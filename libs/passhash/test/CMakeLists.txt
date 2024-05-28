@@ -31,10 +31,10 @@ macro(define_passhash_test name)
 
     set_target_properties(passhash_${name}_test PROPERTIES CXX_STANDARD 14)
 
-    get_target_property(target_type Boost::unit_test_framework TYPE)
-    if(target_type STREQUAL "SHARED_LIB")
+    
+    if(NOT ${Boost_USE_STATIC_LIB})
         target_compile_definitions(passhash_${name}_test PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(target_type STREQUAL "STATIC_LIB")
+    elseif(${Boost_USE_STATIC_LIB})
 
     endif()
 endmacro()

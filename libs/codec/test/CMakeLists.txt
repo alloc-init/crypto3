@@ -28,10 +28,10 @@ macro(define_codec_test name)
                               CXX_STANDARD_REQUIRED TRUE)
     endif()
 
-    get_target_property(target_type Boost::unit_test_framework TYPE)
-    if(target_type STREQUAL "SHARED_LIB")
+
+    if(NOT ${Boost_USE_STATIC_LIB})
         target_compile_definitions(codec_${name}_test PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(target_type STREQUAL "STATIC_LIB")
+    elseif(${Boost_USE_STATIC_LIB})
 
     endif()
 endmacro()

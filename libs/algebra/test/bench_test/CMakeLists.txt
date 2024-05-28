@@ -25,10 +25,9 @@ macro(define_runtime_algebra_test name)
     set_target_properties(${test_name} PROPERTIES CXX_STANDARD 17
         CXX_STANDARD_REQUIRED TRUE)
 
-    get_target_property(target_type Boost::unit_test_framework TYPE)
-    if(target_type STREQUAL "SHARED_LIB")
+    if(NOT ${Boost_USE_STATIC_LIB})
         target_compile_definitions(${test_name} PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(target_type STREQUAL "STATIC_LIB")
+    elseif(${Boost_USE_STATIC_LIB})
 
     endif()
 
