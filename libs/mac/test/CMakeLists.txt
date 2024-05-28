@@ -16,7 +16,7 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
                        ${CMAKE_WORKSPACE_NAME}::block
                        ${CMAKE_WORKSPACE_NAME}::hash
 
-                       ${Boost_LIBRARIES})
+                       Boost::unit_test_framework)
 
 macro(define_mac_test name)
     cm_test(NAME ${name}_test SOURCES ${name}.cpp)

@@ -10,12 +10,15 @@
 include(CMTest)
 
 cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
-                       ${Boost_LIBRARIES}
 
                        crypto3::multiprecision
                        crypto3::algebra
-		               ${CMAKE_WORKSPACE_NAME}::crypto3_multiprecision
-                       ${CMAKE_WORKSPACE_NAME}::core)
+                       ${CMAKE_WORKSPACE_NAME}::crypto3_multiprecision
+                       ${CMAKE_WORKSPACE_NAME}::core
+
+                       Boost::random
+                       Boost::unit_test_framework
+                   )
 
 macro(define_marshalling_test name)
     set(test_name "marshalling_${name}_test")

@@ -7,7 +7,7 @@
 #---------------------------------------------------------------------------#
 
 cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
-                       ${Boost_LIBRARIES})
+                       Boost::unit_test_framework)
 
 macro(define_block_cipher_test name)
     set(test_name "block_${name}_test")

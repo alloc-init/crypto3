@@ -14,7 +14,7 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 
                        ${CMAKE_WORKSPACE_NAME}::block
 
-                       ${Boost_LIBRARIES})
+                       Boost::unit_test_framework)
 
 macro(define_stream_test name)
     cm_test(NAME stream_${name}_test SOURCES ${name}.cpp)

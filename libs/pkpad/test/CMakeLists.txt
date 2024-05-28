@@ -6,7 +6,7 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
                        ${CMAKE_WORKSPACE_NAME}::algebra
                        marshalling::crypto3_algebra
 
-                       ${Boost_LIBRARIES})
+                       Boost::unit_test_framework)
 
 macro(define_pkpad_test name)
     cm_test(NAME pkpad_${name}_test SOURCES ${name}.cpp)

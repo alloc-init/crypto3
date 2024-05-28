@@ -15,7 +15,7 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 
                        ${CMAKE_WORKSPACE_NAME}::block
 
-                       ${Boost_LIBRARIES})
+                       Boost::unit_test_framework)
 
 macro(define_hash_test name)
     set(test_name "hash_${name}_test")

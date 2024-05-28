@@ -13,7 +13,9 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
                        ${CMAKE_WORKSPACE_NAME}::algebra
                        ${CMAKE_WORKSPACE_NAME}::multiprecision
 
-                       ${Boost_LIBRARIES})
+                       Boost::random
+                       Boost::unit_test_framework
+                       )
 
 macro(define_math_test name)
     set(test_name "math_${name}_test")

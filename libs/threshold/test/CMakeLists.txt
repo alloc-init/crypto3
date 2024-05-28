@@ -14,7 +14,7 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 
         ${CMAKE_WORKSPACE_NAME}::pubkey
 
-        ${Boost_LIBRARIES})
+        Boost::unit_test_framework)
 
 macro(define_threshold_test name)
     cm_test(NAME threshold_${name}_test SOURCES ${name}.cpp)

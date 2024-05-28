@@ -15,7 +15,7 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
                        $<$<BOOL:${GMP_FOUND}>:${GMP_LIBRARIES}>
                        $<$<BOOL:${TOMMATH_FOUND}>:${TomMath_LIBRARIES}>
 
-                       ${Boost_LIBRARIES})
+                       Boost::unit_test_framework)
 
 macro(define_vdf_test name)
     cm_test(NAME vdf_${name}_test SOURCES ${name}.cpp)

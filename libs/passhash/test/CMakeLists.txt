@@ -18,7 +18,7 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
                        ${CMAKE_WORKSPACE_NAME}::codec
                        ${CMAKE_WORKSPACE_NAME}::kdf
 
-                       ${Boost_LIBRARIES})
+                       Boost::unit_test_framework)
 
 macro(define_passhash_test name)
     cm_test(NAME passhash_${name}_test SOURCES ${name}.cpp)

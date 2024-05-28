@@ -22,7 +22,7 @@ add_custom_target(${CURRENT_PROJECT_NAME}_test_suite_modular_cpp_int_tests)
 
 cm_test_link_libraries(
     ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
-    ${Boost_LIBRARIES}
+    Boost::unit_test_framework
 )
 
 # HACK: Workaround broken includes

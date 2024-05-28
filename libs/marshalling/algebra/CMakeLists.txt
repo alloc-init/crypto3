@@ -50,7 +50,8 @@ target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
                       crypto3::algebra
 
                       ${CMAKE_WORKSPACE_NAME}::crypto3_multiprecision
-                      ${CMAKE_WORKSPACE_NAME}::core)
+                      ${CMAKE_WORKSPACE_NAME}::core
+                  )
 
 cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
           INCLUDE include
