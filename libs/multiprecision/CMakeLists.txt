@@ -41,7 +41,7 @@ set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
                       EXPORT_NAME ${CURRENT_PROJECT_NAME})
 
 cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
-          INCLUDE ${CURRENT_SOURCES_DIR}/include
+          INCLUDE include
           NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
 
 include(CMTest)
