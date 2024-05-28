@@ -42,17 +42,7 @@ macro(define_storage_test test)
         set(target_name ${PARENT_DIR}_${target_name})
     endwhile()
 
-    set(additional_args "")
-    if(ENABLE_JUNIT_TEST_OUTPUT)
-        set(TEST_RESULTS_DIR "${CMAKE_CURRENT_BINARY_DIR}/junit_results")
-        set(TEST_LOGS_DIR "${TEST_RESULTS_DIR}/logs")
-        file(MAKE_DIRECTORY ${TEST_LOGS_DIR})
-
-        set(additional_args "--log_format=JUNIT"
-                            "--log_sink=${TEST_LOGS_DIR}/${target_name}.xml")
-    endif()
-
-    cm_test(NAME ${target_name} SOURCES ${test}.cpp ARGS ${additional_args})
+    cm_test(NAME ${target_name} SOURCES ${test}.cpp)
 
     target_include_directories(${target_name} PRIVATE
                                "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
