@@ -20,10 +20,6 @@ cm_find_package(CM)
 include(CMDeploy)
 include(CMSetupVersion)
 
-if(NOT Boost_FOUND AND NOT CMAKE_CROSSCOMPILING)
-    find_package(Boost REQUIRED)
-endif()
-
 option(BUILD_TESTS "Build unit tests" FALSE)
 option(BUILD_EXAMPLES "Build examples" FALSE)
 

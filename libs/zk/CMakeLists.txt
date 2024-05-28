@@ -32,10 +32,6 @@ endif()
 
 cm_project(zk WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
-if(NOT Boost_FOUND AND NOT CMAKE_CROSSCOMPILING)
-    find_package(Boost)
-endif()
-
 include(CMDeploy)
 include(FindPkgConfig)
 

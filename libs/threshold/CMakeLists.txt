@@ -30,10 +30,6 @@ endif()
 
 cm_project(threshold WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME})
 
-if(NOT Boost_FOUND AND NOT CMAKE_CROSSCOMPILING)
-    find_package(Boost)
-endif()
-
 cm_find_package(${CMAKE_WORKSPACE_NAME}_pubkey)
 
 list(APPEND ${CURRENT_PROJECT_NAME}_PUBLIC_HEADERS)

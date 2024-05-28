@@ -6,11 +6,6 @@
 # http://www.boost.org/LICENSE_1_0.txt
 #---------------------------------------------------------------------------#
 
-find_package(Boost REQUIRED COMPONENTS
-    timer
-    unit_test_framework
-)
-
 cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 
     ${CMAKE_WORKSPACE_NAME}::algebra

@@ -29,10 +29,6 @@ endif()
 
 cm_project(passhash WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME})
 
-if(NOT Boost_FOUND)
-    find_package(Boost)
-endif()
-
 cm_find_package(${CMAKE_WORKSPACE_NAME}_codec)
 cm_find_package(${CMAKE_WORKSPACE_NAME}_mac)
 

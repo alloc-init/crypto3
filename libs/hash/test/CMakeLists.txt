@@ -10,10 +10,6 @@ include(CMTest)
 
 cm_find_package(${CMAKE_WORKSPACE_NAME}_block)
 
-if(NOT Boost_UNIT_TEST_FRAMEWORK_FOUND)
-    find_package(Boost REQUIRED COMPONENTS unit_test_framework)
-endif()
-
 cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
                        ${${CURRENT_PROJECT_NAME}_INTERFACE_LIBRARIES}
 

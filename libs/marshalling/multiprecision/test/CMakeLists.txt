@@ -9,10 +9,6 @@
 
 include(CMTest)
 
-if(NOT Boost_UNIT_TEST_FRAMEWORK_FOUND)
-    find_package(Boost REQUIRED COMPONENTS unit_test_framework filesystem log log_setup program_options thread system)
-endif()
-
 cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
                        ${Boost_LIBRARIES}
 

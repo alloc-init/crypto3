@@ -22,10 +22,6 @@ endif()
 
 cm_project(mac WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME})
 
-if(NOT Boost_FOUND AND NOT CMAKE_CROSSCOMPILING)
-    find_package(Boost)
-endif()
-
 include(CMDeploy)
 include(CMSetupVersion)
 

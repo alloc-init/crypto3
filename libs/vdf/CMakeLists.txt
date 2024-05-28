@@ -77,8 +77,6 @@ elseif(CRYPTO3_VDF_BOOST)
     if(NOT TARGET ${CMAKE_WORKSPACE_NAME}::multiprecision)
         if(${CMAKE_WORKSPACE_NAME} STREQUAL boost)
             cm_find_package(${CMAKE_WORKSPACE_NAME}_multiprecision)
-        else()
-            find_package(Boost)
         endif()
     endif()
 

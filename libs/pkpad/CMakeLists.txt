@@ -19,10 +19,6 @@ cm_project(pkpad WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME})
 include(CMDeploy)
 include(CMSetupVersion)
 
-if(NOT Boost_FOUND AND NOT CMAKE_CROSSCOMPILING)
-    find_package(Boost COMPONENTS)
-endif()
-
 list(APPEND ${CURRENT_PROJECT_NAME}_PUBLIC_HEADERS
         include/nil/crypto3/pkpad/algorithm/encode.hpp
         include/nil/crypto3/pkpad/algorithm/verify.hpp)

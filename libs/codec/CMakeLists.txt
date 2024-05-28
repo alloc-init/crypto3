@@ -28,10 +28,6 @@ endif()
 
 cm_project(codec WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
-if((NOT Boost_CONTAINER_FOUND OR NOT Boost_FOUND) AND NOT CMAKE_CROSSCOMPILING)
-    find_package(Boost COMPONENTS REQUIRED container)
-endif()
-
 option(CRYPTO3_CODEC_BASE58 "Build unit tests" TRUE)
 
 set(BUILD_WITH_CONFIGURATION_FILE_DIR "${CMAKE_CURRENT_LIST_DIR}/cmake" CACHE STRING "Directory for build.hpp lookup")

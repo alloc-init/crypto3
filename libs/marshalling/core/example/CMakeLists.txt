@@ -10,10 +10,6 @@
 
 include(CMTest)
 
-if (NOT Boost_UNIT_TEST_FRAMEWORK_FOUND)
-    find_package(Boost REQUIRED COMPONENTS unit_test_framework)
-endif ()
-
 macro(define_marshalling_example name)
     add_executable(marshalling_${name}_example ${name}.cpp)
 

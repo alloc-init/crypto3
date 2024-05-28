@@ -29,10 +29,6 @@ endif()
 
 cm_project(hash WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
-if(NOT Boost_FOUND AND NOT CMAKE_CROSSCOMPILING)
-    find_package(Boost COMPONENTS REQUIRED container)
-endif()
-
 include(TargetArchitecture)
 include(TargetConfiguration)
 include(PlatformConfiguration)

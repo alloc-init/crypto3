@@ -8,10 +8,6 @@
 
 include(CMTest)
 
-if(NOT Boost_UNIT_TEST_FRAMEWORK_FOUND)
-    find_package(Boost REQUIRED COMPONENTS unit_test_framework)
-endif()
-
 add_custom_target(algebra_runtime_bench_tests)
 
 macro(define_runtime_algebra_test name)

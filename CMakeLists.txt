@@ -46,9 +46,9 @@ else()
     set(Boost_USE_STATIC_LIBS OFF)
 endif()
 
-find_package(Boost REQUIRED COMPONENTS container random system)
+find_package(Boost REQUIRED COMPONENTS container random filesystem log log_setup program_options thread system)
 if(CMAKE_ENABLE_TESTS)
-    find_package(Boost REQUIRED COMPONENTS unit_test_framework)
+    find_package(Boost REQUIRED COMPONENTS unit_test_framework timer)
 endif()
 
 add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs/")
