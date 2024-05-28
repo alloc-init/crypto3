@@ -23,8 +23,7 @@ cm_workspace(crypto3)
 cm_setup_version(VERSION 0.3.0 PREFIX ${CMAKE_WORKSPACE_NAME})
 
 option(BUILD_SHARED_LIBS "Build shared library" FALSE) # TODO: it makes no sense for header-only lib, remove
-option(USE_STATIC_BOOST "Use static libraries for Boost" FALSE)
-option(ENABLE_TESTS "Enable tests" FALSE) # used by CMTest module
+option(ENABLE_TESTS "Enable tests" TRUE) # used by CMTest module
 option(BUILD_BENCH_TESTS "Build performance benchmark tests" FALSE)
 option(BUILD_DOCS "Build with configuring Doxygen documentation compiler" FALSE)
 
@@ -37,12 +36,6 @@ if(BUILD_WITH_TARGET_ARCHITECTURE)
     set(CMAKE_TARGET_ARCHITECTURE ${BUILD_WITH_TARGET_ARCHITECTURE})
 else()
     target_architecture(CMAKE_TARGET_ARCHITECTURE)
-endif()
-
-if(USE_STATIC_BOOST)
-    set(Boost_USE_STATIC_LIBS ON)
-else()
-    set(Boost_USE_STATIC_LIBS OFF)
 endif()
 
 find_package(Boost REQUIRED COMPONENTS container random filesystem log log_setup program_options thread system)
