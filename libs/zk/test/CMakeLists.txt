@@ -47,13 +47,6 @@ macro(define_zk_test test)
 
     set_target_properties(${full_test_name} PROPERTIES CXX_STANDARD 17)
 
-
-    if(NOT ${Boost_USE_STATIC_LIB})
-        target_compile_definitions(${full_test_name} PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(${Boost_USE_STATIC_LIB})
-
-    endif()
-
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${full_test_name} PRIVATE "-fconstexpr-steps=2147483647")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

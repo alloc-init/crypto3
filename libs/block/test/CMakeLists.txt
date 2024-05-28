@@ -24,12 +24,6 @@ macro(define_block_cipher_test name)
         set_target_properties(${test_name} PROPERTIES CXX_STANDARD 14)
     endif()
 
-    if(NOT ${Boost_USE_STATIC_LIB})
-        target_compile_definitions(${test_name} PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(${Boost_USE_STATIC_LIB})
-
-    endif()
-
     string(CONCAT TEST_DATA ${CMAKE_CURRENT_SOURCE_DIR} "/data/" "${name}" ".json")
     target_compile_definitions(${test_name} PRIVATE TEST_DATA="${TEST_DATA}")
 endmacro()

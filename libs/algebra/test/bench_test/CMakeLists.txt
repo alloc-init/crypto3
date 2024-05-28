@@ -25,12 +25,6 @@ macro(define_runtime_algebra_test name)
     set_target_properties(${test_name} PROPERTIES CXX_STANDARD 17
         CXX_STANDARD_REQUIRED TRUE)
 
-    if(NOT ${Boost_USE_STATIC_LIB})
-        target_compile_definitions(${test_name} PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(${Boost_USE_STATIC_LIB})
-
-    endif()
-
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${test_name} PRIVATE "-fconstexpr-steps=2147483647")
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

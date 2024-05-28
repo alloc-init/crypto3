@@ -25,13 +25,7 @@ macro(define_pbkdf_test name)
                                ${Boost_INCLUDE_DIRS})
 
     set_target_properties(${name}_test PROPERTIES CXX_STANDARD 14)
-
     
-    if(NOT ${Boost_USE_STATIC_LIB})
-        target_compile_definitions(${name}_test PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(${Boost_USE_STATIC_LIB})
-
-    endif()
 endmacro()
 
 set(TESTS_NAMES

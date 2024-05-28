@@ -24,8 +24,7 @@ cm_setup_version(VERSION 0.3.0 PREFIX ${CMAKE_WORKSPACE_NAME})
 
 option(BUILD_SHARED_LIBS "Build shared library" FALSE) # TODO: it makes no sense for header-only lib, remove
 option(USE_STATIC_BOOST "Use static libraries for Boost" FALSE)
-option(BUILD_TESTS "Include tests to `all` target" FALSE) # used by CMTest module
-option(CMAKE_ENABLE_TESTS "Enable tests" FALSE) # used by CMTest module
+option(ENABLE_TESTS "Enable tests" FALSE) # used by CMTest module
 option(BUILD_BENCH_TESTS "Build performance benchmark tests" FALSE)
 option(BUILD_DOCS "Build with configuring Doxygen documentation compiler" FALSE)
 
@@ -47,7 +46,7 @@ else()
 endif()
 
 find_package(Boost REQUIRED COMPONENTS container random filesystem log log_setup program_options thread system)
-if(CMAKE_ENABLE_TESTS)
+if(ENABLE_TESTS)
     find_package(Boost REQUIRED COMPONENTS unit_test_framework timer)
 endif()
 

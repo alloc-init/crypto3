@@ -20,7 +20,6 @@ cm_find_package(CM)
 include(CMDeploy)
 include(CMSetupVersion)
 
-option(BUILD_TESTS "Build unit tests" FALSE)
 option(BUILD_EXAMPLES "Build examples" FALSE)
 
 list(APPEND ${CURRENT_PROJECT_NAME}_LIBRARIES

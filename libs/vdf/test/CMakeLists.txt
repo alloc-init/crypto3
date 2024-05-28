@@ -34,13 +34,6 @@ macro(define_vdf_test name)
                                $<$<BOOL:${GMP_FOUND}>:CRYPTO3_VDF_BOOST_GMP>)
 
     set_target_properties(vdf_${name}_test PROPERTIES CXX_STANDARD 14)
-
-    
-    if(NOT ${Boost_USE_STATIC_LIB})
-        target_compile_definitions(vdf_${name}_test PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(${Boost_USE_STATIC_LIB})
-
-    endif()
 endmacro()
 
 set(TESTS_NAMES "chia" "pietrzak" "wesolowski")

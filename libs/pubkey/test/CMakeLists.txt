@@ -32,12 +32,6 @@ macro(define_pubkey_test name)
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(pubkey_${name}_test PRIVATE "-fconstexpr-ops-limit=4294967295" "-ftemplate-backtrace-limit=0")
     endif()
-
-    if(NOT ${Boost_USE_STATIC_LIB})
-        target_compile_definitions(pubkey_${name}_test PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(${Boost_USE_STATIC_LIB})
-
-    endif()
 endmacro()
 
 set(TESTS_NAMES

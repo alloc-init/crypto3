@@ -22,7 +22,6 @@ include(FindPkgConfig)
 
 include(CMSetupVersion)
 
-option(BUILD_TESTS "Build unit tests" TRUE)
 option(BUILD_WITH_NO_WARNINGS "Build threading warnings as errors" FALSE)
 
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})

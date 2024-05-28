@@ -19,12 +19,6 @@ macro(define_pkpad_test name)
 
     set_target_properties(pkpad_${name}_test PROPERTIES CXX_STANDARD 17)
 
-    
-    if (NOT ${Boost_USE_STATIC_LIB})
-        target_compile_definitions(pkpad_${name}_test PRIVATE BOOST_TEST_DYN_LINK)
-    elseif (${Boost_USE_STATIC_LIB})
-
-    endif ()
 endmacro()
 
 set(TESTS_NAMES

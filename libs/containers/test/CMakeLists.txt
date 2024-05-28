@@ -54,13 +54,6 @@ macro(define_storage_test test)
 
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
 
-
-    if(NOT ${Boost_USE_STATIC_LIB})
-        target_compile_definitions(${target_name} PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(${Boost_USE_STATIC_LIB})
-
-    endif()
-
      if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${target_name} PRIVATE "-fconstexpr-steps=2147483647" "-ftemplate-backtrace-limit=0")
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

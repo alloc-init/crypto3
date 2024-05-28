@@ -22,7 +22,6 @@ include(FindPkgConfig)
 
 include(CMSetupVersion)
 
-option(BUILD_TESTS "Build unit tests" TRUE)
 option(BUILD_WITH_NO_WARNINGS "Build threading warnings as errors" FALSE)
 
 list(APPEND ${CURRENT_PROJECT_NAME}_PUBLIC_HEADERS

@@ -28,12 +28,6 @@ macro(define_codec_test name)
                               CXX_STANDARD_REQUIRED TRUE)
     endif()
 
-
-    if(NOT ${Boost_USE_STATIC_LIB})
-        target_compile_definitions(codec_${name}_test PRIVATE BOOST_TEST_DYN_LINK)
-    elseif(${Boost_USE_STATIC_LIB})
-
-    endif()
 endmacro()
 
 set(TESTS_NAMES "hex" "base")

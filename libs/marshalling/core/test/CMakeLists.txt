@@ -30,15 +30,6 @@ macro(define_marshalling_test name)
     set_target_properties(marshalling_${name}_test PROPERTIES
                           CXX_STANDARD 11
                           CXX_STANDARD_REQUIRED TRUE)
-
-    if(TARGET Boost::unit_test_framework)
-
-        if(NOT ${Boost_USE_STATIC_LIB})
-            target_compile_definitions(marshalling_${name}_test PRIVATE BOOST_TEST_DYN_LINK)
-        elseif(${Boost_USE_STATIC_LIB})
-
-        endif()
-    endif()
 endmacro()
 
 set(TESTS_NAMES
