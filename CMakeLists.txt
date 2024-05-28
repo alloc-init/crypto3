@@ -46,12 +46,10 @@ else()
     set(Boost_USE_STATIC_LIBS OFF)
 endif()
 
-# TODO: in subdirs use Boost::lib_name instead of wide ${Boost_LIBRARIES}, split next lines into 2 find_package calls
-set(BOOST_COMPONENTS "container;random;system")
+find_package(Boost REQUIRED COMPONENTS container random system)
 if(CMAKE_ENABLE_TESTS)
-    list(APPEND BOOST_COMPONENTS "unit_test_framework")
+    find_package(Boost REQUIRED COMPONENTS unit_test_framework)
 endif()
-find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 
 add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs/")
 add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs/marshalling")
