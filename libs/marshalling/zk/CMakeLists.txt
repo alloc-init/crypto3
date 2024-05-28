@@ -36,7 +36,7 @@ target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTER
                            "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>")
 
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
-                      ${Boost_LIBRARIES}
+                      Boost::container
 
                       crypto3::multiprecision
                       crypto3::algebra

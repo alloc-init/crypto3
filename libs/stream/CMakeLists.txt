@@ -114,7 +114,7 @@ target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTER
 
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
                       ${CMAKE_WORKSPACE_NAME}::block
-                      ${Boost_LIBRARIES})
+                      Boost::container)
 
 if(${CMAKE_TARGET_ARCHITECTURE} STREQUAL "x86_64" OR
    ${CMAKE_TARGET_ARCHITECTURE} STREQUAL "x86")

@@ -16,8 +16,8 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
                        ${CMAKE_WORKSPACE_NAME}::crypto3_multiprecision
                        ${CMAKE_WORKSPACE_NAME}::core
 
-                       Boost::random
                        Boost::unit_test_framework
+                       Boost::random
                    )
 
 macro(define_marshalling_test name)
