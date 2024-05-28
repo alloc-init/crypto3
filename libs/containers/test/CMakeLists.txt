@@ -30,7 +30,9 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
                        ${CMAKE_WORKSPACE_NAME}::algebra
                        ${CMAKE_WORKSPACE_NAME}::hash
 
-                       ${Boost_LIBRARIES})
+                       Boost::unit_test_framework
+                       Boost::random
+                   )
 
 macro(define_storage_test test)
     get_filename_component(test_name ${test} NAME)
