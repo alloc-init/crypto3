@@ -3,6 +3,7 @@
 // Copyright (c) 2021 Nikita Kaskov <nbering@nil.foundation>
 // Copyright (c) 2021 Ilias Khairullin <ilias@nil.foundation>
 // Copyright (c) 2022-2023 Elena Tatuzova <e.tatuzova@nil.foundation>
+// Copyright (c) 2024 Vasiliy Olekhov <vasiliy.olekhov@nil.foundation>
 //
 // MIT License
 //
@@ -31,7 +32,6 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
-#include <regex>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -58,10 +58,7 @@
 #include <nil/crypto3/algebra/curves/mnt6.hpp>
 #include <nil/crypto3/algebra/pairing/mnt6.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/mnt6.hpp>
-/*
-#include <nil/crypto3/algebra/curves/alt_bn128.hpp>
-#include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
-*/
+
 #include <nil/crypto3/algebra/curves/pallas.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
@@ -1102,7 +1099,7 @@ BOOST_AUTO_TEST_SUITE(placeholder_circuit2_kzg_v2)
     placeholder_kzg_test_fixture_v2< algebra::curves::mnt6_298, hashes::keccak_1600<256>, true>
     >;
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(prover_test, F, TestFixtures) {
+BOOST_AUTO_TEST_CASE_TEMPLATE(proof_marshalling_test, F, TestFixtures) {
     using field_type = typename F::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     typename field_type::value_type pi0 = random_test_initializer.alg_random_engines.template get_alg_engine<field_type>()();
