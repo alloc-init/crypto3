@@ -30,8 +30,9 @@ namespace boost {
                 std::size_t s = a.size();
                 if (s == 1) {
                     double_limb_type r = static_cast<double_limb_type>(*a.limbs()) + static_cast<double_limb_type>(*b.limbs());
-                    if (r > cpp_int_modular_backend<Bits>::max_limb_value) {
-                        result = r - cpp_int_modular_backend<Bits>::max_limb_value;
+                    double_limb_type mask = cpp_int_modular_backend<Bits>::upper_limb_mask;
+                    if (r & ~mask) {
+                        result = r & mask;
                         result.set_carry(true);
                     } else {
                         result = r;
@@ -54,7 +55,16 @@ namespace boost {
                     carry >>= cpp_int_modular_backend<Bits>::limb_bits;
                     ++pr, ++pa, ++pb;
                 }
-                result.set_carry(carry);
+                if (Bits % cpp_int_modular_backend<Bits>::limb_bits == 0)
+                    result.set_carry(carry);
+                else {
+                    limb_type mask = cpp_int_modular_backend<Bits>::upper_limb_mask;
+                    // If we have set any bit above "Bits", then we have a carry.
+                    if (result.limbs()[s - 1] & ~mask) {
+                        result.limbs()[s - 1] &= mask;
+                        result.set_carry(true);
+                    }
+                }
             }
 
             //
@@ -129,11 +139,13 @@ namespace boost {
                     if (s == 1) {
                         double_limb_type v = static_cast<double_limb_type>(*a.limbs()) + 
                             static_cast<double_limb_type>(*b.limbs());
-                        if (v > cpp_int_modular_backend<Bits>::max_limb_value) {
-                            v ^= (double_limb_type(1) << Bits);
+                        double_limb_type mask = cpp_int_modular_backend<Bits>::upper_limb_mask;
+                        if (v & ~mask) {
+                            v &= mask;
                             result.set_carry(true);
                         }
                         result = v;
+                        return;
                     }
                     typename cpp_int_modular_backend<Bits>::const_limb_pointer pa = a.limbs();
                     typename cpp_int_modular_backend<Bits>::const_limb_pointer pb = b.limbs();
@@ -170,7 +182,17 @@ namespace boost {
 #endif
                     for (; i < s; ++i)
                         carry = ::boost::multiprecision::detail::addcarry_limb(carry, pa[i], pb[i], pr + i);
-                    result.set_carry(carry);
+                    
+                    if (Bits % cpp_int_modular_backend<Bits>::limb_bits == 0)
+                        result.set_carry(carry);
+                    else {
+                        limb_type mask = cpp_int_modular_backend<Bits>::upper_limb_mask;
+                        // If we have set any bit above "Bits", then we have a carry.
+                        if (result.limbs()[s - 1] & ~mask) {
+                            result.limbs()[s - 1] &= mask;
+                            result.set_carry(true);
+                        }
+                    }
                 }
             }
 
