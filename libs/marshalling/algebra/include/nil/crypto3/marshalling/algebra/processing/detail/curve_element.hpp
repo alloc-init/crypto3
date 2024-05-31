@@ -29,13 +29,16 @@
 #include <type_traits>
 
 #include <nil/marshalling/endianness.hpp>
+#include <nil/marshalling/status_type.hpp>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/algebra/curves/curve25519.hpp>
 
 #include <nil/crypto3/marshalling/multiprecision/processing/integral.hpp>
 
-#include <optional>
+#include <boost/outcome.hpp>
+
+namespace outcome = BOOST_OUTCOME_V2_NAMESPACE;
 
 namespace nil {
     namespace crypto3 {
@@ -90,7 +93,7 @@ namespace nil {
                     std::enable_if<
                         std::is_same<algebra::curves::coordinates::affine,
                         typename GroupAffineElement::coordinates>::value,
-                        std::optional<GroupAffineElement> >::type
+                        outcome::result<GroupAffineElement> >::type
                         recover_x(const typename GroupAffineElement::field_type::integral_type &y_int, bool sign) {
                         using base_field_type = typename GroupAffineElement::field_type;
                         using base_field_value_type = typename base_field_type::value_type;
@@ -100,13 +103,13 @@ namespace nil {
 
                         // TODO: throw catchable error, for example return status
                         if (y_int >= base_field_type::modulus) {
-                            return std::nullopt;
+                            return nil::marshalling::status_type::invalid_msg_data;
                         }
                         base_field_value_type y(y_int);
                         base_field_value_type y2 = y * y;
                         base_field_value_type y2dp1 = y2 * group_type::params_type::d + base_integral_type(1);
                         if (y2dp1.is_zero()) {
-                            return std::nullopt;
+                            return nil::marshalling::status_type::invalid_msg_data;
                         }
                         base_field_value_type x2 =
                             (y2 - base_integral_type(1)) * y2dp1.inversed();
@@ -114,7 +117,7 @@ namespace nil {
                             return group_affine_value_type(base_field_value_type::zero(), y);
                         }
                         if (!x2.is_square()) {
-                            return std::nullopt;
+                            return nil::marshalling::status_type::invalid_msg_data;
                         }
                         base_field_value_type x = x2.sqrt();
                         auto x_int = static_cast<base_integral_type>(x.data);

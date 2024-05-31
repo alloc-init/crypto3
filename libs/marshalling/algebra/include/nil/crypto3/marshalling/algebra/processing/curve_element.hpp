@@ -1189,7 +1189,7 @@ namespace nil {
                             read_data<params_type::bit_length(), base_integral_type, endianness>(iter);
                         bool sign = *(iter + encoded_size - 1) & (1 << 7);
 
-                        std::optional<group_affine_value_type> decoded_point_affine =
+                        auto decoded_point_affine =
                                 detail::recover_x<group_affine_value_type>(y, sign);
 
                         if (!decoded_point_affine) {
@@ -1199,7 +1199,7 @@ namespace nil {
                         // TODO: remove hard-coded call for type conversion, implement type conversion between
                         // coordinates
                         //  through operator
-                        point = decoded_point_affine->to_extended_with_a_minus_1();
+                        point = decoded_point_affine.value().to_extended_with_a_minus_1();
                         return nil::marshalling::status_type::success;
                     }
                 };
