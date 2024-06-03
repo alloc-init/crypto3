@@ -334,7 +334,7 @@ namespace nil {
 
                         friend std::ostream& operator<<(std::ostream& os, curve_element const& e)
                         {
-                            os << "{\"X\":" << e.X << ",Y\":" << e.Y << ",Z\":" << e.Z << "}";
+                            os << "{\"X\":" << e.X << ",\"Y\":" << e.Y << ",\"Z\":" << e.Z << "}";
                             return os;
                         }
                     };
