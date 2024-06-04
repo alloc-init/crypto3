@@ -35,6 +35,8 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/bls12.hpp>
 #include <nil/crypto3/algebra/curves/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
+#include <nil/crypto3/algebra/curves/mnt4.hpp>
+#include <nil/crypto3/algebra/curves/mnt6.hpp>
 
 #include <nil/crypto3/hash/block_to_field_elements_wrapper.hpp>
 #include <nil/crypto3/hash/poseidon.hpp>
@@ -110,6 +112,27 @@ BOOST_AUTO_TEST_CASE(zk_poseidon_transcript_no_init_test) {
     BOOST_CHECK_EQUAL(ch1.data, field_type::value_type(0x35626947fa1063436f4e5434029ccaec64075c9fc80034c0923054a2b1d30bd2_cppui_modular255).data);
     BOOST_CHECK_EQUAL(ch2.data, field_type::value_type(0x1b961886411ee8722dd6b576cba5876eb30999b5237fe0e14255e6d006cff63c_cppui_modular255).data);
     BOOST_CHECK_EQUAL(ch_int, 0xc92);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(transcript_test_curves)
+
+    using curves_list = boost::mpl::list<
+        algebra::curves::bls12_381,
+        algebra::curves::mnt4_298,
+        algebra::curves::mnt6_298
+        >;
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(curves, curve_type, curves_list) {
+    using field_type = typename curve_type::base_field_type;
+    using g1_type = typename curve_type::template g1_type<>;
+    using hash_type = typename hashes::keccak_1600<512>;
+
+    transcript::fiat_shamir_heuristic_sequential<hash_type> tr;
+
+    tr(g1_type::value_type::one());
+    auto ch = tr.challenge<field_type>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

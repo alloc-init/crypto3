@@ -335,6 +335,8 @@ namespace nil {
                     nil::marshalling::status_type status;
 
                     for (const auto &commit : public_key.commits) {
+                        transcript(commit);
+                        /*
                         std::vector<uint8_t> byteblob =
                             nil::marshalling::pack<nil::marshalling::option::big_endian>(commit, status);
                         BOOST_ASSERT(status == nil::marshalling::status_type::success);
@@ -344,6 +346,7 @@ namespace nil {
                                 decltype(byteblob)
                             >(byteblob)
                         );
+                        */
                     }
                     for (const auto &S : public_key.S) {
                         for (const auto &s : S) {

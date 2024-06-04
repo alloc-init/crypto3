@@ -162,6 +162,20 @@ namespace nil {
                             hash<hash_type>(first, last, static_cast<accumulator_set<hash_type> &>(acc_convertible)));
                     }
 
+                    /*
+                    template<typename TAny>
+                    typename std::enable_if<algebra::is_g1_group_element<TAny>::value, void>::type
+                    operator()(TAny data) {
+                        nil::marshalling::status_type status;
+                        typename hash_type::construction::type::block_type byte_data =
+                            nil::marshalling::pack(data, status);
+                        BOOST_ASSERT(status == nil::marshalling::status_type::success);
+                        auto acc_convertible = hash<hash_type>(state);
+                        state = accumulators::extract::hash<hash_type>(
+                                hash<hash_type>(byte_data, static_cast<accumulator_set<hash_type> &>(acc_convertible)));
+                    }
+                    */
+
                     template<typename Field>
                     // typename std::enable_if<(Hash::digest_bits >= Field::modulus_bits),
                     //                         typename Field::value_type>::type
