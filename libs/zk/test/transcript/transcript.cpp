@@ -133,6 +133,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(curves, curve_type, curves_list) {
 
     tr(g1_type::value_type::one());
     auto ch = tr.challenge<field_type>();
+    std::cout << "challenge: " << ch << std::endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END()
