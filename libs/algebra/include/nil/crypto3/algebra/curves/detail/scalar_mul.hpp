@@ -76,9 +76,50 @@ namespace nil {
                         }
                         return result;
 #else
+
+                        const size_t window_size = 3;
+                        auto naf = boost::multiprecision::eval_find_wnaf_a(window_size, scalar.backend().base_data());
+                        /*
+                        std::cout << "scalar: " << scalar << std::endl;
+                        std::cout << "NAF: ";
+                        for(int i = 0; i < naf.size(); ++i) {
+                            std::cout << naf[i] << " ";
+                        }
+                        std::cout << std::endl;
+                        */
+                        std::array<GroupValueType, 1ul << (window_size - 1)> table;
+                        GroupValueType tmp = base;
+                        GroupValueType dbl = base;
+                        dbl.double_inplace();
+                        for (size_t i = 0; i < 1ul << (window_size - 1); ++i) {
+                            table[i] = tmp;
+                            tmp = tmp + dbl;
+                        }
+
+                        GroupValueType res = GroupValueType::zero();
+                        bool found_nonzero = false;
+                        for (long i = naf.size() - 1; i >= 0; --i) {
+                            if (found_nonzero) {
+                                res.double_inplace();
+                            }
+
+                            if (naf[i] != 0) {
+                                found_nonzero = true;
+                                if (naf[i] > 0) {
+                                    res = res + table[naf[i] / 2];
+                                } else {
+                                    res = res - table[(-naf[i]) / 2];
+                                }
+                            }
+                        }
+
+                        return res;
+
+/*
                         using mp_backend = typename Backend::backend_type;
                         unsigned bits = boost::multiprecision::backends::max_precision<mp_backend>::value;
                         return opt_window_wnaf_exp(base, scalar, bits);
+*/
 #endif
 
                     }

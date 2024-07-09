@@ -140,6 +140,7 @@ void curve_operations_perf_test(std::string const& curve_name) {
     for(int MULTIPLICATOR = 1; MULTIPLICATOR <= 10; ++MULTIPLICATOR) {
         std::cout << "MULT: " << MULTIPLICATOR << std::endl;
 
+        /*
         auto madd_res = run_batched_test(
                 "madd",
                 BATCHES, SAMPLES_PER_BATCH / MULTIPLICATOR,
@@ -166,6 +167,7 @@ void curve_operations_perf_test(std::string const& curve_name) {
                 for(int m = 0; m < MULTIPLICATOR; ++m)
                 A.double_inplace();
                 } );
+                */
 
         auto smul_res = run_batched_test(
                 "smul",
@@ -185,9 +187,9 @@ void curve_operations_perf_test(std::string const& curve_name) {
         std::size_t prec = 4;
         for(std::size_t i = 0; i < BATCHES; ++i) {
             f
-                << std::fixed << std::setprecision(prec) << madd_res[i].count() << ","
-                << std::fixed << std::setprecision(prec) << add_res[i].count() << ","
-                << std::fixed << std::setprecision(prec) << dbl_res[i].count() << ","
+//                << std::fixed << std::setprecision(prec) << madd_res[i].count() << ","
+//                << std::fixed << std::setprecision(prec) << add_res[i].count() << ","
+//                << std::fixed << std::setprecision(prec) << dbl_res[i].count() << ","
                 << std::fixed << std::setprecision(prec) << smul_res[i].count()
                 << std::endl;
         }
