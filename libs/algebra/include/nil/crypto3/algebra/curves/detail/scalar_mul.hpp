@@ -32,6 +32,10 @@
 #include <boost/multiprecision/number.hpp>
 #include <nil/crypto3/multiprecision/modular/modular_adaptor.hpp>
 
+#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
+
+#include <nil/crypto3/algebra/wnaf.hpp>
+
 #include <cstdint>
 
 namespace nil {
@@ -49,6 +53,8 @@ namespace nil {
                         if (scalar.is_zero()) {
                             return GroupValueType::zero();
                         }
+
+#if 0
                         GroupValueType result;
 
                         bool found_one = false;
@@ -68,8 +74,13 @@ namespace nil {
                                 }
                             }
                         }
-
                         return result;
+#else
+                        using mp_backend = typename Backend::backend_type;
+                        unsigned bits = boost::multiprecision::backends::max_precision<mp_backend>::value;
+                        return opt_window_wnaf_exp(base, scalar, bits);
+#endif
+
                     }
 
                     template<typename GroupValueType,
