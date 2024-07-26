@@ -21,8 +21,8 @@ macro(define_marshalling_example name)
                           crypto3::zk
                           ${CMAKE_WORKSPACE_NAME}::marshalling-multiprecision
                           ${CMAKE_WORKSPACE_NAME}::marshalling-algebra
-                          ${CMAKE_WORKSPACE_NAME}::crypto3_zk
-                          ${CMAKE_WORKSPACE_NAME}::core
+                          # ${CMAKE_WORKSPACE_NAME}::crypto3_zk
+                          # ${CMAKE_WORKSPACE_NAME}::core
 
                           Boost::container)
 

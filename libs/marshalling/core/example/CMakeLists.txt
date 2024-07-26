@@ -14,7 +14,7 @@ macro(define_marshalling_example name)
     add_executable(marshalling_${name}_example ${name}.cpp)
 
     target_link_libraries(marshalling_${name}_example PRIVATE
-            ${CMAKE_WORKSPACE_NAME}::core
+        #            ${CMAKE_WORKSPACE_NAME}::core
 
             Boost::container)
 
