@@ -11,7 +11,6 @@ macro(define_bench_example name)
                           ${CMAKE_WORKSPACE_NAME}_algebra
                           ${CMAKE_WORKSPACE_NAME}_multiprecision
                           $<TARGET_NAME_IF_EXISTS:boost_multiprecision>
-                          boost_random
                       )
 
     set_target_properties(bench_${name}_example PROPERTIES CXX_STANDARD 14)
