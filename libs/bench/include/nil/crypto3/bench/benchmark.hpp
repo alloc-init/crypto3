@@ -65,14 +65,12 @@
                 /*std::cout << "batch " << d << ":" << std::fixed << std::setprecision(3) << durs[d].count() << std::endl;*/ \
             } \
         } \
-        std::cout << std::endl << "size,duration" << std::endl; \
         double xy = 0, x2 = 0; \
         for(auto const& p: durs) { \
-            /*std::cout << p.first << "," << p.second.count() << std::endl;*/ \
             xy += p.first*p.second.count(); x2 += p.first*p.first; \
         } \
         double b = xy/x2; \
-        std::cout << "b: " << std::fixed << std::setprecision(3) << b << std::endl; \
+        std::cout << std::fixed << std::setprecision(3) << b << std::endl; \
     } while(0);
 
 #if 0
