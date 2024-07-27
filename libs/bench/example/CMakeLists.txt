@@ -5,15 +5,17 @@
 #---------------------------------------------------------------------------#
 
 macro(define_bench_example name)
-    add_executable(bench_${name}_example ${name}.cpp)
-    target_link_libraries(bench_${name}_example PRIVATE
+    set(test_name "bench_${name}_example")
+    add_executable(${test_name} ${name}.cpp)
+    target_link_libraries(${test_name} PRIVATE
                           ${CMAKE_WORKSPACE_NAME}_bench
                           ${CMAKE_WORKSPACE_NAME}_algebra
                           ${CMAKE_WORKSPACE_NAME}_multiprecision
-                          $<TARGET_NAME_IF_EXISTS:boost_multiprecision>
+    Boost::random
+                      ${Boost_LIBRARIES}
                       )
 
-    set_target_properties(bench_${name}_example PROPERTIES CXX_STANDARD 14)
+    set_target_properties(${test_name} PROPERTIES CXX_STANDARD 17)
 endmacro()
 
 set(EXAMPLES_NAMES

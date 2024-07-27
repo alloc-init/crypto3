@@ -23,16 +23,16 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#define BOOST_TEST_MODULE algebra_curves_bench_test
+//#define BOOST_TEST_MODULE algebra_curves_bench_test
 
 #include <iostream>
 #include <chrono>
 #include <ratio>
 #include <type_traits>
 
-#include <boost/test/unit_test.hpp>
-#include <boost/test/data/test_case.hpp>
-#include <boost/test/data/monomorphic.hpp>
+//#include <boost/test/unit_test.hpp>
+//#include <boost/test/data/test_case.hpp>
+//#include <boost/test/data/monomorphic.hpp>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -64,6 +64,29 @@
 
 using namespace nil::crypto3::algebra;
 
+int main(int argc, char* argv[])
+{
+    std::cout << "Hello, world" << std::endl;
+    using policy_type = nil::crypto3::algebra::curves::bls12<381>::g1_type<
+        nil::crypto3::algebra::curves::coordinates::jacobian_with_a4_0,
+        nil::crypto3::algebra::curves::forms::short_weierstrass>;
+
+    policy_type::value_type A = {1,2};
+    std::cout << A << std::endl;
+    /*
+
+    using bench_type_B = bench_type_A;
+    using bench_type_C = bench_type_A; //bench_type<nil::crypto3::algebra::curves::bls12_381::scalar_field_type>;
+//    using bench_type_C = bench_type<nil::crypto3::algebra::curves::bls12_381::scalar_field_type>;
+
+    CRYPTO3_RUN_BENCHMARK("BLS12-381 Curve scalar multiplication", "sample.json",
+            bench_type_A, bench_type_B, bench_type_C,
+            A = B+C
+            );
+*/
+    return 0;
+}
+#if 0
 BOOST_AUTO_TEST_SUITE(curves_manual_tests)
 /**/
 
@@ -253,3 +276,5 @@ BOOST_AUTO_TEST_CASE(perf_test_ed25519) {
 
 
 BOOST_AUTO_TEST_SUITE_END()
+
+#endif
