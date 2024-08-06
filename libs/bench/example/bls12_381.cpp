@@ -19,7 +19,7 @@
 int main()
 {
     {
-        using bench_type_A = bench_type<nil::crypto3::algebra::curves::mnt4_298::base_field_type>;
+        using bench_type_A = nil::crypto3::bench::bench_type<nil::crypto3::algebra::curves::mnt4_298::base_field_type>;
         using bench_type_B = bench_type_A;
         using bench_type_C = bench_type_A;
 

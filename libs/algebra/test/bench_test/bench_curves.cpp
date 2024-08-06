@@ -45,7 +45,6 @@
 
 #include <nil/crypto3/algebra/curves/alt_bn128.hpp>
 #include <nil/crypto3/algebra/curves/bls12.hpp>
-#include <nil/crypto3/algebra/curves/edwards.hpp>
 #include <nil/crypto3/algebra/curves/jubjub.hpp>
 #include <nil/crypto3/algebra/curves/babyjubjub.hpp>
 #include <nil/crypto3/algebra/curves/mnt4.hpp>
@@ -69,23 +68,36 @@ using namespace nil::crypto3::algebra;
 int main(int argc, char* argv[])
 {
     std::cout << "Hello, world" << std::endl;
-    using policy_type = nil::crypto3::algebra::curves::bls12<381>::g1_type<
-        nil::crypto3::algebra::curves::coordinates::jacobian_with_a4_0,
-        nil::crypto3::algebra::curves::forms::short_weierstrass>;
 
-    policy_type::value_type A = {1,2};
-    std::cout << A << std::endl;
-    /*
-
+    using curve_type = nil::crypto3::algebra::curves::bls12_381;
+    using bench_type_A = nil::crypto3::bench::bench_type<curve_type::base_field_type>;
     using bench_type_B = bench_type_A;
-    using bench_type_C = bench_type_A; //bench_type<nil::crypto3::algebra::curves::bls12_381::scalar_field_type>;
-//    using bench_type_C = bench_type<nil::crypto3::algebra::curves::bls12_381::scalar_field_type>;
+    using bench_type_C = bench_type_A;
 
-    CRYPTO3_RUN_BENCHMARK("BLS12-381 Curve scalar multiplication", "sample.json",
+    CRYPTO3_RUN_BENCHMARK("BLS12-381 Point addition",
             bench_type_A, bench_type_B, bench_type_C,
             A = B+C
             );
-*/
+    CRYPTO3_RUN_BENCHMARK("BLS12-381 Point addition",
+            bench_type_A, bench_type_B, bench_type_C,
+            A = B+C
+            );
+    CRYPTO3_RUN_BENCHMARK("BLS12-381 Point addition",
+            bench_type_A, bench_type_B, bench_type_C,
+            A = B+C
+            );
+    CRYPTO3_RUN_BENCHMARK("BLS12-381 Point addition",
+            bench_type_A, bench_type_B, bench_type_C,
+            A = B+C
+            );
+    CRYPTO3_RUN_BENCHMARK("BLS12-381 Point addition",
+            bench_type_A, bench_type_B, bench_type_C,
+            A = B+C
+            );
+    CRYPTO3_RUN_BENCHMARK("BLS12-381 Point addition",
+            bench_type_A, bench_type_B, bench_type_C,
+            A = B+C
+            );
     return 0;
 }
 #if 0

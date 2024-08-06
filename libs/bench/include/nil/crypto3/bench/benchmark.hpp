@@ -31,12 +31,12 @@
             std::size_t warmup_batch = 1e9*ESTIMATION_BATCH*WARMUP/sample.count(); \
             /*std::cout << "Warming up.." << std::endl;*/ \
             for(std::size_t i = 0; i < warmup_batch; ++i) { expression; } \
-            long_batch = 5*1e9*ESTIMATION_BATCH/ESTIMATION_BATCH/sample.count(); \
+            long_batch = 1e9*ESTIMATION_BATCH/ESTIMATION_BATCH/sample.count(); \
         } \
         /* std::cout << "long_batch: " << long_batch << std::endl; */ \
         /* std::cout << "Measuring.. " << std::endl; */ \
         constexpr std::size_t MEASUREMENTS = 100; \
-        constexpr std::size_t START_MULT = 2, FINISH_MULT = 10; \
+        constexpr std::size_t START_MULT = 5, FINISH_MULT = 15; \
         std::array<std::pair<std::size_t, duration>, (FINISH_MULT - START_MULT) * MEASUREMENTS> durs; \
         { \
             /* CAPACITY_X - create arrays that do not fit into L1 cache */ \
@@ -69,21 +69,38 @@
                 /*std::cout << "batch " << d << ":" << std::fixed << std::setprecision(3) << durs[d].count() << std::endl;*/ \
             } \
         } \
+        std::sort(durs.begin(), durs.end(), [](auto const& a, auto const& b) { \
+                return a.first == b.first ? a.second < b.second : a.first < b.first; \
+                }); \
         double xy = 0, x2 = 0; \
-        for(auto const& p: durs) { \
-            xy += p.first*p.second.count(); x2 += p.first*p.first; \
+        for(std::size_t i = 0; i < FINISH_MULT - START_MULT; ++i) { \
+            for(std::size_t m = 0; m < MEASUREMENTS; ++m) { \
+                /* discard top 30% outliers */ \
+                if ( m < MEASUREMENTS*0.7 ) { \
+                    xy += durs[i*MEASUREMENTS+m].first * durs[i*MEASUREMENTS+m].second.count(); \
+                    x2 += durs[i*MEASUREMENTS+m].first * durs[i*MEASUREMENTS+m].first; \
+                } \
+            } \
         } \
         double b = xy/x2; \
         std::cout << std::fixed << std::setprecision(3) << b << " ns" << std::endl; \
     } while(0);
 
-template<typename A>
-class bench_type {
-    public:
-        typedef A type_name;
-        static typename A::value_type sample_random_element() {
-            return nil::crypto3::algebra::random_element<A>();
+namespace nil {
+    namespace crypto3 {
+        namespace bench {
+
+            template<typename A>
+                class bench_type {
+                    public:
+                        typedef A type_name;
+                        static typename A::value_type sample_random_element() {
+                            return nil::crypto3::algebra::random_element<A>();
+                        }
+                };
+
         }
-};
+    }
+}
 
 #endif /* CRYPTO3_BENCHMARK_HPP */
