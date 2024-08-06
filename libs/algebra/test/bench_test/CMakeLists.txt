@@ -31,7 +31,6 @@ macro(define_runtime_algebra_test name)
         target_compile_options(${test_name} PRIVATE "-fconstexpr-ops-limit=4294967295")
     endif()
 
-    target_compile_definitions(${test_name} PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
 endmacro()
 
 set(RUNTIME_TESTS_NAMES
@@ -39,8 +38,4 @@ set(RUNTIME_TESTS_NAMES
     "bench_fields"
     "bench_multiexp"
     )
-
-foreach(TEST_NAME ${RUNTIME_TESTS_NAMES})
-    define_runtime_algebra_test(${TEST_NAME})
-endforeach()
 

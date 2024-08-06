@@ -62,6 +62,8 @@
 
 #include <nil/crypto3/algebra/random_element.hpp>
 
+#include <nil/crypto3/bench/benchmark.hpp>
+
 using namespace nil::crypto3::algebra;
 
 int main(int argc, char* argv[])

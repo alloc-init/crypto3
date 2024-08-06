@@ -3,13 +3,17 @@
 //
 // SPDX-License-Identifier: MIT
 
+#ifndef CRYPTO3_BENCHMARK_HPP
+#define CRYPTO3_BENCHMARK_HPP
+
 #include <iostream>
 #include <vector>
+#include <array>
 #include <chrono>
 
 #include <nil/crypto3/algebra/random_element.hpp>
 
-#define CRYPTO3_RUN_BENCHMARK(bench_name, results_name, bench_type_A, bench_type_B, bench_type_C, expression) \
+#define CRYPTO3_RUN_BENCHMARK(bench_name, bench_type_A, bench_type_B, bench_type_C, expression) \
     do { \
         std::cout << "# " << bench_name << " " /*<< std::endl*/; \
         using duration = std::chrono::duration<double, std::nano>; \
@@ -56,7 +60,7 @@
                         bench_type_A::type_name::value_type &A = acc[i % long_batch]; \
                         bench_type_B::type_name::value_type &B = B_array[B_idx % CAPACITY_B]; \
                         bench_type_C::type_name::value_type &C = C_array[C_idx % CAPACITY_C]; \
-                        expression; \
+                        /* ### */ expression; /* ### */ \
                         B_idx += STRIDE_B; C_idx += STRIDE_C; \
                     } \
                     auto finish = std::chrono::high_resolution_clock::now(); \
@@ -70,23 +74,8 @@
             xy += p.first*p.second.count(); x2 += p.first*p.first; \
         } \
         double b = xy/x2; \
-        std::cout << std::fixed << std::setprecision(3) << b << std::endl; \
+        std::cout << std::fixed << std::setprecision(3) << b << " ns" << std::endl; \
     } while(0);
-
-#if 0
-std::sort(durs.begin(), durs.end()); \
-        double avg = 0, stdiv = 0, m2 = 0; \
-        for(std::size_t i = MEASUREMENTS*0.1; i < MEASUREMENTS*0.9; ++i ) { \
-            avg += durs[i].count(); \
-            m2 += durs[i].count()*durs[i].count(); \
-        } \
-        avg /= MEASUREMENTS*0.8; \
-        stdiv = sqrt(m2/(MEASUREMENTS*0.8) - avg*avg); \
-        std::cout << " median: "  << std::fixed << std::setprecision(2) << durs[MEASUREMENTS/2].count() << "ns "; \
-        std::cout << "mean: "  << std::fixed << std::setprecision(2) << avg << "ns "; \
-        std::cout << "stdiv: " << std::fixed << std::setprecision(2) << stdiv << std::endl; \
-
-#endif
 
 template<typename A>
 class bench_type {
@@ -96,3 +85,5 @@ class bench_type {
             return nil::crypto3::algebra::random_element<A>();
         }
 };
+
+#endif /* CRYPTO3_BENCHMARK_HPP */
