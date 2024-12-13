@@ -507,39 +507,56 @@ cfe_gpsw_pub_key_ser(&pk, &buf);
 
 [1] C. Mascia, M. Sala, and I. Villa, “A survey on Functional Encryption,” AMC, vol. 17, no. 5, pp. 1251–1289, 2023,
 doi: 10.3934/amc.2021049.
+
 [2] P. Datta, T. Okamoto, and K. Takashima, “Adaptively Simulation-Secure Attribute-Hiding Predicate Encryption,” IEICE
 Trans. Inf. & Syst., vol. E103.D, no. 7, pp. 1556–1597, Jul. 2020, doi: 10.1587/transinf.2019ICP0001.
+
 [3] E. Miles, A. Sahai, and M. Zhandry, “Annihilation Attacks for Multilinear Maps: Cryptanalysis of
 Indistinguishability Obfuscation over GGH13,” 2016, 2016/147. Accessed: Aug. 13, 2024. [Online].
 Available: https://eprint.iacr.org/2016/147
+
 [4] S. Garg, C. Gentry, S. Halevi, M. Raykova, and A. Sahai, “Candidate Indistinguishability Obfuscation and Functional
 Encryption for all circuits”.
+
 [5] P. Datta, T. Okamoto, and K. Takashima, “Efficient Attribute-Based Signatures for Unbounded Arithmetic Branching
 Programs,” 2019, 2019/363. Accessed: Sep. 03, 2024. [Online]. Available: https://eprint.iacr.org/2019/363
+
 [6] P. Datta, T. Okamoto, and J. Tomida, “Full-Hiding (Unbounded) Multi-Input Inner Product Functional Encryption from
 the $k$-Linear Assumption,” 2018, 2018/061. Accessed: Aug. 13, 2024. [Online].
 Available: https://eprint.iacr.org/2018/061
+
 [7] S. Kim, K. Lewi, A. Mandal, H. Montgomery, A. Roy, and D. J. Wu, “Function-Hiding Inner Product Encryption is
 Practical,” 2016, 2016/440. Accessed: Aug. 11, 2024. [Online]. Available: https://eprint.iacr.org/2016/440
+
 [8] Z. Brakerski and G. Segev, “Function-Private Functional Encryption in the Private-Key Setting,” 2014, 2014/550.
 Accessed: Aug. 11, 2024. [Online]. Available: https://eprint.iacr.org/2014/550
+
 [9] H. Wee, “Functional Encryption for Quadratic Functions from k-Lin, Revisited,” 2020, 2020/1420. Accessed: Oct. 02,
 2024. [Online]. Available: https://eprint.iacr.org/2020/1420
+
 [10] D. Boneh, D. J. Wu, and J. Zimmerman, “Immunizing Multilinear Maps Against Zeroizing Attacks,” 2014, 2014/930.
 Accessed: Aug. 13, 2024. [Online]. Available: https://eprint.iacr.org/2014/930
+
 [11] M. Abdalla, D. Catalano, D. Fiore, R. Gay, and B. Ursu, “Multi-Input Functional Encryption for Inner Products:
 Function-Hiding Realizations and Constructions without Pairings,” 2017, 2017/972. Accessed: Aug. 11, 2024. [Online].
 Available: https://eprint.iacr.org/2017/972
+
 [12] B. C. Behera and S. C. Ramanna, “Multi-Input Functional Encryption for Unbounded Inner Products,” 2024, 2024/919.
 Accessed: Sep. 07, 2024. [Online]. Available: https://eprint.iacr.org/2024/919
+
 [13] S. Gorbunov, V. Vaikuntanathan, and H. Wee, “Predicate Encryption for Circuits from LWE,” 2015, 2015/029. Accessed:
 Aug. 13, 2024. [Online]. Available: https://eprint.iacr.org/2015/029
+
 [14] Q. Chu, L. Lin, C. Qian, and J. Chen, “Registered Functional Encryption for Quadratic Functions from MDDH,” 2024,
 2024/177. Accessed: Oct. 02, 2024. [Online]. Available: https://eprint.iacr.org/2024/177
+
 [15] J. Bartusek, J. Guan, F. Ma, and M. Zhandry, “Return of GGH15: Provable Security Against Zeroizing Attacks,” 2018,
 2018/511. Accessed: Aug. 13, 2024. [Online]. Available: https://eprint.iacr.org/2018/511
+
 [16] H. Wee and D. J. Wu, “Succinct Functional Commitments for Circuits from k-Lin,” 2024, 2024/688. Accessed: Oct. 02,
 2024. [Online]. Available: https://eprint.iacr.org/2024/688
+
 [17] J. Tomida, “Towards Practical Inner Product Functional Encryption”.
+
 [18] J. Tomida, “Unbounded Quadratic Functional Encryption and More from Pairings,” 2022, 2022/1124. Accessed: Oct. 02,
 2024. [Online]. Available: https://eprint.iacr.org/2022/1124
