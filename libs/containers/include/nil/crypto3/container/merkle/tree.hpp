@@ -253,7 +253,7 @@ namespace nil {
                     }
 
                     bool operator==(const merkle_tree_impl &rhs) const {
-                        return _hashes == rhs.val;
+                        return _hashes == rhs._hashes;
                     }
 
                     bool operator!=(const merkle_tree_impl &rhs) const {
@@ -261,7 +261,7 @@ namespace nil {
                     }
 
                     allocator_type get_allocator() const BOOST_NOEXCEPT {
-                        return this->val.__alloc();
+                        return this->_hashes.__alloc();
                     }
 
                     iterator begin() BOOST_NOEXCEPT {
@@ -393,12 +393,12 @@ namespace nil {
                     //
                     template<class... Args>
                     reference emplace_back(Args &&..._args) {
-                        return _hashes.template emplace_back(_args...);
+                        return _hashes.emplace_back(_args...);
                     }
 
                     template<class... Args>
                     iterator emplace(const_iterator _position, Args &&... _args) {
-                        return _hashes.template emplace(_position, _args...);
+                        return _hashes.emplace(_position, _args...);
                     }
 
                     void pop_back() {
@@ -420,7 +420,7 @@ namespace nil {
                     void swap(merkle_tree_impl &other) {
                         _hashes.swap(other.hashes());
                         std::swap(_leaves, other.leaves());
-                        std::swap(_rc, other.rc());
+                        std::swap(_rc, other._rc());
                         std::swap(_size, other.size());
                     }
 
