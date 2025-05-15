@@ -285,7 +285,7 @@ namespace nil {
                 }
 
                 void swap(polynomial_view& other) {
-                    it.swap(other.val);
+                    it.swap(other.it);
                 }
 
                 template<typename Range>

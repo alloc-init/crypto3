@@ -102,7 +102,7 @@ namespace nil {
                 //                }
 
                 bool operator==(const polynomial_dfs_view& rhs) const {
-                    return (*it) == (*(rhs.it)) && _d == rhs.d;
+                    return (*it) == (*(rhs.it)) && _d == rhs._d;
                 }
                 bool operator!=(const polynomial_dfs_view& rhs) const {
                     return !(rhs == *this);
@@ -309,7 +309,7 @@ namespace nil {
                 //                }
 
                 void swap(polynomial_dfs_view& other) {
-                    it.swap(other.val);
+                    it.swap(other.it);
                     std::swap(_d, other._d);
                 }
 
