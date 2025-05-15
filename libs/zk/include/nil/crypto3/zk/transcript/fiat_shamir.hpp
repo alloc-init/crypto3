@@ -211,8 +211,8 @@ namespace nil {
                                     hashes::h2f_default_params<FieldType,
                                         hash_type,
                                         128,
-                                        hashes::uniformity_count::nonuniform_count,
-                                        hashes::expand_msg_variant::rfc_xmd>>;
+                                        hashes::uniformity_count_t::nonuniform_count,
+                                        hashes::expand_msg_variant_t::rfc_xmd>>;
 
                         typename h2f_type::digest_type result = hash<h2f_type>(state);
                         nil::marshalling::status_type status;

@@ -420,7 +420,7 @@ namespace nil {
                     void swap(merkle_tree_impl &other) {
                         _hashes.swap(other.hashes());
                         std::swap(_leaves, other.leaves());
-                        std::swap(_rc, other._rc());
+                        std::swap(_rc, other._rc);
                         std::swap(_size, other.size());
                     }
 

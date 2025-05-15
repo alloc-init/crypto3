@@ -40,11 +40,11 @@ namespace nil {
     namespace crypto3 {
         namespace hashes {
             template<typename GroupType, typename HashType, std::size_t _k = 128,
-                     uniformity_count _uniformity_count = uniformity_count::uniform_count,
-                     expand_msg_variant _expand_msg_variant = expand_msg_variant::rfc_xmd>
+                     uniformity_count_t _uniformity_count = uniformity_count_t::uniform_count,
+                     expand_msg_variant_t _expand_msg_variant = expand_msg_variant_t::rfc_xmd>
             struct h2c_default_params {
-                constexpr static uniformity_count uniformity_count = _uniformity_count;
-                constexpr static expand_msg_variant expand_msg_variant = _expand_msg_variant;
+                constexpr static uniformity_count_t uniformity_count = _uniformity_count;
+                constexpr static expand_msg_variant_t expand_msg_variant = _expand_msg_variant;
                 constexpr static std::size_t k = _k;
 
                 typedef std::vector<std::uint8_t> dst_type;
