@@ -33,7 +33,7 @@ namespace nil {
                     constexpr static const std::size_t round_constants_size = 4;
                     typedef std::array<word_type, round_constants_size> round_constants_type;
 
-                    constexpr static const round_constants_type round_constants[3] = {
+                    inline constexpr static const round_constants_type round_constants[3] = {
                         {0x517cc1b7, 0x27220a94, 0xfe13abe8, 0xfa9a6ee0},
                         {0x6db14acc, 0x9e21c820, 0xff28b1d5, 0xef5de2b0},
                         {0xdb92371d, 0x2126e970, 0x03249775, 0x04e8c90e}

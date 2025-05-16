@@ -42,11 +42,11 @@ namespace nil {
             template<typename FieldType,
                      typename HashType,
                      std::size_t K = 128,
-                     uniformity_count UniformityCount = uniformity_count::uniform_count,
-                     expand_msg_variant ExpandMsgVariant = expand_msg_variant::rfc_xmd>
+                     uniformity_count_t UniformityCount = uniformity_count_t::uniform_count,
+                     expand_msg_variant_t ExpandMsgVariant = expand_msg_variant_t::rfc_xmd>
             struct h2f_default_params {
-                constexpr static uniformity_count uniformity_count = UniformityCount;
-                constexpr static expand_msg_variant expand_msg_variant = ExpandMsgVariant;
+                constexpr static uniformity_count_t uniformity_count = UniformityCount;
+                constexpr static expand_msg_variant_t expand_msg_variant = ExpandMsgVariant;
                 constexpr static std::size_t k = K;
 
                 typedef std::vector<std::uint8_t> dst_type;
@@ -71,8 +71,8 @@ namespace nil {
                      typename ParamsType = h2f_default_params<FieldType, HashType>>
             struct h2f {
                 typedef h2f_suite<FieldType, HashType, ParamsType::k> suite_type;
-                static constexpr uniformity_count uniformity_count = ParamsType::uniformity_count;
-                static constexpr expand_msg_variant expand_msg_variant = ParamsType::expand_msg_variant;
+                static constexpr uniformity_count_t uniformity_count = ParamsType::uniformity_count;
+                static constexpr expand_msg_variant_t expand_msg_variant = ParamsType::expand_msg_variant;
 
                 typedef typename suite_type::field_type field_type;
                 typedef typename suite_type::field_value_type field_value_type;
@@ -91,7 +91,7 @@ namespace nil {
 
                 constexpr static std::size_t len_in_bytes = count * m * L;
 
-                typedef typename std::conditional<(expand_msg_variant::rfc_xmd == expand_msg_variant),
+                typedef typename std::conditional<(expand_msg_variant_t::rfc_xmd == expand_msg_variant),
                                                   detail::expand_message_xmd<k, len_in_bytes, hash_type>,
                                                   detail::expand_message_xof<k, len_in_bytes, hash_type>>::type
                     expand_message_type;

@@ -342,8 +342,8 @@ namespace nil {
                     return R * h2c_suite<typename GroupValue::group_type>::h_eff;
                 }
 
-                template<typename GroupType, uniformity_count count, typename U>
-                static inline typename std::enable_if<(uniformity_count::uniform_count == count),
+                template<typename GroupType, uniformity_count_t count, typename U>
+                static inline typename std::enable_if<(uniformity_count_t::uniform_count == count),
                                                       typename GroupType::value_type>::type
                     ep_map(const U &u) {
                     typename GroupType::value_type Q0 = map_to_curve<GroupType>::process(u[0]);

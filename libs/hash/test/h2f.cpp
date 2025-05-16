@@ -628,8 +628,8 @@ BOOST_AUTO_TEST_SUITE(hash_h2f_manual_tests)
                 hashes::h2f_default_params<field_type,
                         hashes::shake<128, 1024>,
                         128,
-                        hashes::uniformity_count::uniform_count,
-                        hashes::expand_msg_variant::rfc_xof>>;
+                        hashes::uniformity_count_t::uniform_count,
+                        hashes::expand_msg_variant_t::rfc_xof>>;
 
         using samples_type = std::vector<std::tuple<std::string, std::array<field_value_type, 2>>>;
         samples_type samples = {
@@ -695,8 +695,8 @@ BOOST_AUTO_TEST_SUITE(hash_h2f_manual_tests)
                 hashes::h2f_default_params<field_type,
                         hashes::shake<128, 2048>,
                         128,
-                        hashes::uniformity_count::uniform_count,
-                        hashes::expand_msg_variant::rfc_xof>>;
+                        hashes::uniformity_count_t::uniform_count,
+                        hashes::expand_msg_variant_t::rfc_xof>>;
 
         using samples_type = std::vector<std::tuple<std::string, std::array<field_value_type, 2>>>;
         samples_type samples = {
@@ -796,8 +796,8 @@ BOOST_AUTO_TEST_SUITE(hash_h2f_manual_tests)
                 hashes::h2f_default_params<field_type,
                         hashes::shake<256, 1024>,
                         128,
-                        hashes::uniformity_count::uniform_count,
-                        hashes::expand_msg_variant::rfc_xof>>;
+                        hashes::uniformity_count_t::uniform_count,
+                        hashes::expand_msg_variant_t::rfc_xof>>;
 
         using samples_type = std::vector<std::tuple<std::string, std::array<field_value_type, 2>>>;
         samples_type samples = {
@@ -863,8 +863,8 @@ BOOST_AUTO_TEST_SUITE(hash_h2f_manual_tests)
                 hashes::h2f_default_params<field_type,
                         hashes::shake<256, 2048>,
                         128,
-                        hashes::uniformity_count::uniform_count,
-                        hashes::expand_msg_variant::rfc_xof>>;
+                        hashes::uniformity_count_t::uniform_count,
+                        hashes::expand_msg_variant_t::rfc_xof>>;
 
         using samples_type = std::vector<std::tuple<std::string, std::array<field_value_type, 2>>>;
         samples_type samples = {

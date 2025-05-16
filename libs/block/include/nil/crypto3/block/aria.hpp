@@ -221,7 +221,7 @@ namespace nil {
 
                 block_type transform(const block_type &plaintext, const key_schedule_type &schedule) const {
                     // Hit every state line of S1 and S2
-                    const size_t cache_line_size = BOOST_LOCKFREE_CACHELINE_BYTES;
+                    const size_t cache_line_size = boost::lockfree::detail::cacheline_bytes;
 
                     /*
                      * This initializer ensures Z == 0xFFFFFFFF for any state line size
