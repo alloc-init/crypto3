@@ -426,7 +426,7 @@ namespace nil {
                         bool deciphered = false;
                         do {
                             if (dec_tmp == discrete_log) {
-                                m_new.template emplace_back(exp);
+                                m_new.emplace_back(exp);
                                 deciphered = true;
                                 break;
                             }

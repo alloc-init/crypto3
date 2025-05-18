@@ -28,7 +28,7 @@ namespace boost {
        template<char... STR>
        BOOST_MP_CXX14_CONSTEXPR typename boost::multiprecision::literals::detail::unsigned_cpp_int_modular_literal_result_type<
            (sizeof...(STR)) - 2>::number_type
-           operator"" _cppui_modular() {
+           operator""_cppui_modular() {
            using pt = typename boost::multiprecision::literals::detail::make_packed_value_from_str<
                STR...>::type;
            return boost::multiprecision::literals::detail::make_backend_from_pack<
@@ -47,7 +47,7 @@ namespace boost {
 #define CRYPTO3_MP_DEFINE_SIZED_CPP_INT_MODULAR_LITERAL(Bits)                                                  \
     template<char... STR>                                                                                      \
     BOOST_MP_CXX14_CONSTEXPR boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<Bits>>    \
-        operator"" BOOST_JOIN(_cppui_modular, Bits)() {                                                        \
+        operator""_cppui_modular##Bits() {                                                        \
         using pt = typename boost::multiprecision::literals::detail::make_packed_value_from_str<STR...>::type; \
         return boost::multiprecision::literals::detail::make_backend_from_pack<                                \
             pt, boost::multiprecision::backends::cpp_int_modular_backend<Bits>>::value;                        \

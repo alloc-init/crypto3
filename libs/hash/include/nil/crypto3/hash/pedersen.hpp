@@ -145,7 +145,7 @@ namespace nil {
 
                 public:
                     inline void update(bool b) {
-                        cached_bits.template emplace_back(b);
+                        cached_bits.emplace_back(b);
                         ++bits_supplied;
                         if (cached_bits.size() == chunk_bits) {
                             ///< we could proceed if whole chunk was supplied
