@@ -65,10 +65,22 @@ root
 
 ### Dependencies
 
-- [clang](https://clang.llvm.org/) (>= 11.0)/GCC (>= 10.0)/MSVC (>= 14.20)
+- [clang](https://clang.llvm.org/) (>= 17.0)/GCC (>= 10.0)/MSVC (>= 14.20)
 - [cmake](https://cmake.org) (>= 3.6)
 - [boost](https://boost.org) (>= 1.87)
 - [cmake_modules](https://github.com/BoostCMake/cmake_modules) (57639741ecf018835deb97a04db2200241d7fbd3)
+
+### Apple Silicon (Note)
+
+For apple silicone, some of the requirements differ:
+
+Homebrew packages:
+* Required: you need to download the latest clang from homebrew `brew install llvm`
+* Optional: Doxygen (if you want to use it) `brew install doxygen`
+* Optional: GraphViz (needed for doxygens) `brew install graphviz`
+
+#### Tested on the following systems:
+* Apple Silicon: it's tested on:Homebrew clang version 20.1.5
 
 ### Clone & Build
 
