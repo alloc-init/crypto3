@@ -59,14 +59,14 @@ function recorded_run() {
     local testname="$2"
     if [[ $func == compile ]]; then
         echo "======= compiling $testname ======="
-        timeout --signal=INT --preserve-status $timelimit make $testname
+        timeout $timelimit make $testname
     elif [[ $func == run ]]; then
         exe=$(fd $testname)
         if [[ -z $exe ]]; then
             return 0; # possibly a compile test
         fi
         echo "======= running ./$exe ======="
-        timeout --signal=INT --preserve-status $timelimit ./$exe
+        timeout $timelimit ./$exe
     else
         echo "ERROR: unknown func=$func"
         exit 1
