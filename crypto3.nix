@@ -5,6 +5,8 @@
   pkg-config,
   cmake,
   boost183,
+  doxygen,
+  graphviz,
   # We'll use boost183 by default, but you can override it
   boost_lib ? boost183,
   gdb,
@@ -20,7 +22,7 @@ in stdenv.mkDerivation {
 
   src = src_repo;
 
-  nativeBuildInputs = [ cmake ninja pkg-config ] ++ (lib.optional (!stdenv.isDarwin) gdb);
+  nativeBuildInputs = [ cmake ninja pkg-config doxygen graphviz] ++ (lib.optional (!stdenv.isDarwin) gdb);
 
   # enableDebugging will keep debug symbols in boost
   propagatedBuildInputs = [ (if enableDebug then (enableDebugging boost_lib) else boost_lib) ];
