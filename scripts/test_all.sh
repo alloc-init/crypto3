@@ -9,9 +9,6 @@ fi
 
 csv=$1
 
-# allow C-c to be propagated to tests
-export BOOST_TEST_DISABLE_SIGNAL_HANDLERS=1
-
 if [[ $(uname) == Darwin ]]; then
     arch=mac
 else
@@ -34,7 +31,23 @@ function list_make_targets() {
         | sort -u
 }
 
-tests=$(list_make_targets | grep _test)
+raw_tests=$(list_make_targets | grep _test | sort)
+
+# drop tests which we've logged already
+if [[ $(wc -l "$csv" | cut -w -f2) -gt 0 ]]; then
+    last_test=$(tail -n1 $csv | cut -d',' -f1)
+    for test in $raw_tests; do
+        if [[ $test > $raw_tests ]]; then
+            tests+=" $test"
+        else 
+            echo "skipping $test"
+        fi
+
+    done
+else
+    tests=$raw_tests
+fi
+
 
 function recorded_run() {
     local func="$1"
@@ -44,6 +57,9 @@ function recorded_run() {
         timeout --signal=INT --preserve-status $timelimit make $TEST
     elif [[ $func == run ]]; then
         exe=$(fd $testname)
+        if [[ -z $exe ]]; then
+            return 0; # possibly a compile test
+        fi
         echo "======= running ./$exe ======="
         timeout --signal=INT --preserve-status $timelimit ./$exe
     else
@@ -67,8 +83,6 @@ function recorded_run() {
     fi
     return $res
 }
-
-
 
 for test in $tests; do
     compile_timed_out=0
