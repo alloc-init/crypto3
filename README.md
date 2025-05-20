@@ -5,6 +5,7 @@
 
 Crypto3 cryptography suite's purpose is:
 
+(test)
 1. To provide a secure, fast and architecturally clean C++ generic cryptography schemes implementation.
 2. To provide a developer-friendly, modular suite, usable for novel schemes implementation and further
    extension.
