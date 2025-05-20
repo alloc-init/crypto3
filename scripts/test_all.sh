@@ -43,7 +43,7 @@ if [[ $(wc -l "$csv" | perl -lane 'print $F[0]') -gt 0 ]]; then
     echo "last_test=$last_test"
     for test in $raw_tests; do
         if [[ $test > $last_test ]]; then
-            echo "adding $test"
+            # echo "adding $test"
             tests+=" $test"
         else 
             echo "skipping $test"
