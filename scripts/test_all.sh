@@ -40,13 +40,14 @@ raw_tests=$(list_make_targets \
 # drop tests which we've logged already
 if [[ $(wc -l "$csv" | perl -lane 'print $F[0]') -gt 0 ]]; then
     last_test=$(tail -n1 $csv | cut -d',' -f1)
+    echo "last_test=$last_test"
     for test in $raw_tests; do
-        if [[ $test > $raw_tests ]]; then
+        if [[ $test > $last_test ]]; then
+            echo "adding $test"
             tests+=" $test"
         else 
             echo "skipping $test"
         fi
-
     done
 else
     tests=$raw_tests
@@ -57,8 +58,8 @@ function recorded_run() {
     local func="$1"
     local testname="$2"
     if [[ $func == compile ]]; then
-        echo "======= compiling $TEST ======="
-        timeout --signal=INT --preserve-status $timelimit make $TEST
+        echo "======= compiling $testname ======="
+        timeout --signal=INT --preserve-status $timelimit make $testname
     elif [[ $func == run ]]; then
         exe=$(fd $testname)
         if [[ -z $exe ]]; then
@@ -94,6 +95,7 @@ for test in $tests; do
     compile_failed=0
     exec_failed=0
     echo "======= starting $test ======="
+    recorded_run compile $test
     if [[ $res -eq 130 ]]; then
         echo "Caught SIGINT during compile"
         exit 130
