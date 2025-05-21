@@ -22,7 +22,7 @@ macro(define_threshold_test name)
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(threshold_${name}_test PROPERTIES CXX_STANDARD 17)
+    set_target_properties(threshold_${name}_test PROPERTIES CXX_STANDARD 20)
 endmacro()
 
 set(TESTS_NAMES

@@ -25,7 +25,7 @@ macro(define_marshalling_example name)
             ${Boost_INCLUDE_DIRS})
 
     set_target_properties(${CMAKE_WORKSPACE_NAME}_${name}_example PROPERTIES
-            CXX_STANDARD 17
+            CXX_STANDARD 20
             CXX_STANDARD_REQUIRED TRUE)
 endmacro()
 
