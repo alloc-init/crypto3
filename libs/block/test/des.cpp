@@ -208,8 +208,9 @@ BOOST_AUTO_TEST_CASE(des_1) {
 
     std::vector<char> input = {'\x05', '\x9b', '\x5e', '\x08', '\x51', '\xcf', '\x14', '\x3a'};
     std::vector<char> key = {'\x01', '\x13', '\xb9', '\x70', '\xfd', '\x34', '\xf2', '\xce'};
-
-    std::string out = encrypt<block::des>(input, key);
+    
+    auto res = encrypt<block::des>(input, key);
+    std::string out = res;
     
     BOOST_CHECK_EQUAL(out, "86a560f10ec6d85b");
 }
