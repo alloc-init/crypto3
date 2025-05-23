@@ -154,8 +154,8 @@ namespace nil {
 
                     template<typename Char, typename CharTraits, typename Alloc>
                     operator std::basic_string<Char, CharTraits, Alloc>() const {
-                        return std::to_string(
-                            boost::accumulators::extract_result<accumulator_type>(this->accumulator_set));
+                        auto res = boost::accumulators::extract_result<accumulator_type>(this->accumulator_set);
+                        return std::to_string(res);
                     }
 
 #endif
