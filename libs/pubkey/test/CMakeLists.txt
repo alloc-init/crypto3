@@ -20,7 +20,7 @@ macro(define_pubkey_test name)
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(pubkey_${name}_test PROPERTIES CXX_STANDARD 17)
+    set_target_properties(pubkey_${name}_test PROPERTIES CXX_STANDARD 20)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(pubkey_${name}_test PRIVATE "-fconstexpr-steps=2147483647" "-ftemplate-backtrace-limit=0")

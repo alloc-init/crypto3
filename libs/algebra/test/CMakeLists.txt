@@ -49,7 +49,7 @@ macro(define_compile_time_algebra_test name)
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(algebra_${name}_compile_test PROPERTIES CXX_STANDARD 17)
+    set_target_properties(algebra_${name}_compile_test PROPERTIES CXX_STANDARD 20)
 endmacro()
 
 set(RUNTIME_TESTS_NAMES
