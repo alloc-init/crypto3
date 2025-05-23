@@ -70,7 +70,7 @@ namespace nil {
                     constexpr static const std::size_t value_bits = sizeof(typename block_type::value_type) * CHAR_BIT;
                     constexpr static const std::size_t block_values = block_bits / value_bits;
 
-                    constexpr static const std::size_t result_bytes = block_bits / CHAR_BIT;
+                    constexpr static const std::size_t block_bytes = block_bits / CHAR_BIT;
 
                     typedef ::nil::crypto3::detail::injector<endian_type, endian_type, value_bits, block_values>
                         injector_type;
@@ -96,10 +96,10 @@ namespace nil {
 
                         block_type processed_block = mode.end_message(cache, total_seen);
 
-                        res = ::nil::crypto3::resize<block_bits>(res, result_bytes);
+                        res = ::nil::crypto3::resize<block_bits>(res, res.size() + block_bytes);
 
                         pack<endian_type, endian_type, value_bits, octet_bits>(
-                            processed_block.begin(), processed_block.end(), res.end() - result_bytes);
+                            processed_block.begin(), processed_block.end(), res.end() - block_bytes);
 
                         return res;
                     }
