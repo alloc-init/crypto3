@@ -12,7 +12,7 @@ macro(define_pkpad_test name)
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(pkpad_${name}_test PROPERTIES CXX_STANDARD 17)
+    set_target_properties(pkpad_${name}_test PROPERTIES CXX_STANDARD 20)
 
 endmacro()
 

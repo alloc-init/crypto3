@@ -25,7 +25,7 @@ macro(define_witness_test test)
             ${Boost_INCLUDE_DIRS})
 
     set_target_properties(${test_name} PROPERTIES
-            CXX_STANDARD 17
+            CXX_STANDARD 20
             CXX_STANDARD_REQUIRED TRUE)
 
     target_compile_options(${test_name} PRIVATE "-ftemplate-backtrace-limit=0")
