@@ -61,7 +61,12 @@ namespace boost {
     }        // namespace test_tools
 }    // namespace boost
 
-const char *test_data = "data/base.json";
+// TEST_DATA_PATH provided by cmake (see CMakeLists.txt)
+#ifndef TEST_DATA_PATH
+#define TEST_DATA_PATH "data"
+#endif
+
+const char *test_data = TEST_DATA_PATH "/base.json";
 
 boost::property_tree::ptree base_data(const char *child_name) {
     boost::property_tree::ptree root_data;
