@@ -413,6 +413,9 @@ BOOST_DATA_TEST_CASE(base32_single_range_random_encode_decode,
 
 BOOST_AUTO_TEST_SUITE_END()
 
+
+// the following 2 test suites fail
+
 BOOST_AUTO_TEST_SUITE(base58_codec_random_data_test_suite)
 
 BOOST_DATA_TEST_CASE(base58_single_range_random_encode_decode,
