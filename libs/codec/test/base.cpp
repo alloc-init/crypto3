@@ -413,9 +413,6 @@ BOOST_DATA_TEST_CASE(base32_single_range_random_encode_decode,
 
 BOOST_AUTO_TEST_SUITE_END()
 
-
-// the following 2 test suites fail
-
 BOOST_AUTO_TEST_SUITE(base58_codec_random_data_test_suite)
 
 BOOST_DATA_TEST_CASE(base58_single_range_random_encode_decode,
@@ -424,16 +421,19 @@ BOOST_DATA_TEST_CASE(base58_single_range_random_encode_decode,
                          boost::unit_test::data::xrange(std::numeric_limits<std::uint8_t>::max()),
                      random_sample, index) {
     std::array<std::uint8_t, sizeof(decltype(random_sample))> arr = to_byte_array(random_sample);
+    std::cout << "IN: ";
     for (auto i : arr) {
         std::cout << (int)i << ' ';
     }
     std::cout << std::endl;
-    std::vector<std::uint8_t> enc = encode<base<58>>(arr);
-    for (auto i : enc) {
+    std::string enc = encode<base<58>>(arr);
+    std::cout << enc << std::endl;
+    std::vector<std::uint8_t> out = decode<base<58>>(enc);
+    std::cout << "OUT: ";
+    for (auto i : out) {
         std::cout << (int)i << ' ';
     }
     std::cout << std::endl;
-    std::vector<std::uint8_t> out = decode<base<58>>(enc);
     BOOST_CHECK_EQUAL_COLLECTIONS(out.begin(), out.end(), arr.begin(), arr.end());
 }
 
