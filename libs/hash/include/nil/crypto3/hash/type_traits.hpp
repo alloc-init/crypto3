@@ -26,11 +26,7 @@
 #ifndef CRYPTO3_HASH_TYPE_TRAITS_HPP
 #define CRYPTO3_HASH_TYPE_TRAITS_HPP
 
-
 #include <boost/config.hpp>
-
-
-#define STRINGIZE(x) #x
 
 #ifdef __has_include
 #if __has_include(<version>)
