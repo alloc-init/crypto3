@@ -173,10 +173,12 @@ namespace nil {
                 // S = R || C (state)
                 constexpr static const std::size_t state_words = policy_type::state_words;
                 typedef std::array<word_type, state_words> state_type;
+                constexpr static const std::size_t state_bits = state_words * word_bits;
 
                 // R (bitrate). `block` is used to fit other code (e.g. accumulator)
                 constexpr static const std::size_t block_words = policy_type::block_words;
                 typedef std::array<word_type, block_words> block_type;
+                constexpr static const std::size_t block_bits = block_words * word_bits;
 
                 using digest_type = typename policy_type::digest_type;
 

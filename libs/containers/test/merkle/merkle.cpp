@@ -285,144 +285,130 @@ using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::mina_poseid
 using original_poseidon_type =
     hashes::original_poseidon<nil::crypto3::hashes::detail::mina_poseidon_policy<field_type>>;
 
-// BOOST_AUTO_TEST_CASE(merkletree_construct_test_1) {
-//     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
-//     merkle_tree<hashes::sha2<256>, 2> tree_res = make_merkle_tree<hashes::sha2<256>, 2>(v.begin(), v.end());
-//     merkle_tree<hashes::sha2<256>, 2> tree(tree_res.begin(), tree_res.end());
-//     BOOST_CHECK_EQUAL(tree.size(), 15);
-//     BOOST_CHECK_EQUAL(tree.leaves(), 8);
-//     BOOST_CHECK_EQUAL(tree.row_count(), 4);
-// }
-
-// BOOST_AUTO_TEST_CASE(merkletree_construct_test_2) {
-//     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
-//     merkle_tree<hashes::sha2<256>, 3> tree_res = make_merkle_tree<hashes::sha2<256>, 3>(v.begin(), v.end());
-//     merkle_tree<hashes::sha2<256>, 3> tree(tree_res.begin(), tree_res.end());
-//     BOOST_CHECK_EQUAL(tree.size(), 13);
-//     BOOST_CHECK_EQUAL(tree.leaves(), 9);
-//     BOOST_CHECK_EQUAL(tree.row_count(), 3);
-// }
-
-BOOST_AUTO_TEST_CASE(merkletree_validate_test_1) {
-    using hash_type = original_poseidon_type::construction::type;
-    BOOST_STATIC_ASSERT(nil::crypto3::hashes::has_digest_type<hash_type>::value);
-    BOOST_STATIC_ASSERT(nil::crypto3::hashes::has_block_type<hash_type>::value);
-    BOOST_STATIC_ASSERT(nil::crypto3::hashes::has_state_type<hash_type>::value);
-    BOOST_STATIC_ASSERT(nil::crypto3::hashes::has_word_type<hash_type>::value);
-    BOOST_STATIC_ASSERT(nil::crypto3::hashes::has_word_bits<hash_type>::value);
-    BOOST_STATIC_ASSERT(nil::crypto3::hashes::has_block_bits<hash_type>::value);
-    BOOST_STATIC_ASSERT(nil::crypto3::hashes::has_state_bits<hash_type>::value);
-    BOOST_STATIC_ASSERT(nil::crypto3::hashes::has_absorb<hash_type>::value);
-    BOOST_STATIC_ASSERT(nil::crypto3::hashes::has_squeeze<hash_type>::value);
-
-    BOOST_STATIC_ASSERT(nil::crypto3::hashes::is_sponge_construction<hash_type>::value);
-
-
-    // std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
-    // testing_validate_template<hashes::sha2<256>, 2>(v);
-    // testing_validate_template<hashes::md5, 2>(v);
-    // testing_validate_template<hashes::blake2b<224>, 2>(v);
-
-    // BOOST_STATIC_ASSERT_MSG(algebra::is_field_element<original_poseidon_type::word_type>::value,
-    //                         "Expecting Poseidon to consume field elements");
-    // std::vector<std::array<original_poseidon_type::word_type, 1>> v_field = {
-    //     {0x0_cppui_modular255}, {0x1_cppui_modular255}, {0x2_cppui_modular255}, {0x3_cppui_modular255},
-    //     {0x4_cppui_modular255}, {0x5_cppui_modular255}, {0x6_cppui_modular255}, {0x7_cppui_modular255}};
-    // testing_validate_template<original_poseidon_type, 2>(v_field); // fails is_sponge_construction
-    // testing_validate_template<poseidon_type, 2>(v_field); // fails is_sponge_construction
-    // When you have bytes input, use wrapper to lazy convert it to field elements:
-    // std::vector<nil::crypto3::hashes::block_to_field_elements_wrapper<typename poseidon_type::word_type::field_type,
-    //                                                                   std::array<char, 1>>>
-    //     wrappers;
-    // for (const auto &inner_containers : v) {
-    //     wrappers.emplace_back(inner_containers);
-    // }
-    // testing_validate_template<original_poseidon_type, 2>(wrappers);
-    // testing_validate_template<poseidon_type, 2>(wrappers);
-
-    // std::size_t leaf_number = 8;
-    // testing_validate_template_random_data<hashes::sha2<256>, 2, std::uint8_t, 1>(leaf_number);
-    // testing_validate_template_random_data<hashes::md5, 2, std::uint8_t, 1>(leaf_number);
-    // testing_validate_template_random_data<hashes::blake2b<224>, 2, std::uint8_t, 1>(leaf_number);
-    // testing_validate_template_random_data<original_poseidon_type, 2, original_poseidon_type::word_type, 1>(leaf_number);
-    // testing_validate_template_random_data<poseidon_type, 2, poseidon_type::word_type, 1>(leaf_number);
+BOOST_AUTO_TEST_CASE(merkletree_construct_test_1) {
+    std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
+    merkle_tree<hashes::sha2<256>, 2> tree_res = make_merkle_tree<hashes::sha2<256>, 2>(v.begin(), v.end());
+    merkle_tree<hashes::sha2<256>, 2> tree(tree_res.begin(), tree_res.end());
+    BOOST_CHECK_EQUAL(tree.size(), 15);
+    BOOST_CHECK_EQUAL(tree.leaves(), 8);
+    BOOST_CHECK_EQUAL(tree.row_count(), 4);
 }
 
-// BOOST_AUTO_TEST_CASE(merkletree_validate_test_2) {
-//     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
-//     testing_validate_template<hashes::sha2<256>, 3>(v);
-//     testing_validate_template<hashes::md5, 3>(v);
-//     testing_validate_template<hashes::blake2b<224>, 3>(v);
+BOOST_AUTO_TEST_CASE(merkletree_construct_test_2) {
+    std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
+    merkle_tree<hashes::sha2<256>, 3> tree_res = make_merkle_tree<hashes::sha2<256>, 3>(v.begin(), v.end());
+    merkle_tree<hashes::sha2<256>, 3> tree(tree_res.begin(), tree_res.end());
+    BOOST_CHECK_EQUAL(tree.size(), 13);
+    BOOST_CHECK_EQUAL(tree.leaves(), 9);
+    BOOST_CHECK_EQUAL(tree.row_count(), 3);
+}
 
-//     std::size_t leaf_number = 9;
-//     testing_validate_template_random_data<hashes::sha2<256>, 3, std::uint8_t, 1>(leaf_number);
-//     testing_validate_template_random_data<hashes::md5, 3, std::uint8_t, 1>(leaf_number);
-//     testing_validate_template_random_data<hashes::blake2b<224>, 3, std::uint8_t, 1>(leaf_number);
-// }
+BOOST_AUTO_TEST_CASE(merkletree_validate_test_1) {
+    std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
+    testing_validate_template<hashes::sha2<256>, 2>(v);
+    testing_validate_template<hashes::md5, 2>(v);
+    testing_validate_template<hashes::blake2b<224>, 2>(v);
 
-// BOOST_AUTO_TEST_CASE(merkletree_validate_test_3) {
-//     using hash_type = hashes::pedersen<
-//         hashes::find_group_hash_default_params, hashes::sha2<256>,
-//         algebra::curves::jubjub::template g1_type<nil::crypto3::algebra::curves::coordinates::affine,
-//                                                   nil::crypto3::algebra::curves::forms::twisted_edwards>>;
-//     std::size_t leaf_number = 8;
-//     testing_validate_template_random_data<hash_type, 2, bool, hash_type::digest_bits>(leaf_number);
-// }
+    BOOST_STATIC_ASSERT_MSG(algebra::is_field_element<original_poseidon_type::word_type>::value,
+                            "Expecting Poseidon to consume field elements");
+    std::vector<std::array<original_poseidon_type::word_type, 1>> v_field = {
+        {0x0_cppui_modular255}, {0x1_cppui_modular255}, {0x2_cppui_modular255}, {0x3_cppui_modular255},
+        {0x4_cppui_modular255}, {0x5_cppui_modular255}, {0x6_cppui_modular255}, {0x7_cppui_modular255}};
+    testing_validate_template<original_poseidon_type, 2>(v_field);
+    testing_validate_template<poseidon_type, 2>(v_field);
+    // When you have bytes input, use wrapper to lazy convert it to field elements:
+    std::vector<nil::crypto3::hashes::block_to_field_elements_wrapper<typename poseidon_type::word_type::field_type,
+                                                                      std::array<char, 1>>>
+        wrappers;
+    for (const auto &inner_containers : v) {
+        wrappers.emplace_back(inner_containers);
+    }
+    testing_validate_template<original_poseidon_type, 2>(wrappers);
+    testing_validate_template<poseidon_type, 2>(wrappers);
 
-// BOOST_AUTO_TEST_CASE(merkletree_validate_test_4) {
-//     using hash_type = hashes::pedersen<
-//         hashes::find_group_hash_default_params, hashes::sha2<256>,
-//         algebra::curves::jubjub::template g1_type<nil::crypto3::algebra::curves::coordinates::affine,
-//                                                   nil::crypto3::algebra::curves::forms::twisted_edwards>>;
-//     testing_validate_template_random_data_compressed_proofs<hash_type, 2, bool, hash_type::digest_bits>(8);
-//     testing_validate_template_random_data_compressed_proofs<hash_type, 3, bool, hash_type::digest_bits>(9);
-//     testing_validate_template_random_data_compressed_proofs<hash_type, 4, bool, hash_type::digest_bits>(16);
-// }
+    std::size_t leaf_number = 8;
+    testing_validate_template_random_data<hashes::sha2<256>, 2, std::uint8_t, 1>(leaf_number);
+    testing_validate_template_random_data<hashes::md5, 2, std::uint8_t, 1>(leaf_number);
+    testing_validate_template_random_data<hashes::blake2b<224>, 2, std::uint8_t, 1>(leaf_number);
+    testing_validate_template_random_data<original_poseidon_type, 2, original_poseidon_type::word_type, 1>(leaf_number);
+    testing_validate_template_random_data<poseidon_type, 2, poseidon_type::word_type, 1>(leaf_number);
+}
 
-// BOOST_AUTO_TEST_CASE(merkletree_validate_test_5) {
-//     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
-//     testing_validate_template_compressed_proofs<hashes::sha2<256>, 3>(v);
-//     testing_validate_template_compressed_proofs<hashes::md5, 3>(v);
-//     testing_validate_template_compressed_proofs<hashes::blake2b<224>, 3>(v);
+BOOST_AUTO_TEST_CASE(merkletree_validate_test_2) {
+    std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
+    testing_validate_template<hashes::sha2<256>, 3>(v);
+    testing_validate_template<hashes::md5, 3>(v);
+    testing_validate_template<hashes::blake2b<224>, 3>(v);
 
-//     std::size_t leaf_number = 16;
-//     testing_validate_template_random_data_compressed_proofs<hashes::sha2<256>, 4, std::uint8_t, 1>(leaf_number);
-//     testing_validate_template_random_data_compressed_proofs<hashes::md5, 4, std::uint8_t, 1>(leaf_number);
-//     testing_validate_template_random_data_compressed_proofs<hashes::blake2b<224>, 4, std::uint8_t, 1>(leaf_number);
-// }
+    std::size_t leaf_number = 9;
+    testing_validate_template_random_data<hashes::sha2<256>, 3, std::uint8_t, 1>(leaf_number);
+    testing_validate_template_random_data<hashes::md5, 3, std::uint8_t, 1>(leaf_number);
+    testing_validate_template_random_data<hashes::blake2b<224>, 3, std::uint8_t, 1>(leaf_number);
+}
 
-// BOOST_AUTO_TEST_CASE(merkletree_hash_test_1) {
-//     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
-//     testing_hash_template<hashes::sha2<256>, 2>(v, "3b828c4f4b48c5d4cb5562a474ec9e2fd8d5546fae40e90732ef635892e42720");
-//     testing_hash_template<hashes::md5, 2>(v, "11ee8b50825ce6f816a1ae06d4aa0045");
-//     testing_hash_template<hashes::blake2b<224>, 2>(v, "0ed2a2145cae554ca57f08420d6cb58629ca1e89dc92f819c6c1d13d");
-//     testing_hash_template<hashes::keccak_1600<256>, 2>(
-//         v, "568ff5eb286f51b8a3e8de4e53aa8daed44594a246deebbde119ea2eb27acd6b");
-//     testing_hash_template<hashes::keccak_1600<512>, 2>(
-//         v,
-//         "1a0ca31dd9e0b27afdf77021dc50023cdd814eb53ede16e8c5c322a0bcb6bd7d26a0404e5af53971e1566c1649bb9686905cdedfa9a358"
-//         "023065e423522d4372");
+BOOST_AUTO_TEST_CASE(merkletree_validate_test_3) {
+    using hash_type = hashes::pedersen<
+        hashes::find_group_hash_default_params, hashes::sha2<256>,
+        algebra::curves::jubjub::template g1_type<nil::crypto3::algebra::curves::coordinates::affine,
+                                                  nil::crypto3::algebra::curves::forms::twisted_edwards>>;
+    std::size_t leaf_number = 8;
+    testing_validate_template_random_data<hash_type, 2, bool, hash_type::digest_bits>(leaf_number);
+}
 
-//     std::vector<std::string> v_64 = {"0123456789012345678901234567890123456789012345678901234567890123",
-//                                      "0123456789012345678901234567890123456789012345678901234567890123",
-//                                      "0123456789012345678901234567890123456789012345678901234567890123",
-//                                      "0123456789012345678901234567890123456789012345678901234567890123"};
-//     std::vector<nil::crypto3::hashes::block_to_field_elements_wrapper<typename poseidon_type::word_type::field_type,
-//                                                                       std::string,
-//                                                                       /*OverflowOnPurpose=*/true>>
-//         wrappers;
-//     for (const auto &inner_containers : v_64) {
-//         wrappers.emplace_back(inner_containers);
-//     }
-//     merkle_tree<poseidon_type, 2> tree = make_merkle_tree<poseidon_type, 2>(wrappers.begin(), wrappers.end());
-//     BOOST_CHECK(tree.root() == 0x6E7641F1EAE17C0DA8227840EFEA6E1D17FB5EBA600D9DC34F314D5400E5BF3_cppui_modular255);
-// }
+BOOST_AUTO_TEST_CASE(merkletree_validate_test_4) {
+    using hash_type = hashes::pedersen<
+        hashes::find_group_hash_default_params, hashes::sha2<256>,
+        algebra::curves::jubjub::template g1_type<nil::crypto3::algebra::curves::coordinates::affine,
+                                                  nil::crypto3::algebra::curves::forms::twisted_edwards>>;
+    testing_validate_template_random_data_compressed_proofs<hash_type, 2, bool, hash_type::digest_bits>(8);
+    testing_validate_template_random_data_compressed_proofs<hash_type, 3, bool, hash_type::digest_bits>(9);
+    testing_validate_template_random_data_compressed_proofs<hash_type, 4, bool, hash_type::digest_bits>(16);
+}
 
-// BOOST_AUTO_TEST_CASE(merkletree_hash_test_2) {
-//     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
-//     testing_hash_template<hashes::sha2<256>, 3>(v, "6831d4d32538bedaa7a51970ac10474d5884701c840781f0a434e5b6868d4b73");
-//     testing_hash_template<hashes::md5, 3>(v, "0733c4cd580b1523cfbb9751f42e9420");
-//     testing_hash_template<hashes::blake2b<224>, 3>(v, "d9d0ff26d10aaac2882c08eb2b55e78690c949d1a73b1cfc0eb322ee");
-// }
+BOOST_AUTO_TEST_CASE(merkletree_validate_test_5) {
+    std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
+    testing_validate_template_compressed_proofs<hashes::sha2<256>, 3>(v);
+    testing_validate_template_compressed_proofs<hashes::md5, 3>(v);
+    testing_validate_template_compressed_proofs<hashes::blake2b<224>, 3>(v);
+
+    std::size_t leaf_number = 16;
+    testing_validate_template_random_data_compressed_proofs<hashes::sha2<256>, 4, std::uint8_t, 1>(leaf_number);
+    testing_validate_template_random_data_compressed_proofs<hashes::md5, 4, std::uint8_t, 1>(leaf_number);
+    testing_validate_template_random_data_compressed_proofs<hashes::blake2b<224>, 4, std::uint8_t, 1>(leaf_number);
+}
+
+BOOST_AUTO_TEST_CASE(merkletree_hash_test_1) {
+    std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
+    testing_hash_template<hashes::sha2<256>, 2>(v, "3b828c4f4b48c5d4cb5562a474ec9e2fd8d5546fae40e90732ef635892e42720");
+    testing_hash_template<hashes::md5, 2>(v, "11ee8b50825ce6f816a1ae06d4aa0045");
+    testing_hash_template<hashes::blake2b<224>, 2>(v, "0ed2a2145cae554ca57f08420d6cb58629ca1e89dc92f819c6c1d13d");
+    testing_hash_template<hashes::keccak_1600<256>, 2>(
+        v, "568ff5eb286f51b8a3e8de4e53aa8daed44594a246deebbde119ea2eb27acd6b");
+    testing_hash_template<hashes::keccak_1600<512>, 2>(
+        v,
+        "1a0ca31dd9e0b27afdf77021dc50023cdd814eb53ede16e8c5c322a0bcb6bd7d26a0404e5af53971e1566c1649bb9686905cdedfa9a358"
+        "023065e423522d4372");
+
+    std::vector<std::string> v_64 = {"0123456789012345678901234567890123456789012345678901234567890123",
+                                     "0123456789012345678901234567890123456789012345678901234567890123",
+                                     "0123456789012345678901234567890123456789012345678901234567890123",
+                                     "0123456789012345678901234567890123456789012345678901234567890123"};
+    std::vector<nil::crypto3::hashes::block_to_field_elements_wrapper<typename poseidon_type::word_type::field_type,
+                                                                      std::string,
+                                                                      /*OverflowOnPurpose=*/true>>
+        wrappers;
+    for (const auto &inner_containers : v_64) {
+        wrappers.emplace_back(inner_containers);
+    }
+    merkle_tree<poseidon_type, 2> tree = make_merkle_tree<poseidon_type, 2>(wrappers.begin(), wrappers.end());
+    BOOST_CHECK(tree.root() == 0x6E7641F1EAE17C0DA8227840EFEA6E1D17FB5EBA600D9DC34F314D5400E5BF3_cppui_modular255);
+}
+
+BOOST_AUTO_TEST_CASE(merkletree_hash_test_2) {
+    std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
+    testing_hash_template<hashes::sha2<256>, 3>(v, "6831d4d32538bedaa7a51970ac10474d5884701c840781f0a434e5b6868d4b73");
+    testing_hash_template<hashes::md5, 3>(v, "0733c4cd580b1523cfbb9751f42e9420");
+    testing_hash_template<hashes::blake2b<224>, 3>(v, "d9d0ff26d10aaac2882c08eb2b55e78690c949d1a73b1cfc0eb322ee");
+}
 
 BOOST_AUTO_TEST_SUITE_END()
