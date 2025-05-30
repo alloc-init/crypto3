@@ -26,7 +26,11 @@
 #ifndef CRYPTO3_HASH_TYPE_TRAITS_HPP
 #define CRYPTO3_HASH_TYPE_TRAITS_HPP
 
+
 #include <boost/config.hpp>
+
+
+#define STRINGIZE(x) #x
 
 #ifdef __has_include
 #if __has_include(<version>)
@@ -363,15 +367,37 @@ namespace nil {
 
             template<typename HashType>
             struct is_sponge_construction {
-                constexpr static const bool value =
-                        has_digest_type<HashType>::value && has_block_type<HashType>::value &&
-                        has_state_type<HashType>::value && has_word_type<HashType>::value &&
-                        has_word_bits<HashType>::value && has_block_bits<HashType>::value &&
-                        has_state_bits<HashType>::value && has_absorb<HashType>::value && has_squeeze<HashType>::value;
+                static constexpr bool has_digest = has_digest_type<HashType>::value;
+                static constexpr bool has_block = has_block_type<HashType>::value;
+                static constexpr bool has_state = has_state_type<HashType>::value;
+                static constexpr bool has_word = has_word_type<HashType>::value;
+                static constexpr bool has_word_bits_member = has_word_bits<HashType>::value;
+                static constexpr bool has_block_bits_member = has_block_bits<HashType>::value;
+                static constexpr bool has_state_bits_member = has_state_bits<HashType>::value;
+                static constexpr bool has_absorb_member = has_absorb<HashType>::value;
+                static constexpr bool has_squeeze_member = has_squeeze<HashType>::value;
+
+                static constexpr bool value =
+                    has_digest && has_block && has_state && has_word && has_word_bits_member &&
+                    has_block_bits_member && has_state_bits_member && has_absorb_member && has_squeeze_member;
                 typedef HashType type;
+
+                static_assert(value || !value,
+                              "HashType does not satisfy is_sponge_construction requirements.\n"
+                              "Missing: \n"
+                              STRINGIZE(!has_digest ? "digest_type\n" : "")
+                              STRINGIZE(!has_block ? "block_type\n" : "")
+                              STRINGIZE(!has_state ? "state_type\n" : "")
+                              STRINGIZE(!has_word ? "word_type\n" : "")
+                              STRINGIZE(!has_word_bits_member ? "word_bits member\n" : "")
+                              STRINGIZE(!has_block_bits_member ? "block_bits member\n" : "")
+                              STRINGIZE(!has_state_bits_member ? "state_bits member\n" : "")
+                              STRINGIZE(!has_absorb_member ? "absorb member function\n" : "")
+                              STRINGIZE(!has_squeeze_member ? "squeeze member function\n" : ""));
             };
         } // namespace hashes
     } // namespace crypto3
 } // namespace nil
+
 
 #endif    // CRYPTO3_HASH_TYPE_TRAITS_HPP
