@@ -35,9 +35,12 @@ namespace nil {
                     // `block` is used to fit other code (e.g. accumulator)
                     using digest_type = typename policy_type::digest_type;
 
+                    constexpr static const std::size_t word_bits = policy_type::word_bits;
                     constexpr static const std::size_t state_words = policy_type::state_words;
                     constexpr static const std::size_t block_words = policy_type::block_words;
                     constexpr static const std::size_t digest_words = policy_type::digest_words;
+                    constexpr static const std::size_t state_bits = state_words * word_bits;
+                    constexpr static const std::size_t block_bits = block_words * word_bits;
 
                     poseidon_sponge_construction_custom() {
                         reset();
