@@ -69,10 +69,12 @@ template<typename ValueType, std::size_t N>
 typename std::enable_if<algebra::is_field_element<ValueType>::value, std::vector<std::array<ValueType, N>>>::type
     generate_random_data(std::size_t leaf_number) {
     std::vector<std::array<ValueType, N>> v;
+    auto rng = random::ct_lcg<std::size_t, 1664525, 1013904223, 4294967296>();
     for (std::size_t i = 0; i < leaf_number; ++i) {
         std::array<ValueType, N> leaf {};
-        std::generate(std::begin(leaf), std::end(leaf),
-                      [&]() { return algebra::random_element<typename ValueType::field_type>(); });
+        for (size_t i = 0; i < N; i++) {
+            leaf[i] = algebra::random_element<typename ValueType::field_type>(rng);
+        }
         v.emplace_back(leaf);
     }
     return v;
