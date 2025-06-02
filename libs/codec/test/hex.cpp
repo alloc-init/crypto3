@@ -59,7 +59,13 @@ namespace boost {
     }        // namespace test_tools
 }
 
-const char *test_data = "data/hex.json";
+
+// TEST_DATA_PATH provided by cmake (see CMakeLists.txt)
+#ifndef TEST_DATA_PATH
+#define TEST_DATA_PATH "data"
+#endif
+
+const char *test_data = TEST_DATA_PATH "/hex.json";
 
 boost::property_tree::ptree mode_data(const char *mode) {
     boost::property_tree::ptree root_data;
