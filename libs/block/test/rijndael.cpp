@@ -209,7 +209,11 @@ inline bool operator!=(const byte_string &lhs, const byte_string &rhs) {
     return lhs.s_ != rhs.s_;
 }
 
-const char *test_data = "data/rijndael.json";
+// TEST_DATA provided by cmake (see CMakeLists.txt)
+#ifndef TEST_DATA
+#define TEST_DATA "data"
+#endif
+const char *test_data = TEST_DATA "/rijndael.json";
 
 boost::property_tree::ptree string_data(const char *child_name) {
     boost::property_tree::ptree root_data;

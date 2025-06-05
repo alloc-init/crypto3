@@ -25,7 +25,7 @@ macro(define_block_cipher_test name)
     endif()
 
     string(CONCAT TEST_DATA ${CMAKE_CURRENT_SOURCE_DIR} "/data/" "${name}" ".json")
-    target_compile_definitions(${test_name} PRIVATE TEST_DATA="${TEST_DATA}")
+    target_compile_definitions(${test_name} PRIVATE TEST_DATA="${CMAKE_CURRENT_SOURCE_DIR}/data")
 endmacro()
 
 set(TESTS_NAMES
