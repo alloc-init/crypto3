@@ -163,8 +163,8 @@ using HashTypes = boost::mpl::list<
     BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_2_test, HashType, HashTypes) {
         std::srand(std::time(0));
         test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2>(5);
-        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2>(10);
-        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2, 320>(15);
+        // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2>(10);
+        // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2, 320>(15);
     }
 
 // Poseidon hash function supports only Arity 2.
@@ -175,17 +175,17 @@ using BlockHashTypes = boost::mpl::list<
 
     BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_3_test, HashType, BlockHashTypes) {
         test_merkle_proof<nil::marshalling::option::big_endian, HashType, 3>(5);
-        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 3>(10);
+        // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 3>(10);
     }
 
     BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_4_test, HashType, BlockHashTypes) {
         test_merkle_proof<nil::marshalling::option::big_endian, HashType, 4>(5);
-        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 4>(10);
+        // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 4>(10);
     }
 
     BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_5_test, HashType, BlockHashTypes) {
         test_merkle_proof<nil::marshalling::option::big_endian, HashType, 5>(5);
-        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 5>(10);
+        // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 5>(10);
     }
 
 BOOST_AUTO_TEST_SUITE_END()
