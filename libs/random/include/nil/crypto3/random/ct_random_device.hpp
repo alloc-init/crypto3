@@ -90,6 +90,7 @@ namespace nil {
                 }
 
                 constexpr result_type operator()() {
+                    // BC: the following line causes value to run for a very very long time under certain conditions
                     state = value(state, (A * state + C) % M);
 
                     return state;

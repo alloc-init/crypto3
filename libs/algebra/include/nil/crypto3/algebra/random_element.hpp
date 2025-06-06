@@ -51,9 +51,9 @@ namespace nil {
     namespace crypto3 {
         namespace algebra {
             template<typename FieldType,
-                    typename DistributionType = random::ct_uniform_int_distribution<typename FieldType::integral_type>,
-                    typename UniformRandomBitGenerator = random::ct_lcg<std::size_t, 1664525, 1013904223, 4294967296>>
-            constexpr typename std::enable_if<is_field<FieldType>::value && !(is_extended_field<FieldType>::value),
+                    typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
+                    typename UniformRandomBitGenerator = boost::random::random_device>
+             typename std::enable_if<is_field<FieldType>::value && !(is_extended_field<FieldType>::value),
                     typename FieldType::value_type>::type
             random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
 
@@ -71,11 +71,11 @@ namespace nil {
             }
 
             template<typename FieldType,
-                    typename DistributionType = random::ct_uniform_int_distribution<typename FieldType::integral_type>,
-                    typename UniformRandomBitGenerator = random::ct_lcg<std::size_t, 1664525, 1013904223, 4294967296>>
+                    typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
+                    typename UniformRandomBitGenerator = boost::random::random_device>
             typename std::enable_if<is_field<FieldType>::value && is_extended_field<FieldType>::value,
                     typename FieldType::value_type>::type
-            constexpr random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
+             random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
 
                 using field_type = FieldType;
                 using distribution_type = DistributionType;
@@ -93,8 +93,8 @@ namespace nil {
             }
 
             template<typename CurveGroupType,
-                    typename DistributionType = random::ct_uniform_int_distribution<typename CurveGroupType::field_type::integral_type>,
-                    typename UniformRandomBitGenerator = random::ct_lcg<std::size_t, 1664525, 1013904223, 4294967296>>
+                    typename DistributionType = boost::random::uniform_int_distribution<typename CurveGroupType::field_type::integral_type>,
+                    typename UniformRandomBitGenerator = boost::random::random_device>
             typename std::enable_if<is_curve_group<CurveGroupType>::value, typename CurveGroupType::value_type>::type
             constexpr random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
 
