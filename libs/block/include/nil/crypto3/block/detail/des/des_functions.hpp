@@ -80,10 +80,12 @@ namespace nil {
                         block = {boost::endian::native_to_big(R), boost::endian::native_to_big(L)};
                     }
 
-                    inline static void des_key_schedule(key_schedule_type &round_key, const key_type &key) {
+                    inline static void des_key_schedule(key_schedule_type &round_key, const key_type &key_words) {
 
                         constexpr static const std::array<byte_type, 16> ROT = {1, 1, 2, 2, 2, 2, 2, 2,
                                                                                 1, 2, 2, 2, 2, 2, 2, 1};
+
+                        const char *key = (const char*)&key_words;
 
                         word_type C = ((key[7] & 0x80) << 20) | ((key[6] & 0x80) << 19) | ((key[5] & 0x80) << 18) |
                                       ((key[4] & 0x80) << 17) | ((key[3] & 0x80) << 16) | ((key[2] & 0x80) << 15) |
