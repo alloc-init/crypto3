@@ -263,7 +263,7 @@ BOOST_AUTO_TEST_SUITE(batched_kzg_test_suite)
         bool run_test() {
             typedef typename curve_type::scalar_field_type::value_type scalar_value_type;
 
-            typedef hashes::keccak_1600<256> transcript_hash_type;
+            typedef hashes::keccak_1600<512> transcript_hash_type;
             const std::size_t batch_size = 1;
             typedef zk::commitments::batched_kzg<curve_type, transcript_hash_type, math::polynomial<scalar_value_type>>
                 kzg_type;
@@ -319,7 +319,7 @@ BOOST_AUTO_TEST_SUITE(batched_kzg_test_suite)
         bool run_test() {
             typedef typename curve_type::scalar_field_type::value_type scalar_value_type;
 
-            typedef hashes::keccak_1600<256> transcript_hash_type;
+            typedef hashes::keccak_1600<512> transcript_hash_type;
             typedef zk::commitments::batched_kzg<curve_type, transcript_hash_type, math::polynomial<scalar_value_type>>
                 kzg_type;
             typedef typename kzg_type::transcript_type transcript_type;
@@ -390,7 +390,7 @@ BOOST_AUTO_TEST_SUITE(batched_kzg_test_suite)
         //    typedef algebra::curves::bls12_381 curve_type;
         typedef typename curve_type::scalar_field_type::value_type scalar_value_type;
 
-        typedef hashes::keccak_1600<256> transcript_hash_type;
+        typedef hashes::keccak_1600<512> transcript_hash_type;
         typedef zk::commitments::batched_kzg<curve_type, transcript_hash_type, math::polynomial<scalar_value_type>>
             kzg_type;
         typedef typename kzg_type::transcript_type transcript_type;
