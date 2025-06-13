@@ -92,7 +92,10 @@ void testing_validate_template_random_data(std::size_t leaf_number) {
     bool wrong_leaf_validate = proof.validate(data[(proof_idx + 1) % leaf_number]);
     bool wrong_data_validate = proof.validate(data_not_in_tree);
     BOOST_CHECK(good_validate);
-    BOOST_CHECK(!wrong_leaf_validate);
+    if (data[proof_idx] != data[(proof_idx + 1) % leaf_number]) {
+        // sometimes the data is the same, causing a spurious failure
+        BOOST_CHECK(!wrong_leaf_validate);
+    }
     BOOST_CHECK(!wrong_data_validate);
 }
 
