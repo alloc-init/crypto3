@@ -13,6 +13,8 @@
 
 #include <nil/crypto3/block/detail/des/basic_des_policy.hpp>
 
+#define CEIL_DIV(X, Y) (((X) + (Y) - 1) / (Y))
+
 namespace nil {
     namespace crypto3 {
         namespace block {
@@ -25,8 +27,8 @@ namespace nil {
                     typedef std::array<word_type, block_words> block_type;
 
                     constexpr static const std::size_t key_bits = 56;
-                    constexpr static const std::size_t key_words = key_bits / word_bits;
-                    typedef std::array<byte_type, key_words> key_type;
+                    constexpr static const std::size_t key_words = CEIL_DIV(key_bits, word_bits);
+                    typedef std::array<word_type, key_words> key_type;
 
                     constexpr static const std::size_t key_schedule_size = 32;
                     typedef std::array<word_type, key_schedule_size> key_schedule_type;
