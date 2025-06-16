@@ -22,6 +22,8 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
+// bc: the unit tests fail on mac with this implementation enabled, punting for now.
+
 #ifndef CRYPTO3_RIJNDAEL_ARMV8_IMPL_HPP
 #define CRYPTO3_RIJNDAEL_ARMV8_IMPL_HPP
 
