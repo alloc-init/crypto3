@@ -87,10 +87,12 @@ namespace nil {
                                   std::back_inserter(personalization_transcript_g1s_g1sx));
 
                         auto g1_s_blob = serialize_g1_uncompressed(g1_s);
-                        std::copy(std::cbegin(g1_s_blob), std::cend(g1_s_blob), std::back_inserter(g1_s_blob));
+                        auto copy = g1_s_blob; // avoid UB (asan doesnt approve of following line otherwise - potential use-after-free)
+                        std::copy(copy.cbegin(), copy.cend(), std::back_inserter(g1_s_blob));
 
                         auto g1_s_x_blob = serialize_g1_uncompressed(g1_s_x);
-                        std::copy(std::cbegin(g1_s_x_blob), std::cend(g1_s_x_blob), std::back_inserter(g1_s_x_blob));
+                        copy = g1_s_x_blob; // avoid UB
+                        std::copy(copy.cbegin(), copy.cend(), std::back_inserter(g1_s_x_blob));
 
                         std::vector<std::uint8_t> hash =
                                 nil::crypto3::hash<hashes::blake2b<256>>(personalization_transcript_g1s_g1sx);
