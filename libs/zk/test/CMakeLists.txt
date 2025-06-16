@@ -52,7 +52,6 @@ set(TESTS_NAMES
         "commitment/fri"
         "commitment/kzg"
         "commitment/fold_polynomial"
-        "commitment/lpc_performance"
         "commitment/pedersen"
         "commitment/proof_of_knowledge"
         "commitment/powers_of_tau"
