@@ -1233,8 +1233,8 @@ BOOST_AUTO_TEST_SUITE(placeholder_circuit2_kzg_v2)
        */
     , placeholder_kzg_test_fixture_v2<
     algebra::curves::mnt4_298,
-    hashes::keccak_1600<256>,
-    hashes::keccak_1600<256>,
+    hashes::keccak_1600<512>,
+    hashes::keccak_1600<512>,
     witness_columns_t,
     public_columns_t,
     constant_columns_t,
@@ -1243,8 +1243,8 @@ BOOST_AUTO_TEST_SUITE(placeholder_circuit2_kzg_v2)
     true>
     , placeholder_kzg_test_fixture_v2<
     algebra::curves::mnt6_298,
-    hashes::keccak_1600<256>,
-    hashes::keccak_1600<256>,
+    hashes::keccak_1600<512>,
+    hashes::keccak_1600<512>,
     witness_columns_t,
     public_columns_t,
     constant_columns_t,

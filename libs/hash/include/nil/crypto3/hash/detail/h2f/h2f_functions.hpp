@@ -62,6 +62,7 @@ namespace nil {
                     static_assert(HashType::digest_bits % 8 == 0, "b_in_bytes is not a multiple of 8");
                     static_assert(HashType::digest_bits >= 2 * K, "K-bit collision resistance is not fulfilled");
                     static_assert(BytesLength < 0x10000, "BytesLength should be less than 0x10000");
+                    static_assert(BytesLength <= HashType::digest_bits/8, "result should be no longer than a digest");
 
                     constexpr static std::size_t b_in_bytes = HashType::digest_bits / 8;
                     constexpr static std::size_t r_in_bytes = HashType::block_bits / 8;

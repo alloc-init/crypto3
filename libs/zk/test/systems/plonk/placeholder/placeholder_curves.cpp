@@ -65,7 +65,7 @@ using namespace nil::crypto3::zk::snark;
 
 BOOST_AUTO_TEST_SUITE(placeholder_curves_test)
 
-    using hash_type = hashes::keccak_1600<256>;
+    using hash_type = hashes::keccak_1600<512>;
 
     using TestRunners = boost::mpl::list<
             placeholder_test_runner<algebra::curves::pallas::scalar_field_type, hash_type, hash_type>,
