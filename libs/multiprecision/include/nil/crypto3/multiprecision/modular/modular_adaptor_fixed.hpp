@@ -271,7 +271,7 @@ namespace boost {
             BOOST_MP_CXX14_CONSTEXPR void assign_components(
                 modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
                 const Backend1 &a, const Backend2 &b) {
-                BOOST_ASSERT_MSG(Bits == eval_msb(b) + 1, "modulus precision should match used backend");
+                BOOST_ASSERT_MSG(Bits >= eval_msb(b) + 1, "modulus precision should match used backend");
 
                 result.set_modular_params(b);
                 result.mod_data().adjust_modular(result.base_data(), a);
