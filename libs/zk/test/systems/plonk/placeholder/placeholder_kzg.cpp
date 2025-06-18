@@ -71,7 +71,7 @@ using namespace nil::crypto3;
 using namespace nil::crypto3::zk;
 using namespace nil::crypto3::zk::snark;
 
-using hash_type = hashes::keccak_1600<256>;
+using hash_type = hashes::keccak_1600<512>;
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit2_kzg)
 
