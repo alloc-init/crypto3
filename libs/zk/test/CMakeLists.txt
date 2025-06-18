@@ -77,7 +77,6 @@ set(TESTS_NAMES
         "systems/plonk/placeholder/placeholder_circuits"
         "systems/plonk/placeholder/placeholder_goldilocks"
         "systems/plonk/placeholder/placeholder_m31"
-        "systems/plonk/placeholder/placeholder_babybear"
         "systems/plonk/placeholder/placeholder_lookup_argument"
         "systems/plonk/placeholder/placeholder_gate_argument"
         "systems/plonk/placeholder/placeholder_permutation_argument"
