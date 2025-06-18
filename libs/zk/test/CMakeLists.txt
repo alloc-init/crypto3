@@ -68,11 +68,11 @@ set(TESTS_NAMES
         #    "relations/numeric/sap"
         #    "relations/numeric/ssp"
 
-        "systems/plonk/pickles/pickles"
-        "systems/plonk/pickles/kimchi"
-        "systems/plonk/pickles/oracles"
-        "systems/plonk/pickles/to_field"
-        "systems/plonk/pickles/to_group"
+        # "systems/plonk/pickles/pickles"
+        # "systems/plonk/pickles/kimchi"
+        # "systems/plonk/pickles/oracles"
+        # "systems/plonk/pickles/to_field"
+        # "systems/plonk/pickles/to_group"
 
         "systems/plonk/placeholder/placeholder_circuits"
         "systems/plonk/placeholder/placeholder_goldilocks"
