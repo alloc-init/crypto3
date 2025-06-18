@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(mnt6_keccak) {
 }
 
 BOOST_AUTO_TEST_CASE(bls12_keccak) {
-    test_transcript<algebra::curves::bls12_381, hashes::sha2<256>>
+    test_transcript<algebra::curves::bls12_381, hashes::sha2<512>>
         (0x122a878f445070db1680540fb6e8105eb8edd62767b2269d24ba2d76c319340226b15b9740c3ae669d995c3d48efc66c_cppui_modular381);    
 }
 
