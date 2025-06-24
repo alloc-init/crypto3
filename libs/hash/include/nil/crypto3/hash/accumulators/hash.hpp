@@ -216,14 +216,18 @@ namespace nil {
                     inline result_type result(boost::accumulators::dont_care) const {
                         construction_type res = construction;
                         // Make a copy, so we can append more to existing state afterwards
-                        if constexpr (nil::crypto3::hashes::is_sponge_construction<typename
-                            hash_type::construction::type>::value) {
-                            res.absorb_with_padding(cache_.get_block(), cache_.words_used());
-                            return res.digest();
-                        } else {
-                            BOOST_ASSERT_MSG(false, "Unknown construction");
-                            return {};
-                        }
+                        static_assert(nil::crypto3::hashes::has_digest_type<typename hash_type::construction::type>::value);
+                        static_assert(nil::crypto3::hashes::has_block_type<typename hash_type::construction::type>::value);
+                        static_assert(nil::crypto3::hashes::has_state_type<typename hash_type::construction::type>::value);
+                        static_assert(nil::crypto3::hashes::has_word_type<typename hash_type::construction::type>::value);
+                        static_assert(nil::crypto3::hashes::has_word_bits<typename hash_type::construction::type>::value);
+                        static_assert(nil::crypto3::hashes::has_block_bits<typename hash_type::construction::type>::value);
+                        static_assert(nil::crypto3::hashes::has_state_bits<typename hash_type::construction::type>::value);
+                        static_assert(nil::crypto3::hashes::has_absorb<typename hash_type::construction::type>::value);
+                        static_assert(nil::crypto3::hashes::has_squeeze<typename hash_type::construction::type>::value);
+                        static_assert(nil::crypto3::hashes::is_sponge_construction<typename hash_type::construction::type>::value);
+                        res.absorb_with_padding(cache_.get_block(), cache_.words_used());
+                        return res.digest();
                     }
 
                 protected:

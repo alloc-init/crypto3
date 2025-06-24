@@ -39,7 +39,7 @@ option(${CMAKE_UPPER_WORKSPACE_NAME}_HASH_STREEBOG "Build with Streebog hash sup
 option(${CMAKE_UPPER_WORKSPACE_NAME}_HASH_TIGER "Build with Tiger hash support" TRUE)
 option(${CMAKE_UPPER_WORKSPACE_NAME}_HASH_WHIRLPOOL "Build with Whirlpool hash support" TRUE)
 option(${CMAKE_UPPER_WORKSPACE_NAME}_HASH_POSEIDON "Build with Poseidon hash support" TRUE)
-option(${CMAKE_UPPER_WORKSPACE_NAME}_HASH_POSEIDON_COMPILE_TIME_CONSTANTS "Build with compile-time Poseidon constants generation" TRUE)
+option(${CMAKE_UPPER_WORKSPACE_NAME}_HASH_POSEIDON_COMPILE_TIME_CONSTANTS "Build with compile-time Poseidon constants generation" FALSE)
 option(${CMAKE_UPPER_WORKSPACE_NAME}_HASH_PEDERSEN "Build with Pedersen hash support" TRUE)
 option(${CMAKE_UPPER_WORKSPACE_NAME}_HASH_REINFORCED_CONCRETE "Build with Reinforced Concrete hash support" ${${CMAKE_UPPER_WORKSPACE_NAME}_HASH_POSEIDON})
 
