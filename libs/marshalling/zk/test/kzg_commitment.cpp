@@ -145,8 +145,8 @@ struct placeholder_class_test_initializer {
 BOOST_AUTO_TEST_SUITE(placeholder_class)
     using TestFixtures = boost::mpl::list<
         placeholder_class_test_initializer< algebra::curves::bls12_381, hashes::keccak_1600<256> >,
-        placeholder_class_test_initializer< algebra::curves::mnt4_298, hashes::keccak_1600<512> >,
-        placeholder_class_test_initializer< algebra::curves::mnt6_298, hashes::keccak_1600<512> >
+        placeholder_class_test_initializer< algebra::curves::mnt4_298, hashes::keccak_1600<256> >,
+        placeholder_class_test_initializer< algebra::curves::mnt6_298, hashes::keccak_1600<256> >
         >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(placeholder_class_test, F, TestFixtures) {
@@ -193,8 +193,8 @@ struct batched_kzg_test_initializer {
 BOOST_AUTO_TEST_SUITE(batched_kzg_marshalling)
     using TestFixtures = boost::mpl::list<
         batched_kzg_test_initializer< algebra::curves::bls12_381, hashes::keccak_1600<256> >,
-        batched_kzg_test_initializer< algebra::curves::mnt4_298, hashes::keccak_1600<512> >,
-        batched_kzg_test_initializer< algebra::curves::mnt6_298, hashes::keccak_1600<512> >
+        batched_kzg_test_initializer< algebra::curves::mnt4_298, hashes::keccak_1600<256> >,
+        batched_kzg_test_initializer< algebra::curves::mnt6_298, hashes::keccak_1600<256> >
         >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(batched_kzg_test, F, TestFixtures) {
