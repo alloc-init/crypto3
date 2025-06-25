@@ -40,7 +40,7 @@ namespace nil {
                     constexpr static const std::size_t word_bits = policy_type::word_bits;
                     typedef typename policy_type::word_type word_type;
 
-                    constexpr static inline void permute(state_type &A) {
+                    static inline void permute(state_type &A) {
                         std::size_t round_number = 0;
 
                         // Converting from std::array to algebra::vector here.

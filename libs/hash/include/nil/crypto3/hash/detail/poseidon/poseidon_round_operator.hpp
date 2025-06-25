@@ -22,14 +22,15 @@ namespace nil {
 
                 // TODO(martun): Poseidon paper describes an optimized round, which can work faster when
                 // the Rate is high. Consider implementing it later.
-                template<typename PolicyType>
+                template<typename poseidon_policy_type, typename Enable=void>
                 class poseidon_round_operator;
 
                 /// Round for the original version, ARC-SBOX-MDS order.
-                template<typename PolicyType>
-                class poseidon_round_operator {
+                template<typename poseidon_policy_type>
+                class poseidon_round_operator<poseidon_policy_type,
+                                              std::enable_if_t<!poseidon_policy_type::pasta_version>> {
                 public:
-                    typedef PolicyType policy_type;
+                    typedef poseidon_policy_type policy_type;
 
                     typedef poseidon_constants<policy_type> poseidon_constants_type;
                     typedef typename poseidon_constants_type::round_constants_type round_constants_type;
@@ -45,37 +46,43 @@ namespace nil {
                     constexpr static const std::size_t part_rounds = policy_type::part_rounds;
                     constexpr static const std::size_t sbox_power = policy_type::sbox_power;
 
-                    constexpr static void full_round(state_vector_type &A, std::size_t round_number) {
+                    static void full_round(state_vector_type &A, std::size_t round_number) {
                         BOOST_ASSERT_MSG(round_number < half_full_rounds ||
-                                         round_number >= half_full_rounds + part_rounds,
+                                             round_number >= half_full_rounds + part_rounds,
                                          "Wrong usage of the full round function of original Poseidon.");
-
                         for (std::size_t i = 0; i < state_words; i++) {
-                            A[i] += poseidon_constants_type::round_constant(round_number, i);
+                            A[i] += get_constants().get_round_constant(round_number, i);
                             A[i] = A[i].pow(sbox_power);
                         }
-                        poseidon_constants_type::product_with_mds_matrix(A);
+                        get_constants().product_with_mds_matrix(A);
                     }
 
-                    constexpr static void part_round(state_vector_type &A, std::size_t round_number) {
+                    static void part_round(state_vector_type &A, std::size_t round_number) {
                         BOOST_ASSERT_MSG(round_number >= half_full_rounds &&
-                                         round_number < half_full_rounds + part_rounds,
+                                             round_number < half_full_rounds + part_rounds,
                                          "Wrong usage of the part round function of original Poseidon.");
                         for (std::size_t i = 0; i < state_words; i++) {
-                            A[i] += poseidon_constants_type::round_constant(round_number, i);
+                            A[i] += get_constants().get_round_constant(round_number, i);
                         }
-
                         A[0] = A[0].pow(sbox_power);
+                        get_constants().product_with_mds_matrix(A);
+                    }
 
-                        poseidon_constants_type::product_with_mds_matrix(A);
+                private:
+                    // Contains all the constants: mds matrix and round constants.
+                    // Default constructor selects the right ones.
+                    static const poseidon_constants<poseidon_policy_type> get_constants() {
+                        static const poseidon_constants<poseidon_policy_type> constants;
+                        return constants;
                     }
                 };
 
-                /// Rounds for Mina version have SBOX-MDS-ARC order.
-                template<typename FieldType>
-                class poseidon_round_operator<mina_poseidon_policy<FieldType>> {
+                /// Rounds for Pasta version have SBOX-MDS-ARC order.
+                template<typename poseidon_policy_type>
+                class poseidon_round_operator<poseidon_policy_type,
+                                              std::enable_if_t<poseidon_policy_type::pasta_version>> {
                 public:
-                    typedef mina_poseidon_policy<FieldType> policy_type;
+                    typedef poseidon_policy_type policy_type;
                     typedef typename policy_type::field_type field_type;
 
                     typedef poseidon_constants<policy_type> poseidon_constants_type;
@@ -92,35 +99,39 @@ namespace nil {
                     constexpr static const std::size_t part_rounds = policy_type::part_rounds;
                     constexpr static const std::size_t sbox_power = policy_type::sbox_power;
 
-                    constexpr static void full_round(state_vector_type &A, std::size_t round_number) {
+                    static void full_round(state_vector_type &A, std::size_t round_number) {
                         BOOST_ASSERT_MSG(round_number < half_full_rounds ||
-                                         round_number >= half_full_rounds + part_rounds,
-                                         "Wrong usage of the Full round function of Mina Poseidon.");
-
+                                             round_number >= half_full_rounds + part_rounds,
+                                         "Wrong usage of the Full round function of Pasta Poseidon.");
                         for (std::size_t i = 0; i < state_words; i++) {
                             A[i] = A[i].pow(sbox_power);
                         }
-
-                        poseidon_constants_type::product_with_mds_matrix(A);
-
+                        get_constants().product_with_mds_matrix(A);
                         for (std::size_t i = 0; i < state_words; i++) {
-                            A[i] += poseidon_constants_type::round_constant(round_number, i);
+                            A[i] += get_constants().get_round_constant(round_number, i);
                         }
                     }
 
-                    constexpr static void part_round(state_vector_type &A, std::size_t round_number) {
+                    static void part_round(state_vector_type &A, std::size_t round_number) {
                         BOOST_ASSERT_MSG(round_number >= half_full_rounds &&
-                                         round_number < half_full_rounds + part_rounds,
-                                         "Wrong usage of the part round function of Mina Poseidon.");
+                                             round_number < half_full_rounds + part_rounds,
+                                         "Wrong usage of the part round function of Pasta Poseidon.");
                         A[0] = A[0].pow(sbox_power);
-
-                        poseidon_constants_type::product_with_mds_matrix(A);
-
+                        get_constants().product_with_mds_matrix(A);
                         for (std::size_t i = 0; i < state_words; i++) {
-                            A[i] += poseidon_constants_type::round_constant(round_number, i);
+                            A[i] += get_constants().get_round_constant(round_number, i);
                         }
+                    }
+
+                private:
+                    // Contains all the constants: mds matrix and round constants.
+                    // Default constructor selects the right ones.
+                    static const poseidon_constants<poseidon_policy_type> get_constants() {
+                        static const poseidon_constants<poseidon_policy_type> constants;
+                        return constants;
                     }
                 };
+
             }    // namespace detail
         }        // namespace hashes
     }            // namespace crypto3

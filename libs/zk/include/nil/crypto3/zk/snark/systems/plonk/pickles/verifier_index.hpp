@@ -51,8 +51,8 @@ namespace nil {
                 // hashes::detail::poseidon_constants_kimchi<scalar_field_type> fr_sponge_params;
                 // hashes::detail::poseidon_constants_kimchi<base_field_type> fq_sponge_params;
                 template<typename CurveType,
-                        typename PoseidonKimchiScalarConstants = hashes::detail::poseidon_constants<nil::crypto3::hashes::detail::mina_poseidon_policy<typename CurveType::scalar_field_type>>,
-                        typename PoseidonKimchiBaseConstants = hashes::detail::poseidon_constants<nil::crypto3::hashes::detail::mina_poseidon_policy<typename CurveType::base_field_type>>,
+                        typename PoseidonKimchiScalarConstants = hashes::detail::poseidon_constants<nil::crypto3::hashes::detail::pasta_poseidon_policy<typename CurveType::scalar_field_type>>,
+                        typename PoseidonKimchiBaseConstants = hashes::detail::poseidon_constants<nil::crypto3::hashes::detail::pasta_poseidon_policy<typename CurveType::base_field_type>>,
                         std::size_t WiresAmount = kimchi_constant::COLUMNS,
                         std::size_t Permuts = kimchi_constant::PERMUTES
                 >

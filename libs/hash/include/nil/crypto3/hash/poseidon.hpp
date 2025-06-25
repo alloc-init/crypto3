@@ -10,19 +10,12 @@
 #ifndef CRYPTO3_HASH_POSEIDON_HPP
 #define CRYPTO3_HASH_POSEIDON_HPP
 
-#ifdef __ZKLLVM__
-#include <nil/crypto3/algebra/curves/pallas.hpp>
-#else
-
 #include <nil/crypto3/hash/accumulators/hash.hpp>
 #include <nil/crypto3/hash/detail/poseidon/poseidon_sponge.hpp>
 #include <nil/crypto3/hash/detail/poseidon/poseidon_functions.hpp>
 #include <nil/crypto3/hash/detail/poseidon/poseidon_permutation.hpp>
 #include <nil/crypto3/hash/detail/sponge_construction.hpp>
 #include <nil/crypto3/hash/detail/stream_processors/stream_processors_enum.hpp>
-
-#endif
-
 namespace nil {
     namespace crypto3 {
         namespace hashes {
