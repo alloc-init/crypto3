@@ -272,7 +272,7 @@ namespace nil {
 
                     typedef HashType hash_type;
                     using field_type = nil::crypto3::algebra::curves::pallas::base_field_type;
-                    using poseidon_policy = nil::crypto3::hashes::detail::mina_poseidon_policy<field_type>;
+                    using poseidon_policy = nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>;
                     using permutation_type = nil::crypto3::hashes::detail::poseidon_permutation<poseidon_policy>;
                     using state_type = typename permutation_type::state_type;
 

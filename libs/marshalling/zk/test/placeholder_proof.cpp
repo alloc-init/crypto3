@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_SUITE(placeholder_circuit1_poseidon)
 
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
-    using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::mina_poseidon_policy<field_type>>;
+    using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
 
     using merkle_hash_type = poseidon_type;
     using transcript_hash_type = poseidon_type;
@@ -1254,8 +1254,8 @@ BOOST_AUTO_TEST_SUITE(placeholder_circuit2_kzg_v2)
     /*, -- Not yet implemented
       placeholder_kzg_test_fixture<
       algebra::curves::mnt6_298,
-      hashes::poseidon<nil::crypto3::hashes::detail::mina_poseidon_policy<algebra::curves::mnt6_298>>,
-      hashes::poseidon<nil::crypto3::hashes::detail::mina_poseidon_policy<algebra::curves::mnt6_298>>,
+      hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<algebra::curves::mnt6_298>>,
+      hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<algebra::curves::mnt6_298>>,
       witness_columns_t,
       public_columns_t,
       constant_columns_t,

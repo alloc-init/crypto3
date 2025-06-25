@@ -63,7 +63,7 @@ namespace nil {
                     typedef typename CurveType::template g1_type<algebra::curves::coordinates::affine> group_type;
                     typedef typename CurveType::base_field_type base_field_type;
                     typedef typename CurveType::scalar_field_type scalar_field_type;
-                    typedef nil::crypto3::hashes::detail::mina_poseidon_policy<base_field_type> policy_type;
+                    typedef nil::crypto3::hashes::detail::pasta_poseidon_policy<base_field_type> policy_type;
 
                     constexpr static const int CHALLENGE_LENGTH_IN_LIMBS = 2;
                     constexpr static const int HIGH_ENTROPY_LIMBS = 2;
@@ -84,7 +84,7 @@ namespace nil {
                     typedef typename BaseSponge<CurveType>::limb_type limb_type;
                     // typedef typename BaseSponge<CurveType>::scalar_challenge_type scalar_challenge_type;
 
-                    typedef nil::crypto3::hashes::detail::mina_poseidon_policy<scalar_field_type> policy_type;
+                    typedef nil::crypto3::hashes::detail::pasta_poseidon_policy<scalar_field_type> policy_type;
                     typename nil::crypto3::hashes::detail::poseidon_sponge_construction_custom<policy_type> sponge;
                     typedef snark::ScalarChallenge<scalar_field_type> scalar_challenge_type;
 

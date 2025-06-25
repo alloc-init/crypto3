@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_SUITE(marshalling_merkle_proof_test_suite)
 
 using curve_type = nil::crypto3::algebra::curves::pallas;
 using field_type = typename curve_type::base_field_type;
-using poseidon = nil::crypto3::hashes::poseidon<nil::crypto3::hashes::detail::mina_poseidon_policy<field_type>>;
+using poseidon = nil::crypto3::hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
 
 using HashTypes = boost::mpl::list<
         nil::crypto3::hashes::sha2<256>,

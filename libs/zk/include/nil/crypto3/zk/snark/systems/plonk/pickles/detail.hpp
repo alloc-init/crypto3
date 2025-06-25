@@ -54,7 +54,7 @@ namespace nil {
                     /// The endomorphism coefficient
                     typename FieldType::value_type endo_coefficient;
                     /// The MDS matrix
-                    typename hashes::detail::poseidon_constants<hashes::detail::mina_poseidon_policy<FieldType>>::mds_matrix_type mds;
+                    typename hashes::detail::poseidon_constants<hashes::detail::pasta_poseidon_policy<FieldType>>::mds_matrix_type mds;
                 };
 
                 enum gate_type {
@@ -109,7 +109,7 @@ namespace nil {
                 template<typename FieldType>
                 struct arithmetic_sponge_params {
                     std::vector<std::vector<typename FieldType::value_type>> round_constants;
-                    typename hashes::detail::poseidon_constants<hashes::detail::mina_poseidon_policy<FieldType>>::mds_matrix_type mds;
+                    typename hashes::detail::poseidon_constants<hashes::detail::pasta_poseidon_policy<FieldType>>::mds_matrix_type mds;
                 };
 
                 struct Column;

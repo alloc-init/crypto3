@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_SUITE(placeholder_hashes_test)
 
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
-    using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::mina_poseidon_policy<field_type>>;
+    using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
     using keccak_256_type = hashes::keccak_1600<256>;
     using keccak_512_type = hashes::keccak_1600<512>;
     using sha2_256_type = hashes::sha2<256>;
