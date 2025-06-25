@@ -62,7 +62,6 @@ namespace nil {
                     static_assert(HashType::digest_bits % 8 == 0, "b_in_bytes is not a multiple of 8");
                     static_assert(HashType::digest_bits >= 2 * K, "K-bit collision resistance is not fulfilled");
                     static_assert(BytesLength < 0x10000, "BytesLength should be less than 0x10000");
-                    static_assert(BytesLength <= HashType::digest_bits/8, "result should be no longer than a digest");
 
                     constexpr static std::size_t b_in_bytes = HashType::digest_bits / 8;
                     constexpr static std::size_t r_in_bytes = HashType::block_bits / 8;
@@ -115,7 +114,7 @@ namespace nil {
                         typename HashType::digest_type b0 = ::nil::crypto3::accumulators::extract::hash<HashType>(
                                 b0_acc);
 
-                        result_type uniform_bytes;
+                        result_type uniform_bytes = {};
                         accumulator_type bi_acc;
                         hash<HashType>(b0, bi_acc);
                         hash<HashType>(std::array<std::uint8_t, 1>{1}, bi_acc);
@@ -123,9 +122,12 @@ namespace nil {
                         hash<HashType>(std::array<std::uint8_t, 1>{static_cast<std::uint8_t>(dst_size)}, bi_acc);
                         typename HashType::digest_type bi = ::nil::crypto3::accumulators::extract::hash<HashType>(
                                 bi_acc);
-                        std::copy(bi.begin(), bi.end(), uniform_bytes.begin());
 
-                        typename HashType::digest_type xored_b;
+                        // For the first digest, copy only what fits
+                        std::size_t bytes_to_copy = std::min(b_in_bytes, BytesLength);
+                        std::copy(bi.begin(), bi.begin() + bytes_to_copy, uniform_bytes.begin());
+
+                        typename HashType::digest_type xored_b = {};
                         for (std::size_t i = 2; i <= ell; i++) {
                             accumulator_type bi_acc;
                             ::nil::crypto3::detail::strxor(b0, bi, xored_b.begin());
@@ -134,7 +136,16 @@ namespace nil {
                             hash<HashType>(dst, bi_acc);
                             hash<HashType>(std::array<std::uint8_t, 1>{static_cast<std::uint8_t>(dst_size)}, bi_acc);
                             bi = ::nil::crypto3::accumulators::extract::hash<HashType>(bi_acc);
-                            std::copy(bi.begin(), bi.end(), uniform_bytes.begin() + (i - 1) * b_in_bytes);
+
+                            // Calculate how many bytes to copy for this iteration
+                            std::size_t offset = (i - 1) * b_in_bytes;
+                            std::size_t remaining = BytesLength - offset;
+                            bytes_to_copy = std::min(b_in_bytes, remaining);
+                            
+                            // Only copy if there are bytes remaining to fill
+                            if (remaining > 0) {
+                                std::copy(bi.begin(), bi.begin() + bytes_to_copy, uniform_bytes.begin() + offset);
+                            }
                         }
                         return uniform_bytes;
                     }

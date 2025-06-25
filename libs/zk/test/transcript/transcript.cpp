@@ -138,17 +138,17 @@ void test_transcript(typename curve_type::base_field_type::value_type const& exp
 }
 
 BOOST_AUTO_TEST_CASE(mnt4_keccak) {
-    test_transcript<algebra::curves::mnt4_298, hashes::keccak_1600<512>>
+    test_transcript<algebra::curves::mnt4_298, hashes::keccak_1600<256>>
         (0x2b4e9c317f18745b6b89cbb97728923a2d797e261f8320d90f204192c7aabd2b397a0cc155c_cppui_modular298);
 }
 
 BOOST_AUTO_TEST_CASE(mnt6_keccak) {
-    test_transcript<algebra::curves::mnt6_298, hashes::keccak_1600<512>>
+    test_transcript<algebra::curves::mnt6_298, hashes::keccak_1600<256>>
         (0x25a45c6b7d107961d135e640abfb1840cefd9c8ea318f7f33cd327cd55dabdd18c125d6c6b_cppui_modular298);
 }
 
 BOOST_AUTO_TEST_CASE(bls12_keccak) {
-    test_transcript<algebra::curves::bls12_381, hashes::sha2<512>>
+    test_transcript<algebra::curves::bls12_381, hashes::sha2<256>>
         (0x122a878f445070db1680540fb6e8105eb8edd62767b2269d24ba2d76c319340226b15b9740c3ae669d995c3d48efc66c_cppui_modular381);    
 }
 
