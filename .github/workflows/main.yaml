@@ -1,0 +1,63 @@
+name: Build and Test
+
+on:
+  pull_request:
+  workflow_call:
+
+jobs:
+  build-test:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang cmake git wget curl python3 python3-pip libgmp-dev libssl-dev libsqlite3-dev fd-find
+
+      - name: Install Boost 1.83
+        run: |
+          wget -q https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.gz/download -O boost_1_83_0.tar.gz
+          tar -xzf boost_1_83_0.tar.gz
+          cd boost_1_83_0
+          ./bootstrap.sh --prefix=/opt/boost_1_83
+          ./b2 install --with=all -j$(nproc)
+          echo "BOOST_ROOT=/opt/boost_1_83" >> $GITHUB_ENV
+          echo "/opt/boost_1_83/lib" | sudo tee /etc/ld.so.conf.d/boost_1_83.conf
+          sudo ldconfig
+
+      - name: Build project
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DBOOST_ROOT=/opt/boost_1_83 -DCMAKE_PREFIX_PATH=/opt/boost_1_83 -DBUILD_SHARED_LIBS=FALSE -DCMAKE_ENABLE_TESTS=TRUE
+          cmake --build . -j$(nproc)
+
+      - name: Run tests
+        run: |
+          cd build
+          ../scripts/test_all_parallel.sh results.csv
+
+      - name: Upload artifact (results.csv)
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/results.csv
+
+      - name: Print test failures (highlight in Actions UI)
+        run: |
+          awk -F, 'NR==1{next}
+          {
+              desc=""
+              if($3==1) desc=desc " compile timed out;"
+              if($4==1) desc=desc " compile failed;"
+              if($5==1) desc=desc " exec timed out;"
+              if($6==1) desc=desc " exec failed;"
+              if(length(desc)>0)
+                  print "::error file=1.csv,line=" NR+1 ",col=1::" $1 desc
+          }' build/results.csv
+
+      - name: Fail workflow if there are failed tests
+        run: |
+          awk -F, 'NR==1{next} ($3==1 || $4==1 || $5==1 || $6==1){exit 1}' build/results.csv
