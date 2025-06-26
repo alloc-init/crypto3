@@ -2,7 +2,7 @@ name: Build and Test
 
 on:
   pull_request:
-  workflow_call:
+  workflow_dispatch:
 
 jobs:
   build-test:
@@ -10,10 +10,7 @@ jobs:
 #    runs-on: ubuntu-latest
 
     steps:
-      - run: |
-          echo "Runner is alive"
-          whoami
-          uname -a
+      - run: echo "Hello from AWS runner!"
 #      - uses: actions/checkout@v4
 #
 #      - name: Install dependencies
