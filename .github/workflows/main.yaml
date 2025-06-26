@@ -55,7 +55,7 @@ jobs:
               if($5==1) desc=desc " exec timed out;"
               if($6==1) desc=desc " exec failed;"
               if(length(desc)>0)
-                  print "::error file=1.csv,line=" NR+1 ",col=1::" $1 desc
+                  print "::error file=results.csv,line=" NR+1 ",col=1::" $1 desc
           }' build/results.csv
 
       - name: Fail workflow if there are failed tests
