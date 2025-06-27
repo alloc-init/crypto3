@@ -100,7 +100,7 @@ namespace nil {
                         );
                     }
 
-                    std::array<octet_type, digest_bits / octet_bits> d_full;
+                    std::array<octet_type, digest_bits> d_full;
                     pack_from<endian_type, word_bits, octet_bits>(squeezed_blocks_holder.begin(),
                                                                   squeezed_blocks_holder.end(), d_full.begin());
 
