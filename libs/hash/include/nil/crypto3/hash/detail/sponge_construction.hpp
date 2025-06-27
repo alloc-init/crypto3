@@ -100,7 +100,11 @@ namespace nil {
                         );
                     }
 
-                    std::array<octet_type, digest_bits> d_full;
+                    // Pack uses the size of the input iterator to determine size of the output. There are some edge
+                    // cases where the word size does not cleanly divide the digest size (such as sha3-224). So unless
+                    // we make d_full the same size as squeezed_blocks_holder, pack will write past the end of d_full.
+                    // This doesnt affect correctness since in a few lines we will copy exactly the right size of digest.
+                    std::array<octet_type, digest_words * word_bits / octet_bits> d_full;
                     pack_from<endian_type, word_bits, octet_bits>(squeezed_blocks_holder.begin(),
                                                                   squeezed_blocks_holder.end(), d_full.begin());
 
