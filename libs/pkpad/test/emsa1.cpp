@@ -72,11 +72,9 @@ namespace boost {
     }        // namespace test_tools
 }    // namespace boost
 
-const char *test_data = "../../../../libs/pkpad/test/data/emsa.json";
-
 boost::property_tree::ptree string_data(std::string test_name) {
     boost::property_tree::ptree string_data;
-    boost::property_tree::read_json(test_data, string_data);
+    boost::property_tree::read_json(std::string(TEST_DATA_DIR) + "emsa.json", string_data);
     return string_data.get_child(test_name);
 }
 
