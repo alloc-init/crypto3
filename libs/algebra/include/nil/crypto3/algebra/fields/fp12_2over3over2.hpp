@@ -56,21 +56,19 @@ namespace nil {
                     typedef __attribute__((ext_vector_type(12)))
                         __zkllvm_field_bls12381_base value_type;
 #else
-                    typedef BaseField base_field_type;
-                    typedef base_field_type policy_type;
-                    typedef detail::fp12_2over3over2_extension_params<policy_type> extension_policy;
+                    typedef detail::fp12_2over3over2_extension_params<BaseField> extension_policy;
                     typedef typename extension_policy::underlying_field_type underlying_field_type;
 
-                    constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
-                    typedef typename policy_type::integral_type integral_type;
+                    constexpr static const std::size_t modulus_bits = BaseField::modulus_bits;
+                    typedef typename BaseField::integral_type integral_type;
 
-                    typedef typename policy_type::extended_integral_type extended_integral_type;
+                    typedef typename BaseField::extended_integral_type extended_integral_type;
 
-                    constexpr static const std::size_t number_bits = policy_type::number_bits;
-                    typedef typename policy_type::modular_type modular_type;
-                    typedef typename policy_type::modular_backend modular_backend;
+                    constexpr static const std::size_t number_bits = BaseField::number_bits;
+                    typedef typename BaseField::modular_type modular_type;
+                    typedef typename BaseField::modular_backend modular_backend;
 
-                    constexpr static const integral_type modulus = policy_type::modulus;
+                    constexpr static const integral_type modulus = BaseField::modulus;
 
                     typedef typename detail::element_fp12_2over3over2<extension_policy> value_type;
 
