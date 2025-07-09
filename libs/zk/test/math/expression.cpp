@@ -42,7 +42,7 @@
 #include <nil/crypto3/zk/snark/arithmetization/plonk/variable.hpp>
 
 using namespace nil::crypto3;
-using namespace nil::crypto3::math;
+using namespace nil::crypto3::zk::snark;
 
 BOOST_AUTO_TEST_SUITE(expression_tests_suite)
 
@@ -59,11 +59,11 @@ BOOST_AUTO_TEST_CASE(expression_to_non_linear_combination_test) {
     variable_type w3(6, 2, variable_type::column_type::constant);
 
     expression<variable_type> expr = (w0 + w1) * (w2 + w3) - w1 * (w2 + w0);
-   
+
     expression_to_non_linear_combination_visitor<variable_type> visitor;
     non_linear_combination<variable_type> result = visitor.convert(expr);
     non_linear_combination<variable_type> expected({w0 * w2, w0 * w3, w1 * w3, -w1 * w0});
- 
+
     // We may get the terms in a different order due to changes in the code, and that's fine.
     BOOST_CHECK_EQUAL(result, expected);
 }
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(expression_evaluation_test) {
     variable_type w3(6, 2, variable_type::column_type::constant);
 
     expression<variable_type> expr = (w0 + w1) * (w2 + w3);
-   
+
     variable_type::assignment_type w0_value(1u);
     variable_type::assignment_type w1_value(2u);
     variable_type::assignment_type w2_value(3u);
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(expression_evaluation_test) {
             abort();
         }
     );
- 
+
     BOOST_CHECK(evaluator.evaluate() == variable_type::assignment_type((1u + 2u) * (3u + 4u)));
 }
 
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(expression_max_degree_visitor_test) {
     variable_type w3(6, 2, variable_type::column_type::constant);
 
     expression<variable_type> expr = (w0 + w1) * (w2 + w3) + w0 * w1 * (w2 + w3);
-   
+
     expression_max_degree_visitor<variable_type> visitor;
 
     BOOST_CHECK_EQUAL(visitor.compute_max_degree(expr), 3);
@@ -133,8 +133,8 @@ BOOST_AUTO_TEST_CASE(expression_for_each_variable_visitor_test) {
     variable_type w2(4, 1, variable_type::column_type::public_input);
     variable_type w3(6, 2, variable_type::column_type::constant);
 
-    expression<variable_type> expr = (w0 + w1) * (w2 + w3) + w0 * w1 * (w2 + w3);
-   
+    expression<variable_type> expr = (w0 + w1) * (w2 + w3) - w0 * w1 * (w2 + w3);
+
     std::set<int> variable_indices;
     std::set<int> variable_rotations;
 

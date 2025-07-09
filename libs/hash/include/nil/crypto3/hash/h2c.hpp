@@ -39,17 +39,17 @@
 namespace nil {
     namespace crypto3 {
         namespace hashes {
-            template<typename GroupType, typename HashType, std::size_t _k = 128,
-                     uniformity_count_t _uniformity_count = uniformity_count_t::uniform_count,
-                     expand_msg_variant_t _expand_msg_variant = expand_msg_variant_t::rfc_xmd>
+            template<typename Group, typename Hash, std::size_t _k = 128,
+                     UniformityCount _uniformity_count = UniformityCount::uniform_count,
+                     ExpandMsgVariant _expand_msg_variant = ExpandMsgVariant::rfc_xmd>
             struct h2c_default_params {
-                constexpr static uniformity_count_t uniformity_count = _uniformity_count;
-                constexpr static expand_msg_variant_t expand_msg_variant = _expand_msg_variant;
+                constexpr static UniformityCount uniformity_count = _uniformity_count;
+                constexpr static ExpandMsgVariant expand_msg_variant = _expand_msg_variant;
                 constexpr static std::size_t k = _k;
 
                 typedef std::vector<std::uint8_t> dst_type;
                 static inline dst_type dst = []() {
-                    using internal_suite_type = h2f_suite<typename GroupType::field_type, HashType, k>;
+                    using internal_suite_type = h2f_suite<typename Group::field_type, Hash, k>;
                     std::string default_tag_str = "QUUX-V01-CS02-with-";
                     dst_type dst(default_tag_str.begin(), default_tag_str.end());
                     dst.insert(dst.end(), internal_suite_type::suite_id.begin(), internal_suite_type::suite_id.end());
@@ -61,13 +61,12 @@ namespace nil {
              * @brief Hashing to Elliptic Curves
              * https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11
              *
-             * @tparam GroupType
+             * @tparam Group
              * @tparam Params
              */
-            template<typename GroupType, typename HashType = sha2<256>,
-                     typename ParamsType = h2c_default_params<GroupType, HashType>>
+            template<typename Group, typename Hash = sha2<256>, typename Params = h2c_default_params<Group, Hash>>
             struct h2c {
-                typedef h2c_suite<GroupType> suite_type;
+                typedef h2c_suite<Group> suite_type;
 
                 typedef typename suite_type::group_type group_type;
                 typedef typename suite_type::group_value_type group_value_type;
@@ -76,9 +75,9 @@ namespace nil {
                 typedef typename suite_type::modular_type modular_type;
                 typedef typename suite_type::integral_type integral_type;
 
-                typedef h2f<field_type, HashType, ParamsType> hash_type;
+                typedef h2f<field_type, Hash, Params> hash_type;
 
-                typedef typename hash_type::accumulator_type accumulator_type;
+                typedef typename hash_type::internal_accumulator_type internal_accumulator_type;
                 typedef group_value_type result_type;
                 typedef result_type digest_type;
 
@@ -86,36 +85,34 @@ namespace nil {
 
                 struct construction {
                     struct params_type {
-                        typedef nil::marshalling::option::big_endian digest_endian;
+                        typedef marshalling::option::big_endian digest_endian;
                     };
-
                     typedef void type;
                 };
 
-                constexpr static detail::stream_processor_type stream_processor =
-                    detail::stream_processor_type::raw_delegating;
-                using accumulator_tag = accumulators::tag::forwarding_hash<h2c<GroupType, HashType, ParamsType>>;
+                constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::RawDelegating;
+                using accumulator_tag = accumulators::tag::forwarding_hash<h2c<Group, Hash, Params>>;
 
-                static inline void init_accumulator(accumulator_type &acc) {
+                static inline void init_accumulator(internal_accumulator_type &acc) {
                     hash_type::init_accumulator(acc);
                 }
 
                 template<typename InputRange>
-                static inline void update(accumulator_type &acc, const InputRange &range) {
+                static inline void update(internal_accumulator_type &acc, const InputRange &range) {
                     hash_type::update(acc, range);
                 }
 
                 template<typename InputIterator>
-                static inline void update(accumulator_type &acc, InputIterator first, InputIterator last) {
+                static inline void update(internal_accumulator_type &acc, InputIterator first, InputIterator last) {
                     hash_type::update(acc, first, last);
                 }
 
-                static inline result_type process(accumulator_type &acc) {
-                    return detail::ep_map<group_type, ParamsType::uniformity_count>(hash_type::process(acc));
+                static inline result_type process(internal_accumulator_type &acc) {
+                    return detail::ep_map<group_type, Params::uniformity_count>(hash_type::process(acc));
                 }
             };
         }    // namespace hashes
-    }    // namespace crypto3
+    }        // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_H2C_HPP

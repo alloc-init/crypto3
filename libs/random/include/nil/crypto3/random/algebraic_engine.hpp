@@ -58,11 +58,11 @@ namespace nil {
 
             template<typename AlgebraicType, typename Engine>
             struct algebraic_engine<
-                    AlgebraicType,
-                    Engine,
-                    typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
-                                            !algebra::is_extended_field<AlgebraicType>::value &&
-                                            boost::is_integral<typename Engine::result_type>::value>::type> {
+                AlgebraicType,
+                Engine,
+                typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
+                                        !algebra::is_extended_field<AlgebraicType>::value &&
+                                        boost::is_integral<typename Engine::result_type>::value>::type> {
             protected:
                 typedef AlgebraicType field_type;
                 typedef typename field_type::value_type field_value_type;
@@ -142,16 +142,16 @@ namespace nil {
 
                 /** Writes a algebraic_engine to a @c std::ostream */
                 template<class CharT, class Traits>
-                friend std::basic_ostream<CharT, Traits> &operator<<(std::basic_ostream<CharT, Traits> &os,
-                                                                     const algebraic_engine &ae) {
+                friend std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os,
+                                                                     const algebraic_engine& ae) {
                     os << ae.gen;
                     return os;
                 }
 
                 /** Reads a algebraic_engine from a @c std::istream */
                 template<class CharT, class Traits>
-                friend std::basic_istream<CharT, Traits> &operator>>(std::basic_istream<CharT, Traits> &is,
-                                                                     algebraic_engine &ae) {
+                friend std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>& is,
+                                                                     algebraic_engine& ae) {
                     is >> ae.gen;
                     return is;
                 }
@@ -160,14 +160,14 @@ namespace nil {
                  * Returns true if the two generators are in the same state,
                  * and will thus produce identical sequences.
                  */
-                friend bool operator==(const algebraic_engine &x_, const algebraic_engine &y_) {
+                friend bool operator==(const algebraic_engine& x_, const algebraic_engine& y_) {
                     return x_.gen == y_.gen && x_.dist == y_.dist;
                 }
 
                 /**
                  * Returns true if the two generators are in different states.
                  */
-                friend bool operator!=(const algebraic_engine &x_, const algebraic_engine &y_) {
+                friend bool operator!=(const algebraic_engine& x_, const algebraic_engine& y_) {
                     return !(x_ == y_);
                 }
 
@@ -178,11 +178,11 @@ namespace nil {
 
             template<typename AlgebraicType, typename Engine>
             struct algebraic_engine<
-                    AlgebraicType,
-                    Engine,
-                    typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
-                                            algebra::is_extended_field<AlgebraicType>::value &&
-                                            boost::is_integral<typename Engine::result_type>::value>::type> {
+                AlgebraicType,
+                Engine,
+                typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
+                                        algebra::is_extended_field<AlgebraicType>::value &&
+                                        boost::is_integral<typename Engine::result_type>::value>::type> {
             protected:
                 typedef AlgebraicType extended_field_type;
                 typedef typename extended_field_type::value_type extended_field_value_type;
@@ -233,7 +233,7 @@ namespace nil {
                 // TODO: evaluate min_value at compile-time
                 constexpr static inline result_type min() {
                     result_type min_value;
-                    for (auto &coord: min_value.data) {
+                    for (auto& coord : min_value.data) {
                         coord = internal_generator_type::min();
                     }
 
@@ -244,7 +244,7 @@ namespace nil {
                 // TODO: evaluate max_value at compile-time
                 constexpr static inline result_type max() {
                     result_type max_value;
-                    for (auto &coord: max_value.data) {
+                    for (auto& coord : max_value.data) {
                         coord = internal_generator_type::max();
                     }
 
@@ -254,7 +254,7 @@ namespace nil {
                 /** Returns a random value in the range [min, max]. */
                 result_type operator()() {
                     result_type result;
-                    for (auto &coord: result.data) {
+                    for (auto& coord : result.data) {
                         coord = gen();
                     }
 
@@ -272,16 +272,16 @@ namespace nil {
 
                 /** Writes a algebraic_engine to a @c std::ostream */
                 template<class CharT, class Traits>
-                friend std::basic_ostream<CharT, Traits> &operator<<(std::basic_ostream<CharT, Traits> &os,
-                                                                     const algebraic_engine &ae) {
+                friend std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os,
+                                                                     const algebraic_engine& ae) {
                     os << ae.gen;
                     return os;
                 }
 
                 /** Reads a algebraic_engine from a @c std::istream */
                 template<class CharT, class Traits>
-                friend std::basic_istream<CharT, Traits> &operator>>(std::basic_istream<CharT, Traits> &is,
-                                                                     algebraic_engine &ae) {
+                friend std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>& is,
+                                                                     algebraic_engine& ae) {
                     is >> ae.gen;
                     return is;
                 }
@@ -290,14 +290,14 @@ namespace nil {
                  * Returns true if the two generators are in the same state,
                  * and will thus produce identical sequences.
                  */
-                friend bool operator==(const algebraic_engine &x_, const algebraic_engine &y_) {
+                friend bool operator==(const algebraic_engine& x_, const algebraic_engine& y_) {
                     return x_.gen == y_.gen;
                 }
 
                 /**
                  * Returns true if the two generators are in different states.
                  */
-                friend bool operator!=(const algebraic_engine &x_, const algebraic_engine &y_) {
+                friend bool operator!=(const algebraic_engine& x_, const algebraic_engine& y_) {
                     return !(x_ == y_);
                 }
 
@@ -307,10 +307,10 @@ namespace nil {
 
             template<typename AlgebraicType, typename Engine>
             struct algebraic_engine<
-                    AlgebraicType,
-                    Engine,
-                    typename std::enable_if<algebra::is_curve_group<AlgebraicType>::value &&
-                                            boost::is_integral<typename Engine::result_type>::value>::type> {
+                AlgebraicType,
+                Engine,
+                typename std::enable_if<algebra::is_curve_group<AlgebraicType>::value &&
+                                        boost::is_integral<typename Engine::result_type>::value>::type> {
             protected:
                 typedef AlgebraicType group_type;
                 typedef typename group_type::value_type group_value_type;
@@ -389,16 +389,16 @@ namespace nil {
 
                 /** Writes a algebraic_engine to a @c std::ostream */
                 template<class CharT, class Traits>
-                friend std::basic_ostream<CharT, Traits> &operator<<(std::basic_ostream<CharT, Traits> &os,
-                                                                     const algebraic_engine &ae) {
+                friend std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os,
+                                                                     const algebraic_engine& ae) {
                     os << ae.gen;
                     return os;
                 }
 
                 /** Reads a algebraic_engine from a @c std::istream */
                 template<class CharT, class Traits>
-                friend std::basic_istream<CharT, Traits> &operator>>(std::basic_istream<CharT, Traits> &is,
-                                                                     algebraic_engine &ae) {
+                friend std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>& is,
+                                                                     algebraic_engine& ae) {
                     is >> ae.gen;
                     return is;
                 }
@@ -407,14 +407,14 @@ namespace nil {
                  * Returns true if the two generators are in the same state,
                  * and will thus produce identical sequences.
                  */
-                friend bool operator==(const algebraic_engine &x_, const algebraic_engine &y_) {
+                friend bool operator==(const algebraic_engine& x_, const algebraic_engine& y_) {
                     return x_.gen == y_.gen;
                 }
 
                 /**
                  * Returns true if the two generators are in different states.
                  */
-                friend bool operator!=(const algebraic_engine &x_, const algebraic_engine &y_) {
+                friend bool operator!=(const algebraic_engine& x_, const algebraic_engine& y_) {
                     return !(x_ == y_);
                 }
 

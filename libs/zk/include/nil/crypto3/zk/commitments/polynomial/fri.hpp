@@ -34,8 +34,6 @@
 
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
-#include <nil/crypto3/math/domains/evaluation_domain.hpp>
-#include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
 
 #include <nil/crypto3/container/merkle/tree.hpp>
 #include <nil/crypto3/container/merkle/proof.hpp>
@@ -47,24 +45,35 @@ namespace nil {
     namespace crypto3 {
         namespace zk {
             namespace commitments {
+
                 /**
-                 * @brief Based on the FRI Commitment description from \[Placeholder].
+                 * @brief Based on the FRI Commitment description from \[ResShift].
                  * @tparam d ...
                  * @tparam Rounds Denoted by r in \[Placeholder].
                  *
                  * References:
                  * \[Placeholder]:
-                 * "Placeholder Proof System",
-                 * Alisa Cherniaeva, Ilia Shirobokov, Mikhail Komarov,
-                 * =nil; Foundation,
-                 * <https://www.allocin.it/uploads/placeholder.pdf>
+                 * "PLACEHOLDER: Transparent SNARKs from List
+                 * Polynomial Commitment IOPs",
+                 * Assimakis Kattis, Konstantin Panarin, Alexander Vlasov,
+                 * Matter Labs,
+                 * <https://eprint.iacr.org/2019/1400.pdf>
                  */
-                template<typename FieldType, typename MerkleTreeHashType, typename TranscriptHashType, std::size_t M,
-                         typename GrindingType = proof_of_work<TranscriptHashType>>
-                struct fri : public detail::basic_batched_fri<FieldType, MerkleTreeHashType, TranscriptHashType, M,
-                                                              GrindingType> {
-                    using basic_fri =
-                        detail::basic_batched_fri<FieldType, MerkleTreeHashType, TranscriptHashType, M, GrindingType>;
+                template<typename FieldType,
+                        typename MerkleTreeHashType,
+                        typename TranscriptHashType,
+                        std::size_t M,
+                        typename GrindingType = proof_of_work<TranscriptHashType>
+                >
+                struct fri : public detail::basic_batched_fri<FieldType,
+                        MerkleTreeHashType,
+                        TranscriptHashType,
+                        M, GrindingType
+                > {
+                    using basic_fri = detail::basic_batched_fri<FieldType,
+                            MerkleTreeHashType,
+                            TranscriptHashType,
+                            M, GrindingType>;
                     constexpr static const std::size_t m = basic_fri::m;
                     constexpr static const std::size_t batches_num = basic_fri::batches_num;
 
@@ -85,55 +94,69 @@ namespace nil {
             namespace algorithms {
                 // Proof and verify for one polynomial
                 // One polynomial processing
-                template<
-                    typename FRI, typename PolynomialType,
-                    typename std::enable_if<
-                        std::is_base_of<
-                            commitments::fri<typename FRI::field_type, typename FRI::merkle_tree_hash_type,
-                                             typename FRI::transcript_hash_type, FRI::m, typename FRI::grinding_type>,
-                            FRI>::value,
-                        bool>::type = true>
-                static typename FRI::basic_fri::proof_type
-                    proof_eval(PolynomialType &g,
-                               typename FRI::basic_fri::merkle_tree_type &tree,
-                               const typename FRI::params_type &fri_params,
-                               typename FRI::transcript_type &transcript = typename FRI::transcript_type()) {
-                    std::map<std::size_t, std::vector<PolynomialType>> gs;
+                template<typename FRI,
+                    typename polynomial_dfs_type>
+                    requires(
+                        std::is_base_of<commitments::fri<typename FRI::field_type,
+                            typename FRI::merkle_tree_hash_type,
+                            typename FRI::transcript_hash_type,
+                            FRI::m,
+                            typename FRI::grinding_type
+                        >, FRI>::value && 
+                        math::is_any_polynomial_dfs<polynomial_dfs_type>::value)
+                static typename FRI::basic_fri::proof_type proof_eval(
+                    polynomial_dfs_type &g,
+                    typename FRI::basic_fri::merkle_tree_type &tree,
+                    const typename FRI::params_type &fri_params,
+                    typename FRI::transcript_type &transcript = typename FRI::transcript_type()
+                ) {
+                    using polynomial_type = typename polynomial_dfs_type::polynomial_type;
+
+                    std::map<std::size_t, std::vector<polynomial_dfs_type>> gs;
                     gs[0] = {g};
+                    std::map<std::size_t, std::vector<polynomial_type>> gs_coefficients;
+                    gs_coefficients[0] = {polynomial_type(g.coefficients())};
+
                     std::map<std::size_t, typename FRI::basic_fri::merkle_tree_type> trees;
                     trees[0] = typename FRI::basic_fri::merkle_tree_type(tree);
-                    return proof_eval<FRI, PolynomialType>(gs, g, trees, tree, fri_params, transcript);
+                    
+                    return proof_eval<FRI, polynomial_dfs_type>(gs, gs_coefficients, g, trees, tree, fri_params, transcript);
                 }
 
-                template<
-                    typename FRI,
+                template<typename FRI,
                     typename std::enable_if<
                         std::is_base_of<commitments::detail::basic_batched_fri<
-                                            typename FRI::field_type, typename FRI::merkle_tree_hash_type,
-                                            typename FRI::transcript_hash_type, FRI::m, typename FRI::grinding_type>,
-                                        FRI>::value,
+                            typename FRI::field_type,
+                            typename FRI::merkle_tree_hash_type,
+                            typename FRI::transcript_hash_type,
+                            FRI::m,
+                            typename FRI::grinding_type
+                        >,
+                        FRI>::value,
                         bool>::type = true>
-                static bool verify_eval(const typename FRI::basic_fri::proof_type &proof,
+                static bool verify_eval(
+                    const typename FRI::basic_fri::proof_type &proof,
                     const typename FRI::basic_fri::commitment_type &t_root,
                     const typename FRI::basic_fri::params_type &fri_params,
-                    typename FRI::basic_fri::transcript_type &transcript = typename FRI::basic_fri::transcript_type()) {
-                    std::map<std::size_t, typename FRI::basic_fri::commitment_type> t_roots;
-                    t_roots[0] = {t_root};
+                    typename FRI::basic_fri::transcript_type &transcript = typename FRI::basic_fri::transcript_type()
+                ) {
+                    std::map<std::size_t, typename FRI::basic_fri::commitment_type> t_roots; t_roots[0] = {t_root};
                     std::vector<std::vector<std::tuple<std::size_t, std::size_t>>> evals_map(1);
-                    evals_map[0] = {{0u, 0u}};
+                    evals_map[0] = {{0u,0u}};
 
-                    std::vector<typename FRI::field_type::value_type> combined_U = {
-                        {FRI::field_type::value_type::zero()}};
-                    std::vector<math::polynomial<typename FRI::field_type::value_type>> combined_V = {
-                        {FRI::field_type::value_type::one()}};
+                    std::vector<typename FRI::field_type::value_type> combined_U = {{FRI::field_type::value_type::zero()}};
+                    std::vector<math::polynomial<typename FRI::field_type::value_type>> combined_V = {{FRI::field_type::value_type::one()}};
 
-                    return verify_eval<typename FRI::basic_fri>(proof, fri_params, t_roots,
-                                                                FRI::basic_fri::field_type::value_type::one(),
-                                                                evals_map, combined_U, combined_V, transcript);
+                    return verify_eval<typename FRI::basic_fri>(
+                            proof, fri_params, t_roots,
+                            FRI::basic_fri::field_type::value_type::one(),
+                            evals_map, combined_U, combined_V,
+                            transcript
+                    );
                 }
             }    // namespace algorithms
-        }    // namespace zk
-    }    // namespace crypto3
+        }        // namespace zk
+    }            // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_FRI_COMMITMENT_SCHEME_HPP

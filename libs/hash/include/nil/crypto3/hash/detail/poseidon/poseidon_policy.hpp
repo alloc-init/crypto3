@@ -34,19 +34,15 @@ namespace nil {
                 struct base_poseidon_policy {
                     using field_type = FieldType;
 
-                    constexpr static const std::size_t word_bits = field_type::value_bits;
                     using word_type = typename field_type::value_type;
 
                     constexpr static const std::size_t block_words = Rate;
-                    constexpr static const std::size_t block_bits = block_words * word_bits;
 
                     using block_type = std::array<word_type, block_words>;
-                
+
                     constexpr static const std::size_t state_words = Rate + Capacity;
                     using state_type = std::array<word_type, state_words>;
-                    constexpr static const std::size_t state_bits = state_words * state_bits;
 
-                    constexpr static const std::size_t digest_bits = word_bits;
                     using digest_type = word_type;
 
                     constexpr static const std::size_t full_rounds = FullRounds;

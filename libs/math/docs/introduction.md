@@ -61,13 +61,13 @@ parallelizing butterfly operations in the FFT operation.
 
 #### Extended radix-2 FFT
 
-The extended radix-2 FFT domain has size _m = 2^(K + 1)_ and consists of the _m_-th roots of unity, union a coset of
+The extended radix-2 FFT domain has size _m = 2^(k + 1)_ and consists of the _m_-th roots of unity, union a coset of
 these roots. The domain performs two _basic\_radix2\_FFT_ operations for evaluation and interpolation in order to
 account for the extended domain size.
 
 #### Step radix-2 FFT
 
-The step radix-2 FFT domain has size _m = 2^K + 2^r_ and consists of the _2^k_-th roots of unity, union a coset of _2^r_
+The step radix-2 FFT domain has size _m = 2^k + 2^r_ and consists of the _2^k_-th roots of unity, union a coset of _2^r_
 -th roots of unity. The domain performs two _basic\_radix2\_FFT_ operations for evaluation and interpolation in order to
 account for the extended domain size.
 
@@ -89,7 +89,7 @@ Newton evaluation and interpolation by choosing sample points that form a geomet
 
 Internal dependencies:
 
-1. [=nil; Algebra](https://github.com/alloc-init/algebra.git)
+1. [=nil; Algebra](https://github.com/nilfoundation/algebra.git)
 
 Outer dependencies:
 

@@ -25,10 +25,7 @@
 #ifndef CRYPTO3_KECCAK_PADDING_HPP
 #define CRYPTO3_KECCAK_PADDING_HPP
 
-#include <vector>
-
 #include <nil/crypto3/hash/detail/keccak/keccak_policy.hpp>
-
 #include <nil/crypto3/detail/inject.hpp>
 #include <nil/crypto3/detail/unbounded_shift.hpp>
 
@@ -37,9 +34,9 @@ namespace nil {
         namespace hashes {
             namespace detail {
                 // pad10*1 scheme
-                template<typename PolicyType>
+                template<typename Policy>
                 class keccak_1600_padder {
-                    typedef PolicyType policy_type;
+                    typedef Policy policy_type;
 
                     constexpr static const std::size_t word_bits = policy_type::word_bits;
                     typedef typename policy_type::word_type word_type;
@@ -52,12 +49,12 @@ namespace nil {
                     constexpr static const std::size_t block_words = policy_type::block_words;
                     typedef typename policy_type::block_type block_type;
 
-                    // constexpr static const std::size_t digest_bits = policy_type::digest_bits;
-                    // typedef typename policy_type::digest_type digest_type;
+                    constexpr static const std::size_t digest_bits = policy_type::digest_bits;
+                    typedef typename policy_type::digest_type digest_type;
 
                     typedef ::nil::crypto3::detail::injector<stream_endian::big_octet_big_bit, stream_endian::little_octet_little_bit, word_bits,
-                            block_words>
-                            injector_type;
+                                                             block_words>
+                        injector_type;
 
                     bool is_last;
 
@@ -65,7 +62,7 @@ namespace nil {
                     keccak_1600_padder() : is_last(true) {
                     }
 
-                    static std::vector<block_type> get_padded_blocks(const block_type &block, std::size_t block_seen) {
+                    static std::vector<block_type> get_padded_blocks(const block_type& block, std::size_t block_seen) {
                         using namespace nil::crypto3::detail;
 
                         std::vector<block_type> padded_blocks;
@@ -73,8 +70,7 @@ namespace nil {
                         // set variable to 10
                         word_type padding_start = high_bits<word_bits>(~word_type(), 1);
                         // get how many bits from it could fit into current block
-                        const std::size_t padding_start_bits_for_first_block = std::min(block_bits - block_seen,
-                                                                                        std::size_t{2});
+                        const std::size_t padding_start_bits_for_first_block = std::min(block_bits - block_seen, std::size_t{2});
                         // inject this amount of bits
                         injector_type::inject(padding_start, padding_start_bits_for_first_block, new_block, block_seen);
 
@@ -88,7 +84,7 @@ namespace nil {
                         if (padding_start_bits_for_first_block < 2) {
                             // if not all padding_start was injected, we inject the rest of the padding_start to the next block
                             injector_type::inject(padding_start, 2 - padding_start_bits_for_first_block, new_block,
-                                                  block_seen, padding_start_bits_for_first_block);
+                                                    block_seen, padding_start_bits_for_first_block);
                         }
 
                         // fill the rest of the block with zeros
@@ -98,7 +94,7 @@ namespace nil {
 
                         // add the last 1
                         injector_type::inject(high_bits<word_bits>(~word_type(), 1), 1, new_block,
-                                              block_seen);
+                                                block_seen);
 
                         padded_blocks.push_back(new_block);
 

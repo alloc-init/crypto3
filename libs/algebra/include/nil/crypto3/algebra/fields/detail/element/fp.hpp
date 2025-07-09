@@ -31,13 +31,10 @@
 #include <nil/crypto3/algebra/fields/detail/exponentiation.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/operations.hpp>
 
+#include <nil/crypto3/multiprecision/big_mod.hpp>
+#include <nil/crypto3/multiprecision/big_uint.hpp>
+#include <nil/crypto3/multiprecision/pow.hpp>
 #include <nil/crypto3/multiprecision/ressol.hpp>
-#include <nil/crypto3/multiprecision/inverse.hpp>
-#include <boost/multiprecision/number.hpp>
-#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
-#include <nil/crypto3/multiprecision/modular/modular_adaptor.hpp>
-
-#include <boost/type_traits/is_integral.hpp>
 
 #include <type_traits>
 
@@ -50,39 +47,33 @@ namespace nil {
                     class element_fp {
                         typedef FieldParams policy_type;
 
-                    public:
+                      public:
                         typedef typename policy_type::field_type field_type;
 
                         typedef typename policy_type::modular_type modular_type;
                         typedef typename policy_type::integral_type integral_type;
-                        typedef typename policy_type::modular_backend modular_backend;
-                        typedef typename policy_type::modular_params_type modular_params_type;
 
-                        constexpr static const modular_params_type modulus_params = policy_type::modulus_params;
                         constexpr static const integral_type modulus = policy_type::modulus;
 
+                      private:
                         using data_type = modular_type;
                         data_type data;
 
+                      public:
                         constexpr element_fp() = default;
 
                         constexpr element_fp(const data_type &data) : data(data) {}
 
-                        template<typename Number,
-                                typename std::enable_if<(boost::multiprecision::is_number<Number>::value), bool>::type = true>
-                        constexpr element_fp(const Number &data)
-                                : data(typename modular_type::backend_type(data.backend(), modulus_params)) {}
+                        constexpr element_fp(
+                            const std::array<element_fp, 1> &coefficients)
+                            : element_fp(coefficients[0]) {}
 
-                        template<typename Number, typename std::enable_if<
-                                std::is_integral<Number>::value, bool>::type = true>
-                        constexpr element_fp(const Number &data)
-                                : data(typename modular_type::backend_type(data, modulus_params)) {}
+                        template<multiprecision::integral T>
+                        constexpr element_fp(const T &data) : data(data) {}
 
-                        constexpr element_fp(const element_fp &B)
-                                : data(B.data) {}
-
-                        constexpr element_fp(const element_fp &&B) BOOST_NOEXCEPT
-                                : data(std::move(B.data)) {}
+                        constexpr typename field_type::integral_type to_integral() const {
+                            return data.to_integral();
+                        }
 
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.
@@ -98,17 +89,21 @@ namespace nil {
                             return *this == one();
                         }
 
+                        constexpr auto operator<=>(const element_fp &B) const {
+                            return to_integral() <=> B.to_integral();
+                        }
+
                         constexpr bool operator==(const element_fp &B) const {
                             return data == B.data;
                         }
 
-                        constexpr bool operator!=(const element_fp &B) const {
-                            return data != B.data;
-                        }
-
-                        constexpr element_fp &operator=(const element_fp &B) {
-                            data = B.data;
-
+                        element_fp binomial_extension_coefficient(
+                            std::size_t index) const {
+                            if (index != 0) {
+                                throw std::logic_error(
+                                    "FP is degree 1 extension of itself, but trying to "
+                                    "access more coefficients");
+                            }
                             return *this;
                         }
 
@@ -121,16 +116,12 @@ namespace nil {
                         }
 
                         constexpr element_fp &operator-=(const element_fp &B) {
-                            // TODO(martun): consider directly taking the backend and calling
-                            // eval_add to improve performance.
                             data -= B.data;
 
                             return *this;
                         }
 
                         constexpr element_fp &operator+=(const element_fp &B) {
-                            // TODO(martun): consider directly taking the backend and calling
-                            // eval_add to improve performance.
                             data += B.data;
 
                             return *this;
@@ -164,22 +155,6 @@ namespace nil {
                             return element_fp(data * B.data);
                         }
 
-                        constexpr bool operator<(const element_fp &B) const {
-                            return data < B.data;
-                        }
-
-                        constexpr bool operator>(const element_fp &B) const {
-                            return data > B.data;
-                        }
-
-                        constexpr bool operator<=(const element_fp &B) const {
-                            return data <= B.data;
-                        }
-
-                        constexpr bool operator>=(const element_fp &B) const {
-                            return data >= B.data;
-                        }
-
                         constexpr element_fp &operator++() {
                             data += one().data;
                             return *this;
@@ -192,7 +167,7 @@ namespace nil {
                         }
 
                         constexpr element_fp &operator--() {
-                            data = data - typename modular_type::backend_type(1u, modulus_params);
+                            data = data - modular_type(1u);
                             return *this;
                         }
 
@@ -221,11 +196,7 @@ namespace nil {
                         }
 
                         constexpr element_fp inversed() const {
-                            return element_fp(inverse_mod(data));
-                        }
-
-                        // TODO: complete method
-                        constexpr element_fp _2z_add_3x() {
+                            return element_fp(inverse(data));
                         }
 
                         constexpr element_fp squared() const {
@@ -243,24 +214,22 @@ namespace nil {
                             return (tmp.is_one() || tmp.is_zero());
                         }
 
-                        template<typename PowerType,
-                                typename = typename std::enable_if<boost::is_integral<PowerType>::value>::type>
-                        constexpr element_fp pow(const PowerType pwr) const {
-                            return element_fp(boost::multiprecision::powm(data, boost::multiprecision::uint128_modular_t(pwr)));
+                        template<typename PowerType>
+                        constexpr element_fp pow(const PowerType &pwr) const {
+                            return element_fp(nil::crypto3::multiprecision::pow(data, pwr));
                         }
 
-                        template<typename Backend, boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr element_fp
-                        pow(const boost::multiprecision::number<Backend, ExpressionTemplates> &pwr) const {
-                            return element_fp(boost::multiprecision::powm(data, pwr));
+                        friend std::ostream &operator<<(std::ostream &os,
+                                                        const element_fp &elem) {
+                            os << elem.data;
+                            return os;
                         }
+
+                        friend std::hash<element_fp>;
                     };
 
                     template<typename FieldParams>
                     constexpr typename element_fp<FieldParams>::integral_type const element_fp<FieldParams>::modulus;
-
-                    template<typename FieldParams>
-                    constexpr typename element_fp<FieldParams>::modular_params_type const element_fp<FieldParams>::modulus_params;
 
                     namespace element_fp_details {
                         // These constexpr static variables can not be members of element_fp, because
@@ -281,13 +250,6 @@ namespace nil {
                     constexpr const element_fp<FieldParams> &element_fp<FieldParams>::one() {
                         return element_fp_details::one_instance<FieldParams>;
                     }
-
-                    template<typename FieldParams>
-                    std::ostream &operator<<(std::ostream &os, const element_fp<FieldParams> &elem) {
-                        os << elem.data;
-                        return os;
-                    }
-
                 }    // namespace detail
             }        // namespace fields
         }            // namespace algebra

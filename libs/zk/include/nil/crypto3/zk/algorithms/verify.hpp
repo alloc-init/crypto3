@@ -46,7 +46,7 @@ namespace nil {
                 return ProofSystemType::verify(pvk, primary_input, proof);
             }
 
-            template<typename ProofSystemType, typename DistributionType, typename GeneratorType, typename HashType,
+            template<typename ProofSystemType, typename DistributionType, typename GeneratorType, typename Hash,
                     typename InputPrimaryInputRange, typename InputIterator>
             bool verify(const typename ProofSystemType::verification_srs_type &ip_verifier_srs,
                         const typename ProofSystemType::verification_key_type &pvk,
@@ -55,11 +55,11 @@ namespace nil {
                         InputIterator transcript_include_first,
                         InputIterator transcript_include_last) {
 
-                return ProofSystemType::template verify<DistributionType, GeneratorType, HashType>(
+                return ProofSystemType::template verify<DistributionType, GeneratorType, Hash>(
                         ip_verifier_srs, pvk, public_inputs, proof, transcript_include_first, transcript_include_last);
             }
 
-            template<typename ProofSystemType, typename DistributionType, typename GeneratorType, typename HashType,
+            template<typename ProofSystemType, typename DistributionType, typename GeneratorType, typename Hash,
                     typename InputPrimaryInputRange, typename InputIterator>
             bool verify(const typename ProofSystemType::verification_srs_type &ip_verifier_srs,
                         const typename ProofSystemType::verification_key_type &pvk,
@@ -68,7 +68,7 @@ namespace nil {
                         InputIterator transcript_include_first,
                         InputIterator transcript_include_last) {
 
-                return ProofSystemType::template verify<DistributionType, GeneratorType, HashType>(
+                return ProofSystemType::template verify<DistributionType, GeneratorType, Hash>(
                         ip_verifier_srs, pvk, public_inputs, proof, transcript_include_first, transcript_include_last);
             }
 

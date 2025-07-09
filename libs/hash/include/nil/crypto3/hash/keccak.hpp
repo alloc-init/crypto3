@@ -68,14 +68,15 @@ namespace nil {
                         constexpr static const std::size_t digest_bits = policy_type::digest_bits;
                     };
 
-                    typedef sponge_construction<params_type, policy_type, typename policy_type::iv_generator,
-                            detail::keccak_1600_functions<digest_bits>,
-                            nil::crypto3::hashes::detail::keccak_1600_impl<policy_type>,
-                            detail::keccak_1600_padder<policy_type>>
-                            type;
+                    typedef sponge_construction<
+                        params_type, policy_type, typename policy_type::iv_generator,
+                         detail::keccak_1600_functions<digest_bits>,
+                         nil::crypto3::hashes::detail::keccak_1600_impl<policy_type>,
+                        detail::keccak_1600_padder<policy_type>>
+                        type;
                 };
 
-                constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::block;
+                constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::Block;
                 using accumulator_tag = accumulators::tag::hash<keccak_1600<DigestBits>>;
             };
         }    // namespace hashes

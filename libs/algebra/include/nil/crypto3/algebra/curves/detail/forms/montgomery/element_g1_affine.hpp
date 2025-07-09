@@ -87,10 +87,9 @@ namespace nil {
                         constexpr curve_element(const field_value_type &in_X, const field_value_type &in_Y) :
                             is_inf_point(false), X(in_X), Y(in_Y) {};
 
-                        template<typename Backend,
-                                 boost::multiprecision::expression_template_option ExpressionTemplates>
+                        template<std::size_t Bits>
                         explicit constexpr curve_element(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                                  const nil::crypto3::multiprecision::big_uint<Bits> &value) {
                             *this = one() * value;
                         }
 
@@ -203,10 +202,9 @@ namespace nil {
                             return *this;
                         }
 
-                        template<typename Backend,
-                                 boost::multiprecision::expression_template_option ExpressionTemplates>
+                        template<std::size_t Bits>
                         constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                                  const nil::crypto3::multiprecision::big_uint<Bits> &value) {
                             *this = one() * value;
                             return *this;
                         }
@@ -273,16 +271,20 @@ namespace nil {
                          * @return doubled element from group G1
                          */
                         constexpr void double_inplace() {
-                            if ( 2 * params_type::B * this->Y == field_value_type::zero() ) {
+                            const field_value_type two(2u);
+                            const field_value_type twoBY = two * params_type::B * this->Y;
+
+                            if ( twoBY == field_value_type::zero() ) {
                                 this->is_inf_point = true;
+                                return;
                             }
+
                             if (!this->is_zero()) {
-                                const field_value_type two(2u);
                                 const field_value_type three(3u);
                                 const field_value_type A(params_type::A);
                                 const field_value_type B(params_type::B);
 
-                                const field_value_type temp1i = (two * B * this->Y).inversed();
+                                const field_value_type temp1i = twoBY.inversed();
                                 const field_value_type temp2 =
                                     three * this->X.squared() + two * A * this->X + field_value_type::one();
                                 const field_value_type temp1i_sqr = temp1i.squared();

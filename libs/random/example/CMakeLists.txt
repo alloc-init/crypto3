@@ -17,16 +17,14 @@ macro(define_random_example name)
     target_link_libraries(random_${name}_example PRIVATE
             ${CMAKE_WORKSPACE_NAME}::algebra
             ${CMAKE_WORKSPACE_NAME}::hash
-            ${CMAKE_WORKSPACE_NAME}::mac
-            ${CMAKE_WORKSPACE_NAME}::stream
             ${CMAKE_WORKSPACE_NAME}::multiprecision
 
             Boost::container)
-    set_target_properties(random_${name}_example PROPERTIES CXX_STANDARD 20)
+    set_target_properties(random_${name}_example PROPERTIES CXX_STANDARD 23)
 endmacro()
 
 set(EXAMPLES_NAMES
-        "hash")
+        "generate")
 
 foreach(EXAMPLE_NAME ${EXAMPLES_NAMES})
     define_random_example(${EXAMPLE_NAME})

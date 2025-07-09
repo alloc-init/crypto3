@@ -38,6 +38,7 @@ namespace nil {
     namespace crypto3 {
         namespace algebra {
             namespace curves {
+
                 /** @brief A struct representing a Barreto-Naehrig curve.
                  *  @tparam Version version of the curve
                  *
@@ -45,6 +46,7 @@ namespace nil {
                  */
                 template<std::size_t Version>
                 class alt_bn128 {
+
                     typedef detail::alt_bn128_types<Version> policy_type;
 
                 public:
@@ -66,9 +68,10 @@ namespace nil {
                 };
 
                 typedef alt_bn128<254> alt_bn128_254;
-            } // namespace curves
-        } // namespace algebra
-    } // namespace crypto3
-} // namespace nil
+
+            }    // namespace curves
+        }        // namespace algebra
+    }            // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_ALT_BN128_HPP

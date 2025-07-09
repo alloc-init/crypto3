@@ -1,8 +1,8 @@
 include(CMConfig)
 include(CMSetupVersion)
 
-cm_workspace(marshalling)
-cm_project(core WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
+cm_workspace(crypto3)
+cm_project(marshalling-core WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
 include(CMDeploy)
 include(FindPkgConfig)
@@ -11,28 +11,38 @@ include(CMSetupVersion)
 
 option(BUILD_WITH_NO_WARNINGS "Build threading warnings as errors" FALSE)
 
+# When set, the code always throws on invalid data.
+# If not set, the code is using BOOST_VERIFY - noop in release and stop in debug
+option(CRYPTO3_MARSHALLING_THROWS "Throw exceptions when marshalling invalid data" TRUE)
+
+if(CRYPTO3_MARSHALLING_THROWS)
+    add_definitions(-DCRYPTO3_MARSHALLING_THROWS)
+endif()
+
+if(NOT CMAKE_CXX_STANDARD)
+    set_target_properties(${test_name} PROPERTIES CXX_STANDARD 23)
+endif()
+
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 add_library(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE)
+add_library(${CMAKE_WORKSPACE_NAME}::${CURRENT_PROJECT_NAME} ALIAS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
-        EXPORT_NAME ${CURRENT_PROJECT_NAME})
+                      EXPORT_NAME ${CURRENT_PROJECT_NAME})
 
 target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+                           $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
 
-        $<$<BOOL:${Boost_FOUND}>:${Boost_INCLUDE_DIRS}>)
+                           $<$<BOOL:${Boost_FOUND}>:${Boost_INCLUDE_DIRS}>)
 
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
-        Boost::container)
-
-cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
-        INCLUDE include
-        NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
+    crypto3::algebra
+    Boost::container)
 
 include(CMTest)
-cm_add_test_subdirectory(test)
+add_tests(test)
 
 if(BUILD_EXAMPLES)
     add_subdirectory(example)
@@ -40,9 +50,9 @@ endif()
 
 if((CMAKE_COMPILER_IS_GNUCC) OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
     set(extra_flags_list -Wall -Wextra -Wcast-align -Wcast-qual
-            -Wctor-dtor-privacy -Wmissing-include-dirs -Woverloaded-virtual
-            -Wredundant-decls -Wshadow -Wundef -Wunused -Wno-unknown-pragmas
-            -fdiagnostics-show-option)
+        -Wctor-dtor-privacy -Wmissing-include-dirs -Woverloaded-virtual
+        -Wredundant-decls -Wshadow -Wundef -Wunused -Wno-unknown-pragmas
+        -fdiagnostics-show-option)
 
     if(CMAKE_COMPILER_IS_GNUCC)
         list(APPEND extra_flags_list -Wnoexcept -Wlogical-op -Wstrict-null-sentinel)
@@ -104,8 +114,11 @@ if(DOXYGEN_FOUND)
     file(WRITE "${output_file}" "${modified_config_text}")
 
     add_custom_target("doc_${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}"
-            COMMAND ${DOXYGEN_EXECUTABLE} ${output_file}
-            COMMAND ${CMAKE_COMMAND} -DDOC_OUTPUT_DIR="${doc_output_dir}" -P
-            ${CMAKE_SOURCE_DIR}/cmake/DocCleanupScript.cmake
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+                      COMMAND ${DOXYGEN_EXECUTABLE} ${output_file}
+                      COMMAND ${CMAKE_COMMAND} -DDOC_OUTPUT_DIR="${doc_output_dir}" -P
+                      ${CMAKE_SOURCE_DIR}/cmake/DocCleanupScript.cmake
+                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

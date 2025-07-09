@@ -37,7 +37,7 @@ namespace nil {
             namespace detail {
                 template<typename HashAccumulator, typename SinglePassRange>
                 inline detail::range_hash_impl<detail::value_hash_impl<HashAccumulator>>
-                operator|(SinglePassRange &r, const detail::value_hash_impl<HashAccumulator> &f) {
+                    operator|(SinglePassRange &r, const detail::value_hash_impl<HashAccumulator> &f) {
                     BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<SinglePassRange>));
 
                     typedef detail::value_hash_impl<HashAccumulator> StreamHashImpl;
@@ -48,7 +48,7 @@ namespace nil {
 
                 template<typename HashAccumulator, typename SinglePassRange>
                 inline detail::range_hash_impl<detail::value_hash_impl<HashAccumulator>>
-                operator|(const SinglePassRange &r, const detail::value_hash_impl<HashAccumulator> &f) {
+                    operator|(const SinglePassRange &r, const detail::value_hash_impl<HashAccumulator> &f) {
                     BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<const SinglePassRange>));
 
                     typedef detail::value_hash_impl<HashAccumulator> StreamHashImpl;
@@ -59,8 +59,8 @@ namespace nil {
 
                 template<typename HashAccumulator, typename SinglePassRange>
                 inline detail::range_hash_impl<detail::value_hash_impl<HashAccumulator>>
-                operator|(std::initializer_list<SinglePassRange> r,
-                          const detail::value_hash_impl<HashAccumulator> &f) {
+                    operator|(std::initializer_list<SinglePassRange> r,
+                              const detail::value_hash_impl<HashAccumulator> &f) {
                     BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<SinglePassRange>));
 
                     typedef detail::value_hash_impl<HashAccumulator> StreamHashImpl;
@@ -68,17 +68,17 @@ namespace nil {
 
                     return HashImpl(r, HashAccumulator());
                 }
-            } // namespace detail
-        } // namespace hashes
+            }    // namespace detail
+        }        // namespace hashes
 
         namespace adaptors {
             namespace {
-                template<typename HashType, typename HashAccumulator = accumulator_set<HashType>>
+                template<typename Hash, typename HashAccumulator = accumulator_set<Hash>>
                 const hashes::detail::value_hash_impl<HashAccumulator>
-                hashed = hashes::detail::value_hash_impl<HashAccumulator>(HashAccumulator());
+                    hashed = hashes::detail::value_hash_impl<HashAccumulator>(HashAccumulator());
             }
-        } // namespace adaptors
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace adaptors
+    }        // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_HASHED_HPP

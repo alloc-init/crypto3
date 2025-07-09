@@ -62,7 +62,10 @@
 #include <nil/crypto3/zk/commitments/polynomial/kzg.hpp>
 #include <nil/crypto3/zk/commitments/polynomial/kzg_v2.hpp>
 #include <nil/crypto3/zk/commitments/batched_commitment.hpp>
-#include <nil/crypto3/zk/test_tools/random_test_initializer.hpp>
+#include <nil/crypto3/test_tools/random_test_initializer.hpp>
+
+#include <nil/crypto3/marshalling/algebra/processing/mnt4.hpp>
+#include <nil/crypto3/marshalling/algebra/processing/mnt6.hpp>
 
 #include "circuits.hpp"
 #include "placeholder_test_runner.hpp"
@@ -71,13 +74,13 @@ using namespace nil::crypto3;
 using namespace nil::crypto3::zk;
 using namespace nil::crypto3::zk::snark;
 
-using hash_type = hashes::keccak_1600<512>;
+using hash_type = hashes::keccak_1600<256>;
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit2_kzg)
 
     using TestRunners = boost::mpl::list<
-        placeholder_kzg_test_runner<algebra::curves::mnt4_298, hash_type>,
-        placeholder_kzg_test_runner<algebra::curves::mnt6_298, hash_type>
+            placeholder_kzg_test_runner<algebra::curves::mnt4_298, hash_type>,
+            placeholder_kzg_test_runner<algebra::curves::mnt6_298, hash_type>
     >;
 
     BOOST_AUTO_TEST_CASE_TEMPLATE(kzg_test, TestRunner, TestRunners) {
@@ -85,10 +88,10 @@ BOOST_AUTO_TEST_SUITE(placeholder_circuit2_kzg)
         test_tools::random_test_initializer<field_type> random_test_initializer;
         auto pi0 = random_test_initializer.alg_random_engines.template get_alg_engine<field_type>()();
         auto circuit = circuit_test_t<field_type>(
-            pi0,
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-            random_test_initializer.generic_random_engine
-            );
+                pi0,
+                random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                random_test_initializer.generic_random_engine
+        );
         TestRunner test_runner(circuit);
         BOOST_CHECK(test_runner.run_test());
     }
@@ -98,8 +101,8 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE(placeholder_circuit2_kzg_v2)
 
     using TestRunners = boost::mpl::list<
-        placeholder_kzg_test_runner_v2<algebra::curves::mnt4_298, hash_type>,
-        placeholder_kzg_test_runner_v2<algebra::curves::mnt6_298, hash_type>
+            placeholder_kzg_test_runner_v2<algebra::curves::mnt4_298, hash_type>,
+            placeholder_kzg_test_runner_v2<algebra::curves::mnt6_298, hash_type>
     >;
 
     BOOST_AUTO_TEST_CASE_TEMPLATE(kzg_v2_test, TestRunner, TestRunners) {
@@ -107,9 +110,10 @@ BOOST_AUTO_TEST_SUITE(placeholder_circuit2_kzg_v2)
         test_tools::random_test_initializer<field_type> random_test_initializer;
         auto pi0 = random_test_initializer.alg_random_engines.template get_alg_engine<field_type>()();
         auto circuit = circuit_test_t<field_type>(
-            pi0,
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-            random_test_initializer.generic_random_engine);
+                pi0,
+                random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                random_test_initializer.generic_random_engine
+        );
         TestRunner test_runner(circuit);
         BOOST_CHECK(test_runner.run_test());
     }

@@ -27,43 +27,48 @@ include(CMTest)
 
 cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 
+    ${CMAKE_WORKSPACE_NAME}::algebra
+    ${CMAKE_WORKSPACE_NAME}::hash
+
+    Boost::unit_test_framework
+    Boost::random
+)
+set_target_properties(_cm_internal_tests-crypto3-containers-test PROPERTIES CXX_STANDARD 23)
+target_precompile_headers(_cm_internal_tests-crypto3-containers-test REUSE_FROM crypto3_precompiled_headers)
+
+macro(define_storage_test test)
+    get_filename_component(test_name ${test} NAME)
+    set(full_test_name ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_${test_name}_test)
+
+    while(TARGET ${full_test_name})
+        get_filename_component(TEST_DIRECTORY ${test} DIRECTORY)
+        get_filename_component(PARENT_DIR ${TEST_DIRECTORY} DIRECTORY)
+        set(full_test_name ${PARENT_DIR}_${full_test_name})
+    endwhile()
+
+    cm_test(NAME ${full_test_name} SOURCES ${test}.cpp)
+
+    target_link_libraries(${full_test_name}
+        ${CMAKE_WORKSPACE_NAME}::containers
         ${CMAKE_WORKSPACE_NAME}::algebra
         ${CMAKE_WORKSPACE_NAME}::hash
 
         Boost::unit_test_framework
         Boost::random
-)
+    )
 
-macro(define_storage_test test)
-    get_filename_component(test_name ${test} NAME)
-    set(target_name ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_${test_name}_test)
+    set_target_properties(${full_test_name} PROPERTIES CXX_STANDARD 23)
 
-    while(TARGET ${target_name})
-        get_filename_component(TEST_DIRECTORY ${test} DIRECTORY)
-        get_filename_component(PARENT_DIR ${TEST_DIRECTORY} DIRECTORY)
-        set(target_name ${PARENT_DIR}_${target_name})
-    endwhile()
-
-    cm_test(NAME ${target_name} SOURCES ${test}.cpp)
-
-    target_include_directories(${target_name} PRIVATE
-            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-            "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
-
-            ${Boost_INCLUDE_DIRS})
-
-    set_target_properties(${target_name} PROPERTIES CXX_STANDARD 20)
-
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        target_compile_options(${target_name} PRIVATE "-fconstexpr-steps=2147483647" "-ftemplate-backtrace-limit=0")
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        target_compile_options(${target_name} PRIVATE "-fconstexpr-ops-limit=4294967295" "-ftemplate-backtrace-limit=0")
+     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(${full_test_name} PRIVATE "-fconstexpr-steps=2147483647" "-ftemplate-backtrace-limit=0")
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(${full_test_name} PRIVATE "-fconstexpr-ops-limit=4294967295" "-ftemplate-backtrace-limit=0")
     endif()
-
+    target_precompile_headers(${full_test_name} REUSE_FROM crypto3_precompiled_headers)
 endmacro()
 
 set(TESTS_NAMES
-        "merkle/merkle"
+    "merkle/merkle"
 )
 
 foreach(TEST_NAME ${TESTS_NAMES})

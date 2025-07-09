@@ -26,43 +26,46 @@
 #ifndef MARSHALLING_ARRAY_LIST_HPP
 #define MARSHALLING_ARRAY_LIST_HPP
 
+#include <functional>
 #include <vector>
+#include <map>
 
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/types/array_list/behaviour.hpp>
 #include <nil/marshalling/types/detail/options_parser.hpp>
 
 #include <nil/marshalling/types/tag.hpp>
+#include <nil/detail/type_traits.hpp>
 
-namespace nil {
+namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             /// @brief field_type that represents a sequential collection of fields.
             /// @details By default uses
             ///     <a href="http://en.cppreference.com/w/cpp/container/vector">std::vector</a>,
-            ///     for internal storage, unless nil::marshalling::option::fixed_size_storage option is used,
-            ///     which forces usage of nil::marshalling::container::static_vector instead.
+            ///     for internal storage, unless nil::crypto3::marshalling::option::fixed_size_storage option is used,
+            ///     which forces usage of nil::crypto3::marshalling::container::static_vector instead.
             /// @tparam TFieldBase Base class for this field, expected to be a variant of
-            ///     nil::marshalling::field_type.
+            ///     nil::crypto3::marshalling::field_type.
             /// @tparam TElement Element of the collection, can be either basic integral value
-            ///     (such as std::uint8_t) or any other field from nil::marshalling::types namespace.@n
+            ///     (such as std::uint8_t) or any other field from nil::crypto3::marshalling::types namespace.@n
             ///     For example:
             ///     @code
-            ///     using MyFieldBase = nil::marshalling::field_type<nil::marshalling::option::BigEndian>;
+            ///     using MyFieldBase = nil::crypto3::marshalling::field_type<nil::crypto3::marshalling::option::BigEndian>;
             ///     using RawDataSeqField =
-            ///         nil::marshalling::types::array_list<
+            ///         nil::crypto3::marshalling::types::array_list<
             ///             MyFieldBase,
             ///             std::uint8_t
             ///         >;
             ///     using CollectionOfBundlesField =
-            ///         nil::marshalling::types::array_list<
+            ///         nil::crypto3::marshalling::types::array_list<
             ///             MyFieldBase,
             ///             std::types::bundle<
             ///                 MyFieldBase,
             ///                 std::tuple<
-            ///                     nil::marshalling::types::integral<MyFieldBase, std::uint16_t>
-            ///                     nil::marshalling::types::integral<MyFieldBase, std::uint8_t>
-            ///                     nil::marshalling::types::integral<MyFieldBase, std::uint8_t>
+            ///                     nil::crypto3::marshalling::types::integral<MyFieldBase, std::uint16_t>
+            ///                     nil::crypto3::marshalling::types::integral<MyFieldBase, std::uint8_t>
+            ///                     nil::crypto3::marshalling::types::integral<MyFieldBase, std::uint8_t>
             ///                 >
             ///             >
             ///         >;
@@ -70,29 +73,9 @@ namespace nil {
             /// @tparam TOptions Zero or more options that modify/refine default behaviour
             ///     of the field.@n
             ///     Supported options are:
-            ///     @li @ref nil::marshalling::option::fixed_size_storage
-            ///     @li @ref nil::marshalling::option::custom_storage_type
-            ///     @li @ref nil::marshalling::option::sequence_size_field_prefix
-            ///     @li @ref nil::marshalling::option::sequence_ser_length_field_prefix
-            ///     @li @ref nil::marshalling::option::sequence_elem_ser_length_field_prefix
-            ///     @li @ref nil::marshalling::option::sequence_elem_fixed_ser_length_field_prefix
-            ///     @li @ref nil::marshalling::option::sequence_size_forcing_enabled
-            ///     @li @ref nil::marshalling::option::sequence_length_forcing_enabled
-            ///     @li @ref nil::marshalling::option::sequence_fixed_size
-            ///     @li @ref nil::marshalling::option::sequence_termination_field_suffix
-            ///     @li @ref nil::marshalling::option::sequence_trailing_field_suffix
-            ///     @li @ref nil::marshalling::option::default_value_initializer
-            ///     @li @ref nil::marshalling::option::contents_validator
-            ///     @li @ref nil::marshalling::option::contents_refresher
-            ///     @li @ref nil::marshalling::option::has_custom_read
-            ///     @li @ref nil::marshalling::option::has_custom_refresh
-            ///     @li @ref nil::marshalling::option::fail_on_invalid
-            ///     @li @ref nil::marshalling::option::ignore_invalid
-            ///     @li @ref nil::marshalling::option::orig_data_view (valid only if TElement is integral type
-            ///         of 1 byte size.
-            ///     @li @ref nil::marshalling::option::empty_serialization
-            ///     @li @ref nil::marshalling::option::version_storage
-            /// @extends nil::marshalling::field_type
+            ///     @li @ref nil::crypto3::marshalling::option::fixed_size_storage
+            ///     @li @ref nil::crypto3::marshalling::option::sequence_size_field_prefix
+            /// @extends nil::crypto3::marshalling::field_type
             /// @headerfile nil/marshalling/types/array_list.hpp
             template<typename TFieldBase, typename TElement, typename... TOptions>
             class array_list : private detail::array_list_base_type<TFieldBase, TElement, TOptions...> {
@@ -102,9 +85,6 @@ namespace nil {
                 /// @brief endian_type used for serialization.
                 using endian_type = typename base_impl_type::endian_type;
 
-                /// @brief Version type
-                using version_type = typename base_impl_type::version_type;
-
                 /// @brief All the options provided to this class bundled into struct.
                 using parsed_options_type = detail::options_parser<TOptions...>;
 
@@ -113,10 +93,10 @@ namespace nil {
                                                       tag::array_list>::type;
 
                 /// @brief Type of underlying value.
-                /// @details If nil::marshalling::option::fixed_size_storage option is NOT used, the
+                /// @details If nil::crypto3::marshalling::option::fixed_size_storage option is NOT used, the
                 ///     value_type is std::vector<TElement>, otherwise it becomes
-                ///     nil::marshalling::container::static_vector<TElement, TSize>, where TSize is a size
-                ///     provided to nil::marshalling::option::fixed_size_storage option.
+                ///     nil::crypto3::marshalling::container::static_vector<TElement, TSize>, where TSize is a size
+                ///     provided to nil::crypto3::marshalling::option::fixed_size_storage option.
                 using value_type = typename base_impl_type::value_type;
 
                 /// @brief Type of the element.
@@ -171,10 +151,7 @@ namespace nil {
                 /// @brief Read field value from input data sequence
                 /// @details By default, the read operation will try to consume all the
                 ///     data available, unless size limiting option (such as
-                ///     nil::marshalling::option::sequence_size_field_prefix,
-                ///     nil::marshalling::option::sequence_fixed_size,
-                ///     nil::marshalling::option::sequence_size_forcing_enabled,
-                ///     nil::marshalling::option::sequence_length_forcing_enabled) is used.
+                ///     nil::crypto3::marshalling::option::sequence_size_field_prefix) is used.
                 /// @param[in, out] iter Iterator to read the data.
                 /// @param[in] len Number of bytes available for reading.
                 /// @return Status of read operation.
@@ -196,7 +173,7 @@ namespace nil {
 
                 /// @brief Write current field value to output data sequence
                 /// @details By default, the write operation will write all the
-                ///     elements the field contains. If nil::marshalling::option::sequence_fixed_size option
+                ///     elements the field contains. If nil::crypto3::marshalling::option::sequence_fixed_size option
                 ///     is used, the number of elements, that is going to be written, is
                 ///     exactly as the option specifies. If underlying vector storage
                 ///     doesn't contain enough data, the default constructed elements will
@@ -222,9 +199,7 @@ namespace nil {
                 }
 
                 /// @brief Check validity of the field value.
-                /// @details The collection is valid if all the elements are valid. In case
-                ///     nil::marshalling::option::contents_validator option is used, the validator,
-                ///     it provides, is invoked IN ADDITION to the validation of the elements.
+                /// @details The collection is valid if all the elements are valid.
                 /// @return true in case the field's value is valid, false otherwise.
                 bool valid() const {
                     return base_impl_type::valid();
@@ -247,108 +222,10 @@ namespace nil {
                     return base_impl_type::max_length();
                 }
 
-                /// @brief Force number of elements that must be read in the next read()
-                ///     invocation.
-                /// @details Exists only if nil::marshalling::option::sequence_size_forcing_enabled option has been
-                ///     used.
-                /// @param[in] count Number of elements to read during following read operation.
-                void force_read_elem_count(std::size_t count) {
-                    return base_impl_type::force_read_elem_count(count);
-                }
-
-                /// @brief Clear forcing of the number of elements that must be read in the next read()
-                ///     invocation.
-                /// @details Exists only if nil::marshalling::option::sequence_size_forcing_enabled option has been
-                ///     used.
-                void clear_read_elem_count() {
-                    return base_impl_type::clear_read_elem_count();
-                }
-
-                /// @brief Force available length for the next read() invocation.
-                /// @details Exists only if @ref nil::marshalling::option::sequence_length_forcing_enabled option has been
-                ///     used.
-                /// @param[in] count Number of elements to read during following read operation.
-                void force_read_length(std::size_t count) {
-                    return base_impl_type::force_read_length(count);
-                }
-
-                /// @brief Clear forcing of the available length in the next read()
-                ///     invocation.
-                /// @details Exists only if @ref nil::marshalling::option::sequence_length_forcing_enabled option has been
-                ///     used.
-                void clear_read_length_forcing() {
-                    return base_impl_type::clear_read_length_forcing();
-                }
-
-                /// @brief Force serialization length of a single element.
-                /// @details The function can be used to force a serialization length of a
-                ///     single element within the array_list.
-                ///     Exists only if @ref nil::marshalling::option::SequenceElemLengthForcingEnabled option has been
-                ///     used.
-                /// @param[in] count Number of elements to read during following read operation.
-                void force_read_elem_length(std::size_t count) {
-                    return base_impl_type::force_read_elem_length(count);
-                }
-
-                /// @brief Clear forcing the serialization length of the single element.
-                /// @details Exists only if nil::marshalling::option::SequenceElemLengthForcingEnabled option has been
-                ///     used.
-                void clear_read_elem_length_forcing() {
-                    return base_impl_type::clear_read_elem_length_forcing();
-                }
-
-                /// @brief Compile time check if this class is version dependent
-                static constexpr bool is_version_dependent() {
-                    return parsed_options_type::has_custom_version_update || base_impl_type::is_version_dependent();
-                }
-
-                /// @brief Get version of the field.
-                /// @details Exists only if @ref nil::marshalling::option::version_storage option has been provided.
-                version_type get_version() const {
-                    return base_impl_type::get_version();
-                }
-
-                /// @brief Default implementation of version update.
-                /// @return @b true in case the field contents have changed, @b false otherwise
-                bool set_version(version_type version) {
-                    return base_impl_type::set_version(version);
-                }
-
             protected:
                 using base_impl_type::read_data;
                 using base_impl_type::write_data;
 
-            private:
-                static_assert(
-                    !parsed_options_type::has_ser_offset,
-                    "nil::marshalling::option::num_value_ser_offset option is not applicable to array_list field");
-                static_assert(!parsed_options_type::has_fixed_length_limit,
-                              "nil::marshalling::option::fixed_length option is not applicable to array_list field");
-                static_assert(
-                    !parsed_options_type::has_fixed_bit_length_limit,
-                    "nil::marshalling::option::fixed_bit_length option is not applicable to array_list field");
-                static_assert(!parsed_options_type::has_var_length_limits,
-                              "nil::marshalling::option::var_length option is not applicable to array_list field");
-                static_assert(
-                    !parsed_options_type::has_scaling_ratio,
-                    "nil::marshalling::option::scaling_ratio_type option is not applicable to array_list field");
-                static_assert(!parsed_options_type::has_units,
-                              "nil::marshalling::option::Units option is not applicable to array_list field");
-                static_assert(!parsed_options_type::has_multi_range_validation,
-                              "nil::marshalling::option::valid_num_value_range (or similar) option is not applicable "
-                              "to array_list field");
-                static_assert(
-                    (!parsed_options_type::has_orig_data_view)
-                        || (std::is_integral<TElement>::value && (sizeof(TElement) == sizeof(std::uint8_t))),
-                    "Usage of nil::marshalling::option::orig_data_view option is allowed only for raw binary data "
-                    "(std::uint8_t) types.");
-                static_assert(
-                    !parsed_options_type::has_versions_range,
-                    "nil::marshalling::option::exists_between_versions (or similar) option is not applicable to "
-                    "array_list field");
-                static_assert(
-                    !parsed_options_type::has_invalid_by_default,
-                    "nil::marshalling::option::invalid_by_default option is not applicable to array_list field");
             };
 
             /// @brief Equivalence comparison operator.
@@ -386,22 +263,100 @@ namespace nil {
                 return !(field1 != field2);
             }
 
-            /// @brief Upcast type of the field definition to its parent nil::marshalling::types::array_list type
+            /// @brief Upcast type of the field definition to its parent nil::crypto3::marshalling::types::array_list type
             ///     in order to have access to its internal types.
-            /// @related nil::marshalling::types::array_list
+            /// @related nil::crypto3::marshalling::types::array_list
             template<typename TFieldBase, typename TElement, typename... TOptions>
             inline array_list<TFieldBase, TElement, TOptions...> &
                 to_field_base(array_list<TFieldBase, TElement, TOptions...> &field) {
                 return field;
             }
 
-            /// @brief Upcast type of the field definition to its parent nil::marshalling::types::array_list type
+            /// @brief Upcast type of the field definition to its parent nil::crypto3::marshalling::types::array_list type
             ///     in order to have access to its internal types.
-            /// @related nil::marshalling::types::array_list
+            /// @related nil::crypto3::marshalling::types::array_list
             template<typename TFieldBase, typename TElement, typename... TOptions>
             inline const array_list<TFieldBase, TElement, TOptions...> &
                 to_field_base(const array_list<TFieldBase, TElement, TOptions...> &field) {
                 return field;
+            }
+
+            // We use this type of array_list waay too often, so this is a shortcut, not to copy-paste it all the time.
+            template<typename TFieldBase, typename TElement>
+            using standard_array_list = array_list<
+                TFieldBase,
+                TElement,
+                nil::crypto3::marshalling::option::size_t_sequence_size_field_prefix<TFieldBase>>;
+
+            // Very often we just need an array list of std::size_t, so here's another shortcut.
+            template<typename TFieldBase>
+            using standard_size_t_array_list = array_list<
+                TFieldBase,
+                nil::crypto3::marshalling::types::integral<TFieldBase, std::size_t>,
+                nil::crypto3::marshalling::option::size_t_sequence_size_field_prefix<TFieldBase>>;
+
+            // Helper functions to convert to/from an arraylist.
+            template<typename TFieldBase, typename TMarshalledElement, typename Range>
+            typename std::enable_if<
+                marshalling::detail::is_range<Range>::value, 
+                standard_array_list<TFieldBase, TMarshalledElement>>::type 
+            fill_standard_array_list(
+                    const Range& input_range,
+                    std::function<TMarshalledElement(const typename Range::value_type&)> element_marshalling) {
+                standard_array_list<TFieldBase, TMarshalledElement> result;
+                for (const auto& v: input_range) {
+                    result.value().push_back(element_marshalling(v));
+                }
+                return result;
+            }
+
+            template<typename TFieldBase, typename TElement, typename TMarshalledElement> 
+            std::vector<TElement> make_standard_array_list(
+                const standard_array_list<TFieldBase, TMarshalledElement>& filled_array,
+                std::function<TElement(const TMarshalledElement&)> element_de_marshalling)
+            {
+                std::vector<TElement> result;
+                result.reserve(filled_array.value().size());
+                for (const auto& v: filled_array.value()) {
+                    result.push_back(element_de_marshalling(v));
+                }
+                return result;
+            }
+
+            // Helper functions to marshall an std::map.
+            // We keep TKey, TValue at the end, because they can be decuded from the map type, but the other 3
+            // arguments must be provided explicitly.
+            template<typename TFieldBase, typename TMarshalledKey, typename TMarshalledValue, typename TKey, typename TValue>
+            std::pair<standard_array_list<TFieldBase, TMarshalledKey>, standard_array_list<TFieldBase, TMarshalledValue>>
+            fill_std_map(
+                    const std::map<TKey, TValue>& input_map,
+                    std::function<TMarshalledKey(const TKey&)> key_marshalling,
+                    std::function<TMarshalledValue(const TValue&)> value_marshalling) {
+                standard_array_list<TFieldBase, TMarshalledKey> result_keys;
+                standard_array_list<TFieldBase, TMarshalledValue> result_values;
+                for (const auto& [k, v]: input_map) {
+                    result_keys.value().push_back(key_marshalling(k));
+                    result_values.value().push_back(value_marshalling(v));
+                }
+                return {result_keys, result_values};
+            }
+
+            template<typename TFieldBase, typename TKey, typename TValue, typename TMarshalledKey, typename TMarshalledValue>
+            std::map<TKey, TValue> make_std_map(
+                    const standard_array_list<TFieldBase, TMarshalledKey>& filled_keys,
+                    const standard_array_list<TFieldBase, TMarshalledValue>& filled_values,
+                    std::function<TKey(const TMarshalledKey&)> key_de_marshalling,
+                    std::function<TValue(const TMarshalledValue&)> value_de_marshalling)
+            {
+                if (filled_keys.value().size() != filled_values.value().size()) {
+                    throw std::invalid_argument("Number of values and keys do not match");;
+                }
+
+                std::map<TKey, TValue> result;
+                for (std::size_t i = 0; i < filled_keys.value().size(); ++i) {
+                    result[key_de_marshalling(filled_keys.value()[i])] = value_de_marshalling(filled_values.value()[i]);
+                }
+                return result;
             }
 
         }    // namespace types

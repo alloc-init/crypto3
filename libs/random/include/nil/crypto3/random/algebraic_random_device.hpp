@@ -51,8 +51,8 @@ namespace nil {
 
             template<typename AlgebraicType>
             struct algebraic_random_device<
-                    AlgebraicType, typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
-                                                           !algebra::is_extended_field<AlgebraicType>::value>::type> {
+                AlgebraicType, typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
+                                                       !algebra::is_extended_field<AlgebraicType>::value>::type> {
             protected:
                 typedef AlgebraicType field_type;
                 typedef typename field_type::value_type field_value_type;
@@ -90,8 +90,8 @@ namespace nil {
 
             template<typename AlgebraicType>
             struct algebraic_random_device<
-                    AlgebraicType, typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
-                                                           algebra::is_extended_field<AlgebraicType>::value>::type> {
+                AlgebraicType, typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
+                                                       algebra::is_extended_field<AlgebraicType>::value>::type> {
             protected:
                 typedef AlgebraicType extended_field_type;
                 typedef typename extended_field_type::value_type extended_field_value_type;
@@ -104,7 +104,7 @@ namespace nil {
                 /** Returns a random value in the range [min, max]. */
                 result_type operator()() {
                     result_type result;
-                    for (auto &coord: result.data) {
+                    for (auto &coord : result.data) {
                         coord = gen();
                     }
 
@@ -115,7 +115,7 @@ namespace nil {
                 // TODO: evaluate min_value at compile-time
                 constexpr static inline result_type min() {
                     result_type min_value;
-                    for (auto &coord: min_value.data) {
+                    for (auto &coord : min_value.data) {
                         coord = internal_generator_type::min();
                     }
 
@@ -126,7 +126,7 @@ namespace nil {
                 // TODO: evaluate max_value at compile-time
                 constexpr static inline result_type max() {
                     result_type max_value;
-                    for (auto &coord: max_value.data) {
+                    for (auto &coord : max_value.data) {
                         coord = internal_generator_type::max();
                     }
 
@@ -139,7 +139,7 @@ namespace nil {
 
             template<typename AlgebraicType>
             struct algebraic_random_device<
-                    AlgebraicType, typename std::enable_if<algebra::is_curve_group<AlgebraicType>::value>::type> {
+                AlgebraicType, typename std::enable_if<algebra::is_curve_group<AlgebraicType>::value>::type> {
             protected:
                 typedef AlgebraicType group_type;
                 typedef typename group_type::value_type group_value_type;

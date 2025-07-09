@@ -31,6 +31,7 @@
 #include <vector>
 
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/actor/core/parallelization_utils.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -232,7 +233,7 @@ namespace nil {
 
                 template<class... Args>
                 reference emplace_back(Args&&... _args) {
-                    return it.emplace_back(_args...);
+                    return it.template emplace_back<>(_args...);
                 }
 
                 void pop_back() {
@@ -248,7 +249,7 @@ namespace nil {
                 }
                 template<class... Args>
                 iterator emplace(const_iterator _position, Args&&... _args) {
-                    return it.emplace(_position, _args...);
+                    return it.template emplace<>(_position, _args...);
                 }
 
                 iterator insert(const_iterator _position, size_type _n, const_reference _x) {
@@ -285,7 +286,7 @@ namespace nil {
                 }
 
                 void swap(polynomial_view& other) {
-                    it.swap(other.it);
+                    it.swap(other.data());
                 }
 
                 template<typename Range>
@@ -352,7 +353,7 @@ namespace nil {
 
 //                polynomial_view operator-() const {
                 void neg() {
-                    std::transform(this->begin(), this->end(), this->begin(), std::negate<FieldValueType>());
+                    nil::crypto3::parallel_transform(this->begin(), this->end(), this->begin(), std::negate<FieldValueType>());
                 }
 
                 /**
@@ -400,14 +401,14 @@ namespace nil {
                       auto glambda = [=](const FieldValueType& x, const FieldValueType& y) {
                           return y - (x * lead_coeff);
                       };
-                      std::transform(other.begin(), other.end(), r.begin() + shift, r.begin() + shift, glambda);
+                      nil::crypto3::parallel_transform(other.begin(), other.end(), r.begin() + shift, r.begin() + shift, glambda);
                       r.condense();
 
                       r_deg = r.size() - 1;
                     }
                     nil::crypto3::math::condense(q);
 
-                    this->assign(q.begin(), q.end());
+                    this->template assign<>(q.begin(), q.end());
                     return *this;
                 }
 
@@ -433,7 +434,7 @@ namespace nil {
                         auto glambda = [=](const FieldValueType& x, const FieldValueType& y) {
                             return y - (x * lead_coeff);
                         };
-                        std::transform(other.begin(), other.end(), this->begin() + shift, this->begin() + shift, glambda);
+                        nil::crypto3::parallel_transform(other.begin(), other.end(), this->begin() + shift, this->begin() + shift, glambda);
                         this->condense();
 
                         r_deg = this->size() - 1;

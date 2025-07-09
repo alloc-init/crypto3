@@ -84,7 +84,7 @@ namespace nil {
                     typedef typename impl_type::round_constants_type round_constants_type;
                     constexpr static const round_constants_type round_constants = impl_type::round_constants;
 
-                    static void absorb(const block_type &block, state_type &state) {
+                    static void absorb(const block_type& block, state_type& state) {
                         for (std::size_t i = 0; i < block.size(); ++i) {
                             // XOR
                             state[i] ^= block[i];
@@ -94,7 +94,7 @@ namespace nil {
 
                 template<std::size_t DigestBits>
                 constexpr typename keccak_1600_functions<DigestBits>::round_constants_type const
-                        keccak_1600_functions<DigestBits>::round_constants;
+                    keccak_1600_functions<DigestBits>::round_constants;
             }    // namespace detail
         }        // namespace hashes
     }            // namespace crypto3

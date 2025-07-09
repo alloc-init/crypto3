@@ -66,10 +66,8 @@ namespace nil {
                             std::size_t BatchSize = 1>
                     struct basic_batched_fri_compile_time_size {
 
-                        constexpr static const std::size_t
-                        m = M;
-                        constexpr static const std::size_t
-                        leaf_size = BatchSize;
+                        constexpr static const std::size_t m = M;
+                        constexpr static const std::size_t leaf_size = BatchSize;
 
                         typedef FieldType field_type;
                         typedef MerkleTreeHashType merkle_tree_hash_type;
@@ -78,9 +76,9 @@ namespace nil {
                         typedef typename containers::merkle_tree<MerkleTreeHashType, 2> merkle_tree_type;
                         typedef typename containers::merkle_proof<MerkleTreeHashType, 2> merkle_proof_type;
 
-                        using Endianness = nil::marshalling::option::big_endian;
+                        using Endianness = marshalling::option::big_endian;
                         using field_element_type =
-                                nil::crypto3::marshalling::types::field_element<nil::marshalling::field_type<Endianness>,
+                                nil::crypto3::marshalling::types::field_element<marshalling::field_type<Endianness>,
                                         typename FieldType::value_type>;
 
                         using precommitment_type = merkle_tree_type;

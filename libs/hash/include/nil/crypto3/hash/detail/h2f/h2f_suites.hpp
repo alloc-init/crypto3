@@ -29,18 +29,13 @@
 #include <cstdint>
 
 #include <nil/crypto3/algebra/curves/bls12.hpp>
-#include <nil/crypto3/algebra/curves/pallas.hpp>
-#include <nil/crypto3/algebra/curves/mnt4.hpp>
-#include <nil/crypto3/algebra/curves/mnt6.hpp>
 
 #include <nil/crypto3/hash/sha2.hpp>
-#include <nil/crypto3/hash/keccak.hpp>
-#include <nil/crypto3/hash/shake.hpp>
 
 namespace nil {
     namespace crypto3 {
         namespace hashes {
-            template<typename FieldType, typename HashType, std::size_t k>
+            template<typename Field, typename Hash, std::size_t k>
             struct h2f_suite;
 
             template<>
@@ -57,13 +52,13 @@ namespace nil {
 
                 constexpr static std::size_t m = field_type::arity;
                 constexpr static std::size_t k = 128;
-                /// L = ceil((ceil(log2(p)) + K) / 8)
+                /// L = ceil((ceil(log2(p)) + k) / 8)
                 constexpr static std::size_t L = 64;
             };
 
             template<>
             struct h2f_suite<typename algebra::fields::fp2<typename algebra::curves::bls12_381::base_field_type>,
-                    sha2<256>, 128> {
+                             sha2<256>, 128> {
                 typedef typename algebra::curves::bls12_381::g2_type<>::field_type field_type;
                 typedef typename field_type::value_type field_value_type;
                 typedef typename field_type::modular_type modular_type;
@@ -71,144 +66,16 @@ namespace nil {
 
                 // BLS12381G2_XMD:SHA-256_SSWU_RO_
                 constexpr static std::array<std::uint8_t, 31> suite_id = {
-                        0x42, 0x4c, 0x53, 0x31, 0x32, 0x33, 0x38, 0x31, 0x47, 0x32, 0x5f, 0x58, 0x4d, 0x44, 0x3a, 0x53,
-                        0x48, 0x41, 0x2d, 0x32, 0x35, 0x36, 0x5f, 0x53, 0x53, 0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f};
+                    0x42, 0x4c, 0x53, 0x31, 0x32, 0x33, 0x38, 0x31, 0x47, 0x32, 0x5f, 0x58, 0x4d, 0x44, 0x3a, 0x53,
+                    0x48, 0x41, 0x2d, 0x32, 0x35, 0x36, 0x5f, 0x53, 0x53, 0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f};
 
                 constexpr static std::size_t m = field_type::arity;
                 constexpr static std::size_t k = 128;
-                /// L = ceil((ceil(log2(p)) + K) / 8)
+                /// L = ceil((ceil(log2(p)) + k) / 8)
                 constexpr static std::size_t L = 64;
-            };
-
-            template<>
-            struct h2f_suite<typename algebra::curves::bls12_381::base_field_type, shake<128, 1024>, 128> {
-                typedef typename algebra::curves::bls12_381::base_field_type field_type;
-                typedef typename field_type::value_type field_value_type;
-                typedef typename field_type::modular_type modular_type;
-                typedef shake<128, 1024> hash_type;
-
-                // BLS12381G1_XOF:SHAKE128_SSWU_RO_
-                constexpr static std::array<std::uint8_t, 32> suite_id = {
-                        0x42, 0x4c, 0x53, 0x31, 0x32, 0x33, 0x38, 0x31, 0x47, 0x31, 0x5f, 0x58, 0x4f, 0x46, 0x3a, 0x53,
-                        0x48, 0x41, 0x4b, 0x45, 0x31, 0x32, 0x38, 0x5f, 0x53, 0x53, 0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f};
-
-                constexpr static std::size_t m = field_type::arity;
-                constexpr static std::size_t k = 128;
-                /// L = ceil((ceil(log2(p)) + K) / 8)
-                constexpr static std::size_t L = 64;
-            };
-
-            template<>
-            struct h2f_suite<typename algebra::fields::fp2<typename algebra::curves::bls12_381::base_field_type>,
-                    shake<128, 2048>, 128> {
-                typedef typename algebra::curves::bls12_381::g2_type<>::field_type field_type;
-                typedef typename field_type::value_type field_value_type;
-                typedef typename field_type::modular_type modular_type;
-                typedef shake<128, 2048> hash_type;
-
-                // BLS12381G2_XOF:SHAKE128_SSWU_RO_
-                constexpr static std::array<std::uint8_t, 32> suite_id = {
-                        0x42, 0x4c, 0x53, 0x31, 0x32, 0x33, 0x38, 0x31, 0x47, 0x32, 0x5f, 0x58, 0x4f, 0x46, 0x3a, 0x53,
-                        0x48, 0x41, 0x4b, 0x45, 0x31, 0x32, 0x38, 0x5f, 0x53, 0x53, 0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f};
-
-                constexpr static std::size_t m = field_type::arity;
-                constexpr static std::size_t k = 128;
-                /// L = ceil((ceil(log2(p)) + K) / 8)
-                constexpr static std::size_t L = 64;
-            };
-
-            template<>
-            struct h2f_suite<typename algebra::curves::bls12_381::base_field_type, shake<256, 1024>, 128> {
-                typedef typename algebra::curves::bls12_381::base_field_type field_type;
-                typedef typename field_type::value_type field_value_type;
-                typedef typename field_type::modular_type modular_type;
-                typedef shake<256, 1024> hash_type;
-
-                // BLS12381G1_XOF:SHAKE256_SSWU_RO_
-                constexpr static std::array<std::uint8_t, 32> suite_id = {
-                        0x42, 0x4c, 0x53, 0x31, 0x32, 0x33, 0x38, 0x31, 0x47, 0x31, 0x5f, 0x58, 0x4f, 0x46, 0x3a, 0x53,
-                        0x48, 0x41, 0x4b, 0x45, 0x32, 0x35, 0x36, 0x5f, 0x53, 0x53, 0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f};
-
-                constexpr static std::size_t m = field_type::arity;
-                constexpr static std::size_t k = 128;
-                /// L = ceil((ceil(log2(p)) + K) / 8)
-                constexpr static std::size_t L = 64;
-            };
-
-            template<>
-            struct h2f_suite<typename algebra::fields::fp2<typename algebra::curves::bls12_381::base_field_type>,
-                    shake<256, 2048>, 128> {
-                typedef typename algebra::curves::bls12_381::g2_type<>::field_type field_type;
-                typedef typename field_type::value_type field_value_type;
-                typedef typename field_type::modular_type modular_type;
-                typedef shake<256, 2048> hash_type;
-
-                // BLS12381G2_XOF:SHAKE256_SSWU_RO_
-                constexpr static std::array<std::uint8_t, 32> suite_id = {
-                        0x42, 0x4c, 0x53, 0x31, 0x32, 0x33, 0x38, 0x31, 0x47, 0x32, 0x5f, 0x58, 0x4f, 0x46, 0x3a, 0x53,
-                        0x48, 0x41, 0x4b, 0x45, 0x32, 0x35, 0x36, 0x5f, 0x53, 0x53, 0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f};
-
-                constexpr static std::size_t m = field_type::arity;
-                constexpr static std::size_t k = 128;
-                /// L = ceil((ceil(log2(p)) + K) / 8)
-                constexpr static std::size_t L = 64;
-            };
-
-            template<>
-            struct h2f_suite<typename algebra::curves::pallas::base_field_type, keccak_1600<256>, 128> {
-                typedef typename algebra::curves::pallas::base_field_type field_type;
-                typedef typename field_type::value_type field_value_type;
-                typedef typename field_type::modular_type modular_type;
-                typedef keccak_1600<256> hash_type;
-
-                // PALLAS_XMD:KECCAK-256_SSWU_RO_
-                constexpr static std::array<std::uint8_t, 30> suite_id = {
-                        0x50, 0x41, 0x4c, 0x4c, 0x41, 0x53, 0x5f, 0x58, 0x4d, 0x44, 0x3a, 0x4b, 0x45, 0x43, 0x43,
-                        0x41, 0x4b, 0x2d, 0x32, 0x35, 0x36, 0x5f, 0x53, 0x53, 0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f};
-
-                constexpr static std::size_t m = field_type::arity;
-                constexpr static std::size_t k = 128;
-                /// L = ceil((ceil(log2(p)) + K) / 8)
-                constexpr static std::size_t L = 48;
-            };
-
-            template<>
-            struct h2f_suite<typename algebra::curves::mnt4_298::base_field_type, keccak_1600<256>, 128> {
-                typedef typename algebra::curves::mnt4_298::base_field_type field_type;
-                typedef typename field_type::value_type field_value_type;
-                typedef typename field_type::modular_type modular_type;
-                typedef keccak_1600<256> hash_type;
-
-                // MNT4298_XMD:KECCAK-256_SSWU_RO_
-                constexpr static std::array<std::uint8_t, 31> suite_id = {
-                        0x4d, 0x4e, 0x54, 0x34, 0x32, 0x39, 0x38, 0x5f, 0x58, 0x4d, 0x44, 0x3a, 0x4b, 0x45, 0x43, 0x43,
-                        0x41, 0x4b, 0x2d, 0x32, 0x35, 0x36, 0x5f, 0x53, 0x53, 0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f};
-
-                constexpr static std::size_t m = field_type::arity;
-                constexpr static std::size_t k = 128;
-                /// L = ceil((ceil(log2(p)) + K) / 8)
-                constexpr static std::size_t L = 54;
-            };
-
-            template<>
-            struct h2f_suite<typename algebra::curves::mnt6_298::base_field_type, keccak_1600<256>, 128> {
-                typedef typename algebra::curves::mnt6_298::base_field_type field_type;
-                typedef typename field_type::value_type field_value_type;
-                typedef typename field_type::modular_type modular_type;
-                typedef keccak_1600<256> hash_type;
-
-                // MNT6298_XMD:KECCAK-256_SSWU_RO_
-                constexpr static std::array<std::uint8_t, 31> suite_id = {
-                        0x4d, 0x4e, 0x54, 0x36, 0x32, 0x39, 0x38, 0x5f, 0x58, 0x4d, 0x44, 0x3a, 0x4b, 0x45, 0x43, 0x43,
-                        0x41, 0x4b, 0x2d, 0x32, 0x35, 0x36, 0x5f, 0x53, 0x53, 0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f};
-
-                constexpr static std::size_t m = field_type::arity;
-                constexpr static std::size_t k = 128;
-                /// L = ceil((ceil(log2(p)) + K) / 8)
-                constexpr static std::size_t L = 54;
             };
         }    // namespace hashes
-    }    // namespace crypto3
+    }        // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_H2F_SUITES_HPP

@@ -54,7 +54,7 @@ namespace nil {
                     static const field_value_type one = field_value_type::one();
 
                     field_value_type tv1 =
-                            (suite_type::Z.pow(2) * u.pow(4) + suite_type::Z * u.pow(2)).inversed();
+                        (suite_type::Z.pow(2) * u.pow(4) + suite_type::Z * u.pow(2)).inversed();
                     field_value_type x1 = (-suite_type::Bi * suite_type::Ai.inversed()) * (one + tv1);
                     if (tv1.is_zero()) {
                         x1 = suite_type::Bi * (suite_type::Z * suite_type::Ai).inversed();
@@ -95,13 +95,11 @@ namespace nil {
 
             template<>
             struct map_to_curve<typename bls12_381::g1_type<>>
-                    : m2c_simple_swu_zeroAB<typename bls12_381::g1_type<>> {
-            };
+                : m2c_simple_swu_zeroAB<typename bls12_381::g1_type<>> { };
 
             template<>
             struct map_to_curve<typename bls12_381::g2_type<>>
-                    : m2c_simple_swu_zeroAB<typename bls12_381::g2_type<>> {
-            };
+                : m2c_simple_swu_zeroAB<typename bls12_381::g2_type<>> { };
         } // namespace hashes
     } // namespace crypto3
 } // namespace nil

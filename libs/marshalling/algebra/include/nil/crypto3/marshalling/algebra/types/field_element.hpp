@@ -2,6 +2,7 @@
 // Copyright (c) 2017-2021 Mikhail Komarov <nemo@nil.foundation>
 // Copyright (c) 2020-2021 Nikita Kaskov <nbering@nil.foundation>
 // Copyright (c) 2021 Ilias Khairullin <ilias@nil.foundation>
+// Copyright (c) 2024 Vasiliy Olekhov <vasiliy.olekhov@nil.foundation>
 //
 // MIT License
 //
@@ -27,13 +28,10 @@
 #ifndef CRYPTO3_MARSHALLING_FIELD_ELEMENT_HPP
 #define CRYPTO3_MARSHALLING_FIELD_ELEMENT_HPP
 
-#include <ratio>
-#include <limits>
 #include <type_traits>
 
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/options.hpp>
-#include <nil/marshalling/types/integral.hpp>
 #include <nil/marshalling/types/array_list.hpp>
 #include <nil/marshalling/types/tag.hpp>
 #include <nil/marshalling/types/detail/adapt_basic_field.hpp>
@@ -56,7 +54,8 @@ namespace nil {
 
                         std::array<typename FieldValueType::field_type::integral_type,
                             FieldValueType::field_type::arity> result;
-                        result[0] = typename FieldValueType::field_type::integral_type(field_elem.data);
+                        result[0] = typename FieldValueType::field_type::integral_type(
+                            field_elem.to_integral());
                         return result;
                     }
 
@@ -117,14 +116,14 @@ namespace nil {
                          typename FieldValueType,
                          typename... TOptions>
                 class pure_field_element
-                    : private ::nil::marshalling::types::detail::adapt_basic_field_type<
+                    : private ::nil::crypto3::marshalling::types::detail::adapt_basic_field_type<
                           integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
                           TOptions...> {
 
                     static_assert(algebra::is_field_element<FieldValueType>::value);
                     static_assert(!algebra::is_extended_field_element<FieldValueType>::value);
 
-                    using base_impl_type = ::nil::marshalling::types::detail::adapt_basic_field_type<
+                    using base_impl_type = ::nil::crypto3::marshalling::types::detail::adapt_basic_field_type<
                         integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
                         TOptions...>;
 
@@ -132,11 +131,8 @@ namespace nil {
                     /// @brief endian_type used for serialization.
                     using endian_type = typename base_impl_type::endian_type;
 
-                    /// @brief Version type
-                    using version_type = typename base_impl_type::version_type;
-
                     /// @brief All the options provided to this class bundled into struct.
-                    using parsed_options_type = ::nil::marshalling::types::detail::options_parser<TOptions...>;
+                    using parsed_options_type = ::nil::crypto3::marshalling::types::detail::options_parser<TOptions...>;
 
                     /// @brief Type of underlying field_element value.
                     /// @details Same as template parameter T to this class.
@@ -148,8 +144,9 @@ namespace nil {
 
                     /// @brief Constructor
                     explicit pure_field_element(const FieldValueType &field_elem)
-                    : base_impl_type(typename FieldValueType::field_type::integral_type(field_elem.data)){
-                    }
+                        : base_impl_type(
+                              typename FieldValueType::field_type::integral_type(
+                                  field_elem.to_integral())) {}
 
                     /// @brief Copy constructor
                     pure_field_element(const pure_field_element &) = default;
@@ -211,7 +208,7 @@ namespace nil {
                     /// @return Status of read operation.
                     /// @post Iterator is advanced.
                     template<typename TIter>
-                    nil::marshalling::status_type read(TIter &iter, std::size_t size) {
+                    nil::crypto3::marshalling::status_type read(TIter &iter, std::size_t size) {
                         return base_impl_type::read(iter, size);
                     }
 
@@ -231,7 +228,7 @@ namespace nil {
                     /// @return Status of write operation.
                     /// @post Iterator is advanced.
                     template<typename TIter>
-                    nil::marshalling::status_type write(TIter &iter, std::size_t size) const {
+                    nil::crypto3::marshalling::status_type write(TIter &iter, std::size_t size) const {
                         return base_impl_type::write(iter, size);
                     }
 
@@ -245,119 +242,36 @@ namespace nil {
                         base_impl_type::write_no_status(iter);
                     }
 
-                    /// @brief Compile time check if this class is version dependent
-                    static constexpr bool is_version_dependent() {
-                        return parsed_options_type::has_custom_version_update || base_impl_type::is_version_dependent();
-                    }
-
-                    /// @brief Get version of the field.
-                    /// @details Exists only if @ref nil::marshalling::option::version_storage option has been provided.
-                    version_type get_version() const {
-                        return base_impl_type::get_version();
-                    }
-
-                    /// @brief Default implementation of version update.
-                    /// @return @b true in case the field contents have changed, @b false otherwise
-                    bool set_version(version_type version) {
-                        return base_impl_type::set_version(version);
-                    }
-
                 protected:
                     using base_impl_type::read_data;
                     using base_impl_type::write_data;
 
                 private:
-                    // because such an adapter uses pure byte reading,
-                    // incompatible with crypto3::field_element
-                    static_assert(!parsed_options_type::has_fixed_length_limit,
-                                  "nil::marshalling::option::fixed_length option is not applicable to "
-                                  "crypto3::field_element type");
-
-                    // because such an adapter uses pure byte reading,
-                    // incompatible with crypto3::field_element
-                    static_assert(!parsed_options_type::has_fixed_bit_length_limit,
-                                  "nil::marshalling::option::fixed_bit_length option is not applicable to "
-                                  "crypto3::field_element type");
-
-                    static_assert(!parsed_options_type::has_scaling_ratio,
-                                  "nil::marshalling::option::scaling_ratio option is not applicable to "
-                                  "crypto3::field_element type");
-
-                    static_assert(
-                        !parsed_options_type::has_sequence_elem_length_forcing,
-                        "nil::marshalling::option::SequenceElemLengthForcingEnabled option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_sequence_size_forcing,
-                                  "nil::marshalling::option::SequenceSizeForcingEnabled option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_sequence_length_forcing,
-                                  "nil::marshalling::option::SequenceLengthForcingEnabled option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_sequence_fixed_size,
-                                  "nil::marshalling::option::sequence_fixed_size option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_fixed_size_use_fixed_size_storage,
-                        "nil::marshalling::option::SequenceFixedSizeUseFixedSizeStorage option is not applicable to "
-                        "crypto3::field_element type");
                     static_assert(!parsed_options_type::has_sequence_size_field_prefix,
-                                  "nil::marshalling::option::sequence_size_field_prefix option is not applicable to "
+                                  "nil::crypto3::marshalling::option::sequence_size_field_prefix option is not applicable to "
                                   "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_ser_length_field_prefix,
-                        "nil::marshalling::option::sequence_ser_length_field_prefix option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_elem_ser_length_field_prefix,
-                        "nil::marshalling::option::sequence_elem_ser_length_field_prefix option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_elem_fixed_ser_length_field_prefix,
-                        "nil::marshalling::option::SequenceElemSerLengthFixedFieldPrefix option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_trailing_field_suffix,
-                        "nil::marshalling::option::sequence_trailing_field_suffix option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_termination_field_suffix,
-                        "nil::marshalling::option::sequence_termination_field_suffix option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_fixed_size_storage,
-                                  "nil::marshalling::option::fixed_size_storage option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_custom_storage_type,
-                                  "nil::marshalling::option::custom_storage_type option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_orig_data_view,
-                                  "nil::marshalling::option::orig_data_view option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_versions_range,
-                        "nil::marshalling::option::exists_between_versions (or similar) option is not applicable to "
-                        "crypto3::field_element type");
                 };
 
                 template<typename TTypeBase,
                          typename FieldValueType,
                          typename... TOptions>
                 class extended_field_element
-                    : private ::nil::marshalling::types::detail::adapt_basic_field_type<
-                            nil::marshalling::types::array_list<
-                                nil::marshalling::field_type<nil::marshalling::option::little_endian>,
+                    : private ::nil::crypto3::marshalling::types::detail::adapt_basic_field_type<
+                            nil::crypto3::marshalling::types::array_list<
+                                nil::crypto3::marshalling::field_type<nil::crypto3::marshalling::option::little_endian>,
                                 integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
-                                nil::marshalling::option::fixed_size_storage<
+                                nil::crypto3::marshalling::option::fixed_size_storage<
                                     FieldValueType::field_type::arity>>,
                           TOptions...> {
 
                     static_assert(algebra::is_field_element<FieldValueType>::value);
                     static_assert(algebra::is_extended_field_element<FieldValueType>::value);
 
-                    using base_impl_type = ::nil::marshalling::types::detail::adapt_basic_field_type<
-                        typename nil::marshalling::types::array_list<
-                                                  nil::marshalling::field_type<nil::marshalling::option::little_endian>,
+                    using base_impl_type = ::nil::crypto3::marshalling::types::detail::adapt_basic_field_type<
+                        typename nil::crypto3::marshalling::types::array_list<
+                                                  nil::crypto3::marshalling::field_type<nil::crypto3::marshalling::option::little_endian>,
                                                   integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
-                                                  nil::marshalling::option::fixed_size_storage<
+                                                  nil::crypto3::marshalling::option::fixed_size_storage<
                                                     FieldValueType::field_type::arity>>,
                         TOptions...>;
 
@@ -365,11 +279,8 @@ namespace nil {
                     /// @brief endian_type used for serialization.
                     using endian_type = typename base_impl_type::endian_type;
 
-                    /// @brief Version type
-                    using version_type = typename base_impl_type::version_type;
-
                     /// @brief All the options provided to this class bundled into struct.
-                    using parsed_options_type = ::nil::marshalling::types::detail::options_parser<TOptions...>;
+                    using parsed_options_type = ::nil::crypto3::marshalling::types::detail::options_parser<TOptions...>;
 
                     /// @brief Type of underlying field_element value.
                     /// @details Same as template parameter T to this class.
@@ -463,7 +374,7 @@ namespace nil {
                     /// @return Status of read operation.
                     /// @post Iterator is advanced.
                     template<typename TIter>
-                    nil::marshalling::status_type read(TIter &iter, std::size_t size) {
+                    nil::crypto3::marshalling::status_type read(TIter &iter, std::size_t size) {
                         return base_impl_type::read(iter, size);
                     }
 
@@ -483,7 +394,7 @@ namespace nil {
                     /// @return Status of write operation.
                     /// @post Iterator is advanced.
                     template<typename TIter>
-                    nil::marshalling::status_type write(TIter &iter, std::size_t size) const {
+                    nil::crypto3::marshalling::status_type write(TIter &iter, std::size_t size) const {
                         return base_impl_type::write(iter, size);
                     }
 
@@ -497,97 +408,14 @@ namespace nil {
                         base_impl_type::write_no_status(iter);
                     }
 
-                    /// @brief Compile time check if this class is version dependent
-                    static constexpr bool is_version_dependent() {
-                        return parsed_options_type::has_custom_version_update || base_impl_type::is_version_dependent();
-                    }
-
-                    /// @brief Get version of the field.
-                    /// @details Exists only if @ref nil::marshalling::option::version_storage option has been provided.
-                    version_type get_version() const {
-                        return base_impl_type::get_version();
-                    }
-
-                    /// @brief Default implementation of version update.
-                    /// @return @b true in case the field contents have changed, @b false otherwise
-                    bool set_version(version_type version) {
-                        return base_impl_type::set_version(version);
-                    }
-
                 protected:
                     using base_impl_type::read_data;
                     using base_impl_type::write_data;
 
                 private:
-                    // because such an adapter uses pure byte reading,
-                    // incompatible with crypto3::field_element
-                    static_assert(!parsed_options_type::has_fixed_length_limit,
-                                  "nil::marshalling::option::fixed_length option is not applicable to "
-                                  "crypto3::field_element type");
-
-                    // because such an adapter uses pure byte reading,
-                    // incompatible with crypto3::field_element
-                    static_assert(!parsed_options_type::has_fixed_bit_length_limit,
-                                  "nil::marshalling::option::fixed_bit_length option is not applicable to "
-                                  "crypto3::field_element type");
-
-                    static_assert(!parsed_options_type::has_scaling_ratio,
-                                  "nil::marshalling::option::scaling_ratio option is not applicable to "
-                                  "crypto3::field_element type");
-
-                    static_assert(
-                        !parsed_options_type::has_sequence_elem_length_forcing,
-                        "nil::marshalling::option::SequenceElemLengthForcingEnabled option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_sequence_size_forcing,
-                                  "nil::marshalling::option::SequenceSizeForcingEnabled option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_sequence_length_forcing,
-                                  "nil::marshalling::option::SequenceLengthForcingEnabled option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_sequence_fixed_size,
-                                  "nil::marshalling::option::sequence_fixed_size option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_fixed_size_use_fixed_size_storage,
-                        "nil::marshalling::option::SequenceFixedSizeUseFixedSizeStorage option is not applicable to "
-                        "crypto3::field_element type");
                     static_assert(!parsed_options_type::has_sequence_size_field_prefix,
-                                  "nil::marshalling::option::sequence_size_field_prefix option is not applicable to "
+                                  "nil::crypto3::marshalling::option::sequence_size_field_prefix option is not applicable to "
                                   "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_ser_length_field_prefix,
-                        "nil::marshalling::option::sequence_ser_length_field_prefix option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_elem_ser_length_field_prefix,
-                        "nil::marshalling::option::sequence_elem_ser_length_field_prefix option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_elem_fixed_ser_length_field_prefix,
-                        "nil::marshalling::option::SequenceElemSerLengthFixedFieldPrefix option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_trailing_field_suffix,
-                        "nil::marshalling::option::sequence_trailing_field_suffix option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_sequence_termination_field_suffix,
-                        "nil::marshalling::option::sequence_termination_field_suffix option is not applicable to "
-                        "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_fixed_size_storage,
-                                  "nil::marshalling::option::fixed_size_storage option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_custom_storage_type,
-                                  "nil::marshalling::option::custom_storage_type option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(!parsed_options_type::has_orig_data_view,
-                                  "nil::marshalling::option::orig_data_view option is not applicable to "
-                                  "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_versions_range,
-                        "nil::marshalling::option::exists_between_versions (or similar) option is not applicable to "
-                        "crypto3::field_element type");
                 };
 
                 template<typename TTypeBase,
@@ -621,12 +449,15 @@ namespace nil {
                 // }
 
                 // template<typename FieldValueType>
-                // typename std::enable_if<algebra::is_field_element<FieldValueType>::value &&
+                // typename
+                // std::enable_if<algebra::is_field_element<FieldValueType>::value &&
                 //                             !(algebra::is_extended_field_element<FieldValueType>::value),
                 //                         int>::type
                 //     compare_field_data(const FieldValueType &field_elem1,
                 //                        const FieldValueType &field_elem2) {
-                //     return (field_elem1.data < field_elem2.data) ? -1 : ((field_elem1.data > field_elem2.data) ? 1 : 0);
+                //     return (field_elem1.to_integral()  < field_elem2.to_integral()) ?
+                //     -1 :
+                //     ((field_elem1.to_integral()  > field_elem2.to_integral()) ? 1 : 0);
                 // }
 
                 // template<typename FieldValueType>
@@ -668,41 +499,38 @@ namespace nil {
                 //     return false;
                 // }
 
-                // /// @brief Upcast type of the field definition to its parent nil::marshalling::types::field_element type
+                // /// @brief Upcast type of the field definition to its parent nil::crypto3::marshalling::types::field_element type
                 // ///     in order to have access to its internal types.
-                // /// @related nil::marshalling::types::field_element
+                // /// @related nil::crypto3::marshalling::types::field_element
                 // template<typename TTypeBase, typename CurveGroupType, typename... TOptions>
                 // inline field_element<TTypeBase, CurveGroupType, TOptions...> &
                 //     to_field_base(field_element<TTypeBase, CurveGroupType, TOptions...> &field) {
                 //     return field;
                 // }
 
-                // /// @brief Upcast type of the field definition to its parent nil::marshalling::types::field_element type
+                // /// @brief Upcast type of the field definition to its parent nil::crypto3::marshalling::types::field_element type
                 // ///     in order to have access to its internal types.
-                // /// @related nil::marshalling::types::field_element
+                // /// @related nil::crypto3::marshalling::types::field_element
                 // template<typename TTypeBase, typename CurveGroupType, typename... TOptions>
                 // inline const field_element<TTypeBase, CurveGroupType, TOptions...> &
                 //     to_field_base(const field_element<TTypeBase, CurveGroupType, TOptions...> &field) {
                 //     return field;
                 // }
 
+
+                template<typename FieldValueType, typename TTypeBase>
+                using field_element_vector = nil::crypto3::marshalling::types::standard_array_list<
+                    TTypeBase,
+                    field_element<TTypeBase, FieldValueType>>;
+
                 template<typename FieldValueType, typename Endianness>
-                nil::marshalling::types::array_list<
-                    nil::marshalling::field_type<Endianness>,
-                    field_element<nil::marshalling::field_type<Endianness>, FieldValueType>,
-                    nil::marshalling::option::sequence_size_field_prefix<
-                        nil::marshalling::types::integral<nil::marshalling::field_type<Endianness>, std::size_t>>>
+                field_element_vector<FieldValueType, nil::crypto3::marshalling::field_type<Endianness>>
                     fill_field_element_vector(const std::vector<FieldValueType> &field_elem_vector) {
 
-                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
                     using field_element_type = field_element<TTypeBase, FieldValueType>;
-                    using field_element_vector_type = nil::marshalling::types::array_list<
-                        TTypeBase,
-                        field_element_type,
-                        nil::marshalling::option::sequence_size_field_prefix<
-                            nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
-                    field_element_vector_type result;
+                    field_element_vector<FieldValueType, TTypeBase> result;
                     for (std::size_t i = 0; i < field_elem_vector.size(); i++) {
                         result.value().push_back(field_element_type(field_elem_vector[i]));
                     }
@@ -711,12 +539,7 @@ namespace nil {
 
                 template<typename FieldValueType, typename Endianness>
                 std::vector<FieldValueType> make_field_element_vector(
-                    const nil::marshalling::types::array_list<
-                        nil::marshalling::field_type<Endianness>,
-                        field_element<nil::marshalling::field_type<Endianness>, FieldValueType>,
-                        nil::marshalling::option::sequence_size_field_prefix<
-                            nil::marshalling::types::integral<nil::marshalling::field_type<Endianness>, std::size_t>>>
-                        &field_elem_vector) {
+                    const field_element_vector<FieldValueType, nil::crypto3::marshalling::field_type<Endianness>>& field_elem_vector) {
 
                     std::vector<FieldValueType> result;
                     result.reserve(field_elem_vector.value().size());

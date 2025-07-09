@@ -29,39 +29,37 @@
 
 #include <set>
 
-#include <boost/multiprecision/miller_rabin.hpp>
+#include <nil/crypto3/multiprecision/big_mod.hpp>
+#include <nil/crypto3/multiprecision/big_uint.hpp>
+#include <nil/crypto3/multiprecision/miller_rabin.hpp>
 
-#include <nil/crypto3/algebra/random_element.hpp>
-
-#include <nil/crypto3/multiprecision/modular/modular_adaptor.hpp>
+#include "random_element.hpp"
 
 namespace nil {
     namespace crypto3 {
         namespace algebra {
-            using namespace boost::multiprecision;
-
             /*
              The Pollard Rho factorization of a number n.
              Input: n the number to be factorized.
              Output: a factor of n.
              */
-            template<typename Backend, expression_template_option ExpressionTemplates>
-            number<Backend, ExpressionTemplates> pollard_rho_factorization(const number<Backend, ExpressionTemplates> &n) {
+            template<std::size_t Bits>
+            nil::crypto3::multiprecision::big_uint<Bits>
+            pollard_rho_factorization(const nil::crypto3::multiprecision::big_uint<Bits> &n) {
                 if (!(n % 2)) {
                     return 2;
                 }
 
-                boost::random::independent_bits_engine<std::mt19937, 256, number<Backend, ExpressionTemplates>> rng;
-                number<backends::modular_adaptor<Backend, backends::modular_params_rt<Backend>>, ExpressionTemplates>
-                        divisor,
+                boost::random::independent_bits_engine<std::mt19937, 256, nil::crypto3::multiprecision::big_uint<Bits>> rng;
+                nil::crypto3::multiprecision::montgomery_big_mod_rt<Bits> divisor(0u, n),
                         c(rng(), n), x(rng(), n), nn(n, n), xx = x;
                 do {
                     x = x * x + c;
                     xx = xx * xx + c;
                     xx = xx * xx + c;
-                    divisor = gcd((x > xx) ? x - xx : xx - x, nn);
+                    divisor = nil::crypto3::multiprecision::gcd((x > xx) ? x - xx : xx - x, nn);
                 } while (static_cast<int>(divisor) == 1);
-                return static_cast<number<Backend, ExpressionTemplates>>(divisor);
+                return divisor.to_integral();
             }
 
             /*
@@ -69,11 +67,11 @@ namespace nil {
              Input: n is the number to be prime factorized,
              prime_factors is a set of prime factors of n.
              */
-            template<typename IntegerType, std::size_t Iterations = 100>
+            template<typename IntegerType>
             void prime_factorize(IntegerType n, std::set<IntegerType> &prime_factors) {
                 if (n == 0 || n == 1)
                     return;
-                if (miller_rabin_test(n, Iterations)) {
+                if (nil::crypto3::multiprecision::miller_rabin_test(n, 100)) {
                     prime_factors.insert(n);
                     return;
                 }
@@ -84,35 +82,38 @@ namespace nil {
                 prime_factorize(n_div, prime_factors);
             }
 
-            template<typename IntegerType, std::size_t Iterations = 100>
-            IntegerType first_prime(uint64_t bits, uint64_t m) {
-                IntegerType mi(m), q_new(IntegerType(1) << bits), r(q_new % mi), q_new2(q_new + 1);
+            template<typename IntegerType>
+            IntegerType first_prime(uint64_t nBits, uint64_t m) {
+                IntegerType mi(m);
+                IntegerType qNew(IntegerType(1) << nBits);
+                IntegerType r(qNew % mi);
+                IntegerType qNew2(qNew + 1);
                 if (r > IntegerType(0))
-                    q_new2 += (mi - r);
-                BOOST_ASSERT_MSG(q_new2 >= q_new, "FirstPrime parameters overflow this integer implementation");
-                while (!miller_rabin_test((q_new = q_new2), Iterations)) {
-                    q_new2 = q_new + mi;
-                    BOOST_ASSERT_MSG(q_new2 >= q_new, "FirstPrime overflow growing candidate");
+                    qNew2 += (mi - r);
+                BOOST_ASSERT_MSG(qNew2 >= qNew, "FirstPrime parameters overflow this integer implementation");
+                while (!nil::crypto3::multiprecision::miller_rabin_test((qNew = qNew2), 100)) {
+                    qNew2 = qNew + mi;
+                    BOOST_ASSERT_MSG(qNew2 >= qNew, "FirstPrime overflow growing candidate");
                 }
-                return q_new;
+                return qNew;
             }
 
-            template<typename IntegerType, std::size_t Iterations = 100>
+            template<typename IntegerType>
             IntegerType next_prime(const IntegerType &q, uint64_t m) {
-                IntegerType M(m), q_new(q + M);
-                while (!miller_rabin_test(q_new, Iterations)) {
-                    BOOST_VERIFY_MSG((q_new += M) >= q, "NextPrime overflow growing candidate");
+                IntegerType M(m), qNew(q + M);
+                while (!nil::crypto3::multiprecision::miller_rabin_test(qNew, 100)) {
+                    BOOST_VERIFY_MSG((qNew += M) >= q, "NextPrime overflow growing candidate");
                 }
-                return q_new;
+                return qNew;
             }
 
-            template<typename IntegerType, std::size_t Iterations = 100>
+            template<typename IntegerType>
             IntegerType previous_prime(const IntegerType &q, uint64_t m) {
-                IntegerType M(m), q_new(q - M);
-                while (!miller_rabin_test(q_new, Iterations)) {
-                    BOOST_VERIFY_MSG((q_new -= M) <= q, "Moduli size is not sufficient! Must be increased.");
+                IntegerType M(m), qNew(q - M);
+                while (!nil::crypto3::multiprecision::miller_rabin_test(qNew, 100)) {
+                    BOOST_VERIFY_MSG((qNew -= M) <= q, "Moduli size is not sufficient! Must be increased.");
                 }
-                return q_new;
+                return qNew;
             }
         }
     }

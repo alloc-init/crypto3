@@ -41,41 +41,39 @@ namespace nil {
              * @tparam DigestBits
              *
              * The Sponge construction builds a block hashes from a
-             * one-way compressor.  As this version operated on the block
+             * one-way compressor. As this version operated on the block
              * level, it doesn't contain any padding or other strengthening.
              * For a Wide Pipe construction, use a digest that will
              * truncate the internal state.
              */
-            template<typename ParamsType,
-                    typename PolicyType,
-                    typename IVGenerator, // Class produsing IV
-                    typename Absorber,    // Must provide void absorb(block, state)
-                    typename Permutator,  // Must provide void permute(state)
-                    typename Padder       // Must provide std::vector<block_type> get_padded_blocks(block)
-            >
+            template<typename Params,
+                     typename Policy,
+                     typename IVGenerator, // Class produsing IV
+                     typename Absorber,    // Must provide void absorb(block, state)
+                     typename Permutator,  // Must provide void permute(state)
+                     typename Padder       // Must provide std::vector<block_type> get_padded_blocks(block)
+                     >
             class sponge_construction {
-                typedef PolicyType policy_type;
-                // This implementation corresponds to hash accumulator, it consumes full block rather than words.
+            // This implementation corresponds to hash accumulator, it consumes full block rather than words.
             public:
-                using endian_type = typename ParamsType::digest_endian;
+                using endian_type = typename Params::digest_endian;
 
-                constexpr static const std::size_t word_bits = policy_type::word_bits;
-                using word_type = typename policy_type::word_type;
+                constexpr static const std::size_t word_bits = Policy::word_bits;
+                using word_type = typename Policy::word_type;
 
                 // S = R || C (state)
-                constexpr static const std::size_t state_bits = policy_type::state_bits;
-                constexpr static const std::size_t state_words = policy_type::state_words;
-                using state_type = typename policy_type::state_type;
+                constexpr static const std::size_t state_bits = Policy::state_bits;
+                constexpr static const std::size_t state_words = Policy::state_words;
+                using state_type = typename Policy::state_type;
 
                 // R (bitrate). `block` is used to fit other code (e.g. accumulator)
-                constexpr static const std::size_t block_bits = policy_type::block_bits;
-                constexpr static const std::size_t block_words = policy_type::block_words;
-                using block_type = typename policy_type::block_type;
+                constexpr static const std::size_t block_bits = Policy::block_bits;
+                constexpr static const std::size_t block_words = Policy::block_words;
+                using block_type = typename Policy::block_type;
 
-                constexpr static const std::size_t digest_bits = ParamsType::digest_bits;
+                constexpr static const std::size_t digest_bits = Params::digest_bits;
                 constexpr static const std::size_t digest_bytes = digest_bits / octet_bits;
-                constexpr static const std::size_t digest_words =
-                        digest_bits / word_bits + (digest_bits % word_bits == 0 ? 0 : 1);
+                constexpr static const std::size_t digest_words = digest_bits / word_bits + (digest_bits % word_bits == 0 ? 0 : 1);
                 using digest_type = static_digest<digest_bits>;
 
                 sponge_construction() {
@@ -86,27 +84,27 @@ namespace nil {
                     using namespace nil::crypto3::detail;
 
                     std::array<word_type, digest_words> squeezed_blocks_holder;
-                    constexpr static std::size_t blocks_needed_for_digest =
-                            digest_bits / block_bits + (digest_bits % block_bits == 0 ? 0 : 1);
+                    constexpr static std::size_t blocks_needed_for_digest = 
+                        digest_bits / block_bits + (digest_bits % block_bits == 0 ? 0 : 1);
                     for (std::size_t i = 0; i < blocks_needed_for_digest; ++i) {
                         std::size_t dest_offset = i * block_words;
                         block_type squeezed = squeeze();
-                        // TODO: check if this will break in case >1. sinse there could be not enough squeezed_blocks_holder
                         pack_from<endian_type, word_bits, word_bits>(
-                                squeezed.begin(),
-                                squeezed.begin() +
-                                std::min(squeezed.size(), squeezed_blocks_holder.size() - dest_offset),
-                                squeezed_blocks_holder.begin() + dest_offset
+                            squeezed.begin(),
+                            squeezed.begin() + std::min(squeezed.size(), squeezed_blocks_holder.size() - dest_offset),
+                            squeezed_blocks_holder.begin() + dest_offset
                         );
                     }
 
-                    // Pack uses the size of the input iterator to determine size of the output. There are some edge
-                    // cases where the word size does not cleanly divide the digest size (such as sha3-224). So unless
-                    // we make d_full the same size as squeezed_blocks_holder, pack will write past the end of d_full.
-                    // This doesnt affect correctness since in a few lines we will copy exactly the right size of digest.
+                    // Here 'squeezed_blocks_holder' can have more bytes than needed.
+                    // Suppose we had 224 bits hash, then 'squeezed_blocks_holder' has 4x64 bits.
+                    // We will convert all 4x64 bits into 'd_full', then use as many octets as required.
+                    // TODO(martun): add tests for this case, check that this works as expected. Maybe taking the first 224 bits
+                    // for the wrong endianness may take the wrong bits.
                     std::array<octet_type, digest_words * word_bits / octet_bits> d_full;
-                    pack_from<endian_type, word_bits, octet_bits>(squeezed_blocks_holder.begin(),
-                                                                  squeezed_blocks_holder.end(), d_full.begin());
+
+                    pack_from<endian_type, word_bits, octet_bits>(
+                        squeezed_blocks_holder.begin(), squeezed_blocks_holder.end(), d_full.begin());
 
                     digest_type d;
                     std::copy(d_full.begin(), d_full.begin() + digest_bytes, d.begin());
@@ -121,10 +119,10 @@ namespace nil {
                 }
 
                 void absorb_with_padding(const block_type &block = block_type(),
-                                         const std::size_t last_block_bits_filled = 0) {
+                                          const std::size_t last_block_bits_filled = 0) {
                     // Mb create padding somewhere else and only keep absorb(...) method?
                     auto padded_blocks = Padder::get_padded_blocks(block, last_block_bits_filled);
-                    for (auto &block: padded_blocks) {
+                    for (auto& block : padded_blocks) {
                         absorb(std::move(block));
                     }
                 }
@@ -161,30 +159,26 @@ namespace nil {
                 bool permutation_was_made_;
             };
 
-            template<typename PolicyType,
-                    typename IVGenerator, // Class producing IV
-                    typename Absorber,    // Must provide void absorb(block, state)
-                    typename Permutator,  // Must provide void permute(state)
-                    typename Padder       // Must provide std::vector<block_type> get_padded_blocks(block)
-            >
+            template<typename Policy,
+                     typename IVGenerator, // Class produsing IV
+                     typename Absorber,    // Must provide void absorb(block, state)
+                     typename Permutator,  // Must provide void permute(state)
+                     typename Padder       // Must provide std::vector<block_type> get_padded_blocks(block)
+                     >
             class algebraic_sponge_construction {
-                typedef PolicyType policy_type;
-                // This implementation corresponds to hash accumulator, it consumes full block rather than words.
+            // This implementation corresponds to hash accumulator, it consumes full block rather than words.
             public:
-                constexpr static const std::size_t word_bits = policy_type::word_bits;
-                typedef typename policy_type::word_type word_type;
+                using word_type = typename Policy::word_type;
 
                 // S = R || C (state)
-                constexpr static const std::size_t state_words = policy_type::state_words;
-                typedef std::array<word_type, state_words> state_type;
-                constexpr static const std::size_t state_bits = state_words * word_bits;
+                constexpr static const std::size_t state_words = Policy::state_words;
+                using state_type = std::array<word_type, state_words>;
 
                 // R (bitrate). `block` is used to fit other code (e.g. accumulator)
-                constexpr static const std::size_t block_words = policy_type::block_words;
-                typedef std::array<word_type, block_words> block_type;
-                constexpr static const std::size_t block_bits = block_words * word_bits;
+                constexpr static const std::size_t block_words = Policy::block_words;
+                using block_type = std::array<word_type, block_words>;
 
-                using digest_type = typename policy_type::digest_type;
+                using digest_type = typename Policy::digest_type;
 
                 algebraic_sponge_construction() {
                     reset();
@@ -201,9 +195,9 @@ namespace nil {
                 }
 
                 void absorb_with_padding(const block_type &block,
-                                         const std::size_t last_block_words_filled = block_words) {
+                                          const std::size_t last_block_words_filled = block_words) {
                     auto padded_blocks = Padder::get_padded_blocks(block, last_block_words_filled);
-                    for (auto &block: padded_blocks) {
+                    for (auto& block : padded_blocks) {
                         absorb(std::move(block));
                     }
                 }
@@ -222,7 +216,7 @@ namespace nil {
                     return block;
                 }
 
-                void reset(state_type const &s) {
+                void reset(state_type const& s) {
                     state_ = s;
                     permutation_was_made_ = false;
                 }
@@ -231,7 +225,7 @@ namespace nil {
                     reset(IVGenerator::generate());
                 }
 
-                const state_type &state() const {
+                const state_type& state() const {
                     return state_;
                 }
 
@@ -239,6 +233,7 @@ namespace nil {
                 state_type state_;
                 bool permutation_was_made_;
             };
+
         }    // namespace hashes
     }        // namespace crypto3
 }    // namespace nil

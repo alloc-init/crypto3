@@ -70,6 +70,7 @@ namespace nil {
     namespace crypto3 {
         namespace zk {
             namespace commitments {
+
                 template<typename CurveType>
                 class kzg_ipp2 {
                     /// Key is a generic commitment key that is instantiated with g and h as basis,
@@ -101,7 +102,7 @@ namespace nil {
                         template<typename InputIterator,
                                  typename ValueType = typename std::iterator_traits<InputIterator>::value_type,
                                  typename std::enable_if<std::is_same<field_value_type, ValueType>::value, bool>::type =
-                                         true>
+                                     true>
                         commitment_key<group_type> scale(InputIterator s_first, InputIterator s_last) const {
                             BOOST_ASSERT(has_correct_len(std::distance(s_first, s_last)));
 
@@ -109,7 +110,7 @@ namespace nil {
                             std::for_each(boost::make_zip_iterator(boost::make_tuple(s_first, a.begin(), b.begin())),
                                           boost::make_zip_iterator(boost::make_tuple(s_last, a.end(), b.end())),
                                           [&](const boost::tuple<const field_value_type &, const group_value_type &,
-                                      const group_value_type &> &t) {
+                                                                 const group_value_type &> &t) {
                                               result.a.emplace_back(t.template get<1>() * t.template get<0>());
                                               result.b.emplace_back(t.template get<2>() * t.template get<0>());
                                           });
@@ -160,7 +161,7 @@ namespace nil {
                                 boost::make_zip_iterator(
                                     boost::make_tuple(a.end(), b.end(), right.a.end(), right.b.end())),
                                 [&](const boost::tuple<const group_value_type &, const group_value_type &,
-                            const group_value_type &, const group_value_type &> &t) {
+                                                       const group_value_type &, const group_value_type &> &t) {
                                     result.a.emplace_back(t.template get<0>() + t.template get<2>() * scale);
                                     result.b.emplace_back(t.template get<1>() + t.template get<3>() * scale);
                                 });
@@ -199,9 +200,9 @@ namespace nil {
                     template<typename GroupType>
                     using opening_type = std::pair<typename GroupType::value_type, typename GroupType::value_type>;
 
-                    /// Both commitment outputs a pair of $F_q^K$ element.
+                    /// Both commitment outputs a pair of $F_q^k$ element.
                     using output_type =
-                    std::pair<typename CurveType::gt_type::value_type, typename CurveType::gt_type::value_type>;
+                        std::pair<typename CurveType::gt_type::value_type, typename CurveType::gt_type::value_type>;
 
                     /// Commits to a tuple of G1 vector and G2 vector in the following way:
                     /// $T = \prod_{i=0}^n e(A_i, v_{1,i})e(B_i,w_{1,i})$
@@ -281,9 +282,9 @@ namespace nil {
                                               algebra::final_exponentiation<curve_type>(u1));
                     }
                 };
-            } // namespace commitments
-        } // namespace zk
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace commitments
+        }        // namespace zk
+    }            // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ZK_COMMITMENTS_KZG_IPP2_HPP

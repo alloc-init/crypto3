@@ -29,6 +29,7 @@
 #define CRYPTO3_ZK_PLONK_PLACEHOLDER_PROOF_HPP
 
 #include <map>
+#include <vector>
 
 namespace nil {
     namespace crypto3 {
@@ -36,9 +37,36 @@ namespace nil {
             namespace snark {
                 constexpr std::size_t FIXED_VALUES_BATCH = 0;
                 constexpr std::size_t VARIABLE_VALUES_BATCH = 1;
-                constexpr std::size_t PERMUTATION_BATCH = 2;
+                constexpr std::size_t PERMUTATION_BATCH =2;
                 constexpr std::size_t QUOTIENT_BATCH = 3;
                 constexpr std::size_t LOOKUP_BATCH = 4;
+
+                // A part of the placeholder_proof. Used for proofs with aggregated FRI.
+                template<typename FieldType, typename ParamsType>
+                struct placeholder_partial_proof {
+                    static constexpr std::size_t FIXED_VALUES_BATCH = 0;
+                    static constexpr std::size_t VARIABLE_VALUES_BATCH = 1;
+                    static constexpr std::size_t PERMUTATION_BATCH = 2;
+                    static constexpr std::size_t QUOTIENT_BATCH = 3;
+                    static constexpr std::size_t LOOKUP_BATCH = 4;
+
+                    typedef FieldType field_type;
+                    typedef ParamsType params_type;
+
+                    using commitment_scheme_type = typename ParamsType::commitment_scheme_type;
+                    using commitment_type = typename commitment_scheme_type::commitment_type;
+
+                    placeholder_partial_proof() = default;
+
+                    bool operator==(const placeholder_partial_proof &rhs) const {
+                        return commitments == rhs.commitments;
+                    }
+                    bool operator!=(const placeholder_partial_proof &rhs) const {
+                        return !(rhs == *this);
+                    }
+
+                    std::map<std::size_t, commitment_type> commitments;
+                };
 
                 /**
                  * A proof for the Placeholder scheme.
@@ -48,7 +76,7 @@ namespace nil {
                  * about the structure for marshalling purposes.
                  */
                 template<typename FieldType, typename ParamsType>
-                struct placeholder_proof {
+                struct placeholder_proof : public placeholder_partial_proof<FieldType, ParamsType> {
                     static constexpr std::size_t FIXED_VALUES_BATCH = 0;
                     static constexpr std::size_t VARIABLE_VALUES_BATCH = 1;
                     static constexpr std::size_t PERMUTATION_BATCH = 2;
@@ -61,37 +89,68 @@ namespace nil {
                     using circuit_params_type = typename ParamsType::circuit_params_type;
                     using commitment_scheme_type = typename ParamsType::commitment_scheme_type;
                     using commitment_type = typename commitment_scheme_type::commitment_type;
+                    using partial_proof_type = placeholder_partial_proof<FieldType, ParamsType>;
 
                     struct evaluation_proof {
-                        // TODO: remove it!
-                        typename FieldType::value_type challenge;
-
                         typename commitment_scheme_type::proof_type eval_proof;
 
                         bool operator==(const evaluation_proof &rhs) const {
-                            return challenge == rhs.challenge && eval_proof == rhs.eval_proof;
+                            return eval_proof == rhs.eval_proof;
                         }
                         bool operator!=(const evaluation_proof &rhs) const {
                             return !(rhs == *this);
                         }
                     };
 
-                    placeholder_proof() {
-                    }
+                    placeholder_proof() = default;
 
-                    std::map<std::size_t, commitment_type> commitments;
-                    evaluation_proof eval_proof;
+                    placeholder_proof(const partial_proof_type &partial_proof) :
+                        placeholder_partial_proof<FieldType, ParamsType>(partial_proof) {}
+
+                    placeholder_proof(const partial_proof_type &partial_proof, const evaluation_proof &eval_proof) :
+                        placeholder_partial_proof<FieldType, ParamsType>(partial_proof), eval_proof(eval_proof) {}
 
                     bool operator==(const placeholder_proof &rhs) const {
-                        return commitments == rhs.commitments && eval_proof == rhs.eval_proof;
+                        return placeholder_partial_proof<FieldType, ParamsType>::operator==(rhs) &&
+                            eval_proof == rhs.eval_proof;
                     }
                     bool operator!=(const placeholder_proof &rhs) const {
                         return !(rhs == *this);
                     }
+
+                    evaluation_proof eval_proof;
+                };
+
+                /**
+                 * An aggregated proof for the Placeholder scheme. It contains N partial proofs from N provers, with a shared
+                 * aggregated FRI proof.
+                 */
+                template<typename FieldType, typename ParamsType>
+                struct placeholder_aggregated_proof {
+                    typedef FieldType field_type;
+                    typedef ParamsType params_type;
+
+                    using circuit_params_type = typename ParamsType::circuit_params_type;
+                    using commitment_scheme_type = typename ParamsType::commitment_scheme_type;
+                    using commitment_type = typename commitment_scheme_type::commitment_type;
+
+                    placeholder_aggregated_proof() = default;
+
+                    bool operator==(const placeholder_aggregated_proof &rhs) const {
+                        return partial_proofs == rhs.partial_proofs &&
+                            aggregated_proof == rhs.aggregated_proof;
+                    }
+                    bool operator!=(const placeholder_aggregated_proof &rhs) const {
+                        return !(rhs == *this);
+                    }
+
+                    // This vector contains N partial proofs, one per prover.
+                    std::vector<placeholder_partial_proof<FieldType, ParamsType>> partial_proofs;
+                    typename commitment_scheme_type::aggregated_proof_type aggregated_proof;
                 };
             }    // namespace snark
-        }    // namespace zk
-    }    // namespace crypto3
+        }        // namespace zk
+    }            // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_PLONK_PLACEHOLDER_PROOF_HPP

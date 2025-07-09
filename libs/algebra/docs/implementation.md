@@ -2,14 +2,8 @@
 
 @tableofcontents
 
-The key idea of `algebra` is to provide usefull interfaces for basic cryptography math. It's based on the extension of Boost.Multiprecision so that it can be used with boost cpp_int, gmp or other backends.
-
-We expanded Boost.Multiprecision with `modular_adaptor`, which is actually a multi-precision number by some modular. It contains 
-modular number-specific algorithms using Montgomery representation. It also supports compile-time computations, because it gives 
-us opportunity to implement algebra constructions as constexpr.
-
-For our purposes we needed the opportunity to use field and curve arithmetic in compile time, what became possible thanks to 
-compile-time `modular_adaptor`.
+The key idea of `algebra` is to provide useful interfaces for basic cryptography math. It's based on NilFoundation implementation
+of fixed-width numbers called `big_uint` and modular number `big_mod`.
 
 Algebra library consists of several modules listed below:
 
@@ -23,7 +17,7 @@ This separation defines the implementation architecture.
 
 ## Fields Architecture ## {#fields_architecture}
 
-Fields were meant to be a wrapper over `multiprecision` module and concept of `modular_adaptor` number. So it basically consist 
+Fields were meant to be a wrapper over `multiprecision` module. It basically consist 
 of several parts listed below:
 
 1. Field Policies
@@ -50,9 +44,9 @@ node [shape="box"]
 
 ### Field Policies ### {#field_policies}
 
-A field policy describes its essential parameters such as `modulus`, `arity` or `mul_generator` - multiply generator. 
+A field policy describes its essential parameters such as `modulus` or `arity`.
 
-### FieldType Extensions ### {#field_extensions}
+### Field Extensions ### {#field_extensions}
 
 For the purposes of effictive field/elliptic curve operations and pairings evaluation fields are arranged as a field tower.
 
@@ -127,7 +121,7 @@ For example, `extension_params` structure keeps all the parameters needed for fi
 ### Field Element Algorithms ### {#field_element_algorithms}
 
 Field element corresponds an element of the field and has all the needed methods and overloaded arithmetic operators. The corresponding 
-algorithms are also defined here. As the backend they use now Boost::multiprecision, but it can be easily changed.
+algorithms are also defined here. As the backend they use nil::crypto3::multiprecision.
 
 ## Elliptic Curves Architecture ## {#curves_architecture}
 
@@ -159,7 +153,7 @@ It also contains `pairing_policy` type, needed for comfortable usage of curve pa
 
 ### Curve Element Algorithms ### {#curve_element_algorithms}
 
-Curve element corresponds an point of the curve and has all the needed methods and overloaded arithmetic operators. The corresponding algorithms 
+Curve element corresponds a point of the curve and has all the needed methods and overloaded arithmetic operators. The corresponding algorithms
 are based on the underlying field algorithms are also defined here.
 
 ### Basic Curve Policies ### {#basic_curve_policies}

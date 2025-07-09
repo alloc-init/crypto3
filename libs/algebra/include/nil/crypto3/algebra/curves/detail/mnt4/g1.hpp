@@ -34,12 +34,14 @@ namespace nil {
     namespace crypto3 {
         namespace algebra {
             namespace curves {
+
                 template<std::size_t Version>
                 class mnt4;
 
                 namespace detail {
                     /** @brief A struct representing a group G1 of mnt4 curve.
                      *    @tparam Version version of the curve
+                     *
                      */
                     template<std::size_t Version, typename Form, typename Coordinates>
                     struct mnt4_g1 {
@@ -50,13 +52,14 @@ namespace nil {
                         using field_type = typename params_type::field_type;
 
                         constexpr static const std::size_t value_bits =
-                                field_type::value_bits + 1; ///< size of the base field in bits
+                            field_type::value_bits + 1;    ///< size of the base field in bits
 
                         using value_type = curve_element<params_type, Form, Coordinates>;
                     };
-                } // namespace detail
-            } // namespace curves
-        } // namespace algebra
-    } // namespace crypto3
-} // namespace nil
+
+                }    // namespace detail
+            }        // namespace curves
+        }            // namespace algebra
+    }                // namespace crypto3
+}    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_MNT4_G1_HPP

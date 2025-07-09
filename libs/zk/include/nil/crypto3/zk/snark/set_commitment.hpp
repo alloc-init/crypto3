@@ -53,10 +53,10 @@ namespace nil {
                     }
                 };
 
-                template<typename HashType>
+                template<typename Hash>
                 class set_commitment_accumulator {
                 private:
-                    std::shared_ptr<merkle_tree<HashType>> tree;
+                    std::shared_ptr<merkle_tree<Hash>> tree;
                     std::map<std::vector<bool>, std::size_t> hash_to_pos;
 
                 public:
@@ -67,14 +67,14 @@ namespace nil {
                     set_commitment_accumulator(const std::size_t max_entries, const std::size_t value_size = 0) :
                         value_size(value_size) {
                         depth = static_cast<std::size_t>(std::ceil(std::log2(max_entries)));
-                        digest_size = HashType::get_digest_len();
+                        digest_size = Hash::get_digest_len();
 
-                        tree.reset(new merkle_tree<HashType>(depth, digest_size));
+                        tree.reset(new merkle_tree<Hash>(depth, digest_size));
                     }
 
                     void add(const std::vector<bool> &value) {
                         assert(value_size == 0 || value.size() == value_size);
-                        const std::vector<bool> hash = HashType::get_hash(value);
+                        const std::vector<bool> hash = Hash::get_hash(value);
                         if (hash_to_pos.find(hash) == hash_to_pos.end()) {
                             const std::size_t pos = hash_to_pos.size();
                             tree->set_value(pos, hash);
@@ -84,7 +84,7 @@ namespace nil {
 
                     bool is_in_set(const std::vector<bool> &value) const {
                         assert(value_size == 0 || value.size() == value_size);
-                        const std::vector<bool> hash = HashType::get_hash(value);
+                        const std::vector<bool> hash = Hash::get_hash(value);
                         return (hash_to_pos.find(hash) != hash_to_pos.end());
                     }
 
@@ -93,7 +93,7 @@ namespace nil {
                     }
 
                     set_membership_proof get_membership_proof(const std::vector<bool> &value) const {
-                        const std::vector<bool> hash = HashType::get_hash(value);
+                        const std::vector<bool> hash = Hash::get_hash(value);
                         auto it = hash_to_pos.find(hash);
                         assert(it != hash_to_pos.end());
 

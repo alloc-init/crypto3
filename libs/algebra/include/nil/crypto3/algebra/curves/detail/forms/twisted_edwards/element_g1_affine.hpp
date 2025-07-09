@@ -86,10 +86,9 @@ namespace nil {
                             : X(X), Y(Y) 
                         { }
 
-                        template<typename Backend,
-                                 boost::multiprecision::expression_template_option ExpressionTemplates>
+                        template<std::size_t Bits>
                         explicit constexpr curve_element(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                                  const nil::crypto3::multiprecision::big_uint<Bits> &value) {
                             *this = one() * value;
                         }
 
@@ -186,22 +185,6 @@ namespace nil {
                         /** @brief
                          *
                          * @return return the corresponding element from affine coordinates to
-                         * inverted coordinates
-                         */
-                        constexpr curve_element<params_type, form, typename curves::coordinates::inverted>
-                            to_inverted() const {
-
-                            using result_type =
-                                curve_element<params_type, form, typename curves::coordinates::inverted>;
-
-                            return result_type(
-                                X.inversed(), Y.inversed(),
-                                result_type::field_type::value_type::one());    // X = x^(-1), Y = y^(-1), Z = 1
-                        }
-
-                        /** @brief
-                         *
-                         * @return return the corresponding element from affine coordinates to
                          * extended coordinates with a=-1
                          */
                         constexpr curve_element<params_type, form,
@@ -234,10 +217,9 @@ namespace nil {
                             return *this;
                         }
 
-                        template<typename Backend,
-                                 boost::multiprecision::expression_template_option ExpressionTemplates>
+                        template<std::size_t Bits>
                         constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                                  const nil::crypto3::multiprecision::big_uint<Bits> &value) {
                             *this = one() * value;
                             return *this;
                         }

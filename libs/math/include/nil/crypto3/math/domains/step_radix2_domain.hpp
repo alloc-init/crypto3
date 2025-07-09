@@ -82,6 +82,8 @@ namespace nil {
 
                     if (small_m != 1ul << static_cast<std::size_t>(std::ceil(std::log2(small_m))))
                         throw std::invalid_argument("step_radix2(): expected small_m == 1ul<<log2(small_m)");
+
+                    create_fft_cache();
                 }
 
                 void fft(std::vector<value_type> &a) override {
@@ -112,9 +114,6 @@ namespace nil {
                         }
                     }
 
-                    if (small_fft_cache == nullptr) {
-                        create_fft_cache();
-                    }
                     detail::basic_radix2_fft_cached<FieldType>(c, big_fft_cache->first);
                     detail::basic_radix2_fft_cached<FieldType>(e, small_fft_cache->first);
 
@@ -186,6 +185,16 @@ namespace nil {
                     for (std::size_t i = 0; i < small_m; ++i) {
                         a[big_m + i] = (U0[i] - U1[i]) * over_two;
                     }
+                }
+
+                void batch_fft(std::vector<std::vector<value_type>> &a) override {
+                    // TODO(martun): implement this.
+                    throw std::logic_error{"Not implemented yet"};
+                }
+
+                void batch_inverse_fft(std::vector<std::vector<value_type>> &a) override {
+                    // TODO(martun): implement this.
+                    throw std::logic_error{"Not implemented yet"};
                 }
 
                 std::vector<field_value_type> evaluate_all_lagrange_polynomials(const field_value_type &t) override {
@@ -301,7 +310,7 @@ namespace nil {
                     H[0] += coeff * omega_to_small_m;
                 }
                 void divide_by_z_on_coset(std::vector<field_value_type> &P) override {
-                    // (c^{2^K}-1) * (c^{2^r} * w^{2^{r+1}*i) - w^{2^r})
+                    // (c^{2^k}-1) * (c^{2^r} * w^{2^{r+1}*i) - w^{2^r})
                     const field_value_type coset = fields::arithmetic_params<FieldType>::multiplicative_generator;
 
                     const field_value_type Z0 = coset.pow(big_m) - field_value_type::one();
@@ -315,7 +324,7 @@ namespace nil {
                         elt *= omega_to_2small_m;
                     }
 
-                    // (c^{2^K}*w^{2^K}-1) * (c^{2^K} * w^{2^r} - w^{2^r})
+                    // (c^{2^k}*w^{2^k}-1) * (c^{2^k} * w^{2^r} - w^{2^r})
 
                     const field_value_type Z1 = (((coset * omega).pow(big_m) - field_value_type::one()) *
                                            ((coset * omega).pow(small_m) - omega.pow(small_m)));

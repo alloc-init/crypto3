@@ -1,80 +1,47 @@
 //---------------------------------------------------------------------------//
 // Copyright (c) 2020 Mikhail Komarov <nemo@nil.foundation>
+// Copyright (c) 2021 Aleksei Moskvin <alalmoskvin@gmail.com>
+// Copyright (c) 2024 Andrey Nefedov <ioxid@nil.foundation>
 //
 // Distributed under the Boost Software License, Version 1.0
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //---------------------------------------------------------------------------//
 
-#ifndef BOOST_MULTIPRECISION_INVERSE_HPP
-#define BOOST_MULTIPRECISION_INVERSE_HPP
+#pragma once
 
-#include <boost/container/vector.hpp>
+#include <cstddef>
+#include <stdexcept>
+#include <type_traits>
 
-#include <boost/type_traits/is_integral.hpp>
+#include <boost/assert.hpp>
 
-#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
-#include <boost/multiprecision/cpp_int/cpp_int_config.hpp>
-#include <nil/crypto3/multiprecision/modular/modular_adaptor.hpp>
-#include <nil/crypto3/multiprecision/modular/modular_adaptor_fixed.hpp>
-#include <nil/crypto3/multiprecision/modular/inverse.hpp>
+#include "nil/crypto3/multiprecision/big_uint.hpp"
+#include "nil/crypto3/multiprecision/detail/big_int.hpp"
+#include "nil/crypto3/multiprecision/detail/half_extended_euclidean_algorithm.hpp"
+#include "nil/crypto3/multiprecision/type_traits.hpp"
 
-namespace boost {
-    namespace multiprecision {
-
-        template<typename Backend, boost::multiprecision::expression_template_option ExpressionTemplates>
-        BOOST_MP_CXX14_CONSTEXPR boost::multiprecision::number<Backend, ExpressionTemplates>
-        inverse_extended_euclidean_algorithm(const boost::multiprecision::number<Backend, ExpressionTemplates> &n,
-                                             const boost::multiprecision::number<Backend, ExpressionTemplates> &mod) {
-            boost::multiprecision::number<Backend, ExpressionTemplates> result;
-            backends::eval_inverse_extended_euclidean_algorithm(result.backend(), n.backend(), mod.backend());
-            return result;
+namespace nil::crypto3::multiprecision {
+    template<std::size_t Bits>
+    constexpr big_uint<Bits> inverse_mod(const big_uint<Bits>& a,
+                                         const big_uint<Bits>& m) {
+        big_int<Bits> aa = a, mm = m, x, g;
+        g = detail::half_extended_euclidean_algorithm(aa, mm, x);
+        if (g != 1u) {
+            throw std::invalid_argument("no multiplicative inverse");
         }
-
-        template<typename Backend, typename StorageType, boost::multiprecision::expression_template_option ExpressionTemplates>
-        BOOST_MP_CXX14_CONSTEXPR boost::multiprecision::number<backends::modular_adaptor<Backend, StorageType>, ExpressionTemplates>
-        inverse_extended_euclidean_algorithm(
-                const boost::multiprecision::number<backends::modular_adaptor<Backend, StorageType>, ExpressionTemplates> &modular) {
-            boost::multiprecision::number<Backend, ExpressionTemplates> new_base, res;
-            boost::multiprecision::number<backends::modular_adaptor<Backend, StorageType>, ExpressionTemplates> res_mod;
-
-            modular.backend().mod_data().adjust_regular(new_base.backend(), modular.backend().base_data());
-            backends::eval_inverse_extended_euclidean_algorithm(
-                    res.backend(), new_base.backend(), modular.backend().mod_data().get_mod());
-            assign_components(res_mod.backend(), res.backend(), modular.backend().mod_data().get_mod());
-
-            return res_mod;
+        x %= m;
+        if (x.negative()) {
+            x += m;
         }
+        BOOST_ASSERT(!x.negative() && x.abs() < m);
+        return x.abs();
+    }
 
-        template<typename Backend, boost::multiprecision::expression_template_option ExpressionTemplates>
-        BOOST_MP_CXX14_CONSTEXPR boost::multiprecision::number<Backend, ExpressionTemplates>
-        monty_inverse(const boost::multiprecision::number<Backend, ExpressionTemplates> &a,
-                      const boost::multiprecision::number<Backend, ExpressionTemplates> &p,
-                      const boost::multiprecision::number<Backend, ExpressionTemplates> &k) {
-            boost::multiprecision::number<Backend, ExpressionTemplates> res;
-            backends::eval_monty_inverse(res.backend(), a.backend(), p.backend(), k.backend());
-            return res;
-        }
-
-        template<typename Backend, boost::multiprecision::expression_template_option ExpressionTemplates>
-        BOOST_MP_CXX14_CONSTEXPR boost::multiprecision::number<Backend, ExpressionTemplates>
-        inverse_mod(const boost::multiprecision::number<Backend, ExpressionTemplates> &a,
-                    const boost::multiprecision::number<Backend, ExpressionTemplates> &p) {
-            boost::multiprecision::number<Backend, ExpressionTemplates> res;
-            backends::eval_inverse_mod(res.backend(), a.backend(), p.backend());
-            return res;
-        }
-
-        template<typename Backend, typename StorageType, boost::multiprecision::expression_template_option ExpressionTemplates>
-        BOOST_MP_CXX14_CONSTEXPR boost::multiprecision::number<backends::modular_adaptor<Backend, StorageType>, ExpressionTemplates>
-        inverse_mod(
-                const boost::multiprecision::number<backends::modular_adaptor<Backend, StorageType>, ExpressionTemplates> &modular) {
-            boost::multiprecision::number<backends::modular_adaptor<Backend, StorageType>, ExpressionTemplates> res;
-            backends::eval_inverse_mod(res.backend(), modular.backend());
-            return res;
-        }
-
-    }   // namespace multiprecision
-}   // namespace boost
-
-#endif
+    template<typename big_mod_t, std::enable_if_t<is_big_mod_v<big_mod_t>, int> = 0>
+    constexpr big_mod_t inverse(const big_mod_t& modular) {
+        return big_mod_t(inverse_mod(detail::as_big_uint(modular.to_integral()),
+                                     detail::as_big_uint(modular.mod())),
+                         modular.ops_storage());
+    }
+}  // namespace nil::crypto3::multiprecision

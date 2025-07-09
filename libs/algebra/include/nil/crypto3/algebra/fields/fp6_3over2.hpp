@@ -30,12 +30,6 @@
 
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/fp6_3over2.hpp>
 #include <nil/crypto3/algebra/fields/detail/extension_params/bls12/fp6_3over2.hpp>
-#include <nil/crypto3/algebra/fields/detail/extension_params/bn128/fp6_3over2.hpp>
-//#include <nil/crypto3/algebra/fields/detail/extension_params/frp_v1.hpp>
-//#include <nil/crypto3/algebra/fields/detail/extension_params/gost_A.hpp>
-/*#include <nil/crypto3/algebra/fields/detail/extension_params/secp.hpp>
-#include <nil/crypto3/algebra/fields/detail/extension_params/sm2p_v1.hpp>
-#include <nil/crypto3/algebra/fields/detail/extension_params/x962_p.hpp>*/
 
 #include <nil/crypto3/algebra/fields/params.hpp>
 
@@ -59,11 +53,8 @@ namespace nil {
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
-                    typedef typename policy_type::extended_integral_type extended_integral_type;
-
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
                     typedef typename policy_type::modular_type modular_type;
-                    typedef typename policy_type::modular_backend modular_backend;
 
                     constexpr static const integral_type modulus = policy_type::modulus;
 

@@ -36,8 +36,6 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
-
 #include <nil/crypto3/algebra/curves/bls12.hpp>
 
 #include <nil/crypto3/algebra/fields/bls12/base_field.hpp>
@@ -49,24 +47,11 @@
 #include <nil/crypto3/hash/detail/h2c/ep2.hpp>
 #include <nil/crypto3/hash/detail/h2c/h2c_expand.hpp>
 
-using namespace boost::multiprecision;
 using namespace nil::crypto3;
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::algebra::curves::detail;
 using namespace nil::crypto3::algebra::curves;
 using namespace nil::crypto3::hashes;
-
-namespace boost {
-    namespace test_tools {
-        namespace tt_detail {
-            template<template<typename, typename> class P, typename K, typename V>
-            struct print_log_value<P<K, V>> {
-                void operator()(std::ostream &, P<K, V> const &) {
-                }
-            };
-        }    // namespace tt_detail
-    }        // namespace test_tools
-}    // namespace boost
 
 template<typename Expander,
          typename DstType,
@@ -87,7 +72,7 @@ void check_expand_message(std::size_t len_in_bytes, const DstType &dst, const Ms
         return ret;
     };
     std::vector<std::uint8_t> uniform_bytes(len_in_bytes, 0);
-    Expander::process(len_in_bytes, msg, dst, uniform_bytes);
+    Expander::template process<>(len_in_bytes, msg, dst, uniform_bytes);
     BOOST_CHECK(result_compare(uniform_bytes));
 }
 
@@ -126,7 +111,7 @@ BOOST_AUTO_TEST_CASE(expand_message_xmd_sha256_test) {
     std::string DST_str("QUUX-V01-CS02-with-expander");
     std::vector<std::uint8_t> DST(DST_str.begin(), DST_str.end());
 
-    // {BytesLength, msg, uniform_bytes}
+    // {len_in_bytes, msg, uniform_bytes}
     using samples_type = std::vector<std::tuple<std::size_t, std::vector<std::uint8_t>, std::vector<std::uint8_t>>>;
     samples_type samples {
         {0x20, {}, {0xf6, 0x59, 0x81, 0x9a, 0x64, 0x73, 0xc1, 0x83, 0x5b, 0x25, 0xea, 0x59, 0xe3, 0xd3, 0x89, 0x14,

@@ -1,107 +1,67 @@
 //---------------------------------------------------------------------------//
 // Copyright (c) 2018-2020 Mikhail Komarov <nemo@nil.foundation>
+// Copyright (c) 2024 Andrey Nefedov <ioxid@nil.foundation>
 //
 // Distributed under the Boost Software License, Version 1.0
 // See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt
 //---------------------------------------------------------------------------//
+// Functions for building w-ary Non-Adjacent Form of a multiprecision value
+// for a given window size.
+// https://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication#w-ary_non-adjacent_form_(wNAF)_method
 
-#ifndef BOOST_MULTIPRECISION_WNAF_HPP
-#define BOOST_MULTIPRECISION_WNAF_HPP
+#pragma once
 
-#include <boost/multiprecision/number.hpp>
+#include <array>
+#include <cstddef>
+#include <vector>
 
-namespace boost {
-    namespace multiprecision {
+#include "nil/crypto3/multiprecision/big_uint.hpp"
 
-        template<typename Backend>
-        std::vector<long> eval_find_wnaf(const size_t window_size, const Backend &scalar) {
-            using ui_type = typename std::tuple_element<0, typename Backend::unsigned_types>::type;
-
-            using default_ops::eval_add;
-            using default_ops::eval_right_shift;
-            using default_ops::eval_subtract;
-
-            const std::size_t length = scalar.size() * std::numeric_limits<ui_type>::digits;    // upper bound
-            std::vector<long> res(length + 1);
-
-            Backend c(scalar);
-            ui_type j = 0;
-
-            while (!(eval_is_zero(c))) {
-                long u;
-                if ((c.limbs()[0] & 1) == 1) {
-                    u = c.limbs()[0] % (1u << (window_size + 1));
-                    if (u > (1 << window_size)) {
-                        u = u - (1 << (window_size + 1));
-                    }
-
-                    if (u > 0) {
-                        eval_subtract(c, c, ui_type(u));
-                    } else {
-                        eval_add(c, c, ui_type(-u));
-                    }
-                } else {
-                    u = 0;
-                }
-                res[j] = u;
-                ++j;
-
-                eval_right_shift(c, c, 1);    // c = c/2
-            }
-
-            return res;
-        }
-
-        template<typename Backend, expression_template_option ExpressionTemplates>
-        std::vector<long> find_wnaf(const size_t window_size, const number<Backend, ExpressionTemplates> &scalar) {
-            return eval_find_wnaf(window_size, scalar.backend());
-        }
-
-        template<typename Backend>
-        constexpr auto eval_find_wnaf_a(const size_t window_size, const Backend &scalar) {
-            using ui_type = typename std::tuple_element<0, typename Backend::unsigned_types>::type;
-
-            using default_ops::eval_add;
-            using default_ops::eval_right_shift;
-            using default_ops::eval_subtract;
-
-            // upper bound
-            constexpr std::size_t length = Backend::internal_limb_count * std::numeric_limits<ui_type>::digits;
-
-            std::array<long, length + 1> res{0};
-
-            Backend c(scalar);
-            ui_type j = 0;
-
-            while (!(eval_is_zero(c))) {
+namespace nil::crypto3::multiprecision {
+    namespace detail {
+        template<std::size_t Bits, typename T>
+        constexpr void find_wnaf_impl(T& res, const std::size_t window_size,
+                                      big_uint<Bits> c) noexcept {
+            std::size_t j = 0;
+            while (!c.is_zero()) {
                 long u = 0;
-                if ((c.limbs()[0] & 1) == 1) {
-                    u = c.limbs()[0] % (1u << (window_size + 1));
+                if (c.bit_test(0u)) {
+                    u = static_cast<long>(c & ((1u << (window_size + 1)) - 1));
                     if (u > (1 << window_size)) {
                         u = u - (1 << (window_size + 1));
                     }
-
-                    if (u > 0) {
-                        eval_subtract(c, c, ui_type(u));
-                    } else {
-                        eval_add(c, c, ui_type(-u));
-                    }
+                    c -= u;
                 }
-
                 res[j] = u;
                 ++j;
-                eval_right_shift(c, c, 1);    // c = c/2
+                c >>= 1;
             }
-
-            return res;
         }
+    }  // namespace detail
 
-        template<typename Backend, expression_template_option ExpressionTemplates>
-        constexpr auto find_wnaf_a(const size_t window_size, const number<Backend, ExpressionTemplates> &scalar) {
-            return eval_find_wnaf_a(window_size, scalar.backend());
-        }
-    }   // namespace multiprecision
-}   // namespace boost
+    /* Vector version */
+    template<std::size_t Bits>
+    constexpr std::vector<long> find_wnaf(const std::size_t window_size,
+                                          const big_uint<Bits>& c) noexcept {
+        // upper bound
+        constexpr std::size_t length = Bits + 1;
+        std::vector<long> res(length);
 
-#endif    // BOOST_MULTIPRECISION_WNAF_HPP
+        detail::find_wnaf_impl(res, window_size, c);
+
+        return res;
+    }
+
+    /* Array version */
+    template<std::size_t Bits>
+    constexpr auto find_wnaf_a(const std::size_t window_size, const big_uint<Bits>& c) noexcept {
+        // upper bound
+        constexpr std::size_t length = Bits + 1;
+        std::array<long, length> res{0};
+
+        detail::find_wnaf_impl(res, window_size, c);
+
+        return res;
+    }
+}  // namespace nil::crypto3::multiprecision

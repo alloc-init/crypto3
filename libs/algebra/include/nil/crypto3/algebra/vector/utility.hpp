@@ -28,6 +28,7 @@
 #define CRYPTO3_ALGEBRA_VECTOR_UTILITY_HPP
 
 #include <nil/crypto3/algebra/vector/vector.hpp>
+#include <nil/crypto3/detail/same_value.hpp>
 
 #include <tuple>
 
@@ -48,13 +49,12 @@ namespace nil {
              *  Applies a function elementwise between many vectors.
              */
             template<typename F, typename T, typename... Vectors,
-                     typename U = typename std::invoke_result<F, T, typename Vectors::value_type...>::type,
+                     typename U = std::invoke_result_t<F, T, typename Vectors::value_type...>,
                      std::size_t N = detail::all_same_value<std::size_t, Vectors::size...>::value>
             constexpr vector<U, N> elementwise(F f, const vector<T, N> &v, const Vectors &...vectors) {
                 vector<U, N> op_applied = {};
-                for (std::size_t i = 0; i < N; ++i) {
+                for (std::size_t i = 0; i < N; ++i)
                     op_applied[i] = std::apply(f, std::forward_as_tuple(v[i], vectors[i]...));
-                }
                 return op_applied;
             }
 
@@ -95,7 +95,7 @@ namespace nil {
             template<std::size_t N, typename T>
             constexpr vector<T, N> iota(T value = T()) {
                 vector<T, N> seq = {};
-                for (auto &x: seq) {
+                for (auto &x : seq) {
                     x = value;
                     value += 1;    // equivalent to value++, see GCC Bug 91705
                 }
@@ -123,7 +123,7 @@ namespace nil {
             template<std::size_t N, typename T>
             constexpr vector<T, N> fill(T value) {
                 vector<T, N> filled = {};
-                for (auto &x: filled)
+                for (auto &x : filled)
                     x = value;
                 return filled;
             }
@@ -151,12 +151,10 @@ namespace nil {
             constexpr vector<T, N> rotate(vector<T, N> v, int n) {
                 vector<T, N> rotated = {};
                 // add N (the modulus) to n until it is positive
-                while (n < 0) {
+                while (n < 0)
                     n += N;
-                }
-                for (std::size_t i = 0; i < N; ++i) {
+                for (std::size_t i = 0; i < N; ++i)
                     rotated[i] = v[(i + n) % N];
-                }
                 return rotated;
             }
 
@@ -191,12 +189,10 @@ namespace nil {
             template<typename T, std::size_t N, std::size_t M>
             constexpr vector<T, N + M> concat(vector<T, N> a, vector<T, M> b) {
                 vector<T, N + M> concatted = {};
-                for (std::size_t i = 0; i < N; ++i) {
+                for (std::size_t i = 0; i < N; ++i)
                     concatted[i] = a[i];
-                }
-                for (std::size_t i = 0; i < M; ++i) {
+                for (std::size_t i = 0; i < M; ++i)
                     concatted[i + N] = b[i];
-                }
                 return concatted;
             }
 

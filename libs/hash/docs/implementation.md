@@ -15,7 +15,7 @@ Hashes library architecture consists of several parts listed below:
 
 1. Algorithms
 2. Stream Processors
-3. HashType Policies
+3. Hash Policies
 4. Constructions and Compressors
 5. Accumulators
 6. Value Processors
@@ -28,7 +28,7 @@ node [shape="box"]
 a [label="Algorithms" color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica" URL="@ref hashes_algorithms"]; 
 b [label="Stream Processors" color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica" URL="@ref hashes_stream"];
 c [label="Data Type Conversion" color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica" URL="@ref hashes_data"]; 
-d [label="HashType Policies" color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica" URL="@ref hashes_policies"];
+d [label="Hash Policies" color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica" URL="@ref hashes_policies"];
 e [label="Constructions and Compressors" color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica" URL="@ref hashes_constructions_compressors"]; 
 f [label="Accumulators" color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica" URL="@ref hashes_accumulators"]; 
 g [label="Value Processors" color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica" URL="@ref hashes_value"];
@@ -74,28 +74,28 @@ This particular modification takes no difference if `InputRange` is a
 As much as such algorithms are implemented as generic ones, hash algorithms should follow that too:
 
 ```cpp
-template<typename HashType, typename InputIterator, typename OutputIterator>
+template<typename Hash, typename InputIterator, typename OutputIterator>
 OutputIterator hash(InputIterator first, InputIterator last, OutputIterator out);
 ```
 
-`HashType` is a policy type which represents the particular hash will be used.
+`Hash` is a policy type which represents the particular hash will be used.
 `InputIterator` represents the input data coming to be hashed.
 `OutputIterator` is exactly the same as it was in `std::transform` algorithm - it handles all the output storage
 operations.
 
 The most obvious difference between `std::transform` is a representation of a policy defining the particular behaviour
 of an algorithm. `std::transform`
-proposes to pass it as a reference to `Functor`, which is also possible in case of `HashType` policy used in function
+proposes to pass it as a reference to `Functor`, which is also possible in case of `Hash` policy used in function
 already pre-scheduled:
 
 ```cpp
-template<typename HashType, typename InputIterator, typename OutputIterator>
+template<typename Hash, typename InputIterator, typename OutputIterator>
 OutputIterator hash(InputIterator first, InputIterator last, OutputIterator out);
 ```
 
 Algorithms are no more than an internal structures initializer wrapper. In this particular case algorithm would
 initialize stream processor fed with accumulator set with [`hash` accumulator](@ref accumulators::hash) inside
-initialized with `HashType`.
+initialized with `Hash`.
 
 ## Stream Data Processing {#hashes_stream}
 
@@ -105,7 +105,7 @@ of `uint32_t` ). Input data in the implementation proposed is supposed to be a v
 could be not even to block size.
 
 This requires an introduction of stream processor specified with particular parameter set unique for
-each [`HashType`](@ref hashes_concept) type, which takes input data stream and gets it split to blocks filled with converted
+each [`Hash`](@ref hashes_concept) type, which takes input data stream and gets it split to blocks filled with converted
 to appropriate size integers (words in the cryptography meaning, not machine words).
 
 Example. Lets assume input data stream consists of 16 bytes as follows.
@@ -146,7 +146,7 @@ struct2:w0 -> struct3:bl0 struct2:w1 -> struct3:bl0 struct2:w2 -> struct3:bl0 st
 
 @enddot
 
-Now with this a [`HashType`](@ref hashes_concept) instance of [`SHA2`](@ref hashes::sha2)
+Now with this a [`Hash`](@ref hashes_concept) instance of [`SHA2`](@ref hashes::sha2)
 can be fed.
 
 This mechanism is handled with `stream_processor` template class specified for each particular hash with parameters
@@ -165,7 +165,7 @@ all the input data should be in some way converted to 4 byte sized `Integral` ty
 in previous section. This is a case with both input stream and required data format are satisfy the same concept.
 
 The more case with input data being presented by sequence of various type `T`
-requires for the `T` to has conversion operator `operator Integral()` to the type required by particular `HashType` policy.
+requires for the `T` to has conversion operator `operator Integral()` to the type required by particular `Hash` policy.
 
 Example. Let us assume the following class is presented:
 
@@ -185,7 +185,7 @@ Now let us assume there exists an initialized and filled with random values
 std::vector<A> a;
 ```
 
-To feed the `HashType` with the data presented, it is required to convert `A` to `Integral` type which is only available
+To feed the `Hash` with the data presented, it is required to convert `A` to `Integral` type which is only available
 if `A` has conversion operator in some way as follows:
 
 ```cpp
@@ -203,18 +203,18 @@ public:
 
 This part is handled internally with `stream_processor` configured for each particular hash.
 
-## HashType Policies {#hashes_policies}
+## Hash Policies {#hashes_policies}
 
-HashType policies architecturally are completely stateless. HashType policies are required to be compliant
-with [`HashType` concept](@ref hash_concept). Thus, a policy has to contain all the data corresponding to the `HashType` and
-defined in the [`HashType` concept](@ref hash_concept).
+Hash policies architecturally are completely stateless. Hash policies are required to be compliant
+with [`Hash` concept](@ref hash_concept). Thus, a policy has to contain all the data corresponding to the `Hash` and
+defined in the [`Hash` concept](@ref hash_concept).
 
 Among other things a hash policy should contain information about its compressor and construction. For example,
 for `SHA2` there are Merkle-Damgard construction and Davies-Meyer compressor.
 
 ## Constructions and Compressors {#hashes_constructions_compressors}
 
-Constructions and Compressors used by a `HashType` should be defined in its [`policy`](@ref hashes_policies). Construction
+Constructions and Compressors used by a `Hash` should be defined in its [`policy`](@ref hashes_policies). Construction
 defines how the message should be padded, if its size is not multiple of `block_bits` and how the hashed messaged should
 be finalized. Construction also calls the compressor inside itself while processing a message block.
 
@@ -230,15 +230,15 @@ The Hashing contains an accumulation step, which is implemented with
 
 All the concepts are held.
 
-HashType contain pre-defined [`block::accumulator_set`](@ref accumulator_set), which is a `boost::accumulator_set` with
+Hash contain pre-defined [`block::accumulator_set`](@ref accumulator_set), which is a `boost::accumulator_set` with
 pre-filled
 [`hash` accumulator](@ref accumulators::hash).
 
-HashType accumulator accepts only one either `block_type::value_type` or `block_type`
+Hash accumulator accepts only one either `block_type::value_type` or `block_type`
 at insert.
 
 Accumulator is implemented as a caching one. This means there is an input cache sized as same as
-particular `HashType::block_type`, which accumulates unprocessed data. After it gets `filled`, data gets hashed, then it
+particular `Hash::block_type`, which accumulates unprocessed data. After it gets `filled`, data gets hashed, then it
 gets moved to the main accumulator storage, then cache gets emptied.
 
 [`hash` accumulator](@ref accumulators::hash) internally uses
@@ -271,7 +271,7 @@ std::string ciphertext = extract::block<block::rijndael<128, 128>>(acc);
 ## Value Postprocessors {#hashes_value}
 
 Since the accumulator output type is strictly tied to [`digest_type`](@ref hashes::digest_type)
-of particular [`HashType`](@ref hash_concept) policy, the output format in generic is closely tied to digest type too.
+of particular [`Hash`](@ref hash_concept) policy, the output format in generic is closely tied to digest type too.
 Digest type is usually defined as fixed or variable length byte array, which is not always the format of container or
 range user likes to store output in. It could easily be a
 `std::vector<uint32_t>` or a `std::string`, so there is a [`hash_value`](@ref hash_value)

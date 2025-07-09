@@ -30,17 +30,14 @@
 #include <complex>
 
 #include <boost/math/constants/constants.hpp>
-#include <boost/multiprecision/number.hpp>
 
+#include <nil/crypto3/algebra/totient.hpp>
 #include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/algebra/fields/params.hpp>
-
-#include <nil/crypto3/math/totient.hpp>
 
 namespace nil {
     namespace crypto3 {
         namespace math {
-            using namespace boost::multiprecision;
 
             /*
              A helper function to RootOfUnity function. This finds a generator for a given
@@ -48,7 +45,7 @@ namespace nil {
              */
             template<typename IntegerType>
             static typename std::enable_if<!algebra::is_field_element<IntegerType>::value, IntegerType>::type
-                find_generator(const IntegerType &q) {
+            find_generator(const IntegerType &q) {
                 std::set<IntegerType> prime_factors;
 
                 IntegerType qm1 = q - IntegerType(1);
@@ -60,7 +57,7 @@ namespace nil {
                     uint32_t count = 0;
 
                     // gen = RNG(qm2).ModAdd(IntegerType::ONE, q); //modadd note needed
-                    gen = UniformRandomBitGenerator(qm2) + IntegerType(1);
+                    gen = RNG(qm2) + IntegerType(1);
 
                     for (auto it = prime_factors.begin(); it != prime_factors.end(); ++it) {
                         if (gen.ModExp(qm1 / (*it), q) == IntegerType(1))
@@ -90,19 +87,16 @@ namespace nil {
              *
              * @return a root of unity.
              */
-            template<typename Backend, boost::multiprecision::expression_template_option ExpressionTemplates>
-            boost::multiprecision::number<Backend, ExpressionTemplates>
-                unity_root(uint32_t m, const boost::multiprecision::number<Backend, ExpressionTemplates> &modulo) {
-                using namespace boost::multiprecision;
+            template<std::size_t Bits>
+            nil::crypto3::multiprecision::big_uint<Bits>
+            unity_root(uint32_t m, const nil::crypto3::multiprecision::big_uint<Bits> &modulo) {
+                nil::crypto3::multiprecision::big_uint<Bits> M(m);
 
-                number<Backend, ExpressionTemplates> M(m);
-
-                if ((modulo - number<Backend, ExpressionTemplates>(1) % M) % M != 0) {
+                if ((modulo - nil::crypto3::multiprecision::big_uint<Bits>(1) % M) % M != 0) {
                     return {};
                 }
 
-                number<backends::modular_adaptor<Backend, backends::modular_params_rt<Backend>>, ExpressionTemplates>
-                    gen(find_generator(modulo), modulo), result = boost::multiprecision::pow(gen, (modulo - 1) / M);
+                nil::crypto3::multiprecision::big_mod_rt<Bits> gen(find_generator(modulo), modulo), result = nil::crypto3::multiprecision::powm(gen, (modulo - 1) / M);
                 if (result == 1u) {
                     result = unity_root(m, modulo);
                 }
@@ -122,20 +116,20 @@ namespace nil {
                  *
                  */
 
-                number<Backend, ExpressionTemplates> mu = modulo.ComputeMu();
-                number<Backend, ExpressionTemplates> x(1);
+                nil::crypto3::multiprecision::big_uint<Bits> mu = modulo.ComputeMu();
+                nil::crypto3::multiprecision::big_uint<Bits> x(1);
                 x.ModMulEq(result, modulo, mu);
-                number<Backend, ExpressionTemplates> minRU(x);
-                number<Backend, ExpressionTemplates> curPowIdx(1);
-                std::vector<number<Backend, ExpressionTemplates>> coprimes =
-                    totient_list<number<Backend, ExpressionTemplates>>(m);
+                nil::crypto3::multiprecision::big_uint<Bits> minRU(x);
+                nil::crypto3::multiprecision::big_uint<Bits> curPowIdx(1);
+                std::vector<nil::crypto3::multiprecision::big_uint<Bits>> coprimes = algebra::totient_list<nil::crypto3::multiprecision::big_uint<Bits>>(
+                        m);
                 for (uint32_t i = 0; i < coprimes.size(); i++) {
                     auto nextPowIdx = coprimes[i];
-                    number<Backend, ExpressionTemplates> diffPow(nextPowIdx - curPowIdx);
+                    nil::crypto3::multiprecision::big_uint<Bits> diffPow(nextPowIdx - curPowIdx);
                     for (std::size_t j = 0; j < diffPow; j++) {
                         x.ModMulEq(result, modulo, mu);
                     }
-                    if (x < minRU && x != number<Backend, ExpressionTemplates>(1)) {
+                    if (x < minRU && x != nil::crypto3::multiprecision::big_uint<Bits>(1)) {
                         minRU = x;
                     }
                     curPowIdx = nextPowIdx;
@@ -145,8 +139,8 @@ namespace nil {
 
             template<typename FieldType>
             constexpr typename std::enable_if<std::is_same<typename FieldType::value_type, std::complex<double>>::value,
-                                              typename FieldType::value_type>::type
-                unity_root(const std::size_t n) {
+                    typename FieldType::value_type>::type
+            unity_root(const std::size_t n) {
                 const double PI = boost::math::constants::pi<double>();
 
                 return typename FieldType::value_type(cos(2 * PI / n), sin(2 * PI / n));
@@ -154,9 +148,10 @@ namespace nil {
 
             template<typename FieldType>
             constexpr
-                typename std::enable_if<!std::is_same<typename FieldType::value_type, std::complex<double>>::value,
-                                        typename FieldType::value_type>::type
-                unity_root(const std::size_t n) {
+            typename std::enable_if<!std::is_same<typename FieldType::value_type, std::complex<double>>::value,
+                    typename FieldType::value_type>::type
+            unity_root(const std::size_t n) {
+
                 typedef typename FieldType::value_type value_type;
 
                 const std::size_t logn = std::ceil(std::log2(n));
@@ -164,19 +159,22 @@ namespace nil {
                 if (n != (1u << logn)) {
                     throw std::invalid_argument("expected n == (1u << logn)");
                 }
-                if (logn > algebra::fields::arithmetic_params<FieldType>::s) {
-                    throw std::invalid_argument("expected logn <= arithmetic_params<FieldType>::s");
+                if (logn > algebra::fields::arithmetic_params<FieldType>::two_adicity) {
+                    throw std::invalid_argument(
+                        "expected logn <= arithmetic_params<FieldType>::two_adicity");
                 }
 
                 value_type omega = value_type(algebra::fields::arithmetic_params<FieldType>::root_of_unity);
-                for (std::size_t i = algebra::fields::arithmetic_params<FieldType>::s; i > logn; --i) {
+                for (std::size_t i =
+                         algebra::fields::arithmetic_params<FieldType>::two_adicity;
+                     i > logn; --i) {
                     omega *= omega;
                 }
 
                 return omega;
             }
         }    // namespace math
-    }    // namespace crypto3
-}    // namespace nil
+    }        // namespace crypto3
+}
 
 #endif    // CRYPTO3_MATH_UNITY_ROOT_HPP

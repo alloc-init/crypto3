@@ -2,14 +2,14 @@
 
 @tableofcontents
 
-## HashType Concept ## {#hash_concept}
+## Hash Concept ## {#hash_concept}
 
-A ```HashType``` is a function object for which the output depends only on the input and has a very low probability of
+A ```Hash``` is a function object for which the output depends only on the input and has a very low probability of
 yielding the same output given different input values.
 
 ### Requirements ### {#hash_concepts_requirements}
 
-The type ```X``` satisfies ```HashType``` if:
+The type ```X``` satisfies ```Hash``` if:
 
 Given
 

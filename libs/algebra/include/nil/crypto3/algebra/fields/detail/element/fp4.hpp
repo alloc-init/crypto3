@@ -26,10 +26,10 @@
 #ifndef CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP4_HPP
 #define CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP4_HPP
 
+#include <nil/crypto3/multiprecision/wnaf.hpp>
+
 #include <nil/crypto3/algebra/fields/detail/exponentiation.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/operations.hpp>
-
-#include <nil/crypto3/multiprecision/wnaf.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -55,21 +55,20 @@ namespace nil {
                         constexpr element_fp4() = default;
 
                         constexpr element_fp4(underlying_type in_data0, underlying_type in_data1)
-                                : data({in_data0, in_data1}) {}
+                            : data({in_data0, in_data1}) {}
 
                         constexpr element_fp4(const data_type &in_data)
-                                : data({in_data[0], in_data[1]}) {}
+                            : data({in_data[0], in_data[1]}) {}
 
-                        constexpr element_fp4(const element_fp4 &B) : data{B.data} {}
+                        constexpr element_fp4(const element_fp4 &B) : data {B.data} {}
 
-                        constexpr element_fp4(const element_fp4 &&B) BOOST_NOEXCEPT
-                                : data(std::move(B.data)) {}
+                        constexpr element_fp4(const element_fp4 &&B) BOOST_NOEXCEPT 
+                            : data(std::move(B.data)) {}
 
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.
-                        constexpr static const element_fp4 &zero();
-
-                        constexpr static const element_fp4 &one();
+                        constexpr static const element_fp4& zero();
+                        constexpr static const element_fp4& one();
 
                         constexpr bool is_zero() const {
                             return *this == zero();
@@ -131,18 +130,13 @@ namespace nil {
                                                (data[0] + data[1]) * (B.data[0] + B.data[1]) - A0B0 - A1B1);
                         }
 
-                        constexpr element_fp4 &operator*=(const element_fp4 &B) {
+                        constexpr element_fp4& operator*=(const element_fp4 &B) {
                             const underlying_type A0B0 = data[0] * B.data[0], A1B1 = data[1] * B.data[1];
 
                             data[1] = (data[0] + data[1]) * (B.data[0] + B.data[1]) - A0B0 - A1B1;
                             data[0] = A0B0 + mul_by_non_residue(A1B1);
 
                             return *this;
-                        }
-
-                        element_fp4 sqrt() const {
-
-                            // compute squared root with Tonelli--Shanks
                         }
 
                         constexpr element_fp4 squared() const {
@@ -171,21 +165,21 @@ namespace nil {
                             return element_fp4(c0, c1);
                         }
 
+                        /** @brief Frobenius map is exponentiation to p^pwr. */
                         template<typename PowerType>
                         constexpr element_fp4 Frobenius_map(const PowerType &pwr) const {
                             return element_fp4(
-                                    data[0].Frobenius_map(pwr),
-                                    typename policy_type::non_residue_type(policy_type::Frobenius_coeffs_c1[pwr % 4]) *
+                                data[0].Frobenius_map(pwr),
+                                typename policy_type::non_residue_type(policy_type::Frobenius_coeffs_c1[pwr % 4]) *
                                     data[1].Frobenius_map(pwr));
-                            // return element_fp4(data[0].Frobenius_map(pwr),
-                            //                    policy_type::Frobenius_coeffs_c1[pwr % 4] *
-                            //                    data[1].Frobenius_map(pwr)});
                         }
 
+                        /** @brief For normalized numbers the inverse is conjugation */
                         element_fp4 unitary_inversed() const {
                             return element_fp4(data[0], -data[1]);
                         }
 
+                        /** @brief Elements from cyclotomic subgroup allow fast squaring */
                         element_fp4 cyclotomic_squared() const {
                             const underlying_type A = data[1].squared();
                             const underlying_type B = data[0] + data[1];
@@ -198,13 +192,14 @@ namespace nil {
                             return element_fp4(F, G);
                         }
 
+                        /** @brief Square-and-multiply exponentiation using cyclotomic squaring */
                         template<typename PowerType>
                         element_fp4 cyclotomic_exp(const PowerType &exponent) const {
                             element_fp4 res = this->one();
                             element_fp4 this_inverse = this->unitary_inversed();
 
                             bool found_nonzero = false;
-                            std::vector<long> NAF = boost::multiprecision::find_wnaf(1, exponent);
+                            std::vector<long> NAF = nil::crypto3::multiprecision::find_wnaf(1, exponent);
 
                             for (long i = static_cast<long>(NAF.size() - 1); i >= 0; --i) {
                                 if (found_nonzero) {
@@ -231,13 +226,14 @@ namespace nil {
                             return underlying_type(non_residue * A.data[1], A.data[0]);
                         }
 
+                        /** @brief multiply by [ [c0, 0], [c2, c3] ] */
                         element_fp4 mul_by_023(const element_fp4 &other) const {
                             /* Devegili OhEig Scott Dahab --- Multiplication and Squaring on Pairing-Friendly
                              * Fields.pdf; Section 3 (Karatsuba) */
                             assert(other.data[0].data[1].is_zero());
 
                             const underlying_type &A = other.data[0], &B = other.data[1], &a = this->data[0],
-                                    &b = this->data[1];
+                                                  &b = this->data[1];
                             const underlying_type aA = underlying_type(a.data[0] * A.data[0], a.data[1] * A.data[0]);
                             const underlying_type bB = b * B;
 
@@ -248,34 +244,34 @@ namespace nil {
 
                     template<typename FieldParams>
                     constexpr const typename element_fp4<FieldParams>::non_residue_type
-                            element_fp4<FieldParams>::non_residue;
+                        element_fp4<FieldParams>::non_residue;
 
                     namespace element_fp4_details {
                         // These constexpr static variables can not be members of element_fp2, because 
                         // element_fp2 is incomplete type until the end of its declaration.
                         template<typename FieldParams>
                         constexpr static element_fp4<FieldParams> zero_instance(
-                                FieldParams::underlying_type::zero(),
-                                FieldParams::underlying_type::zero());
+                            FieldParams::underlying_type::zero(),
+                            FieldParams::underlying_type::zero());
 
                         template<typename FieldParams>
                         constexpr static element_fp4<FieldParams> one_instance(
-                                FieldParams::underlying_type::one(),
-                                FieldParams::underlying_type::zero());
+                            FieldParams::underlying_type::one(),
+                            FieldParams::underlying_type::zero());
                     }
 
                     template<typename FieldParams>
-                    constexpr const element_fp4<FieldParams> &element_fp4<FieldParams>::zero() {
+                    constexpr const element_fp4<FieldParams>& element_fp4<FieldParams>::zero() {
                         return element_fp4_details::zero_instance<FieldParams>;
                     }
 
                     template<typename FieldParams>
-                    constexpr const element_fp4<FieldParams> &element_fp4<FieldParams>::one() {
+                    constexpr const element_fp4<FieldParams>& element_fp4<FieldParams>::one() {
                         return element_fp4_details::one_instance<FieldParams>;
                     }
 
                     template<typename FieldParams>
-                    std::ostream &operator<<(std::ostream &os, const element_fp4<FieldParams> &elem) {
+                    std::ostream& operator<<(std::ostream& os, const element_fp4<FieldParams>& elem) {
                         os << "[" << elem.data[0] << "," << elem.data[1] << "]";
                         return os;
                     }

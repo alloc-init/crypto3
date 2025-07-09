@@ -23,12 +23,10 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ALGEBRA_FIELDS_FIELD_HPP
-#define CRYPTO3_ALGEBRA_FIELDS_FIELD_HPP
+#pragma once
 
-#include <boost/multiprecision/number.hpp>
-#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
-#include <nil/crypto3/multiprecision/modular/modular_adaptor.hpp>
+#include <nil/crypto3/multiprecision/big_uint.hpp>
+#include <nil/crypto3/multiprecision/literals.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -48,28 +46,10 @@ namespace nil {
                     constexpr static const std::size_t modulus_bits = ModulusBits;
                     constexpr static const std::size_t number_bits = ModulusBits;
 
-#ifdef __ZKLLVM__
-                    typedef int integral_type;
-                    typedef int extended_integral_type;
-#else
-                    typedef boost::multiprecision::number<
-                            boost::multiprecision::backends::cpp_int_modular_backend<modulus_bits>>
-                            integral_type;
-
-                    // TODO(martun): check why extended integral type must be 16x wider.
-                    typedef boost::multiprecision::number<
-                            boost::multiprecision::backends::cpp_int_modular_backend<16 * modulus_bits>>
-                            extended_integral_type;
-
-                    typedef boost::multiprecision::backends::cpp_int_modular_backend<modulus_bits> modular_backend;
-
-                    typedef boost::multiprecision::backends::modular_params<modular_backend> modular_params_type;
-#endif
+                    typedef nil::crypto3::multiprecision::big_uint<modulus_bits> integral_type;
                 };
 
             }    // namespace fields
         }        // namespace algebra
     }            // namespace crypto3
 }    // namespace nil
-
-#endif    // CRYPTO3_ALGEBRA_FIELDS_FIELD_HPP

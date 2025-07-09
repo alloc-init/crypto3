@@ -32,24 +32,24 @@ namespace nil {
     namespace crypto3 {
         namespace hashes {
             namespace detail {
-                template<typename PolicyType>
+                template<typename Policy>
                 struct poseidon_functions {
-                protected:
-                    typedef poseidon_permutation<PolicyType> permutation_type;
+                private:
+                    typedef poseidon_permutation<Policy> permutation_type;
 
                 public:
-                    constexpr static const std::size_t block_words = PolicyType::block_words;
-                    constexpr static const std::size_t state_words = PolicyType::state_words;
+                    constexpr static const std::size_t block_words = Policy::block_words;
+                    constexpr static const std::size_t state_words = Policy::state_words;
 
-                    typedef typename PolicyType::word_type word_type;
-                    typedef typename PolicyType::block_type block_type;
-                    typedef typename PolicyType::state_type state_type;
+                    typedef typename Policy::word_type word_type;
+                    typedef typename Policy::block_type block_type;
+                    typedef typename Policy::state_type state_type;
 
-                    static void permute(state_type &state) {
+                    static void permute(state_type& state) {
                         permutation_type::permute(state);
                     }
 
-                    static void absorb(const block_type block, state_type &state) {
+                    static void absorb(const block_type block, state_type& state) {
                         for (std::size_t i = 0; i < block_words; ++i) {
                             state[i] += block[i];
                         }

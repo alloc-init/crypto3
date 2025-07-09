@@ -26,20 +26,18 @@
 #ifndef CRYPTO3_MERKLE_TREE_NODE_HPP
 #define CRYPTO3_MERKLE_TREE_NODE_HPP
 
-#include <numeric>
-
 namespace nil {
     namespace crypto3 {
         namespace containers {
             namespace detail {
-                template<typename HashType>
+                template<typename Hash>
                 struct merkle_tree_node {
-                    typedef HashType hash_type;
+                    typedef Hash hash_type;
 
                     constexpr static const std::size_t digest_bits = hash_type::digest_bits;
                     typedef typename hash_type::digest_type digest_type;
 
-                    typedef typename HashType::digest_type value_type;
+                    typedef typename Hash::digest_type value_type;
                     constexpr static const std::size_t value_bits = digest_bits;
                 };
             }    // namespace detail

@@ -28,8 +28,6 @@
 
 #include <nil/crypto3/algebra/type_traits.hpp>
 
-#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
-
 #include <boost/core/ignore_unused.hpp>
 
 #include <boost/random/independent_bits.hpp>
@@ -42,20 +40,20 @@
 #include <boost/random/discrete_distribution.hpp>
 #include <boost/random/random_device.hpp>
 
-#include <nil/crypto3/random/algebraic_random_device.hpp>
-#include <nil/crypto3/random/ct_random_device.hpp>
-
 #include <random>
 
 namespace nil {
     namespace crypto3 {
         namespace algebra {
-            template<typename FieldType,
-                    typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
-                    typename UniformRandomBitGenerator = boost::random::random_device>
-             typename std::enable_if<is_field<FieldType>::value && !(is_extended_field<FieldType>::value),
-                    typename FieldType::value_type>::type
-            random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
+
+            template<
+                typename FieldType,
+                typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
+                typename GeneratorType = boost::random::mt19937,
+                typename RNG = boost::random_device>
+            typename std::enable_if<is_field<FieldType>::value && !(is_extended_field<FieldType>::value),
+                                    typename FieldType::value_type>::type
+                random_element(RNG &&rng = boost::random_device()) {
 
                 using field_type = FieldType;
                 using distribution_type = DistributionType;
@@ -70,41 +68,49 @@ namespace nil {
                 return value;
             }
 
-            template<typename FieldType,
-                    typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
-                    typename UniformRandomBitGenerator = boost::random::random_device>
+            template<
+                typename FieldType,
+                typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
+                typename GeneratorType = boost::random::mt19937,
+                typename RNG = boost::random_device>
             typename std::enable_if<is_field<FieldType>::value && is_extended_field<FieldType>::value,
-                    typename FieldType::value_type>::type
-             random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
+                                    typename FieldType::value_type>::type
+                random_element(RNG &&rng = boost::random_device()) {
 
                 using field_type = FieldType;
                 using distribution_type = DistributionType;
+                using generator_type = GeneratorType;
 
                 typename field_type::value_type::data_type data;
                 const std::size_t data_dimension = field_type::arity / field_type::underlying_field_type::arity;
 
                 for (std::size_t n = 0; n < data_dimension; ++n) {
                     data[n] =
-                            random_element<typename FieldType::underlying_field_type, distribution_type>(
-                                    rng);
+                        random_element<typename FieldType::underlying_field_type, distribution_type, generator_type>(rng);
                 }
 
                 return typename field_type::value_type(data);
             }
 
             template<typename CurveGroupType,
-                    typename DistributionType = boost::random::uniform_int_distribution<typename CurveGroupType::field_type::integral_type>,
-                    typename UniformRandomBitGenerator = boost::random::random_device>
+                     typename DistributionType =
+                         boost::random::uniform_int_distribution<typename CurveGroupType::field_type::integral_type>,
+                     typename GeneratorType = boost::random::mt19937,
+                     typename RNG = boost::random_device>
             typename std::enable_if<is_curve_group<CurveGroupType>::value, typename CurveGroupType::value_type>::type
-            constexpr random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
+                random_element(RNG &&rng = boost::random_device()) {
 
                 using curve_type = typename CurveGroupType::curve_type;
                 using field_type = typename curve_type::scalar_field_type;
                 using distribution_type = boost::random::uniform_int_distribution<typename field_type::integral_type>;
+                using generator_type = GeneratorType;
 
-                return random_element<typename curve_type::scalar_field_type, distribution_type>(rng) *
-                       CurveGroupType::value_type::one();
+                typename curve_type::scalar_field_type::value_type scalar =
+                    random_element<typename curve_type::scalar_field_type, distribution_type, generator_type>(rng);
+
+                return CurveGroupType::value_type::one() * scalar;
             }
+
         }    // namespace algebra
     }        // namespace crypto3
 }    // namespace nil

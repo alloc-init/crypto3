@@ -58,8 +58,8 @@ namespace nil {
 
                 // Process elements from a container
                 template<typename ContainerT>
-                inline void operator()(const ContainerT &container) {
-                    for (const auto &value: container) {
+                inline void operator()(const ContainerT& container) {
+                    for (const auto& value : container) {
                         update_one(value); // Use the single-value operator for consistency
                     }
                 }

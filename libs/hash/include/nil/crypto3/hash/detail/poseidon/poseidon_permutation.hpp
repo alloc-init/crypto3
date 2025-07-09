@@ -17,10 +17,9 @@ namespace nil {
     namespace crypto3 {
         namespace hashes {
             namespace detail {
-                template<typename PolicyType>
-                class poseidon_permutation {
-                    typedef PolicyType policy_type;
-                public:
+                template<typename poseidon_policy_type>
+                struct poseidon_permutation {
+                    typedef poseidon_policy_type policy_type;
 
                     typedef poseidon_round_operator<policy_type> round_operator_type;
 

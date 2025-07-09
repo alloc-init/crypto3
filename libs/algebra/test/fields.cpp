@@ -55,12 +55,12 @@
 #include <nil/crypto3/algebra/fields/secp/secp_r1/base_field.hpp>
 #include <nil/crypto3/algebra/fields/secp/secp_r1/scalar_field.hpp>
 
+#include <nil/crypto3/algebra/fields/babybear.hpp>
 #include <nil/crypto3/algebra/fields/curve25519/base_field.hpp>
 #include <nil/crypto3/algebra/fields/curve25519/scalar_field.hpp>
-#include <nil/crypto3/algebra/fields/goldilocks64/base_field.hpp>
-#include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
-#include <nil/crypto3/algebra/fields/m31/base_field.hpp>
-#include <nil/crypto3/algebra/fields/maxprime.hpp>
+#include <nil/crypto3/algebra/fields/goldilocks.hpp>
+#include <nil/crypto3/algebra/fields/koalabear.hpp>
+#include <nil/crypto3/algebra/fields/mersenne31.hpp>
 
 #include <nil/crypto3/algebra/fields/detail/element/fp.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/fp2.hpp>
@@ -245,6 +245,29 @@ struct field_element_init<fields::detail::element_fp12_2over3over2<FieldParams>>
     }
 };
 
+template<typename FieldParams>
+struct field_element_init<fields::detail::element_fpn<FieldParams>> {
+    using element_type = fields::detail::element_fpn<FieldParams>;
+
+    template<typename ElementData>
+    static inline element_type process(const ElementData &element_data) {
+        using underlying_type = typename element_type::underlying_type;
+
+        std::array<underlying_type, element_type::dimension> element_values;
+
+        auto i = 0;
+        for (auto &element_value : element_data.second) {
+            element_values[i++] =
+                field_element_init<underlying_type>::process(element_value);
+        }
+        if (i != element_type::dimension) {
+            throw std::runtime_error("wrong number of elements");
+        }
+
+        return element_values;
+    }
+};
+
 template<typename element_type>
 void check_field_operations(const std::vector<element_type> &elements, const std::vector<constant_type> &constants) {
     BOOST_CHECK_EQUAL(elements[e1] + elements[e2], elements[e1_plus_e2]);
@@ -309,6 +332,14 @@ void check_field_operations(const std::vector<fields::detail::element_fp12_2over
     check_field_eq_operations(elements);
 }
 
+template<typename FieldParams>
+void check_field_operations(
+    const std::vector<fields::detail::element_fpn<FieldParams>> &elements,
+    const std::vector<constant_type> &constants) {
+    check_field_operations_wo_sqrt(elements, constants);
+    check_field_eq_operations(elements);
+}
+
 template<typename ElementType, typename TestSet>
 void field_test_init(std::vector<ElementType> &elements,
                      std::vector<constant_type> &constants,
@@ -351,8 +382,44 @@ void field_not_square_test(const TestSet &test_set) {
 
 BOOST_AUTO_TEST_SUITE(fields_manual_tests)
 
-BOOST_DATA_TEST_CASE(field_operation_test_goldilocks64_fq, string_data("field_operation_test_goldilocks64_fq"), data_set) {
-    using policy_type = fields::goldilocks64_fq;
+BOOST_DATA_TEST_CASE(field_operation_test_goldilocks,
+                     string_data("field_operation_test_goldilocks"), data_set) {
+    using policy_type = fields::goldilocks;
+
+    field_operation_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_operation_test_mersenne31,
+                     string_data("field_operation_test_mersenne31"), data_set) {
+    using policy_type = fields::mersenne31;
+
+    field_operation_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_operation_test_koalabear,
+                     string_data("field_operation_test_koalabear"), data_set) {
+    using policy_type = fields::koalabear;
+
+    field_operation_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_operation_test_babybear,
+                     string_data("field_operation_test_babybear"), data_set) {
+    using policy_type = fields::babybear;
+
+    field_operation_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_operation_test_babybear_fp4,
+                     string_data("field_operation_test_babybear_fp4"), data_set) {
+    using policy_type = fields::babybear_fp4;
+
+    field_operation_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_operation_test_babybear_fp5,
+                     string_data("field_operation_test_babybear_fp5"), data_set) {
+    using policy_type = fields::babybear_fp5;
 
     field_operation_test<policy_type>(data_set);
 }
@@ -387,11 +454,6 @@ BOOST_DATA_TEST_CASE(field_operation_test_bls12_381_fq12,
     using policy_type = fields::fp12_2over3over2<fields::bls12_fq<381>>;
 
     field_operation_test<policy_type>(data_set);
-}
-
-BOOST_AUTO_TEST_CASE(field_operation_test_maxprime){
-    using maxprime_field_type = fields::maxprime<64>;
-    typename maxprime_field_type::value_type zero = maxprime_field_type::value_type::zero();
 }
 
 BOOST_DATA_TEST_CASE(field_operation_test_mnt4_fq, string_data("field_operation_test_mnt4_fq"), data_set) {
@@ -474,7 +536,10 @@ BOOST_DATA_TEST_CASE(field_operation_test_secp256r1_fq, string_data("field_opera
  * pallas_base_field
  * vesta_base_field
 
- * goldilocks64
+ * goldilocks
+ * mersenne31
+ * koalabear
+ * babybear
 
  */
 
@@ -569,9 +634,32 @@ BOOST_DATA_TEST_CASE(field_not_square_test_vesta_scalar_field, string_data("fiel
     field_not_square_test<policy_type>(data_set);
 }
 
+BOOST_DATA_TEST_CASE(field_not_square_test_goldilocks,
+                     string_data("field_not_square_test_goldilocks"), data_set) {
+    using policy_type = typename fields::goldilocks;
 
-BOOST_DATA_TEST_CASE(field_not_square_test_goldilocks64_base_field, string_data("field_not_square_test_goldilocks64_base_field"), data_set) {
-    using policy_type = typename fields::goldilocks64_base_field;
+    field_not_square_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_not_square_test_mersenne31,
+                     string_data("field_not_square_test_mersenne31"),
+                     data_set) {
+    using policy_type = typename fields::mersenne31;
+
+    field_not_square_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_not_square_test_koalabear,
+                     string_data("field_not_square_test_koalabear"),
+                     data_set) {
+    using policy_type = typename fields::koalabear;
+
+    field_not_square_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_not_square_test_babybear,
+                     string_data("field_not_square_test_babybear"), data_set) {
+    using policy_type = typename fields::babybear;
 
     field_not_square_test<policy_type>(data_set);
 }

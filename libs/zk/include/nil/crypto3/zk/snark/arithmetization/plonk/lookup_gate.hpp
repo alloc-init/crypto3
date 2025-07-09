@@ -46,14 +46,14 @@ namespace nil {
                     std::vector<ConstraintType> constraints;
                     std::size_t tag_index;
 
-                    plonk_lookup_gate() : tag_index(0) {
+                    plonk_lookup_gate(  ) : tag_index(0) {
                     }
 
-                    plonk_lookup_gate(std::size_t tag_index, const ConstraintType &constraint) :
+                    plonk_lookup_gate( std::size_t tag_index, const ConstraintType &constraint ) :
                         constraints(std::vector<ConstraintType>(1, constraint)), tag_index(tag_index) {
                     }
 
-                    plonk_lookup_gate(std::size_t tag_index, const std::vector<ConstraintType> &constraints) :
+                    plonk_lookup_gate( std::size_t tag_index, const std::vector<ConstraintType> &constraints) :
                         constraints(constraints), tag_index(tag_index) {
                     }
 
@@ -63,8 +63,8 @@ namespace nil {
                 };
 
             }    // namespace snark
-        }    // namespace zk
-    }    // namespace crypto3
+        }        // namespace zk
+    }            // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_PLONK_GATE_HPP

@@ -77,7 +77,7 @@ namespace nil {
                 /**
                  * A system of USCS constraints looks like
                  *
-                 *     { ( \sum_{i=1}^{m_k} a_{K,i} * x_{K,i} )^2 = 1 }_{K=1}^{n}  .
+                 *     { ( \sum_{i=1}^{m_k} a_{k,i} * x_{k,i} )^2 = 1 }_{k=1}^{n}  .
                  *
                  * In other words, the system is satisfied if and only if there exist a
                  * USCS variable assignment for which each USCS constraint evaluates to -1 or 1.

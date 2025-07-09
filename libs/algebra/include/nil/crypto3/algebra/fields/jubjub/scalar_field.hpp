@@ -44,24 +44,17 @@ namespace nil {
                 struct jubjub_scalar_field : public field<252> {
                     typedef field<252> policy_type;
 
+                    using small_subfield = jubjub_scalar_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
-
-                    typedef typename policy_type::extended_integral_type extended_integral_type;
 
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
 
                     constexpr static const integral_type modulus =
-                        0xE7DB4EA6533AFA906673B0101343B00A6682093CCC81082D0970E5ED6F72CB7_cppui_modular252;
+                        0xE7DB4EA6533AFA906673B0101343B00A6682093CCC81082D0970E5ED6F72CB7_big_uint252;
 
-                    typedef typename policy_type::modular_backend modular_backend;
-                    constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
-                        modular_type;
-
+                    typedef nil::crypto3::multiprecision::auto_big_mod<modulus> modular_type;
                     typedef typename detail::element_fp<params<jubjub_scalar_field>> value_type;
 
                     constexpr static const std::size_t value_bits = modulus_bits;
@@ -76,7 +69,6 @@ namespace nil {
 
                 constexpr typename jubjub_scalar_field::integral_type const jubjub_scalar_field::modulus;
 
-                constexpr typename jubjub_scalar_field::modular_params_type const jubjub_scalar_field::modulus_params;
 
                 using jubjub_fr = jubjub_scalar_field;
 

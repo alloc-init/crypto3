@@ -28,8 +28,9 @@
 
 #include <array>
 #include <cstdint>
+#include <bit>
 
-#include <nil/crypto3/block/shacal2.hpp>
+#include <nil/crypto3/hash/shacal2.hpp>
 
 #include <nil/crypto3/detail/static_digest.hpp>
 
@@ -56,7 +57,11 @@ namespace nil {
                     constexpr static const std::size_t block_words = block_cipher_type::key_words;
                     typedef typename block_cipher_type::key_type block_type;
 
-                    constexpr static const std::size_t length_bits = word_bits * 2;
+                    // length_bits is the number of bits required to write the length of the block.
+                    // FIPS PUB 180-4 states it must be 64 bits for 256 bit version, and 128 bits for the 512 bit version.
+                    // Since for 256 bit version the standard requires to add another 64 bits of zeros for padding,
+                    // we use 2 * word_bits for both cases.
+                    constexpr static const std::size_t length_bits = 2 * word_bits;
 
                     typedef typename stream_endian::big_octet_big_bit digest_endian;
                 };

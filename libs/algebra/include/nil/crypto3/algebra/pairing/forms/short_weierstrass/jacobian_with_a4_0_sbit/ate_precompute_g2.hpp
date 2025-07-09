@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------//
 // Copyright (c) 2020-2021 Mikhail Komarov <nemo@nil.foundation>
 // Copyright (c) 2020-2021 Nikita Kaskov <nbering@nil.foundation>
-// Copyright (c) 2024  Vasiliy Olekhov <vasiliy.olekhov@nil.foundation>
+// Copyright (c) 2024 Vasiliy Olekhov <vasiliy.olekhov@nil.foundation>
 //
 // MIT License
 //
@@ -26,8 +26,6 @@
 
 #ifndef CRYPTO3_ALGEBRA_PAIRING_SHORT_WEIERSTRASS_JACOBIAN_WITH_A4_0_SBIT_ATE_PRECOMPUTE_G2_HPP
 #define CRYPTO3_ALGEBRA_PAIRING_SHORT_WEIERSTRASS_JACOBIAN_WITH_A4_0_SBIT_ATE_PRECOMPUTE_G2_HPP
-
-#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
 
 #include <nil/crypto3/algebra/curves/detail/forms/short_weierstrass/coordinates.hpp>
 
@@ -133,6 +131,11 @@ namespace nil {
                         }
                     }
 
+                    /* Multiply curve point by field characteristic.
+                     * For G2 groups the base field is $F_{p^k}$ and field
+                     * characteristic is $p$. This multiplication can be done
+                     * more efficiently rather than direct multiplication by
+                     * scalar */
                     static typename g2_affine_type::value_type mul_by_char(
                             typename g2_affine_type::value_type const& Q) {
 

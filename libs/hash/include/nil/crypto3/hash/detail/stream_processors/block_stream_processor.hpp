@@ -50,20 +50,18 @@ namespace nil {
              * @tparam StateAccumulator
              * @tparam Params
              */
-            template<typename PolicyType, typename StateAccumulator, std::size_t ValueBits>
+            template<typename Policy, typename StateAccumulator, std::size_t ValueBits>
             class block_stream_processor {
-                typedef PolicyType policy_type;
             protected:
                 typedef StateAccumulator accumulator_type;
 
-                constexpr static const std::size_t word_bits = policy_type::word_bits;
-                typedef typename policy_type::word_type word_type;
+                constexpr static const std::size_t word_bits = Policy::word_bits;
 
-                constexpr static const std::size_t block_bits = policy_type::block_bits;
-                typedef typename policy_type::block_type block_type;
+                constexpr static const std::size_t block_bits = Policy::block_bits;
+                typedef typename Policy::block_type block_type;
 
             public:
-                typedef typename policy_type::digest_endian endian_type;
+                typedef typename Policy::digest_endian endian_type;
 
                 constexpr static const std::size_t value_bits = ValueBits;
                 typedef typename boost::uint_t<value_bits>::least value_type;

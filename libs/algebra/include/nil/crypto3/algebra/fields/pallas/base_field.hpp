@@ -41,43 +41,30 @@ namespace nil {
                 struct pallas_base_field : public field<255> {
                     typedef field<255> policy_type;
 
+                    using small_subfield = pallas_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
                     constexpr static const std::size_t value_bits = modulus_bits;
                     constexpr static const std::size_t arity = 1;
-                    
+
                     typedef typename policy_type::integral_type integral_type;
-                    typedef typename policy_type::extended_integral_type extended_integral_type;
-#ifdef __ZKLLVM__
-                    typedef __zkllvm_field_pallas_base value_type;
-#else
 
                     constexpr static const integral_type modulus =
-                        0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001_cppui_modular255;
+                        0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001_big_uint255;
 
                     constexpr static const integral_type group_order_minus_one_half = (modulus - 1u) / 2 ;
 
-                    typedef typename policy_type::modular_backend modular_backend;
-                    constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
-                        modular_type;
-
+                    typedef nil::crypto3::multiprecision::auto_big_mod<modulus> modular_type;
                     typedef typename detail::element_fp<params<pallas_base_field>> value_type;
-#endif
                 };
 
                 constexpr typename std::size_t const pallas_base_field::modulus_bits;
                 constexpr typename std::size_t const pallas_base_field::number_bits;
                 constexpr typename std::size_t const pallas_base_field::value_bits;
 
-#ifdef __ZKLLVM__
-#else
                 constexpr typename pallas_base_field::integral_type const pallas_base_field::modulus;
                 constexpr typename pallas_base_field::integral_type const pallas_base_field::group_order_minus_one_half;
-#endif
 
                 using pallas_fq = pallas_base_field;
             }    // namespace fields

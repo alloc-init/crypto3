@@ -30,80 +30,84 @@
 namespace nil {
     namespace crypto3 {
         namespace zk {
-            namespace detail {
-
-                /**
-                 * @brief Consuming field elements and choose either to serialize field element to vector of bytes
-                 *        or to keep field elements as is. Could be used in places, where hash is computed, to
-                 *        avoid unnecessary serialization in case of algebraic hashes.
-                 *
-                * @tparam Field
-                * @tparam Target A type that determines whether to store Field's value_type directly or as bytes.
-                *         The decision is based on whether Target is identified as a field element by the
-                *         `algebra::is_field_element` trait.
-                * @tparam Marshalling A type of marshalled strucutre to use for serialization in case of keepeng
-                *         serialized values.
-                */
-                template<typename FieldType, typename Target, typename Marshalling>
-                class field_element_consumer : public std::vector<typename std::conditional_t<
-                        algebra::is_field_element<Target>::value,
-                        typename FieldType::value_type,
-                        std::uint8_t
-                >> {
-                public: // TODO: make private
-                    using base_class = std::vector<typename std::conditional_t<
-                            algebra::is_field_element<Target>::value,
-                            typename FieldType::value_type,
-                            std::uint8_t
-                    >>;
-                    using iterator = typename base_class::iterator;
+                namespace detail {
 
                     /**
-                     * @brief Constant expression that determines the size multiplier.
-                     *        If the word type is a field element, the size is 1; otherwise,
-                     *        it multiplies by the length of the field element representation.
-                     */
-                    static constexpr std::size_t field_element_holder_size_multiplier = std::conditional_t<
+                     * @brief Consuming field elements and choose either to serialize field element to vector of bytes
+                     *        or to keep field elements as is. Could be used in places, where hash is computed, to
+                     *        avoid unnecessary serialization in case of algebraic hashes.
+                     *
+                    * @tparam Field
+                    * @tparam Target A type that determines whether to store Field's value_type directly or as bytes.
+                    *         The decision is based on whether Target is identified as a field element by the
+                    *         `algebra::is_field_element` trait.
+                    * @tparam Marshalling A type of marshalled strucutre to use for serialization in case of keepeng
+                    *         serialized values.
+                    */
+                    template <typename Field, typename Target, typename Marshalling>
+                    class field_element_consumer : public std::vector<typename std::conditional_t<
+                        algebra::is_field_element<Target>::value,
+                        typename Field::value_type,
+                        std::uint8_t
+                    >> {
+                    public: // TODO: make private
+                        using base_class = std::vector<typename std::conditional_t<
                             algebra::is_field_element<Target>::value,
-                            std::integral_constant<std::size_t, 1>,
-                            std::integral_constant<std::size_t, Marshalling::length()>
-                    >::value;
+                            typename Field::value_type,
+                            std::uint8_t
+                        >>;
+                        using iterator = typename base_class::iterator;
 
-                    // Default ctor is used for single values
-                    field_element_consumer() : field_element_consumer(1) {
+                        /**
+                         * @brief Constant expression that determines the size multiplier.
+                         *        If the word type is a field element, the size is 1; otherwise,
+                         *        it multiplies by the length of the field element representation.
+                         */
+                        static constexpr std::size_t
+                            field_element_holder_size_multiplier = std::conditional_t<
+                                algebra::is_field_element<Target>::value,
+                                std::integral_constant<std::size_t, 1>,
+                                std::integral_constant<std::size_t,
+                                                       Marshalling::max_length()>>::value;
+
+                        // Default ctor is used for single values
+                        field_element_consumer() : field_element_consumer(1) {
+                        };
+
+                        field_element_consumer(std::size_t size)
+                            : base_class(size * field_element_holder_size_multiplier) {
+                            reset_cursor();
+                        }
+
+                        explicit field_element_consumer(const typename Field::value_type& field_element)
+                            : field_element_consumer() {
+                            consume(field_element);
+                        }
+
+
+                        void consume(const typename Field::value_type& field_element) {
+                            BOOST_ASSERT(current_iter <= this->end() - field_element_holder_size_multiplier);
+                            if constexpr (algebra::is_field_element<Target>::value) {
+                                *current_iter++ = field_element;
+                            } else {
+                                Marshalling field_val(field_element);
+                                if (field_val.length() != Marshalling::max_length()) {
+                                    throw std::runtime_error("non-static length");
+                                }
+                                field_val.write(current_iter, Marshalling::max_length());
+                            }
+                        }
+
+                        field_element_consumer& reset_cursor() {
+                            current_iter = this->begin();
+                            return *this;
+                        }
+
+                    private:
+                        iterator current_iter;
                     };
 
-                    field_element_consumer(std::size_t size)
-                            : base_class(size * field_element_holder_size_multiplier) {
-                        reset_cursor();
-                    }
-
-                    explicit field_element_consumer(const typename FieldType::value_type &field_element)
-                            : field_element_consumer() {
-                        consume(field_element);
-                    }
-
-
-                    void consume(const typename FieldType::value_type &field_element) {
-                        BOOST_ASSERT(current_iter <= this->end() - field_element_holder_size_multiplier);
-                        if constexpr (algebra::is_field_element<Target>::value) {
-                            *current_iter++ = field_element;
-                        } else {
-                            Marshalling field_val(field_element);
-                            field_val.write(current_iter, Marshalling::length());
-                        }
-                    }
-
-                    field_element_consumer &reset_cursor() {
-                        current_iter = this->begin();
-                        return *this;
-                    }
-
-                private:
-                    iterator current_iter;
-                };
-
-            }    // namespace detail
+                }    // namespace detail
         }    // namespace zk
     }    // namespace crypto3
 }    // namespace nil

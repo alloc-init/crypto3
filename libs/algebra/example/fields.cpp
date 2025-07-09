@@ -22,13 +22,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //---------------------------------------------------------------------------//
+// This example shows different field operations: addition, multiplication,
+// squaring and inverting
 
 #include <iostream>
 
-#include <nil/crypto3/multiprecision/cpp_modular.hpp>
-#include <boost/multiprecision/number.hpp>
-#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
-#include <nil/crypto3/multiprecision/modular/modular_adaptor.hpp>
+#include <nil/crypto3/multiprecision/literals.hpp>
+
 
 #include <nil/crypto3/algebra/fields/fp2.hpp>
 #include <nil/crypto3/algebra/fields/fp3.hpp>
@@ -36,20 +36,10 @@
 #include <nil/crypto3/algebra/fields/alt_bn128/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/bls12/base_field.hpp>
 #include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
-#include <nil/crypto3/algebra/fields/bn128/base_field.hpp>
-#include <nil/crypto3/algebra/fields/bn128/scalar_field.hpp>
-#include <nil/crypto3/algebra/fields/edwards/base_field.hpp>
-#include <nil/crypto3/algebra/fields/edwards/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/mnt4/base_field.hpp>
 #include <nil/crypto3/algebra/fields/mnt4/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/mnt6/base_field.hpp>
 #include <nil/crypto3/algebra/fields/mnt6/scalar_field.hpp>
-#include <nil/crypto3/algebra/fields/dsa_botan.hpp>
-#include <nil/crypto3/algebra/fields/dsa_jce.hpp>
-//#include <nil/crypto3/algebra/fields/ed25519_fe.hpp>
-//#include <nil/crypto3/algebra/fields/ffdhe_ietf.hpp>
-//#include <nil/crypto3/algebra/fields/modp_ietf.hpp>
-//#include <nil/crypto3/algebra/fields/modp_srp.hpp>
 
 #include <nil/crypto3/algebra/fields/detail/element/fp.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/fp2.hpp>
@@ -61,11 +51,11 @@ void fields_fp_basic_math_examples() {
     using policy_type = FpField;
     typedef typename policy_type::value_type value_type;
 
-    std::cout << "FieldType module value: " << policy_type::modulus << std::endl;
+    std::cout << "Field module value: " << policy_type::modulus << std::endl;
 
     value_type e1 = value_type(76749407), e2(44410867), e3 = value_type::one(), e4(121160274);
 
-    std::cout << "FieldType element values: " << std::endl;
+    std::cout << "Field element values: " << std::endl;
     std::cout << "e1 value: " << e1 << std::endl;
 
     std::cout << "e2 value: " << e2 << std::endl;
@@ -121,7 +111,7 @@ void fields_fp2_basic_math_examples() {
     using policy_type = Fp2Field;
     typedef typename policy_type::value_type value_type;
 
-    std::cout << "FieldType module value: " << policy_type::modulus << std::endl;
+    std::cout << "Field module value: " << policy_type::modulus << std::endl;
 
     value_type e1 = value_type(76749407, 44410867), e2(44410867, 1), e3 = value_type::one(), e4(121160274, 7);
 
@@ -129,9 +119,9 @@ void fields_fp2_basic_math_examples() {
 
     std::cout << "ee value: " << ee << std::endl;
 
-    std::cout << "Non residue: " << e1.non_residue.data << std::endl;
+    std::cout << "Non residue: " << e1.non_residue << std::endl;
 
-    std::cout << "FieldType element values: " << std::endl;
+    std::cout << "Field element values: " << std::endl;
     std::cout << "e1 value: " << e1 << std::endl;
 
     e1 += e2;
@@ -188,7 +178,7 @@ void fields_fp3_basic_math_examples() {
     using policy_type = Fp3Field;
     typedef typename policy_type::value_type value_type;
 
-    std::cout << "FieldType module value: " << policy_type::modulus << std::endl;
+    std::cout << "Field module value: " << policy_type::modulus << std::endl;
 
     value_type e1 = value_type(76749407, 44410867, 44410867), e2(44410867, 44410867, 1), e3 = value_type::one(),
                e4(121160274, 7, 121160274);
@@ -197,9 +187,9 @@ void fields_fp3_basic_math_examples() {
 
     std::cout << "ee value: " << ee << std::endl;
 
-    std::cout << "Non residue: " << e1.non_residue.data << std::endl;
+    std::cout << "Non residue: " << e1.non_residue << std::endl;
 
-    std::cout << "FieldType element values: " << std::endl;
+    std::cout << "Field element values: " << std::endl;
     std::cout << "e1 value: " << e1 << std::endl;
 
     e1 += e2;
@@ -247,8 +237,6 @@ void fields_fp3_basic_math_examples() {
     e1 += e2;
 
     std::cout << "e1 += e2 value: " << e1 << std::endl;
-
-    // std::cout << "e1 inversed value: " << e1.inversed() << std::endl;
 }
 
 int main() {
@@ -297,36 +285,6 @@ int main() {
 
     std::cout << "----------------------------" << std::endl;
 
-    std::cout << "BN128-254 Fq basic math:" << std::endl;
-    fields_fp_basic_math_examples<fields::bn128_fq<254>>();
-
-    std::cout << "----------------------------" << std::endl;
-
-    std::cout << "BN128-254 Fq2 basic math:" << std::endl;
-    fields_fp2_basic_math_examples<fields::fp2<fields::bn128_fq<254>>>();
-
-    std::cout << "----------------------------" << std::endl;
-
-    std::cout << "BN128-254 Fr basic math:" << std::endl;
-    fields_fp_basic_math_examples<fields::bn128_fr<254>>();
-
-    std::cout << "----------------------------" << std::endl;
-
-    std::cout << "Edwards Fq basic math:" << std::endl;
-    fields_fp_basic_math_examples<fields::edwards_fq<183>>();
-
-    std::cout << "----------------------------" << std::endl;
-
-    std::cout << "Edwards Fq3 basic math:" << std::endl;
-    fields_fp3_basic_math_examples<fields::fp3<fields::edwards_fq<183>>>();
-
-    std::cout << "----------------------------" << std::endl;
-
-    std::cout << "Edwards Fr basic math:" << std::endl;
-    fields_fp_basic_math_examples<fields::edwards_fr<183>>();
-
-    std::cout << "----------------------------" << std::endl;
-
     std::cout << "MNT4 Fq basic math:" << std::endl;
     fields_fp_basic_math_examples<fields::mnt4_fq<298>>();
 
@@ -356,29 +314,6 @@ int main() {
     fields_fp_basic_math_examples<fields::mnt6_fr<298>>();
 
     std::cout << "----------------------------" << std::endl;
-
-    std::cout << "DSA Botan 2048 basic math:" << std::endl;
-    fields_fp_basic_math_examples<fields::dsa_botan<2048>>();
-
-    std::cout << "----------------------------" << std::endl;
-
-    std::cout << "DSA JCE 1024 basic math:" << std::endl;
-    fields_fp_basic_math_examples<fields::dsa_jce<1024>>();
-
-    /*    std::cout << "----------------------------" << std::endl;
-
-        std::cout << "FFDHE IETF 2048 basic math:" << std::endl;
-        fields_fp_basic_math_examples<fields::ffdhe_ietf<2048>>();
-
-        std::cout << "----------------------------" << std::endl;
-
-        std::cout << "MODP IETF 1024 basic math:" << std::endl;
-        fields_fp_basic_math_examples<fields::modp_ietf<1024>>();
-
-        std::cout << "----------------------------" << std::endl;
-
-        std::cout << "MODP SRP 1024 basic math:" << std::endl;
-        fields_fp_basic_math_examples<fields::modp_srp<1024>>();*/
 
     return 0;
 }

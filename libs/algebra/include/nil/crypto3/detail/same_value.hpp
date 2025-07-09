@@ -7,8 +7,7 @@ namespace nil {
             namespace detail {
 
                 template<typename T, T... v>
-                struct all_same_value {
-                };
+                struct all_same_value { };
 
                 template<typename T, T v1, T v2, T... rest>
                 struct all_same_value<T, v1, v2, rest...> : all_same_value<T, v2, rest...> {
@@ -21,14 +20,6 @@ namespace nil {
                     static constexpr T value = v;
                 };
 
-                template<typename First, typename... Rest>
-                constexpr bool all_same_size(const First &first, const Rest &... rest) {
-                    // Get the size of the first element
-                    constexpr const std::size_t first_size = first.size();
-
-                    // Fold expression to check all sizes are the same
-                    return ((rest.size() == first_size) && ...);
-                }
             }    // namespace detail
         }        // namespace algebra
     }            // namespace crypto3

@@ -27,10 +27,8 @@
 #ifndef CRYPTO3_ALGEBRA_FIELDS_POWER_HPP
 #define CRYPTO3_ALGEBRA_FIELDS_POWER_HPP
 
-#include <cstdint>
-
-#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
-
+#include <nil/crypto3/multiprecision/integer.hpp>
+#include <nil/crypto3/multiprecision/unsigned_utils.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -38,23 +36,28 @@ namespace nil {
             namespace fields {
                 namespace detail {
                     template<typename FieldValueType, typename NumberType>
-                    constexpr FieldValueType power(const FieldValueType &base, const NumberType &exponent) {
+                    constexpr FieldValueType power(const FieldValueType &base,
+                                                   const NumberType &exponent_original) {
                         FieldValueType result = FieldValueType::one();
 
-                        if (exponent == 0u)
+                        if (nil::crypto3::multiprecision::is_zero(exponent_original)) {
                             return result;
+                        }
+
+                        decltype(auto) exponent =
+                            nil::crypto3::multiprecision::unsigned_or_throw(
+                                exponent_original);
 
                         bool found_one = false;
 
-                        for (long i = boost::multiprecision::msb(exponent); i >= 0; --i) {
+                        for (long i = nil::crypto3::multiprecision::msb(exponent); i >= 0; --i) {
                             if (found_one) {
                                 result = result.squared();
                             }
 
-                            if (boost::multiprecision::bit_test(exponent, i)) {
+                            if (nil::crypto3::multiprecision::bit_test(exponent, i)) {
                                 found_one = true;
-                                // TODO(martun): create an operator *= for this.
-                                result = result * base;
+                                result *= base;
                             }
                         }
 

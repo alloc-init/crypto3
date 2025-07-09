@@ -62,8 +62,8 @@ namespace nil {
                     using circuit_params_type = CircuitParams;
                 };
             }    // namespace snark
-        }    // namespace zk
-    }    // namespace crypto3
+        }        // namespace zk
+    }            // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_PLONK_PLACEHOLDER_PARAMS_HPP

@@ -37,16 +37,16 @@
 // TODO: rename this file
 namespace nil {
     namespace crypto3 {
-        template<typename HashType, typename = typename std::enable_if<detail::is_hash<HashType>::value>::type>
+        template<typename Hash, typename = typename std::enable_if<detail::is_hash<Hash>::value>::type>
         struct accumulator_set
-                : public boost::accumulators::accumulator_set<
-                        typename HashType::digest_type,
-                        boost::accumulators::features<
-                                typename HashType::accumulator_tag
-                        >,
-                        std::size_t
-                > {
-            typedef HashType hash_type;
+            : public boost::accumulators::accumulator_set<
+                typename Hash::digest_type,
+                boost::accumulators::features<
+                    typename Hash::accumulator_tag
+                >,
+                std::size_t
+            > {
+            typedef Hash hash_type;
         };
     }    // namespace crypto3
 }    // namespace nil

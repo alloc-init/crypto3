@@ -35,11 +35,11 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/test_case.hpp>
 
-#include <nil/crypto3/algebra/fields/goldilocks64/base_field.hpp>
-#include <nil/crypto3/algebra/fields/arithmetic_params/goldilocks64.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/goldilocks.hpp>
+#include <nil/crypto3/algebra/fields/goldilocks.hpp>
 
 #include <nil/crypto3/hash/keccak.hpp>
-#include <nil/crypto3/zk/test_tools/random_test_initializer.hpp>
+#include <nil/crypto3/test_tools/random_test_initializer.hpp>
 
 #include "circuits.hpp"
 #include "placeholder_test_runner.hpp"
@@ -50,19 +50,18 @@ using namespace nil::crypto3::zk::snark;
 
 BOOST_AUTO_TEST_SUITE(placeholder_goldilocks)
 
-    using field_type = typename algebra::fields::goldilocks64;
-    using hash_type = hashes::keccak_1600<256>;
-    using test_runner_type = placeholder_test_runner<field_type, hash_type, hash_type>;
+using field_type = typename algebra::fields::goldilocks;
+using hash_type = hashes::keccak_1600<256>;
+using test_runner_type = placeholder_test_runner<field_type, hash_type, hash_type>;
 
-    BOOST_AUTO_TEST_CASE(circuit1)
-    {
-        test_tools::random_test_initializer<field_type> random_test_initializer;
-        auto circuit = circuit_test_1<field_type>(
-                random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-                random_test_initializer.generic_random_engine
-        );
-        test_runner_type test_runner(circuit);
-        BOOST_CHECK(test_runner.run_test());
-    }
-
+BOOST_AUTO_TEST_CASE(circuit1)
+{
+    test_tools::random_test_initializer<field_type> random_test_initializer;
+    auto circuit = circuit_test_1<field_type>(
+        random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+        random_test_initializer.generic_random_engine
+    );
+    test_runner_type test_runner(circuit);
+    BOOST_CHECK(test_runner.run_test());
+}
 BOOST_AUTO_TEST_SUITE_END()

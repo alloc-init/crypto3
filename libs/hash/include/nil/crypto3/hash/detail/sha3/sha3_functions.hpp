@@ -59,7 +59,7 @@ namespace nil {
                         keccak_1600_impl<policy_type>::permute(A);
                     }
 
-                    static void absorb(const block_type &block, state_type &state) {
+                    static void absorb(const block_type& block, state_type& state) {
                         for (std::size_t i = 0; i < block.size(); ++i) {
                             // XOR
                             state[i] ^= block[i];

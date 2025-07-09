@@ -34,31 +34,37 @@
 #include <nil/crypto3/algebra/vector/operators.hpp>
 #include <nil/crypto3/algebra/vector/utility.hpp>
 
+#include <nil/crypto3/algebra/fields/goldilocks.hpp>
+
 using namespace nil::crypto3::algebra;
 
-static_assert(make_vector(1, 2, 3) == vector{1, 2, 3}, "make_vector and uniform initialization deduction guide");
+using field = fields::goldilocks;
+using value = field::value_type;
 
-static_assert(make_vector(1, 2, 3) == vector{{1, 2, 3}}, "make_vector and aggregate initialization deduction guide");
+static_assert(make_vector(1, 2, 3) == vector {1, 2, 3}, "make_vector and uniform initialization deduction guide");
 
-static_assert(elementwise([](double x) { return 1 / x; }, vector{1., 2., 4.}) == vector{1., 0.5, 0.25},
+static_assert(make_vector(1, 2, 3) == vector {{1, 2, 3}}, "make_vector and aggregate initialization deduction guide");
+
+static_assert(elementwise([](value x) { return x.inversed(); }, vector {1, 2, 4}) ==
+        vector<value, 3> {1, 0x7fffffff80000001_big_uint64, 0xbfffffff40000001_big_uint64},
               "elementwise");
 
-static_assert(vector{1, 2, 3} == vector{1, 2, 3}, "operator==");
+static_assert(vector {1, 2, 3} == vector {1, 2, 3}, "operator==");
 
-static_assert(vector{1, 2, 3} != vector{3, 2, 1}, "operator!=");
+static_assert(vector {1, 2, 3} != vector {3, 2, 1}, "operator!=");
 
-static_assert(vector{1, 2, 3} + vector{1, 2, 3} == vector{2, 4, 6}, "operator+");
+static_assert(vector {1, 2, 3} + vector {1, 2, 3} == vector {2, 4, 6}, "operator+");
 
-static_assert(sum(vector{1, 2, 3}) == 6, "sum");
+static_assert(sum(vector {1, 2, 3}) == 6, "sum");
 
-static_assert(iota<5>(0) == vector{0, 1, 2, 3, 4}, "iota");
+static_assert(iota<5>(0) == vector {0, 1, 2, 3, 4}, "iota");
 
-static_assert(iota<5, double>() == vector{0., 1., 2., 3., 4.}, "iota");
+static_assert(iota<5, value>() == vector<value, 5> {0, 1, 2, 3, 4}, "iota");
 
-static_assert(fill<4>(2.) == vector{2., 2., 2., 2.}, "fill");
+static_assert(fill<4>(2) == vector {2, 2, 2, 2}, "fill");
 
-static_assert(generate<4>([](auto i) { return double(i * i); }) == vector{0., 1., 4., 9.}, "generate");
+static_assert(generate<4>([](auto i) { return value(i * i); }) == vector<value, 4> {0, 1, 4, 9}, "generate");
 
-static_assert(vector{1, 2, 3} == slice<3>(vector{1, 2, 3, 4}), "slice-no offset");
+static_assert(vector {1, 2, 3} == slice<3>(vector {1, 2, 3, 4}), "slice-no offset");
 
-static_assert(vector{2, 3, 4} == slice<3>(vector{1, 2, 3, 4}, 1), "slice with offset");
+static_assert(vector {2, 3, 4} == slice<3>(vector {1, 2, 3, 4}, 1), "slice with offset");

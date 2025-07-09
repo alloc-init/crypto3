@@ -16,8 +16,8 @@ Crypto3.Hash consists of several parts to review:
 
 Internal dependencies:
 
-1. [Crypto3.Block](https://github.com/alloc-init/block.git)
-2. [Crypto3.Codec](https://github.com/alloc-init/codec.git)
+1. [Crypto3.Block](https://github.com/nilfoundation/block.git)
+2. [Crypto3.Codec](https://github.com/nilfoundation/codec.git)
 
 External dependencies:
 

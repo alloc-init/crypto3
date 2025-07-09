@@ -12,8 +12,7 @@
 #include <nil/crypto3/algebra/vector/vector.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
 
-#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
-#include <boost/multiprecision/number.hpp>
+#include <nil/crypto3/multiprecision/big_uint.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -49,9 +48,7 @@ namespace nil {
                     typedef typename poseidon_constants_type::state_vector_type state_vector_type;
 
                     constexpr static const std::size_t lfsr_state_bits = 80;
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::cpp_int_modular_backend<lfsr_state_bits>
-                    > lfsr_state_type;
+                    typedef nil::crypto3::multiprecision::big_uint<lfsr_state_bits> lfsr_state_type;
 
                     typedef typename poseidon_constants_type::round_constants_type round_constants_type;
 
@@ -183,8 +180,7 @@ namespace nil {
                     }
 
                     static constexpr inline bool get_lfsr_state_bit(lfsr_state_type state, std::size_t pos) {
-                        lfsr_state_type m = state & (1 << (lfsr_state_bits - 1 - pos));
-                        return m > 0;
+                        return state.bit_test(lfsr_state_bits - 1 - pos);
                     }
 
                     template<typename T>

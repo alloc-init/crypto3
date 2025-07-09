@@ -82,7 +82,7 @@ namespace nil {
              */
             template<std::size_t N, std::size_t M, typename F>
             constexpr decltype(auto) generate(F &&f) {
-                matrix<typename std::invoke_result<F, std::size_t, std::size_t>::type, N, M> generated = {};
+                matrix<std::invoke_result_t<F, std::size_t, std::size_t>, N, M> generated = {};
                 for (std::size_t i = 0; i < N; ++i) {
                     for (std::size_t j = 0; j < M; ++j) {
                         generated[i][j] = std::apply(f, std::forward_as_tuple(i, j));
@@ -240,7 +240,7 @@ namespace nil {
              *  Converts a vector into a column vector.
              */
             template<typename T, std::size_t N>
-            constexpr matrix<T, N, 1> as_column(const std::vector<T> &v) {
+            constexpr matrix<T, N, 1> as_column(const vector<T, N> &v) {
                 return generate<N, 1>([&v](auto i, auto) { return v[i]; });
             }
 
@@ -251,7 +251,7 @@ namespace nil {
              *  Converts a vector into a row vector.
              */
             template<typename T, std::size_t N>
-            constexpr matrix<T, 1, N> as_row(const std::vector<T> &v) {
+            constexpr matrix<T, 1, N> as_row(const vector<T, N> &v) {
                 return generate<1, N>([&v](auto, auto j) { return v[j]; });
             }
 

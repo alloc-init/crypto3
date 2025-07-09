@@ -44,24 +44,17 @@ namespace nil {
                 struct babyjubjub_scalar_field : public field<251> {
                     typedef field<251> policy_type;
 
+                    using small_subfield = babyjubjub_scalar_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
-
-                    typedef typename policy_type::extended_integral_type extended_integral_type;
 
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
 
                     constexpr static const integral_type modulus =
-                        0x60c89ce5c263405370a08b6d0302b0bab3eedb83920ee0a677297dc392126f1_cppui_modular251;
+                        0x60c89ce5c263405370a08b6d0302b0bab3eedb83920ee0a677297dc392126f1_big_uint251;
 
-                    typedef typename policy_type::modular_backend modular_backend;
-                    constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
-                        modular_type;
-
+                    typedef nil::crypto3::multiprecision::auto_big_mod<modulus> modular_type;
                     typedef typename detail::element_fp<params<babyjubjub_scalar_field>> value_type;
 
                     constexpr static const std::size_t value_bits = modulus_bits;
@@ -75,9 +68,6 @@ namespace nil {
                 constexpr typename std::size_t const babyjubjub_scalar_field::value_bits;
 
                 constexpr typename babyjubjub_scalar_field::integral_type const babyjubjub_scalar_field::modulus;
-
-                constexpr
-                    typename babyjubjub_scalar_field::modular_params_type const babyjubjub_scalar_field::modulus_params;
 
                 using babyjubjub_fr = babyjubjub_scalar_field;
 

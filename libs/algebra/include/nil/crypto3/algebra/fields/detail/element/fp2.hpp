@@ -133,8 +133,6 @@ namespace nil {
                         }
 
                         constexpr element_fp2 operator*(const element_fp2 &B) const {
-                            // TODO: the use of data and B.data directly in return statement addition cause constexpr
-                            // error for gcc
                             const underlying_type A0 = data[0], A1 = data[1], B0 = B.data[0], B1 = B.data[1];
                             const underlying_type A0B0 = data[0] * B.data[0], A1B1 = data[1] * B.data[1];
 
@@ -185,10 +183,6 @@ namespace nil {
                             return element_fp2(-(data[1] * y_b), data[0] * y_b);
                         }
 
-                        constexpr element_fp2 _2z_add_3x() {
-                            return element_fp2(data[0]._2z_add_3x(), data[1]._2z_add_3x());
-                        }
-
                         constexpr element_fp2 divBy2() const {
                             return element_fp2(divBy2(data[0]), divBy2(data[1]));
                         }
@@ -210,7 +204,7 @@ namespace nil {
 
                             element_fp2 one = this->one();
 
-                            std::size_t v = policy_type::s;
+                            std::size_t v = policy_type::two_adicity;
                             element_fp2 z(policy_type::nqr_to_t[0], policy_type::nqr_to_t[1]);
                             element_fp2 w = this->pow(policy_type::t_minus_1_over_2);
                             element_fp2 x((*this) * w);
@@ -245,12 +239,9 @@ namespace nil {
                         }
 
                         constexpr element_fp2 squared() const {
-                            // return (*this) * (*this);    // maybe can be done more effective
-
                             /* Devegili OhEig Scott Dahab --- Multiplication and Squaring on Pairing-Friendly
                              * Fields.pdf; Section 3 (Complex squaring) */
-                            // TODO: reference here could cause error in constexpr for gcc
-                            const underlying_type A = data[0], B = data[1];
+                            const underlying_type& A = data[0], B = data[1];
                             const underlying_type AB = A * B;
 
                             return element_fp2((A + B) * (A + non_residue * B) - AB - non_residue * AB, AB + AB);
@@ -261,8 +252,7 @@ namespace nil {
 
                             /* Devegili OhEig Scott Dahab --- Multiplication and Squaring on Pairing-Friendly
                              * Fields.pdf; Section 3 (Complex squaring) */
-                            // TODO: reference here could cause error in constexpr for gcc
-                            const underlying_type A = data[0], B = data[1];
+                            const underlying_type& A = data[0], B = data[1];
                             const underlying_type AB = A * B;
 
                             data[0] = (A + B) * (A + non_residue * B) - AB - non_residue * AB;

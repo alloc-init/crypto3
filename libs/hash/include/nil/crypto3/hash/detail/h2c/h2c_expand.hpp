@@ -48,31 +48,30 @@ namespace nil {
     namespace crypto3 {
         namespace hashes {
             using namespace nil::crypto3::detail;
-
             template<std::size_t k, typename HashType,
-                    /// HashType::digest_type is required to be uint8_t[]
-                    typename = typename std::enable_if<
+                        /// HashType::digest_type is required to be uint8_t[]
+                        typename = typename std::enable_if<
                             std::is_same<std::uint8_t, typename HashType::digest_type::value_type>::value>::type>
             class expand_message_xmd {
                 // https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.4.1
                 BOOST_STATIC_ASSERT_MSG(HashType::block_bits % 8 == 0, "r_in_bytes is not a multiple of 8");
                 BOOST_STATIC_ASSERT_MSG(HashType::digest_bits % 8 == 0, "b_in_bytes is not a multiple of 8");
                 BOOST_STATIC_ASSERT_MSG(HashType::digest_bits >= 2 * k,
-                                        "K-bit collision resistance is not fulfilled");
+                                        "k-bit collision resistance is not fulfilled");
 
                 constexpr static const std::size_t b_in_bytes = HashType::digest_bits / 8;
                 constexpr static const std::size_t r_in_bytes = HashType::block_bits / 8;
 
-                constexpr static const std::array<std::uint8_t, r_in_bytes> Z_pad{0};
+                constexpr static const std::array<std::uint8_t, r_in_bytes> Z_pad {0};
 
             public:
                 template<typename InputMsgType, typename InputDstType, typename OutputType,
-                        typename = typename std::enable_if<
+                            typename = typename std::enable_if<
                                 std::is_same<std::uint8_t, typename InputMsgType::value_type>::value &&
                                 std::is_same<std::uint8_t, typename InputDstType::value_type>::value &&
                                 std::is_same<std::uint8_t, typename OutputType::value_type>::value>::type>
                 static inline void process(const std::size_t len_in_bytes, const InputMsgType &msg,
-                                           const InputDstType &dst, OutputType &uniform_bytes) {
+                                            const InputDstType &dst, OutputType &uniform_bytes) {
                     BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<InputMsgType>));
                     BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<InputDstType>));
                     BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<OutputType>));
@@ -81,13 +80,13 @@ namespace nil {
                     // https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.4.1
                     BOOST_ASSERT(len_in_bytes < 0x10000);
                     BOOST_ASSERT(std::distance(dst.begin(), dst.end()) >= 16 &&
-                                 std::distance(dst.begin(), dst.end()) <= 255);
+                                    std::distance(dst.begin(), dst.end()) <= 255);
                     BOOST_ASSERT(
-                            std::size_t(std::distance(uniform_bytes.begin(), uniform_bytes.end())) >= len_in_bytes);
+                        std::size_t(std::distance(uniform_bytes.begin(), uniform_bytes.end())) >= len_in_bytes);
 
                     const std::array<std::uint8_t, 2> l_i_b_str = {
-                            static_cast<std::uint8_t>(len_in_bytes >> 8u),
-                            static_cast<std::uint8_t>(len_in_bytes % 0x100)};
+                        static_cast<std::uint8_t>(len_in_bytes >> 8u),
+                        static_cast<std::uint8_t>(len_in_bytes % 0x100)};
                     const std::size_t ell = static_cast<std::size_t>(len_in_bytes / b_in_bytes) +
                                             static_cast<std::size_t>(len_in_bytes % b_in_bytes != 0);
 
@@ -111,7 +110,7 @@ namespace nil {
                     msg_prime.insert(msg_prime.end(), static_cast<std::uint8_t>(0));
                     msg_prime.insert(msg_prime.end(), dst.begin(), dst.end());
                     msg_prime.insert(msg_prime.end(),
-                                     static_cast<std::uint8_t>(std::distance(dst.begin(), dst.end())));
+                                        static_cast<std::uint8_t>(std::distance(dst.begin(), dst.end())));
                     typename HashType::digest_type b0 = hash<HashType>(msg_prime);
 
                     // TODO: use accumulators when they will be fixed
@@ -128,7 +127,7 @@ namespace nil {
                     b_i_str.insert(b_i_str.end(), static_cast<std::uint8_t>(1));
                     b_i_str.insert(b_i_str.end(), dst.begin(), dst.end());
                     b_i_str.insert(b_i_str.end(),
-                                   static_cast<std::uint8_t>(std::distance(dst.begin(), dst.end())));
+                                    static_cast<std::uint8_t>(std::distance(dst.begin(), dst.end())));
                     typename HashType::digest_type bi = hash<HashType>(b_i_str);
                     std::copy(bi.begin(), bi.end(), uniform_bytes.begin());
 
@@ -150,7 +149,7 @@ namespace nil {
                         b_i_str.insert(b_i_str.end(), static_cast<std::uint8_t>(i));
                         b_i_str.insert(b_i_str.end(), dst.begin(), dst.end());
                         b_i_str.insert(b_i_str.end(),
-                                       static_cast<std::uint8_t>(std::distance(dst.begin(), dst.end())));
+                                        static_cast<std::uint8_t>(std::distance(dst.begin(), dst.end())));
                         bi = hash<HashType>(b_i_str);
                         std::copy(bi.begin(), bi.end(), uniform_bytes.begin() + (i - 1) * b_in_bytes);
                     }

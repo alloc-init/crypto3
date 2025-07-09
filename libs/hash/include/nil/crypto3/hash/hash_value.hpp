@@ -44,41 +44,11 @@ namespace nil {
     namespace crypto3 {
         namespace hashes {
             namespace detail {
-                template<typename Derived>
-                struct continuator {
-                    // Then method for range-based inputs
-                    template<typename SinglePassRange>
-                    Derived &then(const SinglePassRange &range) {
-                        static_cast<Derived *>(this)->process(range);
-                        return *static_cast<Derived *>(this);
-                    }
-
-                    // Then method for initializer_list
-                    template<typename T>
-                    Derived &then(const std::initializer_list<T> &range) {
-                        static_cast<Derived *>(this)->process(range);
-                        return *static_cast<Derived *>(this);
-                    }
-
-                    // Then method for iterator-based inputs
-                    template<typename InputIterator>
-                    Derived &then(InputIterator first, InputIterator last) {
-                        static_cast<Derived *>(this)->process(first, last);
-                        return *static_cast<Derived *>(this);
-                    }
-
-                    // Explicit overload for std::initializer_list<unsigned int>
-                    Derived& then(const char *range) {
-                        static_cast<Derived *>(this)->process(std::string(range));
-                        return *static_cast<Derived *>(this);
-                    }
-                };
-
                 template<typename HashAccumulatorSet>
                 struct ref_hash_impl {
                     typedef HashAccumulatorSet accumulator_set_type;
                     typedef
-                    typename boost::mpl::front<typename accumulator_set_type::features_type>::type accumulator_type;
+                        typename boost::mpl::front<typename accumulator_set_type::features_type>::type accumulator_type;
 
                     typedef typename accumulator_type::hash_type hash_type;
 
@@ -95,7 +65,7 @@ namespace nil {
                 struct value_hash_impl {
                     typedef HashAccumulatorSet accumulator_set_type;
                     typedef
-                    typename boost::mpl::front<typename accumulator_set_type::features_type>::type accumulator_type;
+                        typename boost::mpl::front<typename accumulator_set_type::features_type>::type accumulator_type;
 
                     typedef typename accumulator_type::hash_type hash_type;
 
@@ -112,7 +82,7 @@ namespace nil {
                 };
 
                 template<typename HashStateImpl>
-                struct range_hash_impl : public HashStateImpl, public continuator<range_hash_impl<HashStateImpl>> {
+                struct range_hash_impl : public HashStateImpl {
                     typedef HashStateImpl hash_state_impl_type;
 
                     typedef typename hash_state_impl_type::accumulator_type accumulator_type;
@@ -121,18 +91,18 @@ namespace nil {
                     typedef typename hash_state_impl_type::hash_type hash_type;
 
                     typedef typename boost::mpl::apply<accumulator_set_type, accumulator_type>::type::result_type
-                    result_type;
+                        result_type;
 
                     template<typename SinglePassRange>
                     range_hash_impl(const SinglePassRange &range, accumulator_set_type &ise)
-                        : HashStateImpl(ise) {
+                            : HashStateImpl(ise) {
                         process(range);
                     }
 
                     // Having accumulator_set_type&& is an rvalue, NOT a universal reference.
                     template<typename SinglePassRange>
                     range_hash_impl(const SinglePassRange &range, accumulator_set_type &&ise)
-                        : HashStateImpl(std::move(ise)) {
+                            : HashStateImpl(std::move(ise)) {
                         process(range);
                     }
 
@@ -145,14 +115,14 @@ namespace nil {
 
                     template<typename InputIterator>
                     range_hash_impl(InputIterator first, InputIterator last, accumulator_set_type &ise)
-                        : HashStateImpl(ise) {
+                            : HashStateImpl(ise) {
                         process(first, last);
                     }
 
                     // Having accumulator_set_type&& is an rvalue, NOT a universal reference.
                     template<typename InputIterator>
                     range_hash_impl(InputIterator first, InputIterator last, accumulator_set_type &&ise)
-                        : HashStateImpl(std::move(ise)) {
+                            : HashStateImpl(std::move(ise)) {
                         process(first, last);
                     }
 
@@ -161,25 +131,21 @@ namespace nil {
                         BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<InputIterator>));
 
                         typedef typename std::iterator_traits<InputIterator>::value_type value_type;
-                        if constexpr (hash_type::stream_processor == detail::stream_processor_type::block) {
+                        if constexpr (hash_type::stream_processor == detail::stream_processor_type::Block) {
                             BOOST_STATIC_ASSERT(std::numeric_limits<value_type>::is_specialized);
 
                             using StreamProcessor = typename nil::crypto3::hashes::block_stream_processor<
                                 typename hash_type::policy_type,
                                 accumulator_set_type,
-                                std::numeric_limits<value_type>::digits +
-                                std::numeric_limits<value_type>::is_signed>;
+                                std::numeric_limits<value_type>::digits + std::numeric_limits<value_type>::is_signed>;
 
                             StreamProcessor(this->accumulator_set)(first, last);
-                        } else if constexpr (hash_type::stream_processor == detail::stream_processor_type::raw) {
-                            using StreamProcessor = typename nil::crypto3::hashes::raw_stream_processor<
-                                accumulator_set_type>;
+                        } else if constexpr (hash_type::stream_processor == detail::stream_processor_type::Raw) {
+                            using StreamProcessor = typename nil::crypto3::hashes::raw_stream_processor<accumulator_set_type>;
 
                             StreamProcessor(this->accumulator_set)(first, last);
-                        } else if constexpr (hash_type::stream_processor ==
-                                             detail::stream_processor_type::raw_delegating) {
-                            using StreamProcessor = typename nil::crypto3::hashes::raw_delegating_stream_processor<
-                                accumulator_set_type>;
+                        } else if constexpr (hash_type::stream_processor == detail::stream_processor_type::RawDelegating) {
+                            using StreamProcessor = typename nil::crypto3::hashes::raw_delegating_stream_processor<accumulator_set_type>;
 
                             StreamProcessor(this->accumulator_set)(first, last);
                         }
@@ -188,7 +154,7 @@ namespace nil {
                     template<typename T, std::size_t Size>
                     inline operator std::array<T, Size>() const {
                         result_type result =
-                                boost::accumulators::extract_result<accumulator_type>(this->accumulator_set);
+                            boost::accumulators::extract_result<accumulator_type>(this->accumulator_set);
                         std::array<T, Size> out;
                         std::copy(result.begin(), result.end(), out.begin());
                         return out;
@@ -197,7 +163,7 @@ namespace nil {
                     template<typename T, std::size_t Size>
                     inline operator boost::array<T, Size>() const {
                         result_type result =
-                                boost::accumulators::extract_result<accumulator_type>(this->accumulator_set);
+                            boost::accumulators::extract_result<accumulator_type>(this->accumulator_set);
                         boost::array<T, Size> out;
                         std::copy(result.begin(), result.end(), out.begin());
                         return out;
@@ -206,7 +172,7 @@ namespace nil {
                     template<typename OutputRange>
                     inline operator OutputRange() const {
                         result_type result =
-                                boost::accumulators::extract_result<accumulator_type>(this->accumulator_set);
+                            boost::accumulators::extract_result<accumulator_type>(this->accumulator_set);
                         return OutputRange(result.begin(), result.end());
                     }
 
@@ -221,7 +187,7 @@ namespace nil {
                     template<typename Integral,
                              typename = typename std::enable_if<std::is_integral<Integral>::value &&
                                                                 hash_type::digest_bits <=
-                                                                std::numeric_limits<Integral>::digits>::type>
+                                                                    std::numeric_limits<Integral>::digits>::type>
                     inline operator Integral() const {
                         std::array<Integral, 1> out;
                         result_type res = boost::accumulators::extract_result<accumulator_type>(this->accumulator_set);
@@ -236,12 +202,11 @@ namespace nil {
                         return std::to_string(
                             boost::accumulators::extract_result<accumulator_type>(this->accumulator_set));
                     }
-
 #endif
                 };
 
                 template<typename HashStateImpl, typename OutputIterator>
-                struct itr_hash_impl : public continuator<itr_hash_impl<HashStateImpl, OutputIterator>> {
+                struct itr_hash_impl {
                 private:
                     mutable OutputIterator out;
 
@@ -254,18 +219,17 @@ namespace nil {
                     typedef typename hash_state_impl_type::hash_type hash_type;
 
                     typedef typename boost::mpl::apply<accumulator_set_type, accumulator_type>::type::result_type
-                    result_type;
+                        result_type;
 
                     template<typename SinglePassRange>
-                    itr_hash_impl(const SinglePassRange &range, OutputIterator out,
-                                  accumulator_set_type &&ise) : out(std::move(out)),
-                                                                range_hash_(range, std::move(ise)) {
+                    itr_hash_impl(const SinglePassRange &range, OutputIterator out, accumulator_set_type &&ise) :
+                        out(std::move(out)), range_hash_(range, std::move(ise)) {
                     }
 
                     template<typename InputIterator>
                     itr_hash_impl(InputIterator first, InputIterator last, OutputIterator out,
-                                  accumulator_set_type &&ise) : out(std::move(out)),
-                                                                range_hash_(first, last, std::move(ise)) {
+                                  accumulator_set_type &&ise) :
+                        out(std::move(out)), range_hash_(first, last, std::move(ise)) {
                     }
 
                     inline operator accumulator_set_type &() const {
@@ -280,9 +244,9 @@ namespace nil {
                 private:
                     range_hash_impl<HashStateImpl> range_hash_;
                 };
-            } // namespace detail
-        } // namespace hashes
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace detail
+        }        // namespace hashes
+    }            // namespace crypto3
+}    // namespace nil
 
 #endif

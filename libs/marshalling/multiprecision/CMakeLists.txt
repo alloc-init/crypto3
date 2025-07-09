@@ -2,8 +2,8 @@ include(CMConfig)
 include(CMDeploy)
 include(CMSetupVersion)
 
-cm_workspace(marshalling)
-cm_project(crypto3_multiprecision WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
+cm_workspace(crypto3)
+cm_project(marshalling-multiprecision WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
 cm_find_package(CM)
 include(CMDeploy)
@@ -16,33 +16,32 @@ option(BUILD_WITH_NO_WARNINGS "Build threading warnings as errors" FALSE)
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 add_library(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE)
+add_library(${CMAKE_WORKSPACE_NAME}::${CURRENT_PROJECT_NAME} ALIAS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
+
+set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
 
 set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
-        EXPORT_NAME ${CURRENT_PROJECT_NAME})
+                      EXPORT_NAME ${CURRENT_PROJECT_NAME})
 
 target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+                           $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
 
-        $<$<BOOL:${Boost_FOUND}>:${Boost_INCLUDE_DIRS}>)
+                           $<$<BOOL:${Boost_FOUND}>:${Boost_INCLUDE_DIRS}>)
 
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
-        Boost::container
+                      Boost::container
 
-        crypto3::multiprecision
-        ${CMAKE_WORKSPACE_NAME}::core)
+                      crypto3::multiprecision
+                      ${CMAKE_WORKSPACE_NAME}::marshalling-core)
 
-cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
-        INCLUDE include
-        NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
-
-cm_add_test_subdirectory(test)
+add_tests(test)
 
 if((CMAKE_COMPILER_IS_GNUCC) OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
     set(extra_flags_list -Wall -Wextra -Wcast-align -Wcast-qual
-            -Wctor-dtor-privacy -Wmissing-include-dirs -Woverloaded-virtual
-            -Wredundant-decls -Wshadow -Wundef -Wunused -Wno-unknown-pragmas
-            -fdiagnostics-show-option)
+        -Wctor-dtor-privacy -Wmissing-include-dirs -Woverloaded-virtual
+        -Wredundant-decls -Wshadow -Wundef -Wunused -Wno-unknown-pragmas
+        -fdiagnostics-show-option)
 
     if(CMAKE_COMPILER_IS_GNUCC)
         list(APPEND extra_flags_list -Wnoexcept -Wlogical-op -Wstrict-null-sentinel)
@@ -88,3 +87,6 @@ endif()
 if(CMAKE_TOOLCHAIN_FILE AND EXISTS ${CMAKE_TOOLCHAIN_FILE})
     message(STATUS "Loading toolchain from ${CMAKE_TOOLCHAIN_FILE}")
 endif()
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

@@ -95,10 +95,9 @@ namespace nil {
                             : X(X), Y(Y), Z(Z)
                         { } 
 
-                        template<typename Backend,
-                                 boost::multiprecision::expression_template_option ExpressionTemplates>
+                        template<std::size_t Bits>
                         explicit constexpr curve_element(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                                  const nil::crypto3::multiprecision::big_uint<Bits> &value) {
                             *this = one() * value;
                         }
 
@@ -214,10 +213,9 @@ namespace nil {
                             return *this;
                         }
 
-                        template<typename Backend,
-                                 boost::multiprecision::expression_template_option ExpressionTemplates>
+                        template<std::size_t Bits>
                         constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                                  const nil::crypto3::multiprecision::big_uint<Bits> &value) {
                             *this = one() * value;
                             return *this;
                         }
@@ -283,7 +281,6 @@ namespace nil {
                          */
                         constexpr void mixed_add(const curve_element &other) {
 
-                            // NOTE: does not handle O and pts of order 2,4
                             // http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#addition-add-1998-cmo-2
 
                             if (this->is_zero()) {

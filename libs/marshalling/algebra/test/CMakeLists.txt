@@ -13,8 +13,8 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 
                        crypto3::multiprecision
                        crypto3::algebra
-                       ${CMAKE_WORKSPACE_NAME}::crypto3_multiprecision
-                       ${CMAKE_WORKSPACE_NAME}::core
+                       ${CMAKE_WORKSPACE_NAME}::marshalling-multiprecision
+                       ${CMAKE_WORKSPACE_NAME}::marshalling-core
 
                        Boost::unit_test_framework
                        Boost::random
@@ -32,7 +32,7 @@ macro(define_marshalling_test name)
                                ${Boost_INCLUDE_DIRS})
 
     set_target_properties(${test_name} PROPERTIES
-                          CXX_STANDARD 20
+                          CXX_STANDARD 23
                           CXX_STANDARD_REQUIRED TRUE)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

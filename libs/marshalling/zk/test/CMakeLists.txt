@@ -15,16 +15,13 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         crypto3::multiprecision
         crypto3::algebra
         crypto3::zk
-        crypto3::pubkey
-        crypto3::pkpad
         crypto3::hash
         crypto3::random
         crypto3::math
-
-        ${CMAKE_WORKSPACE_NAME}::crypto3_multiprecision
-        ${CMAKE_WORKSPACE_NAME}::crypto3_algebra
-        ${CMAKE_WORKSPACE_NAME}::core
-)
+        crypto3::marshalling-multiprecision
+        crypto3::marshalling-algebra
+        crypto3::marshalling-core
+        )
 
 macro(define_marshalling_test test)
 
@@ -34,13 +31,14 @@ macro(define_marshalling_test test)
     cm_test(NAME ${full_test_name} SOURCES ${test}.cpp)
 
     target_include_directories(marshalling_zk_${name}_test PRIVATE
+            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../../test_tools/include>"
             "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
             "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
 
             ${Boost_INCLUDE_DIRS})
 
     set_target_properties(marshalling_zk_${name}_test PROPERTIES
-            CXX_STANDARD 20
+            CXX_STANDARD 23
             CXX_STANDARD_REQUIRED TRUE)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -48,28 +46,25 @@ macro(define_marshalling_test test)
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(${full_test_name} PRIVATE "-fconstexpr-ops-limit=4294967295")
     endif()
-
+    target_precompile_headers(${full_test_name} REUSE_FROM crypto3_precompiled_headers)
 endmacro()
 
-# r1cs tests are failing compilation, turning them off for now.
 set(TESTS_NAMES
         "merkle_proof"
+        "merkle_tree"
         "accumulation_vector"
         "sparse_vector"
-        #        "r1cs_gg_ppzksnark_primary_input"
-        #        "r1cs_gg_ppzksnark_proof"
-        #        "r1cs_gg_ppzksnark_verification_key"
-        #        "r1cs_gg_ppzksnark"
         "kzg_commitment"
         "fri_commitment"
         "lpc_commitment"
+        "polys_evaluator"
         "placeholder_proof"
         "placeholder_common_data"
+        "placeholder_preprocessed_public_data"
         "plonk_gates"
         "plonk_constraint_system"
         "plonk_assignment_table"
-        #        "eddsa"
-)
+        )
 
 foreach(TEST_NAME ${TESTS_NAMES})
     define_marshalling_test(${TEST_NAME})

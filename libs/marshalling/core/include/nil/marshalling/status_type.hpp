@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------//
 // Copyright (c) 2017-2021 Mikhail Komarov <nemo@nil.foundation>
 // Copyright (c) 2020-2021 Nikita Kaskov <nbering@nil.foundation>
+// Copyright (c) 2024 Vasiliy Olekhov <vasiliy.olekhov@nil.foundation>
 //
 // MIT License
 //
@@ -31,7 +32,7 @@
 
 #include <system_error>
 
-namespace nil {
+namespace nil::crypto3 {
     namespace marshalling {
 
         /// @brief Error statuses.
@@ -69,7 +70,7 @@ namespace nil {
         {
             public:
                 // Return a short descriptive name for the category
-                virtual const char *name() const noexcept override final { return "nil::marshalling::status_type"; }
+                virtual const char *name() const noexcept override final { return "nil::crypto3::marshalling::status_type"; }
                 // Return what each enum means in text
                 virtual std::string message(int c) const override final
                 {
@@ -94,8 +95,10 @@ namespace nil {
                         case status_type::not_supported:
                             return "the operation is not supported";
                         case status_type::error_status_amount:
+                        default:
                             return "unreachable";
                     }
+                    return "unreachable";
                 }
         };
     }    // namespace marshalling
@@ -103,16 +106,31 @@ namespace nil {
 
 namespace std
 {
-    template <> struct is_error_code_enum<nil::marshalling::status_type> : true_type
+    template <> struct is_error_code_enum<nil::crypto3::marshalling::status_type> : true_type
     {
     };
 }
 
-inline std::error_code make_error_code(nil::marshalling::status_type e)
+inline std::error_code make_error_code(nil::crypto3::marshalling::status_type e)
 {
-    static nil::marshalling::status_type_category category;
+    static nil::crypto3::marshalling::status_type_category category;
     return {static_cast<int>(e), category};
 }
 
+#if defined(CRYPTO3_MARSHALLING_THROWS)
+
+#define THROW_IF_ERROR_STATUS(status, message) \
+    if (nil::crypto3::marshalling::status_type::success != status) { \
+        std::stringstream os; os << "While performing operation " << std::string(message) \
+        << " marshalling error status received: " << make_error_code(status) \
+        << " @" << __FILE__ << ":" << __LINE__ << std::endl; \
+        throw std::invalid_argument(os); \
+    }
+
+#else
+
+#define THROW_IF_ERROR_STATUS(status, message) \
+    BOOST_VERIFY_MSG(nil::crypto3::marshalling::status_type::success == status, message)
+#endif
 
 #endif    // MARSHALLING_STATUS_TYPE_HPP

@@ -57,7 +57,7 @@ namespace nil {
 
                 inline static void process_block(state_type &state, const block_type &block) {
                     block_cipher_type cipher(block);
-                    state_type new_state = cipher.encrypt((const state_type &) state);
+                    state_type new_state = cipher.encrypt((const state_type &)state);
                     CombineFunction f;
                     f(state, new_state);
                 }

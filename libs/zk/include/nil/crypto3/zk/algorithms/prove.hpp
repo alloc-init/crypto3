@@ -40,7 +40,7 @@ namespace nil {
             }
 
             template<typename ProofSystemType,
-                    typename HashType,
+                    typename Hash,
                     typename InputTranscriptIncludeIterator,
                     typename InputProofIterator>
             typename ProofSystemType::proof_type prove(const typename ProofSystemType::proving_srs_type &srs,
@@ -49,7 +49,7 @@ namespace nil {
                                                        InputProofIterator proofs_first,
                                                        InputProofIterator proofs_last) {
 
-                return ProofSystemType::template prove<HashType>(
+                return ProofSystemType::template prove<Hash>(
                         srs, transcript_include_first, transcript_include_last, proofs_first, proofs_last);
             }
 

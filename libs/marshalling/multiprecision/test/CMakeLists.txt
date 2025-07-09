@@ -10,11 +10,10 @@
 include(CMTest)
 
 cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
-        Boost::unit_test_framework
+                       Boost::unit_test_framework
 
-        crypto3::multiprecision
-
-        ${CMAKE_WORKSPACE_NAME}::core)
+                       crypto3::multiprecision
+                       ${CMAKE_WORKSPACE_NAME}::marshalling-core)
 
 macro(define_marshalling_test name)
     get_filename_component(name ${name} NAME)
@@ -28,20 +27,20 @@ macro(define_marshalling_test name)
         file(MAKE_DIRECTORY ${TEST_LOGS_DIR} ${TEST_REPORTS_DIR})
 
         set(additional_args "--log_format=JUNIT"
-                "--log_sink=${TEST_LOGS_DIR}/${test_name}.xml")
+                            "--log_sink=${TEST_LOGS_DIR}/${test_name}.xml")
     endif()
 
     cm_test(NAME ${test_name} SOURCES ${name}.cpp ARGS ${additional_args})
 
     target_include_directories(marshalling_${name}_test PRIVATE
-            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-            "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
+                               "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+                               "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
 
-            ${Boost_INCLUDE_DIRS})
+                               ${Boost_INCLUDE_DIRS})
 
     set_target_properties(marshalling_${name}_test PROPERTIES
-            CXX_STANDARD 20
-            CXX_STANDARD_REQUIRED TRUE)
+                          CXX_STANDARD 23
+                          CXX_STANDARD_REQUIRED TRUE)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(marshalling_${name}_test PRIVATE "-fconstexpr-steps=2147483647")
@@ -52,10 +51,10 @@ macro(define_marshalling_test name)
 endmacro()
 
 set(TESTS_NAMES
-        "integral"
-        "integral_fixed_size_container"
-        "integral_non_fixed_size_container"
-)
+    "integral"
+    "integral_fixed_size_container"
+    "integral_non_fixed_size_container"
+    )
 
 foreach(TEST_NAME ${TESTS_NAMES})
     define_marshalling_test(${TEST_NAME})

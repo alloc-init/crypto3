@@ -219,106 +219,106 @@ namespace nil {
 
                     constexpr static const std::size_t round_constants_size = policy_type::rounds;
                     typedef typename std::array<word_type, round_constants_size> round_constants_type;
-                    constexpr static const round_constants_type constants = {
-                            UINT64_C(0x0000000000000001), UINT64_C(0x0000000000008082), UINT64_C(0x800000000000808a),
-                            UINT64_C(0x8000000080008000), UINT64_C(0x000000000000808b), UINT64_C(0x0000000080000001),
-                            UINT64_C(0x8000000080008081), UINT64_C(0x8000000000008009), UINT64_C(0x000000000000008a),
-                            UINT64_C(0x0000000000000088), UINT64_C(0x0000000080008009), UINT64_C(0x000000008000000a),
-                            UINT64_C(0x000000008000808b), UINT64_C(0x800000000000008b), UINT64_C(0x8000000000008089),
-                            UINT64_C(0x8000000000008003), UINT64_C(0x8000000000008002), UINT64_C(0x8000000000000080),
-                            UINT64_C(0x000000000000800a), UINT64_C(0x800000008000000a), UINT64_C(0x8000000080008081),
-                            UINT64_C(0x8000000000008080), UINT64_C(0x0000000080000001), UINT64_C(0x8000000080008008)};
+                    constexpr static const round_constants_type round_constants = {
+                        UINT64_C(0x0000000000000001), UINT64_C(0x0000000000008082), UINT64_C(0x800000000000808a),
+                        UINT64_C(0x8000000080008000), UINT64_C(0x000000000000808b), UINT64_C(0x0000000080000001),
+                        UINT64_C(0x8000000080008081), UINT64_C(0x8000000000008009), UINT64_C(0x000000000000008a),
+                        UINT64_C(0x0000000000000088), UINT64_C(0x0000000080008009), UINT64_C(0x000000008000000a),
+                        UINT64_C(0x000000008000808b), UINT64_C(0x800000000000008b), UINT64_C(0x8000000000008089),
+                        UINT64_C(0x8000000000008003), UINT64_C(0x8000000000008002), UINT64_C(0x8000000000000080),
+                        UINT64_C(0x000000000000800a), UINT64_C(0x800000008000000a), UINT64_C(0x8000000080008081),
+                        UINT64_C(0x8000000000008080), UINT64_C(0x0000000080000001), UINT64_C(0x8000000080008008)};
 
                     static inline void permute(state_type &A) {
                         __asm__ volatile(
-                                "ldr x0, [%[A], #0]\n"
-                                //                            "ldr x1, [%[A], #8]\n"
-                                "ldr x2, [%[A], #16]\n"
-                                "ldr x3, [%[A], #24]\n"
-                                "ldr x4, [%[A], #32]\n"
-                                "ldr x5, [%[A], #40]\n"
-                                "ldr x6, [%[A], #48]\n"
-                                "ldr x7, [%[A], #56]\n"
-                                "ldr x8, [%[A], #64]\n"
-                                "ldr x9, [%[A], #72]\n"
-                                "ldr x10, [%[A], #80]\n"
-                                "ldr x11, [%[A], #88]\n"
-                                "ldr x12, [%[A], #96]\n"
-                                "ldr x13, [%[A], #104]\n"
-                                "ldr x14, [%[A], #112]\n"
-                                "ldr x15, [%[A], #120]\n"
-                                "ldr x16, [%[A], #128]\n"
-                                "ldr x17, [%[A], #136]\n"
-                                "ldr x30, [%[A], #144]\n"
-                                "ldr x19, [%[A], #152]\n"
-                                "ldr x20, [%[A], #160]\n"
-                                "ldr x21, [%[A], #168]\n"
-                                "ldr x22, [%[A], #176]\n"
-                                "ldr x23, [%[A], #184]\n"
-                                "ldr x24, [%[A], #192]\n"
+                            "ldr x0, [%[A], #0]\n"
+//                            "ldr x1, [%[A], #8]\n"
+                            "ldr x2, [%[A], #16]\n"
+                            "ldr x3, [%[A], #24]\n"
+                            "ldr x4, [%[A], #32]\n"
+                            "ldr x5, [%[A], #40]\n"
+                            "ldr x6, [%[A], #48]\n"
+                            "ldr x7, [%[A], #56]\n"
+                            "ldr x8, [%[A], #64]\n"
+                            "ldr x9, [%[A], #72]\n"
+                            "ldr x10, [%[A], #80]\n"
+                            "ldr x11, [%[A], #88]\n"
+                            "ldr x12, [%[A], #96]\n"
+                            "ldr x13, [%[A], #104]\n"
+                            "ldr x14, [%[A], #112]\n"
+                            "ldr x15, [%[A], #120]\n"
+                            "ldr x16, [%[A], #128]\n"
+                            "ldr x17, [%[A], #136]\n"
+                            "ldr x30, [%[A], #144]\n"
+                            "ldr x19, [%[A], #152]\n"
+                            "ldr x20, [%[A], #160]\n"
+                            "ldr x21, [%[A], #168]\n"
+                            "ldr x22, [%[A], #176]\n"
+                            "ldr x23, [%[A], #184]\n"
+                            "ldr x24, [%[A], #192]\n"
 
-                                keccak_1600_armv8_step(0x0000000000000001)
-                                keccak_1600_armv8_step(0x0000000000008082)
-                                keccak_1600_armv8_step(0x800000000000808a)
-                                keccak_1600_armv8_step(0x8000000080008000)
-                                keccak_1600_armv8_step(0x000000000000808b)
-                                keccak_1600_armv8_step(0x0000000080000001)
-                                keccak_1600_armv8_step(0x8000000080008081)
-                                keccak_1600_armv8_step(0x8000000000008009)
-                                keccak_1600_armv8_step(0x000000000000008a)
-                                keccak_1600_armv8_step(0x0000000000000088)
-                                keccak_1600_armv8_step(0x0000000080008009)
-                                keccak_1600_armv8_step(0x000000008000000a)
-                                keccak_1600_armv8_step(0x000000008000808b)
-                                keccak_1600_armv8_step(0x800000000000008b)
-                                keccak_1600_armv8_step(0x8000000000008089)
-                                keccak_1600_armv8_step(0x8000000000008003)
-                                keccak_1600_armv8_step(0x8000000000008002)
-                                keccak_1600_armv8_step(0x8000000000000080)
-                                keccak_1600_armv8_step(0x000000000000800a)
-                                keccak_1600_armv8_step(0x800000008000000a)
-                                keccak_1600_armv8_step(0x8000000080008081)
-                                keccak_1600_armv8_step(0x8000000000008080)
-                                keccak_1600_armv8_step(0x0000000080000001)
-                                keccak_1600_armv8_step(0x8000000080008008)
+                            keccak_1600_armv8_step(0x0000000000000001)
+                            keccak_1600_armv8_step(0x0000000000008082)
+                            keccak_1600_armv8_step(0x800000000000808a)
+                            keccak_1600_armv8_step(0x8000000080008000)
+                            keccak_1600_armv8_step(0x000000000000808b)
+                            keccak_1600_armv8_step(0x0000000080000001)
+                            keccak_1600_armv8_step(0x8000000080008081)
+                            keccak_1600_armv8_step(0x8000000000008009)
+                            keccak_1600_armv8_step(0x000000000000008a)
+                            keccak_1600_armv8_step(0x0000000000000088)
+                            keccak_1600_armv8_step(0x0000000080008009)
+                            keccak_1600_armv8_step(0x000000008000000a)
+                            keccak_1600_armv8_step(0x000000008000808b)
+                            keccak_1600_armv8_step(0x800000000000008b)
+                            keccak_1600_armv8_step(0x8000000000008089)
+                            keccak_1600_armv8_step(0x8000000000008003)
+                            keccak_1600_armv8_step(0x8000000000008002)
+                            keccak_1600_armv8_step(0x8000000000000080)
+                            keccak_1600_armv8_step(0x000000000000800a)
+                            keccak_1600_armv8_step(0x800000008000000a)
+                            keccak_1600_armv8_step(0x8000000080008081)
+                            keccak_1600_armv8_step(0x8000000000008080)
+                            keccak_1600_armv8_step(0x0000000080000001)
+                            keccak_1600_armv8_step(0x8000000080008008)
 
-                                "str x0, [%[A], #0]\n"
-                                //                            "str x1, [%[A], #8]\n"
-                                "str x2, [%[A], #16]\n"
-                                "str x3, [%[A], #24]\n"
-                                "str x4, [%[A], #32]\n"
-                                "str x5, [%[A], #40]\n"
-                                "str x6, [%[A], #48]\n"
-                                "str x7, [%[A], #56]\n"
-                                "str x8, [%[A], #64]\n"
-                                "str x9, [%[A], #72]\n"
-                                "str x10, [%[A], #80]\n"
-                                "str x11, [%[A], #88]\n"
-                                "str x12, [%[A], #96]\n"
-                                "str x13, [%[A], #104]\n"
-                                "str x14, [%[A], #112]\n"
-                                "str x15, [%[A], #120]\n"
-                                "str x16, [%[A], #128]\n"
-                                "str x17, [%[A], #136]\n"
-                                "str x30, [%[A], #144]\n"
-                                "str x19, [%[A], #152]\n"
-                                "str x20, [%[A], #160]\n"
-                                "str x21, [%[A], #168]\n"
-                                "str x22, [%[A], #176]\n"
-                                "str x23, [%[A], #184]\n"
-                                "str x24, [%[A], #192]\n"
-                                :
-                                : [A] "r"(A.begin())
-                        : "cc", "memory", "x25", "x26", "x27", "x28",    // C0, C1, C2, C3
-                                //"x1",
-                                "x0", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14",
-                                "x15", "x16", "x17", "x30", "x19", "x20", "x21", "x22", "x23", "x24");
+                            "str x0, [%[A], #0]\n"
+//                            "str x1, [%[A], #8]\n"
+                            "str x2, [%[A], #16]\n"
+                            "str x3, [%[A], #24]\n"
+                            "str x4, [%[A], #32]\n"
+                            "str x5, [%[A], #40]\n"
+                            "str x6, [%[A], #48]\n"
+                            "str x7, [%[A], #56]\n"
+                            "str x8, [%[A], #64]\n"
+                            "str x9, [%[A], #72]\n"
+                            "str x10, [%[A], #80]\n"
+                            "str x11, [%[A], #88]\n"
+                            "str x12, [%[A], #96]\n"
+                            "str x13, [%[A], #104]\n"
+                            "str x14, [%[A], #112]\n"
+                            "str x15, [%[A], #120]\n"
+                            "str x16, [%[A], #128]\n"
+                            "str x17, [%[A], #136]\n"
+                            "str x30, [%[A], #144]\n"
+                            "str x19, [%[A], #152]\n"
+                            "str x20, [%[A], #160]\n"
+                            "str x21, [%[A], #168]\n"
+                            "str x22, [%[A], #176]\n"
+                            "str x23, [%[A], #184]\n"
+                            "str x24, [%[A], #192]\n"
+                            :
+                            : [A] "r"(A.begin())
+                            : "cc", "memory", "x25", "x26", "x27", "x28",    // C0, C1, C2, C3
+                                                                             //"x1",
+                              "x0", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14",
+                              "x15", "x16", "x17", "x30", "x19", "x20", "x21", "x22", "x23", "x24");
                     }
                 };
 
                 template<typename PolicyType>
                 constexpr typename keccak_1600_armv8_impl<PolicyType>::round_constants_type const
-                        keccak_1600_armv8_impl<PolicyType>::constants;
+                    keccak_1600_armv8_impl<PolicyType>::round_constants;
             }    // namespace detail
         }        // namespace hashes
     }            // namespace crypto3

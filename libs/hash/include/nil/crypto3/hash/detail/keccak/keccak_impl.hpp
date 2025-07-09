@@ -33,7 +33,7 @@ namespace nil {
     namespace crypto3 {
         namespace hashes {
             namespace detail {
-                template<typename PolicyType>
+                template< typename PolicyType>
                 struct keccak_1600_impl {
                     typedef PolicyType policy_type;
 
@@ -46,17 +46,17 @@ namespace nil {
                     typedef typename std::array<word_type, round_constants_size> round_constants_type;
 
                     constexpr static const round_constants_type round_constants = {
-                            UINT64_C(0x0000000000000001), UINT64_C(0x0000000000008082), UINT64_C(0x800000000000808a),
-                            UINT64_C(0x8000000080008000), UINT64_C(0x000000000000808b), UINT64_C(0x0000000080000001),
-                            UINT64_C(0x8000000080008081), UINT64_C(0x8000000000008009), UINT64_C(0x000000000000008a),
-                            UINT64_C(0x0000000000000088), UINT64_C(0x0000000080008009), UINT64_C(0x000000008000000a),
-                            UINT64_C(0x000000008000808b), UINT64_C(0x800000000000008b), UINT64_C(0x8000000000008089),
-                            UINT64_C(0x8000000000008003), UINT64_C(0x8000000000008002), UINT64_C(0x8000000000000080),
-                            UINT64_C(0x000000000000800a), UINT64_C(0x800000008000000a), UINT64_C(0x8000000080008081),
-                            UINT64_C(0x8000000000008080), UINT64_C(0x0000000080000001), UINT64_C(0x8000000080008008)};
+                        UINT64_C(0x0000000000000001), UINT64_C(0x0000000000008082), UINT64_C(0x800000000000808a),
+                        UINT64_C(0x8000000080008000), UINT64_C(0x000000000000808b), UINT64_C(0x0000000080000001),
+                        UINT64_C(0x8000000080008081), UINT64_C(0x8000000000008009), UINT64_C(0x000000000000008a),
+                        UINT64_C(0x0000000000000088), UINT64_C(0x0000000080008009), UINT64_C(0x000000008000000a),
+                        UINT64_C(0x000000008000808b), UINT64_C(0x800000000000008b), UINT64_C(0x8000000000008089),
+                        UINT64_C(0x8000000000008003), UINT64_C(0x8000000000008002), UINT64_C(0x8000000000000080),
+                        UINT64_C(0x000000000000800a), UINT64_C(0x800000008000000a), UINT64_C(0x8000000080008081),
+                        UINT64_C(0x8000000000008080), UINT64_C(0x0000000080000001), UINT64_C(0x8000000080008008)};
 
                     static inline void permute(state_type &A) {
-                        for (typename round_constants_type::value_type c: round_constants) {
+                        for (typename round_constants_type::value_type c : round_constants) {
                             const word_type C0 = A[0] ^ A[5] ^ A[10] ^ A[15] ^ A[20];
                             const word_type C1 = A[1] ^ A[6] ^ A[11] ^ A[16] ^ A[21];
                             const word_type C2 = A[2] ^ A[7] ^ A[12] ^ A[17] ^ A[22];
@@ -128,7 +128,7 @@ namespace nil {
 
                 template<typename PolicyType>
                 constexpr typename keccak_1600_impl<PolicyType>::round_constants_type const
-                        keccak_1600_impl<PolicyType>::round_constants;
+                    keccak_1600_impl<PolicyType>::round_constants;
             }    // namespace detail
         }        // namespace hashes
     }            // namespace crypto3

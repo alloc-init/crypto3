@@ -35,9 +35,9 @@ namespace nil {
     namespace crypto3 {
         namespace hashes {
             namespace detail {
-                template<typename HashType>
+                template<typename Hash>
                 class merkle_damgard_padding {
-                    typedef HashType policy_type;
+                    typedef Hash policy_type;
 
                     typedef typename policy_type::digest_endian endian_type;
 
@@ -56,7 +56,7 @@ namespace nil {
                     typedef typename policy_type::digest_type digest_type;
 
                     typedef ::nil::crypto3::detail::injector<endian_type, endian_type, word_bits, block_words>
-                            injector_type;
+                        injector_type;
 
                 public:
                     void operator()(block_type &block, std::size_t &block_seen) {
@@ -69,9 +69,9 @@ namespace nil {
 
                         // Get bit 1 in the endianness used by the hashes
                         std::array<octet_type, word_bits / octet_bits> bit_one = {{0x80}};
-                        std::array<word_type, 1> bit_one_word{};
+                        std::array<word_type, 1> bit_one_word {};
                         pack<stream_endian::big_octet_big_bit, endian_type, octet_bits, word_bits>(
-                                bit_one.begin(), bit_one.end(), bit_one_word.begin());
+                            bit_one.begin(), bit_one.end(), bit_one_word.begin());
 
                         // Add 1 bit to block
                         injector_type::inject(bit_one_word[0], 1, block, block_seen);

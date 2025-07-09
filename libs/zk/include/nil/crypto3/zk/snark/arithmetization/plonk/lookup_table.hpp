@@ -60,15 +60,15 @@ namespace nil {
                         columns_number(_columns_number), tag_index(_tag_index) {
                     }
 
-                    void append_option(const std::vector<variable_type> &variables) {
+                    void append_option(const std::vector<variable_type> &variables){
                         BOOST_ASSERT(variables.size() == columns_number);
                         lookup_options.push_back(variables);
                     }
                 };
 
             }    // namespace snark
-        }    // namespace zk
-    }    // namespace crypto3
+        }        // namespace zk
+    }            // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_PLONK_GATE_HPP

@@ -16,9 +16,8 @@ namespace nil {
     namespace crypto3 {
         namespace hashes {
             namespace detail {
-                template<typename PolicyType>
-                class poseidon_sponge_construction_custom {
-                    typedef PolicyType policy_type;
+                template<typename Policy>
+                struct poseidon_sponge_construction_custom {
                     // This is a quite strange sponge. It has rate = 3 on first absorb, then rate = 2.
                     // E.g., we have ABCDEFG values as input. Rate is 3, Capacity is 1: (full state: 0|0|0|0). Values are consumed as:
                     // 0|0|0|0 -absorb-> A|B|C|0 -permute-> S1|S2|S3|S4 -> S4|0|0|0 -absorb-> S4|D|E|0 -permute->
@@ -27,20 +26,16 @@ namespace nil {
                     // elements (each Rate - 1 instead). State is zeroed after the permutation. Only the first element is returned
                     // from squeeze(), not Rate elements...
                 public:
-                    using permutation_type = poseidon_permutation<policy_type>;
+                    using permutation_type = poseidon_permutation<Policy>;
 
-                    using word_type = typename policy_type::word_type;
-                    using state_type = typename policy_type::state_type;
-                    using block_type = typename policy_type::block_type;
-                    // `block` is used to fit other code (e.g. accumulator)
-                    using digest_type = typename policy_type::digest_type;
+                    using word_type = typename Policy::word_type;
+                    using state_type = typename Policy::state_type;
+                    using block_type = typename Policy::block_type; // `block` is used to fit other code (e.g. accumulator)
+                    using digest_type = typename Policy::digest_type;
 
-                    constexpr static const std::size_t word_bits = policy_type::word_bits;
-                    constexpr static const std::size_t state_words = policy_type::state_words;
-                    constexpr static const std::size_t block_words = policy_type::block_words;
-                    constexpr static const std::size_t digest_words = policy_type::digest_words;
-                    constexpr static const std::size_t state_bits = state_words * word_bits;
-                    constexpr static const std::size_t block_bits = block_words * word_bits;
+                    constexpr static const std::size_t state_words = Policy::state_words;
+                    constexpr static const std::size_t block_words = Policy::block_words;
+                    constexpr static const std::size_t digest_words = Policy::digest_words;
 
                     poseidon_sponge_construction_custom() {
                         reset();
@@ -85,8 +80,7 @@ namespace nil {
                         state_count_++;
                     }
 
-                    const word_type squeeze() {
-                        // type differs from canonical sponge, it should be block_type
+                    const word_type squeeze() { // type differs from canonical sponge, it should be block_type
                         permute();
                         return state_[0];
                     }
@@ -104,9 +98,9 @@ namespace nil {
                     state_type state_;
                     std::size_t state_count_;
                 };
-            } // namespace detail
-        } // namespace hashes
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace detail
+        }        // namespace hashes
+    }            // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_HASH_NIL_POSEIDON_SPONGE_HPP

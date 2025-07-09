@@ -58,7 +58,7 @@ namespace nil {
                             B += second.X;
                             B *= t1;
 
-                            // C = T1*K*T2 // K = 2d?
+                            // C = T1*k*T2 // k = 2d?
                             field_value_type C (first.T);
                             C *= field_value_type(ElementType::params_type::d);
                             C *= second.T;
