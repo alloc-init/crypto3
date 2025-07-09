@@ -1,114 +1,16 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
-find_dependency(Boost COMPONENTS REQUIRED container json filesystem log log_setup program_options thread system unit_test_framework)
+find_dependency(Boost COMPONENTS REQUIRED
+                    container json filesystem log log_setup program_options thread system unit_test_framework)
 
 # Protect against multiple inclusion
-if (TARGET crypto3::algebra)
-    return()
+if (TARGET crypto3::all)
+  return()
 endif()
 
-add_library(crypto3::algebra INTERFACE IMPORTED)
-add_library(crypto3::block INTERFACE IMPORTED)
-add_library(crypto3::codec INTERFACE IMPORTED)
-add_library(crypto3::containers INTERFACE IMPORTED)
-add_library(crypto3::fhe INTERFACE IMPORTED)
-add_library(crypto3::functional INTERFACE IMPORTED)
-add_library(crypto3::hash INTERFACE IMPORTED)
-add_library(crypto3::kdf INTERFACE IMPORTED)
-add_library(crypto3::mac INTERFACE IMPORTED)
-add_library(crypto3::math INTERFACE IMPORTED)
-add_library(crypto3::modes INTERFACE IMPORTED)
-add_library(crypto3::multiprecision INTERFACE IMPORTED)
-add_library(crypto3::passhash INTERFACE IMPORTED)
-add_library(crypto3::pbkdf INTERFACE IMPORTED)
-add_library(crypto3::pkpad INTERFACE IMPORTED)
-add_library(crypto3::pubkey INTERFACE IMPORTED)
-add_library(crypto3::random INTERFACE IMPORTED)
-add_library(crypto3::stream INTERFACE IMPORTED)
-add_library(crypto3::threshold INTERFACE IMPORTED)
-add_library(crypto3::vdf INTERFACE IMPORTED)
-add_library(crypto3::zk INTERFACE IMPORTED)
+add_library(crypto3::all INTERFACE IMPORTED)
 
-set_target_properties(crypto3::algebra PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::block PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::codec PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::containers PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::fhe PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::functional PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::hash PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::kdf PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::mac PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::math PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::modes PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-set_target_properties(crypto3::multiprecision PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::passhash PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::pbkdf PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::pkpad PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::pubkey PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::random  PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::stream  PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::threshold PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::vdf PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
-
-set_target_properties(crypto3::zk PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
+set_target_properties(crypto3::all PROPERTIES
+                        INTERFACE_INCLUDE_DIRECTORIES "@CMAKE_INSTALL_FULL_INCLUDEDIR@"
+                        INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})

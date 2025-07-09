@@ -27,6 +27,49 @@ if (BUILD_TESTS)
     enable_testing()
 endif()
 
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  add_compile_options (-fdiagnostics-color=always)
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  add_compile_options (-fcolor-diagnostics)
+endif ()
+
+if(DEFINED CMAKE_BUILD_TYPE)
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -ggdb")
+    set(BOOST_FORCEINLINE "OFF") # improves debugging traces
+  endif()
+endif()
+
+option(SANITIZE "Build sanitizers" FALSE)
+if(${SANITIZE})
+  add_compile_options(-fsanitize=undefined,address,leak)
+  add_link_options(-fsanitize=undefined,address,leak)
+endif()
+
+option(ARITHMETIC_COUNTERS "Build with arithmetic counters" FALSE)
+if (${ARITHMETIC_COUNTERS})
+  add_compile_definitions(NIL_CO3_MP_ENABLE_ARITHMETIC_COUNTERS NIL_CO3_PROFILE_COUNT_ARITHMETIC_OPS)
+endif()
+
+option(PROFILING_ENABLED "Build with profiling enabled" FALSE)
+if (${PROFILING_ENABLED})
+  add_compile_definitions(PROFILING_ENABLED)
+endif()
+
+option(USE_X86_64_V3 "Build with x86-64-v3 microarchitecture level" FALSE)
+if (${USE_X86_64_V3})
+  add_compile_options(-march=x86-64-v3)
+endif()
+
+# Add dummy target for the more efficient reusing of precompiled headers
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/generated-dummy.cpp)
+add_library(crypto3_precompiled_headers STATIC ${CMAKE_CURRENT_BINARY_DIR}/generated-dummy.cpp)
+set_target_properties(crypto3_precompiled_headers PROPERTIES
+    LINKER_LANGUAGE CXX
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED TRUE
+)
+
 # The file compile_commands.json is generated in build directory, so LSP could
 # pick it up and guess all include paths, defines and other stuff.
 # If Nix is used, LSP could not guess the locations of implicit include
