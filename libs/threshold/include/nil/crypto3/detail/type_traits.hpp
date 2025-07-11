@@ -331,6 +331,14 @@ namespace nil {
             };
 
             template<typename T>
+            struct is_kdf {
+                static const bool value = has_digest_type<T>::value && has_digest_bits<T>::value &&
+                                          has_key_type<T>::value && has_max_key_bits<T>::value &&
+                                          has_min_key_bits<T>::value;
+                typedef T type;
+            };
+
+            template<typename T>
             struct is_passhash {
                 static const bool value = has_generate<T>::value && has_check<T>::value;
                 typedef T type;
