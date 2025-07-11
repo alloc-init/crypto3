@@ -34,7 +34,6 @@ Depending on what you want to change, proceed your pull request to following rep
 * Block Ciphers (encrypt/decrypt with ```block``` namespace member policy) (https://github.com/alloc-init/crypto3-block.git)
 * Codecs (encoding/decoding) (https://github.com/alloc-init/crypto3-codec.git)
 * Hashes (https://github.com/alloc-init/crypto3-hash.git)
-* Key Derivation Functions (https://github.com/alloc-init/crypto3-kdf.git)
 * Message Authentication Codes (https://github.com/alloc-init/crypto3-mac.git)
 * Cipher Modes (encrypt/decrypt either with ```block``` or with ```stream``` namespace member policies) (https://github.com/alloc-init/crypto3-modes.git)
 * Multiprecision (https://github.com/alloc-init/crypto3-multiprecision.git)

@@ -44,7 +44,6 @@ root
 │   ├── codec: encoding/decoding algorithms
 │   ├── containers: containers and generic commitment schemes for accumulating data, includes Merkle Tree
 │   ├── hash: hashing algorithms
-│   ├── kdf: key derivation functions 
 │   ├── mac: message authentication codes
 │   ├── marshalling: marshalling libraries for types in crypto3 library
 │   ├── math: set of Fast Fourier Transforms evaluation algorithms and Polynomial Arithmetics
