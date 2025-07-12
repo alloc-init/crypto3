@@ -7,16 +7,14 @@
 #---------------------------------------------------------------------------#
 
 cmake_minimum_required(VERSION 3.21)
-project(Crypto3)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake"
         "${CMAKE_CURRENT_LIST_DIR}/cmake/packages"
         "${CMAKE_CURRENT_LIST_DIR}/cmake/modules/share/modules/cmake")
 
-set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/modules")
 find_package(CM)
 include(CMConfig)
 include(CMSetupVersion)
@@ -65,11 +63,6 @@ if(BUILD_WITH_TARGET_ARCHITECTURE)
     set(CMAKE_TARGET_ARCHITECTURE ${BUILD_WITH_TARGET_ARCHITECTURE})
 else()
     target_architecture(CMAKE_TARGET_ARCHITECTURE)
-endif()
-
-# Suppress CMP0167 policy warning for find_package Boost warning
-if(POLICY CMP0167)
-  cmake_policy(SET CMP0167 NEW)
 endif()
 
 set(Boost_USE_STATIC_LIBS ${BUILD_WITH_BOOST_STATIC_LIBS})
