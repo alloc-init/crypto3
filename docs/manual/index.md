@@ -38,7 +38,6 @@ root
 │   ├── math: set of Fast Fourier Transforms evaluation algorithms and Polynomial Arithmetics
 │   ├── modes: cipher modes
 │   ├── multiprecision: integer, rational, floating-point, complex and interval number types. 
-│   ├── passhash: password hashing operations 
 │   ├── pbkdf: password based key derivation functions
 │   ├── pkmodes: threshold, aggregation modes for public key schemes
 │   ├── pkpad: padding module for public key schemes

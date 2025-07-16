@@ -406,12 +406,6 @@ namespace nil {
             };
 
             template<typename T>
-            struct is_passhash {
-                static const bool value = has_generate<T>::value && has_check<T>::value;
-                typedef T type;
-            };
-
-            template<typename T>
             struct is_curve {
                 static const bool value = has_base_field_bits<T>::value && has_base_field_type<T>::value &&
                                           has_number_type<T>::value && has_base_field_modulus<T>::value &&
