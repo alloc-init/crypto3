@@ -37,6 +37,7 @@ Depending on what you want to change, proceed your pull request to following rep
 * Message Authentication Codes (https://github.com/alloc-init/crypto3-mac.git)
 * Cipher Modes (encrypt/decrypt either with ```block``` or with ```stream``` namespace member policies) (https://github.com/alloc-init/crypto3-modes.git)
 * Multiprecision (https://github.com/alloc-init/crypto3-multiprecision.git)
+* Passhash (https://github.com/alloc-init/crypto3-passhash.git)
 * Public Key Schemes (`pubkey` namespace) (https://github.com/alloc-init/crypto3-pubkey.git)
 * Public Key Schemes Modes (threshold enhancements to public key schemes)(https://github.com/alloc-init/crypto3-pubkey.git)
 * Stream Ciphers (https://github.com/alloc-init/crypto3-stream.git)
