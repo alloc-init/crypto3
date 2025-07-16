@@ -55,7 +55,6 @@ root
 │   ├── pkpad: padding module for public key schemes
 │   ├── pubkey: pubkey signing APIs
 │   ├── random: randomisation primitives 
-│   ├── vdf: verifiable delay functions 
 │   ├── zk: zk cryptography schemes
 ```
 
