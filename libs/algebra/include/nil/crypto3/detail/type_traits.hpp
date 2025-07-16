@@ -317,6 +317,11 @@ namespace nil {
                 typedef T type;
             };
 
+            template<typename T>
+            struct is_passhash {
+                static const bool value = has_generate<T>::value && has_check<T>::value;
+                typedef T type;
+            };
         }    // namespace detail
     }        // namespace crypto3
 }    // namespace nil
