@@ -35,6 +35,7 @@ set(TESTS_NAMES
     #ecb
     #padding
     #aead_ccm
+    #aead_chacha20poly1305
     #aead_eax
     #aead_gcm
     #aead_ocb
