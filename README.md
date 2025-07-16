@@ -56,7 +56,6 @@ root
 │   ├── pubkey: pubkey signing APIs
 │   ├── random: randomisation primitives 
 │   ├── stream: stream ciphers
-│   ├── vdf: verifiable delay functions 
 │   ├── zk: zk cryptography schemes
 ```
 
