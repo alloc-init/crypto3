@@ -42,6 +42,7 @@ Depending on what you want to change, proceed your pull request to following rep
 * Public Key Schemes Modes (threshold enhancements to public key schemes)(https://github.com/alloc-init/crypto3-pubkey.git)
 * Stream Ciphers (https://github.com/alloc-init/crypto3-stream.git)
 * Random (https://github.com/alloc-init/crypto3-random.git)
+* Verifiable Delay Functions (https://github.com/alloc-init/crypto3-vdf.git)
 * Zero-Knowledge Proofs (https://github.com/alloc-init/crypto3-zk.git)
 
 In case you are not sure which repository to proceed to, create an issue in this repository and ask.
