@@ -37,7 +37,6 @@ endmacro()
 
 # TODO(uncomment the failing tests once they pass)
 set(TESTS_NAMES
-#        "chacha"
         "hash"
         "algebraic_engine"
         "ct_random_device"
