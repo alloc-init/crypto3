@@ -12,6 +12,9 @@ include(CMSetupVersion)
 
 cm_project(hash WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
 include(TargetArchitecture)
 include(TargetConfiguration)
 include(PlatformConfiguration)
