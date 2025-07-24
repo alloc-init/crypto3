@@ -57,7 +57,6 @@ set(TESTS_NAMES
         "commitment/powers_of_tau"
         "commitment/r1cs_gg_ppzksnark_mpc"
         "commitment/type_traits"
-        #        "commitment/kimchi_pedersen"
         "commitment/proof_of_work"
 
         "math/expression"
@@ -93,7 +92,6 @@ set(TESTS_NAMES
         "systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark_aggregation_conformity"
 
         "transcript/transcript"
-        "transcript/kimchi_transcript"
 
         "systems/plonk/plonk_constraint")
 
@@ -101,8 +99,6 @@ foreach(TEST_NAME ${TESTS_NAMES})
     define_zk_test(${TEST_NAME})
 endforeach()
 
-# string(CONCAT TEST_DATA ${CMAKE_CURRENT_SOURCE_DIR} "/systems/plonk/pickles/data/kimchi")
-# target_compile_definitions(crypto3_zk_systems_plonk_pickles_kimchi_test PRIVATE TEST_DATA="${TEST_DATA}")
 if(BUILD_BENCH_TESTS)
     cm_add_test_subdirectory(bench_test)
 endif()
