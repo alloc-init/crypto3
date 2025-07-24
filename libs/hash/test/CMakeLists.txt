@@ -57,13 +57,10 @@ set(TESTS_NAMES
         "sha1"
         "sha2"
         "sha3"
-        "shake"
         "static_digest"
-        "tiger"
         "poseidon"
         "hash_to_curve"
 )
-# "reinforced_concrete")  # fails
 
 if(CRYPTO3_HASH_PEDERSEN)
     list(APPEND TESTS_NAMES

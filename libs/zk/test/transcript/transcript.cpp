@@ -44,7 +44,6 @@
 #include <nil/crypto3/hash/keccak.hpp>
 #include <nil/crypto3/hash/sha2.hpp>
 #include <nil/crypto3/hash/h2f.hpp>
-#include <nil/crypto3/hash/shake.hpp>
 
 #include <nil/crypto3/zk/transcript/fiat_shamir.hpp>
 
