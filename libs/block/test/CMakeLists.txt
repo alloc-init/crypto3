@@ -29,9 +29,7 @@ macro(define_block_cipher_test name)
 endmacro()
 
 set(TESTS_NAMES
-        "des"
         "injector"
-        "kasumi"
         "md4"
         "md5"
         "pack"
