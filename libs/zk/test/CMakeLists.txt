@@ -65,7 +65,6 @@ set(TESTS_NAMES
 
         "relations/numeric/qap"
         "relations/numeric/sap"
-        "relations/numeric/ssp"
 
         "systems/plonk/placeholder/placeholder_circuits"
         "systems/plonk/placeholder/placeholder_goldilocks"
@@ -88,7 +87,6 @@ set(TESTS_NAMES
         #    "systems/ppzksnark/r1cs_se_ppzksnark/r1cs_se_ppzksnark"
         #    "systems/ppzksnark/ram_ppzksnark/ram_ppzksnark"
         #    "systems/ppzksnark/tbcs_ppzksnark/tbcs_ppzksnark"
-        #    "systems/ppzksnark/uscs_ppzksnark/uscs_ppzksnark"
         "systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark_aggregation_conformity"
 
         "transcript/transcript"
