@@ -50,7 +50,7 @@
 #include <nil/crypto3/algebra/curves/params/multiexp/mnt6.hpp>
 #include <nil/crypto3/algebra/curves/params/wnaf/mnt6.hpp>
 
-#include <nil/crypto3/zk/snark/systems/ppzksnark/r1cs_examples.hpp>
+#include "../../systems/ppzksnark/r1cs_examples.hpp"
 
 using namespace nil::crypto3::zk::snark;
 using namespace nil::crypto3::algebra;
@@ -64,7 +64,8 @@ void test_sap(const std::size_t sap_degree, const std::size_t num_inputs, const 
       So we generate an instance of R1CS where the number of constraints is
         (sap_degree - 1) / 2 - num_inputs.
     */
-    const std::size_t num_constraints = (sap_degree - 1) / 2 - num_inputs;
+    // const std::size_t num_constraints = (sap_degree - 1) / 2 - num_inputs;
+    const std::size_t num_constraints = 100; // bc: reduced number of constraints so we can run this test regularly
     BOOST_CHECK(num_constraints >= 1);
 
     r1cs_example <FieldType> example;

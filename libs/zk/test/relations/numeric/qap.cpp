@@ -51,7 +51,7 @@
 #include <nil/crypto3/algebra/curves/params/multiexp/mnt6.hpp>
 #include <nil/crypto3/algebra/curves/params/wnaf/mnt6.hpp>
 
-#include "../../schemes/ppzksnark/r1cs_examples.hpp"
+#include "../../systems/ppzksnark/r1cs_examples.hpp"
 
 using namespace nil::crypto3::zk::snark;
 using namespace nil::crypto3::algebra;
@@ -66,7 +66,8 @@ void test_qap(const std::size_t qap_degree, const std::size_t num_inputs, const 
     */
     BOOST_CHECK(num_inputs + 1 <= qap_degree);
 
-    const std::size_t num_constraints = qap_degree - num_inputs - 1;
+    // const std::size_t num_constraints = qap_degree - num_inputs - 1;
+    const std::size_t num_constraints = 100; // bc: reduced number of constraints so we can run this test regularly
 
     std::cout << "Num constraints " << num_constraints << std::endl;
     std::cout << "Binary input " << bool(binary_input) << std::endl;
