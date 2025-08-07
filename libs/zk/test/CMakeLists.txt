@@ -79,7 +79,6 @@ set(TESTS_NAMES
         "systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark"
         #    "systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark_tvm_marshalling"
         "systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark"
-        #    "systems/ppzksnark/r1cs_se_ppzksnark/r1cs_se_ppzksnark"
         #    "systems/ppzksnark/ram_ppzksnark/ram_ppzksnark"
         #    "systems/ppzksnark/tbcs_ppzksnark/tbcs_ppzksnark"
         "systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark_aggregation_conformity"
