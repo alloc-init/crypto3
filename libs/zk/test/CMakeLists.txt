@@ -76,6 +76,7 @@ set(TESTS_NAMES
         "systems/plonk/placeholder/placeholder_curves"
         "systems/plonk/placeholder/placeholder_quotient_polynomial_chunks"
 
+        #    "systems/ppzksnark/bacs_ppzksnark/bacs_ppzksnark"
         "systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark"
         "systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark"
         #    "systems/ppzksnark/tbcs_ppzksnark/tbcs_ppzksnark"
