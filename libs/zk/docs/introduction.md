@@ -14,7 +14,6 @@ Relations:
 
 zk-SNARKS (Zero-Knowledge Succinct Non-interactive ARgument of Knowledge):
 
-* bacs_ppzksnark- - BACS PreProcessing zk-SNARK
 * r1cs_gg_ppzksnark - R1CS Generic Group PreProcessing zk-SNARK (Groth16)
 * r1cs_ppzksnark - R1CS PreProcessing zk-SNARK
 * r1cs_se_ppzksnark - R1CS Simulation-Extractable PreProcessing zk-SNARK
