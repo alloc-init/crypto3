@@ -29,6 +29,12 @@ endmacro()
 
 set(TESTS_NAMES
         "hmac"
+#        "cmac"
+#        "gmac"
+#        "siphash"
+#        "x919_mac"
+#        "cbc_mac"
+#        "poly1305"
 )
 
 foreach(TEST_NAME ${TESTS_NAMES})
