@@ -33,9 +33,7 @@ function list_make_targets() {
 
 raw_tests=$(list_make_targets \
     | grep _test \
-    | sort \
-    | sed 's/block_aria_test//' \
-    )
+    | sort)
 
 # drop tests which we've logged already
 if [[ $(wc -l "$csv" | perl -lane 'print $F[0]') -gt 0 ]]; then
