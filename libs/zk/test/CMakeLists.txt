@@ -78,6 +78,7 @@ set(TESTS_NAMES
 
         "systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark"
         "systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark"
+        #    "systems/ppzksnark/tbcs_ppzksnark/tbcs_ppzksnark"
         "systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark_aggregation_conformity"
 
         "transcript/transcript"
