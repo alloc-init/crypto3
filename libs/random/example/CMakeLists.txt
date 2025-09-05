@@ -18,7 +18,6 @@ macro(define_random_example name)
             ${CMAKE_WORKSPACE_NAME}::algebra
             ${CMAKE_WORKSPACE_NAME}::hash
             ${CMAKE_WORKSPACE_NAME}::mac
-            ${CMAKE_WORKSPACE_NAME}::stream
             ${CMAKE_WORKSPACE_NAME}::multiprecision
 
             Boost::container)
