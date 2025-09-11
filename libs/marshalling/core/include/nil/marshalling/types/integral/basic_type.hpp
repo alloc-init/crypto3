@@ -30,14 +30,16 @@
 
 #include <nil/marshalling/status_type.hpp>
 
-namespace nil {
+namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
 
+                template<typename TFieldBase, typename T, typename Enable = void>
+                class basic_integral;
+
                 template<typename TFieldBase, typename T>
-                class basic_integral : public TFieldBase {
-                    static_assert(std::is_integral<T>::value, "T must be integral value");
+                class basic_integral<TFieldBase, T, std::enable_if_t<std::is_integral_v<T>>> : public TFieldBase {
 
                     using base_impl_type = TFieldBase;
 
@@ -45,7 +47,6 @@ namespace nil {
                     using value_type = T;
 
                     using serialized_type = value_type;
-                    using scaling_ratio_type = std::ratio<1, 1>;
 
                     basic_integral() = default;
 

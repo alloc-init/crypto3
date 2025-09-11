@@ -28,9 +28,13 @@
 #define CRYPTO3_MATH_POLYNOMIAL_POLYNOM_HPP
 
 #include <algorithm>
+#include <ranges>
+#include <type_traits>
 #include <vector>
 
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
+
+#include <nil/crypto3/algebra/fields/utils.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -42,6 +46,8 @@ namespace nil {
                 container_type val;
 
             public:
+                using polynomial_type = polynomial;
+
                 typedef typename container_type::value_type value_type;
                 typedef typename container_type::allocator_type allocator_type;
                 typedef typename container_type::reference reference;
@@ -64,19 +70,19 @@ namespace nil {
                     }
                 }
 
-                explicit polynomial(size_type n, const allocator_type &a) : val(n, FieldValueType::zero(), a) {
+                explicit polynomial(size_type n, const allocator_type& a) : val(n, FieldValueType::zero(), a) {
                     if (val.empty()) {
                         val.push_back(FieldValueType::zero());
                     }
                 }
 
-                polynomial(size_type n, const value_type &x) : val(n, x) {
+                polynomial(size_type n, const value_type& x) : val(n, x) {
                     if (val.empty()) {
                         val.push_back(FieldValueType::zero());
                     }
                 }
 
-                polynomial(size_type n, const value_type &x, const allocator_type &a) : val(n, x, a) {
+                polynomial(size_type n, const value_type& x, const allocator_type& a) : val(n, x, a) {
                 }
 
                 template<typename InputIterator>
@@ -87,81 +93,69 @@ namespace nil {
                 }
 
                 template<typename InputIterator>
-                polynomial(InputIterator first, InputIterator last, const allocator_type &a) : val(first, last, a) {
+                polynomial(InputIterator first, InputIterator last, const allocator_type& a) : val(first, last, a) {
                     if (val.empty()) {
                         val.push_back(FieldValueType::zero());
                     }
                 }
 
-                ~polynomial() = default;
-
-                polynomial(const polynomial &x) : val(x.val) {
-                }
-
-                polynomial(const polynomial &x, const allocator_type &a) : val(x.val, a) {
+                polynomial(const polynomial& x, const allocator_type& a) : val(x.val, a) {
                 }
 
                 polynomial(std::initializer_list<value_type> il) : val(il) {
                 }
 
-                polynomial(std::initializer_list<value_type> il, const allocator_type &a) : val(il, a) {
+                polynomial(std::initializer_list<value_type> il, const allocator_type& a) : val(il, a) {
                 }
 
-                polynomial(polynomial &&x) BOOST_NOEXCEPT
-                (std::is_nothrow_move_constructible<allocator_type>::value):
-                        val(x.val) {
+                template<typename Subfield>
+                polynomial(const polynomial<Subfield>& x) {
+                    val.resize(x.size());
+                    for (std::size_t i = 0; i < val.size(); ++i) {
+                        val[i] = x[i];
+                    }
                 }
 
-                polynomial(polynomial &&x, const allocator_type &a) : val(x.val, a) {
+                polynomial(polynomial&& x, const allocator_type& a) : val(std::move(x.val), a) {
                 }
 
-                polynomial(const container_type &c) : val(c) {
+                explicit polynomial(const container_type &c) : val(c) {
                     if (val.empty()) {
                         val.push_back(FieldValueType::zero());
                     }
                 }
 
-                polynomial(container_type &&c) : val(std::forward<container_type>(c)) {
+                explicit polynomial(container_type&& c) : val(std::move(c)) {
                     if (val.empty()) {
                         val.push_back(FieldValueType::zero());
                     }
                 }
 
-                polynomial(const FieldValueType &value, std::size_t power = 0) : val(power + 1,
-                                                                                     FieldValueType::zero()) {
+                polynomial(const FieldValueType& value, std::size_t power = 0)
+                    : val(power + 1, FieldValueType::zero()) {
                     this->operator[](power) = value;
                 }
 
-                polynomial &operator=(const polynomial &x) {
-                    val = x.val;
-                    return *this;
-                }
-
-                polynomial &operator=(polynomial &&x) {
-                    val = x.val;
-                    return *this;
-                }
-
-                polynomial &operator=(const container_type &x) {
+                polynomial& operator=(const container_type& x) {
                     val = x;
                     return *this;
                 }
 
-                polynomial &operator=(container_type &&x) {
-                    val = x;
+                polynomial& operator=(container_type&& x) {
+                    val = std::move(x);
                     return *this;
                 }
 
-                polynomial &operator=(std::initializer_list<value_type> il) {
+                polynomial& operator=(std::initializer_list<value_type> il) {
                     val.assign(il.begin(), il.end());
                     return *this;
                 }
 
-                bool operator==(const polynomial &rhs) const {
+                bool operator==(const polynomial& rhs) const {
                     return val == rhs.val;
                 }
 
-                bool operator!=(const polynomial &rhs) const {
+                bool operator!=(const polynomial& rhs) const {
                     return !(rhs == *this);
                 }
 
@@ -183,7 +177,7 @@ namespace nil {
                     return this->val.__alloc();
                 }
 
-                container_type &get_storage() {
+                container_type& get_storage() {
                     return val;
                 }
 
@@ -295,11 +289,11 @@ namespace nil {
                     return val.back();
                 }
 
-                value_type *data() BOOST_NOEXCEPT {
+                value_type* data() BOOST_NOEXCEPT {
                     return val.data();
                 }
 
-                const value_type *data() const BOOST_NOEXCEPT {
+                const value_type* data() const BOOST_NOEXCEPT {
                     return val.data();
                 }
 
@@ -307,13 +301,13 @@ namespace nil {
                     val.push_back(_x);
                 }
 
-                void push_back(value_type &&_x) {
-                    val.push_back(_x);
+                void push_back(value_type&& _x) {
+                    val.push_back(std::move(_x));
                 }
 
                 template<class... Args>
-                reference emplace_back(Args &&... _args) {
-                    return val.emplace_back(_args...);
+                reference emplace_back(Args&&... _args) {
+                    return val.template emplace_back<>(_args...);
                 }
 
                 void pop_back() {
@@ -324,13 +318,13 @@ namespace nil {
                     return val.insert(_position, _x);
                 }
 
-                iterator insert(const_iterator _position, value_type &&_x) {
+                iterator insert(const_iterator _position, value_type&& _x) {
                     return val.insert(_position, _x);
                 }
 
                 template<class... Args>
-                iterator emplace(const_iterator _position, Args &&... _args) {
-                    return val.emplace(_position, _args...);
+                iterator emplace(const_iterator _position, Args&&... _args) {
+                    return val.template emplace<>(_position, _args...);
                 }
 
                 iterator insert(const_iterator _position, size_type _n, const_reference _x) {
@@ -366,25 +360,33 @@ namespace nil {
                     return val.resize(_sz, _x);
                 }
 
-                void swap(polynomial &other) {
-                    val.swap(other.val);
-                }
+                void swap(polynomial& other) noexcept { val.swap(other.val); }
 
-                template<typename Range>
-                FieldValueType evaluate(const Range &values) const {
+                template<std::ranges::range Range>
+                    requires(std::ranges::sized_range<Range>)
+                algebra::fields::choose_extension_field_t<
+                    FieldValueType, std::ranges::range_value_t<Range>>
+                evaluate_powers(const Range& values) const {
+                    BOOST_ASSERT(values.size() >= size());
 
-                    assert(values.size() + 1 == this->size());
+                    auto result = algebra::fields::choose_extension_field_t<
+                        FieldValueType, std::ranges::range_value_t<Range>>::zero();
 
-                    FieldValueType result = (*this)[0];
-                    for (std::size_t i = 0; i < values.size(); i++) {
-                        result += (*this)[i + 1] * values[i];
+                    auto it = values.begin();
+                    for (std::size_t i = 0; i < size(); ++i) {
+                        result += (*this)[i] * *it;
+                        ++it;
                     }
 
                     return result;
                 }
 
-                FieldValueType evaluate(const FieldValueType &value) const {
-                    FieldValueType result = FieldValueType::zero();
+                template<typename EvaluationFieldValueType>
+                algebra::fields::choose_extension_field_t<FieldValueType,
+                                                          EvaluationFieldValueType>
+                evaluate(const EvaluationFieldValueType& value) const {
+                    auto result = algebra::fields::choose_extension_field_t<
+                        FieldValueType, EvaluationFieldValueType>::zero();
                     auto end = this->end();
                     while (end != this->begin()) {
                         result = result * value + *--end;
@@ -405,8 +407,8 @@ namespace nil {
                  */
                 bool is_one() const {
                     return (*this->begin() == FieldValueType(1)) &&
-                           std::all_of(++this->begin(), this->end(),
-                                       [](FieldValueType i) { return i == FieldValueType::zero(); });
+                        std::all_of(++this->begin(), this->end(),
+                            [](FieldValueType i) { return i == FieldValueType::zero(); });
                 }
 
                 inline static polynomial zero() {
@@ -444,13 +446,13 @@ namespace nil {
                  * Computes the standard polynomial addition, polynomial A + polynomial B, and stores result in
                  * polynomial C.
                  */
-                polynomial operator+(const polynomial &other) const {
+                polynomial operator+(const polynomial& other) const {
                     polynomial result;
                     addition(result, *this, other);
                     return result;
                 }
 
-                polynomial &operator+=(const polynomial &other) {
+                polynomial& operator+=(const polynomial& other) {
                     addition(*this, *this, other);
                     return *this;
                 }
@@ -465,13 +467,13 @@ namespace nil {
                  * Computes the standard polynomial subtraction, polynomial A - polynomial B, and stores result in
                  * polynomial C.
                  */
-                polynomial operator-(const polynomial &other) const {
+                polynomial operator-(const polynomial& other) const {
                     polynomial result;
                     subtraction(result, *this, other);
                     return result;
                 }
 
-                polynomial &operator-=(const polynomial &other) {
+                polynomial& operator-=(const polynomial& other) {
                     subtraction(*this, *this, other);
                     return *this;
                 }
@@ -480,13 +482,13 @@ namespace nil {
                  * Perform the multiplication of two polynomials, polynomial A * polynomial B, and stores result in
                  * polynomial C.
                  */
-                polynomial operator*(const polynomial &other) const {
+                polynomial operator*(const polynomial& other) const {
                     polynomial result;
                     multiplication(result, *this, other);
                     return result;
                 }
 
-                polynomial &operator*=(const polynomial &other) {
+                polynomial& operator*=(const polynomial& other) {
                     multiplication(*this, *this, other);
                     return *this;
                 }
@@ -496,13 +498,13 @@ namespace nil {
                  * Input: Polynomial A, Polynomial B, where A / B
                  * Output: Polynomial Q, such that A = (Q * B) + R.
                  */
-                polynomial operator/(const polynomial &other) const {
+                polynomial operator/(const polynomial& other) const {
                     polynomial r, q;
                     division(q, r, *this, other);
                     return q;
                 }
 
-                polynomial &operator/=(const polynomial &other) {
+                polynomial& operator/=(const polynomial& other) {
                     polynomial r, q;
                     // Can't pass *this to the following function call instead of q.
                     division(q, r, *this, other);
@@ -515,13 +517,13 @@ namespace nil {
                  * Input: Polynomial A, Polynomial B, where A / B
                  * Output: Polynomial R, such that A = (Q * B) + R.
                  */
-                polynomial operator%(const polynomial &other) const {
+                polynomial operator%(const polynomial& other) const {
                     polynomial r, q;
                     division(q, r, *this, other);
                     return r;
                 }
 
-                polynomial &operator%=(const polynomial &other) {
+                polynomial& operator%=(const polynomial& other) {
                     polynomial q, r;
                     // Can't pass *this to the following function call instead of r.
                     division(q, r, *this, other);
@@ -531,33 +533,33 @@ namespace nil {
             };
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
-                    typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
-            polynomial<FieldValueType, Allocator> operator+(const polynomial<FieldValueType, Allocator> &A,
-                                                            const FieldValueType &B) {
+                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            polynomial<FieldValueType, Allocator> operator+(const polynomial<FieldValueType, Allocator>& A,
+                                                            const FieldValueType& B) {
 
                 return A + polynomial<FieldValueType>(B);
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
-                    typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
-            polynomial<FieldValueType, Allocator> operator+(const FieldValueType &A,
-                                                            const polynomial<FieldValueType, Allocator> &B) {
+                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            polynomial<FieldValueType, Allocator> operator+(const FieldValueType& A,
+                                                            const polynomial<FieldValueType, Allocator>& B) {
 
                 return polynomial<FieldValueType>(A) + B;
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
-                    typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
-            polynomial<FieldValueType, Allocator> operator-(const polynomial<FieldValueType, Allocator> &A,
-                                                            const FieldValueType &B) {
+                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            polynomial<FieldValueType, Allocator> operator-(const polynomial<FieldValueType, Allocator>& A,
+                                                            const FieldValueType& B) {
 
                 return A - polynomial<FieldValueType>(B);
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
-                    typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
-            polynomial<FieldValueType, Allocator> operator-(const FieldValueType &A,
-                                                            const polynomial<FieldValueType, Allocator> &B) {
+                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            polynomial<FieldValueType, Allocator> operator-(const FieldValueType& A,
+                                                            const polynomial<FieldValueType, Allocator>& B) {
 
                 return polynomial<FieldValueType>(A) - B;
             }
@@ -567,9 +569,10 @@ namespace nil {
             polynomial<FieldValueType, Allocator> operator*(const polynomial<FieldValueType, Allocator>& A,
                                                             const FieldValueType& B) {
                 polynomial<FieldValueType> result(A);
-                for( auto it = result.begin(); it != result.end(); it++ ){
-                    *it *= B;
-                }
+                parallel_foreach(result.begin(), result.end(),
+                    [&B](FieldValueType& v) {
+                        v *= B;
+                    }, ThreadPool::PoolLevel::LOW);
                 return result;
             }
 
@@ -587,16 +590,18 @@ namespace nil {
                                                             const FieldValueType& B) {
                 polynomial<FieldValueType> result(A);
                 FieldValueType B_inversed = B.inversed();
-                for( auto it = result.begin(); it != result.end(); it++ ){
-                    *it *= B_inversed;
-                }
+                parallel_foreach(result.begin(), result.end(),
+                    [&B_inversed](FieldValueType& v) {
+                        v *= B_inversed;
+                    }, ThreadPool::PoolLevel::LOW);
+
                 return result;
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
-                    typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
-            polynomial<FieldValueType, Allocator> operator/(const FieldValueType &A,
-                                                            const polynomial<FieldValueType, Allocator> &B) {
+                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            polynomial<FieldValueType, Allocator> operator/(const FieldValueType& A,
+                                                            const polynomial<FieldValueType, Allocator>& B) {
 
                 return polynomial<FieldValueType>(A) / B;
             }
@@ -604,23 +609,35 @@ namespace nil {
             // Used in the unit tests, so we can use BOOST_CHECK_EQUALS, and see
             // the values of polynomials, when the check fails.
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
-                    typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
-            std::ostream &operator<<(std::ostream &os,
-                                     const polynomial<FieldValueType, Allocator> &poly) {
+                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            std::ostream& operator<<(std::ostream& os,
+                                     const polynomial<FieldValueType, Allocator>& poly) {
                 if (poly.degree() == 0) {
                     // If all it contains is a constant, print the constant, so it's more readable.
-                    os << *poly.begin();
+                    os << std::hex << std::showbase << *poly.begin() << std::dec;
                 } else {
-                    os << "[Polynomial, size " << poly.size() << " values ";
-                    for (auto it = poly.begin(); it != poly.end(); it++) {
-                        os << "0x" << std::hex << it->data << ", ";
+                    os << "[Polynomial, size " << poly.size() << " values " << std::hex << std::showbase;
+                    for (auto it = poly.begin(); it != poly.end(); ++it) {
+                        if (it != poly.begin())
+                            os << ", ";
+                        os << *it;
                     }
-                    os << "]";
+                    os << "]" << std::dec;
                 }
                 return os;
             }
 
-        }    // namespace math
+            template<typename FieldValue>
+            std::vector<FieldValue> compute_powers(FieldValue v, std::size_t size) {
+                std::vector<FieldValue> result(size);
+                auto acc = FieldValue::one();
+                for (std::size_t i = 0; i < size; ++i) {
+                    result[i] = acc;
+                    acc *= v;
+                }
+                return result;
+            }
+        }  // namespace math
     }        // namespace crypto3
 }    // namespace nil
 

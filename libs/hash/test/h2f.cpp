@@ -46,72 +46,9 @@
 using namespace nil::crypto3;
 using namespace nil::crypto3::algebra;
 
-template<typename FieldParams>
-void print_field_element(std::ostream &os, const typename fields::detail::element_fp<FieldParams> &e) {
-    std::cout << e.data << std::endl;
-}
-
-template<typename FieldParams>
-void print_field_element(std::ostream &os, const typename fields::detail::element_fp2<FieldParams> &e) {
-    std::cout << e.data[0].data << ", " << e.data[1].data << std::endl;
-}
-
-namespace boost {
-    namespace test_tools {
-        namespace tt_detail {
-            template<typename FieldParams>
-            struct print_log_value<typename fields::detail::element_fp<FieldParams>> {
-                void operator()(std::ostream &os, typename fields::detail::element_fp<FieldParams> const &e) {
-                    print_field_element(os, e);
-                }
-            };
-
-            template<typename FieldParams>
-            struct print_log_value<typename fields::detail::element_fp2<FieldParams>> {
-                void operator()(std::ostream &os, typename fields::detail::element_fp2<FieldParams> const &e) {
-                    print_field_element(os, e);
-                }
-            };
-
-            template<template<typename, typename> class P, typename K, typename V>
-            struct print_log_value<P<K, V>> {
-                void operator()(std::ostream &, P<K, V> const &) {
-                }
-            };
-
-        }    // namespace tt_detail
-    }    // namespace test_tools
-}    // namespace boost
-
-template<typename Expander,
-        typename DstType,
-        typename MsgType,
-        typename ResultType,
-        typename = typename std::enable_if<std::is_same<std::uint8_t, typename DstType::value_type>::value &&
-                                           std::is_same<std::uint8_t, typename MsgType::value_type>::value &&
-                                           std::is_same<std::uint8_t, typename ResultType::value_type>::value>::type>
-void check_expand_message(const DstType &dst, const MsgType &msg, const ResultType &result) {
-    auto result_compare = [&result](auto my_result) {
-        if (result.size() != my_result.size()) {
-            return false;
-        }
-        bool ret = true;
-        for (std::size_t i = 0; i < result.size(); i++) {
-            ret &= result[i] == my_result[i];
-        }
-        return ret;
-    };
-
-    typename Expander::accumulator_type acc;
-    Expander::init_accumulator(acc);
-    Expander::update(acc, msg);
-    typename Expander::result_type uniform_bytes = Expander::process(acc, dst);
-    BOOST_CHECK(result_compare(uniform_bytes));
-}
-
-template<typename HashType>
-typename std::enable_if<hashes::is_h2f<HashType>::value>::type
-check_hash_to_field_ro(const std::string &msg_str, const typename HashType::digest_type &result) {
+template<typename Hash>
+typename std::enable_if<hashes::is_h2f<Hash>::value>::type
+    check_hash_to_field_ro(const std::string &msg_str, const typename Hash::digest_type &result) {
 
     std::vector<std::uint8_t> msg(msg_str.begin(), msg_str.end());
     typename HashType::digest_type u = hash<HashType>(msg);

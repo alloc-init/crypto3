@@ -197,6 +197,53 @@ namespace nil {
 
                         return evaluator.evaluate();
                     }
+
+                    template<typename T>
+                        requires(
+                            !std::is_same_v<typename VariableType::assignment_type, T>)
+                    T evaluate(std::map<std::tuple<std::size_t, int,
+                                                   typename VariableType::column_type>,
+                                        T> &assignments) const {
+                        expression_variable_type_converter<variable_type,
+                                                           plonk_variable<T>>
+                            converter(
+                                [&assignments](
+                                    const typename VariableType::assignment_type &coeff) {
+                                    return T(coeff);
+                                });
+
+                        auto converted_expression = converter.convert(*this);
+
+                        expression_evaluator<plonk_variable<T>> evaluator(
+                            converted_expression,
+                            [&assignments](const plonk_variable<T> &var) -> const T & {
+                                std::tuple<std::size_t, int,
+                                           typename VariableType::column_type>
+                                    key = std::make_tuple(var.index, var.rotation,
+                                                          var.type);
+
+                                BOOST_ASSERT(assignments.count(key) > 0);
+                                return assignments[key];
+                            });
+
+                        return evaluator.evaluate();
+                    }
+
+                    bool is_absolute() const {
+                        return expression_relativity_check_visitor<VariableType>::is_absolute(*this);
+                    }
+                    bool is_relative() const {
+                        return expression_relativity_check_visitor<VariableType>::is_relative(*this);
+                    }
+
+                    // Returns the rotated version, or nullptr if it can't be rotated.
+                    std::optional<plonk_constraint> rotate(int32_t shift) const {
+                        auto result = expression_relativize_visitor<VariableType>::relativize(
+                            *this, shift);
+                        if (!result)
+                            return std::nullopt;
+                        return *result;
+                    }
                 };
             }    // namespace snark
         }    // namespace zk

@@ -275,7 +275,9 @@ namespace nil {
                         constexpr void double_inplace() {
                             if ( 2 * params_type::B * this->Y == field_value_type::zero() ) {
                                 this->is_inf_point = true;
+                                return;
                             }
+
                             if (!this->is_zero()) {
                                 const field_value_type two(2u);
                                 const field_value_type three(3u);

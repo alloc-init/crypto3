@@ -26,35 +26,19 @@
 #ifndef MARSHALLING_STRING_BEHAVIOUR_HPP
 #define MARSHALLING_STRING_BEHAVIOUR_HPP
 
-#include <vector>
-
 #include <nil/marshalling/type_traits.hpp>
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/container/static_string.hpp>
-#include <nil/marshalling/container/string_view.hpp>
 #include <nil/marshalling/types/string/basic_type.hpp>
 #include <nil/marshalling/types/detail/adapt_basic_field.hpp>
 #include <nil/marshalling/types/detail/options_parser.hpp>
 
 #include <nil/marshalling/types/tag.hpp>
 
-namespace nil {
+namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
-
-                template<bool THasOrigDataViewStorage>
-                struct string_orig_data_view_storage_type;
-
-                template<>
-                struct string_orig_data_view_storage_type<true> {
-                    using type = nil::marshalling::container::string_view;
-                };
-
-                template<>
-                struct string_orig_data_view_storage_type<false> {
-                    using type = std::string;
-                };
 
                 template<bool THasSequenceFixedSizeUseFixedSizeStorage>
                 struct string_fixed_size_use_fixed_size_storage_type;
@@ -62,13 +46,13 @@ namespace nil {
                 template<>
                 struct string_fixed_size_use_fixed_size_storage_type<true> {
                     template<typename TOpt>
-                    using type = nil::marshalling::container::static_string<TOpt::sequence_fixed_size>;
+                    using type = nil::crypto3::marshalling::container::static_string<TOpt::sequence_fixed_size>;
                 };
 
                 template<>
                 struct string_fixed_size_use_fixed_size_storage_type<false> {
                     template<typename TOpt>
-                    using type = typename string_orig_data_view_storage_type<TOpt::has_orig_data_view>::type;
+                    using type = std::string;
                 };
 
                 template<bool THasFixedSizeStorage>
@@ -77,7 +61,7 @@ namespace nil {
                 template<>
                 struct string_fixed_size_storage_type<true> {
                     template<typename TOpt>
-                    using type = nil::marshalling::container::static_string<TOpt::fixed_size_storage>;
+                    using type = nil::crypto3::marshalling::container::static_string<TOpt::fixed_size_storage>;
                 };
 
                 template<>
@@ -87,25 +71,9 @@ namespace nil {
                         TOpt::has_sequence_fixed_size_use_fixed_size_storage>::template type<TOpt>;
                 };
 
-                template<bool THasCustomStorage>
-                struct string_custom_string_storage_type;
-
-                template<>
-                struct string_custom_string_storage_type<true> {
-                    template<typename TOpt>
-                    using type = typename TOpt::custom_storage_type;
-                };
-
-                template<>
-                struct string_custom_string_storage_type<false> {
-                    template<typename TOpt>
-                    using type =
-                        typename string_fixed_size_storage_type<TOpt::has_fixed_size_storage>::template type<TOpt>;
-                };
-
                 template<typename TOpt>
                 using string_storage_type =
-                    typename string_custom_string_storage_type<TOpt::has_custom_storage_type>::template type<TOpt>;
+                    typename string_fixed_size_storage_type<TOpt::has_fixed_size_storage>::template type<TOpt>;
 
                 template<typename TFieldBase, typename... TOptions>
                 using string_base_type = adapt_basic_field_type<

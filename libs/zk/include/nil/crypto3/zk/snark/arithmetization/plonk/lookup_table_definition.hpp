@@ -93,8 +93,29 @@ namespace nil {
                 };
 
                 template<typename FieldType>
-                std::vector<std::string> get_tables_ordered_by_rows_number(
-                    const std::map<std::string, std::shared_ptr<lookup_table_definition<FieldType>>> &tables) {
+                class dynamic_table_definition {
+                protected:
+                    bool defined;
+                public:
+                    plonk_lookup_table<FieldType> lookup_table;
+                    std::string name;
+
+                    dynamic_table_definition(std::string _name): defined(false), name(_name) {}
+
+                    void define(const plonk_lookup_table<FieldType> &table){
+                        BOOST_ASSERT(!defined);
+                        lookup_table = table;
+                        defined = true;
+                    }
+                    bool is_defined(){
+                        return defined;
+                    }
+                    virtual ~dynamic_table_definition() {};
+                };
+
+                template<typename FieldType>
+                std::vector<std::string>
+                get_tables_ordered_by_rows_number(const std::map<std::string, std::shared_ptr<lookup_table_definition<FieldType>>> &tables){
                     std::vector<std::pair<std::size_t, std::string>> before;
                     for (const auto &[K, table] : tables) {
                         before.push_back(std::make_pair(table->get_rows_number(), K));
@@ -135,20 +156,30 @@ namespace nil {
                     const std::map<std::string, std::shared_ptr<dynamic_table_definition<FieldType>>> &dynamic_tables,
                     plonk_constraint_system<FieldType> &bp,
                     plonk_assignment_table<FieldType> &assignment,
-                    const std::vector<std::size_t> &constant_columns_ids,
-                    std::size_t usable_rows) {
-                    // std::cout << "Usable rows before: " << usable_rows << std::endl;
+                    std::size_t usable_rows
+                ){
                     std::size_t usable_rows_after = usable_rows;
 
                     // Compute first selector index.
-                    std::size_t cur_selector_id = 0;
-                    for (const auto &gate : bp.gates()) {
-                        cur_selector_id = std::max(cur_selector_id, gate.selector_index);
+                    std::size_t cur_selector_id;
+                    for(std::size_t i = assignment.selectors_amount(); i > 0; ){
+                        i--;
+                        cur_selector_id = i;
+                        if (assignment.selector(cur_selector_id).size() != 0){
+                            cur_selector_id++;
+                            break;
+                        }
                     }
-                    for (const auto &lookup_gate : bp.lookup_gates()) {
-                        cur_selector_id = std::max(cur_selector_id, lookup_gate.tag_index);
+
+                    // Compute available constant columns list
+                    std::vector<std::size_t> constant_columns_ids;
+                    for(std::size_t i = assignment.constants_amount(); i > 0;){
+                        i--;
+                        if (assignment.constant(i).size() != 0){
+                            break;
+                        }
+                        constant_columns_ids.push_back(i);
                     }
-                    cur_selector_id++;
 
                     // Allocate constant columns
                     std::vector<plonk_column<FieldType>> constant_columns(
@@ -221,11 +252,30 @@ namespace nil {
                     const std::map<std::string, std::shared_ptr<dynamic_table_definition<FieldType>>> &dynamic_tables,
                     plonk_constraint_system<FieldType> &bp,
                     plonk_assignment_table<FieldType> &assignment,
-                    const std::vector<std::size_t> &constant_columns_ids,
-                    std::size_t cur_selector_id,
                     std::size_t usable_rows,
                     std::size_t max_usable_rows = 524288) {
                     std::size_t usable_rows_after = usable_rows;
+
+                    // Compute first selector index.
+                    std::size_t cur_selector_id;
+                    for(std::size_t i = assignment.selectors_amount(); i > 0; ){
+                        i--;
+                        cur_selector_id = i;
+                        if (assignment.selector(cur_selector_id).size() != 0){
+                            cur_selector_id++;
+                            break;
+                        }
+                    }
+
+                    // Compute available constant columns list
+                    std::vector<std::size_t> constant_columns_ids;
+                    for(std::size_t i = assignment.constants_amount(); i > 0;){
+                        i--;
+                        if (assignment.constant(i).size() != 0){
+                            break;
+                        }
+                        constant_columns_ids.push_back(i);
+                    }
 
                     // Allocate constant columns
                     std::vector<plonk_column<FieldType>> constant_columns(

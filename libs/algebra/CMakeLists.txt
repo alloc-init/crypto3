@@ -13,7 +13,7 @@ cm_project(algebra WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES ASM C CXX)
 
 include(CMDeploy)
 
-# Blurprint components are using point {0, 0} as a point in infinity, while the stadard is {0, 1}
+# Blueprint components are using point {0, 0} as a point in infinity, while the standard is {0, 1}
 # for most curves. We will use compatibility mode with blueprint as default. Setting this flag to
 # TRUE will change the value of inf point for all curves to the standard value.
 option(STANDARD_EC_INF_POINTS "Use standard zero points for Eliptic Curves" FALSE)
@@ -47,3 +47,6 @@ cm_add_test_subdirectory(test)
 if(BUILD_EXAMPLES)
     add_subdirectory(example)
 endif()
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

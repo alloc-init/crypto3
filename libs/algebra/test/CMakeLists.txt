@@ -28,7 +28,7 @@ macro(define_runtime_algebra_test name)
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(${test_name} PROPERTIES CXX_STANDARD 20
+    set_target_properties(${test_name} PROPERTIES CXX_STANDARD 23
             CXX_STANDARD_REQUIRED TRUE)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -49,7 +49,7 @@ macro(define_compile_time_algebra_test name)
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(algebra_${name}_compile_test PROPERTIES CXX_STANDARD 20)
+    set_target_properties(algebra_${name}_compile_test PROPERTIES CXX_STANDARD 23)
 endmacro()
 
 set(RUNTIME_TESTS_NAMES
@@ -59,6 +59,8 @@ set(RUNTIME_TESTS_NAMES
         "fields"
         "fields_static"
         "pairing"
+        "type_traits"
+        "multiexp"
 )
 
 set(COMPILE_TIME_TESTS_NAMES

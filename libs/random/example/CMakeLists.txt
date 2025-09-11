@@ -22,11 +22,12 @@ macro(define_random_example name)
             ${CMAKE_WORKSPACE_NAME}::multiprecision
 
             Boost::container)
-    set_target_properties(random_${name}_example PROPERTIES CXX_STANDARD 20)
+    set_target_properties(random_${name}_example PROPERTIES CXX_STANDARD 23)
 endmacro()
 
 set(EXAMPLES_NAMES
-        "hash")
+        "hash"
+        "generate")
 
 foreach(EXAMPLE_NAME ${EXAMPLES_NAMES})
     define_random_example(${EXAMPLE_NAME})

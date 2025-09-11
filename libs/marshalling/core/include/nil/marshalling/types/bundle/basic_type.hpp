@@ -37,7 +37,7 @@
 
 #include <nil/marshalling/types/detail/common_funcs.hpp>
 
-namespace nil {
+namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
@@ -46,7 +46,6 @@ namespace nil {
                 class basic_bundle : public TFieldBase {
                 public:
                     using value_type = TMembers;
-                    using version_type = typename TFieldBase::version_type;
 
                     basic_bundle() = default;
 
@@ -264,14 +263,6 @@ namespace nil {
                             value(), make_write_no_status_helper(iter));
                     }
 
-                    static constexpr bool is_version_dependent() {
-                        return common_funcs::are_members_version_dependent<value_type>();
-                    }
-
-                    bool set_version(version_type version) {
-                        return common_funcs::set_version_for_members(value(), version);
-                    }
-
                 private:
                     struct length_calc_helper {
                         template<typename TField>
@@ -407,7 +398,7 @@ namespace nil {
                         return write_no_status_helper<TIter>(iter);
                     }
 
-                    static_assert(nil::detail::is_tuple<value_type>::value,
+                    static_assert(marshalling::detail::is_tuple<value_type>::value,
                                   "value_type must be tuple");
                     value_type members_;
                 };

@@ -66,22 +66,6 @@ if(CRYPTO3_HASH_KECCAK)
     add_definitions(-D${CMAKE_UPPER_WORKSPACE_NAME}_HAS_KECCAK)
 endif()
 
-if(CRYPTO3_HASH_MD4)
-    add_definitions(-D${CMAKE_UPPER_WORKSPACE_NAME}_HAS_MD4)
-endif()
-
-if(CRYPTO3_HASH_MD5)
-    add_definitions(-D${CMAKE_UPPER_WORKSPACE_NAME}_HAS_MD5)
-endif()
-
-if(CRYPTO3_HASH_RIPEMD)
-    add_definitions(-D${CMAKE_UPPER_WORKSPACE_NAME}_HAS_RIPEMD)
-endif()
-
-if(CRYPTO3_HASH_SHA1)
-    add_definitions(-D${CMAKE_UPPER_WORKSPACE_NAME}_HAS_SHA1)
-endif()
-
 if(CRYPTO3_HASH_SHA2)
     add_definitions(-D${CMAKE_UPPER_WORKSPACE_NAME}_HAS_SHA2_32)
     add_definitions(-D${CMAKE_UPPER_WORKSPACE_NAME}_HAS_SHA2_64)
@@ -132,8 +116,21 @@ endif()
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 add_library(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE)
+add_library(${CMAKE_WORKSPACE_NAME}::${CURRENT_PROJECT_NAME} ALIAS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
         EXPORT_NAME ${CURRENT_PROJECT_NAME})
+
+target_precompile_headers(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
+    INTERFACE
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/nil/crypto3/hash/detail/poseidon/poseidon_constants.hpp>"
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/nil/crypto3/hash/detail/poseidon/original_constants.hpp>"
+    )
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE "${ARGV2}" "-fconstexpr-steps=2147483647" "-ftemplate-backtrace-limit=0")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE "${ARGV2}" "-fconstexpr-ops-limit=4294967295" "-ftemplate-backtrace-limit=0")
+endif()
 
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         ${${CURRENT_PROJECT_NAME}_INTERFACE_LIBRARIES}
@@ -143,6 +140,8 @@ target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         ${CMAKE_WORKSPACE_NAME}::random
 
         Boost::container)
+
+target_link_libraries(crypto3_precompiled_headers ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"

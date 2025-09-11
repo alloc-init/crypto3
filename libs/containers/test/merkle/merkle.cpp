@@ -24,16 +24,13 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#define BOOST_TEST_MODULE containter_merkletree_test
+#define BOOST_TEST_MODULE parallel_containter_merkletree_test
 
 #include <nil/crypto3/algebra/random_element.hpp>
 #include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/hash/block_to_field_elements_wrapper.hpp>
 #include <nil/crypto3/hash/sha2.hpp>
-#include <nil/crypto3/hash/md5.hpp>
-#include <nil/crypto3/hash/blake2b.hpp>
 #include <nil/crypto3/hash/keccak.hpp>
-#include <nil/crypto3/hash/pedersen.hpp>
 #include <nil/crypto3/hash/poseidon.hpp>
 
 #include <nil/crypto3/container/merkle/tree.hpp>
@@ -48,6 +45,9 @@
 #include <limits>
 #include <type_traits>
 #include <nil/crypto3/hash/algorithm/hash.hpp>
+
+#include <nil/crypto3/algebra/curves/jubjub.hpp>
+#include <nil/crypto3/marshalling/algebra/processing/jubjub.hpp>
 
 using namespace nil::crypto3;
 using namespace nil::crypto3::containers;
@@ -287,8 +287,12 @@ BOOST_AUTO_TEST_SUITE(containers_merkltree_test)
 using curve_type = algebra::curves::pallas;
 using field_type = typename curve_type::base_field_type;
 using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
+<<<<<<< HEAD
 using original_poseidon_type =
     hashes::original_poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
+=======
+using original_poseidon_type = hashes::original_poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
+>>>>>>> nil/master
 
 BOOST_AUTO_TEST_CASE(merkletree_construct_test_1) {
     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
@@ -311,8 +315,6 @@ BOOST_AUTO_TEST_CASE(merkletree_construct_test_2) {
 BOOST_AUTO_TEST_CASE(merkletree_validate_test_1) {
     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
     testing_validate_template<hashes::sha2<256>, 2>(v);
-    testing_validate_template<hashes::md5, 2>(v);
-    testing_validate_template<hashes::blake2b<224>, 2>(v);
 
     BOOST_STATIC_ASSERT_MSG(algebra::is_field_element<original_poseidon_type::word_type>::value,
                             "Expecting Poseidon to consume field elements");
