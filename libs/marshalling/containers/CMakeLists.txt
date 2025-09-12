@@ -2,8 +2,8 @@ include(CMConfig)
 include(CMDeploy)
 include(CMSetupVersion)
 
-cm_workspace(crypto3)
-cm_project(marshalling-containers WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
+cm_workspace(marshalling)
+cm_project(crypto3_containers WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
 cm_find_package(CM)
 include(CMDeploy)
@@ -30,7 +30,7 @@ target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTER
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
                       Boost::container
 
-                      ${CMAKE_WORKSPACE_NAME}::marshalling-core)
+                      ${CMAKE_WORKSPACE_NAME}::core)
 
 if((CMAKE_COMPILER_IS_GNUCC) OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
     set(extra_flags_list -Wall -Wextra -Wcast-align -Wcast-qual

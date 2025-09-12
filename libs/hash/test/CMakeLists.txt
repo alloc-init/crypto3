@@ -19,7 +19,6 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         Boost::unit_test_framework)
 
 set_target_properties(_cm_internal_tests-crypto3-hash-test PROPERTIES CXX_STANDARD 23)
-target_precompile_headers(_cm_internal_tests-crypto3-hash-test REUSE_FROM crypto3_precompiled_headers)
 
 macro(define_hash_test name)
     set(test_name "hash_${name}_test")

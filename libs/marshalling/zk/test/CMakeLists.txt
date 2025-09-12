@@ -20,10 +20,10 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         crypto3::hash
         crypto3::random
         crypto3::math
-        crypto3::marshalling-multiprecision
-        crypto3::marshalling-algebra
-        crypto3::marshalling-core
-        )
+
+        ${CMAKE_WORKSPACE_NAME}::crypto3_multiprecision
+        ${CMAKE_WORKSPACE_NAME}::crypto3_algebra
+        ${CMAKE_WORKSPACE_NAME}::core)
 
 macro(define_marshalling_test test)
 
@@ -48,7 +48,6 @@ macro(define_marshalling_test test)
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(${full_test_name} PRIVATE "-fconstexpr-ops-limit=4294967295")
     endif()
-    target_precompile_headers(${full_test_name} REUSE_FROM crypto3_precompiled_headers)
 endmacro()
 
 set(TESTS_NAMES

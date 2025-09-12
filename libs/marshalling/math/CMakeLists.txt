@@ -2,8 +2,8 @@ include(CMConfig)
 include(CMDeploy)
 include(CMSetupVersion)
 
-cm_workspace(crypto3)
-cm_project(marshalling-math WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
+cm_workspace(marshalling)
+cm_project(crypto3_math WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
 cm_find_package(CM)
 include(CMDeploy)
@@ -19,24 +19,24 @@ add_library(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE)
 add_library(${CMAKE_WORKSPACE_NAME}::${CURRENT_PROJECT_NAME} ALIAS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
-                      EXPORT_NAME ${CURRENT_PROJECT_NAME})
+        EXPORT_NAME ${CURRENT_PROJECT_NAME})
 
 target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
-                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-                           $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
 
-                           $<$<BOOL:${Boost_FOUND}>:${Boost_INCLUDE_DIRS}>)
+        $<$<BOOL:${Boost_FOUND}>:${Boost_INCLUDE_DIRS}>)
 
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
-                      Boost::container
+        Boost::container
 
-                      ${CMAKE_WORKSPACE_NAME}::marshalling-core)
+        ${CMAKE_WORKSPACE_NAME}::core)
 
 if((CMAKE_COMPILER_IS_GNUCC) OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
     set(extra_flags_list -Wall -Wextra -Wcast-align -Wcast-qual
-        -Wctor-dtor-privacy -Wmissing-include-dirs -Woverloaded-virtual
-        -Wredundant-decls -Wshadow -Wundef -Wunused -Wno-unknown-pragmas
-        -fdiagnostics-show-option)
+            -Wctor-dtor-privacy -Wmissing-include-dirs -Woverloaded-virtual
+            -Wredundant-decls -Wshadow -Wundef -Wunused -Wno-unknown-pragmas
+            -fdiagnostics-show-option)
 
     if(CMAKE_COMPILER_IS_GNUCC)
         list(APPEND extra_flags_list -Wnoexcept -Wlogical-op -Wstrict-null-sentinel)

@@ -6,7 +6,7 @@
 # http://www.boost.org/LICENSE_1_0.txt
 #---------------------------------------------------------------------------#
 
-find_package(CM REQUIRED)
+find_package(CM)
 include(CMConfig)
 include(CMSetupVersion)
 
@@ -36,4 +36,4 @@ set(CONFIG_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/${CURRENT_PROJECT_NAME})
 
 # Install transpiler headers
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

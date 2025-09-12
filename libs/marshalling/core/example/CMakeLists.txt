@@ -12,16 +12,17 @@ include(CMTest)
 
 macro(define_marshalling_example name)
     add_executable(${CMAKE_WORKSPACE_NAME}_${name}_example ${name}.cpp)
-    
+
     target_link_libraries(marshalling_${name}_example PRIVATE
-        crypto3::marshalling-core
-        Boost::container)
+            ${CMAKE_WORKSPACE_NAME}::core
+
+            Boost::container)
 
     target_include_directories(marshalling_${name}_example PRIVATE
-        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-        "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
+            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+            "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
 
-        ${Boost_INCLUDE_DIRS})
+            ${Boost_INCLUDE_DIRS})
 
     set_target_properties(marshalling_${name}_example PROPERTIES
             CXX_STANDARD 23
@@ -29,8 +30,7 @@ macro(define_marshalling_example name)
 endmacro()
 
 set(EXAMPLES_NAMES
-        "bundle"
-        )
+        "bundle")
 
 foreach(EXAMPLES_NAME ${EXAMPLES_NAMES})
     define_marshalling_example(${EXAMPLES_NAME})

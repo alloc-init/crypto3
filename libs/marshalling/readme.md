@@ -1,4 +1,4 @@
-# Crypto3 Marshalling library
+# [[alloc] init]'s Marshalling library
 
 This library is used throughout the project to transform data from one type to
 another. To define representation rules for custom type we use template-defined
@@ -67,6 +67,7 @@ comprising Placeholder proof.
 ## Build & test
 
 To run single test:
+
 ```bash
 nix develop .#<derivation>
 eval "$configurePhase" // automatically move to the build directory
@@ -74,6 +75,7 @@ ninja <test-name>
 ```
 
 For example:
+
 ```bash
 nix develop .#crypto3-debug-tests
 eval "$configurePhase" // automatically move to the build directory

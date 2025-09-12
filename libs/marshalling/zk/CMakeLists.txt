@@ -26,18 +26,17 @@ target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTER
 
 
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
-                      Boost::container
-                      Boost::random
+        Boost::container
+        Boost::random
 
-                      crypto3::multiprecision
-                      crypto3::algebra
+        crypto3::multiprecision
+        crypto3::algebra
 
-                      ${CMAKE_WORKSPACE_NAME}::marshalling-multiprecision
-                      ${CMAKE_WORKSPACE_NAME}::marshalling-algebra
-                      ${CMAKE_WORKSPACE_NAME}::marshalling-core
-                      ${CMAKE_WORKSPACE_NAME}::marshalling-math
-                      ${CMAKE_WORKSPACE_NAME}::marshalling-containers
-                  )
+        ${CMAKE_WORKSPACE_NAME}::core
+        ${CMAKE_WORKSPACE_NAME}::crypto3_multiprecision
+        ${CMAKE_WORKSPACE_NAME}::crypto3_algebra
+        ${CMAKE_WORKSPACE_NAME}::crypto3_math
+        ${CMAKE_WORKSPACE_NAME}::crypto3_containers)
 
 cm_add_test_subdirectory(test)
 

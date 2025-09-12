@@ -43,11 +43,9 @@ target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         # Containers and math implementation could be replaced with namespace change
         crypto3::containers
         crypto3::math
-        crypto3::core
         crypto3::algebra
         crypto3::hash
-        crypto3::multiprecision
-        crypto3::marshalling-zk)
+        crypto3::multiprecision)
 
 cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         INCLUDE include

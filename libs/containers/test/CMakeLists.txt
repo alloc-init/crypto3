@@ -33,10 +33,10 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
     Boost::unit_test_framework
     Boost::random
 )
-set_target_properties(_cm_internal_tests-crypto3-containers-test PROPERTIES CXX_STANDARD 23)
-target_precompile_headers(_cm_internal_tests-crypto3-containers-test REUSE_FROM crypto3_precompiled_headers)
 
-macro(define_storage_test test)
+set_target_properties(_cm_internal_tests-crypto3-containers-test PROPERTIES CXX_STANDARD 23)
+
+macro(define_container_test test)
     get_filename_component(test_name ${test} NAME)
     set(full_test_name ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_${test_name}_test)
 
@@ -54,8 +54,7 @@ macro(define_storage_test test)
         ${CMAKE_WORKSPACE_NAME}::hash
 
         Boost::unit_test_framework
-        Boost::random
-    )
+        Boost::random)
 
     set_target_properties(${full_test_name} PROPERTIES CXX_STANDARD 23)
 
@@ -64,13 +63,10 @@ macro(define_storage_test test)
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(${full_test_name} PRIVATE "-fconstexpr-ops-limit=4294967295" "-ftemplate-backtrace-limit=0")
     endif()
-    target_precompile_headers(${full_test_name} REUSE_FROM crypto3_precompiled_headers)
 endmacro()
 
-set(TESTS_NAMES
-        "merkle/merkle"
-)
+set(TESTS_NAMES "merkle/merkle")
 
 foreach(TEST_NAME ${TESTS_NAMES})
-    define_storage_test(${TEST_NAME})
+    define_container_test(${TEST_NAME})
 endforeach()

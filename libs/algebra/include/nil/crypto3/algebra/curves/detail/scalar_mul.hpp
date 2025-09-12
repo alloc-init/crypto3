@@ -42,10 +42,11 @@ namespace nil {
         namespace algebra {
             namespace curves {
                 namespace detail {
-
                     template<typename CurveElementType, unsigned int Bits>
                     constexpr void scalar_mul_inplace(CurveElementType &base,
-                                                      boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<Bits>> const &scalar) {
+                                                      boost::multiprecision::number<
+                                                          boost::multiprecision::backends::cpp_int_modular_backend<
+                                                              Bits>> const &scalar) {
                         if (scalar.is_zero()) {
                             base = CurveElementType::zero();
                             return;
@@ -81,18 +82,22 @@ namespace nil {
 
                     template<typename CurveElementType>
                     constexpr CurveElementType &operator*=(CurveElementType &point,
-                                                           typename CurveElementType::params_type::scalar_field_type::value_type const &scalar) {
-                        using scalar_integral_type = typename CurveElementType::params_type::scalar_field_type::integral_type;
+                                                           typename
+                                                           CurveElementType::params_type::scalar_field_type::value_type
+                                                           const &scalar) {
+                        using scalar_integral_type = typename
+                                CurveElementType::params_type::scalar_field_type::integral_type;
                         scalar_mul_inplace(point, static_cast<scalar_integral_type>(scalar.data));
                         return point;
                     }
 
                     template<typename CurveElementType>
-                    constexpr CurveElementType operator * (
-                            CurveElementType const& point,
-                            typename CurveElementType::params_type::scalar_field_type::value_type const& scalar)
-                    {
-                        using scalar_integral_type = typename CurveElementType::params_type::scalar_field_type::integral_type;
+                    constexpr CurveElementType operator*(CurveElementType const &point,
+                                                         typename
+                                                         CurveElementType::params_type::scalar_field_type::value_type
+                                                         const &scalar) {
+                        using scalar_integral_type = typename
+                                CurveElementType::params_type::scalar_field_type::integral_type;
                         CurveElementType res = point;
                         scalar_mul_inplace(
                             res, static_cast<scalar_integral_type>(scalar.to_integral()));
@@ -100,11 +105,11 @@ namespace nil {
                     }
 
                     template<typename CurveElementType>
-                    constexpr CurveElementType operator * (
-                            typename CurveElementType::params_type::scalar_field_type::value_type const& scalar,
-                            CurveElementType const& point)
-                    {
-                        using scalar_integral_type = typename CurveElementType::params_type::scalar_field_type::integral_type;
+                    constexpr CurveElementType operator*(
+                        typename CurveElementType::params_type::scalar_field_type::value_type const &scalar,
+                        CurveElementType const &point) {
+                        using scalar_integral_type = typename
+                                CurveElementType::params_type::scalar_field_type::integral_type;
                         CurveElementType res = point;
                         scalar_mul_inplace(
                             res, static_cast<scalar_integral_type>(scalar.to_integral()));
@@ -113,20 +118,14 @@ namespace nil {
 
                     template<typename CurveElementType>
                     std::enable_if_t<is_curve_element<CurveElementType>::value, CurveElementType>
-                    constexpr operator * (
-                            const CurveElementType &point,
-                            const std::size_t &multiplier)
-                    {
+                    constexpr operator*(const CurveElementType &point, const std::size_t &multiplier) {
                         typename CurveElementType::params_type::scalar_field_type::value_type scalar(multiplier);
                         return point * scalar;
                     }
 
                     template<typename CurveElementType>
                     std::enable_if_t<is_curve_element<CurveElementType>::value, CurveElementType>
-                    constexpr operator * (
-                            const std::size_t &multiplier,
-                            const CurveElementType &point)
-                    {
+                    constexpr operator*(const std::size_t &multiplier, const CurveElementType &point) {
                         typename CurveElementType::params_type::scalar_field_type::value_type scalar(multiplier);
                         return point * scalar;
                     }
@@ -138,10 +137,9 @@ namespace nil {
                         scalar_mul_inplace(point, scalar_modulus);
                         return point.is_zero();
                     }
-
-                }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
-}    // namespace nil
+                } // namespace detail
+            } // namespace curves
+        } // namespace algebra
+    } // namespace crypto3
+} // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SCALAR_MUL_HPP
