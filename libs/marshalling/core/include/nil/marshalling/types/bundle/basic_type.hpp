@@ -41,7 +41,6 @@ namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
-
                 template<typename TFieldBase, typename TMembers>
                 class basic_bundle : public TFieldBase {
                 public:
@@ -75,7 +74,7 @@ namespace nil::crypto3 {
 
                     constexpr std::size_t length() const {
                         return processing::tuple_accumulate(value(), std::size_t(0),
-                                                                              length_calc_helper());
+                                                            length_calc_helper());
                     }
 
                     template<std::size_t TFromIdx>
@@ -106,7 +105,7 @@ namespace nil::crypto3 {
                     static constexpr std::size_t min_length_from() {
                         return processing::tuple_type_accumulate_from_until<
                             TFromIdx, std::tuple_size<value_type>::value, value_type>(std::size_t(0),
-                                                                                      min_length_calc_helper());
+                            min_length_calc_helper());
                     }
 
                     template<std::size_t TUntilIdx>
@@ -118,7 +117,7 @@ namespace nil::crypto3 {
                     template<std::size_t TFromIdx, std::size_t TUntilIdx>
                     static constexpr std::size_t min_length_from_until() {
                         return processing::tuple_type_accumulate_from_until<TFromIdx, TUntilIdx,
-                                                                                              value_type>(
+                            value_type>(
                             std::size_t(0), min_length_calc_helper());
                     }
 
@@ -131,7 +130,7 @@ namespace nil::crypto3 {
                     static constexpr std::size_t max_length_from() {
                         return processing::tuple_type_accumulate_from_until<
                             TFromIdx, std::tuple_size<value_type>::value, value_type>(std::size_t(0),
-                                                                                      max_length_calc_helper());
+                            max_length_calc_helper());
                     }
 
                     template<std::size_t TUntilIdx>
@@ -143,7 +142,7 @@ namespace nil::crypto3 {
                     template<std::size_t TFromIdx, std::size_t TUntilIdx>
                     static constexpr std::size_t max_length_from_until() {
                         return processing::tuple_type_accumulate_from_until<TFromIdx, TUntilIdx,
-                                                                                              value_type>(
+                            value_type>(
                             std::size_t(0), max_length_calc_helper());
                     }
 
@@ -402,9 +401,8 @@ namespace nil::crypto3 {
                                   "value_type must be tuple");
                     value_type members_;
                 };
-
-            }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
-}    // namespace nil
+            } // namespace detail
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_BASIC_BUNDLE_HPP

@@ -38,7 +38,6 @@
 namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
-
             /// @brief field_type that represent integral value.
             /// @tparam TFieldBase Base class for this field, expected to be a variant of
             ///     nil::crypto3::marshalling::field_type.
@@ -55,8 +54,10 @@ namespace nil::crypto3 {
             /// @extends nil::crypto3::marshalling::field_type
             /// @headerfile nil/marshalling/types/integral.hpp
             template<typename TFieldBase, typename T, typename... TOptions>
-            class integral : private detail::adapt_basic_field_type<detail::basic_integral<TFieldBase, T>, TOptions...> {
-                using base_impl_type = detail::adapt_basic_field_type<detail::basic_integral<TFieldBase, T>, TOptions...>;
+            class integral : private detail::adapt_basic_field_type<detail::basic_integral<TFieldBase, T>, TOptions
+                        ...> {
+                using base_impl_type = detail::adapt_basic_field_type<detail::basic_integral<TFieldBase, T>, TOptions
+                    ...>;
 
             public:
                 /// @brief endian_type used for serialization.
@@ -173,14 +174,14 @@ namespace nil::crypto3 {
                 using base_impl_type::write_data;
 
             private:
-
                 static_assert(
                     !parsed_options_type::has_sequence_fixed_size_use_fixed_size_storage,
                     "nil::crypto3::marshalling::option::SequenceFixedSizeUseFixedSizeStorage option is not applicable to "
                     "integral field");
                 static_assert(
                     !parsed_options_type::has_sequence_size_field_prefix,
-                    "nil::crypto3::marshalling::option::sequence_size_field_prefix option is not applicable to integral field");
+                    "nil::crypto3::marshalling::option::sequence_size_field_prefix option is not applicable to integral field")
+                ;
                 static_assert(
                     !parsed_options_type::has_fixed_size_storage,
                     "nil::crypto3::marshalling::option::fixed_size_storage option is not applicable to integral field");
@@ -232,24 +233,23 @@ namespace nil::crypto3 {
             /// @related nil::crypto3::marshalling::types::integral
             template<typename TFieldBase, typename T, typename... TOptions>
             inline const integral<TFieldBase, T, TOptions...> &
-                to_field_base(const integral<TFieldBase, T, TOptions...> &field) {
+            to_field_base(const integral<TFieldBase, T, TOptions...> &field) {
                 return field;
             }
 
             // This is a helper, frequently used to convert size_t. It just shortens our code.
             template<typename TFieldBase>
-            integral<TFieldBase, std::size_t> fill_size_t(const std::size_t& v) {
+            integral<TFieldBase, std::size_t> fill_size_t(const std::size_t &v) {
                 integral<TFieldBase, std::size_t> result;
                 result.value() = v;
                 return result;
             }
 
             template<typename TFieldBase>
-            std::size_t make_size_t(const integral<TFieldBase, std::size_t>& v) {
+            std::size_t make_size_t(const integral<TFieldBase, std::size_t> &v) {
                 return v.value();
             }
-
-        }    // namespace types
-    }        // namespace marshalling
-}    // namespace nil
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_INT_VALUE_HPP

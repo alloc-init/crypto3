@@ -30,19 +30,22 @@ namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace tag {
+                struct raw_array_list {
+                };
 
-                struct raw_array_list { };
+                struct array_list {
+                };
 
-                struct array_list { };
+                struct bundle {
+                };
 
-                struct bundle { };
+                struct integral {
+                };
 
-                struct integral { };
-
-                struct string { };
-
-            }    // namespace tag
-        }        // namespace types
-    }            // namespace marshalling
-}    // namespace nil
+                struct string {
+                };
+            } // namespace tag
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_TAG_HPP

@@ -45,14 +45,13 @@ namespace nil::crypto3 {
         /// @related nil::crypto3::marshalling::types::array_list
         template<typename T>
         struct is_array_list {
-
-            static const bool value = has_type_tag<T, 
+            static const bool value = has_type_tag<T,
                 boost::is_same<boost::mpl::placeholders::_1, types::tag::array_list>>::value;
         };
 
         template<typename T>
         struct is_raw_array_list {
-            static const bool value = has_type_tag<T, 
+            static const bool value = has_type_tag<T,
                 boost::is_same<boost::mpl::placeholders::_1, types::tag::raw_array_list>>::value;
         };
 
@@ -63,7 +62,7 @@ namespace nil::crypto3 {
         /// @related nil::crypto3::marshalling::types::bundle
         template<typename T>
         struct is_bundle {
-            static const bool value = has_type_tag<T, 
+            static const bool value = has_type_tag<T,
                 boost::is_same<boost::mpl::placeholders::_1, types::tag::bundle>>::value;
         };
 
@@ -74,7 +73,7 @@ namespace nil::crypto3 {
         /// @related nil::crypto3::marshalling::types::integral
         template<typename T>
         struct is_integral {
-            static const bool value = has_type_tag<T, 
+            static const bool value = has_type_tag<T,
                 boost::is_same<boost::mpl::placeholders::_1, types::tag::integral>>::value;
         };
 
@@ -85,27 +84,27 @@ namespace nil::crypto3 {
         /// @related nil::crypto3::marshalling::types::string
         template<typename T>
         struct is_string {
-            static const bool value = has_type_tag<T, 
+            static const bool value = has_type_tag<T,
                 boost::is_same<boost::mpl::placeholders::_1, types::tag::string>>::value;
         };
 
         template<typename T>
         struct is_marshalling_type {
-            static const bool value = 
-                boost::is_base_of<detail::field_base<>, T>::value;
+            static const bool value =
+                    boost::is_base_of<detail::field_base<>, T>::value;
         };
 
         template<typename T, typename Enabled = void>
         struct is_container;
 
         template<typename T>
-        struct is_container <T, typename std::enable_if<nil::crypto3::marshalling::is_integral<T>::value>::type> {
+        struct is_container<T, typename std::enable_if<nil::crypto3::marshalling::is_integral<T>::value>::type> {
             static const bool value = false;
         };
 
         template<typename T>
-        struct is_container <T, typename std::enable_if<is_array_list<T>::value
-                                                || is_bundle<T>::value>::type> {
+        struct is_container<T, typename std::enable_if<is_array_list<T>::value
+                                                       || is_bundle<T>::value>::type> {
             static const bool value = true;
         };
 
@@ -115,14 +114,16 @@ namespace nil::crypto3 {
         };
 
         template<typename T>
-        struct is_supported_representation_type<T,  typename std::enable_if<std::is_same<std::uint8_t, T>::value
-                || std::is_same<std::int8_t, T>::value
-                || std::is_same<char, T>::value || std::is_same<bool, T>::value>::type> {
+        struct is_supported_representation_type<T, typename std::enable_if<std::is_same<std::uint8_t, T>::value
+                                                                           || std::is_same<std::int8_t, T>::value
+                                                                           || std::is_same<char, T>::value ||
+                                                                           std::is_same<bool, T>::value>::type> {
             static const bool value = true;
         };
 
         template<typename T>
-        struct is_supported_representation_type<T,  typename std::enable_if<is_supported_representation_type<typename T::value_type>::value>::type> {
+        struct is_supported_representation_type<T, typename std::enable_if<is_supported_representation_type<typename
+                    T::value_type>::value>::type> {
             static const bool value = true;
         };
 
@@ -130,7 +131,8 @@ namespace nil::crypto3 {
         // The following four functions we need only because of absence of BOOST_TTI_HAS_MEMBER_FUNCTION for std::string
         template<typename T>
         class has_member_function_clear {
-            struct no { };
+            struct no {
+            };
 
         protected:
             template<typename C>
@@ -145,7 +147,8 @@ namespace nil::crypto3 {
 
         template<typename T>
         class has_member_function_reserve {
-            struct no { };
+            struct no {
+            };
 
         protected:
             template<typename C>
@@ -160,7 +163,8 @@ namespace nil::crypto3 {
 
         template<typename T>
         class has_member_function_resize {
-            struct no { };
+            struct no {
+            };
 
         protected:
             template<typename C>
@@ -191,8 +195,7 @@ namespace nil::crypto3 {
         public:
             constexpr static const bool value = (sizeof(test<T>(nullptr)) == sizeof(Yes));
         };
-
-    }        // namespace marshalling
-}    // namespace nil
+    } // namespace marshalling
+} // namespace nil
 
 #endif    // MARSHALLING_TYPE_TRAITS_HPP

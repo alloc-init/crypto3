@@ -32,9 +32,7 @@
 namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
-
             namespace adapter {
-
                 template<typename TSizeField, typename TBase>
                 class sequence_size_field_prefix : public TBase {
                     using base_impl_type = TBase;
@@ -127,8 +125,8 @@ namespace nil::crypto3 {
                         base_impl_type::write_no_status(iter);
                     }
                 };
-            }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
-}    // namespace nil
+            } // namespace adapter
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_SEQUENCE_SIZE_FIELD_PREFIX_HPP

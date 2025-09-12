@@ -90,7 +90,7 @@ namespace nil::crypto3 {
 
                 /// @brief Tag indicating type of the field
                 using tag = typename std::conditional<std::is_integral<TElement>::value, tag::raw_array_list,
-                                                      tag::array_list>::type;
+                    tag::array_list>::type;
 
                 /// @brief Type of underlying value.
                 /// @details If nil::crypto3::marshalling::option::fixed_size_storage option is NOT used, the
@@ -147,7 +147,7 @@ namespace nil::crypto3 {
                 constexpr std::size_t bit_length() const {
                     return base_impl_type::bit_length();
                 }
-                
+
                 /// @brief Read field value from input data sequence
                 /// @details By default, the read operation will try to consume all the
                 ///     data available, unless size limiting option (such as
@@ -225,7 +225,6 @@ namespace nil::crypto3 {
             protected:
                 using base_impl_type::read_data;
                 using base_impl_type::write_data;
-
             };
 
             /// @brief Equivalence comparison operator.
@@ -268,7 +267,7 @@ namespace nil::crypto3 {
             /// @related nil::crypto3::marshalling::types::array_list
             template<typename TFieldBase, typename TElement, typename... TOptions>
             inline array_list<TFieldBase, TElement, TOptions...> &
-                to_field_base(array_list<TFieldBase, TElement, TOptions...> &field) {
+            to_field_base(array_list<TFieldBase, TElement, TOptions...> &field) {
                 return field;
             }
 
@@ -277,7 +276,7 @@ namespace nil::crypto3 {
             /// @related nil::crypto3::marshalling::types::array_list
             template<typename TFieldBase, typename TElement, typename... TOptions>
             inline const array_list<TFieldBase, TElement, TOptions...> &
-                to_field_base(const array_list<TFieldBase, TElement, TOptions...> &field) {
+            to_field_base(const array_list<TFieldBase, TElement, TOptions...> &field) {
                 return field;
             }
 
@@ -298,26 +297,25 @@ namespace nil::crypto3 {
             // Helper functions to convert to/from an arraylist.
             template<typename TFieldBase, typename TMarshalledElement, typename Range>
             typename std::enable_if<
-                marshalling::detail::is_range<Range>::value, 
-                standard_array_list<TFieldBase, TMarshalledElement>>::type 
+                marshalling::detail::is_range<Range>::value,
+                standard_array_list<TFieldBase, TMarshalledElement>>::type
             fill_standard_array_list(
-                    const Range& input_range,
-                    std::function<TMarshalledElement(const typename Range::value_type&)> element_marshalling) {
+                const Range &input_range,
+                std::function<TMarshalledElement(const typename Range::value_type &)> element_marshalling) {
                 standard_array_list<TFieldBase, TMarshalledElement> result;
-                for (const auto& v: input_range) {
+                for (const auto &v: input_range) {
                     result.value().push_back(element_marshalling(v));
                 }
                 return result;
             }
 
-            template<typename TFieldBase, typename TElement, typename TMarshalledElement> 
+            template<typename TFieldBase, typename TElement, typename TMarshalledElement>
             std::vector<TElement> make_standard_array_list(
-                const standard_array_list<TFieldBase, TMarshalledElement>& filled_array,
-                std::function<TElement(const TMarshalledElement&)> element_de_marshalling)
-            {
+                const standard_array_list<TFieldBase, TMarshalledElement> &filled_array,
+                std::function<TElement(const TMarshalledElement &)> element_de_marshalling) {
                 std::vector<TElement> result;
                 result.reserve(filled_array.value().size());
-                for (const auto& v: filled_array.value()) {
+                for (const auto &v: filled_array.value()) {
                     result.push_back(element_de_marshalling(v));
                 }
                 return result;
@@ -326,28 +324,30 @@ namespace nil::crypto3 {
             // Helper functions to marshall an std::map.
             // We keep TKey, TValue at the end, because they can be decuded from the map type, but the other 3
             // arguments must be provided explicitly.
-            template<typename TFieldBase, typename TMarshalledKey, typename TMarshalledValue, typename TKey, typename TValue>
-            std::pair<standard_array_list<TFieldBase, TMarshalledKey>, standard_array_list<TFieldBase, TMarshalledValue>>
+            template<typename TFieldBase, typename TMarshalledKey, typename TMarshalledValue, typename TKey, typename
+                     TValue>
+            std::pair<standard_array_list<TFieldBase, TMarshalledKey>, standard_array_list<TFieldBase,
+                TMarshalledValue>>
             fill_std_map(
-                    const std::map<TKey, TValue>& input_map,
-                    std::function<TMarshalledKey(const TKey&)> key_marshalling,
-                    std::function<TMarshalledValue(const TValue&)> value_marshalling) {
+                const std::map<TKey, TValue> &input_map,
+                std::function<TMarshalledKey(const TKey &)> key_marshalling,
+                std::function<TMarshalledValue(const TValue &)> value_marshalling) {
                 standard_array_list<TFieldBase, TMarshalledKey> result_keys;
                 standard_array_list<TFieldBase, TMarshalledValue> result_values;
-                for (const auto& [k, v]: input_map) {
+                for (const auto &[k, v]: input_map) {
                     result_keys.value().push_back(key_marshalling(k));
                     result_values.value().push_back(value_marshalling(v));
                 }
                 return {result_keys, result_values};
             }
 
-            template<typename TFieldBase, typename TKey, typename TValue, typename TMarshalledKey, typename TMarshalledValue>
+            template<typename TFieldBase, typename TKey, typename TValue, typename TMarshalledKey, typename
+                     TMarshalledValue>
             std::map<TKey, TValue> make_std_map(
-                    const standard_array_list<TFieldBase, TMarshalledKey>& filled_keys,
-                    const standard_array_list<TFieldBase, TMarshalledValue>& filled_values,
-                    std::function<TKey(const TMarshalledKey&)> key_de_marshalling,
-                    std::function<TValue(const TMarshalledValue&)> value_de_marshalling)
-            {
+                const standard_array_list<TFieldBase, TMarshalledKey> &filled_keys,
+                const standard_array_list<TFieldBase, TMarshalledValue> &filled_values,
+                std::function<TKey(const TMarshalledKey &)> key_de_marshalling,
+                std::function<TValue(const TMarshalledValue &)> value_de_marshalling) {
                 if (filled_keys.value().size() != filled_values.value().size()) {
                     throw std::invalid_argument("Number of values and keys do not match");;
                 }
@@ -358,8 +358,7 @@ namespace nil::crypto3 {
                 }
                 return result;
             }
-
-        }    // namespace types
-    }        // namespace marshalling
-}    // namespace nil
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_ARRAY_LIST_HPP

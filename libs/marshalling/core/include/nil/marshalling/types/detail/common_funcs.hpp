@@ -36,7 +36,6 @@ namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
-
                 struct common_funcs {
                     template<typename TField, typename TIter>
                     static status_type read_sequence(TField &field, TIter &iter, std::size_t len) {
@@ -56,7 +55,7 @@ namespace nil::crypto3 {
 
                     template<typename TField, typename TIter>
                     static status_type read_sequence_n(TField &field, std::size_t count, TIter &iter,
-                                                                         std::size_t &len) {
+                                                       std::size_t &len) {
                         field.clear();
                         while (0 < count) {
                             auto &elem = field.create_back();
@@ -82,10 +81,10 @@ namespace nil::crypto3 {
 
                     template<typename TField, typename TIter>
                     static status_type write_sequence(const TField &field, TIter &iter,
-                                                                        std::size_t len) {
+                                                      std::size_t len) {
                         status_type es = status_type::success;
                         auto remainingLen = len;
-                        for (auto &elem : field.value()) {
+                        for (auto &elem: field.value()) {
                             es = field.write_element(elem, iter, remainingLen);
                             if (es != status_type::success) {
                                 break;
@@ -97,16 +96,16 @@ namespace nil::crypto3 {
 
                     template<typename TField, typename TIter>
                     static void write_sequence_no_status(TField &field, TIter &iter) {
-                        for (auto &elem : field.value()) {
+                        for (auto &elem: field.value()) {
                             field.write_element_no_status(elem, iter);
                         }
                     }
 
                     template<typename TField, typename TIter>
                     static status_type write_sequence_n(const TField &field, std::size_t count,
-                                                                          TIter &iter, std::size_t &len) {
+                                                        TIter &iter, std::size_t &len) {
                         status_type es = status_type::success;
-                        for (auto &elem : field.value()) {
+                        for (auto &elem: field.value()) {
                             if (count == 0) {
                                 break;
                             }
@@ -124,7 +123,7 @@ namespace nil::crypto3 {
 
                     template<typename TField, typename TIter>
                     static void write_sequence_no_status_n(const TField &field, std::size_t count, TIter &iter) {
-                        for (auto &elem : field.value()) {
+                        for (auto &elem: field.value()) {
                             if (count == 0) {
                                 break;
                             }
@@ -149,11 +148,10 @@ namespace nil::crypto3 {
                         return 0xffff;
                     }
 
-                    private:
+                private:
                 };
-
-            }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
-}    // namespace nil
+            } // namespace detail
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_COMMON_FUNCS_HPP

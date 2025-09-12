@@ -39,7 +39,6 @@ namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
-
                 template<bool THasSequenceFixedSizeUseFixedSizeStorage>
                 struct string_fixed_size_use_fixed_size_storage_type;
 
@@ -73,15 +72,14 @@ namespace nil::crypto3 {
 
                 template<typename TOpt>
                 using string_storage_type =
-                    typename string_fixed_size_storage_type<TOpt::has_fixed_size_storage>::template type<TOpt>;
+                typename string_fixed_size_storage_type<TOpt::has_fixed_size_storage>::template type<TOpt>;
 
                 template<typename TFieldBase, typename... TOptions>
                 using string_base_type = adapt_basic_field_type<
                     basic_string<TFieldBase, string_storage_type<options_parser<TOptions...>>>,
                     TOptions...>;
-
-            }    // namespace detail
-        }    // namespace types
-    }        // namespace marshalling
-}    // namespace nil
+            } // namespace detail
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_STRING_BEHAVIOUR_HPP

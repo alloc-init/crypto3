@@ -41,14 +41,14 @@ namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
-
                 template<bool THasSequenceFixedSizeUseFixedSizeStorage>
                 struct array_list_sequence_fixed_size_use_fixed_size_storage_type;
 
                 template<>
                 struct array_list_sequence_fixed_size_use_fixed_size_storage_type<true> {
                     template<typename TElement, typename TOpt>
-                    using type = nil::crypto3::marshalling::container::static_vector<TElement, TOpt::sequence_fixed_size>;
+                    using type = nil::crypto3::marshalling::container::static_vector<TElement,
+                        TOpt::sequence_fixed_size>;
                 };
 
                 template<>
@@ -63,7 +63,8 @@ namespace nil::crypto3 {
                 template<>
                 struct array_list_fixed_size_storage_type<true> {
                     template<typename TElement, typename TOpt>
-                    using type = nil::crypto3::marshalling::container::static_vector<TElement, TOpt::fixed_size_storage>;
+                    using type = nil::crypto3::marshalling::container::static_vector<TElement, TOpt::fixed_size_storage>
+                    ;
                 };
 
                 template<>
@@ -82,9 +83,8 @@ namespace nil::crypto3 {
                     basic_array_list<
                         TFieldBase, array_list_storage_type_type<TElement, options_parser<TOptions...>>>,
                     TOptions...>;
-
-            }    // namespace detail
-        }    // namespace types
-    }        // namespace marshalling
-}    // namespace nil
+            } // namespace detail
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_ARRAY_LIST_BEHAVIOUR_HPP

@@ -34,13 +34,11 @@ namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
-
                 template<typename TFieldBase, typename T, typename Enable = void>
                 class basic_integral;
 
                 template<typename TFieldBase, typename T>
                 class basic_integral<TFieldBase, T, std::enable_if_t<std::is_integral_v<T>>> : public TFieldBase {
-
                     using base_impl_type = TFieldBase;
 
                 public:
@@ -125,9 +123,8 @@ namespace nil::crypto3 {
                 private:
                     value_type value_ = static_cast<value_type>(0);
                 };
-
-            }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
-}    // namespace nil
+            } // namespace detail
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_BASIC_INTEGRAL_HPP

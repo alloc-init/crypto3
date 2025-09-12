@@ -38,7 +38,6 @@
 namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
-
             /// @brief Bundles multiple fields into a single field.
             /// @details The class wraps nicely multiple fields and provides
             ///     expected single field API functions, such as length(), read(), write(),
@@ -57,8 +56,10 @@ namespace nil::crypto3 {
             /// @see @ref MARSHALLING_FIELD_MEMBERS_ACCESS()
             /// @see @ref MARSHALLING_FIELD_MEMBERS_ACCESS_NOTEMPLATE()
             template<typename TFieldBase, typename TMembers, typename... TOptions>
-            class bundle : private detail::adapt_basic_field_type<detail::basic_bundle<TFieldBase, TMembers>, TOptions...> {
-                using base_impl_type = detail::adapt_basic_field_type<detail::basic_bundle<TFieldBase, TMembers>, TOptions...>;
+            class bundle : private detail::adapt_basic_field_type<detail::basic_bundle<TFieldBase, TMembers>, TOptions
+                        ...> {
+                using base_impl_type = detail::adapt_basic_field_type<detail::basic_bundle<TFieldBase, TMembers>,
+                    TOptions...>;
                 static_assert(marshalling::detail::is_tuple<TMembers>::value,
                               "TMembers is expected to be a tuple of std::tuple<...>");
 
@@ -464,9 +465,11 @@ namespace nil::crypto3 {
                               "to bundle field");
                 static_assert(
                     !parsed_options_type::has_sequence_size_field_prefix,
-                    "nil::crypto3::marshalling::option::sequence_size_field_prefix option is not applicable to bundle field");
+                    "nil::crypto3::marshalling::option::sequence_size_field_prefix option is not applicable to bundle field")
+                ;
                 static_assert(!parsed_options_type::has_fixed_size_storage,
-                              "nil::crypto3::marshalling::option::fixed_size_storage option is not applicable to bundle field");
+                              "nil::crypto3::marshalling::option::fixed_size_storage option is not applicable to bundle field")
+                ;
             };
 
             /// @brief Equality comparison operator.
@@ -536,7 +539,7 @@ namespace nil::crypto3 {
             /// @related nil::crypto3::marshalling::types::bundle
             template<typename TFieldBase, typename TMembers, typename... TOptions>
             inline bundle<TFieldBase, TMembers, TOptions...> &
-                to_field_base(bundle<TFieldBase, TMembers, TOptions...> &field) {
+            to_field_base(bundle<TFieldBase, TMembers, TOptions...> &field) {
                 return field;
             }
 
@@ -545,11 +548,10 @@ namespace nil::crypto3 {
             /// @related nil::crypto3::marshalling::types::bundle
             template<typename TFieldBase, typename TMembers, typename... TOptions>
             inline const bundle<TFieldBase, TMembers, TOptions...> &
-                to_field_base(const bundle<TFieldBase, TMembers, TOptions...> &field) {
+            to_field_base(const bundle<TFieldBase, TMembers, TOptions...> &field) {
                 return field;
             }
-
-        }    // namespace types
-    }        // namespace marshalling
-}    // namespace nil
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_BUNDLE_HPP

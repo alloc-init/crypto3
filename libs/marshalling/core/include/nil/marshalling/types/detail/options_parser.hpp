@@ -33,7 +33,6 @@ namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
-
                 template<typename... TOptions>
                 class options_parser;
 
@@ -46,8 +45,9 @@ namespace nil::crypto3 {
                 };
 
                 template<typename TSizeField, typename... TOptions>
-                class options_parser<nil::crypto3::marshalling::option::sequence_size_field_prefix<TSizeField>, TOptions...>
-                    : public options_parser<TOptions...> {
+                class options_parser<nil::crypto3::marshalling::option::sequence_size_field_prefix<TSizeField>, TOptions
+                            ...>
+                        : public options_parser<TOptions...> {
                 public:
                     static const bool has_sequence_size_field_prefix = true;
                     using sequence_size_field_prefix = TSizeField;
@@ -55,24 +55,26 @@ namespace nil::crypto3 {
 
                 template<std::size_t TSize, typename... TOptions>
                 class options_parser<nil::crypto3::marshalling::option::fixed_size_storage<TSize>, TOptions...>
-                    : public options_parser<TOptions...> {
+                        : public options_parser<TOptions...> {
                 public:
                     static const bool has_fixed_size_storage = true;
                     static const std::size_t fixed_size_storage = TSize;
                 };
+
                 template<typename... TOptions>
-                class options_parser<nil::crypto3::marshalling::option::sequence_fixed_size_use_fixed_size_storage, TOptions...>
-                    : public options_parser<TOptions...> {
+                class options_parser<nil::crypto3::marshalling::option::sequence_fixed_size_use_fixed_size_storage,
+                            TOptions...>
+                        : public options_parser<TOptions...> {
                 public:
                     static const bool has_sequence_fixed_size_use_fixed_size_storage = true;
                 };
 
                 template<typename... TTupleOptions, typename... TOptions>
                 class options_parser<std::tuple<TTupleOptions...>, TOptions...>
-                    : public options_parser<TTupleOptions..., TOptions...> { };
-
-            }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
-}    // namespace nil::crypto3
+                        : public options_parser<TTupleOptions..., TOptions...> {
+                };
+            } // namespace detail
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil::crypto3
 #endif    // MARSHALLING_OPTIONS_PARSER_HPP

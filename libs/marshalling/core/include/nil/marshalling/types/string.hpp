@@ -38,7 +38,6 @@
 namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
-
             /// @brief field_type that represents a string.
             /// @details By default uses
             ///     <a href="http://en.cppreference.com/w/cpp/string/basic_string">std::string</a>,
@@ -194,10 +193,17 @@ namespace nil::crypto3 {
                 using base_impl_type::write_data;
 
             private:
-                struct no_adjustment_tag { };
-                struct adjustment_needed_tag { };
-                struct has_resize_tag { };
-                struct has_remove_suffix_tag { };
+                struct no_adjustment_tag {
+                };
+
+                struct adjustment_needed_tag {
+                };
+
+                struct has_resize_tag {
+                };
+
+                struct has_remove_suffix_tag {
+                };
 
                 void adjust_value(no_adjustment_tag) {
                 }
@@ -219,8 +225,8 @@ namespace nil::crypto3 {
                         has_member_function_resize<value_type>::value,
                         has_resize_tag,
                         typename std::conditional<has_member_function_remove_suffix<value_type>::value,
-                                                  has_remove_suffix_tag,
-                                                  void>::type>::type;
+                            has_remove_suffix_tag,
+                            void>::type>::type;
 
                     static_assert(!std::is_void<tag>::value,
                                   "The string storage value type must have either resize() or remove_suffix() "
@@ -286,8 +292,7 @@ namespace nil::crypto3 {
             inline const string<TFieldBase, TOptions...> &to_field_base(const string<TFieldBase, TOptions...> &field) {
                 return field;
             }
-
-        }    // namespace types
-    }        // namespace marshalling
-}    // namespace nil
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_STRING_HPP

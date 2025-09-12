@@ -36,7 +36,6 @@
 
 namespace nil::crypto3 {
     namespace marshalling {
-
         /// @brief Base class for any custom assertion behaviour.
         /// @details In order to implement custom assertion failure behaviour it
         ///          is necessary to inherit from this class and override
@@ -120,8 +119,8 @@ namespace nil::crypto3 {
             ///          assertion object of type TAssert.
             /// @param args Arguments to pass to the assertion class constructor.
             template<typename... TParams>
-            enable_assert(TParams &&...args) :
-                assert_(std::forward<TParams>(args)...), prevAssert_(assert_manager::instance().reset(&assert_)) {
+            enable_assert(TParams &&... args) : assert_(std::forward<TParams>(args)...),
+                                                prevAssert_(assert_manager::instance().reset(&assert_)) {
             }
 
             /// @brief Destructor
@@ -144,7 +143,7 @@ namespace nil::crypto3 {
 
 #ifndef NDEBUG
 
-/// @cond DOCUCMENT_AM_ASSERT_FUNCTION
+        /// @cond DOCUCMENT_AM_ASSERT_FUNCTION
 #ifndef __ASSERT_FUNCTION
 #define MARSHALLING_ASSERT_FUNCTION_STR __FUNCTION__
 #else    // #ifndef __ASSERT_FUNCTION
@@ -157,14 +156,14 @@ namespace nil::crypto3 {
 #define MARSHALLING_ASSERT_FAIL_FUNC(expr) nil::crypto3::marshalling::assert_manager::instance().infinite_loop()
 #endif    // #ifndef NOSTDLIB
 
-/// @endcond
+        /// @endcond
 
-/// @brief Generic assert macro
-/// @details Will use custom assertion failure behaviour if such is defined,
-///          otherwise it will use standard "assert()" macro.
-///          In case NOSTDLIB is defined and no custom assertion failure was
-///          enabled, infinite loop will be executed.
-/// @param expr Boolean expression
+        /// @brief Generic assert macro
+        /// @details Will use custom assertion failure behaviour if such is defined,
+        ///          otherwise it will use standard "assert()" macro.
+        ///          In case NOSTDLIB is defined and no custom assertion failure was
+        ///          enabled, infinite loop will be executed.
+        /// @param expr Boolean expression
 #define MARSHALLING_ASSERT(expr)                                                      \
     ((expr) ? static_cast<void>(0) :                                                  \
               (nil::crypto3::marshalling::assert_manager::instance().has_assert_registered() ? \
@@ -178,10 +177,9 @@ namespace nil::crypto3 {
 
 #endif    // #ifndef NDEBUG
 
-/// @brief Same as @ref MARSHALLING_ASSERT
-/// @details Kept for backward compatibility of already written protocols.
+        /// @brief Same as @ref MARSHALLING_ASSERT
+        /// @details Kept for backward compatibility of already written protocols.
 #define GASSERT(expr) MARSHALLING_ASSERT(expr)
-
-    }    // namespace marshalling
-}    // namespace nil
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_ASSERT_TYPE_HPP

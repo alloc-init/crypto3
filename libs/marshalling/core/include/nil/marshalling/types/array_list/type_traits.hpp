@@ -42,7 +42,6 @@ namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
-
                 template<typename TElemType, bool TIntegral>
                 struct array_list_field_has_var_length_helper;
 
@@ -59,8 +58,8 @@ namespace nil::crypto3 {
                 template<typename TElemType>
                 struct array_list_field_has_var_length {
                     static const bool value
-                        = array_list_field_has_var_length_helper<TElemType,
-                                                                 std::is_integral<TElemType>::value>::value;
+                            = array_list_field_has_var_length_helper<TElemType,
+                                std::is_integral<TElemType>::value>::value;
                 };
 
                 template<typename TStorage>
@@ -70,12 +69,13 @@ namespace nil::crypto3 {
 
                 template<typename T, std::size_t TSize>
                 struct array_list_max_length_retrieve_helper<
-                    nil::crypto3::marshalling::container::static_vector<T, TSize>> {
+                            nil::crypto3::marshalling::container::static_vector<T, TSize>> {
                     static const std::size_t value = TSize;
                 };
 
                 template<std::size_t TSize>
-                struct array_list_max_length_retrieve_helper<nil::crypto3::marshalling::container::static_string<TSize>> {
+                struct array_list_max_length_retrieve_helper<nil::crypto3::marshalling::container::static_string<
+                            TSize>> {
                     static const std::size_t value = TSize - 1;
                 };
 
@@ -100,9 +100,8 @@ namespace nil::crypto3 {
                 public:
                     static const bool value = (sizeof(test<T, typename T::const_pointer>(nullptr)) == sizeof(Yes));
                 };
-
-            }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
-}    // namespace nil
+            } // namespace detail
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_BASIC_ARRAY_LIST_TYPE_TRAITS_HPP

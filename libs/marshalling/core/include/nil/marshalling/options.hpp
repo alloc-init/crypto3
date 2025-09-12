@@ -40,7 +40,6 @@
 
 namespace nil::crypto3 {
     namespace marshalling {
-
         namespace types {
             // We cannot include integral.hpp, it includes this file. So just declare the class.
             template<typename TFieldBase, typename T, typename... TOptions>
@@ -55,7 +54,8 @@ namespace nil::crypto3 {
             ///     nil::crypto3::marshalling::endian::little_endian.
             /// @headerfile nil/marshalling/options.hpp
             template<typename TEndian>
-            struct endian { };
+            struct endian {
+            };
 
             /// @brief Alias option to endian_type specifying big endian.
             /// @headerfile nil/marshalling/options.hpp
@@ -79,7 +79,8 @@ namespace nil::crypto3 {
             ///     the '\0' terminating character.
             /// @headerfile nil/marshalling/options.hpp
             template<std::size_t TSize>
-            struct fixed_size_storage { };
+            struct fixed_size_storage {
+            };
 
             /// @brief Option that modifies the default behaviour of collection fields to
             ///     prepend the serialized data with number of @b elements information.
@@ -104,11 +105,12 @@ namespace nil::crypto3 {
             /// @tparam TField Type of the field that represents size
             /// @headerfile nil/marshalling/options.hpp
             template<typename TField>
-            struct sequence_size_field_prefix { };
+            struct sequence_size_field_prefix {
+            };
 
-            template <typename TTypeBase>
+            template<typename TTypeBase>
             using size_t_sequence_size_field_prefix = sequence_size_field_prefix<
-               nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>;
+                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>;
 
             /// @brief Option that forces usage of fixed size storage for sequences with fixed
             ///     size.
@@ -117,9 +119,9 @@ namespace nil::crypto3 {
             ///     that alrady use @ref sequence_fixed_size option. Usage of this option do not require knowledge of
             ///     the storage area size.
             /// @headerfile nil/marshalling/options.hpp
-            struct sequence_fixed_size_use_fixed_size_storage { };
-
-        }    // namespace option
-    }        // namespace marshalling
-}    // namespace nil
+            struct sequence_fixed_size_use_fixed_size_storage {
+            };
+        } // namespace option
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_OPTIONS_HPP

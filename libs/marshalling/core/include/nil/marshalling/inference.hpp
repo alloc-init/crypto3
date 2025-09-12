@@ -35,26 +35,27 @@
 
 namespace nil::crypto3 {
     namespace marshalling {
-
         template<typename T, typename Enabled = void>
         class is_compatible;
 
         template<typename T>
-        class is_compatible <T, typename std::enable_if<std::is_integral<T>::value>::type> {
+        class is_compatible<T, typename std::enable_if<std::is_integral<T>::value>::type> {
             using default_endianness = option::big_endian;
+
         public:
-            template <typename TEndian = default_endianness>
+            template<typename TEndian = default_endianness>
             using type = typename types::integral<field_type<TEndian>, T>;
             static const bool value = true;
             static const bool fixed_size = true;
         };
 
         template<typename T>
-        class is_compatible <std::vector<T>, typename std::enable_if<is_compatible<T>::value
+        class is_compatible<std::vector<T>, typename std::enable_if<is_compatible<T>::value
                                                                     && is_compatible<T>::fixed_size>::type> {
             using default_endianness = option::big_endian;
+
         public:
-            template <typename TEndian = default_endianness>
+            template<typename TEndian = default_endianness>
             using type = typename types::array_list<
                 field_type<TEndian>,
                 typename is_compatible<T>::template type<TEndian>>;
@@ -63,11 +64,12 @@ namespace nil::crypto3 {
         };
 
         template<typename T, std::size_t TSize>
-        class is_compatible <std::array<T, TSize>, typename std::enable_if<is_compatible<T>::value
+        class is_compatible<std::array<T, TSize>, typename std::enable_if<is_compatible<T>::value
                                                                           && is_compatible<T>::fixed_size>::type> {
             using default_endianness = option::big_endian;
+
         public:
-            template <typename TEndian = default_endianness>
+            template<typename TEndian = default_endianness>
             using type = typename types::array_list<
                 field_type<TEndian>,
                 typename is_compatible<T>::template type<TEndian>,
@@ -77,11 +79,12 @@ namespace nil::crypto3 {
         };
 
         template<typename T, std::size_t TSize>
-        class is_compatible <boost::array<T, TSize>, typename std::enable_if<is_compatible<T>::value
-                                                                          && is_compatible<T>::fixed_size>::type> {
+        class is_compatible<boost::array<T, TSize>, typename std::enable_if<is_compatible<T>::value
+                                                                            && is_compatible<T>::fixed_size>::type> {
             using default_endianness = option::big_endian;
+
         public:
-            template <typename TEndian = default_endianness>
+            template<typename TEndian = default_endianness>
             using type = typename types::array_list<
                 field_type<TEndian>,
                 typename is_compatible<T>::template type<TEndian>,
@@ -89,8 +92,7 @@ namespace nil::crypto3 {
             static const bool value = true;
             static const bool fixed_size = true;
         };
-
-    }        // namespace marshalling
-}    // namespace nil
+    } // namespace marshalling
+} // namespace nil
 
 #endif    // MARSHALLING_INFERENCE_TYPE_TRAITS_HPP

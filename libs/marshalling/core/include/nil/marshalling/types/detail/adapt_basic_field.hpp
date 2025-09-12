@@ -33,7 +33,6 @@ namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
-
                 template<bool T1 = false,
                          bool T2 = false,
                          bool T3 = false,
@@ -53,7 +52,7 @@ namespace nil::crypto3 {
                 struct adapt_field_sequence_size_field_prefix<true> {
                     template<typename TField, typename TOpts>
                     using type = types::adapter::
-                        sequence_size_field_prefix<typename TOpts::sequence_size_field_prefix, TField>;
+                    sequence_size_field_prefix<typename TOpts::sequence_size_field_prefix, TField>;
                 };
 
                 template<>
@@ -61,6 +60,7 @@ namespace nil::crypto3 {
                     template<typename TField, typename TOpts>
                     using type = TField;
                 };
+
                 template<typename TField, typename TOpts>
                 using adapt_field_sequence_size_field_prefix_type = typename adapt_field_sequence_size_field_prefix<
                     TOpts::has_sequence_size_field_prefix>::template type<TField, TOpts>;
@@ -69,16 +69,16 @@ namespace nil::crypto3 {
                 class adapt_basic_field {
                     using parsed_options_type = options_parser<TOptions...>;
                     using sequence_size_field_prefix_adapted
-                        = adapt_field_sequence_size_field_prefix_type<TBasic, parsed_options_type>;
+                    = adapt_field_sequence_size_field_prefix_type<TBasic, parsed_options_type>;
+
                 public:
                     using type = sequence_size_field_prefix_adapted;
                 };
 
                 template<typename TBasic, typename... TOptions>
                 using adapt_basic_field_type = typename adapt_basic_field<TBasic, TOptions...>::type;
-
-            }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
-}    // namespace nil
+            } // namespace detail
+        } // namespace types
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_ADAPT_BASIC_FIELD_HPP

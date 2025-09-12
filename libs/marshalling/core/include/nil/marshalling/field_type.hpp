@@ -34,7 +34,6 @@
 
 namespace nil::crypto3 {
     namespace marshalling {
-
         /// @brief Base class to all the field classes.
         /// @details Every custom "field" class should inherit from this one.
         /// @tparam TOptions Zero or more options. The supported options are:
@@ -143,7 +142,6 @@ namespace nil::crypto3 {
                 return processing::read_data<T, TSize>(iter, endian_type());
             }
         };
-
-    }    // namespace marshalling
-}    // namespace nil
+    } // namespace marshalling
+} // namespace nil
 #endif    // MARSHALLING_FIELD_TYPE_HPP
