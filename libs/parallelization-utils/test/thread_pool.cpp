@@ -38,27 +38,27 @@
 
 BOOST_AUTO_TEST_SUITE(thread_pool_test_suite)
 
-BOOST_AUTO_TEST_CASE(vector_multiplication_test) {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level( boost::unit_test::log_messages );
-    //boost::unit_test::framework::instance().set_report_level(boost::unit_test::log_silent);
-    size_t size = 131072;
+    BOOST_AUTO_TEST_CASE(vector_multiplication_test) {
+        boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+        //boost::unit_test::framework::instance().set_report_level(boost::unit_test::log_silent);
+        size_t size = 131072;
 
-    std::vector<size_t> v(size);
+        std::vector<size_t> v(size);
 
-    for (std::size_t i = 0; i < size; ++i)
-        v[i] = i;
+        for (std::size_t i = 0; i < size; ++i)
+            v[i] = i;
 
-    nil::crypto3::wait_for_all(nil::crypto3::parallel_run_in_chunks<void>(
-        size,
-        [&v](std::size_t begin, std::size_t end) {
-            for (std::size_t i = begin; i < end; ++i) {
-                v[i] *= v[i];
-            }
-        }, nil::crypto3::ThreadPool::PoolLevel::HIGH));
+        nil::crypto3::wait_for_all(nil::crypto3::parallel_run_in_chunks<void>(
+            size,
+            [&v](std::size_t begin, std::size_t end) {
+                for (std::size_t i = begin; i < end; ++i) {
+                    v[i] *= v[i];
+                }
+            }, nil::crypto3::ThreadPool::PoolLevel::HIGH));
 
-    for (std::size_t i = 0; i < size; ++i) {
-        BOOST_CHECK_EQUAL(v[i], i * i);
+        for (std::size_t i = 0; i < size; ++i) {
+            BOOST_CHECK_EQUAL(v[i], i * i);
+        }
     }
-}
 
 BOOST_AUTO_TEST_SUITE_END()

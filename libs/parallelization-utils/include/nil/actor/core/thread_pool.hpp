@@ -38,9 +38,8 @@
 
 namespace nil {
     namespace crypto3 {
-
         class ThreadPool {
-            public:
+        public:
             static std::size_t core_count() {
 #if defined(__linux__) && !defined(__ANDROID__)
                 cpu_set_t cpuset;
@@ -53,6 +52,7 @@ namespace nil {
 #endif
                 return std::thread::hardware_concurrency();
             }
+
             enum class PoolLevel {
                 LOW,
                 HIGH
@@ -62,7 +62,7 @@ namespace nil {
              *  operations and fft. Any code that uses these operations and needs to be parallel will submit its tasks to pool with HIGH.
              *  Submission of higher level tasks to low level pool will immediately result in a deadlock.
              */
-            static ThreadPool& get_instance(PoolLevel pool_id) {
+            static ThreadPool &get_instance(PoolLevel pool_id) {
                 static std::size_t pool_size = core_count();
                 static ThreadPool instance_for_low_level(pool_size);
                 static ThreadPool instance_for_middle_level(pool_size);
@@ -74,8 +74,9 @@ namespace nil {
                 throw std::invalid_argument("Invalid instance of thread pool requested.");
             }
 
-            ThreadPool(const ThreadPool& obj)= delete;
-            ThreadPool& operator=(const ThreadPool& obj)= delete;
+            ThreadPool(const ThreadPool &obj) = delete;
+
+            ThreadPool &operator=(const ThreadPool &obj) = delete;
 
             template<class ReturnType>
             inline std::future<ReturnType> post(std::function<ReturnType()> task) {
@@ -97,15 +98,13 @@ namespace nil {
         private:
             inline ThreadPool(std::size_t pool_size)
                 : pool(pool_size)
-                , pool_size(pool_size)  {
+                  , pool_size(pool_size) {
             }
 
             boost::asio::thread_pool pool;
             const std::size_t pool_size;
-
         };
-
-    }        // namespace crypto3
-}    // namespace nil
+    } // namespace crypto3
+} // namespace nil
 
 #endif // CRYPTO3_THREAD_POOL_HPP

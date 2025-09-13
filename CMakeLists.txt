@@ -28,14 +28,8 @@ option(BUILD_TESTS "Enable tests" TRUE)# used by CMTest module; If set to false,
 option(BUILD_CRYPTO3_BENCH_TESTS "Build performance benchmark tests" FALSE)
 option(BUILD_DOCS "Build with configuring Doxygen documentation compiler" FALSE)
 
-if(BUILD_TESTS)
-    enable_testing()
-endif()
-
 # The file compile_commands.json is generated in build directory, so LSP could
 # pick it up and guess all include paths, defines and other stuff.
-# If Nix is used, LSP could not guess the locations of implicit include
-# directories, so we need to include them explicitly.
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
     set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES
             ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
