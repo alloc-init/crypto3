@@ -1,6 +1,7 @@
 include(CMConfig)
 include(CMSetupVersion)
 include(CMTest)
+include(CMDeploy)
 
 macro(cm_find_package NAME)
     foreach(ITERATOR ${CMAKE_WORKSPACE_LIST})
@@ -12,7 +13,7 @@ macro(cm_find_package NAME)
     endforeach()
 endmacro()
 
-cm_project(core WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
+cm_project(parallelization_utils WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
 if(NOT Boost_FOUND AND NOT CMAKE_CROSSCOMPILING)
     cm_find_package(Boost)
@@ -57,5 +58,6 @@ target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
 
 add_tests(test)
 
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
+        INCLUDE include
+        NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
