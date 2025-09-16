@@ -173,10 +173,28 @@ namespace nil {
             struct is_extended_field_element {
                 static const bool value =
                     is_field_element<T>::value &&
-                    has_type_underlying_type<T>::value
-                    ;
+                    has_type_underlying_type<T>::value;
             };
+        
+            template<typename T>
+            struct is_complex : std::false_type {
+            };
+            template<typename T>
+            struct is_complex<std::complex<T>> : std::true_type {
+            };
+            template<typename T>
+            constexpr bool is_complex_v = is_complex<T>::value;
 
+            template<typename T>
+            struct remove_complex {
+                using type = T;
+            };
+            template<typename T>
+            struct remove_complex<std::complex<T>> {
+                using type = T;
+            };
+            template<typename T>
+            using remove_complex_t = typename remove_complex<T>::type;
         }    // namespace algebra
     }        // namespace crypto3
 }    // namespace nil
