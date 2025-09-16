@@ -33,6 +33,7 @@ target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         crypto3::algebra
         crypto3::multiprecision
         crypto3::parallelization_utils
+        crypto3::benchmark_tools
 
         Boost::random)
 
