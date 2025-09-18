@@ -373,12 +373,12 @@ namespace nil {
                         return result;
                     }
 
-                    template<typename Field>
-                    std::vector<typename Field::value_type> challenges(std::size_t N) {
+                    template<typename FieldType>
+                    std::vector<typename FieldType::value_type> challenges(std::size_t N) {
 
-                        std::vector<typename Field::value_type> result;
+                        std::vector<typename FieldType::value_type> result;
                         for (std::size_t i = 0; i < N; ++i) {
-                            result.push_back(challenge<Field>());
+                            result.push_back(challenge<FieldType>());
                         }
 
                         return result;
