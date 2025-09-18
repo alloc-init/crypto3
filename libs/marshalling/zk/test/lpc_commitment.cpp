@@ -469,13 +469,19 @@ BOOST_FIXTURE_TEST_CASE(batches_num_3_test, zk::test_tools::random_test_initiali
     std::vector<std::shared_ptr<math::evaluation_domain<field_type>>> D =
         math::calculate_domain_set<field_type>(extended_log, r);
 
+    //   params_type(const std::vector<std::size_t> &step_list_in,
+    //                 std::size_t degree_log,
+    //                 std::size_t lambda,
+    //                 std::size_t expand_factor,
+    //                 bool use_grinding = false,
+    //                 std::size_t grinding_parameter = 16)
+
     // Setup params
     typename fri_type::params_type fri_params(
-        d - 1, // max_degree
-        D,
         generate_random_step_list(r, 1, generic_random_engine),
-        2, //expand_factor
-        lambda
+        d - 1, // max_degree
+        lambda,
+        2 //expand_factor
     );
 
     using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, math::polynomial<typename field_type::value_type>>;

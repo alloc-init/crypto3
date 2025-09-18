@@ -85,7 +85,7 @@ namespace nil {
                     }
 
 
-                    void consume(const typename Field::value_type& field_element) {
+                    void consume(const typename FieldType::value_type& field_element) {
                         BOOST_ASSERT(current_iter <= this->end() - field_element_holder_size_multiplier);
                         if constexpr (algebra::is_field_element<Target>::value) {
                             *current_iter++ = field_element;
