@@ -81,7 +81,7 @@ namespace nil {
                 // 'length_bits' is the number of bits required to write the length of the message.
                 // Depending on the hash function, it's either 64 or 128 bits, even though the value is stored in 64-bit
                 // integers, since we never hash messages longer than 2^64 bits. 
-                constexpr static const std::size_t length_bits = Params::length_bits;
+                constexpr static const std::size_t length_bits = ParamsType::length_bits;
                 // We can consider to stop thresholding the length to 64 bits, but we don't want to. We never use messages
                 // larger than 2^64 bits.
                 constexpr static const std::size_t length_type_bits = length_bits < word_bits ? word_bits :
