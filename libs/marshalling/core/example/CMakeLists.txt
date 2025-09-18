@@ -13,24 +13,26 @@ include(CMTest)
 macro(define_marshalling_example name)
     add_executable(${CMAKE_WORKSPACE_NAME}_${name}_example ${name}.cpp)
 
-    target_link_libraries(marshalling_${name}_example PRIVATE
+    target_link_libraries(${CMAKE_WORKSPACE_NAME}_${name}_example PRIVATE
             ${CMAKE_WORKSPACE_NAME}::core
 
             Boost::container)
 
-    target_include_directories(marshalling_${name}_example PRIVATE
+    target_include_directories(${CMAKE_WORKSPACE_NAME}_${name}_example PRIVATE
             "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
             "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(marshalling_${name}_example PROPERTIES
-            CXX_STANDARD 23
+    set_target_properties(${CMAKE_WORKSPACE_NAME}_${name}_example PROPERTIES
+            CXX_STANDARD 20
             CXX_STANDARD_REQUIRED TRUE)
 endmacro()
 
 set(EXAMPLES_NAMES
-        "bundle")
+        "interfaces"
+        "pack"
+        "endian")
 
 foreach(EXAMPLES_NAME ${EXAMPLES_NAMES})
     define_marshalling_example(${EXAMPLES_NAME})

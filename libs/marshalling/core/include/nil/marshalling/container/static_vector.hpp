@@ -34,15 +34,10 @@
 
 #include <nil/marshalling/assert_type.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace container {
             namespace detail {
-
-                template<typename T>
-                struct alignas(T) element_type_placeholder {
-                    std::byte __data[sizeof(T)];
-                };
 
                 template<typename T>
                 class static_vector_base {
@@ -58,7 +53,7 @@ namespace nil::crypto3 {
                     using reverse_iterator = std::reverse_iterator<iterator>;
                     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-                    using cell_type = element_type_placeholder<T>;
+                    using cell_type = typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type;
 
                     static_assert(sizeof(cell_type) == sizeof(T), "type T must be padded");
 
@@ -478,7 +473,8 @@ namespace nil::crypto3 {
 
                 template<typename T, std::size_t TSize>
                 struct static_vector_storage_base {
-                    using element_type = element_type_placeholder<T>;
+                    using element_type = typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type;
+
                     using storage_type = std::array<element_type, TSize>;
                     storage_type data_;
                 };
@@ -1270,10 +1266,10 @@ namespace std {
 
     /// @brief Specializes the std::swap algorithm.
     /// @see <a href="http://en.cppreference.com/w/cpp/container/vector/swap2">Reference</a>
-    /// @related nil::crypto3::marshalling::container::static_vector
+    /// @related nil::marshalling::container::static_vector
     template<typename T, std::size_t TSize1, std::size_t TSize2>
-    void swap(nil::crypto3::marshalling::container::static_vector<T, TSize1> &v1,
-              nil::crypto3::marshalling::container::static_vector<T, TSize2> &v2) {
+    void swap(nil::marshalling::container::static_vector<T, TSize1> &v1,
+              nil::marshalling::container::static_vector<T, TSize2> &v2) {
         v1.swap(v2);
     }
 

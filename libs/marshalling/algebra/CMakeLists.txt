@@ -16,7 +16,6 @@ option(BUILD_WITH_NO_WARNINGS "Build threading warnings as errors" FALSE)
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 add_library(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE)
-add_library(${CMAKE_WORKSPACE_NAME}::${CURRENT_PROJECT_NAME} ALIAS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
         EXPORT_NAME ${CURRENT_PROJECT_NAME})
@@ -38,9 +37,7 @@ cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         INCLUDE include
         NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
 
-if(BUILD_EXAMPLES)
-    add_subdirectory(example)
-endif()
+cm_add_test_subdirectory(test)
 
 if((CMAKE_COMPILER_IS_GNUCC) OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
     set(extra_flags_list -Wall -Wextra -Wcast-align -Wcast-qual
@@ -71,6 +68,7 @@ if((CMAKE_COMPILER_IS_GNUCC) OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
     endif()
 elseif(MSVC)
+
     add_definitions("/wd4503" "/wd4309" "/wd4267" "-D_SCL_SECURE_NO_WARNINGS")
 
     if(NOT BUILD_WITH_NO_WARNINGS)

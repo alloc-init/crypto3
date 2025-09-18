@@ -26,26 +26,37 @@
 #ifndef MARSHALLING_TAG_HPP
 #define MARSHALLING_TAG_HPP
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace tag {
-                struct raw_array_list {
-                };
 
-                struct array_list {
-                };
+                struct raw_array_list { };
 
-                struct bundle {
-                };
+                struct array_list { };
 
-                struct integral {
-                };
+                struct bitfield { };
 
-                struct string {
-                };
-            } // namespace tag
-        } // namespace types
-    } // namespace marshalling
-} // namespace nil
+                struct bitmask { };
+
+                struct bundle { };
+
+                struct enumeration { };
+
+                struct floating_point { };
+
+                struct integral { };
+
+                struct no_value { };
+
+                struct optional { };
+
+                struct string { };
+
+                struct variant { };
+
+            }    // namespace tag
+        }        // namespace types
+    }            // namespace marshalling
+}    // namespace nil
 #endif    // MARSHALLING_TAG_HPP

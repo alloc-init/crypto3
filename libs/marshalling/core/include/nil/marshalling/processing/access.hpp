@@ -35,7 +35,7 @@
 #include <nil/marshalling/processing/detail/access.hpp>
 #include <nil/marshalling/endianness.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace processing {
 

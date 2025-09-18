@@ -39,10 +39,11 @@
 
 #include <nil/marshalling/types/string/type_traits.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace detail {
+
                 template<typename TFieldBase, typename TStorage>
                 class basic_string : public TFieldBase {
                     using base_impl_type = TFieldBase;
@@ -157,13 +158,13 @@ namespace nil::crypto3 {
                         auto *endStr = reinterpret_cast<ConstPointer>(&(*iter));
                         if (static_cast<std::size_t>(std::distance(str, endStr)) == len) {
                             using tag = typename std::conditional<detail::string_has_assign<value_type>::value,
-                                assign_exists_tag,
-                                assign_missing_tag>::type;
+                                                                  assign_exists_tag,
+                                                                  assign_missing_tag>::type;
                             eval_assign(str, len, tag());
                         } else {
                             using tag = typename std::conditional<detail::string_has_push_back<value_type>::value,
-                                push_back_exists_tag,
-                                push_back_missing_tag>::type;
+                                                                  push_back_exists_tag,
+                                                                  push_back_missing_tag>::type;
 
                             eval_push_dack(str, len, tag());
                         }
@@ -240,29 +241,14 @@ namespace nil::crypto3 {
                     }
 
                 private:
-                    struct assign_exists_tag {
-                    };
-
-                    struct assign_missing_tag {
-                    };
-
-                    struct push_back_exists_tag {
-                    };
-
-                    struct push_back_missing_tag {
-                    };
-
-                    struct reserve_exists_tag {
-                    };
-
-                    struct reserve_missing_tag {
-                    };
-
-                    struct advancable_tag {
-                    };
-
-                    struct not_advancable_tag {
-                    };
+                    struct assign_exists_tag { };
+                    struct assign_missing_tag { };
+                    struct push_back_exists_tag { };
+                    struct push_back_missing_tag { };
+                    struct reserve_exists_tag { };
+                    struct reserve_missing_tag { };
+                    struct advancable_tag { };
+                    struct not_advancable_tag { };
 
                     void eval_assign(typename value_type::const_pointer str, std::size_t len, assign_exists_tag) {
                         value_.assign(str, len);
@@ -281,15 +267,15 @@ namespace nil::crypto3 {
                     }
 
                     void
-                    eval_push_dack(typename value_type::const_pointer str, std::size_t len, push_back_missing_tag) {
+                        eval_push_dack(typename value_type::const_pointer str, std::size_t len, push_back_missing_tag) {
                         value_ = value_type(str, len);
                     }
 
                     void eval_reserve(std::size_t len) {
                         using tag =
-                                typename std::conditional<has_member_function_reserve<value_type>::value,
-                                    reserve_exists_tag,
-                                    reserve_missing_tag>::type;
+                            typename std::conditional<has_member_function_reserve<value_type>::value,
+                                                      reserve_exists_tag,
+                                                      reserve_missing_tag>::type;
                         eval_reserve(len, tag());
                     }
 
@@ -320,8 +306,9 @@ namespace nil::crypto3 {
 
                     value_type value_;
                 };
-            } // namespace detail
-        } // namespace types
-    } // namespace marshalling
-} // namespace nil
+
+            }    // namespace detail
+        }        // namespace types
+    }            // namespace marshalling
+}    // namespace nil
 #endif    // MARSHALLING_BASIC_STRING_HPP

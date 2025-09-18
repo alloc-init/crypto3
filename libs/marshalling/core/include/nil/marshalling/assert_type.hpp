@@ -34,8 +34,9 @@
 #include <type_traits>
 #include <utility>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
+
         /// @brief Base class for any custom assertion behaviour.
         /// @details In order to implement custom assertion failure behaviour it
         ///          is necessary to inherit from this class and override
@@ -102,7 +103,7 @@ namespace nil::crypto3 {
         ///          assertion failure.
         /// @tparam TAssert Class derived from Assert that implements new custom
         ///                 behaviour of the assertion failure.
-        /// @pre TAssert class must be derived from nil::crypto3::marshalling::assert_type.
+        /// @pre TAssert class must be derived from nil::marshalling::assert_type.
         /// @headerfile nil/marshalling/assert_type.hpp
         template<typename TAssert>
         class enable_assert {
@@ -119,8 +120,8 @@ namespace nil::crypto3 {
             ///          assertion object of type TAssert.
             /// @param args Arguments to pass to the assertion class constructor.
             template<typename... TParams>
-            enable_assert(TParams &&... args) : assert_(std::forward<TParams>(args)...),
-                                                prevAssert_(assert_manager::instance().reset(&assert_)) {
+            enable_assert(TParams &&...args) :
+                assert_(std::forward<TParams>(args)...), prevAssert_(assert_manager::instance().reset(&assert_)) {
             }
 
             /// @brief Destructor
@@ -143,7 +144,7 @@ namespace nil::crypto3 {
 
 #ifndef NDEBUG
 
-        /// @cond DOCUCMENT_AM_ASSERT_FUNCTION
+/// @cond DOCUCMENT_AM_ASSERT_FUNCTION
 #ifndef __ASSERT_FUNCTION
 #define MARSHALLING_ASSERT_FUNCTION_STR __FUNCTION__
 #else    // #ifndef __ASSERT_FUNCTION
@@ -153,21 +154,21 @@ namespace nil::crypto3 {
 #ifndef NOSTDLIB
 #define MARSHALLING_ASSERT_FAIL_FUNC(expr) assert(expr)
 #else    // #ifndef NOSTDLIB
-#define MARSHALLING_ASSERT_FAIL_FUNC(expr) nil::crypto3::marshalling::assert_manager::instance().infinite_loop()
+#define MARSHALLING_ASSERT_FAIL_FUNC(expr) nil::marshalling::assert_manager::instance().infinite_loop()
 #endif    // #ifndef NOSTDLIB
 
-        /// @endcond
+/// @endcond
 
-        /// @brief Generic assert macro
-        /// @details Will use custom assertion failure behaviour if such is defined,
-        ///          otherwise it will use standard "assert()" macro.
-        ///          In case NOSTDLIB is defined and no custom assertion failure was
-        ///          enabled, infinite loop will be executed.
-        /// @param expr Boolean expression
+/// @brief Generic assert macro
+/// @details Will use custom assertion failure behaviour if such is defined,
+///          otherwise it will use standard "assert()" macro.
+///          In case NOSTDLIB is defined and no custom assertion failure was
+///          enabled, infinite loop will be executed.
+/// @param expr Boolean expression
 #define MARSHALLING_ASSERT(expr)                                                      \
     ((expr) ? static_cast<void>(0) :                                                  \
-              (nil::crypto3::marshalling::assert_manager::instance().has_assert_registered() ? \
-                   nil::crypto3::marshalling::assert_manager::instance().get_assert()->fail(   \
+              (nil::marshalling::assert_manager::instance().has_assert_registered() ? \
+                   nil::marshalling::assert_manager::instance().get_assert()->fail(   \
                        #expr, __FILE__, __LINE__, MARSHALLING_ASSERT_FUNCTION_STR) :  \
                    MARSHALLING_ASSERT_FAIL_FUNC(expr)))
 
@@ -177,9 +178,10 @@ namespace nil::crypto3 {
 
 #endif    // #ifndef NDEBUG
 
-        /// @brief Same as @ref MARSHALLING_ASSERT
-        /// @details Kept for backward compatibility of already written protocols.
+/// @brief Same as @ref MARSHALLING_ASSERT
+/// @details Kept for backward compatibility of already written protocols.
 #define GASSERT(expr) MARSHALLING_ASSERT(expr)
-    } // namespace marshalling
-} // namespace nil
+
+    }    // namespace marshalling
+}    // namespace nil
 #endif    // MARSHALLING_ASSERT_TYPE_HPP

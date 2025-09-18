@@ -39,16 +39,25 @@
 #include <nil/marshalling/types/array_list/type_traits.hpp>
 #include <nil/marshalling/container/type_traits.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace detail {
+
                 template<typename TFieldBase, typename TStorage>
-                class basic_array_list : public TFieldBase {
+                class basic_array_list
+                    : public TFieldBase,
+                      public detail::version_storage<
+                          typename TFieldBase::version_type,
+                          detail::array_list_element_is_version_dependent<typename TStorage::value_type>()> {
                     using base_impl_type = TFieldBase;
+                    using version_base_impl = detail::version_storage<
+                        typename TFieldBase::version_type,
+                        detail::array_list_element_is_version_dependent<typename TStorage::value_type>()>;
 
                 public:
                     using endian_type = typename base_impl_type::endian_type;
+                    using version_type = typename base_impl_type::version_type;
 
                     using element_type = typename TStorage::value_type;
                     using value_type = TStorage;
@@ -86,6 +95,7 @@ namespace nil::crypto3 {
 
                     element_type &create_back() {
                         value_.emplace_back();
+                        update_elem_version(value_.back(), version_tag());
                         return value_.back();
                     }
 
@@ -149,22 +159,20 @@ namespace nil::crypto3 {
 
                     template<typename TIter>
                     status_type read(TIter &iter, std::size_t len) {
+
                         using IterType = typename std::decay<decltype(iter)>::type;
                         using IterCategory = typename std::iterator_traits<IterType>::iterator_category;
                         static const bool IsRandomAccessIter
-                                = std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
+                            = std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
                         static const bool IsRawData
-                                = std::is_integral<element_type>::value && (
-                                      sizeof(element_type) == sizeof(std::uint8_t));
+                            = std::is_integral<element_type>::value && (sizeof(element_type) == sizeof(std::uint8_t));
 
                         using tag = typename std::conditional<IsRandomAccessIter && IsRawData, raw_data_tag,
-                            field_elem_tag>::type;
+                                                              field_elem_tag>::type;
 
-                        auto length = std::is_same<typename std::iterator_traits<IterType>::value_type, bool>::value ?
-                                          max_bit_length() :
-                                          max_length();
+                        auto length = std::is_same<typename std::iterator_traits<IterType>::value_type, bool>::value ? max_bit_length() : max_length();
 
-                        if (len > length) {
+                        if (len > length){
                             len = length;
                         }
 
@@ -179,13 +187,12 @@ namespace nil::crypto3 {
                         using IterType = typename std::decay<decltype(iter)>::type;
                         using IterCategory = typename std::iterator_traits<IterType>::iterator_category;
                         static const bool IsRandomAccessIter
-                                = std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
+                            = std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
                         static const bool IsRawData
-                                = std::is_integral<element_type>::value && (
-                                      sizeof(element_type) == sizeof(std::uint8_t));
+                            = std::is_integral<element_type>::value && (sizeof(element_type) == sizeof(std::uint8_t));
 
                         using tag = typename std::conditional<IsRandomAccessIter && IsRawData, raw_data_tag,
-                            field_elem_tag>::type;
+                                                              field_elem_tag>::type;
 
                         return read_internal_n(count, iter, len, tag());
                     }
@@ -195,13 +202,12 @@ namespace nil::crypto3 {
                         using IterType = typename std::decay<decltype(iter)>::type;
                         using IterCategory = typename std::iterator_traits<IterType>::iterator_category;
                         static const bool IsRandomAccessIter
-                                = std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
+                            = std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
                         static const bool IsRawData
-                                = std::is_integral<element_type>::value && (
-                                      sizeof(element_type) == sizeof(std::uint8_t));
+                            = std::is_integral<element_type>::value && (sizeof(element_type) == sizeof(std::uint8_t));
 
                         using tag = typename std::conditional<IsRandomAccessIter && IsRawData, raw_data_tag,
-                            field_elem_tag>::type;
+                                                              field_elem_tag>::type;
 
                         return read_no_status_internal_n(count, iter, tag());
                     }
@@ -236,34 +242,35 @@ namespace nil::crypto3 {
                         common_funcs::write_sequence_no_status_n(*this, count, iter);
                     }
 
+                    static constexpr bool is_version_dependent() {
+                        return detail::array_list_element_is_version_dependent<element_type>();
+                    }
+
+                    bool set_version(version_type version) {
+                        return set_version_internal(version, version_tag());
+                    }
+
                 private:
-                    struct field_elem_tag {
-                    };
-
-                    struct integral_elem_tag {
-                    };
-
-                    struct fixed_length_tag {
-                    };
-
-                    struct var_length_tag {
-                    };
-
-                    struct raw_data_tag {
-                    };
-
-                    struct assign_exists_tag {
-                    };
-
-                    struct assign_missing_tag {
-                    };
+                    struct field_elem_tag { };
+                    struct integral_elem_tag { };
+                    struct fixed_length_tag { };
+                    struct var_length_tag { };
+                    struct raw_data_tag { };
+                    struct assign_exists_tag { };
+                    struct assign_missing_tag { };
+                    struct version_dependent_tag { };
+                    struct no_version_dependency_tag { };
 
                     using elem_tag = typename std::conditional<std::is_integral<element_type>::value, integral_elem_tag,
-                        field_elem_tag>::type;
+                                                               field_elem_tag>::type;
 
                     using field_length_tag =
-                    typename std::conditional<detail::array_list_field_has_var_length<element_type>::value,
-                        var_length_tag, fixed_length_tag>::type;
+                        typename std::conditional<detail::array_list_field_has_var_length<element_type>::value,
+                                                  var_length_tag, fixed_length_tag>::type;
+
+                    using version_tag =
+                        typename std::conditional<detail::array_list_element_is_version_dependent<element_type>(),
+                                                  version_dependent_tag, no_version_dependency_tag>::type;
 
                     constexpr std::size_t length_internal(field_elem_tag) const {
                         return field_length(field_length_tag());
@@ -284,7 +291,7 @@ namespace nil::crypto3 {
                                 return sum + e.length();
                             });
                     }
-
+                    
                     constexpr std::size_t bit_length_internal(field_elem_tag) const {
                         return bit_field_length(field_elem_tag());
                     }
@@ -314,9 +321,9 @@ namespace nil::crypto3 {
                         status_type es = elem.read(iter, len);
                         if (es == status_type::success) {
                             std::size_t true_length = 0;
-                            if constexpr (std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value) {
+                            if constexpr(std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value){
                                 true_length = elem.bit_length();
-                            } else {
+                            } else{
                                 true_length = elem.length();
                             }
                             MARSHALLING_ASSERT(true_length <= len);
@@ -373,9 +380,9 @@ namespace nil::crypto3 {
                         status_type es = elem.write(iter, len);
                         if (es == status_type::success) {
                             std::size_t true_length = 0;
-                            if constexpr (std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value) {
+                            if constexpr(std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value){
                                 true_length = elem.bit_length();
-                            } else {
+                            } else{
                                 true_length = elem.length();
                             }
 
@@ -494,7 +501,7 @@ namespace nil::crypto3 {
                     template<typename TIter>
                     status_type read_internal(TIter &iter, std::size_t len, raw_data_tag) {
                         using tag = typename std::conditional<detail::vector_has_assign<value_type>::value,
-                            assign_exists_tag, assign_missing_tag>::type;
+                                                              assign_exists_tag, assign_missing_tag>::type;
                         eval_assign(iter, len, tag());
                         std::advance(iter, len);
                         return status_type::success;
@@ -507,8 +514,8 @@ namespace nil::crypto3 {
 
                     template<typename TIter>
                     void eval_assign(TIter &iter, std::size_t len, assign_missing_tag) {
-                        typename value_type::const_pointer data =
-                                reinterpret_cast<typename value_type::const_pointer>(&(*iter));
+                        typename value_type::const_pointer data = 
+                            reinterpret_cast<typename value_type::const_pointer>(&(*iter));
                         value_ = value_type(data, len);
                     }
 
@@ -552,10 +559,32 @@ namespace nil::crypto3 {
                         read_internal(iter, count, raw_data_tag());
                     }
 
+                    bool update_elem_version(element_type &elem, version_dependent_tag) {
+                        return elem.set_version(version_base_impl::version_);
+                    }
+
+                    static constexpr bool update_elem_version(element_type &, no_version_dependency_tag) {
+                        return false;
+                    }
+
+                    bool set_version_internal(version_type version, version_dependent_tag) {
+                        version_base_impl::version_ = version;
+                        bool updated = false;
+                        for (auto &elem : value()) {
+                            updated = elem.set_version(version) || updated;
+                        }
+
+                        return updated;
+                    }
+
+                    static constexpr bool set_version_internal(version_type, no_version_dependency_tag) {
+                        return false;
+                    }
+
                     value_type value_;
                 };
-            } // namespace detail
-        } // namespace types
-    } // namespace marshalling
-} // namespace nil
+            }        // namespace detail
+        }        // namespace types
+    }            // namespace marshalling
+}    // namespace nil
 #endif    // MARSHALLING_BASIC_ARRAY_LIST_HPP

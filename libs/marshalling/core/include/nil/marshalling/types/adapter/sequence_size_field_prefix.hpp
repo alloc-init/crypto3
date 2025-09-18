@@ -29,14 +29,18 @@
 #include <nil/marshalling/assert_type.hpp>
 #include <nil/marshalling/status_type.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace adapter {
+
                 template<typename TSizeField, typename TBase>
                 class sequence_size_field_prefix : public TBase {
                     using base_impl_type = TBase;
                     using size_field_type = TSizeField;
+
+                    static_assert(!size_field_type::is_version_dependent(),
+                                  "Prefix fields must not be version dependent");
 
                 public:
                     using value_type = typename base_impl_type::value_type;
@@ -125,8 +129,9 @@ namespace nil::crypto3 {
                         base_impl_type::write_no_status(iter);
                     }
                 };
-            } // namespace adapter
-        } // namespace types
-    } // namespace marshalling
-} // namespace nil
+
+            }    // namespace adapter
+        }        // namespace types
+    }            // namespace marshalling
+}    // namespace nil
 #endif    // MARSHALLING_SEQUENCE_SIZE_FIELD_PREFIX_HPP

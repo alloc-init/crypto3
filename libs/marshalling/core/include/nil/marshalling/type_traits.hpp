@@ -34,77 +34,156 @@
 
 #include <nil/marshalling/types/tag.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         BOOST_TTI_HAS_TYPE(tag)
 
         /// @brief Compile time check function of whether a provided type is any
-        ///     variant of nil::crypto3::marshalling::types::array_list.
+        ///     variant of nil::marshalling::types::array_list.
         /// @tparam T Any type.
         /// @return true in case provided type is any variant of @ref array_list
-        /// @related nil::crypto3::marshalling::types::array_list
+        /// @related nil::marshalling::types::array_list
         template<typename T>
         struct is_array_list {
-            static const bool value = has_type_tag<T,
+
+            static const bool value = has_type_tag<T, 
                 boost::is_same<boost::mpl::placeholders::_1, types::tag::array_list>>::value;
         };
 
         template<typename T>
         struct is_raw_array_list {
-            static const bool value = has_type_tag<T,
+            static const bool value = has_type_tag<T, 
                 boost::is_same<boost::mpl::placeholders::_1, types::tag::raw_array_list>>::value;
         };
 
         /// @brief Compile time check function of whether a provided type is any
-        ///     variant of nil::crypto3::marshalling::types::bundle.
+        ///     variant of nil::marshalling::types::bitfield.
+        /// @tparam T Any type.
+        /// @return true in case provided type is any variant of @ref bitfield
+        /// @related nil::marshalling::types::bitfield
+        template<typename T>
+        struct is_bitfield {
+            static const bool value = has_type_tag<T, 
+                boost::is_same<boost::mpl::placeholders::_1, types::tag::bitfield>>::value;
+        };
+
+        /// @brief Compile time check function of whether a provided type is any
+        ///     variant of nil::marshalling::types::bitmask_value.
+        /// @tparam T Any type.
+        /// @return true in case provided type is any variant of @ref bitmask_value
+        /// @related nil::marshalling::types::bitmask_value
+        template<typename T>
+        struct is_bitmask_value {
+            static const bool value = has_type_tag<T, 
+                boost::is_same<boost::mpl::placeholders::_1, types::tag::bitmask>>::value;
+        };
+
+        /// @brief Compile time check function of whether a provided type is any
+        ///     variant of nil::marshalling::types::bundle.
         /// @tparam T Any type.
         /// @return true in case provided type is any variant of @ref bundle
-        /// @related nil::crypto3::marshalling::types::bundle
+        /// @related nil::marshalling::types::bundle
         template<typename T>
         struct is_bundle {
-            static const bool value = has_type_tag<T,
+            static const bool value = has_type_tag<T, 
                 boost::is_same<boost::mpl::placeholders::_1, types::tag::bundle>>::value;
         };
 
         /// @brief Compile time check function of whether a provided type is any
-        ///     variant of nil::crypto3::marshalling::types::integral.
+        ///     variant of nil::marshalling::types::enumeration.
+        /// @tparam T Any type.
+        /// @return true in case provided type is any variant of @ref enumeration
+        /// @related nil::marshalling::types::enumeration
+        template<typename T>
+        struct is_enumeration {
+            static const bool value = has_type_tag<T, 
+                boost::is_same<boost::mpl::placeholders::_1, types::tag::enumeration>>::value;
+        };
+
+        /// @brief Compile time check function of whether a provided type is any
+        ///     variant of nil::marshalling::types::float_value.
+        /// @tparam T Any type.
+        /// @return true in case provided type is any variant of @ref float_value
+        /// @related nil::marshalling::types::float_value
+        template<typename T>
+        struct is_float_value {
+            static const bool value = has_type_tag<T, 
+                boost::is_same<boost::mpl::placeholders::_1, types::tag::floating_point>>::value;
+        };
+
+        /// @brief Compile time check function of whether a provided type is any
+        ///     variant of nil::marshalling::types::integral.
         /// @tparam T Any type.
         /// @return true in case provided type is any variant of @ref integral
-        /// @related nil::crypto3::marshalling::types::integral
+        /// @related nil::marshalling::types::integral
         template<typename T>
         struct is_integral {
-            static const bool value = has_type_tag<T,
+            static const bool value = has_type_tag<T, 
                 boost::is_same<boost::mpl::placeholders::_1, types::tag::integral>>::value;
         };
 
         /// @brief Compile time check function of whether a provided type is any
-        ///     variant of nil::crypto3::marshalling::types::string.
+        ///     variant of nil::marshalling::types::no_value.
+        /// @tparam T Any type.
+        /// @return true in case provided type is any variant of @ref no_value
+        /// @related nil::marshalling::types::no_value
+        template<typename T>
+        struct is_no_value {
+            static const bool value = has_type_tag<T, 
+                boost::is_same<boost::mpl::placeholders::_1, types::tag::no_value>>::value;
+        };
+
+        /// @brief Compile time check function of whether a provided type is any
+        ///     variant of nil::marshalling::types::optional.
+        /// @tparam T Any type.
+        /// @return true in case provided type is any variant of @ref optional
+        /// @related nil::marshalling::types::optional
+        template<typename T>
+        struct is_optional {
+            static const bool value = has_type_tag<T, 
+                boost::is_same<boost::mpl::placeholders::_1, types::tag::optional>>::value;
+        };
+
+        /// @brief Compile time check function of whether a provided type is any
+        ///     variant of nil::marshalling::types::string.
         /// @tparam T Any type.
         /// @return true in case provided type is any variant of @ref string
-        /// @related nil::crypto3::marshalling::types::string
+        /// @related nil::marshalling::types::string
         template<typename T>
         struct is_string {
-            static const bool value = has_type_tag<T,
+            static const bool value = has_type_tag<T, 
                 boost::is_same<boost::mpl::placeholders::_1, types::tag::string>>::value;
+        };
+
+        /// @brief Compile time check function of whether a provided type is any
+        ///     variant of nil::marshalling::types::variant.
+        /// @tparam T Any type.
+        /// @return true in case provided type is any variant of @ref variant
+        /// @related nil::marshalling::types::variant
+        template<typename T>
+        struct is_variant {
+            static const bool value = has_type_tag<T, 
+                boost::is_same<boost::mpl::placeholders::_1, types::tag::variant>>::value;
         };
 
         template<typename T>
         struct is_marshalling_type {
-            static const bool value =
-                    boost::is_base_of<detail::field_base<>, T>::value;
+            static const bool value = 
+                boost::is_base_of<detail::field_base<>, T>::value;
         };
 
         template<typename T, typename Enabled = void>
         struct is_container;
 
         template<typename T>
-        struct is_container<T, typename std::enable_if<nil::crypto3::marshalling::is_integral<T>::value>::type> {
+        struct is_container <T, typename std::enable_if<nil::marshalling::is_integral<T>::value
+                                                || is_float_value<T>::value>::type> {
             static const bool value = false;
         };
 
         template<typename T>
-        struct is_container<T, typename std::enable_if<is_array_list<T>::value
-                                                       || is_bundle<T>::value>::type> {
+        struct is_container <T, typename std::enable_if<is_array_list<T>::value
+                                                || is_bundle<T>::value>::type> {
             static const bool value = true;
         };
 
@@ -114,16 +193,14 @@ namespace nil::crypto3 {
         };
 
         template<typename T>
-        struct is_supported_representation_type<T, typename std::enable_if<std::is_same<std::uint8_t, T>::value
-                                                                           || std::is_same<std::int8_t, T>::value
-                                                                           || std::is_same<char, T>::value ||
-                                                                           std::is_same<bool, T>::value>::type> {
+        struct is_supported_representation_type<T,  typename std::enable_if<std::is_same<std::uint8_t, T>::value
+                || std::is_same<std::int8_t, T>::value
+                || std::is_same<char, T>::value || std::is_same<bool, T>::value>::type> {
             static const bool value = true;
         };
 
         template<typename T>
-        struct is_supported_representation_type<T, typename std::enable_if<is_supported_representation_type<typename
-                    T::value_type>::value>::type> {
+        struct is_supported_representation_type<T,  typename std::enable_if<is_supported_representation_type<typename T::value_type>::value>::type> {
             static const bool value = true;
         };
 
@@ -131,8 +208,7 @@ namespace nil::crypto3 {
         // The following four functions we need only because of absence of BOOST_TTI_HAS_MEMBER_FUNCTION for std::string
         template<typename T>
         class has_member_function_clear {
-            struct no {
-            };
+            struct no { };
 
         protected:
             template<typename C>
@@ -147,8 +223,7 @@ namespace nil::crypto3 {
 
         template<typename T>
         class has_member_function_reserve {
-            struct no {
-            };
+            struct no { };
 
         protected:
             template<typename C>
@@ -163,8 +238,7 @@ namespace nil::crypto3 {
 
         template<typename T>
         class has_member_function_resize {
-            struct no {
-            };
+            struct no { };
 
         protected:
             template<typename C>
@@ -195,7 +269,8 @@ namespace nil::crypto3 {
         public:
             constexpr static const bool value = (sizeof(test<T>(nullptr)) == sizeof(Yes));
         };
-    } // namespace marshalling
-} // namespace nil
+
+    }        // namespace marshalling
+}    // namespace nil
 
 #endif    // MARSHALLING_TYPE_TRAITS_HPP

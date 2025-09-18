@@ -38,10 +38,11 @@
 #include <nil/marshalling/container/static_string.hpp>
 #include <nil/marshalling/types/detail/common_funcs.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace detail {
+
                 template<typename TElemType, bool TIntegral>
                 struct array_list_field_has_var_length_helper;
 
@@ -58,8 +59,8 @@ namespace nil::crypto3 {
                 template<typename TElemType>
                 struct array_list_field_has_var_length {
                     static const bool value
-                            = array_list_field_has_var_length_helper<TElemType,
-                                std::is_integral<TElemType>::value>::value;
+                        = array_list_field_has_var_length_helper<TElemType,
+                                                                 std::is_integral<TElemType>::value>::value;
                 };
 
                 template<typename TStorage>
@@ -69,13 +70,12 @@ namespace nil::crypto3 {
 
                 template<typename T, std::size_t TSize>
                 struct array_list_max_length_retrieve_helper<
-                            nil::crypto3::marshalling::container::static_vector<T, TSize>> {
+                    nil::marshalling::container::static_vector<T, TSize>> {
                     static const std::size_t value = TSize;
                 };
 
                 template<std::size_t TSize>
-                struct array_list_max_length_retrieve_helper<nil::crypto3::marshalling::container::static_string<
-                            TSize>> {
+                struct array_list_max_length_retrieve_helper<nil::marshalling::container::static_string<TSize>> {
                     static const std::size_t value = TSize - 1;
                 };
 
@@ -100,8 +100,39 @@ namespace nil::crypto3 {
                 public:
                     static const bool value = (sizeof(test<T, typename T::const_pointer>(nullptr)) == sizeof(Yes));
                 };
-            } // namespace detail
-        } // namespace types
-    } // namespace marshalling
-} // namespace nil
+
+                template<typename TVersionType, bool TVersionDependent>
+                struct version_storage;
+
+                template<typename TVersionType>
+                struct version_storage<TVersionType, true> {
+                protected:
+                    TVersionType version_ = TVersionType();
+                };
+
+                template<typename TVersionType>
+                struct version_storage<TVersionType, false> { };
+
+                template<typename TElem, bool TIsIntegral>
+                struct array_list_elem_version_dependency_helper;
+
+                template<typename TElem>
+                struct array_list_elem_version_dependency_helper<TElem, true> {
+                    static const bool value = false;
+                };
+
+                template<typename TElem>
+                struct array_list_elem_version_dependency_helper<TElem, false> {
+                    static const bool value = TElem::is_version_dependent();
+                };
+
+                template<typename TElem>
+                constexpr bool array_list_element_is_version_dependent() {
+                    return array_list_elem_version_dependency_helper<TElem, std::is_integral<TElem>::value>::value;
+                }
+
+            }    // namespace detail
+        }        // namespace types
+    }            // namespace marshalling
+}    // namespace nil
 #endif    // MARSHALLING_BASIC_ARRAY_LIST_TYPE_TRAITS_HPP

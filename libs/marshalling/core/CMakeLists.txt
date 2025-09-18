@@ -11,22 +11,9 @@ include(CMSetupVersion)
 
 option(BUILD_WITH_NO_WARNINGS "Build threading warnings as errors" FALSE)
 
-# When set, the code always throws on invalid data.
-# If not set, the code is using BOOST_VERIFY - noop in release and stop in debug
-option(CRYPTO3_MARSHALLING_THROWS "Throw exceptions when marshalling invalid data" TRUE)
-
-if(CRYPTO3_MARSHALLING_THROWS)
-    add_definitions(-DCRYPTO3_MARSHALLING_THROWS)
-endif()
-
-if(NOT CMAKE_CXX_STANDARD)
-    set_target_properties(${test_name} PROPERTIES CXX_STANDARD 23)
-endif()
-
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 add_library(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE)
-add_library(${CMAKE_WORKSPACE_NAME}::${CURRENT_PROJECT_NAME} ALIAS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
         EXPORT_NAME ${CURRENT_PROJECT_NAME})

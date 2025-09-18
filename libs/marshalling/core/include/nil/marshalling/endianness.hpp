@@ -34,26 +34,19 @@
 
 #include <boost/static_assert.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace endian {
+
             // General versions; There should be no need to use these directly
             template<int UnitBits>
-            struct big_unit_big_bit {
-            };
-
+            struct big_unit_big_bit { };
             template<int UnitBits>
-            struct little_unit_little_bit {
-            };
-
+            struct little_unit_little_bit { };
             template<int UnitBits>
-            struct big_unit_little_bit {
-            };
-
+            struct big_unit_little_bit { };
             template<int UnitBits>
-            struct little_unit_big_bit {
-            };
-
+            struct little_unit_big_bit { };
             template<int UnitBits>
             struct host_unit {
                 BOOST_STATIC_ASSERT(UnitBits % CHAR_BIT == 0);
@@ -82,8 +75,9 @@ namespace nil::crypto3 {
 
             /// @brief Empty class used in traits to indicate little endian.
             using little_endian = little_octet_big_bit;
-        } // namespace endian
-    } // namespace marshalling
-} // namespace nil
+
+        }    // namespace endian
+    }            // namespace marshalling
+}    // namespace nil
 
 #endif    // MARSHALLING_ENDIANNESS_HPP

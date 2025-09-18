@@ -39,17 +39,18 @@
 
 #include <nil/marshalling/types/detail/common_funcs.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace detail {
+
                 template<typename TStorage>
                 struct string_max_length_retrieve_helper {
                     static const std::size_t value = common_funcs::max_supported_length();
                 };
 
                 template<std::size_t TSize>
-                struct string_max_length_retrieve_helper<nil::crypto3::marshalling::container::static_string<TSize>> {
+                struct string_max_length_retrieve_helper<nil::marshalling::container::static_string<TSize>> {
                     static const std::size_t value = TSize - 1;
                 };
 
@@ -64,7 +65,7 @@ namespace nil::crypto3 {
 
                     template<typename C>
                     static Yes
-                    test(ReallyHas<C &(C::*)(typename C::const_pointer, typename C::size_type), &C::assign> *);
+                        test(ReallyHas<C &(C::*)(typename C::const_pointer, typename C::size_type), &C::assign> *);
 
                     template<typename C>
                     static Yes test(
@@ -95,8 +96,9 @@ namespace nil::crypto3 {
                 public:
                     static const bool value = (sizeof(test<T>(0)) == sizeof(Yes));
                 };
-            } // namespace detail
-        } // namespace types
-    } // namespace marshalling
-} // namespace nil
+
+            }    // namespace detail
+        }        // namespace types
+    }            // namespace marshalling
+}    // namespace nil
 #endif    // MARSHALLING_BASIC_STRING_TYPE_TRAITS_HPP
