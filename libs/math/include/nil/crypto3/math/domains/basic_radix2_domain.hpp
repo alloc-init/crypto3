@@ -74,10 +74,10 @@ namespace nil {
 
                     if (!std::is_same<field_value_type, std::complex<double>>::value) {
                         const std::size_t logm = static_cast<std::size_t>(std::ceil(std::log2(m)));
-                        if (logm > (fields::arithmetic_params<FieldType>::two_adicity))
+                        if (logm > (fields::arithmetic_params<FieldType>::s))
                             throw std::invalid_argument(
                                 "basic_radix2(): expected logm <= "
-                                "fields::arithmetic_params<FieldType>::two_adicity");
+                                "fields::arithmetic_params<FieldType>::s");
                     }
 
                     // We need to always create fft cache, we cannot create it when needed in parallel environment.

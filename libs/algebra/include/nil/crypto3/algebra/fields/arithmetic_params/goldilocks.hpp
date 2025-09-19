@@ -43,7 +43,7 @@ namespace nil {
                     typedef typename policy_type::modular_type modular_type;
                     typedef typename policy_type::integral_type integral_type;
 
-                    constexpr static const std::size_t two_adicity = 32;
+                    constexpr static const std::size_t s = 32;
                     constexpr static const integral_type arithmetic_generator = 0x01;
                     constexpr static const integral_type geometric_generator = 0x02;
                     constexpr static const integral_type multiplicative_generator = 0x07;
@@ -55,7 +55,7 @@ namespace nil {
                 struct arithmetic_params<goldilocks_fp2> : public params<goldilocks> {
                     // It's actually 29 but that requires going into the extension field and we don't
                     // want that
-                    constexpr static std::size_t two_adicity = 32;
+                    constexpr static std::size_t s = 32;
                     constexpr static goldilocks_fp2::value_type multiplicative_generator{
                         {goldilocks::value_type(18081566051660590251ull), goldilocks::value_type(16121475356294670766ull)}};
                     constexpr static integral_type root_of_unity = 0x185629DCDA58878Cull;

@@ -53,7 +53,7 @@ namespace nil {
                     const std::size_t log_m = static_cast<std::size_t>(std::ceil(std::log2(m)));
 
                     return (m > 1) &&
-                           (log_m <= fields::arithmetic_params<FieldType>::two_adicity) &&
+                           (log_m <= fields::arithmetic_params<FieldType>::s) &&
                            (m == (1ul << log_m));
                 }
 
@@ -65,10 +65,10 @@ namespace nil {
 
                     return (m > 1) &&
                            (log_m ==
-                            fields::arithmetic_params<FieldType>::two_adicity + 1) &&
+                            fields::arithmetic_params<FieldType>::s + 1) &&
                            (small_m == (1ul << log_small_m)) &&
                            (log_small_m <=
-                            fields::arithmetic_params<FieldType>::two_adicity);
+                            fields::arithmetic_params<FieldType>::s);
                 }
 
                 template<typename FieldType>
@@ -82,7 +82,7 @@ namespace nil {
                     return (m > 1) && (small_m == (1ul << log_small_m)) &&
                            (shift_log_m == (1ul << log_shift_log_m)) &&
                            (log_shift_log_m <=
-                            fields::arithmetic_params<FieldType>::two_adicity);
+                            fields::arithmetic_params<FieldType>::s);
                 }
 
                 template<typename FieldType>
