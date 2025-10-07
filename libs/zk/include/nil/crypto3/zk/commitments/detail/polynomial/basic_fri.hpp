@@ -672,14 +672,8 @@ namespace nil {
                 //}
 
                 template<typename FRI>
-                static inline std::pair<
-                    std::vector<std::array<
-                        typename FRI::field_type::small_subfield::value_type, FRI::m>>,
-                    std::vector<std::array<std::size_t, FRI::m>>>
-                calculate_s(
-                    const std::size_t x_index, const std::size_t fri_step,
-                    std::shared_ptr<math::evaluation_domain<typename FRI::field_type>>
-                        D) {
+                static inline auto calculate_s(const std::size_t x_index, const std::size_t fri_step,
+                                               std::shared_ptr<math::evaluation_domain<typename FRI::field_type>> D) {
                     const std::size_t domain_size = D->size();
                     const std::size_t coset_size = 1 << fri_step;
                     std::vector<std::array<

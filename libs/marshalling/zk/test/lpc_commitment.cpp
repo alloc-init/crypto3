@@ -440,6 +440,8 @@ BOOST_AUTO_TEST_SUITE(marshalling_real)
     using merkle_hash_type = nil::crypto3::hashes::keccak_1600<256>;
     using transcript_hash_type = nil::crypto3::hashes::keccak_1600<256>;
     using merkle_tree_type = typename containers::merkle_tree<merkle_hash_type, 2>;
+    using poly_type = math::polynomial_dfs<typename field_type::value_type>;
+
 
 BOOST_FIXTURE_TEST_CASE(batches_num_3_test, zk::test_tools::random_test_initializer<field_type>){
     // Setup types.
@@ -484,16 +486,16 @@ BOOST_FIXTURE_TEST_CASE(batches_num_3_test, zk::test_tools::random_test_initiali
         2 //expand_factor
     );
 
-    using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, math::polynomial<typename field_type::value_type>>;
+    using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, poly_type>;
     lpc_scheme_type lpc_scheme_prover(fri_params);
     lpc_scheme_type lpc_scheme_verifier(fri_params);
 
     // Generate polynomials
-    lpc_scheme_prover.append_to_batch(0, {1u, 13u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u});
-    lpc_scheme_prover.append_to_batch(2, {0u, 1u});
-    lpc_scheme_prover.append_to_batch(2, {0u, 1u, 2u});
-    lpc_scheme_prover.append_to_batch(2, {0u, 1u, 3u});
-    lpc_scheme_prover.append_to_batch(3, {0u});
+    lpc_scheme_prover.append_to_batch(0, poly_type(15, {1u, 13u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u}));
+    lpc_scheme_prover.append_to_batch(2, poly_type(1, {0u, 1u}));
+    lpc_scheme_prover.append_to_batch(2, poly_type(2, {0u, 1u, 2u}));
+    lpc_scheme_prover.append_to_batch(2, poly_type(2, {0u, 1u, 3u}));
+    lpc_scheme_prover.append_to_batch(3, poly_type(0, std::initializer_list<field_type::value_type>{0u}));
 
     // Commit
     std::map<std::size_t, typename lpc_type::commitment_type> commitments;

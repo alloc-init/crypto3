@@ -50,7 +50,7 @@ namespace nil {
                     class element_fp {
                         typedef FieldParams policy_type;
 
-                    public:
+                      public:
                         typedef typename policy_type::field_type field_type;
 
                         typedef typename policy_type::modular_type modular_type;
@@ -84,6 +84,10 @@ namespace nil {
                         constexpr element_fp(const element_fp &&B) BOOST_NOEXCEPT
                                 : data(std::move(B.data)) {}
 
+                        constexpr typename field_type::integral_type to_integral() const {
+                            return (typename field_type::integral_type)data;
+                        }
+
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.
                         constexpr static const element_fp &zero();
@@ -109,6 +113,16 @@ namespace nil {
                         constexpr element_fp &operator=(const element_fp &B) {
                             data = B.data;
 
+                            return *this;
+                        }
+
+                        element_fp binomial_extension_coefficient(
+                            std::size_t index) const {
+                            if (index != 0) {
+                                throw std::logic_error(
+                                    "FP is degree 1 extension of itself, but trying to "
+                                    "access more coefficients");
+                            }
                             return *this;
                         }
 
