@@ -49,6 +49,8 @@ namespace nil {
                 struct brainpool_r1_scalar_field<160> : public field<160> {
                     typedef field<160> policy_type;
 
+                    using small_subfield = brainpool_r1_scalar_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -74,6 +76,8 @@ namespace nil {
                 struct brainpool_r1_scalar_field<192> : public field<192> {
                     typedef field<192> policy_type;
 
+                    using small_subfield = brainpool_r1_scalar_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -97,6 +101,8 @@ namespace nil {
                 template<>
                 struct brainpool_r1_scalar_field<224> : public field<224> {
                     typedef field<224> policy_type;
+
+                    using small_subfield = brainpool_r1_scalar_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
@@ -122,6 +128,8 @@ namespace nil {
                 struct brainpool_r1_scalar_field<256> : public field<256> {
                     typedef field<256> policy_type;
 
+                    using small_subfield = brainpool_r1_scalar_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -145,6 +153,8 @@ namespace nil {
                 template<>
                 struct brainpool_r1_scalar_field<320> : public field<320> {
                     typedef field<320> policy_type;
+
+                    using small_subfield = brainpool_r1_scalar_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
@@ -170,6 +180,8 @@ namespace nil {
                 struct brainpool_r1_scalar_field<384> : public field<384> {
                     typedef field<384> policy_type;
 
+                    using small_subfield = brainpool_r1_scalar_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -193,6 +205,8 @@ namespace nil {
                 template<>
                 struct brainpool_r1_scalar_field<512> : public field<512> {
                     typedef field<512> policy_type;
+
+                    using small_subfield = brainpool_r1_scalar_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;

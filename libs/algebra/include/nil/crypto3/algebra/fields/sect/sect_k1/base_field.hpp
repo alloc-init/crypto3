@@ -49,6 +49,8 @@ namespace nil {
                 struct sect_k1_base_field<163> : public field<164> {
                     typedef field<164> policy_type;
 
+                    using small_subfield = sect_k1_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 

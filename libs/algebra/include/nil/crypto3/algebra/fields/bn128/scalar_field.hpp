@@ -49,6 +49,8 @@ namespace nil {
                 struct bn128_scalar_field<254> : public field<254> {
                     typedef field<254> policy_type;
 
+                    using small_subfield = bn128_scalar_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
