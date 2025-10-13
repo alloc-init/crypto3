@@ -55,7 +55,7 @@
 #include <nil/crypto3/algebra/fields/secp/secp_r1/base_field.hpp>
 #include <nil/crypto3/algebra/fields/secp/secp_r1/scalar_field.hpp>
 
-#include <nil/crypto3/algebra/fields/babybear.hpp>
+#include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/algebra/fields/curve25519/base_field.hpp>
 #include <nil/crypto3/algebra/fields/curve25519/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/goldilocks.hpp>
@@ -406,20 +406,6 @@ BOOST_DATA_TEST_CASE(field_operation_test_koalabear,
 BOOST_DATA_TEST_CASE(field_operation_test_babybear,
                      string_data("field_operation_test_babybear"), data_set) {
     using policy_type = fields::babybear;
-
-    field_operation_test<policy_type>(data_set);
-}
-
-BOOST_DATA_TEST_CASE(field_operation_test_babybear_fp4,
-                     string_data("field_operation_test_babybear_fp4"), data_set) {
-    using policy_type = fields::babybear_fp4;
-
-    field_operation_test<policy_type>(data_set);
-}
-
-BOOST_DATA_TEST_CASE(field_operation_test_babybear_fp5,
-                     string_data("field_operation_test_babybear_fp5"), data_set) {
-    using policy_type = fields::babybear_fp5;
 
     field_operation_test<policy_type>(data_set);
 }
