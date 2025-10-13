@@ -27,10 +27,6 @@
 
 #include <cstddef>
 
-#include <nil/crypto3/multiprecision/big_mod.hpp>
-#include <nil/crypto3/multiprecision/big_uint.hpp>
-#include <nil/crypto3/multiprecision/literals.hpp>
-
 #include <nil/crypto3/algebra/fields/detail/element/fp.hpp>
 
 #include <nil/crypto3/algebra/fields/field.hpp>
@@ -52,10 +48,13 @@ namespace nil::crypto3::algebra::fields {
         using integral_type = policy_type::integral_type;
 
         // 2^31 - 1
-        constexpr static integral_type modulus = 0x7fffffff_big_uint31;
+        constexpr static integral_type modulus = 0x7fffffff_cppui_modular31;
         constexpr static integral_type group_order_minus_one_half = (modulus - 1u) / 2;
 
-        using modular_type = nil::crypto3::multiprecision::auto_big_mod<modulus>;
+        constexpr static const modular_params_type modulus_params = modulus.backend();
+        typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+            modular_backend, boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+            modular_type;
         using value_type = detail::element_fp<params<mersenne31>>;
     };
 }  // namespace nil::crypto3::algebra::fields

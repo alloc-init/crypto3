@@ -43,12 +43,12 @@ namespace nil {
                     typedef typename policy_type::modular_type modular_type;
                     typedef typename policy_type::integral_type integral_type;
 
-                    constexpr static const std::size_t s = 0x20;
-                    constexpr static const integral_type arithmetic_generator = 0x01;
-                    constexpr static const integral_type geometric_generator = 0x02;
-                    constexpr static const integral_type multiplicative_generator = 0x07;
-                    constexpr static const integral_type root_of_unity =
-                            0x185629DCDA58878C_cppui_modular64;
+                    constexpr static const std::size_t s = 27;
+                    constexpr static integral_type arithmetic_generator = 1u;
+                    constexpr static integral_type multiplicative_generator = 31u;
+                    constexpr static integral_type root_of_unity = 0x1a427a41u;
+
+                    constexpr static integral_type geometric_generator = 0u;
                 };
 
                 constexpr std::size_t const arithmetic_params<babybear_base_field>::s;

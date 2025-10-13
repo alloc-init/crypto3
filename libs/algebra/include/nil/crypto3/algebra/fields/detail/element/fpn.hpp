@@ -36,18 +36,12 @@
 #include <nil/crypto3/algebra/fields/detail/element/operations.hpp>
 #include <nil/crypto3/algebra/fields/detail/exponentiation.hpp>
 
-#include <nil/crypto3/multiprecision/detail/big_mod/modular_ops/babybear_simd.hpp>
-
 namespace nil::crypto3::marshalling::types::detail {
     template<typename FieldValueType>
     typename std::enable_if<algebra::is_extended_field_element<FieldValueType>::value,
         std::array<typename FieldValueType::field_type::integral_type,
             FieldValueType::field_type::arity>>::type
     fill_field_data(const FieldValueType &field_elem);
-}
-
-namespace nil::crypto3::algebra::fields {
-    struct babybear;
 }
 
 namespace nil::crypto3::algebra::fields::detail {
@@ -149,11 +143,6 @@ namespace nil::crypto3::algebra::fields::detail {
             }
         }
 
-        template<std::size_t Bits>
-        constexpr element_fpn(const nil::crypto3::multiprecision::big_uint<Bits> &data)
-            : element_fpn(underlying_type(data)) {
-        }
-
         template<std::integral Number>
         constexpr element_fpn(const Number &data) : element_fpn(underlying_type(data)) {
         }
@@ -223,12 +212,6 @@ namespace nil::crypto3::algebra::fields::detail {
         }
 
         constexpr element_fpn operator*(const element_fpn &B) const {
-            if constexpr (dimension == 4 &&
-                          std::is_same_v<typename underlying_type::field_type,
-                              babybear>) {
-                return nil::crypto3::multiprecision::detail::babybear::babybear_fp4_vec_mul(
-                    data, B.data);
-            }
             element_fpn result;
             for (std::size_t j = 0; j < dimension; ++j) {
                 result.data[j] += data[0] * B.data[j];
@@ -315,7 +298,7 @@ namespace nil::crypto3::algebra::fields::detail {
 
         constexpr void square_inplace() { (*this) *= (*this); }
 
-        template<multiprecision::integral PowerType>
+        template<typename PowerType, typename = typename std::enable_if<boost::is_integral<PowerType>::value>::type>
         constexpr element_fpn pow(const PowerType &pwr) const {
             if constexpr (std::is_signed_v<PowerType>) {
                 if (pwr < 0) {

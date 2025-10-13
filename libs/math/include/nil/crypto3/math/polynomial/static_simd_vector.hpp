@@ -37,8 +37,6 @@
 
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
 
-#include <nil/crypto3/multiprecision/detail/big_mod/modular_ops/babybear_simd.hpp>
-
 namespace nil::crypto3::algebra::fields {
     struct babybear;
 }
