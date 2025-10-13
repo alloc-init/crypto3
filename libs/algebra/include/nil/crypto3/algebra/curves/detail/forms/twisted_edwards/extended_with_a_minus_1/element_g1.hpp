@@ -101,6 +101,10 @@ namespace nil {
                             : X(X), Y(Y), T(T), Z(Z) 
                         { }
 
+                        constexpr curve_element(const field_value_type& X, const field_value_type& Y) 
+                            : X(X), Y(Y), T(X * Y), Z(field_value_type::one())
+                        { }
+
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
                         explicit constexpr curve_element(

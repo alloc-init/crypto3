@@ -34,6 +34,8 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
+#include <boost/mpl/list.hpp>
+
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -436,34 +438,34 @@ BOOST_AUTO_TEST_CASE(curve_operation_test_babyjubjub_g1) {
 
     typename policy_type::value_type P4(
         typename policy_type::field_type::value_type(
-            0xF3C160E26FC96C347DD9E705EB5A3E8D661502728609FF95B3B889296901AB5_cppui_modular),
+            0xF3C160E26FC96C347DD9E705EB5A3E8D661502728609FF95B3B889296901AB5_cppui_modular251),
         typename policy_type::field_type::value_type(
-            0x9979273078B5C735585107619130E62E315C5CAFE683A064F79DFED17EB14E1_cppui_modular));
+            0x9979273078B5C735585107619130E62E315C5CAFE683A064F79DFED17EB14E1_cppui_modular251));
 
     P1.double_inplace();
     BOOST_CHECK_EQUAL(P1, P4);
 
     typename policy_type::value_type P5(
         typename policy_type::field_type::value_type(
-            0x274dbce8d15179969bc0d49fa725bddf9de555e0ba6a693c6adb52fc9ee7a82c_cppui_modular),
+            0x274dbce8d15179969bc0d49fa725bddf9de555e0ba6a693c6adb52fc9ee7a82c_cppui_modular251),
         typename policy_type::field_type::value_type(
-            0x5ce98c61b05f47fe2eae9a542bd99f6b2e78246231640b54595febfd51eb853_cppui_modular)),
+            0x5ce98c61b05f47fe2eae9a542bd99f6b2e78246231640b54595febfd51eb853_cppui_modular251)),
         et_s1P5(typename policy_type::field_type::value_type(
-                    0x2ad46cbfb78773b6254adc1d80c6efa02f3bf948c37e5a2222136421d7bec942_cppui_modular),
+                    0x2ad46cbfb78773b6254adc1d80c6efa02f3bf948c37e5a2222136421d7bec942_cppui_modular251),
                 typename policy_type::field_type::value_type(
-                    0x14e9693f16d75f7065ce51e1f46ae6c60841ca1e0cf264eda26398e36ca2ed69_cppui_modular)),
+                    0x14e9693f16d75f7065ce51e1f46ae6c60841ca1e0cf264eda26398e36ca2ed69_cppui_modular251)),
         et_s2P5(typename policy_type::field_type::value_type(
-                    0x031b924a83fbbdc206fb2d3bc85b7a724000714627f681a60b34885e4deca1d6_cppui_modular),
+                    0x031b924a83fbbdc206fb2d3bc85b7a724000714627f681a60b34885e4deca1d6_cppui_modular251),
                 typename policy_type::field_type::value_type(
-                    0x242e364702e64a6850c9aee7ece7ca79ba019ca7a63684e2df0873ca0d8f7e87_cppui_modular)),
+                    0x242e364702e64a6850c9aee7ece7ca79ba019ca7a63684e2df0873ca0d8f7e87_cppui_modular251)),
         P6(typename policy_type::field_type::value_type(
-               0xf3c160e26fc96c347dd9e705eb5a3e8d661502728609ff95b3b889296901ab5_cppui_modular),
+               0xf3c160e26fc96c347dd9e705eb5a3e8d661502728609ff95b3b889296901ab5_cppui_modular251),
            typename policy_type::field_type::value_type(
-               0x9979273078b5c735585107619130e62e315c5cafe683a064f79dfed17eb14e1_cppui_modular)),
+               0x9979273078b5c735585107619130e62e315c5cafe683a064f79dfed17eb14e1_cppui_modular251)),
         et_s1P6(typename policy_type::field_type::value_type(
-                    0x2e6475817d356adbbfcec42b2f7b90500d6f74e8cd4ec1ac0b6effd00ba854d7_cppui_modular),
+                    0x2e6475817d356adbbfcec42b2f7b90500d6f74e8cd4ec1ac0b6effd00ba854d7_cppui_modular251),
                 typename policy_type::field_type::value_type(
-                    0x195a50f93ff3f3e68bd593be5781301c32962777dc8237b099c23d39c24ec76a_cppui_modular));
+                    0x195a50f93ff3f3e68bd593be5781301c32962777dc8237b099c23d39c24ec76a_cppui_modular251));
 
     BOOST_CHECK_EQUAL(et_s1P5, scalar_value_type(integral_type(3u)) * P5);
     BOOST_CHECK_EQUAL(et_s2P5, scalar_value_type(integral_type(
