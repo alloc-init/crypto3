@@ -1232,13 +1232,13 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_inverse_test) {
     using poly_type = polynomial_dfs<typename FieldType::value_type>;
     poly_type a = {
         5,
-        {0x13_cppui_modular, 0x515afe1189d5ef4dbc50a127ce5e634034a28d0005e1fafd70aeef634654d2e0_cppui_modular,
-        0x73eda753299d7d4193643e5a817d9e3a4399a3e577da5bfefff3ffff00000006_cppui_modular,
-        0x519843b006c2b71461725846c0416002ece7f29b47582f326bdcdd22024de904_cppui_modular,
-        0x73eda753299d7d483339d80809a1d80553bda402fffe5bfefffffffefffffff8_cppui_modular,
-        0x2292a9419fc78dfa76e936e03b4374c51f1b1702fa1c61018f51109bb9ab2d2b_cppui_modular,
-        0x69fd599ad882439cb1024001d88240000000c000000000005_cppui_modular,
-        0x225563a322dac633d1c77fc14960780266d5b167b8a62ccc942322dcfdb21707_cppui_modular}};
+        {0x13_cppui_modular253, 0x515afe1189d5ef4dbc50a127ce5e634034a28d0005e1fafd70aeef634654d2e0_cppui_modular253,
+        0x73eda753299d7d4193643e5a817d9e3a4399a3e577da5bfefff3ffff00000006_cppui_modular253,
+        0x519843b006c2b71461725846c0416002ece7f29b47582f326bdcdd22024de904_cppui_modular253,
+        0x73eda753299d7d483339d80809a1d80553bda402fffe5bfefffffffefffffff8_cppui_modular253,
+        0x2292a9419fc78dfa76e936e03b4374c51f1b1702fa1c61018f51109bb9ab2d2b_cppui_modular253,
+        0x69fd599ad882439cb1024001d88240000000c000000000005_cppui_modular253,
+        0x225563a322dac633d1c77fc14960780266d5b167b8a62ccc942322dcfdb21707_cppui_modular253}};
 
     poly_type a_inv = a;
     a_inv.element_wise_inverse();
