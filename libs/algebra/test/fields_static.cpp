@@ -50,13 +50,13 @@
 #include <nil/crypto3/algebra/fields/mnt6/base_field.hpp>
 #include <nil/crypto3/algebra/fields/mnt6/scalar_field.hpp>
 
-#include <nil/crypto3/algebra/fields/babybear.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/fp.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/fp2.hpp>
 
 #include <nil/crypto3/algebra/fields/goldilocks.hpp>
 #include <nil/crypto3/algebra/fields/koalabear.hpp>
 #include <nil/crypto3/algebra/fields/mersenne31.hpp>
+#include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 
 using namespace nil::crypto3::algebra;
 
