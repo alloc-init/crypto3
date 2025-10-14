@@ -260,12 +260,12 @@ namespace nil {
                                 return res;
 
                             bool found_one = false;
-                            for (long i = exponent.msb(); i >= 0; --i) {
+                            for (long i = msb(exponent); i >= 0; --i) {
                                 if (found_one) {
                                     res = res.cyclotomic_squared();
                                 }
 
-                                if (exponent.bit_test(i)) {
+                                if (bit_test(exponent, i)) {
                                     found_one = true;
                                     res = res * (*this);
                                 }
