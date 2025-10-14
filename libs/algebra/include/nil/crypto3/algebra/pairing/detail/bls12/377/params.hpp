@@ -49,8 +49,6 @@ namespace nil {
                         constexpr static const std::size_t integral_type_max_bits =
                             curve_type::base_field_type::modulus_bits;
 
-                        constexpr static const std::size_t integral_type_max_bits = base_field_bits;
-
                         constexpr static const integral_type ate_loop_count = integral_type(0x8508C00000000001_cppui_modular64);
                         constexpr static const bool ate_is_loop_count_neg = false;
                         // constexpr static const extended_integral_type final_exponent = extended_integral_type(
@@ -60,9 +58,13 @@ namespace nil {
                             integral_type(0x8508C00000000001_cppui_modular64);
                         constexpr static const bool final_exponent_is_z_neg = false;
 
-                        using g2_field_type_value = typename curve_type::g2_type::field_type::value_type;
+                        using g2_field_type_value = typename curve_type::template g2_type<>::field_type::value_type;
 
-                        constexpr static const g2_field_type_value twist = g2_type::params_type::twist;
+                        constexpr static const g2_field_type_value twist =
+                            curve_type::template g2_type<>::params_type::twist;
+
+                        constexpr static const g2_field_type_value twist_coeff_b =
+                            curve_type::template g2_type<>::params_type::b;
                     };
 
                     constexpr typename pairing_params<curves::bls12<377>>::integral_type const
@@ -70,6 +72,10 @@ namespace nil {
 
                     constexpr typename pairing_params<curves::bls12<377>>::integral_type const
                         pairing_params<curves::bls12<377>>::final_exponent_z;
+                    constexpr typename pairing_params<curves::bls12<377>>::g2_field_type_value const
+                        pairing_params<curves::bls12<377>>::twist;
+                    constexpr typename pairing_params<curves::bls12<377>>::g2_field_type_value const
+                        pairing_params<curves::bls12<377>>::twist_coeff_b;
 
                     constexpr bool const pairing_params<curves::bls12<377>>::final_exponent_is_z_neg;
 
