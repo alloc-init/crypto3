@@ -46,7 +46,7 @@ static_assert(make_vector(1, 2, 3) == vector {1, 2, 3}, "make_vector and uniform
 static_assert(make_vector(1, 2, 3) == vector{{1, 2, 3}}, "make_vector and aggregate initialization deduction guide");
 
 static_assert(elementwise([](value x) { return x.inversed(); }, vector {1, 2, 4}) ==
-        vector<value, 3> {1, 0x7fffffff80000001_big_uint64, 0xbfffffff40000001_big_uint64},
+        vector<value, 3> {1, 0x7fffffff80000001_cppui_modular64, 0xbfffffff40000001_cppui_modular64},
               "elementwise");
 
 static_assert(vector{1, 2, 3} == vector{1, 2, 3}, "operator==");
