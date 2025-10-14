@@ -443,7 +443,7 @@ namespace boost {
                                 std::integral_constant<bool, false>());
                 }
 
-                void
+                BOOST_MP_CXX14_CONSTEXPR void
                 montgomery_mul(Backend &result, const Backend &y, std::integral_constant<bool, true> const &) const {
                     montgomery_mul_CIOS_impl(
                             result,
