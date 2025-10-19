@@ -105,7 +105,7 @@ namespace nil {
                         }
                     }
 
-                    ColumnType get_variable_value(const VariableType& var,
+                    ColumnType get_variable_value(const variable_type& var,
                             std::shared_ptr<math::evaluation_domain<FieldType>> domain) const {
                          if (var.rotation == 0) {
                              return get_variable_value_without_rotation(var);

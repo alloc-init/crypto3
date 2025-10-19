@@ -38,8 +38,6 @@
 #include <boost/functional/hash.hpp>
 #include <boost/variant.hpp>
 
-#include <nil/crypto3/multiprecision/big_uint.hpp>
-
 #include <nil/crypto3/zk/snark/arithmetization/plonk/variable.hpp>
 
 namespace nil::crypto3::zk::snark {
@@ -104,14 +102,8 @@ namespace nil::crypto3::zk::snark {
         }
 
         // Constructor for integral types.
-        template<std::integral NumericType>
+        template<class NumericType>
         expression(const NumericType& coeff)
-          : expression(term<VariableType>((assignment_type)coeff)) {
-        }
-
-        // Constructor for big_uint.
-        template<std::size_t Bits>
-        expression(const nil::crypto3::multiprecision::big_uint<Bits>& coeff)
           : expression(term<VariableType>((assignment_type)coeff)) {
         }
 
