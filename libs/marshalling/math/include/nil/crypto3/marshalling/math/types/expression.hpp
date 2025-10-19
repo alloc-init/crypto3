@@ -204,16 +204,10 @@ namespace nil {
 
                 template<typename ExpressionType, typename Endianness>
                 ExpressionType make_expression(
-<<<<<<< HEAD:libs/marshalling/zk/include/nil/crypto3/marshalling/math/types/expression.hpp
                     const typename expression<nil::marshalling::field_type<Endianness>,
                                                           ExpressionType>::type &filled_expr) {
 
                     using arithmetic_operator_type = typename ExpressionType::binary_arithmetic_operation_type::arithmetic_operator_type;
-=======
-                    const typename expression<nil::crypto3::marshalling::field_type<Endianness>, ExpressionType>::type &filled_expr)
-                {
-                    using ArithmeticOperatorType = typename ExpressionType::binary_arithmetic_operation_type::ArithmeticOperatorType;
->>>>>>> nil/master:libs/marshalling/math/include/nil/crypto3/marshalling/math/types/expression.hpp
                     math::flat_expression<ExpressionType> flat_expr;
 
                     // Get the terms.

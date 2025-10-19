@@ -33,7 +33,7 @@ namespace nil {
     namespace crypto3 {
         namespace hashes {
 
-            template<typename Field, typename Container, bool OverflowOnPurpose = false, bool Padding = true>
+            template<typename FieldType, typename Container, bool OverflowOnPurpose = false, bool Padding = true>
             class block_to_field_elements_wrapper {
             public:
                 static_assert(std::numeric_limits<typename Container::value_type>::is_specialized);

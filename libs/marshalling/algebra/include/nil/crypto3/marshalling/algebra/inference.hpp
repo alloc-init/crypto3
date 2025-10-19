@@ -63,6 +63,17 @@ namespace nil {
         class is_compatible;
 
         template<typename T>
+        class is_compatible <T, typename std::enable_if<nil::crypto3::algebra::is_curve_element<T>::value>::type> {
+            using default_endianness = option::big_endian;
+        public:
+            template <typename TEndian = default_endianness>
+            using type = typename nil::crypto3::marshalling::types::curve_element<field_type<TEndian>,
+                typename T::group_type>;
+            static const bool value = true;
+            static const bool fixed_size = true;
+        };
+
+        template<typename T>
         class is_compatible <T, typename std::enable_if<nil::crypto3::algebra::is_field_element<T>::value>::type> {
             using default_endianness = option::big_endian;
         public:
