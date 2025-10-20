@@ -45,9 +45,9 @@
 using namespace nil::crypto3;
 using namespace nil::crypto3::algebra;
 
-template<typename Hash>
-typename std::enable_if<hashes::is_h2c<Hash>::value>::type
-    check_hash_to_curve(const std::string &msg_str, const typename Hash::digest_type &expected) {
+template<typename HashType>
+typename std::enable_if<hashes::is_h2c<HashType>::value>::type
+    check_hash_to_curve(const std::string &msg_str, const typename HashType::digest_type &expected) {
 
     std::vector<std::uint8_t> msg(msg_str.begin(), msg_str.end());
     typename HashType::digest_type result = hash<HashType>(msg);
