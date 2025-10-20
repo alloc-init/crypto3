@@ -45,20 +45,20 @@
 using namespace nil::crypto3;
 using namespace nil::crypto3::algebra;
 
-template<typename HashType>
-typename std::enable_if<hashes::is_h2c<HashType>::value>::type
-    check_hash_to_curve(const std::string &msg_str, const typename HashType::digest_type &expected) {
+template<typename Hash>
+typename std::enable_if<hashes::is_h2c<Hash>::value>::type
+    check_hash_to_curve(const std::string &msg_str, const typename Hash::digest_type &expected) {
 
     std::vector<std::uint8_t> msg(msg_str.begin(), msg_str.end());
-    typename HashType::digest_type result = hash<HashType>(msg);
+    typename Hash::digest_type result = hash<Hash>(msg);
     BOOST_CHECK_EQUAL(result, expected);
 
     if (msg.size() > 1) {
         std::size_t offset = std::rand() % (msg.size() - 1) + 1;
-        auto acc_deducible = hash<HashType>(msg.cbegin(), msg.cbegin() + offset);
-        nil::crypto3::accumulator_set<HashType> &acc = acc_deducible;
-        hash<HashType>(msg.cbegin() + offset, msg.cend(), acc);
-        typename HashType::digest_type result1 = nil::crypto3::accumulators::extract::hash<HashType>(acc);
+        auto acc_deducible = hash<Hash>(msg.cbegin(), msg.cbegin() + offset);
+        nil::crypto3::accumulator_set<Hash> &acc = acc_deducible;
+        hash<Hash>(msg.cbegin() + offset, msg.cend(), acc);
+        typename Hash::digest_type result1 = nil::crypto3::accumulators::extract::hash<Hash>(acc);
         BOOST_CHECK_EQUAL(result1, expected);
     }
 }
