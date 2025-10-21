@@ -84,7 +84,7 @@ namespace nil {
                             nil::marshalling::option::sequence_size_field_prefix<
                                 nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // s_reduced
-                        nil::marshalling::types::field_element<TTypeBase,
+                        nil::crypto3::marshalling::types::field_element<TTypeBase,
                                                                         typename PrivateKey::scalar_field_value_type>>>;
 
                 template<typename PublicKey, typename Endianness>

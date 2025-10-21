@@ -40,7 +40,7 @@
 #include "detail/circuits.hpp"
 
 using namespace nil::crypto3;
-using namespace nil::marshalling;
+using namespace nil::crypto3::marshalling;
 using namespace nil::crypto3::zk;
 using namespace nil::crypto3::zk::snark;
 
@@ -69,9 +69,9 @@ void print_hex_byteblob(std::ostream &os, TIter iter_begin, TIter iter_end, bool
 template<typename Endianness, typename ConstraintSystem>
 void test_constraint_system(ConstraintSystem val, std::string folder_name = "") {
     using TTypeBase = nil::marshalling::field_type<Endianness>;
-    using value_marshalling_type = nil::marshalling::types::plonk_constraint_system<TTypeBase, ConstraintSystem>;
+    using value_marshalling_type = nil::crypto3::marshalling::types::plonk_constraint_system<TTypeBase, ConstraintSystem>;
 
-    auto filled_val = nil::marshalling::types::fill_plonk_constraint_system<Endianness, ConstraintSystem>(val);
+    auto filled_val = nil::crypto3::marshalling::types::fill_plonk_constraint_system<Endianness, ConstraintSystem>(val);
     auto _val = types::make_plonk_constraint_system<Endianness, ConstraintSystem>(filled_val);
     BOOST_CHECK(val == _val);
 

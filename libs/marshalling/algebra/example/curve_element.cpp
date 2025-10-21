@@ -53,13 +53,13 @@ int main()
     using g1 = nil::crypto3::algebra::curves::mnt4<298>::g1_type<>;
     using g2 = nil::crypto3::algebra::curves::mnt4<298>::g2_type<>;
 
-    using be = nil::marshalling::option::big_endian;
+    using be = nil::crypto3::marshalling::option::big_endian;
     using unit_type = unsigned char;
 
-    nil::marshalling::status_type status;
+    nil::crypto3::marshalling::status_type status;
     auto G1 = g1::value_type::one();
 
-    std::vector<unit_type> cv_be = nil::marshalling::pack<be>(G1, status);
+    std::vector<unit_type> cv_be = nil::crypto3::marshalling::pack<be>(G1, status);
     std::cout << "Marshalling G1: " << G1 << ": " << make_error_code(status) << std::endl;
     std::cout << "Big endian:" << std::endl;
     print_buffer(cv_be);
@@ -67,7 +67,7 @@ int main()
     
     auto G2 = g2::value_type::one();
 
-    std::vector<unit_type> cv2_be = nil::marshalling::pack<be>(G2, status);
+    std::vector<unit_type> cv2_be = nil::crypto3::marshalling::pack<be>(G2, status);
     std::cout << "Marshalling G2: " << G2 << ": " << make_error_code(status) << std::endl;
     std::cout << "Big endian:" << std::endl;
     print_buffer(cv2_be);

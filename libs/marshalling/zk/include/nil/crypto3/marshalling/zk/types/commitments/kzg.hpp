@@ -64,7 +64,7 @@ namespace nil {
                 typename commitment<nil::marshalling::field_type<Endianness>, KZGScheme, std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>>::type
                 fill_commitment(typename KZGScheme::commitment_type commitment) {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
-                    using result_type = typename nil::marshalling::types::commitment<TTypeBase, KZGScheme>::type;
+                    using result_type = typename nil::crypto3::marshalling::types::commitment<TTypeBase, KZGScheme>::type;
                     result_type result;
                     for( auto it = commitment.begin(); it != commitment.end(); it++ ){
                         result.value().push_back(nil::marshalling::types::integral<TTypeBase,uint8_t>(*it));
@@ -101,7 +101,7 @@ namespace nil {
                 fill_eval_proof( const typename KZGScheme::proof_type &proof, typename KZGScheme::params_type const& params) {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    nil::marshalling::types::batch_info_type batch_info = proof.z.get_batch_info();
+                    nil::crypto3::marshalling::types::batch_info_type batch_info = proof.z.get_batch_info();
 
                     using curve_marhsalling_type = curve_element<TTypeBase, typename KZGScheme::single_commitment_type::group_type>;
 

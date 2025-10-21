@@ -99,11 +99,11 @@ namespace nil {
                             nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                         >,
 //                      14. commitment_scheme_type::params_type
-                        typename nil::marshalling::types::commitment_params<
+                        typename nil::crypto3::marshalling::types::commitment_params<
                             TTypeBase, typename CommonDataType::commitment_scheme_type
                         >::type,
 //                      15. commitment_scheme_type::preprocessed_data_type
-                        typename nil::marshalling::types::commitment_preprocessed_data<
+                        typename nil::crypto3::marshalling::types::commitment_preprocessed_data<
                             TTypeBase, typename CommonDataType::commitment_scheme_type
                         >::type
                     >

@@ -197,17 +197,17 @@ template<typename VerificationKey, typename PublicKey, typename Proof, typename 
 struct marshalling_verification_data_groth16_encrypted_input {
     using endianness = nil::marshalling::option::big_endian;
     using proof_marshalling_type =
-        nil::marshalling::types::r1cs_gg_ppzksnark_proof<nil::marshalling::field_type<endianness>, Proof>;
+        nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_proof<nil::marshalling::field_type<endianness>, Proof>;
     using verification_key_marshalling_type =
-        nil::marshalling::types::r1cs_gg_ppzksnark_extended_verification_key<
+        nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_extended_verification_key<
             nil::marshalling::field_type<endianness>, VerificationKey>;
     using public_key_marshalling_type =
-        nil::marshalling::types::elgamal_verifiable_public_key<nil::marshalling::field_type<endianness>,
+        nil::crypto3::marshalling::types::elgamal_verifiable_public_key<nil::marshalling::field_type<endianness>,
                                                                         PublicKey>;
-    using ct_marshalling_type = nil::marshalling::types::r1cs_gg_ppzksnark_encrypted_primary_input<
+    using ct_marshalling_type = nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_encrypted_primary_input<
         nil::marshalling::field_type<endianness>, CipherText>;
     using pinput_marshalling_type =
-        nil::marshalling::types::r1cs_gg_ppzksnark_primary_input<nil::marshalling::field_type<endianness>,
+        nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_primary_input<nil::marshalling::field_type<endianness>,
                                                                           PInput>;
 
     static inline std::string proof_path_str = "proof.bin";
@@ -249,27 +249,27 @@ struct marshalling_verification_data_groth16_encrypted_input {
     static void write_data(const VerificationKey &vk, const PublicKey &pubkey, const Proof &proof, const PInput &pinput,
                            const CipherText &ct) {
         auto proof_blob = serialize_obj<proof_marshalling_type>(
-            proof, std::function(nil::marshalling::types::fill_r1cs_gg_ppzksnark_proof<Proof, endianness>));
+            proof, std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_proof<Proof, endianness>));
         write_obj(proof_path, {proof_blob});
 
         auto vk_blob = serialize_obj<verification_key_marshalling_type>(
-            vk, std::function(nil::marshalling::types::fill_r1cs_gg_ppzksnark_verification_key<VerificationKey,
+            vk, std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_verification_key<VerificationKey,
                                                                                                         endianness>));
         write_obj(vk_path, {vk_blob});
 
         auto pubkey_blob = serialize_obj<public_key_marshalling_type>(
-            pubkey, std::function(nil::marshalling::types::fill_public_key<PublicKey, endianness>));
+            pubkey, std::function(nil::crypto3::marshalling::types::fill_public_key<PublicKey, endianness>));
         write_obj(pubkey_path, {pubkey_blob});
 
         auto pinput_blob = serialize_obj<pinput_marshalling_type>(
             pinput,
-            std::function(nil::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<PInput, endianness>));
+            std::function(nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_primary_input<PInput, endianness>));
         write_obj(unenc_pi_path, {pinput_blob});
 
         auto ct_blob = serialize_obj<ct_marshalling_type>(
             ct,
             std::function(
-                nil::marshalling::types::fill_r1cs_gg_ppzksnark_encrypted_primary_input<CipherText,
+                nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_encrypted_primary_input<CipherText,
                                                                                                  endianness>));
         write_obj(ct_path, {ct_blob});
 
@@ -281,7 +281,7 @@ struct marshalling_verification_data_groth16_encrypted_input {
         auto ct_wrong_blob = serialize_obj<ct_marshalling_type>(
             ct_wrong,
             std::function(
-                nil::marshalling::types::fill_r1cs_gg_ppzksnark_encrypted_primary_input<CipherText,
+                nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_encrypted_primary_input<CipherText,
                                                                                                  endianness>));
 
         write_obj(full_output_path, {proof_blob, vk_blob, pubkey_blob, ct_blob, pinput_blob});
@@ -305,20 +305,20 @@ struct marshalling_verification_data_groth16_encrypted_input {
     static std::tuple<Proof, VerificationKey, PublicKey, PInput, CipherText> read_data() {
         Proof proof = read_obj<Proof, proof_marshalling_type>(
             proof_path,
-            std::function(nil::marshalling::types::make_r1cs_gg_ppzksnark_proof<Proof, endianness>));
+            std::function(nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_proof<Proof, endianness>));
         VerificationKey vk = read_obj<VerificationKey, verification_key_marshalling_type>(
             vk_path,
-            std::function(nil::marshalling::types::make_r1cs_gg_ppzksnark_verification_key<VerificationKey,
+            std::function(nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_verification_key<VerificationKey,
                                                                                                     endianness>));
         PublicKey pubkey = read_obj<PublicKey, public_key_marshalling_type>(
-            pubkey_path, std::function(nil::marshalling::types::make_public_key<PublicKey, endianness>));
+            pubkey_path, std::function(nil::crypto3::marshalling::types::make_public_key<PublicKey, endianness>));
         PInput pinput = read_obj<PInput, pinput_marshalling_type>(
             unenc_pi_path,
-            std::function(nil::marshalling::types::make_r1cs_gg_ppzksnark_primary_input<PInput, endianness>));
+            std::function(nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_primary_input<PInput, endianness>));
         CipherText ct = read_obj<CipherText, ct_marshalling_type>(
             ct_path,
             std::function(
-                nil::marshalling::types::make_r1cs_gg_ppzksnark_encrypted_primary_input<CipherText,
+                nil::crypto3::marshalling::types::make_r1cs_gg_ppzksnark_encrypted_primary_input<CipherText,
                                                                                                  endianness>));
 
         return std::tuple {proof, vk, pubkey, pinput, ct};

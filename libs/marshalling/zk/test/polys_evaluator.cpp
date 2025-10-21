@@ -76,12 +76,12 @@ using namespace nil::crypto3;
 
 template<typename Endianness, typename PolysEvaluator>
 void test_polys_evaluator_marshalling(PolysEvaluator &evaluator) {
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
 
     evaluator.build_points_map();
 
-    auto filled_evaluator = nil::marshalling::types::fill_polys_evaluator<Endianness, PolysEvaluator>(evaluator);
-    auto _evaluator = nil::marshalling::types::make_polys_evaluator<Endianness, PolysEvaluator>(filled_evaluator);
+    auto filled_evaluator = nil::crypto3::marshalling::types::fill_polys_evaluator<Endianness, PolysEvaluator>(evaluator);
+    auto _evaluator = nil::crypto3::marshalling::types::make_polys_evaluator<Endianness, PolysEvaluator>(filled_evaluator);
 
     BOOST_CHECK(evaluator == _evaluator);
 
@@ -89,21 +89,21 @@ void test_polys_evaluator_marshalling(PolysEvaluator &evaluator) {
     cv.resize(filled_evaluator.length(), 0x00);
     auto write_iter = cv.begin();
     auto status = filled_evaluator.write(write_iter, cv.size());
-    BOOST_CHECK(status == nil::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
 
-    nil::marshalling::types::polys_evaluator<TTypeBase, PolysEvaluator> test_val_read;
+    nil::crypto3::marshalling::types::polys_evaluator<TTypeBase, PolysEvaluator> test_val_read;
     auto read_iter = cv.begin();
     test_val_read.read(read_iter, cv.size());
-    BOOST_CHECK(status == nil::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
 
     PolysEvaluator constructed_val_read =
-            nil::marshalling::types::make_polys_evaluator<Endianness, PolysEvaluator>(test_val_read);
+            nil::crypto3::marshalling::types::make_polys_evaluator<Endianness, PolysEvaluator>(test_val_read);
     BOOST_CHECK(evaluator == constructed_val_read);
 }
 
 BOOST_AUTO_TEST_SUITE(marshalling_real)
     // Setup common types.
-    using Endianness = nil::marshalling::option::big_endian;
+    using Endianness = nil::crypto3::marshalling::option::big_endian;
     using curve_type = nil::crypto3::algebra::curves::vesta;
     using field_type = curve_type::scalar_field_type;
     using merkle_hash_type = nil::crypto3::hashes::keccak_1600<256>;
@@ -162,8 +162,8 @@ BOOST_FIXTURE_TEST_CASE(batches_num_3_test, test_tools::random_test_initializer<
     commitments[2] = lpc_scheme_prover.commit(2);
     commitments[3] = lpc_scheme_prover.commit(3);
 
-    auto filled_commitment = nil::marshalling::types::fill_commitment<Endianness, lpc_scheme_type>(commitments[0]);
-    auto _commitment = nil::marshalling::types::make_commitment<Endianness, lpc_scheme_type>(filled_commitment);
+    auto filled_commitment = nil::crypto3::marshalling::types::fill_commitment<Endianness, lpc_scheme_type>(commitments[0]);
+    auto _commitment = nil::crypto3::marshalling::types::make_commitment<Endianness, lpc_scheme_type>(filled_commitment);
 
     // Generate evaluation points. Generate points outside of the basic domain
     // Generate evaluation points. Choose poin1ts outside the domain

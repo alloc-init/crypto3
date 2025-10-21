@@ -78,7 +78,7 @@ void print_byteblob(TIter iter_begin, TIter iter_end) {
 template<class T, std::size_t TSize, typename OutputType>
 void test_round_trip_fixed_size_container_fixed_precision_big_endian(
     std::array<T, TSize> val_container) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
     std::size_t units_bits = std::is_same_v<OutputType, bool> ? 1 : sizeof(OutputType) * 8;
     using unit_type = OutputType;
     using integral_type = types::integral<nil::marshalling::field_type<nil::marshalling::option::big_endian>, T>;
@@ -120,7 +120,7 @@ void test_round_trip_fixed_size_container_fixed_precision_big_endian(
 template<class T, std::size_t TSize, typename OutputType>
 void test_round_trip_fixed_size_container_fixed_precision_little_endian(
     std::array<T, TSize> val_container) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
     std::size_t units_bits = std::is_same_v<OutputType, bool> ? 1 : sizeof(OutputType) * 8;
     using unit_type = OutputType;
     using integral_type = types::integral<nil::marshalling::field_type<nil::marshalling::option::little_endian>, T>;

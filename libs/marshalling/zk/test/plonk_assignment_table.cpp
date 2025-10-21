@@ -34,7 +34,7 @@
 #include "detail/circuits.hpp"
 
 using namespace nil::crypto3;
-using namespace nil::marshalling;
+using namespace nil::crypto3::marshalling;
 using namespace nil::crypto3::zk;
 using namespace nil::crypto3::zk::snark;
 
@@ -63,9 +63,9 @@ void print_hex_byteblob(std::ostream &os, TIter iter_begin, TIter iter_end, bool
 template<typename Endianness, typename PlonkTable>
 void test_assignment_table(std::size_t usable_rows, PlonkTable val, std::string folder_name = "") {
     using TTypeBase = nil::marshalling::field_type<Endianness>;
-    using value_marshalling_type = nil::marshalling::types::plonk_assignment_table<TTypeBase, PlonkTable>;
+    using value_marshalling_type = nil::crypto3::marshalling::types::plonk_assignment_table<TTypeBase, PlonkTable>;
 
-    auto filled_val = nil::marshalling::types::fill_assignment_table<Endianness, PlonkTable>(usable_rows, val);
+    auto filled_val = nil::crypto3::marshalling::types::fill_assignment_table<Endianness, PlonkTable>(usable_rows, val);
     auto table_desc_pair = types::make_assignment_table<Endianness, PlonkTable>(filled_val);
     BOOST_CHECK(val == table_desc_pair.second);
     BOOST_CHECK(usable_rows == table_desc_pair.first.usable_rows_amount);

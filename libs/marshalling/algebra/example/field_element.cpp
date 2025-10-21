@@ -49,19 +49,19 @@ int main()
     using g1_base_field = nil::crypto3::algebra::curves::mnt4<298>::g1_type<>::field_type;
     using g2_base_field = nil::crypto3::algebra::curves::mnt4<298>::g2_type<>::field_type;
 
-    using be = nil::marshalling::option::big_endian;
-    using le = nil::marshalling::option::little_endian;
+    using be = nil::crypto3::marshalling::option::big_endian;
+    using le = nil::crypto3::marshalling::option::little_endian;
     using unit_type = unsigned char;
 
-    nil::marshalling::status_type status;
+    nil::crypto3::marshalling::status_type status;
     typename g1_base_field::value_type x1 { 0xDEADBEEF };
-    std::vector<unit_type> cv_le = nil::marshalling::pack<le>(x1, status);
+    std::vector<unit_type> cv_le = nil::crypto3::marshalling::pack<le>(x1, status);
     std::cout << "Marshalling x1: " << x1 << ": " << make_error_code(status) << std::endl;
     std::cout << "Little endian:" << std::endl;
     print_buffer(cv_le);
     std::cout << std::endl;
 
-    std::vector<unit_type> cv_be = nil::marshalling::pack<be>(x1, status);
+    std::vector<unit_type> cv_be = nil::crypto3::marshalling::pack<be>(x1, status);
     std::cout << "Marshalling x1: " << x1 << ": " << make_error_code(status) << std::endl;
     std::cout << "Big endian:" << std::endl;
     print_buffer(cv_be);
@@ -69,13 +69,13 @@ int main()
 
     typename g2_base_field::value_type x2 { 0xC001CAFE, 0x8badf00d };
 
-    std::vector<unit_type> cv2_le = nil::marshalling::pack<le>(x2, status);
+    std::vector<unit_type> cv2_le = nil::crypto3::marshalling::pack<le>(x2, status);
     std::cout << "Marshalling x2: " << x2 << ": " << make_error_code(status) << std::endl;
     std::cout << "Little endian:" << std::endl;
     print_buffer(cv2_le);
     std::cout << std::endl;
 
-    std::vector<unit_type> cv2_be = nil::marshalling::pack<be>(x2, status);
+    std::vector<unit_type> cv2_be = nil::crypto3::marshalling::pack<be>(x2, status);
     std::cout << "Marshalling x2: " << x2 << ": " << make_error_code(status) << std::endl;
     std::cout << "Big endian:" << std::endl;
     print_buffer(cv2_be);

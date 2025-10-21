@@ -68,7 +68,7 @@ void print_fp2_curve_group_element(Fp2CurveGroupElement e) {
 template<typename Endianness, typename GroupType>
 void test_sparse_vector(nil::crypto3::container::sparse_vector<GroupType> val) {
 
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using unit_type = unsigned char;
     using sparse_vector_type = types::sparse_vector<nil::marshalling::field_type<Endianness>,

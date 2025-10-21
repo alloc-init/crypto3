@@ -100,7 +100,7 @@ generate_random_data(std::size_t leaf_number) {
 template<typename Endianness, typename HashType, std::size_t Arity, std::size_t LeafSize = 64>
 void test_merkle_proof(std::size_t tree_depth) {
 
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
     using merkle_tree_type = nil::crypto3::containers::merkle_tree<HashType, Arity>;
     using merkle_proof_type = nil::crypto3::containers::merkle_proof<HashType, Arity>;
     using merkle_proof_marshalling_type =

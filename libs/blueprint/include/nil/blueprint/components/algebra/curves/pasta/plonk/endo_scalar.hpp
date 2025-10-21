@@ -215,11 +215,11 @@ namespace nil {
                                 scalar.to_integral());
                         std::vector<bool> bits_msb(component.scalar_size);
                         {
-                            nil::marshalling::status_type status;
+                            nil::crypto3::marshalling::status_type status;
                             assert(component.scalar_size <= BlueprintFieldType::modulus_bits);
 
                             std::array<bool, BlueprintFieldType::modulus_bits> bits_msb_all =
-                                nil::marshalling::pack<nil::marshalling::option::big_endian>(integral_scalar, status);
+                                nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_scalar, status);
 
                             THROW_IF_ERROR_STATUS(status, "plonk_endo_scalar::generate_assignments");
 

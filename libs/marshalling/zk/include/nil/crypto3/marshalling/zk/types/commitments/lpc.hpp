@@ -191,7 +191,7 @@ namespace nil {
                 fill_eval_proof( const typename LPCScheme::proof_type &proof, const typename LPCScheme::fri_type::params_type& fri_params){
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    nil::marshalling::types::batch_info_type batch_info = proof.z.get_batch_info();
+                    nil::crypto3::marshalling::types::batch_info_type batch_info = proof.z.get_batch_info();
 
                     auto filled_z = fill_eval_storage<Endianness, typename LPCScheme::eval_storage_type>(proof.z);
 

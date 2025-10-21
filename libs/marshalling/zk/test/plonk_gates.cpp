@@ -186,7 +186,7 @@ nil::crypto3::zk::snark::plonk_lookup_table<FieldType> generate_random_plonk_loo
 
 template<typename FieldType, typename Endianness>
 void test_plonk_variable() {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using varialbe_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using value_marshalling_type =
@@ -194,7 +194,7 @@ void test_plonk_variable() {
 
     auto val = generate_random_plonk_variable<varialbe_type>();
 
-    auto filled_val = nil::marshalling::types::fill_variable<Endianness, varialbe_type>(val);
+    auto filled_val = nil::crypto3::marshalling::types::fill_variable<Endianness, varialbe_type>(val);
     auto _val = types::make_variable<Endianness, varialbe_type>(filled_val);
     BOOST_CHECK(val == _val);
 
@@ -214,7 +214,7 @@ void test_plonk_variable() {
 
 template<typename FieldType, typename Endianness>
 void test_plonk_variables(std::size_t n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using value_marshalling_type = typename types::variables<nil::marshalling::field_type<Endianness>, FieldType>;
@@ -224,7 +224,7 @@ void test_plonk_variables(std::size_t n) {
         val.push_back(generate_random_plonk_variable<variable_type>());
     }
 
-    auto filled_val = nil::marshalling::types::fill_variables<Endianness, variable_type>(val);
+    auto filled_val = nil::crypto3::marshalling::types::fill_variables<Endianness, variable_type>(val);
     auto _val = types::make_variables<Endianness, variable_type>(filled_val);
     BOOST_CHECK(val.size() == _val.size());
     for (std::size_t i = 0; i < val.size(); i++) {
@@ -250,7 +250,7 @@ void test_plonk_variables(std::size_t n) {
 
 template<typename FieldType, typename Endianness>
 void test_plonk_term(std::size_t vars_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using value_type = nil::crypto3::math::term<variable_type>;
@@ -278,7 +278,7 @@ void test_plonk_term(std::size_t vars_n) {
 
 template<typename FieldType, typename Endianness>
 void test_expression(std::size_t vars_n, std::size_t terms_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using value_type = nil::crypto3::math::expression<variable_type>;
@@ -308,7 +308,7 @@ void test_expression(std::size_t vars_n, std::size_t terms_n) {
 
 template<typename FieldType, typename Endianness>
 void test_plonk_constraint(std::size_t vars_n, std::size_t depth) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using value_type = nil::crypto3::zk::snark::plonk_constraint<FieldType, variable_type>;
@@ -337,7 +337,7 @@ void test_plonk_constraint(std::size_t vars_n, std::size_t depth) {
 
 template<typename FieldType, typename Endianness>
 void test_plonk_constraints(std::size_t vars_n, std::size_t depth, std::size_t constraints_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using constraint_type = nil::crypto3::zk::snark::plonk_constraint<FieldType, variable_type>;
@@ -379,7 +379,7 @@ void test_plonk_lookup_constraints(std::size_t vars_n,
                                    std::size_t depth,
                                    std::size_t expr_n,
                                    std::size_t constraints_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using constraint_type = nil::crypto3::zk::snark::plonk_lookup_constraint<FieldType, variable_type>;
@@ -413,7 +413,7 @@ void test_plonk_lookup_constraints(std::size_t vars_n,
 
 template<typename FieldType, typename Endianness>
 void test_plonk_lookup_constraint(std::size_t vars_n, std::size_t depth, std::size_t expr_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using value_type = nil::crypto3::zk::snark::plonk_lookup_constraint<FieldType, variable_type>;
@@ -442,7 +442,7 @@ void test_plonk_lookup_constraint(std::size_t vars_n, std::size_t depth, std::si
 
 template<typename FieldType, typename Endianness>
 void test_plonk_gate(std::size_t vars_n, std::size_t terms_n, std::size_t constr_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using constraint_type = nil::crypto3::zk::snark::plonk_constraint<FieldType, variable_type>;
@@ -472,7 +472,7 @@ void test_plonk_gate(std::size_t vars_n, std::size_t terms_n, std::size_t constr
 
 template<typename FieldType, typename Endianness>
 void test_plonk_lookup_gate(std::size_t vars_n, std::size_t depth, std::size_t expr_n, std::size_t constr_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
@@ -502,7 +502,7 @@ void test_plonk_lookup_gate(std::size_t vars_n, std::size_t depth, std::size_t e
 
 template<typename FieldType, typename Endianness>
 void test_plonk_gates(std::size_t vars_n, std::size_t depth, std::size_t constr_n, std::size_t gates_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using constraint_type = nil::crypto3::zk::snark::plonk_constraint<FieldType, variable_type>;
@@ -539,7 +539,7 @@ void test_plonk_lookup_gates(std::size_t vars_n,
                              std::size_t expr_n,
                              std::size_t constr_n,
                              std::size_t gates_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
 
     using variable_type = nil::crypto3::zk::snark::plonk_variable<typename FieldType::value_type>;
     using constraint_type = nil::crypto3::zk::snark::plonk_lookup_constraint<FieldType, variable_type>;
@@ -572,7 +572,7 @@ void test_plonk_lookup_gates(std::size_t vars_n,
 
 template<typename FieldType, typename Endianness>
 void test_plonk_lookup_table(std::size_t col_n, std::size_t op_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using value_type = nil::crypto3::zk::snark::plonk_lookup_table<FieldType>;
@@ -600,7 +600,7 @@ void test_plonk_lookup_table(std::size_t col_n, std::size_t op_n) {
 
 template<typename FieldType, typename Endianness>
 void test_plonk_lookup_tables(std::size_t col_n, std::size_t op_n, std::size_t t_n) {
-    using namespace nil::marshalling;
+    using namespace nil::crypto3::marshalling;
     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using value_type = nil::crypto3::zk::snark::plonk_lookup_table<FieldType>;

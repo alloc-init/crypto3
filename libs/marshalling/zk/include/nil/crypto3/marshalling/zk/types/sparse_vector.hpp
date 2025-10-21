@@ -185,7 +185,7 @@ namespace nil {
                         filled_indices_val.push_back(integral_type(knowledge_commitment_sparse_vector.indices[i]));
                     }
 
-                    return ::nil::marshalling::types::
+                    return ::nil::crypto3::marshalling::types::
                         knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>(
                             std::make_tuple(
                                 filled_indices,
@@ -240,7 +240,7 @@ namespace nil {
                         filled_indices_val.push_back(integral_type(knowledge_commitment_sparse_vector.indices[i]));
                     }
 
-                    return ::nil::marshalling::types::
+                    return ::nil::crypto3::marshalling::types::
                         fast_knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>(
                             std::make_tuple(
                                 filled_indices,

@@ -105,19 +105,19 @@ BOOST_AUTO_TEST_SUITE(lpc_test_suite)
         schedule_type pub_k(etalon_pubkey1);
         private_key_type priv_k(privkey1);
 
-        auto filled_key = nil::marshalling::types::fill_eddsa_public_key<
+        auto filled_key = nil::crypto3::marshalling::types::fill_eddsa_public_key<
                 schedule_type, endianness>(pub_k);
 
-        auto made_key = nil::marshalling::types::make_eddsa_public_key<
+        auto made_key = nil::crypto3::marshalling::types::make_eddsa_public_key<
                 schedule_type, endianness>(filled_key);
 
         BOOST_CHECK(made_key.pubkey_point == pub_k.pubkey_point);
         BOOST_CHECK(std::equal(made_key.pubkey.begin(), made_key.pubkey.end(), pub_k.pubkey.begin()));
 
-        auto filled_priv_key = nil::marshalling::types::fill_eddsa_private_key<
+        auto filled_priv_key = nil::crypto3::marshalling::types::fill_eddsa_private_key<
                 private_key_type, endianness>(priv_k);
 
-        auto made_priv_key = nil::marshalling::types::make_eddsa_private_key<
+        auto made_priv_key = nil::crypto3::marshalling::types::make_eddsa_private_key<
                 private_key_type, endianness>(filled_priv_key);
 
         BOOST_CHECK(made_priv_key.s_reduced == priv_k.s_reduced);

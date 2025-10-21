@@ -181,7 +181,7 @@ namespace nil {
                         nil::marshalling::types::integral<TTypeBase, std::size_t>(
                             fri_params.use_grinding ? fri_params.grinding_parameter : 0),
                         nil::marshalling::types::integral<TTypeBase, std::size_t>(fri_params.max_degree),
-                        nil::marshalling::types::fill_field_element_vector<
+                        nil::crypto3::marshalling::types::fill_field_element_vector<
                             typename FieldType::value_type, Endianness>(D_unity_roots),
                         fill_integer_vector<Endianness>(fri_params.step_list),
                         nil::marshalling::types::integral<TTypeBase, std::size_t>(fri_params.expand_factor)

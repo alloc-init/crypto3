@@ -182,7 +182,7 @@ template<typename FRI>
 typename FRI::query_proof_type generate_random_fri_query_proof(
         std::size_t max_batch_size,
         std::vector<std::size_t> step_list,
-        nil::marshalling::types::batch_info_type batch_info,
+        nil::crypto3::marshalling::types::batch_info_type batch_info,
         nil::crypto3::random::algebraic_engine<typename FRI::field_type> &alg_rnd,
         boost::random::mt11213b &rnd
 ) {
@@ -210,7 +210,7 @@ typename FRI::proof_type generate_random_fri_proof(
     std::vector<std::size_t> step_list,
     std::size_t lambda,
     bool use_grinding,
-    nil::marshalling::types::batch_info_type batch_info,
+    nil::crypto3::marshalling::types::batch_info_type batch_info,
     nil::crypto3::random::algebraic_engine<typename FRI::field_type> &alg_rnd,
     boost::random::mt11213b &rnd
 ) {
@@ -304,7 +304,7 @@ typename LPC::proof_type generate_random_lpc_proof(
 ) {
     typename LPC::proof_type res;
 
-    nil::marshalling::types::batch_info_type batch_info;
+    nil::crypto3::marshalling::types::batch_info_type batch_info;
     for( std::size_t i = 0; i < 6; i++ ){
         batch_info[rnd()%6] = rnd()%9 + 1;
     }
@@ -354,7 +354,7 @@ typename LPC::lpc_proof_type generate_random_lpc_inital_proof(
 ) {
     typename LPC::lpc_proof_type res;
 
-    nil::marshalling::types::batch_info_type batch_info;
+    nil::crypto3::marshalling::types::batch_info_type batch_info;
     for (std::size_t i = 0; i < 6; i++) {
         batch_info[rnd()%6] = rnd()%9 + 1;
     }
