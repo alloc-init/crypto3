@@ -67,7 +67,7 @@ void print_field_element(typename nil::crypto3::algebra::fields::detail::element
 template<typename T, typename Endianness>
 void test_field_element_non_fixed_size_container(std::vector<T> val_container) {
 
-    using namespace nil::crypto3::marshalling;
+    using namespace nil::marshalling;
 
     std::size_t units_bits = 8;
     using unit_type = unsigned char;

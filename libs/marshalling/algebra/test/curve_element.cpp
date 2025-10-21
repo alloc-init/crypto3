@@ -63,7 +63,7 @@ void print_byteblob(TIter iter_begin, TIter iter_end) {
 
 template<typename T>
 void test_curve_element_big_endian(T val) {
-    using namespace nil::crypto3::marshalling;
+    using namespace nil::marshalling;
 
     using Endianness = nil::marshalling::option::big_endian;
 
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE(curve_element_ed25519_g1) {
     using base_field_type = typename group_type::params_type::base_field_type;
     using base_integral_type = typename base_field_type::integral_type;
 
-    using curve_element_type = nil::crypto3::marshalling::types::
+    using curve_element_type = nil::marshalling::types::
         curve_element<nil::marshalling::field_type<nil::marshalling::option::little_endian>, group_type>;
 
     curve_element_type test_val = curve_element_type(group_value_type::one());

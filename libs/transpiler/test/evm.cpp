@@ -242,10 +242,10 @@ namespace {
         const std::string &output_file = ""
     ) {
 
-        using namespace nil::crypto3::marshalling;
+        using namespace nil::marshalling;
 
         using TTypeBase = marshalling::field_type<Endianness>;
-        using proof_marshalling_type = nil::crypto3::marshalling::types::placeholder_proof<TTypeBase, ProofType>;
+        using proof_marshalling_type = nil::marshalling::types::placeholder_proof<TTypeBase, ProofType>;
 
         auto filled_placeholder_proof = types::fill_placeholder_proof<Endianness, ProofType>(proof, params);
         ProofType _proof = types::make_placeholder_proof<Endianness, ProofType>(filled_placeholder_proof);

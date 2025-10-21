@@ -65,7 +65,7 @@ namespace nil {
                 ///         boost::multiprecision::number<boost::multiprecision::backends::cpp_int_backend<
                 ///            modulus_bits, modulus_bits, boost::multiprecision::unsigned_magnitude,
                 ///            boost::multiprecision::unchecked, void>>;
-                ///         using MyField = nil::crypto3::marshalling::types::integral<MyFieldBase, modulus_type>;
+                ///         using MyField = nil::marshalling::types::integral<MyFieldBase, modulus_type>;
                 ///     @endcode
                 ///     In the example above it will
                 ///     consume ?? bytes (because sizeof(modulus_type) == ??) and will

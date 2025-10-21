@@ -109,7 +109,7 @@ namespace nil {
                     };
 
                     using endianness = marshalling::option::big_endian;
-                    using field_element_type = nil::crypto3::marshalling::types::field_element<
+                    using field_element_type = nil::marshalling::types::field_element<
                             marshalling::field_type<endianness>,
                             commitment_type
                     >;
@@ -210,7 +210,7 @@ namespace nil {
                         });
                         std::vector<std::uint8_t> result;
                         for (const auto& single_commitment : this->_ind_commitments[index]) {
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             std::vector<uint8_t> single_commitment_bytes =
                                     marshalling::pack<endianness>(single_commitment, status);
                             THROW_IF_ERROR_STATUS(status, "kzg_v2::commit");

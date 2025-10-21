@@ -123,8 +123,8 @@ struct test_initializer {
 };
 
 BOOST_AUTO_TEST_SUITE(recursive_circuit1)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
@@ -303,8 +303,8 @@ BOOST_FIXTURE_TEST_CASE(aggregated_proof_sanity_test, test_initializer) {
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(recursive_circuit2)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
@@ -413,8 +413,8 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test, test_initializer) {
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(recursive_circuit3)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -830,8 +830,8 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test, test_initializer) {
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(recursive_circuit6)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -935,8 +935,8 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test, test_initializer) {
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(recursive_circuit7)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -1042,8 +1042,8 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test, test_initializer) {
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(recursive_circuit7_chunk10)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 

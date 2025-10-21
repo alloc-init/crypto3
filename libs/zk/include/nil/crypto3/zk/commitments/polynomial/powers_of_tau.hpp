@@ -194,7 +194,7 @@ namespace nil {
                     static std::vector<std::uint8_t> serialize_accumulator(const accumulator_type &acc) {
                         using endianness = nil::marshalling::option::little_endian;
                         auto filled_val =
-                                nil::crypto3::marshalling::types::fill_powers_of_tau_accumulator<accumulator_type,
+                                nil::marshalling::types::fill_powers_of_tau_accumulator<accumulator_type,
                                     endianness>(acc);
                         std::vector<std::uint8_t> blob(filled_val.length());
                         auto it = std::begin(blob);

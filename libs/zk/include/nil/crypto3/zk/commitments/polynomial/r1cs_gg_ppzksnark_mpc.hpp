@@ -213,7 +213,7 @@ namespace nil {
                     static std::vector<std::uint8_t> serialize_public_key(const public_key_type &pubkey) {
                         using endianness = nil::marshalling::option::little_endian;
                         auto filled_val =
-                                nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_mpc_public_key<public_key_type,
+                                nil::marshalling::types::fill_r1cs_gg_ppzksnark_mpc_public_key<public_key_type,
                                         endianness>(pubkey);
                         std::vector<std::uint8_t> blob(filled_val.length());
                         auto it = std::begin(blob);
@@ -229,7 +229,7 @@ namespace nil {
                     serialize_constraint_system(const constraint_system_type &constraint_system) {
                         using endianness = nil::marshalling::option::little_endian;
                         auto filled_val =
-                                nil::crypto3::marshalling::types::fill_r1cs_constraint_system<constraint_system_type,
+                                nil::marshalling::types::fill_r1cs_constraint_system<constraint_system_type,
                                         endianness>(
                                         constraint_system);
                         std::vector<std::uint8_t> blob(filled_val.length());

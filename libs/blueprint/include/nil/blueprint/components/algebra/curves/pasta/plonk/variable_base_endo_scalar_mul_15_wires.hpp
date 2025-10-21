@@ -178,9 +178,9 @@ namespace nil {
 
                         std::array<bool, 128> bits = {false};
                         {
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             std::array<bool, 255> bits_all =
-                                nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_b, status);
+                                nil::marshalling::pack<nil::marshalling::option::big_endian>(integral_b, status);
                             THROW_IF_ERROR_STATUS(status, "curve_element_variable_base_endo_scalar_mul::generate_assignments");
                             std::copy(bits_all.end() - 128, bits_all.end(), bits.begin());
                         }

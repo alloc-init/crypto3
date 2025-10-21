@@ -56,10 +56,10 @@ namespace nil {
     namespace marshalling {
 
         /// @brief Compile time check function of whether a provided type is any
-        ///     variant of nil::crypto3::marshalling::types::curve_element.
+        ///     variant of nil::marshalling::types::curve_element.
         /// @tparam T Any type.
         /// @return true in case provided type is any variant of @ref curve_element
-        /// @related nil::crypto3::marshalling::types::curve_element
+        /// @related nil::marshalling::types::curve_element
         template<typename T>
         struct is_curve_element {
 
@@ -67,7 +67,7 @@ namespace nil {
         };
 
         template<typename TTypeBase, typename CurveGroupType, typename... TOptions>
-        struct is_curve_element<nil::crypto3::marshalling::types::curve_element<TTypeBase, 
+        struct is_curve_element<nil::marshalling::types::curve_element<TTypeBase, 
             CurveGroupType, TOptions...>> {
 
             static const bool value = true;
@@ -80,14 +80,14 @@ namespace nil {
         };
 
         template<typename TTypeBase, typename FieldValueType, typename... TOptions>
-        struct is_field_element<nil::crypto3::marshalling::types::extended_field_element<TTypeBase, 
+        struct is_field_element<nil::marshalling::types::extended_field_element<TTypeBase, 
             FieldValueType, TOptions...>> {
 
             static const bool value = true;
         };
 
         template<typename TTypeBase, typename FieldValueType, typename... TOptions>
-        struct is_field_element<nil::crypto3::marshalling::types::pure_field_element<TTypeBase, 
+        struct is_field_element<nil::marshalling::types::pure_field_element<TTypeBase, 
             FieldValueType, TOptions...>> {
 
             static const bool value = true;

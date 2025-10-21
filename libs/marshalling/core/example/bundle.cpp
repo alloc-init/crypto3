@@ -36,7 +36,7 @@
 #include <tuple>
 
 
-using namespace nil::crypto3::marshalling;
+using namespace nil::marshalling;
 
 template<typename unit>
 void print_buffer(std::vector<unit> const& v)
@@ -118,7 +118,7 @@ int main()
     std::cout << "Marshalling structure " << s;
 
     auto m = fill_S(s);
-    nil::crypto3::marshalling::status_type status;
+    nil::marshalling::status_type status;
     std::vector<uint8_t> cv = pack(m, status);
     std::cout << "Status: " << make_error_code(status) << std::endl;
 

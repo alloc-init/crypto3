@@ -79,7 +79,7 @@ void print_byteblob(TIter iter_begin, TIter iter_end) {
 
 template<typename Endianness, std::size_t TSize, typename OutputType, typename Container>
 void test_round_trip_non_fixed_size_container_fixed_precision(const Container &val_container) {
-    using namespace nil::crypto3::marshalling;
+    using namespace nil::marshalling;
     using unit_type = OutputType;
 
     nil::marshalling::status_type status;

@@ -129,7 +129,7 @@ namespace nil {
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(const group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(const group_value_type &point, TIter &iter) {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const chunk_type I_bit = 0x40;
@@ -147,7 +147,7 @@ namespace nil {
                         }
                         (*iter) |= m_unit;
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
@@ -166,7 +166,7 @@ namespace nil {
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(const group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(const group_value_type &point, TIter &iter) {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
@@ -199,7 +199,7 @@ namespace nil {
                         }
                         (*iter) |= m_unit;
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
@@ -217,7 +217,7 @@ namespace nil {
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(const group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(const group_value_type &point, TIter &iter) {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const chunk_type I_bit = 0x40;
@@ -235,7 +235,7 @@ namespace nil {
                         }
                         (*iter) |= m_unit;
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
@@ -254,7 +254,7 @@ namespace nil {
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(const group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(const group_value_type &point, TIter &iter) {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
@@ -287,14 +287,14 @@ namespace nil {
                         }
                         (*iter) |= m_unit;
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                    nil::crypto3::marshalling::endian::big_endian,
+                    nil::marshalling::endian::big_endian,
                     typename algebra::curves::bls12_381::template g1_type<Coordinates,
                                                                           algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::bls12_381::
@@ -302,11 +302,11 @@ namespace nil {
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
-                    using endianness = nil::crypto3::marshalling::endian::big_endian;
+                    using endianness = nil::marshalling::endian::big_endian;
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(group_value_type &point, TIter &iter) {
                         using chunk_type = typename TIter::value_type;
 
                         const chunk_type m_unit = *iter & 0xE0;
@@ -330,7 +330,7 @@ namespace nil {
                             BOOST_VERIFY(iter + sizeof_field_element_chunks_count ==
                                          std::find(iter, iter + sizeof_field_element_chunks_count, true));
                             point = g1_value_type();    // point at infinity
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         static_assert(
@@ -358,13 +358,13 @@ namespace nil {
                             point = result;
                         }
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                    nil::crypto3::marshalling::endian::big_endian,
+                    nil::marshalling::endian::big_endian,
                     typename algebra::curves::bls12_381::template g2_type<Coordinates,
                                                                           algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::bls12_381::
@@ -372,11 +372,11 @@ namespace nil {
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
-                    using endianness = nil::crypto3::marshalling::endian::big_endian;
+                    using endianness = nil::marshalling::endian::big_endian;
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(group_value_type &point, TIter &iter) {
                         using chunk_type = typename TIter::value_type;
 
                         const chunk_type m_unit = *iter & 0xE0;
@@ -400,7 +400,7 @@ namespace nil {
                             BOOST_ASSERT(iter + 2 * sizeof_field_element_chunks_count ==
                                          std::find(iter, iter + 2 * sizeof_field_element_chunks_count, true));
                             point = g2_value_type();    // point at infinity
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         TIter read_iter = iter;
@@ -434,13 +434,13 @@ namespace nil {
                             point = result;
                         }
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                    nil::crypto3::marshalling::endian::big_endian,
+                    nil::marshalling::endian::big_endian,
                     typename algebra::curves::bls12_377::template g1_type<Coordinates,
                                                                           algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::bls12_377::
@@ -448,11 +448,11 @@ namespace nil {
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
-                    using endianness = nil::crypto3::marshalling::endian::big_endian;
+                    using endianness = nil::marshalling::endian::big_endian;
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(group_value_type &point, TIter &iter) {
                         using chunk_type = typename TIter::value_type;
 
                         const chunk_type m_unit = *iter & 0xE0;
@@ -476,7 +476,7 @@ namespace nil {
                             BOOST_VERIFY(iter + sizeof_field_element_chunks_count ==
                                          std::find(iter, iter + sizeof_field_element_chunks_count, true));
                             point = g1_value_type();    // point at infinity
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         static_assert(
@@ -504,13 +504,13 @@ namespace nil {
                             point = result;
                         }
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                    nil::crypto3::marshalling::endian::big_endian,
+                    nil::marshalling::endian::big_endian,
                     typename algebra::curves::bls12_377::template g2_type<Coordinates,
                                                                           algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::bls12_377::
@@ -518,11 +518,11 @@ namespace nil {
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
-                    using endianness = nil::crypto3::marshalling::endian::big_endian;
+                    using endianness = nil::marshalling::endian::big_endian;
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(group_value_type &point, TIter &iter) {
                         using chunk_type = typename TIter::value_type;
 
                         const chunk_type m_unit = *iter & 0xE0;
@@ -546,7 +546,7 @@ namespace nil {
                             BOOST_ASSERT(iter + 2 * sizeof_field_element_chunks_count ==
                                          std::find(iter, iter + 2 * sizeof_field_element_chunks_count, true));
                             point = g2_value_type();    // point at infinity
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         TIter read_iter = iter;
@@ -580,7 +580,7 @@ namespace nil {
                             point = result;
                         }
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 

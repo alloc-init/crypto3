@@ -56,7 +56,7 @@ void print_byteblob(TIter iter_begin, TIter iter_end) {
 template<typename Endianness, class T>
 void test_curve_element_non_fixed_size_container(std::vector<T> val_container) {
 
-    using namespace nil::crypto3::marshalling;
+    using namespace nil::marshalling;
 
     using unit_type = unsigned char;
 

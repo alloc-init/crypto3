@@ -47,7 +47,7 @@
 #include <nil/crypto3/marshalling/types/zk/r1cs_gg_ppzksnark/verification_key.hpp>
 
 using namespace nil::crypto3;
-using namespace nil::crypto3::marshalling;
+using namespace nil::marshalling;
 using namespace nil::crypto3::zk;
 
 template<typename FieldType>

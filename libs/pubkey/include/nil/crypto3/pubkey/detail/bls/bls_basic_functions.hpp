@@ -173,9 +173,9 @@ namespace nil {
                                 return false;
                             }
                             signature_type Q = nil::crypto3::accumulators::extract::hash<h2c_policy>(*acc_n_iter++);
-                            C1 = C1 * PolicyType::pairing(Q, *pk_n_iter++);
+                            C1 = C1 * *PolicyType::pairing(Q, *pk_n_iter++);
                         }
-                        return C1 == PolicyType::pairing(sig, public_key_type::one());
+                        return C1 == *PolicyType::pairing(sig, public_key_type::one());
                     }
 
                     static bool aggregate_verify(const fast_aggregation_accumulator_type &acc,

@@ -69,7 +69,7 @@ void print_fp2_curve_group_element(Fp2CurveGroupElement e) {
 template<typename Endianness, typename GroupType>
 void test_accumulation_vector(nil::crypto3::container::accumulation_vector<GroupType> val) {
 
-    using namespace nil::crypto3::marshalling;
+    using namespace nil::marshalling;
 
     using unit_type = unsigned char;
     using accumulation_vector_type =

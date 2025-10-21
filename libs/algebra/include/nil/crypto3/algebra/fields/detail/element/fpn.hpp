@@ -36,7 +36,7 @@
 #include <nil/crypto3/algebra/fields/detail/element/operations.hpp>
 #include <nil/crypto3/algebra/fields/detail/exponentiation.hpp>
 
-namespace nil::crypto3::marshalling::types::detail {
+namespace nil::marshalling::types::detail {
     template<typename FieldValueType>
     typename std::enable_if<algebra::is_extended_field_element<FieldValueType>::value,
         std::array<typename FieldValueType::field_type::integral_type,
@@ -365,7 +365,7 @@ namespace nil::crypto3::algebra::fields::detail {
             algebra::is_extended_field_element<FieldValueType>::value,
             std::array<typename FieldValueType::field_type::integral_type,
                 FieldValueType::field_type::arity>>::type
-        nil::crypto3::marshalling::types::detail::fill_field_data(
+        nil::marshalling::types::detail::fill_field_data(
             const FieldValueType &field_elem);
     };
 

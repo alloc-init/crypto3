@@ -193,10 +193,10 @@ print_curve_point(std::ostream &os,
 template<typename Endianness, typename ProofType, typename CommitmentParamsType>
 void test_placeholder_proof(const ProofType &proof, const CommitmentParamsType& params, std::string output_file = "") {
 
-    using namespace nil::crypto3::marshalling;
+    using namespace nil::marshalling;
 
     using TTypeBase = nil::marshalling::field_type<Endianness>;
-    using proof_marshalling_type = nil::crypto3::marshalling::types::placeholder_proof<TTypeBase, ProofType>;
+    using proof_marshalling_type = nil::marshalling::types::placeholder_proof<TTypeBase, ProofType>;
 
     auto filled_placeholder_proof = types::fill_placeholder_proof<Endianness, ProofType>(proof, params);
     ProofType _proof = types::make_placeholder_proof<Endianness, ProofType>(filled_placeholder_proof);
@@ -1184,7 +1184,7 @@ struct placeholder_kzg_test_fixture_v2 : public test_tools::random_test_initiali
         using common_data_type = typename placeholder_public_preprocessor<field_type, kzg_placeholder_params_type>::preprocessed_data_type::common_data_type;
         using Endianness = nil::marshalling::option::big_endian;
 //        using TTypeBase = nil::marshalling::field_type<Endianness>;
-//        nil::crypto3::marshalling::types::placeholder_common_data<TTypeBase, common_data_type> filled_data;
+//        nil::marshalling::types::placeholder_common_data<TTypeBase, common_data_type> filled_data;
 
         if( has_argv("--print") ){
             print_placeholder_proof_with_params<

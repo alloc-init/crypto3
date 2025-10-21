@@ -56,7 +56,7 @@ void print_byteblob(TIter iter_begin, TIter iter_end) {
 template<typename T, typename Endianness>
 void test_field_element(T val) {
 
-    using namespace nil::crypto3::marshalling;
+    using namespace nil::marshalling;
 
     std::size_t units_bits = 8;
     using unit_type = unsigned char;

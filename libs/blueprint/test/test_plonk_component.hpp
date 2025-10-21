@@ -95,17 +95,17 @@ namespace nil {
         ){
             using ArithmetizationType = nil::crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
             using AssignmentType = nil::crypto3::zk::snark::plonk_table<BlueprintFieldType, nil::crypto3::zk::snark::plonk_column<BlueprintFieldType>>;
-            using Endianness = nil::crypto3::marshalling::option::big_endian;
-            using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+            using Endianness = nil::marshalling::option::big_endian;
+            using TTypeBase = nil::marshalling::field_type<Endianness>;
 
             {
                 std::ofstream otable;
                 otable.open(path + "_table.tbl", std::ios_base::binary | std::ios_base::out);
-                auto filled_val = nil::crypto3::marshalling::types::fill_assignment_table<Endianness, AssignmentType>(desc.usable_rows_amount, assignment);
+                auto filled_val = nil::marshalling::types::fill_assignment_table<Endianness, AssignmentType>(desc.usable_rows_amount, assignment);
                 std::vector<std::uint8_t> cv;
                 cv.resize(filled_val.length(), 0x00);
                 auto write_iter = cv.begin();
-                nil::crypto3::marshalling::status_type status = filled_val.write(write_iter, cv.size());
+                nil::marshalling::status_type status = filled_val.write(write_iter, cv.size());
                 otable.write(reinterpret_cast<char*>(cv.data()), cv.size());
                 otable.close();
             }
@@ -113,11 +113,11 @@ namespace nil {
             {
                 std::ofstream ocircuit;
                 ocircuit.open(path + "_circuit.crct", std::ios_base::binary | std::ios_base::out);
-                auto filled_val = nil::crypto3::marshalling::types::fill_plonk_constraint_system<Endianness, ArithmetizationType>(bp);
+                auto filled_val = nil::marshalling::types::fill_plonk_constraint_system<Endianness, ArithmetizationType>(bp);
                 std::vector<std::uint8_t> cv;
                 cv.resize(filled_val.length(), 0x00);
                 auto write_iter = cv.begin();
-                nil::crypto3::marshalling::status_type status = filled_val.write(write_iter, cv.size());
+                nil::marshalling::status_type status = filled_val.write(write_iter, cv.size());
                 ocircuit.write(reinterpret_cast<char*>(cv.data()), cv.size());
                 ocircuit.close();
             }
@@ -136,8 +136,8 @@ namespace nil {
             using ColumnType = nil::crypto3::zk::snark::plonk_column<BlueprintFieldType>;
             using AssignmentTableType = nil::crypto3::zk::snark::plonk_table<BlueprintFieldType, ColumnType>;
             using TableDescriptionType = nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>;
-            using Endianness = nil::crypto3::marshalling::option::big_endian;
-            using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+            using Endianness = nil::marshalling::option::big_endian;
+            using TTypeBase = nil::marshalling::field_type<Endianness>;
 
             ConstraintSystemType constraint_system;
             {
@@ -159,10 +159,10 @@ namespace nil {
                 }
                 ifile.close();
 
-                nil::crypto3::marshalling::types::plonk_constraint_system<TTypeBase, ConstraintSystemType> marshalled_data;
+                nil::marshalling::types::plonk_constraint_system<TTypeBase, ConstraintSystemType> marshalled_data;
                 auto read_iter = v.begin();
                 auto status = marshalled_data.read(read_iter, v.size());
-                constraint_system = nil::crypto3::marshalling::types::make_plonk_constraint_system<Endianness, ConstraintSystemType>(
+                constraint_system = nil::marshalling::types::make_plonk_constraint_system<Endianness, ConstraintSystemType>(
                         marshalled_data
                 );
             }
@@ -187,11 +187,11 @@ namespace nil {
                     BOOST_ASSERT(false);
                 }
                 iassignment.close();
-                nil::crypto3::marshalling::types::plonk_assignment_table<TTypeBase, AssignmentTableType> marshalled_table_data;
+                nil::marshalling::types::plonk_assignment_table<TTypeBase, AssignmentTableType> marshalled_table_data;
                 auto read_iter = v.begin();
                 auto status = marshalled_table_data.read(read_iter, v.size());
                 std::tie(desc, assignment_table) =
-                    nil::crypto3::marshalling::types::make_assignment_table<Endianness, AssignmentTableType>(
+                    nil::marshalling::types::make_assignment_table<Endianness, AssignmentTableType>(
                         marshalled_table_data
                     );
             }

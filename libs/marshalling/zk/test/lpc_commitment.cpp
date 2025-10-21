@@ -239,7 +239,7 @@ template<typename FRI>
 typename FRI::query_proof_type generate_random_fri_query_proof(
         std::size_t max_batch_size,
         std::vector<std::size_t> step_list,
-        nil::crypto3::marshalling::types::batch_info_type batch_info,
+        nil::marshalling::types::batch_info_type batch_info,
         nil::crypto3::random::algebraic_engine<typename FRI::field_type> &alg_rnd,
         boost::random::mt11213b &rnd
 ) {
@@ -267,7 +267,7 @@ typename FRI::proof_type generate_random_fri_proof(
     std::vector<std::size_t> step_list,
     std::size_t lambda,
     bool use_grinding,
-    nil::crypto3::marshalling::types::batch_info_type batch_info,
+    nil::marshalling::types::batch_info_type batch_info,
     nil::crypto3::random::algebraic_engine<typename FRI::field_type> &alg_rnd,
     boost::random::mt11213b &rnd
 ) {
@@ -302,7 +302,7 @@ typename LPC::proof_type generate_random_lpc_proof(
 ) {
     typename LPC::proof_type res;
 
-    nil::crypto3::marshalling::types::batch_info_type batch_info;
+    nil::marshalling::types::batch_info_type batch_info;
     for( std::size_t i = 0; i < 6; i++ ){
         batch_info[rnd()%6] = rnd()%9 + 1;
     }
@@ -369,8 +369,8 @@ template<typename Endianness, typename LPC>
 void test_lpc_proof(typename LPC::proof_type &proof, typename LPC::fri_type::params_type fri_params, std::string filename = "") {
     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-    auto filled_proof = nil::crypto3::marshalling::types::fill_eval_proof<Endianness, LPC>(proof, fri_params);
-    auto _proof = nil::crypto3::marshalling::types::make_eval_proof<Endianness, LPC>(filled_proof);
+    auto filled_proof = nil::marshalling::types::fill_eval_proof<Endianness, LPC>(proof, fri_params);
+    auto _proof = nil::marshalling::types::make_eval_proof<Endianness, LPC>(filled_proof);
     BOOST_CHECK(proof == _proof);
 /*
     std::vector<std::uint8_t> cv;
@@ -379,12 +379,12 @@ void test_lpc_proof(typename LPC::proof_type &proof, typename LPC::fri_type::par
     auto status = filled_proof.write(write_iter, cv.size());
     BOOST_CHECK(status == nil::marshalling::status_type::success);
 
-    typename nil::crypto3::marshalling::types::eval_proof<TTypeBase, LPC>::type test_val_read;
+    typename nil::marshalling::types::eval_proof<TTypeBase, LPC>::type test_val_read;
     auto read_iter = cv.begin();
     test_val_read.read(read_iter, cv.size());
     BOOST_CHECK(status == nil::marshalling::status_type::success);
     typename LPC::proof_type constructed_val_read =
-            nil::crypto3::marshalling::types::make_eval_proof<Endianness, LPC>(test_val_read);
+            nil::marshalling::types::make_eval_proof<Endianness, LPC>(test_val_read);
     BOOST_CHECK(proof == constructed_val_read);
 
     if (filename != "") {
@@ -503,8 +503,8 @@ BOOST_FIXTURE_TEST_CASE(batches_num_3_test, zk::test_tools::random_test_initiali
     commitments[2] = lpc_scheme_prover.commit(2);
     commitments[3] = lpc_scheme_prover.commit(3);
 
-    auto filled_commitment = nil::crypto3::marshalling::types::fill_commitment<Endianness, lpc_scheme_type>(commitments[0]);
-    auto _commitment = nil::crypto3::marshalling::types::make_commitment<Endianness, lpc_scheme_type>(filled_commitment);
+    auto filled_commitment = nil::marshalling::types::fill_commitment<Endianness, lpc_scheme_type>(commitments[0]);
+    auto _commitment = nil::marshalling::types::make_commitment<Endianness, lpc_scheme_type>(filled_commitment);
 
 
     // Generate evaluation points. Generate points outside of the basic domain

@@ -62,7 +62,7 @@ void print_fp2_curve_group_element(Fp2CurveGroupElement e) {
 
 template<class T, std::size_t TSize>
 void test_curve_element_fixed_size_container_big_endian(std::array<T, TSize> val_container) {
-    using namespace nil::crypto3::marshalling;
+    using namespace nil::marshalling;
 
     using Endianness = nil::marshalling::option::big_endian;
 

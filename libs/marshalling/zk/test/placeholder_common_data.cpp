@@ -120,8 +120,8 @@ void test_placeholder_common_data(CommonDataType common_data, std::string folder
     using Endianness = nil::marshalling::option::big_endian;
     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-    auto filled_common_data = nil::crypto3::marshalling::types::fill_placeholder_common_data<Endianness, CommonDataType>(common_data);
-    auto _common_data = nil::crypto3::marshalling::types::make_placeholder_common_data<Endianness,CommonDataType>(filled_common_data);
+    auto filled_common_data = nil::marshalling::types::fill_placeholder_common_data<Endianness, CommonDataType>(common_data);
+    auto _common_data = nil::marshalling::types::make_placeholder_common_data<Endianness,CommonDataType>(filled_common_data);
     BOOST_CHECK(common_data == _common_data);
 
     std::vector<std::uint8_t> cv;
@@ -130,11 +130,11 @@ void test_placeholder_common_data(CommonDataType common_data, std::string folder
     auto status = filled_common_data.write(write_iter, cv.size());
     BOOST_CHECK(status == nil::marshalling::status_type::success);
 
-    nil::crypto3::marshalling::types::placeholder_common_data<TTypeBase, CommonDataType> test_val_read;
+    nil::marshalling::types::placeholder_common_data<TTypeBase, CommonDataType> test_val_read;
     auto read_iter = cv.begin();
     test_val_read.read(read_iter, cv.size());
     BOOST_CHECK(status == nil::marshalling::status_type::success);
-    auto constructed_val_read = nil::crypto3::marshalling::types::make_placeholder_common_data<Endianness, CommonDataType>(
+    auto constructed_val_read = nil::marshalling::types::make_placeholder_common_data<Endianness, CommonDataType>(
             test_val_read
     );
     BOOST_CHECK(common_data == constructed_val_read);
@@ -824,7 +824,7 @@ struct placeholder_kzg_test_fixture_v2 : public test_tools::random_test_initiali
         using common_data_type = typename placeholder_public_preprocessor<field_type, kzg_placeholder_params_type>::preprocessed_data_type::common_data_type;
             using Endianness = nil::marshalling::option::big_endian;
         using TTypeBase = nil::marshalling::field_type<Endianness>;
-        nil::crypto3::marshalling::types::placeholder_common_data<TTypeBase, common_data_type> filled_data;
+        nil::marshalling::types::placeholder_common_data<TTypeBase, common_data_type> filled_data;
 
         if(has_argv("--print"))
             test_placeholder_common_data<common_data_type>(kzg_preprocessed_public_data.common_data, std::string("circuit_") + typeid(curve_type).name());

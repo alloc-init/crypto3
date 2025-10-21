@@ -82,7 +82,7 @@ namespace nil {
                     typedef hashes::h2c<signature_group_type, hashes::sha2<256>, PublicParams> h2c_policy;
                     typedef accumulator_set<h2c_policy> accumulator_type;
 
-                    static inline gt_value_type pairing(const signature_type &U, const public_key_type &V) {
+                    static inline std::optional<gt_value_type> pairing(const signature_type &U, const public_key_type &V) {
                         return algebra::pair_reduced<curve_type>(U, V);
                     }
                 };
@@ -118,7 +118,7 @@ namespace nil {
                     typedef hashes::h2c<signature_group_type, hashes::sha2<256>, PublicParams> h2c_policy;
                     typedef accumulator_set<h2c_policy> accumulator_type;
 
-                    static inline gt_value_type pairing(const signature_type &U, const public_key_type &V) {
+                    static inline std::optional<gt_value_type> pairing(const signature_type &U, const public_key_type &V) {
                         return algebra::pair_reduced<curve_type>(V, U);
                     }
 

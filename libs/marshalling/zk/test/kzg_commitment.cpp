@@ -128,8 +128,8 @@ struct placeholder_class_test_initializer {
         transcript_type transcript;
         auto proof = kzg.proof_eval(transcript);
 
-        auto filled_proof = nil::crypto3::marshalling::types::fill_eval_proof<endianness, kzg_scheme_type>(proof, params);
-        auto _proof = nil::crypto3::marshalling::types::make_eval_proof<endianness, kzg_scheme_type>(filled_proof);
+        auto filled_proof = nil::marshalling::types::fill_eval_proof<endianness, kzg_scheme_type>(proof, params);
+        auto _proof = nil::marshalling::types::make_eval_proof<endianness, kzg_scheme_type>(filled_proof);
 
         BOOST_CHECK( _proof == proof);
 
