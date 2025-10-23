@@ -62,7 +62,7 @@ namespace nil {
                                               typename Result::curve_type>>::value,
                              bool>::type,
                          typename... TOptions>
-                using powers_of_tau_result = nil::marshalling::types::bundle<
+                using powers_of_tau_result = nil::crypto3::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // alpha_g1
@@ -72,42 +72,42 @@ namespace nil {
                         // beta_g2
                         fast_curve_element<TTypeBase, typename Result::curve_type::template g2_type<>>,
                         // coeffs_g1
-                        nil::marshalling::types::array_list<
+                        nil::crypto3::marshalling::types::array_list<
                             TTypeBase,
                             fast_curve_element<TTypeBase, typename Result::curve_type::template g1_type<>>,
-                            nil::marshalling::option::sequence_size_field_prefix<
-                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
+                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // coeffs_g2
-                        nil::marshalling::types::array_list<
+                        nil::crypto3::marshalling::types::array_list<
                             TTypeBase,
                             fast_curve_element<TTypeBase, typename Result::curve_type::template g2_type<>>,
-                            nil::marshalling::option::sequence_size_field_prefix<
-                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
+                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // alpha_coeffs_g1
-                        nil::marshalling::types::array_list<
+                        nil::crypto3::marshalling::types::array_list<
                             TTypeBase,
                             fast_curve_element<TTypeBase, typename Result::curve_type::template g1_type<>>,
-                            nil::marshalling::option::sequence_size_field_prefix<
-                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
+                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // beta_coeffs_g1
-                        nil::marshalling::types::array_list<
+                        nil::crypto3::marshalling::types::array_list<
                             TTypeBase,
                             fast_curve_element<TTypeBase, typename Result::curve_type::template g1_type<>>,
-                            nil::marshalling::option::sequence_size_field_prefix<
-                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
+                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // h
-                        nil::marshalling::types::array_list<
+                        nil::crypto3::marshalling::types::array_list<
                             TTypeBase,
                             fast_curve_element<TTypeBase, typename Result::curve_type::template g1_type<>>,
-                            nil::marshalling::option::sequence_size_field_prefix<
-                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
+                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>
                     >>;
 
                 template<typename Result, typename Endianness>
-                powers_of_tau_result<nil::marshalling::field_type<Endianness>, Result>
+                powers_of_tau_result<nil::crypto3::marshalling::field_type<Endianness>, Result>
                     fill_powers_of_tau_result(const Result &result) {
 
-                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
                     using curve_g1_element_type =
                         fast_curve_element<TTypeBase, typename Result::curve_type::template g1_type<>>;
                     using curve_g2_element_type =
@@ -143,7 +143,7 @@ namespace nil {
 
                 template<typename Result, typename Endianness>
                 Result make_powers_of_tau_result(
-                    const powers_of_tau_result<nil::marshalling::field_type<Endianness>, Result>
+                    const powers_of_tau_result<nil::crypto3::marshalling::field_type<Endianness>, Result>
                         &filled_result) {
 
                     return Result(

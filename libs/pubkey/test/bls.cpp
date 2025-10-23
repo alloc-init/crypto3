@@ -108,7 +108,7 @@ const std::vector<std::uint8_t> PopSchemeDstMps_hash_pubkey_to_point(PopSchemeDs
 BOOST_AUTO_TEST_SUITE(bls_serialization)
 
     BOOST_AUTO_TEST_CASE(g1_serialization_test) {
-        using nil::marshalling::curve_element_serializer;
+        using nil::crypto3::marshalling::curve_element_serializer;
         using curve_type = curves::bls12_381;
         using group_type = typename curve_type::g1_type<>;
         using group_value_type = typename group_type::value_type;
@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_SUITE(bls_serialization)
     }
 
     BOOST_AUTO_TEST_CASE(g2_serialization_test) {
-        using nil::marshalling::curve_element_serializer;
+        using nil::crypto3::marshalling::curve_element_serializer;
         using curve_type = curves::bls12_381;
         using group_type = typename curve_type::g2_type<>;
         using group_value_type = typename group_type::value_type;

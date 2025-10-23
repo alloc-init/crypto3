@@ -28,7 +28,7 @@
 
 #include <type_traits>
 
-namespace nil {
+namespace nil::crypto3 {
     namespace marshalling {
         namespace processing {
 

@@ -73,8 +73,8 @@ namespace nil {
                 typedef typename hash_type::digest_type digest_type;
                 typedef mac::computation_accumulator_set<mac::computation_policy<hmac_policy>> accumulator_type;
 
-                typedef marshalling::types::integral<nil::marshalling::field_type<nil::marshalling::option::big_endian>, integral_type> marshalling_integral_value_be_type;
-                typedef marshalling::types::integral<nil::marshalling::field_type<nil::marshalling::option::little_endian>, integral_type> marshalling_integral_value_le_type;
+                typedef marshalling::types::integral<nil::crypto3::marshalling::field_type<nil::crypto3::marshalling::option::big_endian>, integral_type> marshalling_integral_value_be_type;
+                typedef marshalling::types::integral<nil::crypto3::marshalling::field_type<nil::crypto3::marshalling::option::little_endian>, integral_type> marshalling_integral_value_le_type;
 
                 constexpr static std::size_t modulus_bits = field_type::modulus_bits;
                 constexpr static std::size_t modulus_octets =
@@ -167,8 +167,8 @@ namespace nil {
 
                 template<typename InputRange>
                 static inline modulus_octets_container_type bits2octets(const InputRange &range) {
-                    nil::marshalling::status_type status;
-                    return ::nil::marshalling::pack<::nil::marshalling::option::big_endian>(
+                    nil::crypto3::marshalling::status_type status;
+                    return ::nil::crypto3::marshalling::pack<::nil::crypto3::marshalling::option::big_endian>(
                             field_value_type(bits2int(range)), status);
                 }
 
@@ -183,9 +183,9 @@ namespace nil {
                     // d.
                     accumulator_type acc_d(Key);
 
-                    nil::marshalling::status_type status;
+                    nil::crypto3::marshalling::status_type status;
                     modulus_octets_container_type int2octets_x =
-                            ::nil::marshalling::pack<::nil::marshalling::option::big_endian>(x, status);
+                            ::nil::crypto3::marshalling::pack<::nil::crypto3::marshalling::option::big_endian>(x, status);
 
                     auto bits2octets_h1 = bits2octets(h1);
                     compute<hmac_policy>(V, acc_d);

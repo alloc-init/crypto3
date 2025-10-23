@@ -70,7 +70,7 @@ namespace nil {
 
                 struct construction {
                     struct params_type {
-                        typedef nil::marshalling::option::little_endian digest_endian;
+                        typedef nil::crypto3::marshalling::option::little_endian digest_endian;
                     };
 
                     typedef void type;
@@ -230,7 +230,7 @@ namespace nil {
 
                 struct construction {
                     struct params_type {
-                        typedef nil::marshalling::option::little_endian digest_endian;
+                        typedef nil::crypto3::marshalling::option::little_endian digest_endian;
                     };
 
                     typedef void type;
@@ -253,10 +253,10 @@ namespace nil {
 
                 static inline result_type process(accumulator_type &acc) {
                     auto result_point = nil::crypto3::accumulators::extract::hash<base_hash_type>(acc);
-                    nil::marshalling::status_type status;
+                    nil::crypto3::marshalling::status_type status;
                     // TODO: check status
                     result_type result =
-                            nil::marshalling::pack<typename construction::params_type::digest_endian>(result_point,
+                            nil::crypto3::marshalling::pack<typename construction::params_type::digest_endian>(result_point,
                                 status);
                     return result;
                 }

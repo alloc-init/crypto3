@@ -34,7 +34,7 @@
 
 #include <iterator>
 
-namespace nil {
+namespace nil::crypto3 {
     namespace marshalling {
 
         using namespace nil::crypto3;

@@ -367,7 +367,7 @@ generate_random_polynomial_dfs_batch(std::size_t batch_size,
 
 template<typename Endianness, typename LPC>
 void test_lpc_proof(typename LPC::proof_type &proof, typename LPC::fri_type::params_type fri_params, std::string filename = "") {
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
 
     auto filled_proof = nil::crypto3::marshalling::types::fill_eval_proof<Endianness, LPC>(proof, fri_params);
     auto _proof = nil::crypto3::marshalling::types::make_eval_proof<Endianness, LPC>(filled_proof);
@@ -377,12 +377,12 @@ void test_lpc_proof(typename LPC::proof_type &proof, typename LPC::fri_type::par
     cv.resize(filled_proof.length(), 0x00);
     auto write_iter = cv.begin();
     auto status = filled_proof.write(write_iter, cv.size());
-    BOOST_CHECK(status == nil::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
 
     typename nil::crypto3::marshalling::types::eval_proof<TTypeBase, LPC>::type test_val_read;
     auto read_iter = cv.begin();
     test_val_read.read(read_iter, cv.size());
-    BOOST_CHECK(status == nil::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
     typename LPC::proof_type constructed_val_read =
             nil::crypto3::marshalling::types::make_eval_proof<Endianness, LPC>(test_val_read);
     BOOST_CHECK(proof == constructed_val_read);
@@ -406,8 +406,8 @@ BOOST_AUTO_TEST_SUITE(marshalling_random)
     using value_type = typename field_type::value_type;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
 
-    using Endianness = nil::marshalling::option::big_endian;
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
     using FRI = typename nil::crypto3::zk::commitments::detail::basic_batched_fri<field_type, hash_type, hash_type, m>;
     using lpc_params_type = typename nil::crypto3::zk::commitments::list_polynomial_commitment_params<
             hash_type, hash_type, m
@@ -434,7 +434,7 @@ BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(marshalling_real)
     // Setup common types.
-    using Endianness = nil::marshalling::option::big_endian;
+    using Endianness = nil::crypto3::marshalling::option::big_endian;
     using curve_type = nil::crypto3::algebra::curves::vesta;
     using field_type = curve_type::scalar_field_type;
     using merkle_hash_type = nil::crypto3::hashes::keccak_1600<256>;

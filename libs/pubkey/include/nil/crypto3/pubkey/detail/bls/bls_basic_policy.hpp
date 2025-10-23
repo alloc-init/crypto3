@@ -71,7 +71,7 @@ namespace nil {
                     typedef typename public_key_group_type::value_type public_key_type;
                     typedef typename signature_group_type::value_type signature_type;
 
-                    typedef nil::marshalling::curve_element_serializer<curve_type> bls_serializer;
+                    typedef nil::crypto3::marshalling::curve_element_serializer<curve_type> bls_serializer;
                     typedef typename bls_serializer::compressed_g2_octets public_key_serialized_type;
                     typedef typename bls_serializer::compressed_g1_octets signature_serialized_type;
 
@@ -107,7 +107,7 @@ namespace nil {
                     typedef typename public_key_group_type::value_type public_key_type;
                     typedef typename signature_group_type::value_type signature_type;
 
-                    typedef nil::marshalling::curve_element_serializer<curve_type> bls_serializer;
+                    typedef nil::crypto3::marshalling::curve_element_serializer<curve_type> bls_serializer;
                     typedef typename bls_serializer::compressed_g1_octets public_key_serialized_type;
                     typedef typename bls_serializer::compressed_g2_octets signature_serialized_type;
 

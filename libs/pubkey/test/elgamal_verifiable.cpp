@@ -195,19 +195,19 @@ typename std::enable_if<std::is_unsigned<ValueType>::value, std::vector<std::arr
 
 template<typename VerificationKey, typename PublicKey, typename Proof, typename PInput, typename CipherText>
 struct marshalling_verification_data_groth16_encrypted_input {
-    using endianness = nil::marshalling::option::big_endian;
+    using endianness = nil::crypto3::marshalling::option::big_endian;
     using proof_marshalling_type =
-        nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_proof<nil::marshalling::field_type<endianness>, Proof>;
+        nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_proof<nil::crypto3::marshalling::field_type<endianness>, Proof>;
     using verification_key_marshalling_type =
         nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_extended_verification_key<
-            nil::marshalling::field_type<endianness>, VerificationKey>;
+            nil::crypto3::marshalling::field_type<endianness>, VerificationKey>;
     using public_key_marshalling_type =
-        nil::crypto3::marshalling::types::elgamal_verifiable_public_key<nil::marshalling::field_type<endianness>,
+        nil::crypto3::marshalling::types::elgamal_verifiable_public_key<nil::crypto3::marshalling::field_type<endianness>,
                                                                         PublicKey>;
     using ct_marshalling_type = nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_encrypted_primary_input<
-        nil::marshalling::field_type<endianness>, CipherText>;
+        nil::crypto3::marshalling::field_type<endianness>, CipherText>;
     using pinput_marshalling_type =
-        nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_primary_input<nil::marshalling::field_type<endianness>,
+        nil::crypto3::marshalling::types::r1cs_gg_ppzksnark_primary_input<nil::crypto3::marshalling::field_type<endianness>,
                                                                           PInput>;
 
     static inline std::string proof_path_str = "proof.bin";
@@ -231,7 +231,7 @@ struct marshalling_verification_data_groth16_encrypted_input {
         MarshallingType filled_val = f(in_obj);
         std::vector<std::uint8_t> blob(filled_val.length());
         auto it = std::begin(blob);
-        nil::marshalling::status_type status = filled_val.write(it, blob.size());
+        nil::crypto3::marshalling::status_type status = filled_val.write(it, blob.size());
         return blob;
     }
 
@@ -298,7 +298,7 @@ struct marshalling_verification_data_groth16_encrypted_input {
 
         MarshallingType marshalling_obj;
         auto it = std::cbegin(blob);
-        nil::marshalling::status_type status = marshalling_obj.read(it, blob.size());
+        nil::crypto3::marshalling::status_type status = marshalling_obj.read(it, blob.size());
         return f(marshalling_obj);
     }
 

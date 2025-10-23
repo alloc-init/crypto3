@@ -62,7 +62,7 @@ void print_hex_byteblob(std::ostream &os, TIter iter_begin, TIter iter_end, bool
 
 template<typename Endianness, typename PlonkTable>
 void test_assignment_table(std::size_t usable_rows, PlonkTable val, std::string folder_name = "") {
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
     using value_marshalling_type = nil::crypto3::marshalling::types::plonk_assignment_table<TTypeBase, PlonkTable>;
 
     auto filled_val = nil::crypto3::marshalling::types::fill_assignment_table<Endianness, PlonkTable>(usable_rows, val);
@@ -74,11 +74,11 @@ void test_assignment_table(std::size_t usable_rows, PlonkTable val, std::string 
     cv.resize(filled_val.length(), 0x00);
 
     auto write_iter = cv.begin();
-    nil::marshalling::status_type status = filled_val.write(write_iter, cv.size());
+    nil::crypto3::marshalling::status_type status = filled_val.write(write_iter, cv.size());
     value_marshalling_type test_val_read;
     auto read_iter = cv.begin();
     status = test_val_read.read(read_iter, cv.size());
-    BOOST_CHECK(status == nil::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
     table_desc_pair = types::make_assignment_table<Endianness, PlonkTable>(test_val_read);
 
     BOOST_CHECK(val == table_desc_pair.second);
@@ -95,8 +95,8 @@ void test_assignment_table(std::size_t usable_rows, PlonkTable val, std::string 
 }
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit1)
-    using Endianness = nil::marshalling::option::big_endian;
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
 
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
@@ -152,8 +152,8 @@ BOOST_FIXTURE_TEST_CASE(assignment_table_marshalling_test, test_tools::random_te
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit2)
-    using Endianness = nil::marshalling::option::big_endian;
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
 
     using curve_type = algebra::curves::bls12<381>;
     using field_type = typename curve_type::scalar_field_type;
@@ -213,8 +213,8 @@ BOOST_FIXTURE_TEST_CASE(assignment_table_marshalling_test, test_tools::random_te
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit3)
-    using Endianness = nil::marshalling::option::big_endian;
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -271,8 +271,8 @@ BOOST_AUTO_TEST_SUITE_END()
 
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit4)
-    using Endianness = nil::marshalling::option::big_endian;
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -329,8 +329,8 @@ BOOST_FIXTURE_TEST_CASE(assignment_table_marshalling_test, test_tools::random_te
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit5)
-    using Endianness = nil::marshalling::option::big_endian;
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
 
     using curve_type = algebra::curves::bls12<381>;
     using field_type = typename curve_type::scalar_field_type;
@@ -390,8 +390,8 @@ BOOST_FIXTURE_TEST_CASE(assignment_table_marshalling_test, test_tools::random_te
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit6)
-    using Endianness = nil::marshalling::option::big_endian;
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -446,8 +446,8 @@ BOOST_FIXTURE_TEST_CASE(assignment_table_marshalling_test, test_tools::random_te
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit7)
-    using Endianness = nil::marshalling::option::big_endian;
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
+    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 

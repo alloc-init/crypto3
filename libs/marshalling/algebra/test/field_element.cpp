@@ -60,25 +60,25 @@ void test_field_element(T val) {
 
     std::size_t units_bits = 8;
     using unit_type = unsigned char;
-    using field_element_type = types::field_element<nil::marshalling::field_type<Endianness>, T>;
+    using field_element_type = types::field_element<nil::crypto3::marshalling::field_type<Endianness>, T>;
 
     static_assert(nil::crypto3::algebra::is_field_element<T>::value);
-    static_assert(nil::marshalling::is_field_element<field_element_type>::value);
-    static_assert(nil::marshalling::is_compatible<T>::value);
+    static_assert(nil::crypto3::marshalling::is_field_element<field_element_type>::value);
+    static_assert(nil::crypto3::marshalling::is_compatible<T>::value);
 
-    using inferenced_type = typename nil::marshalling::is_compatible<T>::template type<Endianness>;
+    using inferenced_type = typename nil::crypto3::marshalling::is_compatible<T>::template type<Endianness>;
 
     static_assert(std::is_same<inferenced_type, field_element_type>::value);
 
-    nil::marshalling::status_type status;
-    std::vector<unit_type> cv = nil::marshalling::pack<Endianness>(val, status);
+    nil::crypto3::marshalling::status_type status;
+    std::vector<unit_type> cv = nil::crypto3::marshalling::pack<Endianness>(val, status);
 
-    BOOST_CHECK(status == nil::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
 
-    T test_val = nil::marshalling::pack<Endianness>(cv, status);
+    T test_val = nil::crypto3::marshalling::pack<Endianness>(cv, status);
 
     BOOST_CHECK(val == test_val);
-    BOOST_CHECK(status == nil::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
 }
 
 template<typename FieldType, typename Endianness>
@@ -99,28 +99,28 @@ BOOST_AUTO_TEST_SUITE(field_element_test_suite)
 BOOST_AUTO_TEST_CASE(field_element_bls12_381_g1_field_be) {
     std::cout << "BLS12-381 g1 group field big-endian test started" << std::endl;
     test_field_element<nil::crypto3::algebra::curves::bls12<381>::g1_type<>::field_type,
-                       nil::marshalling::option::big_endian>();
+                       nil::crypto3::marshalling::option::big_endian>();
     std::cout << "BLS12-381 g1 group field big-endian test finished" << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(field_element_bls12_381_g1_field_le) {
     std::cout << "BLS12-381 g1 group field little-endian test started" << std::endl;
     test_field_element<nil::crypto3::algebra::curves::bls12<381>::g1_type<>::field_type,
-                       nil::marshalling::option::little_endian>();
+                       nil::crypto3::marshalling::option::little_endian>();
     std::cout << "BLS12-381 g1 group field little-endian test finished" << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(field_element_bls12_381_g2_field_be) {
     std::cout << "BLS12-381 g2 group field big-endian test started" << std::endl;
     test_field_element<nil::crypto3::algebra::curves::bls12<381>::g2_type<>::field_type,
-                       nil::marshalling::option::big_endian>();
+                       nil::crypto3::marshalling::option::big_endian>();
     std::cout << "BLS12-381 g2 group field big-endian test finished" << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(field_element_bls12_381_g2_field_le) {
     std::cout << "BLS12-381 g2 group field little-endian test started" << std::endl;
     test_field_element<nil::crypto3::algebra::curves::bls12<381>::g2_type<>::field_type,
-                       nil::marshalling::option::little_endian>();
+                       nil::crypto3::marshalling::option::little_endian>();
     std::cout << "BLS12-381 g2 group field little-endian test finished" << std::endl;
 }
 

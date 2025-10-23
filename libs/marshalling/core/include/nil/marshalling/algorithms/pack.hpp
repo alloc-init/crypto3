@@ -24,12 +24,12 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef MARSHALLING_REPACK_NEW_HPP
-#define MARSHALLING_REPACK_NEW_HPP
+#ifndef MARSHALLING_PACK_HPP
+#define MARSHALLING_PACK_HPP
 
 #include <nil/marshalling/detail/repack_value.hpp>
 
-namespace nil {
+namespace nil::crypto3 {
     namespace marshalling {
         /*!
          * @defgroup marshalling Marshalling
@@ -58,17 +58,20 @@ namespace nil {
          *
          * @return TOutput
          */
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename SinglePassRange>
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename SinglePassRange>
         typename std::enable_if<
             nil::detail::is_range<SinglePassRange>::value,
             detail::range_repack_impl<TInputEndian, TOutputEndian, typename SinglePassRange::const_iterator>>::type
 
             pack(const SinglePassRange &val, status_type &status) {
             BOOST_RANGE_CONCEPT_ASSERT((boost::SinglePassRangeConcept<const SinglePassRange>));
-            return detail::range_repack_impl<TInputEndian, TOutputEndian, typename SinglePassRange::const_iterator>(val, status);
+            return detail::range_repack_impl<TInputEndian, TOutputEndian, typename SinglePassRange::const_iterator>(
+                val, status);
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename TInput>
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename TInput>
         typename std::enable_if<!nil::detail::is_range<TInput>::value,
                                 detail::value_repack_impl<TInputEndian, TOutputEndian, TInput>>::type
 
@@ -91,28 +94,30 @@ namespace nil {
          *
          * @return
          */
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename InputIterator>
-        typename std::enable_if<
-            nil::detail::is_iterator<InputIterator>::value
-                && std::is_integral<typename std::iterator_traits<InputIterator>::value_type>::value,
-            detail::range_repack_impl<TInputEndian, TOutputEndian, InputIterator>>::type
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename InputIterator>
+        typename std::enable_if<nil::crypto3::detail::is_iterator<InputIterator>::value &&
+                                    std::is_integral<typename std::iterator_traits<InputIterator>::value_type>::value,
+                                detail::range_repack_impl<TInputEndian, TOutputEndian, InputIterator>>::type
             pack(InputIterator first, InputIterator last, status_type &status) {
             BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<InputIterator>));
             return detail::range_repack_impl<TInputEndian, TOutputEndian, InputIterator>(first, last, status);
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename TInput, typename TOutputIterator>
-        typename std::enable_if<!nil::detail::is_range<TInput>::value && nil::detail::is_iterator<TOutputIterator>::value,
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename TInput, typename TOutputIterator>
+        typename std::enable_if<!nil::detail::is_range<TInput>::value && nil::crypto3::detail::is_iterator<TOutputIterator>::value,
                                 TOutputIterator>::type
             pack(const TInput &val, TOutputIterator out, status_type &status) {
             using T = typename std::iterator_traits<TOutputIterator>::value_type;
-            std::vector<T> result  = pack<TInputEndian, TOutputEndian>(val, status);
+            std::vector<T> result = pack<TInputEndian, TOutputEndian>(val, status);
             return std::move(result.cbegin(), result.cend(), out);
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename SinglePassRange, typename TOutputIterator>
-        typename std::enable_if<nil::detail::is_range<SinglePassRange>::value
-                                    && nil::detail::is_iterator<TOutputIterator>::value,
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename SinglePassRange, typename TOutputIterator>
+        typename std::enable_if<nil::detail::is_range<SinglePassRange>::value &&
+                                    nil::crypto3::detail::is_iterator<TOutputIterator>::value,
                                 TOutputIterator>::type
             pack(const SinglePassRange &rng_input, TOutputIterator out, status_type &status) {
             BOOST_RANGE_CONCEPT_ASSERT((boost::SinglePassRangeConcept<const SinglePassRange>));
@@ -121,9 +126,10 @@ namespace nil {
             return std::move(result.cbegin(), result.cend(), out);
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename InputIterator, typename TOutputIterator>
-        typename std::enable_if<nil::detail::is_iterator<InputIterator>::value
-                                    && nil::detail::is_iterator<TOutputIterator>::value,
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename InputIterator, typename TOutputIterator>
+        typename std::enable_if<nil::crypto3::detail::is_iterator<InputIterator>::value &&
+                                    nil::crypto3::detail::is_iterator<TOutputIterator>::value,
                                 TOutputIterator>::type
             pack(InputIterator first, InputIterator last, TOutputIterator out, status_type &status) {
             using T = typename std::iterator_traits<TOutputIterator>::value_type;
@@ -131,58 +137,62 @@ namespace nil {
             return std::move(result.cbegin(), result.cend(), out);
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename TInput, typename SinglePassRange>
-        typename std::enable_if<!nil::detail::is_range<TInput>::value && nil::detail::is_range<SinglePassRange>::value
-                                    && std::is_constructible<SinglePassRange,
-                                                            typename std::vector<typename SinglePassRange::value_type>::const_iterator,
-                                                            typename std::vector<typename SinglePassRange::value_type>::const_iterator>::value,
-                                status_type>::type
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename TInput, typename SinglePassRange>
+        typename std::enable_if<
+            !nil::detail::is_range<TInput>::value && nil::detail::is_range<SinglePassRange>::value &&
+                std::is_constructible<
+                    SinglePassRange, typename std::vector<typename SinglePassRange::value_type>::const_iterator,
+                    typename std::vector<typename SinglePassRange::value_type>::const_iterator>::value,
+            status_type>::type
 
             pack(const TInput &val, SinglePassRange &rng_output) {
             BOOST_RANGE_CONCEPT_ASSERT((boost::SinglePassRangeConcept<const SinglePassRange>));
             status_type status;
-            std::vector<typename SinglePassRange::value_type> result  = pack<TOutputEndian, TInputEndian>(val, status);
+            std::vector<typename SinglePassRange::value_type> result = pack<TOutputEndian, TInputEndian>(val, status);
             rng_output = SinglePassRange(result.begin(), result.end());
             return status;
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename TInput, typename SinglePassRange>
-        typename std::enable_if<!nil::detail::is_range<TInput>::value && nil::detail::is_range<SinglePassRange>::value
-                                    && !std::is_constructible<SinglePassRange,
-                                                             typename std::vector<typename SinglePassRange::value_type>::const_iterator,
-                                                             typename std::vector<typename SinglePassRange::value_type>::const_iterator>::value,
-                                status_type>::type
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename TInput, typename SinglePassRange>
+        typename std::enable_if<
+            !nil::detail::is_range<TInput>::value && nil::detail::is_range<SinglePassRange>::value &&
+                !std::is_constructible<
+                    SinglePassRange, typename std::vector<typename SinglePassRange::value_type>::const_iterator,
+                    typename std::vector<typename SinglePassRange::value_type>::const_iterator>::value,
+            status_type>::type
 
             pack(const TInput &val, SinglePassRange &rng_output) {
             BOOST_RANGE_CONCEPT_ASSERT((boost::SinglePassRangeConcept<const SinglePassRange>));
             status_type status;
-            rng_output  = pack<TOutputEndian, TInputEndian>(val, status);
+            rng_output = pack<TOutputEndian, TInputEndian>(val, status);
             return status;
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename SinglePassRange1, typename SinglePassRange2>
-        typename std::enable_if<nil::detail::is_range<SinglePassRange1>::value
-                                    && nil::detail::is_range<SinglePassRange2>::value
-                                    && std::is_constructible<SinglePassRange2,
-                                                             typename SinglePassRange2::const_iterator,
-                                                             typename SinglePassRange2::const_iterator>::value,
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename SinglePassRange1, typename SinglePassRange2>
+        typename std::enable_if<nil::detail::is_range<SinglePassRange1>::value &&
+                                    nil::detail::is_range<SinglePassRange2>::value &&
+                                    std::is_constructible<SinglePassRange2, typename SinglePassRange2::const_iterator,
+                                                          typename SinglePassRange2::const_iterator>::value,
                                 status_type>::type
             pack(const SinglePassRange1 &rng_input, SinglePassRange2 &rng_output) {
             BOOST_RANGE_CONCEPT_ASSERT((boost::SinglePassRangeConcept<const SinglePassRange1>));
             BOOST_RANGE_CONCEPT_ASSERT((boost::SinglePassRangeConcept<const SinglePassRange2>));
             status_type status;
-            std::vector<typename SinglePassRange2::value_type> result
-                = pack<TOutputEndian, TInputEndian>(rng_input, status);
+            std::vector<typename SinglePassRange2::value_type> result =
+                pack<TOutputEndian, TInputEndian>(rng_input, status);
             rng_output = SinglePassRange2(result.begin(), result.end());
             return status;
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename SinglePassRange1, typename SinglePassRange2>
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename SinglePassRange1, typename SinglePassRange2>
         typename std::enable_if<
-            nil::detail::is_range<SinglePassRange1>::value && nil::detail::is_range<SinglePassRange2>::value
-                && !std::is_constructible<
-                    SinglePassRange2,
-                    typename std::vector<typename SinglePassRange2::value_type>::const_iterator,
+            nil::detail::is_range<SinglePassRange1>::value && nil::detail::is_range<SinglePassRange2>::value &&
+                !std::is_constructible<
+                    SinglePassRange2, typename std::vector<typename SinglePassRange2::value_type>::const_iterator,
                     typename std::vector<typename SinglePassRange2::value_type>::const_iterator>::value,
             status_type>::type
             pack(const SinglePassRange1 &rng_input, SinglePassRange2 &rng_output) {
@@ -193,29 +203,29 @@ namespace nil {
             return status;
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename InputIterator, typename SinglePassRange>
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename InputIterator, typename SinglePassRange>
         typename std::enable_if<
-            nil::detail::is_iterator<InputIterator>::value && nil::detail::is_range<SinglePassRange>::value
-                && std::is_constructible<
-                    SinglePassRange,
-                    typename std::vector<typename SinglePassRange::value_type>::const_iterator,
+            nil::crypto3::detail::is_iterator<InputIterator>::value && nil::detail::is_range<SinglePassRange>::value &&
+                std::is_constructible<
+                    SinglePassRange, typename std::vector<typename SinglePassRange::value_type>::const_iterator,
                     typename std::vector<typename SinglePassRange::value_type>::const_iterator>::value,
             status_type>::type
             pack(InputIterator first, InputIterator last, SinglePassRange &rng_output) {
             BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<InputIterator>));
             status_type status;
-            std::vector<typename SinglePassRange::value_type> result
-                = pack<TOutputEndian, TInputEndian>(first, last, status);
+            std::vector<typename SinglePassRange::value_type> result =
+                pack<TOutputEndian, TInputEndian>(first, last, status);
             rng_output = SinglePassRange(result.begin(), result.end());
             return status;
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename InputIterator, typename SinglePassRange>
-        typename std::enable_if<nil::detail::is_iterator<InputIterator>::value
-                                    && nil::detail::is_range<SinglePassRange>::value
-                                    && !std::is_constructible<SinglePassRange,
-                                                              typename SinglePassRange::const_iterator,
-                                                              typename SinglePassRange::const_iterator>::value,
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename InputIterator, typename SinglePassRange>
+        typename std::enable_if<nil::crypto3::detail::is_iterator<InputIterator>::value &&
+                                    nil::detail::is_range<SinglePassRange>::value &&
+                                    !std::is_constructible<SinglePassRange, typename SinglePassRange::const_iterator,
+                                                           typename SinglePassRange::const_iterator>::value,
                                 status_type>::type
             pack(InputIterator first, InputIterator last, SinglePassRange &rng_output) {
             BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<InputIterator>));
@@ -224,10 +234,11 @@ namespace nil {
             return status;
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename InputIterator, typename TOutput>
-        typename std::enable_if<nil::detail::is_iterator<InputIterator>::value
-                                    && !(nil::detail::is_range<TOutput>::value || nil::detail::is_array<TOutput>::value)
-                                    && !std::is_same<TOutput, status_type>::value,
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename InputIterator, typename TOutput>
+        typename std::enable_if<nil::crypto3::detail::is_iterator<InputIterator>::value &&
+                                    !(nil::detail::is_range<TOutput>::value || nil::detail::is_array<TOutput>::value) &&
+                                    !std::is_same<TOutput, status_type>::value,
                                 status_type>::type
             pack(InputIterator first, InputIterator last, TOutput &rng_output) {
             BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<InputIterator>));
@@ -236,10 +247,11 @@ namespace nil {
             return status;
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename SinglePassRange, typename TOutput>
-        typename std::enable_if<nil::detail::is_range<SinglePassRange>::value
-                                    && !(nil::detail::is_range<TOutput>::value || nil::detail::is_array<TOutput>::value)
-                                    && !std::is_same<TOutput, status_type>::value,
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename SinglePassRange, typename TOutput>
+        typename std::enable_if<nil::detail::is_range<SinglePassRange>::value &&
+                                    !(nil::detail::is_range<TOutput>::value || nil::detail::is_array<TOutput>::value) &&
+                                    !std::is_same<TOutput, status_type>::value,
                                 status_type>::type
             pack(const SinglePassRange &rng_input, TOutput &rng_output) {
             BOOST_RANGE_CONCEPT_ASSERT((boost::SinglePassRangeConcept<const SinglePassRange>));
@@ -248,8 +260,9 @@ namespace nil {
             return status;
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename TInput, typename TOutputIterator>
-        typename std::enable_if<!nil::detail::is_range<TInput>::value && nil::detail::is_iterator<TOutputIterator>::value,
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename TInput, typename TOutputIterator>
+        typename std::enable_if<!nil::detail::is_range<TInput>::value && nil::crypto3::detail::is_iterator<TOutputIterator>::value,
                                 status_type>::type
 
             pack(const TInput &val, TOutputIterator out) {
@@ -260,9 +273,10 @@ namespace nil {
             return status;
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename SinglePassRange, typename TOutputIterator>
-        typename std::enable_if<nil::detail::is_range<SinglePassRange>::value
-                                    && nil::detail::is_iterator<TOutputIterator>::value,
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename SinglePassRange, typename TOutputIterator>
+        typename std::enable_if<nil::detail::is_range<SinglePassRange>::value &&
+                                    nil::crypto3::detail::is_iterator<TOutputIterator>::value,
                                 status_type>::type
             pack(const SinglePassRange &rng_input, TOutputIterator out) {
             BOOST_RANGE_CONCEPT_ASSERT((boost::SinglePassRangeConcept<const SinglePassRange>));
@@ -273,10 +287,10 @@ namespace nil {
             return status;
         }
 
-        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian, typename InputIterator, typename TOutputIterator>
-        typename std::enable_if<nil::detail::is_iterator<InputIterator>::value
-                                    && nil::detail::is_iterator<TOutputIterator>::value,
-                                status_type>::type
+        template<typename TOutputEndian = option::big_endian, typename TInputEndian = option::big_endian,
+                 typename InputIterator, typename TOutputIterator>
+        typename std::enable_if<
+            nil::crypto3::detail::is_iterator<InputIterator>::value && nil::crypto3::detail::is_iterator<TOutputIterator>::value, status_type>::type
             pack(InputIterator first, InputIterator last, TOutputIterator out) {
             using T = typename std::iterator_traits<TOutputIterator>::value_type;
             status_type status;
@@ -285,6 +299,6 @@ namespace nil {
             return status;
         }
     }    // namespace marshalling
-}    // namespace nil
+}    // namespace nil::crypto3
 
-#endif    // MARSHALLING_REPACK_NEW_HPP
+#endif    // MARSHALLING_PACK_HPP

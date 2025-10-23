@@ -60,7 +60,7 @@ namespace nil {
                                                                       PublicKey::scheme_type::block_bits>>>::value,
                                                      bool>::type,
                          typename... TOptions>
-                using elgamal_verifiable_public_key = nil::marshalling::types::bundle<
+                using elgamal_verifiable_public_key = nil::crypto3::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // delta_g1
@@ -70,23 +70,23 @@ namespace nil {
                         // gamma_inverse_sum_s_g1
                         curve_element<TTypeBase, typename PublicKey::g1_type>,
                         // delta_s_g1
-                        nil::marshalling::types::array_list<
+                        nil::crypto3::marshalling::types::array_list<
                             TTypeBase,
                             curve_element<TTypeBase, typename PublicKey::g1_type>,
-                            nil::marshalling::option::sequence_size_field_prefix<
-                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
+                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // t_g1
-                        nil::marshalling::types::array_list<
+                        nil::crypto3::marshalling::types::array_list<
                             TTypeBase,
                             curve_element<TTypeBase, typename PublicKey::g1_type>,
-                            nil::marshalling::option::sequence_size_field_prefix<
-                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
+                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // t_g2
-                        nil::marshalling::types::array_list<
+                        nil::crypto3::marshalling::types::array_list<
                             TTypeBase,
                             curve_element<TTypeBase, typename PublicKey::g2_type>,
-                            nil::marshalling::option::sequence_size_field_prefix<
-                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>>>;
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
+                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>>>;
 
                 template<typename TTypeBase,
                          typename PrivateKey,
@@ -97,7 +97,7 @@ namespace nil {
                                                                       PrivateKey::scheme_type::block_bits>>>::value,
                                                      bool>::type,
                          typename... TOptions>
-                using elgamal_verifiable_private_key = nil::marshalling::types::bundle<
+                using elgamal_verifiable_private_key = nil::crypto3::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // rho
@@ -112,29 +112,29 @@ namespace nil {
                                               VerificationKey::scheme_type::block_bits>>>::value,
                              bool>::type,
                          typename... TOptions>
-                using elgamal_verifiable_verification_key = nil::marshalling::types::bundle<
+                using elgamal_verifiable_verification_key = nil::crypto3::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // rho_g2
                         curve_element<TTypeBase, typename VerificationKey::g2_type>,
                         // rho_sv_g2
-                        nil::marshalling::types::array_list<
+                        nil::crypto3::marshalling::types::array_list<
                             TTypeBase,
                             curve_element<TTypeBase, typename VerificationKey::g2_type>,
-                            nil::marshalling::option::sequence_size_field_prefix<
-                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
+                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // rho_rhov_g2
-                        nil::marshalling::types::array_list<
+                        nil::crypto3::marshalling::types::array_list<
                             TTypeBase,
                             curve_element<TTypeBase, typename VerificationKey::g2_type>,
-                            nil::marshalling::option::sequence_size_field_prefix<
-                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>>>;
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
+                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>>>;
 
                 template<typename PublicKey, typename Endianness>
-                elgamal_verifiable_public_key<nil::marshalling::field_type<Endianness>, PublicKey>
+                elgamal_verifiable_public_key<nil::crypto3::marshalling::field_type<Endianness>, PublicKey>
                     fill_public_key(const PublicKey &key_inp) {
 
-                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
 
                     using curve_g1_element_type = curve_element<TTypeBase, typename PublicKey::g1_type>;
 
@@ -145,7 +145,7 @@ namespace nil {
                     curve_g1_element_type filled_gamma_inverse_sum_s_g1 =
                         curve_g1_element_type(key_inp.gamma_inverse_sum_s_g1);
 
-                    return elgamal_verifiable_public_key<nil::marshalling::field_type<Endianness>, PublicKey>(
+                    return elgamal_verifiable_public_key<nil::crypto3::marshalling::field_type<Endianness>, PublicKey>(
                         std::make_tuple(
                             filled_delta_g1,
                             filled_delta_sum_s_g1,
@@ -156,7 +156,7 @@ namespace nil {
                 }
 
                 template<typename PublicKey, typename Endianness>
-                PublicKey make_public_key(const elgamal_verifiable_public_key<nil::marshalling::field_type<Endianness>,
+                PublicKey make_public_key(const elgamal_verifiable_public_key<nil::crypto3::marshalling::field_type<Endianness>,
                                                                               PublicKey> &filled_key_inp) {
 
                     return PublicKey(std::move(std::get<0>(filled_key_inp.value()).value()),
@@ -171,10 +171,10 @@ namespace nil {
                 }
 
                 template<typename PrivateKey, typename Endianness>
-                elgamal_verifiable_private_key<nil::marshalling::field_type<Endianness>, PrivateKey>
+                elgamal_verifiable_private_key<nil::crypto3::marshalling::field_type<Endianness>, PrivateKey>
                     fill_private_key(const PrivateKey &key_inp) {
 
-                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
                     using field_element_marshalling_type =
                         field_element<TTypeBase, typename PrivateKey::scalar_field_type::value_type>;
 
@@ -185,16 +185,16 @@ namespace nil {
 
                 template<typename PrivateKey, typename Endianness>
                 PrivateKey
-                    make_private_key(const elgamal_verifiable_private_key<nil::marshalling::field_type<Endianness>,
+                    make_private_key(const elgamal_verifiable_private_key<nil::crypto3::marshalling::field_type<Endianness>,
                                                                           PrivateKey> &filled_key_inp) {
                     return PrivateKey(std::move(std::get<0>(filled_key_inp.value()).value()));
                 }
 
                 template<typename VerificationKey, typename Endianness>
-                elgamal_verifiable_verification_key<nil::marshalling::field_type<Endianness>, VerificationKey>
+                elgamal_verifiable_verification_key<nil::crypto3::marshalling::field_type<Endianness>, VerificationKey>
                     fill_verification_key(const VerificationKey &key_inp) {
 
-                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
                     using curve_g2_element_type = curve_element<TTypeBase, typename VerificationKey::g2_type>;
 
                     curve_g2_element_type filled_rho_g2 = curve_g2_element_type(key_inp.rho_g2);
@@ -206,7 +206,7 @@ namespace nil {
 
                 template<typename VerificationKey, typename Endianness>
                 VerificationKey make_verification_key(
-                    const elgamal_verifiable_verification_key<nil::marshalling::field_type<Endianness>, VerificationKey>
+                    const elgamal_verifiable_verification_key<nil::crypto3::marshalling::field_type<Endianness>, VerificationKey>
                         &filled_key_inp) {
 
                     return VerificationKey(

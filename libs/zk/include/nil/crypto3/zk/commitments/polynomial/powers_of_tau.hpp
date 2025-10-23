@@ -192,14 +192,14 @@ namespace nil {
                     }
 
                     static std::vector<std::uint8_t> serialize_accumulator(const accumulator_type &acc) {
-                        using endianness = nil::marshalling::option::little_endian;
+                        using endianness = nil::crypto3::marshalling::option::little_endian;
                         auto filled_val =
                                 nil::crypto3::marshalling::types::fill_powers_of_tau_accumulator<accumulator_type,
                                     endianness>(acc);
                         std::vector<std::uint8_t> blob(filled_val.length());
                         auto it = std::begin(blob);
-                        nil::marshalling::status_type status = filled_val.write(it, blob.size());
-                        if (status != nil::marshalling::status_type::success) {
+                        nil::crypto3::marshalling::status_type status = filled_val.write(it, blob.size());
+                        if (status != nil::crypto3::marshalling::status_type::success) {
                             return {};
                         } else {
                             return blob;

@@ -86,7 +86,7 @@ namespace nil {
 
                 struct construction {
                     struct params_type {
-                        typedef nil::marshalling::option::big_endian digest_endian;
+                        typedef nil::crypto3::marshalling::option::big_endian digest_endian;
                     };
 
                     typedef void type;

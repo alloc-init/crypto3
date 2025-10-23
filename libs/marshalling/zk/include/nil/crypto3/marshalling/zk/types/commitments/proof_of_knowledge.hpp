@@ -52,7 +52,7 @@ namespace nil {
                                           zk::commitments::detail::element_pok <typename POK::curve_type>>::value,
                              bool>::type,
                          typename... TOptions>
-                using element_pok = nil::marshalling::types::bundle<
+                using element_pok = nil::crypto3::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // g1_s
@@ -63,10 +63,10 @@ namespace nil {
                         fast_curve_element<TTypeBase, typename POK::curve_type::template g2_type<>>>>;
 
                 template<typename POK, typename Endianness>
-                element_pok<nil::marshalling::field_type<Endianness>, POK>
+                element_pok<nil::crypto3::marshalling::field_type<Endianness>, POK>
                     fill_element_pok(const POK &pok) {
 
-                    return element_pok<nil::marshalling::field_type<Endianness>, POK>(
+                    return element_pok<nil::crypto3::marshalling::field_type<Endianness>, POK>(
                         std::make_tuple(
                             std::move(
                                 fill_fast_curve_element<typename POK::curve_type::template g1_type<>, Endianness>(
@@ -82,7 +82,7 @@ namespace nil {
 
                 template<typename POK, typename Endianness>
                 POK make_element_pok(
-                    const element_pok<nil::marshalling::field_type<Endianness>, POK>
+                    const element_pok<nil::crypto3::marshalling::field_type<Endianness>, POK>
                         &filled_pok) {
 
                     return POK(

@@ -204,7 +204,7 @@ namespace nil {
 
                 template<typename ExpressionType, typename Endianness>
                 ExpressionType make_expression(
-                    const typename expression<nil::marshalling::field_type<Endianness>,
+                    const typename expression<nil::crypto3::marshalling::field_type<Endianness>,
                                                           ExpressionType>::type &filled_expr) {
 
                     using arithmetic_operator_type = typename ExpressionType::binary_arithmetic_operation_type::arithmetic_operator_type;

@@ -37,7 +37,7 @@
 
 #include <nil/marshalling/types/detail/common_funcs.hpp>
 
-namespace nil {
+namespace nil::crypto3 {
     namespace marshalling {
         namespace types {
             namespace detail {
@@ -46,7 +46,6 @@ namespace nil {
                 class basic_bundle : public TFieldBase {
                 public:
                     using value_type = TMembers;
-                    using version_type = typename TFieldBase::version_type;
 
                     basic_bundle() = default;
 
@@ -407,7 +406,7 @@ namespace nil {
                         return write_no_status_helper<TIter>(iter);
                     }
 
-                    static_assert(nil::detail::is_tuple<value_type>::value,
+                    static_assert(marshalling::detail::is_tuple<value_type>::value,
                                   "value_type must be tuple");
                     value_type members_;
                 };
