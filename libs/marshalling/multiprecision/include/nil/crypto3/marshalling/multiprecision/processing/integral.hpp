@@ -38,7 +38,7 @@
 namespace nil {
     namespace crypto3 {
         namespace marshalling {
-            namespace multiprecision::processing {
+            namespace processing {
 
                 /// @brief Write part of integral value into the output area using big
                 ///     endian notation.
