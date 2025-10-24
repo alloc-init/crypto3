@@ -76,7 +76,7 @@ using namespace nil::crypto3;
 
 template<typename Endianness, typename PolysEvaluator>
 void test_polys_evaluator_marshalling(PolysEvaluator &evaluator) {
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     evaluator.build_points_map();
 

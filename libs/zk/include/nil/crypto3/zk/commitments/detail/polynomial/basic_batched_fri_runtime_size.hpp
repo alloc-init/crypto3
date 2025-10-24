@@ -76,7 +76,7 @@ namespace nil {
 
                         using Endianness = nil::crypto3::marshalling::option::big_endian;
                         using field_element_type =
-                                nil::crypto3::marshalling::types::field_element<nil::crypto3::marshalling::field_type<Endianness>,
+                                nil::crypto3::marshalling::types::field_element<nil::marshalling::field_type<Endianness>,
                                         typename FieldType::value_type>;
 
                         using precommitment_type = merkle_tree_type;

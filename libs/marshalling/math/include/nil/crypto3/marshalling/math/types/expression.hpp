@@ -113,10 +113,10 @@ namespace nil {
                 };
 
                 template<typename Endianness>
-                typename flat_pow_operation<nil::crypto3::marshalling::field_type<Endianness>>::type
+                typename flat_pow_operation<nil::marshalling::field_type<Endianness>>::type
                     fill_power_operation(const math::flat_pow_operation& power_op) {
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
-                    return typename flat_pow_operation<nil::crypto3::marshalling::field_type<Endianness>>::type(
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    return typename flat_pow_operation<nil::marshalling::field_type<Endianness>>::type(
                         std::make_tuple(
                             nil::crypto3::marshalling::types::integral<TTypeBase, std::int64_t>(power_op.power),
                             nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)power_op.type),
@@ -124,10 +124,10 @@ namespace nil {
                 }
 
                 template<typename Endianness, typename ArithmeticOperatorType>
-                typename flat_binary_arithmetic_operation<nil::crypto3::marshalling::field_type<Endianness>>::type
+                typename flat_binary_arithmetic_operation<nil::marshalling::field_type<Endianness>>::type
                     fill_binary_operation(const math::flat_binary_arithmetic_operation<ArithmeticOperatorType>& bin_op) {
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
-                    return typename flat_binary_arithmetic_operation<nil::crypto3::marshalling::field_type<Endianness>>::type(
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    return typename flat_binary_arithmetic_operation<nil::marshalling::field_type<Endianness>>::type(
                         std::make_tuple(
                             nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)bin_op.op),
                             nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)bin_op.left_type),
@@ -138,13 +138,13 @@ namespace nil {
 
 
                 template<typename ExpressionType, typename Endianness>
-                typename expression<nil::crypto3::marshalling::field_type<Endianness>, ExpressionType>::type
+                typename expression<nil::marshalling::field_type<Endianness>, ExpressionType>::type
                     fill_expression(const ExpressionType &expr) {
 
                     math::expression_flattener<ExpressionType> flattener(expr);
                     const auto& flat_expr = flattener.get_result();
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
                     // Fill the terms.
                     nil::crypto3::marshalling::types::standard_array_list<TTypeBase,
                         typename term<TTypeBase, typename ExpressionType::term_type>::type> filled_terms;
@@ -168,7 +168,7 @@ namespace nil {
                             fill_binary_operation<Endianness>(bin_op));
                     }
 
-                    return typename expression<nil::crypto3::marshalling::field_type<Endianness>, ExpressionType>::type(
+                    return typename expression<nil::marshalling::field_type<Endianness>, ExpressionType>::type(
                         std::make_tuple(
                             filled_terms,
                             filled_powers,
@@ -180,7 +180,7 @@ namespace nil {
 
                 template<typename Endianness>
                 math::flat_pow_operation make_power_operation(
-                    const typename flat_pow_operation<nil::crypto3::marshalling::field_type<Endianness>>::type& filled_power_op)
+                    const typename flat_pow_operation<nil::marshalling::field_type<Endianness>>::type& filled_power_op)
                 {
                     math::flat_pow_operation power_op;
                     power_op.power = std::get<0>(filled_power_op.value()).value();
@@ -191,7 +191,7 @@ namespace nil {
 
                 template<typename Endianness, typename ArithmeticOperatorType>
                 math::flat_binary_arithmetic_operation<ArithmeticOperatorType> make_binary_operation(
-                    const typename flat_binary_arithmetic_operation<nil::crypto3::marshalling::field_type<Endianness>>::type& filled_power_op)
+                    const typename flat_binary_arithmetic_operation<nil::marshalling::field_type<Endianness>>::type& filled_power_op)
                 {
                     math::flat_binary_arithmetic_operation<ArithmeticOperatorType> bin_op;
                     bin_op.op = static_cast<ArithmeticOperatorType>(std::get<0>(filled_power_op.value()).value());

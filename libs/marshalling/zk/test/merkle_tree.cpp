@@ -66,7 +66,7 @@ void test_merkle_tree_marshalling(std::size_t tree_depth) {
     using namespace nil::crypto3::marshalling;
     using merkle_tree_type = nil::crypto3::containers::merkle_tree<Hash, Arity>;
     using merkle_tree_marshalling_type =
-            types::merkle_tree<nil::crypto3::marshalling::field_type<Endianness>, merkle_tree_type>;
+            types::merkle_tree<nil::marshalling::field_type<Endianness>, merkle_tree_type>;
 
     std::size_t leafs_number = std::pow(Arity, tree_depth);
     // You can also lazy convert byte stream to field elements stream using <nil/crypto3/hash/block_to_field_elements_wrapper.hpp>

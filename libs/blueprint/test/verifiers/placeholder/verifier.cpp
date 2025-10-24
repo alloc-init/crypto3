@@ -92,7 +92,7 @@ struct default_zkllvm_params {
     using table_description_type =
         nil::crypto3::zk::snark::plonk_table_description<field_type>;
     using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using ColumnType = nil::crypto3::zk::snark::plonk_column<field_type>;
     using assignment_table_type =
@@ -176,7 +176,7 @@ template<typename SrcParams>
     std::cout << "Loading proof from " << filename << std::endl;
 
     using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     std::ifstream iproof;
     iproof.open(filename);
@@ -240,7 +240,7 @@ struct dst_params{
     using table_description_type =
         nil::crypto3::zk::snark::plonk_table_description<field_type>;
     using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using ColumnType = nil::crypto3::zk::snark::plonk_column<field_type>;
     using assignment_table_type =

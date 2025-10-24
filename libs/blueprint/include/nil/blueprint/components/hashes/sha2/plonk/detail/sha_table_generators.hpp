@@ -65,7 +65,7 @@ namespace nil {
                         std::ostream &stream) {
                     using value_type = typename BlueprintFieldType::value_type;
                     using Endianness = nil::crypto3::marshalling::option::big_endian;
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
                     using marshalling_value_type = crypto3::marshalling::types::field_element<TTypeBase, value_type>;
                     stream << input.size() << std::endl;
                     for (const auto &[preimage, image] : input) {

@@ -60,10 +60,10 @@ namespace nil {
                 };
 
                 template<typename Endianness, typename NonLinearTerm>
-                    typename term<nil::crypto3::marshalling::field_type<Endianness>, NonLinearTerm>::type
+                    typename term<nil::marshalling::field_type<Endianness>, NonLinearTerm>::type
                     fill_term(const NonLinearTerm &t) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
                     using result_type = typename term<TTypeBase, NonLinearTerm>::type;
                     using field_element_marhsalling_type =
                         field_element<TTypeBase, typename NonLinearTerm::assignment_type>;
@@ -83,7 +83,7 @@ namespace nil {
 
                 template<typename Endianness, typename NonLinearTerm>
                 NonLinearTerm make_term(
-                    const typename term<nil::crypto3::marshalling::field_type<Endianness>, NonLinearTerm>::type &filled_term)
+                    const typename term<nil::marshalling::field_type<Endianness>, NonLinearTerm>::type &filled_term)
                 {
                     std::vector<typename NonLinearTerm::variable_type> vars;
                     auto coeff = std::get<0>(filled_term.value()).value();

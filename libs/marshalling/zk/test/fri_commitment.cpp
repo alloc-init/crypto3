@@ -74,7 +74,7 @@ using namespace nil::crypto3;
 template<typename Endianness, typename FRI>
 void test_fri_proof(typename FRI::proof_type &proof, typename nil::crypto3::marshalling::types::batch_info_type batch_info,
         const typename FRI::params_type& params) {
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     auto filled_proof = nil::crypto3::marshalling::types::fill_fri_proof<Endianness, FRI>(proof, batch_info, params);
     auto _proof = nil::crypto3::marshalling::types::make_fri_proof<Endianness, FRI>(filled_proof, batch_info);
@@ -119,7 +119,7 @@ BOOST_FIXTURE_TEST_SUITE(marshalling_fri_proof_elements, test_tools::random_test
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
 
     using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
     using FRI = typename nil::crypto3::zk::commitments::detail::basic_batched_fri<field_type, hash_type, hash_type, m>;
 
     BOOST_AUTO_TEST_CASE(polynomial_test) {
@@ -151,7 +151,7 @@ BOOST_FIXTURE_TEST_SUITE(marshalling_fri_proof_elements, test_tools::random_test
         auto _f = nil::crypto3::marshalling::types::make_merkle_proof_vector<Endianness, FRI>(filled);
         BOOST_CHECK(mp == _f);
 
-        using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+        using TTypeBase = nil::marshalling::field_type<Endianness>;
         std::vector<std::uint8_t> cv;
         cv.resize(filled.length(), 0x00);
         auto write_iter = cv.begin();

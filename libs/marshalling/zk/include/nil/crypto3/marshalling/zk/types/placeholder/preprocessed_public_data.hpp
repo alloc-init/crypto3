@@ -69,12 +69,12 @@ namespace nil {
                 >;
 
                 template<typename Endianness, typename PreprocessedPublicDataType>
-                placeholder_preprocessed_public_data<nil::crypto3::marshalling::field_type<Endianness>, PreprocessedPublicDataType>
+                placeholder_preprocessed_public_data<nil::marshalling::field_type<Endianness>, PreprocessedPublicDataType>
                 fill_placeholder_preprocessed_public_data(const PreprocessedPublicDataType& preprocessed_public_data) {
-                    using TTypeBase = typename nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = typename nil::marshalling::field_type<Endianness>;
                     using PolynomialDFSType = typename PreprocessedPublicDataType::polynomial_dfs_type;
                     using result_type = placeholder_preprocessed_public_data<
-                        nil::crypto3::marshalling::field_type<Endianness>, PreprocessedPublicDataType>;
+                        nil::marshalling::field_type<Endianness>, PreprocessedPublicDataType>;
 
                     return result_type(std::make_tuple(
                         fill_plonk_public_table<Endianness, typename PreprocessedPublicDataType::plonk_public_polynomial_dfs_table_type>(
@@ -91,10 +91,10 @@ namespace nil {
                 template<typename Endianness, typename PreprocessedPublicDataType>
                 PreprocessedPublicDataType make_placeholder_preprocessed_public_data(
                     const placeholder_preprocessed_public_data<
-                        nil::crypto3::marshalling::field_type<Endianness>,
+                        nil::marshalling::field_type<Endianness>,
                         PreprocessedPublicDataType> &filled_preprocessed_public_data)
                 {
-                    using TTypeBase = typename nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = typename nil::marshalling::field_type<Endianness>;
                     using PolynomialDFSType = typename PreprocessedPublicDataType::polynomial_dfs_type;
 
                     return PreprocessedPublicDataType({
