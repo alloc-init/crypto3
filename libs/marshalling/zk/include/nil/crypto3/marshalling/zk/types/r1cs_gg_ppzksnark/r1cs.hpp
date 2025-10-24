@@ -55,11 +55,11 @@ namespace nil {
                              std::is_same<LT, math::linear_term<math::linear_variable<typename LT::field_type>>>::value,
                              bool>::type,
                          typename... TOptions>
-                using linear_term = nil::crypto3::marshalling::types::bundle<
+                using linear_term = nil::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // index
-                        nil::crypto3::marshalling::types::
+                        nil::marshalling::types::
                             integral<TTypeBase, typename math::linear_variable<typename LT::field_type>::index_type>,
                         // coeff
                         field_element<TTypeBase, typename LT::field_type::value_type>>>;
@@ -70,11 +70,11 @@ namespace nil {
                              std::is_same<LC, math::linear_combination<math::linear_variable<typename LC::field_type>>>::value,
                              bool>::type,
                          typename... TOptions>
-                using linear_combination = nil::crypto3::marshalling::types::array_list<
+                using linear_combination = nil::marshalling::types::array_list<
                     TTypeBase,
                     linear_term<TTypeBase, math::linear_term<math::linear_variable<typename LC::field_type>>>,
-                    nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                        nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>;
+                    nil::marshalling::option::sequence_size_field_prefix<
+                        nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
                 template<
                     typename TTypeBase,
@@ -83,7 +83,7 @@ namespace nil {
                         std::is_same<Constraint, zk::snark::r1cs_constraint<typename Constraint::field_type>>::value,
                         bool>::type,
                     typename... TOptions>
-                using r1cs_constraint = nil::crypto3::marshalling::types::bundle<
+                using r1cs_constraint = nil::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // a
@@ -99,25 +99,25 @@ namespace nil {
                              std::is_same<CS, zk::snark::r1cs_constraint_system<typename CS::field_type>>::value,
                              bool>::type,
                          typename... TOptions>
-                using r1cs_constraint_system = nil::crypto3::marshalling::types::bundle<
+                using r1cs_constraint_system = nil::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // primary_input_size
-                        nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>,
+                        nil::marshalling::types::integral<TTypeBase, std::size_t>,
                         // auxiliary_input_size
-                        nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>,
+                        nil::marshalling::types::integral<TTypeBase, std::size_t>,
                         // constraints
-                        nil::crypto3::marshalling::types::array_list<
+                        nil::marshalling::types::array_list<
                             TTypeBase,
                             r1cs_constraint<TTypeBase, zk::snark::r1cs_constraint<typename CS::field_type>>,
-                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>>>;
+                            nil::marshalling::option::sequence_size_field_prefix<
+                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>>>;
 
                 template<typename LT, typename Endianness>
-                linear_term<nil::crypto3::marshalling::field_type<Endianness>, LT> fill_linear_term(const LT &lt) {
+                linear_term<nil::marshalling::field_type<Endianness>, LT> fill_linear_term(const LT &lt) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
-                    using integral_type = nil::crypto3::marshalling::types::
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    using integral_type = nil::marshalling::types::
                         integral<TTypeBase, typename math::linear_variable<typename LT::field_type>::index_type>;
                     using field_element_type = field_element<TTypeBase, typename LT::field_type::value_type>;
 
@@ -126,17 +126,17 @@ namespace nil {
                 }
 
                 template<typename LT, typename Endianness>
-                LT make_linear_term(const linear_term<nil::crypto3::marshalling::field_type<Endianness>, LT> &filled_lt) {
+                LT make_linear_term(const linear_term<nil::marshalling::field_type<Endianness>, LT> &filled_lt) {
                     return typename LT::variable_type(std::move(std::get<0>(filled_lt.value()).value())) *
                               std::move(std::get<1>(filled_lt.value()).value());
                 }
 
                 template<typename LC, typename Endianness>
-                linear_combination<nil::crypto3::marshalling::field_type<Endianness>, LC> fill_linear_combination(const LC &lc) {
+                linear_combination<nil::marshalling::field_type<Endianness>, LC> fill_linear_combination(const LC &lc) {
 
-                    using lt_type = linear_term<nil::crypto3::marshalling::field_type<Endianness>,
+                    using lt_type = linear_term<nil::marshalling::field_type<Endianness>,
                                                 math::linear_term<math::linear_variable<typename LC::field_type>>>;
-                    using lc_type = linear_combination<nil::crypto3::marshalling::field_type<Endianness>, LC>;
+                    using lc_type = linear_combination<nil::marshalling::field_type<Endianness>, LC>;
 
                     lc_type result;
                     std::vector<lt_type> &val = result.value();
@@ -150,10 +150,10 @@ namespace nil {
 
                 template<typename LC, typename Endianness>
                 LC make_linear_combination(
-                    const linear_combination<nil::crypto3::marshalling::field_type<Endianness>, LC> &filled_lc) {
+                    const linear_combination<nil::marshalling::field_type<Endianness>, LC> &filled_lc) {
 
                     LC result;
-                    const std::vector<linear_term<nil::crypto3::marshalling::field_type<Endianness>,
+                    const std::vector<linear_term<nil::marshalling::field_type<Endianness>,
                                                   math::linear_term<math::linear_variable<typename LC::field_type>>>> &values =
                         filled_lc.value();
                     std::size_t size = values.size();
@@ -166,10 +166,10 @@ namespace nil {
                 }
 
                 template<typename Constraint, typename Endianness>
-                r1cs_constraint<nil::crypto3::marshalling::field_type<Endianness>, Constraint>
+                r1cs_constraint<nil::marshalling::field_type<Endianness>, Constraint>
                     fill_r1cs_constraint(const Constraint &c) {
 
-                    return r1cs_constraint<nil::crypto3::marshalling::field_type<Endianness>, Constraint>(std::make_tuple(
+                    return r1cs_constraint<nil::marshalling::field_type<Endianness>, Constraint>(std::make_tuple(
                         fill_linear_combination<math::linear_combination<math::linear_variable<typename Constraint::field_type>>,
                                                 Endianness>(c.a),
                         fill_linear_combination<math::linear_combination<math::linear_variable<typename Constraint::field_type>>,
@@ -180,7 +180,7 @@ namespace nil {
 
                 template<typename Constraint, typename Endianness>
                 Constraint make_r1cs_constraint(
-                    const r1cs_constraint<nil::crypto3::marshalling::field_type<Endianness>, Constraint> &filled_c) {
+                    const r1cs_constraint<nil::marshalling::field_type<Endianness>, Constraint> &filled_c) {
 
                     return Constraint(
                         std::move(
@@ -195,20 +195,20 @@ namespace nil {
                 }
 
                 template<typename Constraint, typename Endianness>
-                nil::crypto3::marshalling::types::array_list<
-                    nil::crypto3::marshalling::field_type<Endianness>,
-                    r1cs_constraint<nil::crypto3::marshalling::field_type<Endianness>,
+                nil::marshalling::types::array_list<
+                    nil::marshalling::field_type<Endianness>,
+                    r1cs_constraint<nil::marshalling::field_type<Endianness>,
                                     zk::snark::r1cs_constraint<typename Constraint::field_type>>,
-                    nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                        nil::crypto3::marshalling::types::integral<nil::crypto3::marshalling::field_type<Endianness>, std::size_t>>>
+                    nil::marshalling::option::sequence_size_field_prefix<
+                        nil::marshalling::types::integral<nil::marshalling::field_type<Endianness>, std::size_t>>>
                     fill_r1cs_constraint_vector(const std::vector<Constraint> &cs_vec) {
 
-                    using constraint_type = r1cs_constraint<nil::crypto3::marshalling::field_type<Endianness>, Constraint>;
-                    using constraint_vector_type = nil::crypto3::marshalling::types::array_list<
-                        nil::crypto3::marshalling::field_type<Endianness>,
+                    using constraint_type = r1cs_constraint<nil::marshalling::field_type<Endianness>, Constraint>;
+                    using constraint_vector_type = nil::marshalling::types::array_list<
+                        nil::marshalling::field_type<Endianness>,
                         constraint_type,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                            nil::crypto3::marshalling::types::integral<nil::crypto3::marshalling::field_type<Endianness>, std::size_t>>>;
+                        nil::marshalling::option::sequence_size_field_prefix<
+                            nil::marshalling::types::integral<nil::marshalling::field_type<Endianness>, std::size_t>>>;
 
                     constraint_vector_type result;
                     std::vector<constraint_type> &val = result.value();
@@ -221,16 +221,16 @@ namespace nil {
 
                 template<typename Constraint, typename Endianness>
                 std::vector<Constraint> make_r1cs_constraint_vector(
-                    const nil::crypto3::marshalling::types::array_list<
-                        nil::crypto3::marshalling::field_type<Endianness>,
-                        r1cs_constraint<nil::crypto3::marshalling::field_type<Endianness>,
+                    const nil::marshalling::types::array_list<
+                        nil::marshalling::field_type<Endianness>,
+                        r1cs_constraint<nil::marshalling::field_type<Endianness>,
                                         zk::snark::r1cs_constraint<typename Constraint::field_type>>,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                            nil::crypto3::marshalling::types::integral<nil::crypto3::marshalling::field_type<Endianness>, std::size_t>>>
+                        nil::marshalling::option::sequence_size_field_prefix<
+                            nil::marshalling::types::integral<nil::marshalling::field_type<Endianness>, std::size_t>>>
                         &filled_cs_vec) {
 
                     std::vector<Constraint> result;
-                    const std::vector<r1cs_constraint<nil::crypto3::marshalling::field_type<Endianness>, Constraint>> &values =
+                    const std::vector<r1cs_constraint<nil::marshalling::field_type<Endianness>, Constraint>> &values =
                         filled_cs_vec.value();
                     std::size_t size = values.size();
 
@@ -243,13 +243,13 @@ namespace nil {
                 }
 
                 template<typename CS, typename Endianness>
-                r1cs_constraint_system<nil::crypto3::marshalling::field_type<Endianness>, CS>
+                r1cs_constraint_system<nil::marshalling::field_type<Endianness>, CS>
                     fill_r1cs_constraint_system(const CS &cs) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
-                    using integral_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    using integral_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
 
-                    return r1cs_constraint_system<nil::crypto3::marshalling::field_type<Endianness>, CS>(std::make_tuple(
+                    return r1cs_constraint_system<nil::marshalling::field_type<Endianness>, CS>(std::make_tuple(
                         integral_type(cs.primary_input_size),
                         integral_type(cs.auxiliary_input_size),
                         fill_r1cs_constraint_vector<zk::snark::r1cs_constraint<typename CS::field_type>, Endianness>(
@@ -258,7 +258,7 @@ namespace nil {
 
                 template<typename CS, typename Endianness>
                 CS make_r1cs_constraint_system(
-                    const r1cs_constraint_system<nil::crypto3::marshalling::field_type<Endianness>, CS> &filled_cs) {
+                    const r1cs_constraint_system<nil::marshalling::field_type<Endianness>, CS> &filled_cs) {
 
                     CS result;
                     result.primary_input_size = std::get<0>(filled_cs.value()).value();

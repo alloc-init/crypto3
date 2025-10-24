@@ -84,7 +84,7 @@ namespace nil {
 
                 struct construction {
                     struct params_type {
-                        typedef nil::crypto3::marshalling::option::little_endian digest_endian;
+                        typedef nil::marshalling::option::little_endian digest_endian;
                     };
 
                     typedef void type;
@@ -118,7 +118,7 @@ namespace nil {
                 }
 
                 static inline result_type process(accumulator_type &acc) {
-                    nil::crypto3::marshalling::status_type status;
+                    nil::marshalling::status_type status;
                     group_value_type point;
                     std::uint8_t i = 0;
 
@@ -129,8 +129,8 @@ namespace nil {
                                 nil::crypto3::accumulators::extract::hash<hash_type>(acc_copy);
                         // TODO: generalize pack interface to accept arbitrary containers
                         std::vector<std::uint8_t> H_vec(std::cbegin(H), std::cend(H));
-                        point = nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::little_endian>(H_vec, status);
-                        if (status == nil::crypto3::marshalling::status_type::success) {
+                        point = nil::marshalling::pack<nil::marshalling::option::little_endian>(H_vec, status);
+                        if (status == nil::marshalling::status_type::success) {
                             break;
                         }
                         // TODO: return status

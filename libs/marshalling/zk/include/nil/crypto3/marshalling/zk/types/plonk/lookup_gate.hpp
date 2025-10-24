@@ -43,30 +43,30 @@ namespace nil {
         namespace marshalling {
             namespace types {
                 template<typename TTypeBase, typename PlonkGate>
-                using plonk_lookup_gate = nil::crypto3::marshalling::types::bundle<
+                using plonk_lookup_gate = nil::marshalling::types::bundle<
                     TTypeBase, std::tuple<
                         // std::size_t selector_index
-                        nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>,
+                        nil::marshalling::types::integral<TTypeBase, std::size_t>,
                         // std::vector<plonk_lookup_constraint<FieldType>> constraints
-                        nil::crypto3::marshalling::types::array_list<
+                        nil::marshalling::types::array_list<
                             TTypeBase,
                             plonk_lookup_constraint<TTypeBase, typename PlonkGate::constraint_type>,
-                            nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>
+                            nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>
                             >
                         >
                     >
                 >;
 
                 template<typename Endianness, typename PlonkGate>
-                plonk_lookup_gate<nil::crypto3::marshalling::field_type<Endianness>, PlonkGate> fill_plonk_lookup_gate(const PlonkGate &gate) {
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                plonk_lookup_gate<nil::marshalling::field_type<Endianness>, PlonkGate> fill_plonk_lookup_gate(const PlonkGate &gate) {
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
                     using result_type = plonk_lookup_gate<TTypeBase, PlonkGate>;
-                    using size_t_marshalling_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>;
+                    using size_t_marshalling_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
 
                     using constraint_marshalling_type = plonk_lookup_constraint<TTypeBase, typename PlonkGate::constraint_type>;
-                    using constraint_vector_marshalling_type = nil::crypto3::marshalling::types::array_list<
+                    using constraint_vector_marshalling_type = nil::marshalling::types::array_list<
                         TTypeBase, constraint_marshalling_type,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<size_t_marshalling_type>>;
+                        nil::marshalling::option::sequence_size_field_prefix<size_t_marshalling_type>>;
 
                     constraint_vector_marshalling_type filled_constraints;
                     for (const auto &constr : gate.constraints) {
@@ -80,7 +80,7 @@ namespace nil {
 
                 template<typename Endianness, typename PlonkGate>
                 PlonkGate make_plonk_lookup_gate(
-                    const plonk_lookup_gate<nil::crypto3::marshalling::field_type<Endianness>, PlonkGate> &filled_gate) {
+                    const plonk_lookup_gate<nil::marshalling::field_type<Endianness>, PlonkGate> &filled_gate) {
 
                     std::size_t selector_index = std::get<0>(filled_gate.value()).value();
                     std::vector<typename PlonkGate::constraint_type> constraints;
@@ -95,19 +95,19 @@ namespace nil {
 
                 template<typename TTypeBase, typename PlonkGate>
                 using plonk_lookup_gates =
-                    nil::crypto3::marshalling::types::array_list<
+                    nil::marshalling::types::array_list<
                         TTypeBase, plonk_lookup_gate<TTypeBase, PlonkGate>,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>
+                        nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                     >;
 
                 template<typename Endianness, typename PlonkGate, typename InputRange>
-                plonk_lookup_gates<nil::crypto3::marshalling::field_type<Endianness>, PlonkGate>
+                plonk_lookup_gates<nil::marshalling::field_type<Endianness>, PlonkGate>
                     fill_plonk_lookup_gates(const InputRange &gates) {
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
-                    using result_type = nil::crypto3::marshalling::types::array_list<
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    using result_type = nil::marshalling::types::array_list<
                         TTypeBase, plonk_lookup_gate<TTypeBase, PlonkGate>,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>;
+                        nil::marshalling::option::sequence_size_field_prefix<
+                            nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
                     result_type filled_gates;
                     for (const auto &gate : gates) {
@@ -119,7 +119,7 @@ namespace nil {
 
                 template<typename Endianness, typename PlonkGate>
                 std::vector<PlonkGate> make_plonk_lookup_gates(
-                    const plonk_lookup_gates<nil::crypto3::marshalling::field_type<Endianness>, PlonkGate> &filled_gates) {
+                    const plonk_lookup_gates<nil::marshalling::field_type<Endianness>, PlonkGate> &filled_gates) {
                     std::vector<PlonkGate> gates;
                     for (std::size_t i = 0; i < filled_gates.value().size(); i++) {
                         gates.emplace_back(make_plonk_lookup_gate<Endianness, PlonkGate>(filled_gates.value().at(i)));

@@ -29,7 +29,7 @@
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/processing/access.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace adapter {

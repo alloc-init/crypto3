@@ -26,7 +26,7 @@
 #ifndef MARSHALLING_INVALID_BY_DEFAULT_HPP
 #define MARSHALLING_INVALID_BY_DEFAULT_HPP
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace adapter {

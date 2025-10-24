@@ -57,7 +57,7 @@ namespace nil {
                                           zk::commitments::detail::r1cs_gg_ppzksnark_mpc_public_key<typename PublicKey::curve_type>>::value,
                              bool>::type,
                          typename... TOptions>
-                using r1cs_gg_ppzksnark_mpc_public_key = nil::crypto3::marshalling::types::bundle<
+                using r1cs_gg_ppzksnark_mpc_public_key = nil::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // delta after
@@ -67,10 +67,10 @@ namespace nil {
                     >>;
 
                 template<typename PublicKey, typename Endianness>
-                r1cs_gg_ppzksnark_mpc_public_key<nil::crypto3::marshalling::field_type<Endianness>, PublicKey>
+                r1cs_gg_ppzksnark_mpc_public_key<nil::marshalling::field_type<Endianness>, PublicKey>
                     fill_r1cs_gg_ppzksnark_mpc_public_key(const PublicKey &public_key) {
 
-                    return r1cs_gg_ppzksnark_mpc_public_key<nil::crypto3::marshalling::field_type<Endianness>, PublicKey>(
+                    return r1cs_gg_ppzksnark_mpc_public_key<nil::marshalling::field_type<Endianness>, PublicKey>(
                         std::make_tuple(
                             std::move(
                                 fill_fast_curve_element<typename PublicKey::curve_type::template g1_type<>, Endianness>(
@@ -83,7 +83,7 @@ namespace nil {
 
                 template<typename PublicKey, typename Endianness>
                 PublicKey make_r1cs_gg_ppzksnark_mpc_public_key(
-                    const r1cs_gg_ppzksnark_mpc_public_key<nil::crypto3::marshalling::field_type<Endianness>, PublicKey>
+                    const r1cs_gg_ppzksnark_mpc_public_key<nil::marshalling::field_type<Endianness>, PublicKey>
                         &filled_public_key) {
 
                     return PublicKey(

@@ -26,7 +26,7 @@
 #ifndef MARSHALLING_VERSION_STORAGE_HPP
 #define MARSHALLING_VERSION_STORAGE_HPP
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace adapter {

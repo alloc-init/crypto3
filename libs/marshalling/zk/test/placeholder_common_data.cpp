@@ -117,8 +117,8 @@ inline std::vector<std::size_t> generate_random_step_list(const std::size_t r, c
 
 template<typename CommonDataType>
 void test_placeholder_common_data(CommonDataType common_data, std::string folder_name = "") {
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     auto filled_common_data = nil::crypto3::marshalling::types::fill_placeholder_common_data<Endianness, CommonDataType>(common_data);
     auto _common_data = nil::crypto3::marshalling::types::make_placeholder_common_data<Endianness,CommonDataType>(filled_common_data);
@@ -128,12 +128,12 @@ void test_placeholder_common_data(CommonDataType common_data, std::string folder
     cv.resize(filled_common_data.length(), 0x00);
     auto write_iter = cv.begin();
     auto status = filled_common_data.write(write_iter, cv.size());
-    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::marshalling::status_type::success);
 
     nil::crypto3::marshalling::types::placeholder_common_data<TTypeBase, CommonDataType> test_val_read;
     auto read_iter = cv.begin();
     test_val_read.read(read_iter, cv.size());
-    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::marshalling::status_type::success);
     auto constructed_val_read = nil::crypto3::marshalling::types::make_placeholder_common_data<Endianness, CommonDataType>(
             test_val_read
     );
@@ -150,8 +150,8 @@ void test_placeholder_common_data(CommonDataType common_data, std::string folder
 }
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit1_poseidon)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
@@ -221,8 +221,8 @@ BOOST_AUTO_TEST_CASE(prover_test) {
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit1)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
@@ -291,8 +291,8 @@ BOOST_AUTO_TEST_CASE(prover_test) {
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit2)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using curve_type = algebra::curves::bls12<381>;
     using field_type = typename curve_type::scalar_field_type;
@@ -369,8 +369,8 @@ BOOST_AUTO_TEST_SUITE_END()
 
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit3)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -446,8 +446,8 @@ BOOST_AUTO_TEST_SUITE_END()
 
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit4)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -522,8 +522,8 @@ BOOST_FIXTURE_TEST_CASE(proof_marshalling_test, test_tools::random_test_initiali
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit5)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
     using curve_type = algebra::curves::bls12<381>;
     using field_type = typename curve_type::scalar_field_type;
@@ -599,8 +599,8 @@ BOOST_FIXTURE_TEST_CASE(common_data_marshalling_test, test_tools::random_test_in
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit6)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -675,8 +675,8 @@ BOOST_FIXTURE_TEST_CASE(proof_marshalling_test, test_tools::random_test_initiali
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit7)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
-    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -822,8 +822,8 @@ struct placeholder_kzg_test_fixture_v2 : public test_tools::random_test_initiali
             );
 
         using common_data_type = typename placeholder_public_preprocessor<field_type, kzg_placeholder_params_type>::preprocessed_data_type::common_data_type;
-            using Endianness = nil::crypto3::marshalling::option::big_endian;
-        using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+            using Endianness = nil::marshalling::option::big_endian;
+        using TTypeBase = nil::marshalling::field_type<Endianness>;
         nil::crypto3::marshalling::types::placeholder_common_data<TTypeBase, common_data_type> filled_data;
 
         if(has_argv("--print"))

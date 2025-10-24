@@ -30,7 +30,7 @@
 
 #include <nil/marshalling/processing/tuple.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace adapter {

@@ -34,7 +34,7 @@
 
 #include <nil/marshalling/processing/access.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace traits {
             namespace units {

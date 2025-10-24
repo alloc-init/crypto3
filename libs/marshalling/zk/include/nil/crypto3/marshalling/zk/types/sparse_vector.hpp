@@ -58,19 +58,19 @@ namespace nil {
                         std::is_same<SparseVector, container::sparse_vector<typename SparseVector::group_type>>::value,
                         bool>::type,
                     typename... TOptions>
-                using sparse_vector = nil::crypto3::marshalling::types::bundle<
+                using sparse_vector = nil::marshalling::types::bundle<
                     TTypeBase,
-                    std::tuple<nil::crypto3::marshalling::types::array_list<
+                    std::tuple<nil::marshalling::types::array_list<
                                    TTypeBase,
-                                   nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>,
-                                   nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                       nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
-                               nil::crypto3::marshalling::types::array_list<
+                                   nil::marshalling::types::integral<TTypeBase, std::size_t>,
+                                   nil::marshalling::option::sequence_size_field_prefix<
+                                       nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                               nil::marshalling::types::array_list<
                                    TTypeBase,
                                    curve_element<TTypeBase, typename SparseVector::group_type>,
-                                   nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                       nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
-                               nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>;
+                                   nil::marshalling::option::sequence_size_field_prefix<
+                                       nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                               nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
                 template<typename TTypeBase,
                          typename KCSparseVector,
@@ -79,19 +79,19 @@ namespace nil {
                                           container::sparse_vector<typename KCSparseVector::group_type>>::value,
                              bool>::type,
                          typename... TOptions>
-                using knowledge_commitment_sparse_vector = nil::crypto3::marshalling::types::bundle<
+                using knowledge_commitment_sparse_vector = nil::marshalling::types::bundle<
                     TTypeBase,
-                    std::tuple<nil::crypto3::marshalling::types::array_list<
+                    std::tuple<nil::marshalling::types::array_list<
                                    TTypeBase,
-                                   nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>,
-                                   nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                       nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
-                               nil::crypto3::marshalling::types::array_list<
+                                   nil::marshalling::types::integral<TTypeBase, std::size_t>,
+                                   nil::marshalling::option::sequence_size_field_prefix<
+                                       nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                               nil::marshalling::types::array_list<
                                    TTypeBase,
                                    knowledge_commitment<TTypeBase, typename KCSparseVector::group_type>,
-                                   nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                       nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
-                               nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>;
+                                   nil::marshalling::option::sequence_size_field_prefix<
+                                       nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                               nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
                 template<typename TTypeBase,
                          typename KCSparseVector,
@@ -100,31 +100,31 @@ namespace nil {
                                           container::sparse_vector<typename KCSparseVector::group_type>>::value,
                              bool>::type,
                          typename... TOptions>
-                using fast_knowledge_commitment_sparse_vector = nil::crypto3::marshalling::types::bundle<
+                using fast_knowledge_commitment_sparse_vector = nil::marshalling::types::bundle<
                     TTypeBase,
-                    std::tuple<nil::crypto3::marshalling::types::array_list<
+                    std::tuple<nil::marshalling::types::array_list<
                                    TTypeBase,
-                                   nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>,
-                                   nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                       nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
-                               nil::crypto3::marshalling::types::array_list<
+                                   nil::marshalling::types::integral<TTypeBase, std::size_t>,
+                                   nil::marshalling::option::sequence_size_field_prefix<
+                                       nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                               nil::marshalling::types::array_list<
                                    TTypeBase,
                                    fast_knowledge_commitment<TTypeBase, typename KCSparseVector::group_type>,
-                                   nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                       nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
-                               nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>;
+                                   nil::marshalling::option::sequence_size_field_prefix<
+                                       nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                               nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
                 template<typename SparseVector, typename Endianness>
-                sparse_vector<nil::crypto3::marshalling::field_type<Endianness>, SparseVector>
+                sparse_vector<nil::marshalling::field_type<Endianness>, SparseVector>
                     fill_sparse_vector(const SparseVector &sparse_vector_inp) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    using integral_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>;
-                    using integral_vector_type = nil::crypto3::marshalling::types::array_list<
+                    using integral_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
+                    using integral_vector_type = nil::marshalling::types::array_list<
                         TTypeBase,
                         integral_type,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<integral_type>>;
+                        nil::marshalling::option::sequence_size_field_prefix<integral_type>>;
 
                     integral_vector_type filled_indices;
 
@@ -133,7 +133,7 @@ namespace nil {
                         filled_indices_val.push_back(integral_type(sparse_vector_inp.indices[i]));
                     }
 
-                    return sparse_vector<nil::crypto3::marshalling::field_type<Endianness>, SparseVector>(
+                    return sparse_vector<nil::marshalling::field_type<Endianness>, SparseVector>(
                         std::make_tuple(filled_indices,
                                         fill_curve_element_vector<typename SparseVector::group_type, Endianness>(
                                             sparse_vector_inp.values),
@@ -142,11 +142,11 @@ namespace nil {
 
                 template<typename SparseVector, typename Endianness>
                 SparseVector make_sparse_vector(
-                    const sparse_vector<nil::crypto3::marshalling::field_type<Endianness>, SparseVector> &filled_sparse_vector) {
+                    const sparse_vector<nil::marshalling::field_type<Endianness>, SparseVector> &filled_sparse_vector) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    using integral_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>;
+                    using integral_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
 
                     std::vector<std::size_t> constructed_indices;
                     const std::vector<integral_type> &filled_indices =
@@ -167,16 +167,16 @@ namespace nil {
                 }
 
                 template<typename KCSparseVector, typename Endianness>
-                knowledge_commitment_sparse_vector<nil::crypto3::marshalling::field_type<Endianness>, KCSparseVector>
+                knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>
                     fill_knowledge_commitment_sparse_vector(const KCSparseVector &knowledge_commitment_sparse_vector) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    using integral_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>;
-                    using integral_vector_type = nil::crypto3::marshalling::types::array_list<
+                    using integral_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
+                    using integral_vector_type = nil::marshalling::types::array_list<
                         TTypeBase,
                         integral_type,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<integral_type>>;
+                        nil::marshalling::option::sequence_size_field_prefix<integral_type>>;
 
                     integral_vector_type filled_indices;
 
@@ -186,7 +186,7 @@ namespace nil {
                     }
 
                     return ::nil::crypto3::marshalling::types::
-                        knowledge_commitment_sparse_vector<nil::crypto3::marshalling::field_type<Endianness>, KCSparseVector>(
+                        knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>(
                             std::make_tuple(
                                 filled_indices,
                                 fill_knowledge_commitment_vector<typename KCSparseVector::group_type, Endianness>(
@@ -196,12 +196,12 @@ namespace nil {
 
                 template<typename KCSparseVector, typename Endianness>
                 KCSparseVector make_knowledge_commitment_vector(
-                    const knowledge_commitment_sparse_vector<nil::crypto3::marshalling::field_type<Endianness>, KCSparseVector>
+                    const knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>
                         &filled_kc_sparse_vector) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    using integral_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>;
+                    using integral_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
 
                     std::vector<std::size_t> constructed_indices;
                     const std::vector<integral_type> &filled_indices =
@@ -222,16 +222,16 @@ namespace nil {
                 }
 
                 template<typename KCSparseVector, typename Endianness>
-                fast_knowledge_commitment_sparse_vector<nil::crypto3::marshalling::field_type<Endianness>, KCSparseVector>
+                fast_knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>
                     fill_fast_knowledge_commitment_sparse_vector(const KCSparseVector &knowledge_commitment_sparse_vector) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    using integral_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>;
-                    using integral_vector_type = nil::crypto3::marshalling::types::array_list<
+                    using integral_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
+                    using integral_vector_type = nil::marshalling::types::array_list<
                         TTypeBase,
                         integral_type,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<integral_type>>;
+                        nil::marshalling::option::sequence_size_field_prefix<integral_type>>;
 
                     integral_vector_type filled_indices;
 
@@ -241,7 +241,7 @@ namespace nil {
                     }
 
                     return ::nil::crypto3::marshalling::types::
-                        fast_knowledge_commitment_sparse_vector<nil::crypto3::marshalling::field_type<Endianness>, KCSparseVector>(
+                        fast_knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>(
                             std::make_tuple(
                                 filled_indices,
                                 fill_fast_knowledge_commitment_vector<typename KCSparseVector::group_type, Endianness>(
@@ -251,12 +251,12 @@ namespace nil {
 
                 template<typename KCSparseVector, typename Endianness>
                 KCSparseVector make_fast_knowledge_commitment_vector(
-                    const fast_knowledge_commitment_sparse_vector<nil::crypto3::marshalling::field_type<Endianness>, KCSparseVector>
+                    const fast_knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>
                         &filled_kc_sparse_vector) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    using integral_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>;
+                    using integral_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
 
                     std::vector<std::size_t> constructed_indices;
                     const std::vector<integral_type> &filled_indices =

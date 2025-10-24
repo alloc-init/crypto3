@@ -38,7 +38,7 @@
 #include <nil/crypto3/algebra/curves/detail/marshalling.hpp>
 #include <type_traits>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace bincode {
             template<typename FieldType>

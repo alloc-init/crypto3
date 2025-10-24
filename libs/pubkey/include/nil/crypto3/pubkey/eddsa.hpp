@@ -165,17 +165,17 @@ namespace nil {
                 typedef typename scalar_field_type::value_type scalar_field_value_type;
                 typedef typename scalar_field_type::integral_type scalar_integral_type;
 
-                typedef nil::crypto3::marshalling::option::little_endian endianness;
-                typedef marshalling::types::curve_element<nil::crypto3::marshalling::field_type<endianness>,
+                typedef nil::marshalling::option::little_endian endianness;
+                typedef marshalling::types::curve_element<nil::marshalling::field_type<endianness>,
                     group_type>
                 marshalling_group_value_type;
-                typedef marshalling::types::field_element<nil::crypto3::marshalling::field_type<endianness>,
+                typedef marshalling::types::field_element<nil::marshalling::field_type<endianness>,
                     scalar_field_value_type>
                 marshalling_scalar_field_value_type;
-                typedef marshalling::types::integral<nil::crypto3::marshalling::field_type<endianness>,
+                typedef marshalling::types::integral<nil::marshalling::field_type<endianness>,
                     base_integral_type>
                 marshalling_base_integral_type;
-                typedef marshalling::types::integral<nil::crypto3::marshalling::field_type<endianness>,
+                typedef marshalling::types::integral<nil::marshalling::field_type<endianness>,
                     boost::multiprecision::uint512_t>
                 marshalling_uint512_t_type;
 
@@ -215,7 +215,7 @@ namespace nil {
                     marshalling_group_value_type marshalling_group_value_1;
                     auto R_iter_1 = std::cbegin(signature);
                     if (marshalling_group_value_1.read(R_iter_1, marshalling_group_value_type::bit_length()) !=
-                        nil::crypto3::marshalling::status_type::success) {
+                        nil::marshalling::status_type::success) {
                         return false;
                     }
                     group_value_type R = marshalling_group_value_1.value();
@@ -226,7 +226,7 @@ namespace nil {
                                     (base_field_type::modulus_bits % std::numeric_limits<std::uint8_t>::digits ? 1 : 0);
                     if (marshalling_scalar_field_value_1.read(S_iter_1,
                                                               marshalling_scalar_field_value_type::bit_length()) !=
-                        nil::crypto3::marshalling::status_type::success) {
+                        nil::marshalling::status_type::success) {
                         return false;
                     }
                     scalar_field_value_type S = marshalling_scalar_field_value_1.value();
@@ -247,7 +247,7 @@ namespace nil {
                     auto h_2_iter = std::cbegin(h_2);
 
                     if (marshalling_uint512_t_2.read(h_2_iter, hash_type::digest_bits) !=
-                        nil::crypto3::marshalling::status_type::success) {
+                        nil::marshalling::status_type::success) {
                         return false;
                     }
                     boost::multiprecision::uint512_t k = marshalling_uint512_t_2.value();
@@ -273,7 +273,7 @@ namespace nil {
                     marshalling_group_value_type marshalling_group_value_1;
                     auto pubkey_iter = std::cbegin(pubkey);
                     // TODO: process status
-                    nil::crypto3::marshalling::status_type status =
+                    nil::marshalling::status_type status =
                             marshalling_group_value_1.read(pubkey_iter, marshalling_group_value_type::bit_length());
                     return marshalling_group_value_1.value();
                 }
@@ -345,7 +345,7 @@ namespace nil {
                     auto write_iter = std::begin(public_key);
                     // TODO: process status
                     if (marshalling_group_value.write(write_iter, public_key_bits) !=
-                        nil::crypto3::marshalling::status_type::success) {
+                        nil::marshalling::status_type::success) {
                         return {};
                     }
 
@@ -382,7 +382,7 @@ namespace nil {
                     auto h_2_it = std::cbegin(h_2);
                     // TODO: process status
                     if (marshalling_uint512_t_2.read(h_2_it, hash_type::digest_bits) !=
-                        nil::crypto3::marshalling::status_type::success) {
+                        nil::marshalling::status_type::success) {
                         return {};
                     }
                     boost::multiprecision::uint512_t r = marshalling_uint512_t_2.value();
@@ -402,7 +402,7 @@ namespace nil {
                     auto sig_iter_3 = std::begin(signature);
                     // TODO: process status
                     if (marshalling_group_value.write(sig_iter_3, public_key_bits) !=
-                        nil::crypto3::marshalling::status_type::success) {
+                        nil::marshalling::status_type::success) {
                         return {};
                     }
 
@@ -420,7 +420,7 @@ namespace nil {
                     marshalling_uint512_t_type marshalling_uint512_t_4;
                     auto h_4_it = std::cbegin(h_4);
                     if (marshalling_uint512_t_4.read(h_4_it, hash_type::digest_bits) !=
-                        nil::crypto3::marshalling::status_type::success) {
+                        nil::marshalling::status_type::success) {
                         return {};
                     }
                     boost::multiprecision::uint512_t k = marshalling_uint512_t_4.value();
@@ -444,7 +444,7 @@ namespace nil {
                     auto sig_iter_6 = std::begin(signature) + offset_6;
                     std::size_t remaining_bytes_6 = signature.size() - offset_6;
                     if (marshalling_scalar_field_value_6.write(sig_iter_6, remaining_bytes_6) !=
-                        nil::crypto3::marshalling::status_type::success) {
+                        nil::marshalling::status_type::success) {
                         return {};
                     }
 

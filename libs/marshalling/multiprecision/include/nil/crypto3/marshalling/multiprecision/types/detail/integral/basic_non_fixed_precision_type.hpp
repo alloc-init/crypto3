@@ -108,15 +108,15 @@ namespace nil {
                         }
 
                         template<typename TIter>
-                        nil::crypto3::marshalling::status_type read(TIter &iter, std::size_t size) {
+                        nil::marshalling::status_type read(TIter &iter, std::size_t size) {
                             // if (size < length()) {
-                            //     return nil::crypto3::marshalling::status_type::not_enough_data;
+                            //     return nil::marshalling::status_type::not_enough_data;
                             // }
 
                             read_no_status(iter, size);
                             iter += size;
                             cur_length += size;
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         // template<typename TIter>
@@ -136,14 +136,14 @@ namespace nil {
 
                     public:
                         template<typename TIter>
-                        nil::crypto3::marshalling::status_type write(TIter &iter, std::size_t size) const {
+                        nil::marshalling::status_type write(TIter &iter, std::size_t size) const {
                             // if (size < length()) {
-                            //     return nil::crypto3::marshalling::status_type::buffer_overflow;
+                            //     return nil::marshalling::status_type::buffer_overflow;
                             // }
 
                             write_no_status(iter);
                             iter += size;
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         template<typename TIter>

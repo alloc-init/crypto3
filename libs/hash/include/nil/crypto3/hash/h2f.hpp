@@ -103,7 +103,7 @@ namespace nil {
 
                 struct construction {
                     struct params_type {
-                        typedef nil::crypto3::marshalling::option::big_endian digest_endian;
+                        typedef nil::marshalling::option::big_endian digest_endian;
                     };
                     typedef void type;
                 };
@@ -144,9 +144,9 @@ namespace nil {
                             std::copy(std::cbegin(uniform_bytes) + elm_offset,
                                       std::cbegin(uniform_bytes) + elm_offset + L,
                                       std::back_inserter(imported_octets));
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<L * CHAR_BIT>>
-                                tmp = nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(imported_octets,
+                                tmp = nil::marshalling::pack<nil::marshalling::option::big_endian>(imported_octets,
                                                                                                    status);
                             coordinates[j] = modular_type(typename modular_type::backend_type(tmp.backend()));
                         }
@@ -173,9 +173,9 @@ namespace nil {
                             std::copy(std::cbegin(uniform_bytes) + elm_offset,
                                       std::cbegin(uniform_bytes) + elm_offset + L,
                                       std::back_inserter(imported_octets));
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<L * CHAR_BIT>>
-                                tmp = nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(imported_octets,
+                                tmp = nil::marshalling::pack<nil::marshalling::option::big_endian>(imported_octets,
                                                                                                    status);
                             coordinates[j] = modular_type(typename modular_type::backend_type(tmp.backend()));
                         }

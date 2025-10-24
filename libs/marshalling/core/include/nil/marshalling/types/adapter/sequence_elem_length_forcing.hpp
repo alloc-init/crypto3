@@ -33,7 +33,7 @@
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/types/detail/common_funcs.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace adapter {
@@ -96,7 +96,7 @@ namespace nil::crypto3 {
                         using IterTag = typename std::iterator_traits<IterType>::iterator_category;
                         static_assert(std::is_base_of<std::random_access_iterator_tag, IterTag>::value,
                                       "Only random access iterator for reading is supported with "
-                                      "nil::crypto3::marshalling::option::SequenceElemLengthForcingEnabled option");
+                                      "nil::marshalling::option::SequenceElemLengthForcingEnabled option");
 
                         if (forced_ == cleared) {
                             return base_impl_type::read_element(elem, iter, len);
@@ -120,7 +120,7 @@ namespace nil::crypto3 {
                         using IterTag = typename std::iterator_traits<IterType>::iterator_category;
                         static_assert(std::is_base_of<std::random_access_iterator_tag, IterTag>::value,
                                       "Only random access iterator for reading is supported with "
-                                      "nil::crypto3::marshalling::option::SequenceElemLengthForcingEnabled option");
+                                      "nil::marshalling::option::SequenceElemLengthForcingEnabled option");
 
                         if (forced_ == cleared) {
                             return base_impl_type::read_element_no_status(elem, iter);

@@ -88,8 +88,8 @@ namespace nil {
                             typename hash_type::digest_type digest =
                                     crypto3::accumulators::extract::hash<hash_type>(acc);
 
-                            nil::crypto3::marshalling::status_type status;
-                            return ::nil::crypto3::marshalling::pack<::nil::crypto3::marshalling::option::big_endian>(digest, status);
+                            nil::marshalling::status_type status;
+                            return ::nil::marshalling::pack<::nil::marshalling::option::big_endian>(digest, status);
                         }
 
                         template<std::size_t DigistBits = digest_bits, std::size_t ModulusBits = modulus_bits,
@@ -104,8 +104,8 @@ namespace nil {
                             modulus_octets_container.fill(0);
                             std::copy(std::crbegin(digest), std::crend(digest), std::rbegin(modulus_octets_container));
 
-                            nil::crypto3::marshalling::status_type status;
-                            return ::nil::crypto3::marshalling::pack<::nil::crypto3::marshalling::option::big_endian>(
+                            nil::marshalling::status_type status;
+                            return ::nil::marshalling::pack<::nil::marshalling::option::big_endian>(
                                     modulus_octets_container, status);
                         }
                     };

@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
 
     typedef algebra::curves::bls12<381> curve_type;
     typedef typename curve_type::scalar_field_type scalar_field_type;
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
 
     typedef zk::snark::r1cs_gg_ppzksnark<curve_type> scheme_type;
 
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
         zk::snark::prove<scheme_type>(keypair.first, bp.primary_input(), bp.auxiliary_input());
 
     using verification_key_marshalling_type =
-        types::r1cs_gg_ppzksnark_verification_key<nil::crypto3::marshalling::field_type<Endianness>,
+        types::r1cs_gg_ppzksnark_verification_key<nil::marshalling::field_type<Endianness>,
                                                   typename scheme_type::verification_key_type>;
 
     verification_key_marshalling_type filled_verification_key_val =
@@ -145,13 +145,13 @@ int main(int argc, char *argv[]) {
             keypair.second);
 
     using proof_marshalling_type =
-        types::r1cs_gg_ppzksnark_proof<nil::crypto3::marshalling::field_type<Endianness>, typename scheme_type::proof_type>;
+        types::r1cs_gg_ppzksnark_proof<nil::marshalling::field_type<Endianness>, typename scheme_type::proof_type>;
 
     proof_marshalling_type filled_proof_val =
         types::fill_r1cs_gg_ppzksnark_proof<typename scheme_type::proof_type, Endianness>(proof);
 
     using primary_input_marshalling_type =
-        types::r1cs_gg_ppzksnark_primary_input<nil::crypto3::marshalling::field_type<Endianness>,
+        types::r1cs_gg_ppzksnark_primary_input<nil::marshalling::field_type<Endianness>,
                                                typename scheme_type::primary_input_type>;
 
     primary_input_marshalling_type filled_primary_input_val =
@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
     verification_key_byteblob.resize(filled_verification_key_val.length(), 0x00);
     auto write_iter = verification_key_byteblob.begin();
 
-    typename nil::crypto3::marshalling::status_type status =
+    typename nil::marshalling::status_type status =
         filled_verification_key_val.write(write_iter, verification_key_byteblob.size());
 
     std::vector<unit_type> proof_byteblob;
@@ -208,9 +208,9 @@ int main(int argc, char *argv[]) {
         out.close();
     }
 
-    // nil::crypto3::marshalling::status_type provingProcessingStatus = nil::crypto3::marshalling::status_type::success;
+    // nil::marshalling::status_type provingProcessingStatus = nil::marshalling::status_type::success;
     // typename scheme_type::proving_key_type other =
-    //             nil::crypto3::marshalling::verifier_input_deserializer_tvm<scheme_type>::proving_key_process(
+    //             nil::marshalling::verifier_input_deserializer_tvm<scheme_type>::proving_key_process(
     //                 proving_key_byteblob.cbegin(),
     //                 proving_key_byteblob.cend(),
     //                 provingProcessingStatus);

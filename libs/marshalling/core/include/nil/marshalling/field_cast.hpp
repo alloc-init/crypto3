@@ -36,7 +36,7 @@
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/fields.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace detail {
             template<typename TFieldTo, typename TFieldFrom, bool TFixedLength>

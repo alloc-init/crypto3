@@ -52,7 +52,7 @@ namespace nil {
                                           zk::commitments::detail::powers_of_tau_public_key <typename PublicKey::curve_type>>::value,
                              bool>::type,
                          typename... TOptions>
-                using powers_of_tau_public_key = nil::crypto3::marshalling::types::bundle<
+                using powers_of_tau_public_key = nil::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // tau_pok
@@ -63,10 +63,10 @@ namespace nil {
                         element_pok<TTypeBase, typename PublicKey::pok_type>>>;
 
                 template<typename PublicKey, typename Endianness>
-                powers_of_tau_public_key<nil::crypto3::marshalling::field_type<Endianness>, PublicKey>
+                powers_of_tau_public_key<nil::marshalling::field_type<Endianness>, PublicKey>
                     fill_powers_of_tau_public_key(const PublicKey &public_key) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
                     return powers_of_tau_public_key<TTypeBase, PublicKey>(
                         std::make_tuple(
@@ -84,7 +84,7 @@ namespace nil {
 
                 template<typename PublicKey, typename Endianness>
                 PublicKey make_powers_of_tau_public_key(
-                    const powers_of_tau_public_key<nil::crypto3::marshalling::field_type<Endianness>, PublicKey>
+                    const powers_of_tau_public_key<nil::marshalling::field_type<Endianness>, PublicKey>
                         &filled_public_key) {
 
                     return PublicKey(

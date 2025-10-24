@@ -107,13 +107,13 @@ namespace nil {
                     }
 
                     static std::vector<std::uint8_t> serialize_g1_uncompressed(const g1_value_type &g) {
-                        using endianness = nil::crypto3::marshalling::option::little_endian;
+                        using endianness = nil::marshalling::option::little_endian;
                         auto filled_val =
                                 nil::crypto3::marshalling::types::fill_fast_curve_element<g1_type, endianness>(g);
                         std::vector<std::uint8_t> blob(filled_val.length());
                         auto it = std::begin(blob);
-                        nil::crypto3::marshalling::status_type status = filled_val.write(it, blob.size());
-                        if (status != nil::crypto3::marshalling::status_type::success) {
+                        nil::marshalling::status_type status = filled_val.write(it, blob.size());
+                        if (status != nil::marshalling::status_type::success) {
                             return {};
                         } else {
                             return blob;

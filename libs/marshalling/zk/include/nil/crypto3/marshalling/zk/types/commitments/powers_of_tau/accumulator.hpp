@@ -64,42 +64,42 @@ namespace nil {
                                               Accumulator::tau_powers_length>>::value,
                              bool>::type,
                          typename... TOptions>
-                using powers_of_tau_accumulator = nil::crypto3::marshalling::types::bundle<
+                using powers_of_tau_accumulator = nil::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // tau_powers_g1
-                        nil::crypto3::marshalling::types::array_list<
+                        nil::marshalling::types::array_list<
                             TTypeBase,
                             fast_curve_element<TTypeBase, typename Accumulator::curve_type::template g1_type<>>,
-                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::marshalling::option::sequence_size_field_prefix<
+                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // tau_powers_g2
-                        nil::crypto3::marshalling::types::array_list<
+                        nil::marshalling::types::array_list<
                             TTypeBase,
                             fast_curve_element<TTypeBase, typename Accumulator::curve_type::template g2_type<>>,
-                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::marshalling::option::sequence_size_field_prefix<
+                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // alpha_tau_powers_g1
-                        nil::crypto3::marshalling::types::array_list<
+                        nil::marshalling::types::array_list<
                             TTypeBase,
                             fast_curve_element<TTypeBase, typename Accumulator::curve_type::template g1_type<>>,
-                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::marshalling::option::sequence_size_field_prefix<
+                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // beta_tau_powers_g1
-                        nil::crypto3::marshalling::types::array_list<
+                        nil::marshalling::types::array_list<
                             TTypeBase,
                             fast_curve_element<TTypeBase, typename Accumulator::curve_type::template g1_type<>>,
-                            nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>,
+                            nil::marshalling::option::sequence_size_field_prefix<
+                                nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // beta_g2
                         fast_curve_element<TTypeBase, typename Accumulator::curve_type::template g2_type<>>
                     >>;
 
                 template<typename Accumulator, typename Endianness>
-                powers_of_tau_accumulator<nil::crypto3::marshalling::field_type<Endianness>, Accumulator>
+                powers_of_tau_accumulator<nil::marshalling::field_type<Endianness>, Accumulator>
                     fill_powers_of_tau_accumulator(const Accumulator &accumulator) {
 
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
 
                     return powers_of_tau_accumulator<TTypeBase, Accumulator>(std::make_tuple(
                         std::move(
@@ -121,7 +121,7 @@ namespace nil {
 
                 template<typename Accumulator, typename Endianness>
                 Accumulator make_powers_of_tau_accumulator(
-                    const powers_of_tau_accumulator<nil::crypto3::marshalling::field_type<Endianness>, Accumulator>
+                    const powers_of_tau_accumulator<nil::marshalling::field_type<Endianness>, Accumulator>
                         &filled_accumulator) {
 
                     return Accumulator(

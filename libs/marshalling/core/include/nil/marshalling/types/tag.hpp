@@ -26,7 +26,7 @@
 #ifndef MARSHALLING_TAG_HPP
 #define MARSHALLING_TAG_HPP
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace tag {

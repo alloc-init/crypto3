@@ -34,7 +34,7 @@
 #include <nil/marshalling/types/float_value.hpp>
 #include <nil/marshalling/types/array_list.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
 
         template<typename T, typename Enabled = void>

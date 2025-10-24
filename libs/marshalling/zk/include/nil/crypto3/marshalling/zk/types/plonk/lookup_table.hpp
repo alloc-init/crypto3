@@ -42,29 +42,29 @@ namespace nil {
             namespace types {
 
                 template<typename TTypeBase, typename LookupTable>
-                using plonk_lookup_table = nil::crypto3::marshalling::types::bundle<
+                using plonk_lookup_table = nil::marshalling::types::bundle<
                     TTypeBase, std::tuple<
-                        nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>, // tag_index
-                        nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>, // columns_number
+                        nil::marshalling::types::integral<TTypeBase, std::size_t>, // tag_index
+                        nil::marshalling::types::integral<TTypeBase, std::size_t>, // columns_number
 
-                        nil::crypto3::marshalling::types::array_list<
+                        nil::marshalling::types::array_list<
                             TTypeBase,
                             typename variable<TTypeBase, typename LookupTable::variable_type>::type,
-                            nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>
+                            nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                         >
                     >
                 >;
 
                 template<typename Endianness, typename LookupTable>
-                plonk_lookup_table<nil::crypto3::marshalling::field_type<Endianness>, LookupTable>
+                plonk_lookup_table<nil::marshalling::field_type<Endianness>, LookupTable>
                 fill_plonk_lookup_table(const LookupTable &table){
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
                     using variable_type = typename LookupTable::variable_type;
 
-                    nil::crypto3::marshalling::types::array_list<
+                    nil::marshalling::types::array_list<
                         TTypeBase,
                         typename variable<TTypeBase, typename LookupTable::variable_type>::type,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>
+                        nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                     > filled_options;
 
                     for( std::size_t i = 0; i < table.lookup_options.size(); i++ ){
@@ -77,8 +77,8 @@ namespace nil {
                     }
                     return plonk_lookup_table<TTypeBase, LookupTable>(
                         std::make_tuple(
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>(table.tag_index),
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>(table.columns_number),
+                            nil::marshalling::types::integral<TTypeBase, std::size_t>(table.tag_index),
+                            nil::marshalling::types::integral<TTypeBase, std::size_t>(table.columns_number),
                             filled_options
                         )
                     );
@@ -86,7 +86,7 @@ namespace nil {
 
                 template<typename Endianness, typename LookupTable>
                 LookupTable make_plonk_lookup_table(
-                    const plonk_lookup_table<nil::crypto3::marshalling::field_type<Endianness>, LookupTable> &filled_table
+                    const plonk_lookup_table<nil::marshalling::field_type<Endianness>, LookupTable> &filled_table
                 ) {
                     std::size_t tag_index = std::get<0>(filled_table.value()).value();
                     std::size_t columns_number = std::get<1>(filled_table.value()).value();
@@ -112,19 +112,19 @@ namespace nil {
 
                 template<typename TTypeBase, typename PlonkTable>
                 using plonk_lookup_tables =
-                    nil::crypto3::marshalling::types::array_list<
+                    nil::marshalling::types::array_list<
                         TTypeBase, plonk_lookup_table<TTypeBase, PlonkTable>,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>
+                        nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                     >;
 
                 template<typename Endianness, typename PlonkTable, typename InputRange>
-                plonk_lookup_tables<nil::crypto3::marshalling::field_type<Endianness>, PlonkTable>
+                plonk_lookup_tables<nil::marshalling::field_type<Endianness>, PlonkTable>
                     fill_plonk_lookup_tables(const InputRange &tables) {
-                    using TTypeBase = nil::crypto3::marshalling::field_type<Endianness>;
-                    using result_type = nil::crypto3::marshalling::types::array_list<
+                    using TTypeBase = nil::marshalling::field_type<Endianness>;
+                    using result_type = nil::marshalling::types::array_list<
                         TTypeBase, plonk_lookup_table<TTypeBase, PlonkTable>,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>>>;
+                        nil::marshalling::option::sequence_size_field_prefix<
+                            nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
                     result_type filled_tables;
                     for (const auto &table : tables) {
@@ -136,7 +136,7 @@ namespace nil {
 
                 template<typename Endianness, typename PlonkTable>
                 std::vector<PlonkTable> make_plonk_lookup_tables(
-                    const plonk_lookup_tables<nil::crypto3::marshalling::field_type<Endianness>, PlonkTable> &filled_tables) {
+                    const plonk_lookup_tables<nil::marshalling::field_type<Endianness>, PlonkTable> &filled_tables) {
                     std::vector<PlonkTable> tables;
                     for (std::size_t i = 0; i < filled_tables.value().size(); i++) {
                         tables.emplace_back(make_plonk_lookup_table<Endianness, PlonkTable>(filled_tables.value().at(i)));

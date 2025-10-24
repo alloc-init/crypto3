@@ -32,7 +32,7 @@
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/types/detail/common_funcs.hpp>
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace adapter {

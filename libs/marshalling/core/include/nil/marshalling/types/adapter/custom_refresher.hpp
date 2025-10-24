@@ -26,7 +26,7 @@
 #ifndef MARSHALLING_CUSTOM_REFRESHER_HPP
 #define MARSHALLING_CUSTOM_REFRESHER_HPP
 
-namespace nil::crypto3 {
+namespace nil {
     namespace marshalling {
         namespace types {
             namespace adapter {
