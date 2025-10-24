@@ -117,7 +117,7 @@ namespace nil {
                         );
 
                         // Marshall the initialization context and push it to the transcript.
-                        using Endianness = nil::crypto3::marshalling::option::big_endian;
+                        using Endianness = nil::marshalling::option::big_endian;
                         auto filled_context = nil::crypto3::marshalling::types::fill_transcript_initialization_context<
                             Endianness, nil::crypto3::zk::snark::detail::transcript_initialization_context<PlaceholderParamsType>>(context);
 

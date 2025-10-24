@@ -49,8 +49,8 @@ int main()
     using g1_base_field = nil::crypto3::algebra::curves::mnt4<298>::g1_type<>::field_type;
     using g2_base_field = nil::crypto3::algebra::curves::mnt4<298>::g2_type<>::field_type;
 
-    using be = nil::crypto3::marshalling::option::big_endian;
-    using le = nil::crypto3::marshalling::option::little_endian;
+    using be = nil::marshalling::option::big_endian;
+    using le = nil::marshalling::option::little_endian;
     using unit_type = unsigned char;
 
     nil::marshalling::status_type status;

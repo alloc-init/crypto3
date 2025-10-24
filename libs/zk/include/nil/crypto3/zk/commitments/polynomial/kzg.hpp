@@ -686,7 +686,7 @@ namespace nil {
                     using transcript_hash_type = typename CommitmentSchemeType::transcript_hash_type;
                     using polynomial_type = typename CommitmentSchemeType::polynomial_type;
                     using proof_type = typename CommitmentSchemeType::proof_type;
-                    using endianness = nil::crypto3::marshalling::option::big_endian;
+                    using endianness = nil::marshalling::option::big_endian;
                 private:
                     params_type _params;
                     std::map<std::size_t, commitment_type> _commitments;

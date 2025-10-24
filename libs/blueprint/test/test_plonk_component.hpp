@@ -95,7 +95,7 @@ namespace nil {
         ){
             using ArithmetizationType = nil::crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
             using AssignmentType = nil::crypto3::zk::snark::plonk_table<BlueprintFieldType, nil::crypto3::zk::snark::plonk_column<BlueprintFieldType>>;
-            using Endianness = nil::crypto3::marshalling::option::big_endian;
+            using Endianness = nil::marshalling::option::big_endian;
             using TTypeBase = nil::marshalling::field_type<Endianness>;
 
             {
@@ -136,7 +136,7 @@ namespace nil {
             using ColumnType = nil::crypto3::zk::snark::plonk_column<BlueprintFieldType>;
             using AssignmentTableType = nil::crypto3::zk::snark::plonk_table<BlueprintFieldType, ColumnType>;
             using TableDescriptionType = nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>;
-            using Endianness = nil::crypto3::marshalling::option::big_endian;
+            using Endianness = nil::marshalling::option::big_endian;
             using TTypeBase = nil::marshalling::field_type<Endianness>;
 
             ConstraintSystemType constraint_system;

@@ -53,7 +53,7 @@ int main()
     using g1 = nil::crypto3::algebra::curves::mnt4<298>::g1_type<>;
     using g2 = nil::crypto3::algebra::curves::mnt4<298>::g2_type<>;
 
-    using be = nil::crypto3::marshalling::option::big_endian;
+    using be = nil::marshalling::option::big_endian;
     using unit_type = unsigned char;
 
     nil::marshalling::status_type status;

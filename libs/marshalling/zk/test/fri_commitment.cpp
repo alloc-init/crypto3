@@ -118,7 +118,7 @@ BOOST_FIXTURE_TEST_SUITE(marshalling_fri_proof_elements, nil::crypto3::zk::test_
     using value_type = typename field_type::value_type;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
 
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
     using TTypeBase = nil::marshalling::field_type<Endianness>;
     using FRI = typename nil::crypto3::zk::commitments::detail::basic_batched_fri<field_type, hash_type, hash_type, m>;
 
@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_SUITE_END()
 
 
 BOOST_FIXTURE_TEST_SUITE(marshalling_real_fri_proofs, nil::crypto3::zk::test_tools::random_test_initializer<algebra::curves::pallas::base_field_type>)
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
 
 BOOST_AUTO_TEST_CASE(marshalling_fri_basic_test) {
     // setup

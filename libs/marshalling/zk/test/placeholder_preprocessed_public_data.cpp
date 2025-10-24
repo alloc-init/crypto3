@@ -102,7 +102,7 @@ struct placeholder_preprocessed_public_data_test_runner {
 
     void test_placeholder_preprocessed_public_data(public_data_type const& data)
     {
-        using Endianness = nil::crypto3::marshalling::option::big_endian;
+        using Endianness = nil::marshalling::option::big_endian;
         using TTypeBase = nil::marshalling::field_type<Endianness>;
 
         auto filled_public_data = nil::crypto3::marshalling::types::

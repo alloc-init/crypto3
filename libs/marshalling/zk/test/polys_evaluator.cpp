@@ -103,7 +103,7 @@ void test_polys_evaluator_marshalling(PolysEvaluator &evaluator) {
 
 BOOST_AUTO_TEST_SUITE(marshalling_real)
     // Setup common types.
-    using Endianness = nil::crypto3::marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
     using curve_type = nil::crypto3::algebra::curves::vesta;
     using field_type = curve_type::scalar_field_type;
     using merkle_hash_type = nil::crypto3::hashes::keccak_1600<256>;
