@@ -97,7 +97,7 @@ namespace nil {
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(const group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(const group_value_type &point, TIter &iter) {
 
                         /* Point is encoded in compressed form, only X coordinate.
                          * Highest bit is Infinity flag
@@ -124,7 +124,7 @@ namespace nil {
                             *iter |= S_bit;
                         }
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
@@ -145,7 +145,7 @@ namespace nil {
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(const group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(const group_value_type &point, TIter &iter) {
 
                         /* Point is always encoded in compressed form, only X coordinate.
                          * Highest bit is Infinity flag
@@ -186,7 +186,7 @@ namespace nil {
                             *iter |= S_bit;
                         }
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
@@ -205,7 +205,7 @@ namespace nil {
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(group_value_type &point, TIter &iter) {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
@@ -231,7 +231,7 @@ namespace nil {
                         if (I_bit) {
                             // point at infinity
                             point = g1_value_type();
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         g1_field_value_type x_mod(x);
@@ -251,7 +251,7 @@ namespace nil {
                             point = result;
                         }
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
@@ -270,7 +270,7 @@ namespace nil {
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(group_value_type &point, TIter &iter) {
+                    static nil::marshalling::status_type process(group_value_type &point, TIter &iter) {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
@@ -303,7 +303,7 @@ namespace nil {
                         if (I_bit) {
                             // point at infinity
                             point = group_value_type();
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         g2_field_value_type x_mod(x_0, x_1);
@@ -323,7 +323,7 @@ namespace nil {
                             point = result;
                         }
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
             }    // namespace processing

@@ -98,12 +98,12 @@ void test_fri_proof(typename FRI::proof_type &proof, typename nil::crypto3::mars
     cv.resize(filled_proof.length(), 0x00);
     auto write_iter = cv.begin();
     auto status = filled_proof.write(write_iter, cv.size());
-    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::marshalling::status_type::success);
 
     typename nil::crypto3::marshalling::types::fri_proof<TTypeBase, FRI>::type test_val_read;
     auto read_iter = cv.begin();
     status = test_val_read.read(read_iter, cv.size());
-    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::marshalling::status_type::success);
     typename FRI::proof_type constructed_val_read = nil::crypto3::marshalling::types::make_fri_proof<Endianness, FRI>(
             test_val_read, batch_info);
     BOOST_CHECK(proof == constructed_val_read);
@@ -156,12 +156,12 @@ BOOST_FIXTURE_TEST_SUITE(marshalling_fri_proof_elements, test_tools::random_test
         cv.resize(filled.length(), 0x00);
         auto write_iter = cv.begin();
         auto status = filled.write(write_iter, cv.size());
-        BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
+        BOOST_CHECK(status == nil::marshalling::status_type::success);
 
         nil::crypto3::marshalling::types::merkle_proof_vector_type<TTypeBase, FRI> test_val_read;
         auto read_iter = cv.begin();
         test_val_read.read(read_iter, cv.size());
-        BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
+        BOOST_CHECK(status == nil::marshalling::status_type::success);
         auto constructed_val_read = nil::crypto3::marshalling::types::make_merkle_proof_vector<Endianness, FRI>(test_val_read);
         BOOST_CHECK(mp == constructed_val_read);
     }

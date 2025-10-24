@@ -193,7 +193,7 @@ template<typename SrcParams>
     proof_marshalling_type marshalled_proof_data;
     auto read_iter = v.begin();
     auto status = marshalled_proof_data.read(read_iter, v.size());
-    if (status != nil::crypto3::marshalling::status_type::success) {
+    if (status != nil::marshalling::status_type::success) {
         std::cerr << "Status is " << make_error_code(status) << std::endl;
         throw "Reading a marshalled object from buffer failed.";
     }

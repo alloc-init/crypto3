@@ -245,7 +245,7 @@ namespace nil {
                 typename CurveType::scalar_field_type::integral_type integral_b =
                     typename CurveType::scalar_field_type::integral_type(b.to_integral());
                 const std::size_t scalar_size = 255;
-                nil::crypto3::marshalling::status_type status;
+                nil::marshalling::status_type status;
                 std::array<bool, scalar_size> bits =
                     nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_b, status);
                 THROW_IF_ERROR_STATUS(status, "curve_element_variable_base_scalar_mul::generate_assignments");

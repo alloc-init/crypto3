@@ -56,7 +56,7 @@ int main()
     using be = nil::crypto3::marshalling::option::big_endian;
     using unit_type = unsigned char;
 
-    nil::crypto3::marshalling::status_type status;
+    nil::marshalling::status_type status;
     auto G1 = g1::value_type::one();
 
     std::vector<unit_type> cv_be = nil::crypto3::marshalling::pack<be>(G1, status);

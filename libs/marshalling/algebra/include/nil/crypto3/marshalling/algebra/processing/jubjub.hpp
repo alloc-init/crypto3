@@ -64,7 +64,7 @@ namespace nil {
 
                     /// https://zips.z.cash/protocol/protocol.pdf#concreteextractorjubjub
                     template<typename TIter>
-                    static nil::crypto3::marshalling::status_type process(const group_value_type &point, TIter &iter)
+                    static nil::marshalling::status_type process(const group_value_type &point, TIter &iter)
                     {
                         multiprecision::processing::write_data<params_type::bit_length(),
                                                                endianness>(
@@ -72,7 +72,7 @@ namespace nil {
                                 typename group_value_type::field_type::integral_type>(
                                 point.to_affine().X.to_integral()),
                             iter);
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
@@ -95,7 +95,7 @@ namespace nil {
                     template<typename TIter>
                     static typename std::enable_if<
                         std::is_same<std::uint8_t, typename std::iterator_traits<TIter>::value_type>::value,
-                        nil::crypto3::marshalling::status_type>::type
+                        nil::marshalling::status_type>::type
                     process(group_value_type &point, TIter &iter)
                     {
                         using field_type = typename group_value_type::field_type;
@@ -104,12 +104,12 @@ namespace nil {
 
                         integral_type int_u = multiprecision::processing::read_data<params_type::bit_length(), integral_type, endianness>(iter);
                         if (int_u >= group_value_type::field_type::modulus) {
-                            return nil::crypto3::marshalling::status_type::invalid_msg_data;
+                            return nil::marshalling::status_type::invalid_msg_data;
                         }
 
                         if (int_u.is_zero()) {
                             point = group_value_type();
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         field_type::value_type field_u(int_u);
@@ -117,7 +117,7 @@ namespace nil {
                         field_type::value_type denominator =
                             (field_type::value_type::one() - field_type::value_type(group_type::params_type::d) * uu);
                         if (denominator.is_zero()) {
-                            return nil::crypto3::marshalling::status_type::invalid_msg_data;
+                            return nil::marshalling::status_type::invalid_msg_data;
                         }
 
                         field_type::value_type fraction =
@@ -125,7 +125,7 @@ namespace nil {
                             * denominator.inversed();
 
                         if (!fraction.is_square()) {
-                            return nil::crypto3::marshalling::status_type::invalid_msg_data;
+                            return nil::marshalling::status_type::invalid_msg_data;
                         }
 
                         field_type::value_type v = fraction.sqrt();
@@ -133,17 +133,17 @@ namespace nil {
                         // ... at most one of (u, v) and (u, −v) is in J(𝑟)
                         point = group_value_type(field_u, v);
                         if ( (point * (scalar_type::modulus - 1) + point).is_zero() ) {
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         point = group_value_type(field_u, -v);
                         if ( (point * (scalar_type::modulus - 1) + point).is_zero() ) {
-                            return nil::crypto3::marshalling::status_type::success;
+                            return nil::marshalling::status_type::success;
                         }
 
                         // If neither has order r, then point is of mixed order and should be rejected
                         point = group_value_type();
-                        return nil::crypto3::marshalling::status_type::invalid_msg_data;
+                        return nil::marshalling::status_type::invalid_msg_data;
                     }
                 };
             }    // namespace processing

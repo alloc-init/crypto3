@@ -78,7 +78,7 @@ namespace nil {
                     template<typename TIter>
                     static typename std::enable_if<
                     std::is_same<std::uint8_t, typename std::iterator_traits<TIter>::value_type>::value,
-                        nil::crypto3::marshalling::status_type>::type
+                        nil::marshalling::status_type>::type
                         process(const group_value_type &point, TIter &iter) {
                         using base_field_type = typename group_type::field_type;
                         using base_integral_type = typename base_field_type::integral_type;
@@ -107,7 +107,7 @@ namespace nil {
 
                         std::copy(std::cbegin(encoded_value), std::cend(encoded_value), iter);
 
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 
@@ -133,7 +133,7 @@ namespace nil {
                     template<typename TIter>
                     static typename std::enable_if<
                         std::is_same<std::uint8_t, typename std::iterator_traits<TIter>::value_type>::value,
-                        nil::crypto3::marshalling::status_type>::type
+                        nil::marshalling::status_type>::type
                         process(group_value_type &point, TIter &iter)
                     {
                         using base_field_type = typename group_type::field_type;
@@ -165,7 +165,7 @@ namespace nil {
                         }
 
                         point = decoded_point_affine.value();
-                        return nil::crypto3::marshalling::status_type::success;
+                        return nil::marshalling::status_type::success;
                     }
                 };
 

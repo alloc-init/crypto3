@@ -215,7 +215,7 @@ namespace nil {
                                 scalar.to_integral());
                         std::vector<bool> bits_msb(component.scalar_size);
                         {
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             assert(component.scalar_size <= BlueprintFieldType::modulus_bits);
 
                             std::array<bool, BlueprintFieldType::modulus_bits> bits_msb_all =

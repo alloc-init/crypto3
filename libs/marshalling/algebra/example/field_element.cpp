@@ -53,7 +53,7 @@ int main()
     using le = nil::crypto3::marshalling::option::little_endian;
     using unit_type = unsigned char;
 
-    nil::crypto3::marshalling::status_type status;
+    nil::marshalling::status_type status;
     typename g1_base_field::value_type x1 { 0xDEADBEEF };
     std::vector<unit_type> cv_le = nil::crypto3::marshalling::pack<le>(x1, status);
     std::cout << "Marshalling x1: " << x1 << ": " << make_error_code(status) << std::endl;

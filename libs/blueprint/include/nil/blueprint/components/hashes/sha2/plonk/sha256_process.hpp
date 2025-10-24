@@ -213,7 +213,7 @@ namespace nil {
                                     input_state[i].to_integral());
                         std::vector<bool> input_state_sparse(32);
                         {
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             std::vector<bool> input_state_sparse_all =
                                 nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_input_state_sparse,
                                                                                             status);
@@ -234,7 +234,7 @@ namespace nil {
                                     input_state[i].to_integral());
                         std::vector<bool> input_state_sparse(32);
                         {
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             std::vector<bool> input_state_sparse_all =
                                 nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_input_state_sparse,
                                                                                             status);
@@ -260,7 +260,7 @@ namespace nil {
                                     .to_integral());
                         std::vector<bool> a(32);
                         {
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             std::vector<bool> a_all =
                                 nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_a, status);
                             std::copy(a_all.end() - 32, a_all.end(), a.begin());
@@ -284,7 +284,7 @@ namespace nil {
                                     .to_integral());
                         std::vector<bool> b(32);
                         {
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             std::vector<bool> b_all =
                                 nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_b, status);
                             std::copy(b_all.end() - 32, b_all.end(), b.begin());
@@ -324,7 +324,7 @@ namespace nil {
                             typename BlueprintFieldType::integral_type(e.to_integral());
                         std::vector<bool> e_bits(32);
                         {
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             std::vector<bool> e_bits_all =
                                 nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_e, status);
                             std::copy(e_bits_all.end() - 32, e_bits_all.end(), e_bits.begin());
@@ -392,7 +392,7 @@ namespace nil {
                             typename BlueprintFieldType::integral_type(a.to_integral());
                         std::vector<bool> a_bits(32);
                         {
-                            nil::crypto3::marshalling::status_type status;
+                            nil::marshalling::status_type status;
                             std::vector<bool> a_bits_all =
                                 nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_a, status);
                             std::copy(a_bits_all.end() - 32, a_bits_all.end(), a_bits.begin());
@@ -1426,7 +1426,7 @@ namespace nil {
                                 input_state[i].to_integral());
                     std::vector<bool> input_state_sparse(32);
                     {
-                        nil::crypto3::marshalling::status_type status;
+                        nil::marshalling::status_type status;
                         std::vector<bool> input_state_sparse_all =
                             nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_input_state_sparse,
                                                                                          status);
@@ -1450,7 +1450,7 @@ namespace nil {
                                 input_state[i].to_integral());
                     std::vector<bool> input_state_sparse(32);
                     {
-                        nil::crypto3::marshalling::status_type status;
+                        nil::marshalling::status_type status;
                         std::vector<bool> input_state_sparse_all =
                             nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_input_state_sparse,
                                                                                          status);
@@ -1480,7 +1480,7 @@ namespace nil {
                     assignment.witness(component.W(0), i) = message_scheduling_words[(i - row) / 5 + 1];
                     std::vector<bool> a(32);
                     {
-                        nil::crypto3::marshalling::status_type status;
+                        nil::marshalling::status_type status;
                         std::vector<bool> a_all =
                             nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_a, status);
                         std::copy(a_all.end() - 32, a_all.end(), a.begin());
@@ -1523,7 +1523,7 @@ namespace nil {
                             message_scheduling_words[(i - row) / 5 + 14].to_integral());
                     std::vector<bool> b(32);
                     {
-                        nil::crypto3::marshalling::status_type status;
+                        nil::marshalling::status_type status;
                         std::vector<bool> b_all =
                             nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_b, status);
                         std::copy(b_all.end() - 32, b_all.end(), b.begin());
@@ -1595,7 +1595,7 @@ namespace nil {
                         typename BlueprintFieldType::integral_type(e.to_integral());
                     std::vector<bool> e_bits(32);
                     {
-                        nil::crypto3::marshalling::status_type status;
+                        nil::marshalling::status_type status;
                         std::vector<bool> e_bits_all =
                             nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_e, status);
                         std::copy(e_bits_all.end() - 32, e_bits_all.end(), e_bits.begin());
@@ -1705,7 +1705,7 @@ namespace nil {
                         typename BlueprintFieldType::integral_type(a.to_integral());
                     std::vector<bool> a_bits(32);
                     {
-                        nil::crypto3::marshalling::status_type status;
+                        nil::marshalling::status_type status;
                         std::vector<bool> a_bits_all =
                             nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(integral_a, status);
                         std::copy(a_bits_all.end() - 32, a_bits_all.end(), a_bits.begin());

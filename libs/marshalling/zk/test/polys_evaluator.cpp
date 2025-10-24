@@ -89,12 +89,12 @@ void test_polys_evaluator_marshalling(PolysEvaluator &evaluator) {
     cv.resize(filled_evaluator.length(), 0x00);
     auto write_iter = cv.begin();
     auto status = filled_evaluator.write(write_iter, cv.size());
-    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::marshalling::status_type::success);
 
     nil::crypto3::marshalling::types::polys_evaluator<TTypeBase, PolysEvaluator> test_val_read;
     auto read_iter = cv.begin();
     test_val_read.read(read_iter, cv.size());
-    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::marshalling::status_type::success);
 
     PolysEvaluator constructed_val_read =
             nil::crypto3::marshalling::types::make_polys_evaluator<Endianness, PolysEvaluator>(test_val_read);

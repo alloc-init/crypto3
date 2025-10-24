@@ -96,14 +96,14 @@ void test_merkle_tree_marshalling(std::size_t tree_depth) {
     std::vector<std::uint8_t> cv;
     cv.resize(filled_merkle_tree.length(), 0x00);
     auto write_iter = cv.begin();
-    nil::crypto3::marshalling::status_type status = filled_merkle_tree.write(write_iter, cv.size());
-    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
+    nil::marshalling::status_type status = filled_merkle_tree.write(write_iter, cv.size());
+    BOOST_CHECK(status == nil::marshalling::status_type::success);
     // print_merkle_tree(cv.cbegin(), cv.cend(), data[tree_idx].cbegin(), data[tree_idx].cend(), true);
 
     merkle_tree_marshalling_type test_val_read;
     auto read_iter = cv.begin();
     status = test_val_read.read(read_iter, cv.size());
-    BOOST_CHECK(status == nil::crypto3::marshalling::status_type::success);
+    BOOST_CHECK(status == nil::marshalling::status_type::success);
     merkle_tree_type constructed_val_read = types::make_merkle_tree<merkle_tree_type, Endianness>(test_val_read);
     BOOST_CHECK(tree == constructed_val_read);
 }

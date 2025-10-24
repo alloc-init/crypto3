@@ -190,7 +190,7 @@ namespace nil {
                     };
                     std::vector<bool> bits(bits_amount);
                     {
-                        nil::crypto3::marshalling::status_type status;
+                        nil::marshalling::status_type status;
                         std::array<bool, BlueprintFieldType::modulus_bits> bytes_all =
                             nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(input, status);
                         THROW_IF_ERROR_STATUS(status, "bit_decomposition::calculate");
@@ -221,7 +221,7 @@ namespace nil {
 
                 std::vector<bool> input_bits(component.bits_amount);
                 {
-                    nil::crypto3::marshalling::status_type status;
+                    nil::marshalling::status_type status;
                     std::array<bool, BlueprintFieldType::modulus_bits> bytes_all =
                         nil::crypto3::marshalling::pack<nil::crypto3::marshalling::option::big_endian>(
                             var_value(assignment, instance_input.input), status);

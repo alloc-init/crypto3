@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_SUITE(parallel_kzg_test_suite)
 
         auto params = typename kzg_type::params_type(n, alpha);
         auto commit = zk::algorithms::commit<kzg_type>(params, f);
-        nil::crypto3::marshalling::status_type status;
+        nil::marshalling::status_type status;
         using endianness = nil::crypto3::marshalling::option::big_endian;
         std::vector<uint8_t> single_commitment_bytes =
                 nil::crypto3::marshalling::pack<endianness>(commit, status);
@@ -871,7 +871,7 @@ BOOST_AUTO_TEST_CASE(batched_kzg_placeholder_repr) {
     auto commits = zk::algorithms::commit<kzg_type>(params, polys);
     using endianness = nil::crypto3::marshalling::option::big_endian;
     for (auto &c: commits) {
-        nil::crypto3::marshalling::status_type status;
+        nil::marshalling::status_type status;
         std::vector<uint8_t> single_commitment_bytes =
                 nil::crypto3::marshalling::pack<endianness>(c, status);
         dump_vector(single_commitment_bytes, "commitment");

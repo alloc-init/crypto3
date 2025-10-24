@@ -105,7 +105,7 @@ namespace nil {
                 std::vector<std::uint8_t> cv;
                 cv.resize(filled_val.length(), 0x00);
                 auto write_iter = cv.begin();
-                nil::crypto3::marshalling::status_type status = filled_val.write(write_iter, cv.size());
+                nil::marshalling::status_type status = filled_val.write(write_iter, cv.size());
                 otable.write(reinterpret_cast<char*>(cv.data()), cv.size());
                 otable.close();
             }
@@ -117,7 +117,7 @@ namespace nil {
                 std::vector<std::uint8_t> cv;
                 cv.resize(filled_val.length(), 0x00);
                 auto write_iter = cv.begin();
-                nil::crypto3::marshalling::status_type status = filled_val.write(write_iter, cv.size());
+                nil::marshalling::status_type status = filled_val.write(write_iter, cv.size());
                 ocircuit.write(reinterpret_cast<char*>(cv.data()), cv.size());
                 ocircuit.close();
             }

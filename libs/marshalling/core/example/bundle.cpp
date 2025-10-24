@@ -118,7 +118,7 @@ int main()
     std::cout << "Marshalling structure " << s;
 
     auto m = fill_S(s);
-    nil::crypto3::marshalling::status_type status;
+    nil::marshalling::status_type status;
     std::vector<uint8_t> cv = pack(m, status);
     std::cout << "Status: " << make_error_code(status) << std::endl;
 
