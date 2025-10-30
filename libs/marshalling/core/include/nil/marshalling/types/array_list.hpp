@@ -31,6 +31,7 @@
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/types/array_list/behaviour.hpp>
 #include <nil/marshalling/types/detail/options_parser.hpp>
+#include <nil/detail/type_traits.hpp>
 
 #include <nil/marshalling/types/tag.hpp>
 
@@ -421,7 +422,7 @@ namespace nil {
             // Helper functions to convert to/from an arraylist.
             template<typename TFieldBase, typename TMarshalledElement, typename Range>
             typename std::enable_if<
-                marshalling::detail::is_range<Range>::value, 
+                nil::detail::is_range<Range>::value, 
                 standard_array_list<TFieldBase, TMarshalledElement>>::type 
             fill_standard_array_list(
                     const Range& input_range,
