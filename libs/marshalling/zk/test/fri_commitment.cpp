@@ -65,6 +65,7 @@
 #include <nil/crypto3/zk/commitments/detail/polynomial/basic_fri.hpp>
 #include <nil/crypto3/zk/commitments/polynomial/fri.hpp>
 #include <nil/crypto3/marshalling/zk/types/commitments/fri.hpp>
+#include <nil/crypto3/marshalling/math/types/polynomial.hpp>
 
 #include <nil/crypto3/marshalling/zk/detail/random_test_data_generation.hpp>
 #include "random_test_initializer.hpp"

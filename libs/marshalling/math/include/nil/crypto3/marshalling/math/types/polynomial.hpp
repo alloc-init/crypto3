@@ -54,7 +54,7 @@ namespace nil {
                 template<typename TTypeBase, typename PolynomialType>
                 struct polynomial<TTypeBase, PolynomialType, std::enable_if_t<
                         nil::crypto3::math::is_polynomial<PolynomialType>::value>> {
-                    using type = field_element_vector<typename PolynomialType::value_type, TTypeBase>;
+                    using type = field_element_vector_type<typename PolynomialType::value_type, TTypeBase>;
                 };
 
                 template<typename Endianness, typename PolynomialType>
@@ -89,13 +89,13 @@ namespace nil {
                 template<typename TTypeBase, typename PolynomialDFSType>
                 struct polynomial<TTypeBase, PolynomialDFSType, std::enable_if_t<
                         nil::crypto3::math::is_polynomial_dfs<PolynomialDFSType>::value>> {
-                    using type = nil::crypto3::marshalling::types::bundle<
+                    using type = nil::marshalling::types::bundle<
                         TTypeBase,
                         std::tuple<
                             // degree
                             nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>,
                             // values
-                            field_element_vector<typename PolynomialDFSType::value_type, TTypeBase>
+                            field_element_vector_type<typename PolynomialDFSType::value_type, TTypeBase>
                        >
                     >;
                 }; 
@@ -137,7 +137,7 @@ namespace nil {
                 // Polynomial vector marshalling, regardless of the form of the polynomial.
                 ///////////////////////////////////////////////
                 template<typename TTypeBase, typename PolynomialType>
-                using polynomial_vector = nil::crypto3::marshalling::types::standard_array_list<
+                using polynomial_vector = nil::marshalling::types::standard_array_list<
                     TTypeBase,
                     typename polynomial<TTypeBase, PolynomialType>::type
                 >;

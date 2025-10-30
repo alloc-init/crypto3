@@ -23,6 +23,7 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 
         ${CMAKE_WORKSPACE_NAME}::crypto3_multiprecision
         ${CMAKE_WORKSPACE_NAME}::crypto3_algebra
+        ${CMAKE_WORKSPACE_NAME}::crypto3_math
         ${CMAKE_WORKSPACE_NAME}::core
 )
 
