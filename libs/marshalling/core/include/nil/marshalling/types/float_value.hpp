@@ -70,7 +70,6 @@ namespace nil {
             ///         @ref sec_field_tutorial_integral_units for details.
             ///     @li @ref nil::marshalling::option::empty_serialization
             ///     @li @ref nil::marshalling::option::invalid_by_default
-            ///     @li @ref nil::marshalling::option::version_storage
             /// @extends nil::marshalling::field_type
             /// @headerfile nil/marshalling/types/float_value.hpp
             template<typename TFieldBase, typename T, typename... TOptions>
@@ -80,9 +79,6 @@ namespace nil {
             public:
                 /// @brief endian_type used for serialization.
                 using endian_type = typename base_impl_type::endian_type;
-
-                /// @brief Version type
-                using version_type = typename base_impl_type::version_type;
 
                 /// @brief All the options provided to this class bundled into struct.
                 using parsed_options_type = detail::options_parser<TOptions...>;
@@ -181,23 +177,6 @@ namespace nil {
                     base_impl_type::write_no_status(iter);
                 }
 
-                /// @brief Compile time check if this class is version dependent
-                static constexpr bool is_version_dependent() {
-                    return parsed_options_type::has_custom_version_update || base_impl_type::is_version_dependent();
-                }
-
-                /// @brief Get version of the field.
-                /// @details Exists only if @ref nil::marshalling::option::version_storage option has been provided.
-                version_type get_version() const {
-                    return base_impl_type::get_version();
-                }
-
-                /// @brief Default implementation of version update.
-                /// @return @b true in case the field contents have changed, @b false otherwise
-                bool set_version(version_type version) {
-                    return base_impl_type::set_version(version);
-                }
-
             protected:
                 using base_impl_type::read_data;
                 using base_impl_type::write_data;
@@ -249,10 +228,6 @@ namespace nil {
                     "nil::marshalling::option::custom_storage_type option is not applicable to float_value field");
                 static_assert(!parsed_options_type::has_orig_data_view,
                               "nil::marshalling::option::orig_data_view option is not applicable to float_value field");
-                static_assert(
-                    !parsed_options_type::has_versions_range,
-                    "nil::marshalling::option::exists_between_versions (or similar) option is not applicable to "
-                    "float_value field");
             };
 
             /// @brief Equality comparison operator.

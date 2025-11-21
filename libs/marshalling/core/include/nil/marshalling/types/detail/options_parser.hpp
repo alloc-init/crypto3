@@ -42,16 +42,6 @@ namespace nil {
                 template<>
                 class options_parser<> {
                 public:
-                    static const bool has_custom_value_reader = false;
-                    static const bool has_custom_read = false;
-                    static const bool has_ser_offset = false;
-                    static const bool has_fixed_length_limit = false;
-                    static const bool has_fixed_bit_length_limit = false;
-                    static const bool has_var_length_limits = false;
-                    static const bool has_sequence_elem_length_forcing = false;
-                    static const bool has_sequence_size_forcing = false;
-                    static const bool has_sequence_length_forcing = false;
-                    static const bool has_sequence_fixed_size = false;
                     static const bool has_sequence_fixed_size_use_fixed_size_storage = false;
                     static const bool has_sequence_size_field_prefix = false;
                     static const bool has_sequence_ser_length_field_prefix = false;
@@ -73,9 +63,6 @@ namespace nil {
                     static const bool has_orig_data_view = false;
                     static const bool has_empty_serialization = false;
                     static const bool has_multi_range_validation = false;
-                    static const bool has_custom_version_update = false;
-                    static const bool has_versions_range = false;
-                    static const bool has_version_storage = false;
                 };
 
                 template<typename T, typename... TOptions>
@@ -389,29 +376,6 @@ namespace nil {
                     using multi_range_validation_ranges
                         = multi_range_assembler_type<base_impl_type, std::uintmax_t, TMinValue, TMaxValue>;
                     static const bool has_multi_range_validation = true;
-                };
-
-                template<typename... TOptions>
-                class options_parser<nil::marshalling::option::has_custom_version_update, TOptions...>
-                    : public options_parser<TOptions...> {
-                public:
-                    static const bool has_custom_version_update = true;
-                };
-
-                template<std::uintmax_t TFrom, std::uintmax_t TUntil, typename... TOptions>
-                class options_parser<nil::marshalling::option::exists_between_versions<TFrom, TUntil>, TOptions...>
-                    : public options_parser<TOptions...> {
-                public:
-                    static const bool has_versions_range = true;
-                    static const std::uintmax_t exists_from_version = TFrom;
-                    static const std::uintmax_t exists_until_version = TUntil;
-                };
-
-                template<typename... TOptions>
-                class options_parser<nil::marshalling::option::version_storage, TOptions...>
-                    : public options_parser<TOptions...> {
-                public:
-                    static const bool has_version_storage = true;
                 };
 
                 template<typename... TOptions>
