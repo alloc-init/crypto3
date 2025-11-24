@@ -48,7 +48,9 @@ namespace nil {
             protected:
                 using endian_type = TEndian;
             };
-
+            template<typename... TOptions>
+            class field_base<nil::marshalling::option::empty_option, TOptions...> : public field_base<TOptions...> { };
+            
             template<typename... TTuple, typename... TOptions>
             class field_base<std::tuple<TTuple...>, TOptions...> : public field_base<TTuple..., TOptions...> { };
 
