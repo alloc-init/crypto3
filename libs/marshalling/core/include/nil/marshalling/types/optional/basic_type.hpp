@@ -37,8 +37,8 @@ namespace nil {
             namespace detail {
 
                 template<typename TField>
-                    class basic_optional : public nil::marshalling::field_type <
-                                           nil::marshalling::option::endian<typename TField::endian_type> {
+                class basic_optional : public nil::marshalling::field_type<
+                                           nil::marshalling::option::endian<typename TField::endian_type>> {
                     using base_impl_type =
                         nil::marshalling::field_type<nil::marshalling::option::endian<typename TField::endian_type>>;
 

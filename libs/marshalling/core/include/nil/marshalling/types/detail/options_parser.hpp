@@ -42,6 +42,16 @@ namespace nil {
                 template<>
                 class options_parser<> {
                 public:
+                    static const bool has_custom_value_reader = false;
+                    static const bool has_custom_read = false;
+                    static const bool has_ser_offset = false;
+                    static const bool has_fixed_length_limit = false;
+                    static const bool has_fixed_bit_length_limit = false;
+                    static const bool has_var_length_limits = false;
+                    static const bool has_sequence_elem_length_forcing = false;
+                    static const bool has_sequence_size_forcing = false;
+                    static const bool has_sequence_length_forcing = false;
+                    static const bool has_sequence_fixed_size = false;
                     static const bool has_sequence_fixed_size_use_fixed_size_storage = false;
                     static const bool has_sequence_size_field_prefix = false;
                     static const bool has_sequence_ser_length_field_prefix = false;
