@@ -490,7 +490,8 @@ namespace boost {
                 BOOST_MP_CXX14_CONSTEXPR void montgomery_mul_no_carry_impl(
                         Backend1 &c,
                         const Backend1 &b) const {
-                    BOOST_ASSERT(eval_lt(c, m_mod) && eval_lt(b, m_mod));
+                    BOOST_ASSERT(eval_lt(c, m_mod));
+                    BOOST_ASSERT(eval_lt(b, m_mod));
                     BOOST_ASSERT(is_applicable_for_no_carry_montgomery_mul());
 
                     // Obtain number of limbs
