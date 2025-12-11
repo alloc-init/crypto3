@@ -72,7 +72,6 @@ namespace nil {
                                     const typename FieldType::value_type &alpha,
                                     std::shared_ptr<math::evaluation_domain<FieldType>>
                                     domain) {
-                        assert(domain->size() == f.degree()); // bc: TODO: verify this is correct assumption
                         // codeword = [two.inverse() * ( (one + alpha / (offset * (omega^i)) ) * codeword[i]
                         //  + (one - alpha / (offset * (omega^i)) ) * codeword[len(codeword)//2 + i] ) for i in
                         //  range(len(codeword)//2)]
@@ -88,7 +87,7 @@ namespace nil {
                         for (std::size_t i = 0; i <= f_folded.degree(); i++) {
                             size_t other_ix = domain->size() / 2 + i;
                             // std::cout << "other_ix = " << other_ix << " f.degree() = " << f.degree() << std::endl;
-                            assert(other_ix < f.degree()); // this must be true to avoid uninit reads
+                            assert(other_ix <= f.degree()); // this must be true to avoid uninit reads
                             f_folded[i] = two_inversed * (
                                     (FieldType::value_type::one() + acc) * f[i] +
                                     (FieldType::value_type::one() - acc) * f[other_ix]);

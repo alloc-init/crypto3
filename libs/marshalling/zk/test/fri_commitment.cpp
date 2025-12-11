@@ -250,6 +250,8 @@ BOOST_AUTO_TEST_CASE(marshalling_fri_basic_test) {
             2 //expand_factor
             );
 
+    std::cout << "max degree = " << fri_params.max_degree << std::endl;
+
     // commit
     math::polynomial_dfs<typename field_type::value_type> f = {15, {
         1u, 3u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u}};
