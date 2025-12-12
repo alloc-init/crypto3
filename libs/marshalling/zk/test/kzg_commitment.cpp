@@ -72,11 +72,6 @@
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/prover.hpp>
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/verifier.hpp>
 
-#include <nil/crypto3/marshalling/algebra/processing/alt_bn128.hpp>
-#include <nil/crypto3/marshalling/algebra/processing/bls12.hpp>
-#include <nil/crypto3/marshalling/algebra/processing/mnt4.hpp>
-#include <nil/crypto3/marshalling/algebra/processing/mnt6.hpp>
-
 
 template<
     typename curve_type,
@@ -89,7 +84,7 @@ struct placeholder_class_test_initializer {
         using kzg_type = zk::commitments::batched_kzg<curve_type, transcript_hash_type>;
         typedef typename kzg_type::transcript_type transcript_type;
         using kzg_scheme_type = typename zk::commitments::kzg_commitment_scheme_v2<kzg_type>;
-        using endianness = nil::crypto3::marshalling::option::big_endian;
+        using endianness = nil::marshalling::option::big_endian;
 
         scalar_value_type alpha = 7u;
         auto params = kzg_scheme_type::create_params(8, alpha);
