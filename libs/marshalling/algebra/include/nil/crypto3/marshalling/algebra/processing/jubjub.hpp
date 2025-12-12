@@ -66,7 +66,7 @@ namespace nil {
                     template<typename TIter>
                     static nil::marshalling::status_type process(const group_value_type &point, TIter &iter)
                     {
-                        multiprecision::processing::write_data<params_type::bit_length(),
+                        processing::write_data<params_type::bit_length(),
                                                                endianness>(
                             static_cast<
                                 typename group_value_type::field_type::integral_type>(

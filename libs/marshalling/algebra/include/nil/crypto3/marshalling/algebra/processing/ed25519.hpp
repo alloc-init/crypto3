@@ -87,7 +87,7 @@ namespace nil {
                         }
 
                         auto tmp_iter = std::begin(encoded_value);
-                        multiprecision::processing::write_data<encoded_size, endianness>(
+                        processing::write_data<encoded_size, endianness>(
                             static_cast<base_integral_type>(point_affine.Y.to_integral()),
                             tmp_iter);
                         assert(!(encoded_value[encoded_size - 1] & 0x80));

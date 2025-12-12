@@ -53,7 +53,7 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_writer<
-                    nil::crypto3::marshalling::endian::big_endian,
+                    nil::marshalling::endian::big_endian,
                     typename algebra::curves::alt_bn128_254::template g1_type<
                         Coordinates,
                         algebra::curves::forms::short_weierstrass>> {
@@ -64,7 +64,7 @@ namespace nil {
                     using g1_field_type = typename group_value_type::field_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
-                    using endianness = nil::crypto3::marshalling::endian::big_endian;
+                    using endianness = nil::marshalling::endian::big_endian;
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
@@ -80,7 +80,7 @@ namespace nil {
 
                         auto point_affine = point.to_affine();
 
-                        multiprecision::processing::write_data<params_type::bit_length(),
+                        processing::write_data<params_type::bit_length(),
                                                                endianness>(
                             static_cast<
                                 typename group_value_type::field_type::integral_type>(
@@ -101,7 +101,7 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_writer<
-                    nil::crypto3::marshalling::endian::big_endian,
+                    nil::marshalling::endian::big_endian,
                     typename algebra::curves::alt_bn128_254::template g2_type<
                         Coordinates,
                         algebra::curves::forms::short_weierstrass>> {
@@ -112,7 +112,7 @@ namespace nil {
                     using g2_field_type = typename group_value_type::field_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
-                    using endianness = nil::crypto3::marshalling::endian::big_endian;
+                    using endianness = nil::marshalling::endian::big_endian;
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
@@ -138,14 +138,14 @@ namespace nil {
                             form>::value_type point_affine = point.to_affine();
 
                         TIter write_iter = iter;
-                        multiprecision::processing::write_data<sizeof_field_element,
+                        processing::write_data<sizeof_field_element,
                                                                endianness>(
                             static_cast<
                                 typename group_value_type::field_type::integral_type>(
                                 point_affine.X.data[1].to_integral()),
                             write_iter);
                         write_iter += sizeof_field_element_chunks_count;
-                        multiprecision::processing::write_data<sizeof_field_element,
+                        processing::write_data<sizeof_field_element,
                                                                endianness>(
                             static_cast<
                                 typename group_value_type::field_type::integral_type>(
@@ -167,7 +167,7 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                    nil::crypto3::marshalling::endian::big_endian,
+                    nil::marshalling::endian::big_endian,
                     typename algebra::curves::alt_bn128_254::template g1_type<
                         Coordinates,
                         algebra::curves::forms::short_weierstrass>> {
@@ -176,7 +176,7 @@ namespace nil {
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
-                    using endianness = nil::crypto3::marshalling::endian::big_endian;
+                    using endianness = nil::marshalling::endian::big_endian;
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>
@@ -231,7 +231,7 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                    nil::crypto3::marshalling::endian::big_endian,
+                    nil::marshalling::endian::big_endian,
                     typename algebra::curves::alt_bn128_254::template g2_type<
                         Coordinates,
                         algebra::curves::forms::short_weierstrass>> {
@@ -240,7 +240,7 @@ namespace nil {
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
-                    using endianness = nil::crypto3::marshalling::endian::big_endian;
+                    using endianness = nil::marshalling::endian::big_endian;
                     using params_type = curve_element_marshalling_params<group_type>;
 
                     template<typename TIter>

@@ -109,7 +109,7 @@ namespace nil {
 
                         auto point_affine = point.to_affine();
 
-                        multiprecision::processing::write_data<params_type::bit_length(),
+                        processing::write_data<params_type::bit_length(),
                                                                endianness>(
                             static_cast<
                                 typename group_value_type::field_type::integral_type>(
@@ -165,14 +165,14 @@ namespace nil {
                         auto point_affine = point.to_affine();
 
                         TIter write_iter = iter;
-                        multiprecision::processing::write_data<sizeof_field_element,
+                        processing::write_data<sizeof_field_element,
                                                                endianness>(
                             static_cast<
                                 typename group_value_type::field_type::integral_type>(
                                 point_affine.X.data[1].to_integral()),
                             write_iter);
                         write_iter += sizeof_field_element_chunks_count;
-                        multiprecision::processing::write_data<sizeof_field_element,
+                        processing::write_data<sizeof_field_element,
                                                                endianness>(
                             static_cast<
                                 typename group_value_type::field_type::integral_type>(

@@ -785,7 +785,7 @@ namespace nil {
                             this->_ind_commitments[index].push_back(single_commitment);
                             nil::marshalling::status_type status;
                             std::vector<uint8_t> single_commitment_bytes =
-                                    nil::crypto3::marshalling::pack<endianness>(single_commitment, status);
+                                    nil::marshalling::pack<endianness>(single_commitment, status);
                             THROW_IF_ERROR_STATUS(status, "kzg::commit");
                             result.insert(result.end(), single_commitment_bytes.begin(), single_commitment_bytes.end());
                         }
@@ -880,7 +880,7 @@ namespace nil {
                                 }
                                 nil::marshalling::status_type status;
                                 typename curve_type::template g1_type<>::value_type
-                                        i_th_commitment = nil::crypto3::marshalling::pack(byteblob, status);
+                                        i_th_commitment = nil::marshalling::pack(byteblob, status);
                                 THROW_IF_ERROR_STATUS(status, "kzg::verify_eval");
                                 auto U_commit = nil::crypto3::zk::algorithms::commit_one<CommitmentSchemeType>
                                     (_params, this->get_U(k, i));

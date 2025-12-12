@@ -158,12 +158,6 @@ namespace nil::crypto3::math {
 
         static_simd_vector operator+(const static_simd_vector& other) const {
             static_simd_vector result;
-            if constexpr (std::is_same_v<typename FieldValueType::field_type,
-                                         algebra::fields::babybear>) {
-                vectorize<8, nil::crypto3::multiprecision::detail::babybear::
-                                 babybear_add8<FieldValueType>>(*this, other, result);
-                return result;
-            }
             for (std::size_t i = 0; i < Size; ++i) {
                 result[i] = (*this)[i] + other[i];
             }
@@ -171,12 +165,6 @@ namespace nil::crypto3::math {
         }
 
         static_simd_vector& operator+=(const static_simd_vector& other) {
-            if constexpr (std::is_same_v<typename FieldValueType::field_type,
-                                         algebra::fields::babybear>) {
-                vectorize<8, nil::crypto3::multiprecision::detail::babybear::
-                                 babybear_add8<FieldValueType>>(*this, other, *this);
-                return *this;
-            }
             for (std::size_t i = 0; i < Size; ++i) {
                 (*this)[i] += other[i];
             }
@@ -222,12 +210,6 @@ namespace nil::crypto3::math {
 
         static_simd_vector operator*(const static_simd_vector& other) const {
             static_simd_vector result;
-            if constexpr (std::is_same_v<typename FieldValueType::field_type,
-                                         algebra::fields::babybear>) {
-                vectorize<8, nil::crypto3::multiprecision::detail::babybear::
-                                 babybear_mul8<FieldValueType>>(*this, other, result);
-                return result;
-            }
             for (std::size_t i = 0; i < Size; ++i) {
                 result[i] = (*this)[i] * other[i];
             }
@@ -235,12 +217,6 @@ namespace nil::crypto3::math {
         }
 
         static_simd_vector& operator*=(const static_simd_vector& other) {
-            if constexpr (std::is_same_v<typename FieldValueType::field_type,
-                                         algebra::fields::babybear>) {
-                vectorize<8, nil::crypto3::multiprecision::detail::babybear::
-                                 babybear_mul8<FieldValueType>>(*this, other, *this);
-                return *this;
-            }
             for (std::size_t i = 0; i < Size; ++i) {
                 (*this)[i] *= other[i];
             }
