@@ -59,8 +59,8 @@ namespace nil {
                     typename std::enable_if<std::is_same<
                         std::uint8_t,
                         typename std::iterator_traits<typename ValueType::iterator>::value_type>::value>::type> {
-                    using type = nil::crypto3::marshalling::types::standard_array_list<
-                        TTypeBase, nil::crypto3::marshalling::types::integral<TTypeBase, uint8_t>>;
+                    using type = nil::marshalling::types::standard_array_list<
+                        TTypeBase, nil::marshalling::types::integral<TTypeBase, uint8_t>>;
                 };
 
                 // For Poseidon, Merkle node will contain a Group Element, not a vector of bytes.
@@ -107,7 +107,7 @@ namespace nil {
                     fill_merkle_node_value(const ValueType &node_value) {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
-                    using octet_marshalling_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>;
+                    using octet_marshalling_type = nil::marshalling::types::integral<TTypeBase, std::uint8_t>;
 
                     typename merkle_node_value<nil::marshalling::field_type<Endianness>, ValueType>::type
                         filled_node_value;

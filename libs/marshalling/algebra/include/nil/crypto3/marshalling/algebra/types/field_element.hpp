@@ -638,12 +638,14 @@ namespace nil {
                 //     return field;
                 // }
 
+
+                template<typename FieldValueType, typename TTypeBase>
+                using field_element_vector = nil::marshalling::types::standard_array_list<
+                    TTypeBase,
+                    field_element<TTypeBase, FieldValueType>>;
+
                 template<typename FieldValueType, typename Endianness>
-                nil::marshalling::types::array_list<
-                    nil::marshalling::field_type<Endianness>,
-                    field_element<nil::marshalling::field_type<Endianness>, FieldValueType>,
-                    nil::marshalling::option::sequence_size_field_prefix<
-                        nil::marshalling::types::integral<nil::marshalling::field_type<Endianness>, std::size_t>>>
+                field_element_vector<FieldValueType, nil::marshalling::field_type<Endianness>>
                     fill_field_element_vector(const std::vector<FieldValueType> &field_elem_vector) {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;

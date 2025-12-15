@@ -44,7 +44,7 @@ namespace nil {
             namespace types {
 
                 template<typename TTypeBase>
-                using marshalling_string_type = nil::marshalling::types::string<TTypeBase>;
+                using marshalling_string_type = nil::crypto3::marshalling::types::string<TTypeBase>;
 
                 // ******************* placeholder transcript initialization context ********************************* //
                 template<typename TTypeBase, typename TranscriptInitializationContextType>
@@ -102,14 +102,6 @@ namespace nil {
                         marshalling_string_type<TTypeBase>(init_context.application_id)
                     ));
                 }
-
-                // TODO(martun): We don't need the opposite conversion for now, only for testing purposes.
-                // template<typename Endianness, typename TranscriptInitializationContextType>
-                // TranscriptInitializationContextType
-                // make_transcript_initialization_context(
-                //     const transcript_initialization_context<nil::marshalling::field_type<Endianness>, TranscriptInitializationContextType> &filled_init_context
-                // ) {
-                // }
 
             }    // namespace types
         }        // namespace marshalling

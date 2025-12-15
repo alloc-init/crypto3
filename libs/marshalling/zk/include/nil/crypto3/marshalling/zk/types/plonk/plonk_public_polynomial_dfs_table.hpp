@@ -45,7 +45,7 @@ namespace nil {
             namespace types {
 
                 template<typename TTypeBase, typename PlonkPublicTable>
-                using plonk_public_polynomial_table = nil::crypto3::marshalling::types::bundle<
+                using plonk_public_polynomial_table = nil::marshalling::types::bundle<
                     TTypeBase, std::tuple<
                         // public_inputs
                         polynomial_vector<TTypeBase, typename PlonkPublicTable::column_type>,

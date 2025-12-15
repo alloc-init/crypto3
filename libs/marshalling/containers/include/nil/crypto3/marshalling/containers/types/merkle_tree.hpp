@@ -49,7 +49,7 @@ namespace nil {
         namespace marshalling {
             namespace types {
                 template<typename TTypeBase, typename MerkleTree>
-                using merkle_tree = nil::crypto3::marshalling::types::standard_array_list<
+                using merkle_tree = nil::marshalling::types::standard_array_list<
                     TTypeBase,
                     typename merkle_node_value<TTypeBase, MerkleTree>::type>;
 

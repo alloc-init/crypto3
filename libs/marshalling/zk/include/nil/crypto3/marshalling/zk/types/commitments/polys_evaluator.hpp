@@ -46,24 +46,24 @@ namespace nil {
 
                 // * PolysEvaluator is like lpc_commitment_scheme
                 template <typename TTypeBase, typename PolysEvaluator>
-                using polys_evaluator = nil::crypto3::marshalling::types::bundle<
+                using polys_evaluator = nil::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // std::map<std::size_t, std::vector<polynomial_type>> _polys;
-                        nil::crypto3::marshalling::types::standard_size_t_array_list<TTypeBase>,
-                        nil::crypto3::marshalling::types::standard_array_list<
+                        nil::marshalling::types::standard_size_t_array_list<TTypeBase>,
+                        nil::marshalling::types::standard_array_list<
                             TTypeBase,
                             polynomial_vector<TTypeBase, typename PolysEvaluator::polynomial_type>
                         >,
                         // std::map<std::size_t, bool> _locked;
-                        nil::crypto3::marshalling::types::standard_size_t_array_list<TTypeBase>,
-                        nil::crypto3::marshalling::types::standard_size_t_array_list<TTypeBase>,
+                        nil::marshalling::types::standard_size_t_array_list<TTypeBase>,
+                        nil::marshalling::types::standard_size_t_array_list<TTypeBase>,
                         // std::map<std::size_t, std::vector<std::vector<typename field_type::value_type>>> _points;
-                        nil::crypto3::marshalling::types::standard_size_t_array_list<TTypeBase>,
+                        nil::marshalling::types::standard_size_t_array_list<TTypeBase>,
                         // Next structure is a vector of vector of vector of field values.
-                        nil::crypto3::marshalling::types::standard_array_list<
+                        nil::marshalling::types::standard_array_list<
                             TTypeBase,
-                            nil::crypto3::marshalling::types::standard_array_list<
+                            nil::marshalling::types::standard_array_list<
                                 TTypeBase,
                                 field_element_vector<typename PolysEvaluator::value_type, TTypeBase>
                             >
@@ -77,16 +77,16 @@ namespace nil {
                 polys_evaluator<nil::marshalling::field_type<Endianness>, PolysEvaluator>
                 fill_polys_evaluator(const PolysEvaluator& evaluator) {
 
-                    using nil::crypto3::marshalling::types::fill_size_t;
-                    using nil::crypto3::marshalling::types::fill_std_map;
-                    using nil::crypto3::marshalling::types::standard_array_list;
-                    using nil::crypto3::marshalling::types::fill_standard_array_list;
+                    using nil::marshalling::types::fill_size_t;
+                    using nil::marshalling::types::fill_std_map;
+                    using nil::marshalling::types::standard_array_list;
+                    using nil::marshalling::types::fill_standard_array_list;
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
                     using polynomial_type = typename PolysEvaluator::polynomial_type;
                     using value_type = typename polynomial_type::value_type;
 
-                    using size_t_marshalling_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>;
+                    using size_t_marshalling_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
                     using polynomial_vector_marshalling_type = polynomial_vector<TTypeBase, polynomial_type>;
 
                     using field_element_vector_type = field_element_vector<value_type, nil::marshalling::field_type<Endianness>>;
@@ -144,16 +144,16 @@ namespace nil {
                 PolysEvaluator make_polys_evaluator(
                     const polys_evaluator<nil::marshalling::field_type<Endianness>, PolysEvaluator>& filled_polys_evaluator)
                 {
-                    using nil::crypto3::marshalling::types::make_size_t;
-                    using nil::crypto3::marshalling::types::make_std_map;
-                    using nil::crypto3::marshalling::types::standard_array_list;
-                    using nil::crypto3::marshalling::types::make_standard_array_list;
+                    using nil::marshalling::types::make_size_t;
+                    using nil::marshalling::types::make_std_map;
+                    using nil::marshalling::types::standard_array_list;
+                    using nil::marshalling::types::make_standard_array_list;
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
                     using polynomial_type = typename PolysEvaluator::polynomial_type;
                     using value_type = typename polynomial_type::value_type;
 
-                    using size_t_marshalling_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>;
+                    using size_t_marshalling_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
                     using polynomial_vector_marshalling_type = polynomial_vector<TTypeBase, polynomial_type>;
 
                     using field_element_vector_type = field_element_vector<value_type, nil::marshalling::field_type<Endianness>>;

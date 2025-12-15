@@ -53,17 +53,17 @@ namespace nil {
             namespace types {
                 template<typename TTypeBase, typename MerkleProof, typename = void>
                 struct merkle_proof_path_element {
-                    using type = nil::crypto3::marshalling::types::bundle<TTypeBase,
+                    using type = nil::marshalling::types::bundle<TTypeBase,
                         std::tuple<
                             // std::size_t _position
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::uint64_t>,
+                            nil::marshalling::types::integral<TTypeBase, std::uint64_t>,
                             // value_type _hash
                             typename merkle_node_value<TTypeBase, MerkleProof>::type>>;
                 };
 
                 template<typename TTypeBase, typename MerkleProof, typename = void>
                 struct merkle_proof_layer {
-                    using type = nil::crypto3::marshalling::types::standard_array_list<
+                    using type = nil::marshalling::types::standard_array_list<
                         TTypeBase,
                         // path_element_t
                         typename merkle_proof_path_element<TTypeBase, MerkleProof>::type>;
@@ -71,7 +71,7 @@ namespace nil {
 
                 template<typename TTypeBase, typename MerkleProof, typename = void>
                 struct merkle_proof_path {
-                    using type = nil::crypto3::marshalling::types::standard_array_list<
+                    using type = nil::marshalling::types::standard_array_list<
                         TTypeBase,
                         // layer path
                         typename merkle_proof_layer<TTypeBase, MerkleProof>::type>;
@@ -85,11 +85,11 @@ namespace nil {
                                                                                  MerkleProof::arity>>::value,
                              bool>::type,
                          typename... TOptions>
-                using merkle_proof = nil::crypto3::marshalling::types::bundle<
+                using merkle_proof = nil::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // std::size_t _li
-                        nil::crypto3::marshalling::types::integral<TTypeBase, std::uint64_t>,
+                        nil::marshalling::types::integral<TTypeBase, std::uint64_t>,
                         // value_type _root
                         typename merkle_node_value<TTypeBase, MerkleProof>::type,
                         // path_type _path
@@ -100,7 +100,7 @@ namespace nil {
                     fill_merkle_proof_path_element(const typename MerkleProof::path_element_type &proof_path_element) {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
-                    using uint64_t_marshalling_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::uint64_t>;
+                    using uint64_t_marshalling_type = nil::marshalling::types::integral<TTypeBase, std::uint64_t>;
 
                     return typename merkle_proof_path_element<TTypeBase, MerkleProof>::type(
                         std::make_tuple(uint64_t_marshalling_type(proof_path_element._position),
@@ -175,7 +175,7 @@ namespace nil {
                     fill_merkle_proof(const MerkleProof &mp) {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
-                    using uint64_t_marshalling_type = nil::crypto3::marshalling::types::integral<TTypeBase, std::uint64_t>;
+                    using uint64_t_marshalling_type = nil::marshalling::types::integral<TTypeBase, std::uint64_t>;
                     using node_value_marshalling_type = typename merkle_node_value<TTypeBase, MerkleProof>::type;
                     using proof_path_marshalling_type = typename merkle_proof_path<TTypeBase, MerkleProof>::type;
 

@@ -50,11 +50,7 @@ namespace nil {
             namespace types {
                 template<typename TTypeBase>
                 using public_input_sizes_type =
-                nil::marshalling::types::array_list<
-                    TTypeBase,
-                    nil::marshalling::types::integral<TTypeBase, std::size_t>,
-                    nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
-                >;
+                nil::marshalling::types::standard_size_t_array_list<TTypeBase>;
 
                 template<typename TTypeBase, typename PlonkConstraintSystem>
                 using plonk_constraint_system = nil::marshalling::types::bundle<
@@ -89,14 +85,14 @@ namespace nil {
                 }
 
                 template<typename Endianness, typename PlonkConstraintSystem>
-                PlonkConstraintSystem
-                make_plonk_constraint_system(
-                    const plonk_constraint_system<nil::marshalling::field_type<Endianness>, PlonkConstraintSystem> &filled_system
-                ){
+                PlonkConstraintSystem make_plonk_constraint_system(
+                    const plonk_constraint_system<nil::marshalling::field_type<Endianness>, PlonkConstraintSystem> &filled_system)
+                {
                     std::vector<std::size_t> public_input_sizes;
                     for(std::size_t i = 0; i < std::get<4>(filled_system.value()).value().size(); i++){
                         public_input_sizes.push_back(std::get<4>(filled_system.value()).value().at(i).value());
                     }
+
                     return PlonkConstraintSystem(
                         make_plonk_gates<Endianness, typename PlonkConstraintSystem::gates_container_type::value_type>(std::get<0>(filled_system.value())),
                         make_plonk_copy_constraints<Endianness, typename PlonkConstraintSystem::field_type>(std::get<1>(filled_system.value())),

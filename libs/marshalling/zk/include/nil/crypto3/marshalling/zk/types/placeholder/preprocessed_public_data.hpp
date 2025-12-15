@@ -47,7 +47,7 @@ namespace nil {
             namespace types {
                 // ******************* placeholder preprocessed public data ********************************* //
                 template<typename TTypeBase, typename PreprocessedPublicDataType>
-                using placeholder_preprocessed_public_data = nil::crypto3::marshalling::types::bundle<
+                using placeholder_preprocessed_public_data = nil::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
                         // plonk_public_polynomial_dfs_table<FieldType> public_polynomial_table;

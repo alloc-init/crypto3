@@ -47,15 +47,15 @@ namespace nil {
                 template<typename TTypeBase>
                 struct flat_pow_operation {
                     using type =
-                        nil::crypto3::marshalling::types::bundle<
+                        nil::marshalling::types::bundle<
                             TTypeBase,
                             std::tuple<
                                 // power
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::int64_t>,
+                                nil::marshalling::types::integral<TTypeBase, std::int64_t>,
                                 // type
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>,
+                                nil::marshalling::types::integral<TTypeBase, std::uint8_t>,
                                 // child_index
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::uint32_t>
+                                nil::marshalling::types::integral<TTypeBase, std::uint32_t>
                             >
                         >;
                 };
@@ -64,19 +64,19 @@ namespace nil {
                 template<typename TTypeBase>
                 struct flat_binary_arithmetic_operation {
                     using type =
-                        nil::crypto3::marshalling::types::bundle<
+                        nil::marshalling::types::bundle<
                             TTypeBase,
                             std::tuple<
                                 // op
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>,
+                                nil::marshalling::types::integral<TTypeBase, std::uint8_t>,
                                 // left_type
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>,
+                                nil::marshalling::types::integral<TTypeBase, std::uint8_t>,
                                 // left_index
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::uint32_t>,
+                                nil::marshalling::types::integral<TTypeBase, std::uint32_t>,
                                 // right_type
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>,
+                                nil::marshalling::types::integral<TTypeBase, std::uint8_t>,
                                 // right_index
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::uint32_t>
+                                nil::marshalling::types::integral<TTypeBase, std::uint32_t>
                             >
                         >;
                 };
@@ -86,28 +86,28 @@ namespace nil {
                 struct expression
                 {
                     using type =
-                        nil::crypto3::marshalling::types::bundle<
+                        nil::marshalling::types::bundle<
                             TTypeBase,
                             std::tuple<
                                 // std::vector<math::term<VariableType>> terms
-                                nil::crypto3::marshalling::types::standard_array_list<
+                                nil::marshalling::types::standard_array_list<
                                     TTypeBase,
                                     typename term<TTypeBase, typename ExpressionType::term_type>::type
                                 >,
                                 // std::vector<flat_pow_operation> pow_operations
-                                nil::crypto3::marshalling::types::standard_array_list<
+                                nil::marshalling::types::standard_array_list<
                                     TTypeBase,
                                     typename flat_pow_operation<TTypeBase>::type
                                 >,
                                 // std::vector<flat_binary_arithmetic_operation> binary_operations
-                                nil::crypto3::marshalling::types::standard_array_list<
+                                nil::marshalling::types::standard_array_list<
                                     TTypeBase,
                                     typename flat_binary_arithmetic_operation<TTypeBase>::type
                                 >,
                                 // flat_node_type root_type;
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>,
+                                nil::marshalling::types::integral<TTypeBase, std::uint8_t>,
                                 // size_t root_index;
-                                nil::crypto3::marshalling::types::integral<TTypeBase, std::uint32_t>
+                                nil::marshalling::types::integral<TTypeBase, std::uint32_t>
                             >
                         >;
                 };
@@ -118,9 +118,9 @@ namespace nil {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
                     return typename flat_pow_operation<nil::marshalling::field_type<Endianness>>::type(
                         std::make_tuple(
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::int64_t>(power_op.power),
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)power_op.type),
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::uint32_t>(power_op.child_index)));
+                            nil::marshalling::types::integral<TTypeBase, std::int64_t>(power_op.power),
+                            nil::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)power_op.type),
+                            nil::marshalling::types::integral<TTypeBase, std::uint32_t>(power_op.child_index)));
                 }
 
                 template<typename Endianness, typename ArithmeticOperatorType>
@@ -129,11 +129,11 @@ namespace nil {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
                     return typename flat_binary_arithmetic_operation<nil::marshalling::field_type<Endianness>>::type(
                         std::make_tuple(
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)bin_op.op),
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)bin_op.left_type),
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::uint32_t>(bin_op.left_index),
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)bin_op.right_type),
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::uint32_t>(bin_op.right_index)));
+                            nil::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)bin_op.op),
+                            nil::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)bin_op.left_type),
+                            nil::marshalling::types::integral<TTypeBase, std::uint32_t>(bin_op.left_index),
+                            nil::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)bin_op.right_type),
+                            nil::marshalling::types::integral<TTypeBase, std::uint32_t>(bin_op.right_index)));
                 }
 
 
@@ -146,7 +146,7 @@ namespace nil {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
                     // Fill the terms.
-                    nil::crypto3::marshalling::types::standard_array_list<TTypeBase,
+                    nil::marshalling::types::standard_array_list<TTypeBase,
                         typename term<TTypeBase, typename ExpressionType::term_type>::type> filled_terms;
                     for (const auto &term : flat_expr.terms) {
                         filled_terms.value().push_back(
@@ -154,14 +154,14 @@ namespace nil {
                     }
 
                     // Fill the power operations.
-                    nil::crypto3::marshalling::types::standard_array_list<TTypeBase,
+                    nil::marshalling::types::standard_array_list<TTypeBase,
                         typename flat_pow_operation<TTypeBase>::type> filled_powers;
                     for (const auto &power : flat_expr.pow_operations) {
                         filled_powers.value().push_back(fill_power_operation<Endianness>(power));
                     }
 
                     // Fill the binary operations.
-                    nil::crypto3::marshalling::types::standard_array_list<TTypeBase,
+                    nil::marshalling::types::standard_array_list<TTypeBase,
                         typename flat_binary_arithmetic_operation<TTypeBase>::type> filled_binary_operations;
                     for (const auto &bin_op : flat_expr.binary_operations) {
                         filled_binary_operations.value().push_back(
@@ -173,8 +173,8 @@ namespace nil {
                             filled_terms,
                             filled_powers,
                             filled_binary_operations,
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)flat_expr.root_type),
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::uint32_t>(flat_expr.root_index)));
+                            nil::marshalling::types::integral<TTypeBase, std::uint8_t>((std::uint8_t)flat_expr.root_type),
+                            nil::marshalling::types::integral<TTypeBase, std::uint32_t>(flat_expr.root_index)));
 
                 }
 

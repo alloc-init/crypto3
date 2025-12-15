@@ -59,12 +59,12 @@ namespace nil {
                         typename commitment<TTypeBase, typename CommonDataType::commitment_scheme_type>::type,
 
 //                      1.std::array<std::set<int>, ParamsType::arithmetization_params::TotalColumns> columns_rotations;
-                        nil::marshalling::types::array_list <TTypeBase,
-                            nil::marshalling::types::array_list <TTypeBase,
+                        nil::crypto3::marshalling::types::array_list <TTypeBase,
+                            nil::crypto3::marshalling::types::array_list <TTypeBase,
                                 nil::marshalling::types::integral<TTypeBase, int>,
-                                nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
+                                nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                             >,
-                            nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                         >,
 
 //                      2. std::size_t witness_columns;
@@ -89,14 +89,14 @@ namespace nil {
                         nil::marshalling::types::integral<TTypeBase, std::size_t>,
 
 //                      12. permuted_columns // global indices of permuted columns
-                        nil::marshalling::types::array_list <TTypeBase,
+                        nil::crypto3::marshalling::types::array_list <TTypeBase,
                             nil::marshalling::types::integral<TTypeBase, std::size_t>,
-                            nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                         >,
 //                      13. verification_key.constraint_system_with_params_hash
-                        nil::marshalling::types::array_list <TTypeBase,
+                        nil::crypto3::marshalling::types::array_list <TTypeBase,
                             nil::marshalling::types::integral<TTypeBase, octet_type>,
-                            nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
+                            nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                         >,
 //                      14. commitment_scheme_type::params_type
                         typename nil::crypto3::marshalling::types::commitment_params<
@@ -115,16 +115,14 @@ namespace nil {
                     using TTypeBase = typename nil::marshalling::field_type<Endianness>;
                     using result_type = placeholder_common_data<TTypeBase, CommonDataType>;
 
-                    result_type result;
-
-                    using array_int_marshalling_type = nil::marshalling::types::array_list <TTypeBase,
+                    using array_int_marshalling_type = nil::crypto3::marshalling::types::array_list <TTypeBase,
                         nil::marshalling::types::integral<TTypeBase, int>,
-                        nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
+                        nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                     >;
 
-                    using column_r_marshalling_type = nil::marshalling::types::array_list <TTypeBase,
+                    using column_r_marshalling_type = nil::crypto3::marshalling::types::array_list <TTypeBase,
                         array_int_marshalling_type,
-                        nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
+                        nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                     >;
 
                     column_r_marshalling_type filled_columns_rotations;
@@ -141,17 +139,20 @@ namespace nil {
                         common_data.commitments.fixed_values
                     );
 
-                    nil::marshalling::types::array_list <TTypeBase,
+                    nil::crypto3::marshalling::types::array_list <TTypeBase,
                         nil::marshalling::types::integral<TTypeBase, octet_type>,
-                        nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
+                        nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                     > filled_constraint_system_with_params_hash;
 
                     if constexpr(nil::crypto3::algebra::is_field_element<
                         typename CommonDataType::transcript_hash_type::word_type
                     >::value) {
-                        auto integral = typename CommonDataType::field_type::integral_type(common_data.vk.constraint_system_with_params_hash.data);
+                        auto integral =
+                            typename CommonDataType::field_type::integral_type(
+                                common_data.vk.constraint_system_with_params_hash
+                                    .to_integral());
                         std::vector<unsigned char> blob;
-                        export_bits(integral, std::back_inserter(blob), 8);
+                        integral.export_bits(std::back_inserter(blob), 8);
                         for( std::size_t i = blob.size(); i > 0; i--){
                             filled_constraint_system_with_params_hash.value().push_back(
                                 nil::marshalling::types::integral<TTypeBase, octet_type>(blob[i-1])
@@ -165,9 +166,9 @@ namespace nil {
                         }
                     }
 
-                    using permuted_column_indices_type = nil::marshalling::types::array_list <TTypeBase,
+                    using permuted_column_indices_type = nil::crypto3::marshalling::types::array_list <TTypeBase,
                         nil::marshalling::types::integral<TTypeBase, std::size_t>,
-                        nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
+                        nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>
                     >;
                     permuted_column_indices_type filled_permuted_columns;
                     for( const auto &index:common_data.permuted_columns){
@@ -200,11 +201,10 @@ namespace nil {
                         filled_commitment_params,   // 14
                         filled_commitment_preprocessed_data  // 15
                     ));
-                    return result;
                 }
 
                 template<typename Endianness, typename CommonDataType>
-                CommonDataType make_placeholder_common_data(const
+                std::shared_ptr<CommonDataType> make_placeholder_common_data(const
                     placeholder_common_data<nil::marshalling::field_type<Endianness>, CommonDataType> &filled_common_data
                 ){
                     auto fixed_values = make_commitment<Endianness, typename CommonDataType::commitment_scheme_type>(std::get<0>(filled_common_data.value()));
@@ -250,7 +250,7 @@ namespace nil {
                             blob.push_back(std::uint8_t(std::get<13>(filled_common_data.value()).value()[i].value()));
                         }
                         typename CommonDataType::field_type::integral_type newval;
-                        import_bits(newval, blob.begin(), blob.end(), 8, false);
+                        newval.import_bits(blob.begin(), blob.end(), 8, false);
                         vk.constraint_system_with_params_hash = typename CommonDataType::field_type::value_type(newval);
                     } else {
                         for( std::size_t i = 0; i < std::get<13>(filled_common_data.value()).value().size(); i++){
@@ -266,7 +266,7 @@ namespace nil {
                         Endianness, typename CommonDataType::commitment_scheme_type
                     >(std::get<15>(filled_common_data.value()));
 
-                    return CommonDataType(
+                    return std::make_shared<CommonDataType>(
                         commitments,
                         columns_rotations,
                         desc,

@@ -54,7 +54,7 @@ namespace nil {
                 template<typename TTypeBase, typename PolynomialType>
                 struct polynomial<TTypeBase, PolynomialType, std::enable_if_t<
                         nil::crypto3::math::is_polynomial<PolynomialType>::value>> {
-                    using type = field_element_vector_type<TTypeBase, typename PolynomialType::value_type>;
+                    using type = field_element_vector<TTypeBase, typename PolynomialType::value_type>;
                 };
 
                 template<typename Endianness, typename PolynomialType>
@@ -93,9 +93,9 @@ namespace nil {
                         TTypeBase,
                         std::tuple<
                             // degree
-                            nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>,
+                            nil::marshalling::types::integral<TTypeBase, std::size_t>,
                             // values
-                            field_element_vector_type<typename PolynomialDFSType::value_type, TTypeBase>
+                            field_element_vector<typename PolynomialDFSType::value_type, TTypeBase>
                        >
                     >;
                 }; 
@@ -111,7 +111,7 @@ namespace nil {
                     for( auto it=f.begin(); it != f.end(); it++){ val.push_back(*it); }
 
                     return result_type(std::make_tuple(
-                        nil::crypto3::marshalling::types::integral<TTypeBase, std::size_t>(f.degree()),
+                        nil::marshalling::types::integral<TTypeBase, std::size_t>(f.degree()),
                         nil::crypto3::marshalling::types::fill_field_element_vector<
                             typename PolynomialDFSType::value_type,
                             Endianness

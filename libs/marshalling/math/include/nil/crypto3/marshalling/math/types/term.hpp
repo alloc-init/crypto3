@@ -47,13 +47,13 @@ namespace nil {
 
                 template<typename TTypeBase, typename NonLinearTerm>
                 struct term<TTypeBase, NonLinearTerm, void> {
-                    using type = nil::crypto3::marshalling::types::bundle<
+                    using type = nil::marshalling::types::bundle<
                         TTypeBase,
                         std::tuple<
                             // assignment_type coeff
                             field_element<TTypeBase, typename NonLinearTerm::assignment_type>,
                             // std::vector<VariableType> vars
-                            nil::crypto3::marshalling::types::standard_array_list<
+                            nil::marshalling::types::standard_array_list<
                                 TTypeBase, typename variable<TTypeBase, typename NonLinearTerm::variable_type>::type>
                             >
                         >;
@@ -69,7 +69,7 @@ namespace nil {
                         field_element<TTypeBase, typename NonLinearTerm::assignment_type>;
                     using variable_marshalling_type =
                         typename variable<TTypeBase, typename NonLinearTerm::variable_type>::type;
-                    using variable_vector_marshalling_type = nil::crypto3::marshalling::types::standard_array_list<
+                    using variable_vector_marshalling_type = nil::marshalling::types::standard_array_list<
                         TTypeBase, variable_marshalling_type>;
 
                     variable_vector_marshalling_type filled_vars;
