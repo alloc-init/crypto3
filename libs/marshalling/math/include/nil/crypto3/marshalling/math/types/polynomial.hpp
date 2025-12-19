@@ -54,7 +54,7 @@ namespace nil {
                 template<typename TTypeBase, typename PolynomialType>
                 struct polynomial<TTypeBase, PolynomialType, std::enable_if_t<
                         nil::crypto3::math::is_polynomial<PolynomialType>::value>> {
-                    using type = field_element_vector<TTypeBase, typename PolynomialType::value_type>;
+                    using type = field_element_vector<typename PolynomialType::value_type, TTypeBase>;
                 };
 
                 template<typename Endianness, typename PolynomialType>

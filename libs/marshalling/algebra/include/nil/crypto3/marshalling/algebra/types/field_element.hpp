@@ -638,7 +638,7 @@ namespace nil {
                 //     return field;
                 // }
 
-                template<typename TTypeBase, typename FieldValueType>
+                template<typename FieldValueType, typename TTypeBase>
                 using field_element_vector =
                     nil::marshalling::types::standard_array_list<TTypeBase, field_element<TTypeBase, FieldValueType>>;
 
