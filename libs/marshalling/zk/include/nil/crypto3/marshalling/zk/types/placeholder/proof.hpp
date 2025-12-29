@@ -159,12 +159,12 @@ namespace nil {
                     TTypeBase,
                     std::tuple<
                         // typename commitment_scheme_type::commitment_type commitments
-                        // All of them are similar size. So no nil::crypto3::marshalling::option needed
+                        // All of them are similar size. So no nil::marshalling::option needed
                         // There won't be too many commitments. So uint8_t is enough for length
-                        nil::crypto3::marshalling::types::array_list<
+                        nil::marshalling::types::array_list<
                             TTypeBase,
                             typename commitment<TTypeBase, typename Proof::commitment_scheme_type>::type,
-                            nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::uint8_t>>
+                            nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::uint8_t>>
                         >,
 
                         // evaluation_proof eval_proof
@@ -178,10 +178,10 @@ namespace nil {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    nil::crypto3::marshalling::types::array_list<
+                    nil::marshalling::types::array_list<
                         TTypeBase,
                         typename commitment<TTypeBase, typename Proof::commitment_scheme_type>::type,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::uint8_t>>
+                        nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::uint8_t>>
                     > filled_commitments;
                     for( const auto &it:proof.commitments){
                         filled_commitments.value().push_back(

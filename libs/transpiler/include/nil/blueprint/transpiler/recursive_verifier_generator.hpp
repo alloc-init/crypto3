@@ -476,11 +476,11 @@ namespace nil {
                     std::string left = boost::apply_visitor(*this, op.get_expr_left().get_expr());
                     std::string right = boost::apply_visitor(*this, op.get_expr_right().get_expr());
                     switch (op.get_op()) {
-                        case binary_operation_type::ArithmeticOperatorType::ADD:
+                        case binary_operation_type::arithmetic_operator_type::ADD:
                             return "(" + left + " + " + right + ")";
-                        case binary_operation_type::ArithmeticOperatorType::SUB:
+                        case binary_operation_type::arithmetic_operator_type::SUB:
                             return "(" + left + " - " + right + ")";
-                        case binary_operation_type::ArithmeticOperatorType::MULT:
+                        case binary_operation_type::arithmetic_operator_type::MULT:
                             return "(" + left + " * " + right + ")";
                     }
                     return "";

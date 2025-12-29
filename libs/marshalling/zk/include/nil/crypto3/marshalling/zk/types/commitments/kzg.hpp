@@ -53,10 +53,10 @@ namespace nil {
                  * */
                 template <typename TTypeBase, typename KZGScheme>
                 struct commitment<TTypeBase, KZGScheme, std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>> {
-                    using type = nil::crypto3::marshalling::types::array_list<
+                    using type = nil::marshalling::types::array_list<
                         TTypeBase,
                         nil::marshalling::types::integral<TTypeBase, uint8_t>,
-                        nil::crypto3::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::uint16_t>>
+                        nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::uint16_t>>
                     >;
                 };
 

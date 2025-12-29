@@ -319,7 +319,7 @@ namespace nil::crypto3::zk::snark {
     class binary_arithmetic_operation
     {
     public:
-        using ArithmeticOperatorType = ArithmeticOperator;
+        using arithmetic_operator_type = ArithmeticOperator;
 
         binary_arithmetic_operation(expression<VariableType> expr_left,
                                     expression<VariableType> expr_right,

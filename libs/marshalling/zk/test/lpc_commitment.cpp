@@ -66,7 +66,7 @@
 #include <nil/crypto3/zk/commitments/polynomial/fri.hpp>
 #include <nil/crypto3/zk/commitments/polynomial/lpc.hpp>
 
-#include "random_test_initializer.hpp"
+#include "./detail/random_test_initializer.hpp"
 #include <nil/crypto3/marshalling/zk/detail/random_test_data_generation.hpp>
 
 using namespace nil::crypto3::zk;

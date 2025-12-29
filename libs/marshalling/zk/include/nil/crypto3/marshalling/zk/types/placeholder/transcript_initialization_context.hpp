@@ -44,7 +44,7 @@ namespace nil {
             namespace types {
 
                 template<typename TTypeBase>
-                using marshalling_string_type = nil::crypto3::marshalling::types::string<TTypeBase>;
+                using marshalling_string_type = nil::marshalling::types::string<TTypeBase>;
 
                 // ******************* placeholder transcript initialization context ********************************* //
                 template<typename TTypeBase, typename TranscriptInitializationContextType>

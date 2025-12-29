@@ -68,7 +68,7 @@
 #include <nil/crypto3/marshalling/math/types/polynomial.hpp>
 
 #include <nil/crypto3/marshalling/zk/detail/random_test_data_generation.hpp>
-#include "random_test_initializer.hpp"
+#include "./detail/random_test_initializer.hpp"
 
 using namespace nil::crypto3;
 
