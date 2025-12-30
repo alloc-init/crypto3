@@ -56,13 +56,16 @@ endmacro()
 # r1cs tests are failing compilation, turning them off for now.
 set(TESTS_NAMES
         "merkle_proof"
+        "merkle_tree"
         "accumulation_vector"
         "sparse_vector"
         "kzg_commitment"
         "fri_commitment"
         "lpc_commitment"
+        "polys_evaluator"
         "placeholder_proof"
         "placeholder_common_data"
+        "placeholder_preprocessed_public_data"
         "plonk_gates"
         "plonk_constraint_system"
         "plonk_assignment_table"
