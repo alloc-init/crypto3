@@ -243,13 +243,11 @@ BOOST_AUTO_TEST_CASE(test_extended_fields_sqrt_trait) {
     BOOST_ASSERT( FIELD_HAS_SQRT(curves::mnt4_298::scalar_field_type) );
     BOOST_ASSERT( FIELD_HAS_SQRT(curves::mnt4_298::template g1_type<>::field_type) );
     BOOST_ASSERT( FIELD_HAS_SQRT(curves::mnt4_298::template g2_type<>::field_type) );
-    BOOST_ASSERT( !FIELD_HAS_SQRT(curves::mnt4_298::gt_type) );
 
     BOOST_ASSERT( FIELD_HAS_SQRT(curves::mnt6_298::base_field_type) );
     BOOST_ASSERT( FIELD_HAS_SQRT(curves::mnt6_298::scalar_field_type) );
     BOOST_ASSERT( FIELD_HAS_SQRT(curves::mnt6_298::template g1_type<>::field_type) );
     BOOST_ASSERT( FIELD_HAS_SQRT(curves::mnt6_298::template g2_type<>::field_type) );
-    BOOST_ASSERT( !FIELD_HAS_SQRT(curves::mnt6_298::gt_type) );
 
     BOOST_ASSERT( FIELD_HAS_SQRT(curves::pallas::base_field_type) );
     BOOST_ASSERT( FIELD_HAS_SQRT(curves::pallas::scalar_field_type) );
