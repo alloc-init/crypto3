@@ -38,7 +38,7 @@
 
 #include <nil/crypto3/algebra/random_element.hpp>
 #include <nil/crypto3/algebra/curves/bls12.hpp>
-#include <nil/crypto3/marshalling/algebra/processing/bls12.hpp>
+#include <nil/crypto3/marshalling/algebra/processing/curve_element.hpp>
 
 #include <nil/crypto3/container/sparse_vector.hpp>
 
