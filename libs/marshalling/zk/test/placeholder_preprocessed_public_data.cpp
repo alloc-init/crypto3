@@ -48,7 +48,6 @@
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/params.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/plonk/params.hpp>
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/detail/profiling.hpp>
-#include <nil/crypto3/test_tools/random_test_initializer.hpp>
 
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 #include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
@@ -60,6 +59,7 @@
 #include <nil/crypto3/marshalling/zk/types/placeholder/common_data.hpp>
 #include <nil/crypto3/marshalling/zk/types/placeholder/preprocessed_public_data.hpp>
 #include "./detail/circuits.hpp"
+#include "./detail/random_test_initializer.hpp"
 
 
 using namespace nil::crypto3;

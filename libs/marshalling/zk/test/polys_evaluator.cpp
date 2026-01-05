@@ -65,8 +65,8 @@
 #include <nil/crypto3/zk/commitments/polynomial/lpc.hpp>
 #include <nil/crypto3/zk/commitments/batched_commitment.hpp> // contains class polys_evaluator
 
-#include <nil/crypto3/test_tools/random_test_initializer.hpp>
-#include "detail/random_test_data_generation.hpp"
+#include "./detail/random_test_initializer.hpp"
+#include <nil/crypto3/marshalling/zk/detail/random_test_data_generation.hpp>
 
 using namespace nil::crypto3;
 
