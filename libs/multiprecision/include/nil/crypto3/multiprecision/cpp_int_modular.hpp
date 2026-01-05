@@ -77,7 +77,7 @@ namespace boost {
 
             template<unsigned Bits>
             struct is_byte_container<backends::cpp_int_modular_backend<Bits>>
-                : public boost::false_type { };
+                : public math::false_type { };
 
         } // namespace detail
 
