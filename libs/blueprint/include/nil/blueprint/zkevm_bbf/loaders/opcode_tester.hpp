@@ -87,15 +87,15 @@ namespace nil {
                     block.parent_hash = zkevm_keccak_hash({0, 1, 2, 3, 4, 4});
                     block.tx_amount = 1;
 
-                    zkevm_word_type caller_address = zkevm_keccak_hash({0, 1, 2, 3, 4, 5, 6}) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
-                    zkevm_word_type test_account_address = zkevm_keccak_hash({0, 1, 2, 3, 4, 5, 6, 7}) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+                    zkevm_word_type caller_address = zkevm_keccak_hash({0, 1, 2, 3, 4, 5, 6}) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
+                    zkevm_word_type test_account_address = zkevm_keccak_hash({0, 1, 2, 3, 4, 5, 6, 7}) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
 
                     _existing_accounts.insert(caller_address);
                     _existing_accounts.insert(test_account_address);
 
                     _accounts_initial_state[caller_address].address = caller_address;
                     _accounts_initial_state[caller_address].seq_no = 1;
-                    _accounts_initial_state[caller_address].balance = 0xFFFFFFFFFF_big_uint256;
+                    _accounts_initial_state[caller_address].balance = 0xFFFFFFFFFF_cppui_modular256;
 
                     _accounts_initial_state[test_account_address].address = test_account_address;
                     _accounts_initial_state[test_account_address].bytecode = opcode_tester.get_bytecode();

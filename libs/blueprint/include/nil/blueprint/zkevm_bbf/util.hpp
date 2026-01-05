@@ -93,8 +93,8 @@ namespace nil {
             }
 
             zkevm_word_type exp_by_squaring(zkevm_word_type a, zkevm_word_type n) {
-                if (n == 0x00_big_uint256) return 1;
-                if (n == 0x01_big_uint256) return a;
+                if (n == 0x00_cppui_modular256) return 1;
+                if (n == 0x01_cppui_modular256) return a;
 
                 zkevm_word_type exp = exp_by_squaring(a, n >> 1);
                 zkevm_word_type exp2 = wrapping_mul(exp, exp);

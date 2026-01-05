@@ -99,7 +99,7 @@ void test_poseidon_specfic_data() {
     test_poseidon<FieldType>(input, calculate_expected_poseidon<FieldType, PolicyType>(input));
 
     typename FieldType::value_type threeFFF =
-        0x3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+        0x3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
     input = {threeFFF, threeFFF, threeFFF};
     test_poseidon<FieldType>(input, calculate_expected_poseidon<FieldType, PolicyType>(input));
 }

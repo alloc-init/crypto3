@@ -41,7 +41,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
     public:
         using typename generic_component<FieldType,stage>::TYPE;
         using value_type = typename FieldType::value_type;
-        constexpr static const value_type two_128 = 0x100000000000000000000000000000000_big_uint254;
+        constexpr static const value_type two_128 = 0x100000000000000000000000000000000_cppui_modular254;
         using Word_Size = typename zkevm_big_field::word_size<FieldType, stage>;
         using Memory_Cost = typename zkevm_big_field::memory_cost<FieldType, stage>;
 

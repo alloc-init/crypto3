@@ -248,9 +248,9 @@ namespace nil {
                                 msg = {};
                                 hash = {
                                     TYPE(integral_type(
-                                        0xc5d2460186f7233c927e7db2dcc703c0_big_uint256)),
+                                        0xc5d2460186f7233c927e7db2dcc703c0_cppui_modular256)),
                                     TYPE(integral_type(
-                                        0xe500b653ca82273b7bfad8045d85a470_big_uint256))};
+                                        0xe500b653ca82273b7bfad8045d85a470_cppui_modular256))};
                             }
 
                             padded_msg = msg;

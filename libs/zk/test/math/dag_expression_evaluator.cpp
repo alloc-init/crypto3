@@ -65,12 +65,12 @@ BOOST_AUTO_TEST_CASE(dag_expression_evaluator_test) {
     using public_table_type = plonk_polynomial_dfs_table<FieldType>::public_table_type;
 
     polynomial_dfs_type w0_value = {1,
-        {0x3_big_uint255, 
-         0x7_big_uint255}};
+        {0x3_cppui_modular255, 
+         0x7_cppui_modular255}};
 
     polynomial_dfs_type w1_value = {1,
-        {0x7_big_uint255,
-         0x6_big_uint255}};
+        {0x7_cppui_modular255,
+         0x6_cppui_modular255}};
 
     std::vector<polynomial_dfs_type> witness_values = {w0_value, w1_value};
 

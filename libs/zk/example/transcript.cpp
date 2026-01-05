@@ -58,7 +58,7 @@ void keccak_transcript_example()
     tr(b);
 
     std::cout << "Updating transcript with Fp2 element.." << std::endl;
-    typename g2_field_type::value_type x(0x01_big_uint256, 0x02_big_uint256);
+    typename g2_field_type::value_type x(0x01_cppui_modular256, 0x02_cppui_modular256);
     tr(x);
 
     std::cout << "Updating transcript with G1 element.." << std::endl;

@@ -62,8 +62,8 @@ struct hash_usage_example<hash_type, typename std::enable_if<is_poseidon<hash_ty
         using policy = typename hash_type::policy_type;
         using field_type = typename policy::field_type;
         std::vector<typename field_type::value_type> field_input = {
-            0x000123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCD_big_uint255,
-            0x00000000000000000000000000000000000000000000000000000000000000EF_big_uint255,
+            0x000123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCD_cppui_modular255,
+            0x00000000000000000000000000000000000000000000000000000000000000EF_cppui_modular255,
         };
 
         typename policy::digest_type result = nil::crypto3::hash<hash_type>(field_input);

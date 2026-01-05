@@ -115,13 +115,13 @@ namespace nil {
         template<typename BlueprintFieldType>
         typename BlueprintFieldType::value_type w_hi(const zkevm_word_type &val) {
             static constexpr zkevm_word_type mask =
-                0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000_big_uint256;
+                0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000_cppui_modular256;
             return (val & mask) >> 128;
         }
 
         template<typename BlueprintFieldType>
         typename BlueprintFieldType::value_type w_lo(const zkevm_word_type &val) {
-            static constexpr zkevm_word_type mask = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+            static constexpr zkevm_word_type mask = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
             return val & mask;
         }
 

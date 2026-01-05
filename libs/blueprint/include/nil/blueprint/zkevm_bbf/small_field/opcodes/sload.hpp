@@ -43,7 +43,7 @@ namespace nil::blueprint::bbf::zkevm_small_field{
     public:
         using typename generic_component<FieldType,stage>::TYPE;
         using value_type = typename FieldType::value_type;
-        constexpr static const value_type two_128 = 0x100000000000000000000000000000000_big_uint254;
+        constexpr static const value_type two_128 = 0x100000000000000000000000000000000_cppui_modular254;
 
         zkevm_sload_bbf(context_type &context_object, const opcode_input_type<FieldType, stage> &current_state):
             generic_component<FieldType,stage>(context_object, false)

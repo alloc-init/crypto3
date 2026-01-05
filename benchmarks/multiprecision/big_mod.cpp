@@ -33,11 +33,11 @@ using nil::crypto3::multiprecision::detail::get_raw_base;
 using nil::crypto3::multiprecision::detail::pow_unsigned;
 
 constexpr auto modulus_256 =
-    0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_big_uint256;
+    0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_cppui_modular256;
 constexpr auto x_256 =
-    0xb5d724ce6f44c3c587867bbcb417e9eb6fa05e7e2ef029166568f14eb3161387_big_uint256;
+    0xb5d724ce6f44c3c587867bbcb417e9eb6fa05e7e2ef029166568f14eb3161387_cppui_modular256;
 constexpr auto y_256 =
-    0xad6e1fcc680392abfb075838eafa513811112f14c593e0efacb6e9d0d7770b4_big_uint256;
+    0xad6e1fcc680392abfb075838eafa513811112f14c593e0efacb6e9d0d7770b4_cppui_modular256;
 
 struct MontgomeryCompileTimeCase {
     using big_mod_t = montgomery_big_mod<modulus_256>;

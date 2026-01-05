@@ -329,7 +329,7 @@ namespace nil {
                 }
 
                 virtual void call() override{
-                    zkevm_word_type address = stack[stack.size() - 2] & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+                    zkevm_word_type address = stack[stack.size() - 2] & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
                     // // Precompiles
                     // if( address >= 0x1 && address <= 0xa ){
                     //     BOOST_LOG_TRIVIAL(fatal) << "Precompile call";
@@ -350,7 +350,7 @@ namespace nil {
                 }
 
                 virtual void delegatecall() override{
-                    zkevm_word_type address = stack[stack.size() - 2] & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+                    zkevm_word_type address = stack[stack.size() - 2] & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
                     BOOST_LOG_TRIVIAL(debug) << "Delegatecall to " << std::hex << address << std::dec;
                     _zkevm_states.back().load_stack(stack, 6);
                     append_stack_reads(6);
@@ -358,7 +358,7 @@ namespace nil {
                 }
 
                 virtual void staticcall() override{
-                    zkevm_word_type address = stack[stack.size() - 2] & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+                    zkevm_word_type address = stack[stack.size() - 2] & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
                     // Precompiles
                     // if( address >= 0x1 && address <= 0xa ){
                     //     BOOST_LOG_TRIVIAL(fatal) << "Precompile call";

@@ -54,21 +54,21 @@ BOOST_AUTO_TEST_CASE(codecopy) {
 
     l1_size_restrictions max_sizes;
 
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x10_big_uint256);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_big_uint256);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_big_uint256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x10_cppui_modular256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_cppui_modular256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::CODECOPY);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x8_big_uint256);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x1F_big_uint256);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_big_uint256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x8_cppui_modular256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x1F_cppui_modular256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::CODECOPY);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x90_big_uint256);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_big_uint256);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_big_uint256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x90_cppui_modular256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_cppui_modular256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::CODECOPY);
     // huge offset
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x5_big_uint256);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH32, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x5_cppui_modular256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH32, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::PUSH5, 0x0);
     opcode_tester.push_opcode(zkevm_opcode::CODECOPY);
     opcode_tester.push_opcode(zkevm_opcode::STOP);
@@ -116,8 +116,8 @@ BOOST_AUTO_TEST_CASE(codecopy_length_overflow) {
     l1_size_restrictions max_sizes;
 
     // huge length
-    opcode_tester.push_opcode(zkevm_opcode::PUSH32, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_big_uint256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH32, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::PUSH5, hex_string_to_bytes("0x200000"));
     opcode_tester.push_opcode(zkevm_opcode::CODECOPY);
 
@@ -155,8 +155,8 @@ BOOST_AUTO_TEST_CASE(codecopy_destination_overflow) {
 
     // huge length
     opcode_tester.push_opcode(zkevm_opcode::PUSH5, hex_string_to_bytes("0x200000"));
-    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_big_uint256);
-    opcode_tester.push_opcode(zkevm_opcode::PUSH32, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH1, 0x0_cppui_modular256);
+    opcode_tester.push_opcode(zkevm_opcode::PUSH32, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::CODECOPY);
 
     max_sizes.max_keccak_blocks = 10;

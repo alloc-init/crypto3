@@ -260,14 +260,14 @@ void test_real_data() {
     scalar_integral_type n = CurveType::scalar_field_type::modulus, m = (n - 1) / 2 + 1;
 
     scalar_value_type z, r, s, v;
-    z = 0x2b32af2cd800b4b52dbf2886f5d230c21f15e0f835efa82244221297857eb659_big_uint256;
-    r = 0xe879484d7e7072d8ca0b99ea12ec30cb7e43f67af478166018248d0e3dd547b0_big_uint256;
-    s = 0x627f3b19552ce4c96ae1e534638cb09a210183758d565bbc2319324a7c788000_big_uint256;
-    v = 0x01_big_uint256;
+    z = 0x2b32af2cd800b4b52dbf2886f5d230c21f15e0f835efa82244221297857eb659_cppui_modular256;
+    r = 0xe879484d7e7072d8ca0b99ea12ec30cb7e43f67af478166018248d0e3dd547b0_cppui_modular256;
+    s = 0x627f3b19552ce4c96ae1e534638cb09a210183758d565bbc2319324a7c788000_cppui_modular256;
+    v = 0x01_cppui_modular256;
 
     ec_point_value_type QA;
-    QA.X = 0x2f169e7e3b84be6d485cd03eabdba884538640805c5885ac458cfc48fb717bca_big_uint256;
-    QA.Y = 0x24d3fba229e81758bdc48495ce316678aaab9bd318989928a8887508b865352c_big_uint256;
+    QA.X = 0x2f169e7e3b84be6d485cd03eabdba884538640805c5885ac458cfc48fb717bca_cppui_modular256;
+    QA.Y = 0x24d3fba229e81758bdc48495ce316678aaab9bd318989928a8887508b865352c_cppui_modular256;
 
     test_ecdsa_recovery<FieldType, CurveType, num_chunks, bit_size_chunk>(z, r, s, v, QA);
 }

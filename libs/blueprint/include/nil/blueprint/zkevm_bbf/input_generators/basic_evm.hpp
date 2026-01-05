@@ -229,7 +229,7 @@ namespace nil {
                             create_hashed_bytes.push_back(std::uint8_t((nonce >> 8)%256));
                             create_hashed_bytes.push_back(std::uint8_t((nonce)%256));
                         }
-                        call_context_address = zkevm_keccak_hash(create_hashed_bytes) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+                        call_context_address = zkevm_keccak_hash(create_hashed_bytes) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
                         _accounts_current_state[call_context_address] = zkevm_account();
                         _accounts_current_state[call_context_address].balance += tx.value;
 
@@ -338,7 +338,7 @@ namespace nil {
                     }
                     if( call_is_create) {
                         BOOST_LOG_TRIVIAL(trace) << "Create hashed bytes: " << byte_vector_to_sparse_hex_string(create_hashed_bytes);
-                        call_context_address = zkevm_keccak_hash(create_hashed_bytes) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+                        call_context_address = zkevm_keccak_hash(create_hashed_bytes) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
                     }
                     if( call_is_create2 ){
                         zkevm_word_type mask = (zkevm_word_type(0xFF) << (8 *31));
@@ -347,7 +347,7 @@ namespace nil {
                             mask = mask >> 8;
                         }
                         BOOST_LOG_TRIVIAL(trace) << "Create2 hashed bytes: " << byte_vector_to_sparse_hex_string(create_hashed_bytes);
-                        call_context_address = zkevm_keccak_hash(create_hashed_bytes) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+                        call_context_address = zkevm_keccak_hash(create_hashed_bytes) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
                     }
                     _call_stack.back().bytecode = bytecode;
                     _call_stack.back().call_context_address = call_context_address;
@@ -999,13 +999,13 @@ namespace nil {
                     zkevm_word_type b = stack.back();  stack.pop_back();
                     zkevm_word_type input_a = stack.back(); stack.pop_back();
                     zkevm_word_type a = is_negative(input_a)?
-                        zkevm_word_type(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256) - input_a :
+                        zkevm_word_type(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256) - input_a :
                         input_a;
                     int shift = (b < 256) ? int(b) : 256;
                     zkevm_word_type r = a >> shift;
                     zkevm_word_type result;
                     if(is_negative(input_a))
-                        result =  (((r == 0) ? neg_one : (zkevm_word_type(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256) - r)));
+                        result =  (((r == 0) ? neg_one : (zkevm_word_type(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256) - r)));
                     else
                         result = r;
 
@@ -1155,7 +1155,7 @@ namespace nil {
                 virtual void not_opcode() {
                     auto a = stack.back(); stack.pop_back();
                     zkevm_word_type result =
-                        zkevm_word_type(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256) - a;
+                        zkevm_word_type(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256) - a;
                     stack.push_back(result);
                     decrease_gas(3);
                     pc++;
@@ -1186,7 +1186,7 @@ namespace nil {
 
                 virtual void balance() {
                     zkevm_word_type addr = stack.back(); stack.pop_back();
-                    addr &= 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+                    addr &= 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
                     BOOST_LOG_TRIVIAL(trace) << "BALANCE for address 0x" << std::hex << addr << std::dec;
                     stack.push_back(_accounts_current_state[addr].balance);
                     if( _call_stack.back().was_accessed.count({addr, 1, 0}) == 0){
@@ -1625,7 +1625,7 @@ namespace nil {
                     call_is_create2 = false;
                     call_is_precompile = false;
                     call_gas_sent = std::size_t(stack.back());  stack.pop_back();
-                    call_addr = stack.back()& 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;;  stack.pop_back();
+                    call_addr = stack.back()& 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;;  stack.pop_back();
                     call_value = 0;
                     call_args_offset = std::size_t(stack.back());  stack.pop_back();
                     call_args_length = std::size_t(stack.back());  stack.pop_back();
@@ -1658,7 +1658,7 @@ namespace nil {
 
                 virtual void staticcall() {
                     call_gas_sent = stack.back();  stack.pop_back();
-                    call_addr = stack.back() & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;  stack.pop_back();
+                    call_addr = stack.back() & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;  stack.pop_back();
                     call_value = 0;
                     call_context_value = 0;
                     call_args_offset = std::size_t(stack.back());  stack.pop_back();
@@ -1688,7 +1688,7 @@ namespace nil {
                 virtual void transfer_to_eth_account(){
                     BOOST_LOG_TRIVIAL(trace) << "Transfer to eth account" << std::endl;
                     std::size_t transfer_gas = std::size_t(stack.back());  stack.pop_back();
-                    zkevm_word_type transfer_addr = stack.back() & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256; stack.pop_back();
+                    zkevm_word_type transfer_addr = stack.back() & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256; stack.pop_back();
                     zkevm_word_type transfer_value = stack.back();  stack.pop_back();
                     std::size_t transfer_args_offset = std::size_t(stack.back());  stack.pop_back();
                     std::size_t transfer_args_length = std::size_t(stack.back());  stack.pop_back();
@@ -1737,7 +1737,7 @@ namespace nil {
                 virtual void call(){
                     call_is_precompile = stack[stack.size() - 2] >= 0x1 && stack[stack.size() - 2] <= 0xa;
                     if (!call_is_precompile &&
-                        _accounts_current_state[stack[stack.size() - 2] & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256].bytecode.size() == 0) {
+                        _accounts_current_state[stack[stack.size() - 2] & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256].bytecode.size() == 0) {
                         this->transfer_to_eth_account();
                         return;
                     }
@@ -1747,7 +1747,7 @@ namespace nil {
                     call_is_create2 = false;
                     call_gas_sent = stack.back();  stack.pop_back();
                     // TODO: add this xor to circuits!
-                    call_addr = stack.back() & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256; stack.pop_back();
+                    call_addr = stack.back() & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256; stack.pop_back();
                     call_context_value = call_value = stack.back();  stack.pop_back();
                     call_args_offset = std::size_t(stack.back());  stack.pop_back();
                     call_args_length = std::size_t(stack.back());  stack.pop_back();

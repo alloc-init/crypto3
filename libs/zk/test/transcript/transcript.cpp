@@ -94,11 +94,11 @@ BOOST_AUTO_TEST_CASE(zk_poseidon_transcript_init_test) {
     BOOST_CHECK_EQUAL(
         ch1,
         field_type::value_type(
-            0x2c8488fd580563511086c59020975e49afd065fd26c451f6c1f9c5213798c928_big_uint255));
+            0x2c8488fd580563511086c59020975e49afd065fd26c451f6c1f9c5213798c928_cppui_modular255));
     BOOST_CHECK_EQUAL(
         ch2,
         field_type::value_type(
-            0x285f5407fb2f26a10fdcdc9357ecdc2b1415dc67b082f7c18964022bcb644ca7_big_uint255));
+            0x285f5407fb2f26a10fdcdc9357ecdc2b1415dc67b082f7c18964022bcb644ca7_cppui_modular255));
     BOOST_CHECK_EQUAL(ch_int, 0x48f3);
 
     init_blob = {};
@@ -110,11 +110,11 @@ BOOST_AUTO_TEST_CASE(zk_poseidon_transcript_init_test) {
     BOOST_CHECK_EQUAL(
         ch1,
         field_type::value_type(
-            0x35626947FA1063436F4E5434029CCAEC64075C9FC80034C0923054A2B1D30BD2_big_uint255));
+            0x35626947FA1063436F4E5434029CCAEC64075C9FC80034C0923054A2B1D30BD2_cppui_modular255));
     BOOST_CHECK_EQUAL(
         ch2,
         field_type::value_type(
-            0x1B961886411EE8722DD6B576CBA5876EB30999B5237FE0E14255E6D006CFF63C_big_uint255));
+            0x1B961886411EE8722DD6B576CBA5876EB30999B5237FE0E14255E6D006CFF63C_cppui_modular255));
     BOOST_CHECK_EQUAL(ch_int, 0xC92);
 }
 
@@ -131,11 +131,11 @@ BOOST_AUTO_TEST_CASE(zk_poseidon_transcript_no_init_test) {
     BOOST_CHECK_EQUAL(
         ch1,
         field_type::value_type(
-            0x35626947fa1063436f4e5434029ccaec64075c9fc80034c0923054a2b1d30bd2_big_uint255));
+            0x35626947fa1063436f4e5434029ccaec64075c9fc80034c0923054a2b1d30bd2_cppui_modular255));
     BOOST_CHECK_EQUAL(
         ch2,
         field_type::value_type(
-            0x1b961886411ee8722dd6b576cba5876eb30999b5237fe0e14255e6d006cff63c_big_uint255));
+            0x1b961886411ee8722dd6b576cba5876eb30999b5237fe0e14255e6d006cff63c_cppui_modular255));
     BOOST_CHECK_EQUAL(ch_int, 0xc92);
 }
 

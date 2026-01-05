@@ -72,12 +72,12 @@ BOOST_AUTO_TEST_CASE(exp) {
     opcode_tester.push_opcode(zkevm_opcode::PUSH32, 2);
     opcode_tester.push_opcode(
         zkevm_opcode::PUSH32,
-        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_big_uint256
+        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_cppui_modular256
     );
     opcode_tester.push_opcode(zkevm_opcode::EXP);
     opcode_tester.push_opcode(
         zkevm_opcode::PUSH32,
-        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_big_uint256);
+        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::PUSH32, 2);
     opcode_tester.push_opcode(zkevm_opcode::EXP);
     opcode_tester.push_opcode(zkevm_opcode::PUSH32, 255);
@@ -85,26 +85,26 @@ BOOST_AUTO_TEST_CASE(exp) {
     opcode_tester.push_opcode(zkevm_opcode::EXP);
     opcode_tester.push_opcode(
         zkevm_opcode::PUSH32,
-        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_big_uint256);
+        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_cppui_modular256);
     opcode_tester.push_opcode(
         zkevm_opcode::PUSH32,
-        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_big_uint256);
+        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::EXP);
     opcode_tester.push_opcode(zkevm_opcode::PUSH32, 1234567890);
     opcode_tester.push_opcode(
         zkevm_opcode::PUSH32,
-        0x1b70726fb8d3a24da9ff9647225a18412b8f010425938504d73ebc8801e2e016_big_uint256);
+        0x1b70726fb8d3a24da9ff9647225a18412b8f010425938504d73ebc8801e2e016_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::EXP);
     opcode_tester.push_opcode(
         zkevm_opcode::PUSH32,
-        0xFb70726fb8d3a24da9ff9647225a18412b8f010425938504d73ebc8801e2e016_big_uint256);
+        0xFb70726fb8d3a24da9ff9647225a18412b8f010425938504d73ebc8801e2e016_cppui_modular256);
     opcode_tester.push_opcode(
         zkevm_opcode::PUSH32,
-        0xFb70726fb8d3a24da9ff9647225a18412b8f010425938504d73ebc8801e2e016_big_uint256);
+        0xFb70726fb8d3a24da9ff9647225a18412b8f010425938504d73ebc8801e2e016_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::EXP);
     opcode_tester.push_opcode(
         zkevm_opcode::PUSH32,
-        0x1b70726fb8d3a24da9ff9647225a18412b8f010425938504d73ebc8801e2e016_big_uint256);
+        0x1b70726fb8d3a24da9ff9647225a18412b8f010425938504d73ebc8801e2e016_cppui_modular256);
     opcode_tester.push_opcode(zkevm_opcode::PUSH32, 1234567890);
     opcode_tester.push_opcode(zkevm_opcode::EXP);
     opcode_tester.push_opcode(zkevm_opcode::STOP);

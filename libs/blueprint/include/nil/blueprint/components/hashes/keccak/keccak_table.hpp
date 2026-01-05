@@ -52,9 +52,9 @@ namespace nil {
 
                 hash_value.first =
                     (n &
-                     0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000_big_uint256) >>
+                     0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000_cppui_modular256) >>
                     128;
-                hash_value.second = n & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_big_uint256;
+                hash_value.second = n & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular256;
                 return hash_value;
             }
 

@@ -43,9 +43,9 @@ namespace nil::blueprint::bbf::zkevm_big_field{
         using typename generic_component<FieldType,stage>::TYPE;
 
         constexpr static const typename FieldType::value_type two_64 =
-            0x10000000000000000_big_uint256;
-        constexpr static const typename FieldType::value_type two_128 = 0x100000000000000000000000000000000_big_uint254;
-        constexpr static const typename FieldType::value_type two_192 = 0x1000000000000000000000000000000000000000000000000_big_uint254;
+            0x10000000000000000_cppui_modular256;
+        constexpr static const typename FieldType::value_type two_128 = 0x100000000000000000000000000000000_cppui_modular254;
+        constexpr static const typename FieldType::value_type two_192 = 0x1000000000000000000000000000000000000000000000000_cppui_modular254;
 
         TYPE chunk_sum_64(const std::vector<TYPE> &chunks, const unsigned char chunk_idx) const {
             BOOST_ASSERT(chunk_idx < 4);

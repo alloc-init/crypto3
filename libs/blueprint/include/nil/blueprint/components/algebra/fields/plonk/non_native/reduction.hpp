@@ -286,18 +286,18 @@ namespace nil {
 
                 auto constraint_2 =
                     var(component.W(4), 0) -
-                    (var(component.W(3), 0) + var(component.W(2), 0) * 0x2000_big_uint255 +
-                     var(component.W(1), 0) * 0x200000000_big_uint255 +
-                     var(component.W(0), 0) * 0x20000000000000_big_uint255 +
-                     var(component.W(8), -1) * 0x2000000000000000000_big_uint255 +
-                     var(component.W(7), -1) * 0x200000000000000000000000_big_uint255 +
-                     var(component.W(6), -1) * 0x20000000000000000000000000000_big_uint255 +
-                     var(component.W(5), -1) * 0x2000000000000000000000000000000000_big_uint255 +
-                     var(component.W(4), -1) * 0x200000000000000000000000000000000000000_big_uint255 +
-                     var(component.W(3), -1) * 0x20000000000000000000000000000000000000000000_big_uint255 +
-                     var(component.W(2), -1) * 0x2000000000000000000000000000000000000000000000000_big_uint255 +
-                     var(component.W(1), -1) * 0x200000000000000000000000000000000000000000000000000000_big_uint255 +
-                     var(component.W(0), -1) * 0x20000000000000000000000000000000000000000000000000000000000_big_uint255);
+                    (var(component.W(3), 0) + var(component.W(2), 0) * 0x2000_cppui_modular255 +
+                     var(component.W(1), 0) * 0x200000000_cppui_modular255 +
+                     var(component.W(0), 0) * 0x20000000000000_cppui_modular255 +
+                     var(component.W(8), -1) * 0x2000000000000000000_cppui_modular255 +
+                     var(component.W(7), -1) * 0x200000000000000000000000_cppui_modular255 +
+                     var(component.W(6), -1) * 0x20000000000000000000000000000_cppui_modular255 +
+                     var(component.W(5), -1) * 0x2000000000000000000000000000000000_cppui_modular255 +
+                     var(component.W(4), -1) * 0x200000000000000000000000000000000000000_cppui_modular255 +
+                     var(component.W(3), -1) * 0x20000000000000000000000000000000000000000000_cppui_modular255 +
+                     var(component.W(2), -1) * 0x2000000000000000000000000000000000000000000000000_cppui_modular255 +
+                     var(component.W(1), -1) * 0x200000000000000000000000000000000000000000000000000000_cppui_modular255 +
+                     var(component.W(0), -1) * 0x20000000000000000000000000000000000000000000000000000000000_cppui_modular255);
 
                 auto constraint_3 = (s_r) * ((s_r)*var(component.W(5), 0) - 1);
 
