@@ -44,6 +44,9 @@
 #include <nil/crypto3/hash/sha2.hpp>
 
 #include <nil/crypto3/mac/hmac.hpp>
+#include <nil/crypto3/algebra/fields/detail/element/fp2.hpp>
+#include <nil/crypto3/algebra/fields/detail/element/fp6_3over2.hpp>
+#include <nil/crypto3/algebra/fields/detail/element/fp12_2over3over2.hpp>
 
 using namespace nil::crypto3;
 
