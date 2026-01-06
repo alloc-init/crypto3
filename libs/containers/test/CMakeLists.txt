@@ -52,6 +52,7 @@ macro(define_container_test test)
         ${CMAKE_WORKSPACE_NAME}::containers
         ${CMAKE_WORKSPACE_NAME}::algebra
         ${CMAKE_WORKSPACE_NAME}::hash
+        ${CMAKE_WORKSPACE_NAME}::parallelization_utils
 
         Boost::unit_test_framework
         Boost::random)

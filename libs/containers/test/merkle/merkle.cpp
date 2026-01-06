@@ -38,8 +38,9 @@
 #include <nil/crypto3/hash/sha2.hpp>
 #include <nil/crypto3/hash/keccak.hpp>
 #include <nil/crypto3/hash/poseidon.hpp>
+#include <nil/crypto3/hash/pedersen.hpp>
 
-#include <nil/crypto3/marshalling/algebra/processing/jubjub.hpp>
+#include <nil/crypto3/marshalling/algebra/processing/curve_element.hpp>
 
 #include <nil/crypto3/container/merkle/tree.hpp>
 #include <nil/crypto3/container/merkle/proof.hpp>
