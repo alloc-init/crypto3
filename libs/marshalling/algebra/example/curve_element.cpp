@@ -36,7 +36,6 @@
 #include <nil/crypto3/marshalling/algebra/inference.hpp>
 #include <nil/crypto3/marshalling/algebra/types/curve_element.hpp>
 #include <nil/crypto3/marshalling/algebra/processing/curve_element.hpp>
-#include <nil/crypto3/marshalling/algebra/processing/mnt4.hpp>
 #include <nil/marshalling/algorithms/pack.hpp>
 
 template<typename unit>

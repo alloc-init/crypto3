@@ -64,8 +64,7 @@
 #include <nil/crypto3/zk/commitments/batched_commitment.hpp>
 #include <nil/crypto3/test_tools/random_test_initializer.hpp>
 
-#include <nil/crypto3/marshalling/algebra/processing/mnt4.hpp>
-#include <nil/crypto3/marshalling/algebra/processing/mnt6.hpp>
+#include <nil/crypto3/marshalling/algebra/processing/curve_element.hpp>
 
 #include "circuits.hpp"
 #include "placeholder_test_runner.hpp"

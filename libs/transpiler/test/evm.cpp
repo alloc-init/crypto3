@@ -80,8 +80,7 @@
 
 #include <nil/crypto3/random/algebraic_engine.hpp>
 
-#include <nil/crypto3/marshalling/algebra/processing/alt_bn128.hpp> // IWYU pragma: keep (used by other includes)
-#include <nil/crypto3/marshalling/algebra/processing/bls12.hpp> // IWYU pragma: keep (used by other includes)
+#include <nil/crypto3/marshalling/algebra/processing/curve_element.hpp> // IWYU pragma: keep (used by other includes)
 #include <nil/crypto3/marshalling/zk/types/commitments/kzg.hpp> // IWYU pragma: keep (used by other includes)
 #include <nil/crypto3/marshalling/zk/types/commitments/lpc.hpp> // IWYU pragma: keep (used by other includes)
 #include <nil/crypto3/marshalling/zk/types/placeholder/proof.hpp>
