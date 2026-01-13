@@ -92,7 +92,7 @@ typename CurveType::scalar_field_type::value_type calculate_endo_scalar(typename
         nil::marshalling::status_type status;
         BOOST_CHECK(ScalarSize <= 255);
         std::array<bool, 255> bits_msb_all =
-            nil::crypto3::marshalling::pack<nil::marshalling::option::big_endian>(integral_scalar, status);
+            nil::marshalling::pack<nil::marshalling::option::big_endian>(integral_scalar, status);
         BOOST_CHECK(status == nil::marshalling::status_type::success);
         std::copy(bits_msb_all.end() - ScalarSize, bits_msb_all.end(), bits_msb.begin());
 
