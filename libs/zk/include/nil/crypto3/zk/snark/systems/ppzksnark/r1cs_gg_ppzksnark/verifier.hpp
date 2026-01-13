@@ -173,7 +173,7 @@ namespace nil {
                             acc_precomp, processed_verification_key.vk_gamma_g2_precomp, proof_g_C_precomp,
                             processed_verification_key.vk_delta_g2_precomp);
                         const typename gt_type::value_type QAP =
-                            final_exponentiation<CurveType>(QAP1 * QAP2.unitary_inversed());
+                            *final_exponentiation<CurveType>(QAP1 * QAP2.unitary_inversed());
 
                         if (QAP != processed_verification_key.vk_alpha_g1_beta_g2) {
                             result = false;

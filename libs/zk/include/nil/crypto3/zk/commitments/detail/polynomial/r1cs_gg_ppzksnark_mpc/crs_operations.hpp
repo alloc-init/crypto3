@@ -76,7 +76,7 @@ namespace nil {
                         auto beta_g1 = powers_of_tau_result.beta_g1;
                         auto beta_g2 = powers_of_tau_result.beta_g2;
 
-                        auto alpha_g1_beta_g2 = algebra::pair_reduced<curve_type>(alpha_g1, beta_g2);
+                        auto alpha_g1_beta_g2 = *algebra::pair_reduced<curve_type>(alpha_g1, beta_g2);
                         auto gamma_g2 = g2_value_type::one();
                         auto delta_g1 = g1_value_type::one();
                         auto delta_g2 = g2_value_type::one();
