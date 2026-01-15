@@ -186,7 +186,7 @@ namespace nil {
                     }
 
                     inline bool verify() {
-                        return valid && (algebra::final_exponentiation<curve_type>(left) == right);
+                        return valid && (*algebra::final_exponentiation<curve_type>(left) == right);
                     }
 
                     inline scalar_field_value_type derive_non_zero() {
