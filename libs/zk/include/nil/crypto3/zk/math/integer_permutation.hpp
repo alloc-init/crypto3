@@ -106,9 +106,9 @@ namespace nil::crypto3::zk::snark {
                 result.contents[this->contents[position - min_element] - min_element] = position;
             }
 
-#ifd
+#ifdef DEBUG
             assert(result.is_valid());
-#end
+#endif
 
             return result;
         }
@@ -121,9 +121,9 @@ namespace nil::crypto3::zk::snark {
             std::copy(this->contents.begin() + (slice_min_element - min_element),
                       this->contents.begin() + (slice_max_element - min_element) + 1,
                       result.contents.begin());
-#ifd
+#ifdef DEBUG
             assert(result.is_valid());
-#end
+#endif
 
             return result;
         }
