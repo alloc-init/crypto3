@@ -136,7 +136,7 @@ namespace nil {
                             proof_g_A_g_precomp, processed_verification_key.vk_alphaA_g2_precomp);
                         typename gt_type::value_type kc_A_2 =
                             miller_loop<CurveType>(proof_g_A_h_precomp, processed_verification_key.pp_G2_one_precomp);
-                        gt_value_type kc_A = final_exponentiation<CurveType>(kc_A_1 * kc_A_2.unitary_inversed());
+                        gt_value_type kc_A = *final_exponentiation<CurveType>(kc_A_1 * kc_A_2.unitary_inversed());
                         if (kc_A != gt_value_type::one()) {
                             result = false;
                         }
@@ -147,7 +147,7 @@ namespace nil {
                             processed_verification_key.vk_alphaB_g1_precomp, proof_g_B_g_precomp);
                         typename gt_type::value_type kc_B_2 =
                             miller_loop<CurveType>(proof_g_B_h_precomp, processed_verification_key.pp_G2_one_precomp);
-                        gt_value_type kc_B = final_exponentiation<CurveType>(kc_B_1 * kc_B_2.unitary_inversed());
+                        gt_value_type kc_B = *final_exponentiation<CurveType>(kc_B_1 * kc_B_2.unitary_inversed());
                         if (kc_B != gt_value_type::one()) {
                             result = false;
                         }
@@ -158,7 +158,7 @@ namespace nil {
                             proof_g_C_g_precomp, processed_verification_key.vk_alphaC_g2_precomp);
                         typename gt_type::value_type kc_C_2 =
                             miller_loop<CurveType>(proof_g_C_h_precomp, processed_verification_key.pp_G2_one_precomp);
-                        gt_value_type kc_C = final_exponentiation<CurveType>(kc_C_1 * kc_C_2.unitary_inversed());
+                        gt_value_type kc_C = *final_exponentiation<CurveType>(kc_C_1 * kc_C_2.unitary_inversed());
                         if (kc_C != gt_value_type::one()) {
                             result = false;
                         }
@@ -172,7 +172,7 @@ namespace nil {
                         typename gt_type::value_type QAP_23 = double_miller_loop<CurveType>(
                             proof_g_H_precomp, processed_verification_key.vk_rC_Z_g2_precomp, proof_g_C_g_precomp,
                             processed_verification_key.pp_G2_one_precomp);
-                        gt_value_type QAP = final_exponentiation<CurveType>(QAP_1 * QAP_23.unitary_inversed());
+                        gt_value_type QAP = *final_exponentiation<CurveType>(QAP_1 * QAP_23.unitary_inversed());
                         if (QAP != gt_value_type::one()) {
                             result = false;
                         }
@@ -185,7 +185,7 @@ namespace nil {
                         typename gt_type::value_type K_23 = double_miller_loop<CurveType>(
                             proof_g_A_g_acc_C_precomp, processed_verification_key.vk_gamma_beta_g2_precomp,
                             processed_verification_key.vk_gamma_beta_g1_precomp, proof_g_B_g_precomp);
-                        gt_value_type K = final_exponentiation<CurveType>(K_1 * K_23.unitary_inversed());
+                        gt_value_type K = *final_exponentiation<CurveType>(K_1 * K_23.unitary_inversed());
                         if (K != gt_value_type::one()) {
                             result = false;
                         }
