@@ -44,7 +44,6 @@
 #include <boost/core/demangle.hpp>
 
 #include <nil/crypto3/algebra/fields/alt_bn128/scalar_field.hpp>
-#include <nil/crypto3/algebra/fields/babybear.hpp>
 #include <nil/crypto3/algebra/fields/bls12/base_field.hpp>
 #include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/curve25519/base_field.hpp>
@@ -109,9 +108,7 @@ void run_perf_test(std::string const& field_name) {
 using field_types = std::tuple<
     nil::crypto3::algebra::fields::alt_bn128_scalar_field<254u>,
     nil::crypto3::algebra::fields::goldilocks, nil::crypto3::algebra::fields::goldilocks_fp2, nil::crypto3::algebra::fields::mersenne31,
-    nil::crypto3::algebra::fields::koalabear, nil::crypto3::algebra::fields::babybear,
-    nil::crypto3::algebra::fields::babybear_fp4,
-    nil::crypto3::algebra::fields::babybear_fp5,
+    nil::crypto3::algebra::fields::koalabear,
     nil::crypto3::algebra::fields::pallas_base_field,
     nil::crypto3::algebra::fields::mnt4_base_field<298>,
     nil::crypto3::algebra::fields::mnt6_base_field<298>,
