@@ -1,19 +1,18 @@
 #!/bin/bash
 
+test_filter=$1
+
 timelimit="5m"
-
-if [[ $# -ne 1 ]]; then
-    echo "ERROR: csv output file required"
-    exit 1
-fi
-
-csv=$1
 
 if [[ $(uname) == Darwin ]]; then
     arch=mac
-else
+elif [[ $(uname) == Linux ]]; then
     arch=linux
+else
+    arch=unknown
 fi
+
+csv=$arch.csv
 
 if ! which timeout 2>&1>/dev/null; then
     echo "ERROR: missing required command timeout (brew install coreutils)"
@@ -31,20 +30,20 @@ function list_make_targets() {
         | sort -u
 }
 
-raw_tests=$(list_make_targets \
-    | grep _test \
-    | sort)
+if [[ -n $test_filter ]]; then 
+    raw_tests=$(list_make_targets | grep $test_filter)
+else
+    raw_tests=$(list_make_targets)
+fi
 
-# drop tests which we've logged already
+# drop tests which we've logged already to the csv file (allowing resumption)
 if [[ $(wc -l "$csv" | perl -lane 'print $F[0]') -gt 0 ]]; then
-    last_test=$(tail -n1 $csv | cut -d',' -f1)
-    echo "last_test=$last_test"
     for test in $raw_tests; do
-        if [[ $test > $last_test ]]; then
+        if [[ ! $(grep $test $csv) ]]; then
             # echo "adding $test"
             tests+=" $test"
         else 
-            echo "skipping $test"
+            echo "skipping $test (logged already in $csv)"
         fi
     done
 else
