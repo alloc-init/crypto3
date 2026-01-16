@@ -69,7 +69,6 @@ set(TESTS_NAMES
 
         "systems/plonk/placeholder/placeholder_circuits"
         "systems/plonk/placeholder/placeholder_circuits_dFRI"
-        "systems/plonk/placeholder/placeholder_goldilocks"
         # TODO(ioxid): Mersenne31 is unsupported for now.
         # "systems/plonk/placeholder/placeholder_mersenne31"
         "systems/plonk/placeholder/placeholder_koalabear"
