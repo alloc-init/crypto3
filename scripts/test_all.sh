@@ -1,7 +1,17 @@
 #!/bin/bash
 
-test_filter=$1
+if ! which timeout 2>&1>/dev/null; then
+    echo "ERROR: missing required command timeout (brew install coreutils)"
+    exit 1
+fi
 
+if ! which fd 2>&1>/dev/null; then
+    echo "ERROR: missing required command fd (brew install fd)"
+    exit 1
+fi
+
+filter=""
+dryrun=""
 timelimit="5m"
 
 if [[ $(uname) == Darwin ]]; then
@@ -14,15 +24,40 @@ fi
 
 csv=$arch.csv
 
-if ! which timeout 2>&1>/dev/null; then
-    echo "ERROR: missing required command timeout (brew install coreutils)"
-    exit 1
-fi
+function show_help() {
+    echo "  -h              this message"
+    echo "  -d              dry run"
+    echo "  -f FILTER       filter test names"
+    echo "  -t LIMIT        limit compilation and runtime [$timelimit]"
+    echo "  -o FILE         output file [$csv]"
+}
 
-if ! which fd 2>&1>/dev/null; then
-    echo "ERROR: missing required command fd (brew install fd)"
-    exit 1
-fi
+while getopts "h?df:t:o:" opt; do
+  case "$opt" in
+    h|\?)
+        show_help
+        exit 0
+        ;;
+    d)
+        dryrun=1
+        ;;
+    f)  
+        filter=$OPTARG
+        ;;
+    t)
+        timelimit=$OPTARG
+        ;;
+    o)
+        csv=$OPTARG
+        ;;
+  esac
+done
+
+shift $((OPTIND-1))
+
+[ "${1:-}" = "--" ] && shift
+
+
 
 function list_make_targets() {
     make -qp \
@@ -30,13 +65,10 @@ function list_make_targets() {
         | sort -u
 }
 
-if [[ -n $test_filter ]]; then 
-    raw_tests=$(list_make_targets | grep $test_filter)
-else
-    raw_tests=$(list_make_targets)
-fi
+raw_tests=$(list_make_targets | grep "$filter")
 
 # drop tests which we've logged already to the csv file (allowing resumption)
+touch $csv
 if [[ $(wc -l "$csv" | perl -lane 'print $F[0]') -gt 0 ]]; then
     for test in $raw_tests; do
         if [[ ! $(grep $test $csv) ]]; then
@@ -92,6 +124,7 @@ for test in $tests; do
     compile_failed=0
     exec_failed=0
     echo "======= starting $test ======="
+    [[ -n $dryrun ]] && continue # if dryrun, skip to next iteraton
     recorded_run compile $test
     if [[ $res -eq 130 ]]; then
         echo "Caught SIGINT during compile"
