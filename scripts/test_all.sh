@@ -13,6 +13,8 @@ fi
 filter=""
 dryrun=""
 timelimit="5m"
+only_compile=""
+abort_for_compilation_failure=""
 
 if [[ $(uname) == Darwin ]]; then
     arch=mac
@@ -30,9 +32,11 @@ function show_help() {
     echo "  -f FILTER       filter test names"
     echo "  -t LIMIT        limit compilation and runtime [$timelimit]"
     echo "  -o FILE         output file [$csv]"
+    echo "  -c              only compile"
+    echo "  -C              only compile, stop after the first compilation failure"
 }
 
-while getopts "h?df:t:o:" opt; do
+while getopts "h?df:t:o:ocC" opt; do
   case "$opt" in
     h|\?)
         show_help
@@ -49,6 +53,13 @@ while getopts "h?df:t:o:" opt; do
         ;;
     o)
         csv=$OPTARG
+        ;;
+    c)
+        only_compile=1
+        ;;
+    C)
+        only_compile=1
+        abort_for_compilation_failure=1
         ;;
   esac
 done
@@ -123,19 +134,19 @@ for test in $tests; do
     exec_timed_out=0
     compile_failed=0
     exec_failed=0
+
     echo "======= starting $test ======="
+
     [[ -n $dryrun ]] && continue # if dryrun, skip to next iteraton
+
     recorded_run compile $test
-    if [[ $res -eq 130 ]]; then
-        echo "Caught SIGINT during compile"
-        exit 130
-    elif [[ $res -eq 0 ]]; then 
+
+    [[ -n $abort_for_compilation_failure && $compile_failed == 1 ]] && exit 1
+
+    if [[ -n $only_compile ]]; then
+        echo "$test, $arch, $compile_timed_out, $compile_failed, , " >> $csv
+    else
         recorded_run run $test
-        res=$?
-        if [[ $res -eq 130 ]]; then
-            echo "Caught SIGINT during run"
-            exit 130
-        fi
+        echo "$test, $arch, $compile_timed_out, $compile_failed, $exec_timed_out, $exec_failed" >> $csv
     fi
-    echo "$test, $arch, $compile_timed_out, $compile_failed, $exec_timed_out, $exec_failed" >> $csv
 done
