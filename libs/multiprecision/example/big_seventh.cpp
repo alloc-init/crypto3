@@ -39,9 +39,9 @@ constants], we need some includes:
 
 #include <nil/crypto3/multiprecision/cpp_bin_float.hpp>
 // that includes some predefined typedefs like:
-// using nil::crypto3::multiprecision::cpp_bin_float_quad;
-// using nil::crypto3::multiprecision::cpp_bin_float_50;
-// using nil::crypto3::multiprecision::cpp_bin_float_100;
+// using boost::multiprecision::cpp_bin_float_quad;
+// using boost::multiprecision::cpp_bin_float_50;
+// using boost::multiprecision::cpp_bin_float_100;
 
 #include <iostream>
 #include <limits>

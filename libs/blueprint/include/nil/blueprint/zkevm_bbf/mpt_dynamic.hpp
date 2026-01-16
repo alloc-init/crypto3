@@ -68,7 +68,7 @@ public:
     };
 
     using value_type = typename FieldType::value_type;
-    using integral_type = nil::crypto3::multiprecision::big_uint<257>;
+    using integral_type = boost::multiprecision::big_uint<257>;
 
     static table_params get_minimal_requirements(std::size_t max_mpt_size) {
         return {

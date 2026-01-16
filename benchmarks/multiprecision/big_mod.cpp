@@ -27,10 +27,10 @@
 
 #include <nil/crypto3/multiprecision/detail/big_mod/test_support.hpp>
 
-using namespace nil::crypto3::multiprecision;
+using namespace boost::multiprecision;
 using namespace nil::crypto3::bench;
-using nil::crypto3::multiprecision::detail::get_raw_base;
-using nil::crypto3::multiprecision::detail::pow_unsigned;
+using boost::multiprecision::detail::get_raw_base;
+using boost::multiprecision::detail::pow_unsigned;
 
 constexpr auto modulus_256 =
     0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_cppui_modular256;

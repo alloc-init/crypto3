@@ -96,8 +96,8 @@ class zkevm_cmp_bbf : generic_component<Field, stage> {
             BOOST_ASSERT(carry == s < a);
 
             if (!is_unsigned) {
-                a_neg = a.bit_test(255);
-                s_neg = s.bit_test(255);
+                a_neg = bit_test(a, 255);
+                s_neg = bit_test(s, 255);
             }
         }
 

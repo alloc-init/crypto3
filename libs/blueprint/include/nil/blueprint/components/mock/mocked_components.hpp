@@ -132,7 +132,7 @@ namespace nil {
                     using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
                     using non_native_policy_type =
                         nil::blueprint::detail::basic_non_native_policy_field_type<BlueprintFieldType,
-                            nil::crypto3::multiprecision::big_uint<256>>;
+                            boost::multiprecision::big_uint<256>>;
                     typename non_native_policy_type::non_native_var_type value;
 
                     pair_var_type(var first, var second) : value({first, second}) {}
@@ -152,7 +152,7 @@ namespace nil {
                     using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
                     using non_native_policy_type =
                         nil::blueprint::detail::basic_non_native_policy_field_type<BlueprintFieldType,
-                            nil::crypto3::multiprecision::big_uint<256>>;
+                            boost::multiprecision::big_uint<256>>;
                     typename non_native_policy_type::non_native_var_type a, b;
 
                     two_pair_var_type(var a_first, var a_second, var b_first, var b_second)
@@ -639,7 +639,7 @@ namespace nil {
                     detail::signed_pair_var_type<BlueprintFieldType>,
                     detail::signed_pair_var_type<BlueprintFieldType>>;
 
-                typedef nil::crypto3::multiprecision::big_uint<256> int_type;
+                typedef boost::multiprecision::big_uint<256> int_type;
 
                 BOILERPLATING(signed_abs_component_big)
 

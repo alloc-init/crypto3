@@ -46,7 +46,7 @@ void test_mult(const std::vector<typename BlueprintFieldType::value_type> &publi
     using TYPE = typename FieldType::value_type;
     using integral_type = typename BlueprintFieldType::integral_type;
     using extended_integral_type =
-        nil::crypto3::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>;
+        boost::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>;
 
     extended_integral_type x = 0, y = 0, p = 0, pow = 1;
 
@@ -130,7 +130,7 @@ void mult_tests() {
     using value_type = typename BlueprintFieldType::value_type;
     using integral_type = typename BlueprintFieldType::integral_type;
     using foreign_value_type = typename NonNativeFieldType::value_type;
-    typedef nil::crypto3::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
+    typedef boost::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
         extended_integral_type;
 
     static boost::random::mt19937 seed_seq;
@@ -181,7 +181,7 @@ void mult_tests_to_fail() {
     using integral_type = typename BlueprintFieldType::integral_type;
     using foreign_value_type = typename NonNativeFieldType::value_type;
     using foreign_integral_type = typename NonNativeFieldType::integral_type;
-    typedef nil::crypto3::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
+    typedef boost::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
         extended_integral_type;
 
     static boost::random::mt19937 seed_seq;

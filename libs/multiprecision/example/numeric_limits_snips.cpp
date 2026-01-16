@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE(test_numeric_limits_snips) {
 
             typedef number<cpp_dec_float<50>> cpp_dec_float_50;    // 50 decimal digits.
 
-            // or using nil::crypto3::multiprecision::cpp_dec_float_50;
+            // or using boost::multiprecision::cpp_dec_float_50;
 
             cpp_dec_float_50 pi = boost::math::constants::pi<cpp_dec_float_50>();
             std::cout.precision(std::numeric_limits<cpp_dec_float_50>::max_digits10);

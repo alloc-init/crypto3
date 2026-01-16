@@ -229,7 +229,7 @@ class zkevm_addmod_bbf : public generic_component<FieldType, stage> {
             zkevm_word_type N = current_state.stack_top(2);
             
             // addition and modulo operation
-            auto s = nil::crypto3::multiprecision::big_uint<257>(a) + b;
+            auto s = boost::multiprecision::big_uint<257>(a) + b;
             // If N == 0:
             //      q == 0
             //      r == 0

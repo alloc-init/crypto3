@@ -51,7 +51,7 @@ void test_ecdsa_recovery(
     bool to_pass = true) {
     using foreign_basic_integral_type =
         typename CurveType::scalar_field_type::integral_type;
-    typedef nil::crypto3::multiprecision::big_uint<
+    typedef boost::multiprecision::big_uint<
         2 * CurveType::scalar_field_type::modulus_bits>
         foreign_integral_type;
     using TYPE = typename FieldType::value_type;

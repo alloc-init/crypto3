@@ -46,7 +46,7 @@ namespace nil {
             static constexpr std::size_t MAX_ZKEVM_GAS_ERROR_BOUND = std::numeric_limits<std::size_t>::max() - MAX_ZKEVM_GAS_BOUND;
 
             class zkevm_basic_evm{
-                using extended_integral_type = nil::crypto3::multiprecision::big_uint<512>;
+                using extended_integral_type = boost::multiprecision::big_uint<512>;
 
             public:
                 bool get_execution_status() const {return execution_status;}
@@ -1112,7 +1112,7 @@ namespace nil {
                     zkevm_word_type a = stack.back(); stack.pop_back();
                     zkevm_word_type b = stack.back(); stack.pop_back();
                     zkevm_word_type modulus = stack.back(); stack.pop_back();
-                    auto s_full = nil::crypto3::multiprecision::big_uint<257>(a) + b;
+                    auto s_full = boost::multiprecision::big_uint<257>(a) + b;
                     auto r_full = modulus != 0u ? s_full / modulus : 0u;
                     zkevm_word_type q = wrapping_sub(s_full, wrapping_mul(r_full, modulus)).truncate<256>();
                     zkevm_word_type result = modulus != 0u ? q : 0u;

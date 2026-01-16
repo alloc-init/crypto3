@@ -111,7 +111,7 @@ namespace nil {
                         using BASE_TYPE = typename BaseField::value_type;
                         using base_basic_integral_type =
                             typename BaseField::integral_type;
-                        typedef nil::crypto3::multiprecision::big_uint<
+                        typedef boost::multiprecision::big_uint<
                             2 * BaseField::modulus_bits>
                             base_integral_type;
 
@@ -119,7 +119,7 @@ namespace nil {
                         using SCALAR_TYPE = typename ScalarField::value_type;
                         using scalar_basic_integral_type =
                             typename ScalarField::integral_type;
-                        typedef nil::crypto3::multiprecision::big_uint<
+                        typedef boost::multiprecision::big_uint<
                             2 * ScalarField::modulus_bits>
                             scalar_integral_type;
 

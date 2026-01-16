@@ -36,7 +36,6 @@
 #include <array>
 #include <map>
 
-#include <nil/crypto3/multiprecision/integer.hpp>
 
 namespace nil {
     namespace blueprint {
@@ -101,7 +100,7 @@ namespace nil {
                         res[1][i] = 0;
                         for (int j = sizes[i] - 1; j > -1; j--) {
                             const integral_type k_pow = cached_pow<BlueprintFieldType>(base, k);
-                            nil::crypto3::multiprecision::divide_qr(tmp, k_pow, r, tmp);
+                            boost::multiprecision::divide_qr(tmp, k_pow, r, tmp);
                             res[0][i] = res[0][i] * 2 + (r&1);
                             res[1][i] = res[1][i] * sparse_base + r;
                             k--;
@@ -132,7 +131,7 @@ namespace nil {
                         res[1][i] = 0;
                         for (int j = sizes[i] - 1; j > -1; j--) {
                             const integral_type k_pow = cached_pow<BlueprintFieldType>(base, k);
-                            nil::crypto3::multiprecision::divide_qr(tmp, k_pow, r, tmp);
+                            boost::multiprecision::divide_qr(tmp, k_pow, r, tmp);
                             res[0][i] = res[0][i] * 2 + r_values[std::size_t(r)];
                             res[1][i] = res[1][i] * sparse_base + r;
                             k--;
@@ -163,7 +162,7 @@ namespace nil {
                         res[1][i] = 0;
                         for (int j = sizes[i] - 1; j > -1; j--) {
                             const integral_type k_pow = cached_pow<BlueprintFieldType>(base, k);
-                            nil::crypto3::multiprecision::divide_qr(tmp, k_pow, r, tmp);
+                            boost::multiprecision::divide_qr(tmp, k_pow, r, tmp);
                             res[0][i] = res[0][i] * 2 + r_values[std::size_t(r)];
                             res[1][i] = res[1][i] * sparse_base + r;
                             k--;

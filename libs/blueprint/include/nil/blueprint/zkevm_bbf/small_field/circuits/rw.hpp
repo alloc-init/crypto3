@@ -66,7 +66,7 @@ namespace nil::blueprint::bbf::zkevm_small_field{
         };
 
         // using value = typename FieldType::value_type;
-        // using integral_type = nil::crypto3::multiprecision::big_uint<257>;
+        // using integral_type = boost::multiprecision::big_uint<257>;
 
         // Chunks 7: op -- 1, id -- 2, address -- 2, rw_id -- 2;
         // Diff for each chunk has its own selector

@@ -43,7 +43,7 @@ void test_ec_incomplete_add(
     using TYPE = typename FieldType::value_type;
     using NON_NATIVE_TYPE = typename NonNativeFieldType::value_type;
     using integral_type = typename BlueprintFieldType::integral_type;
-    typedef nil::crypto3::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
+    typedef boost::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
         non_native_integral_type;
 
     non_native_integral_type pow = 1;
@@ -151,7 +151,7 @@ void ec_incomplete_add_tests() {
     using ec_point_value_type = typename Curve::template g1_type<
         nil::crypto3::algebra::curves::coordinates::affine>::value_type;
 
-    typedef nil::crypto3::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
+    typedef boost::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
         extended_integral_type;
 
     static boost::random::mt19937 seed_seq;

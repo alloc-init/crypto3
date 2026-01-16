@@ -37,7 +37,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
     public:
         using typename generic_component<FieldType,stage>::TYPE;
         using input_type = typename std::conditional<stage==GenerationStage::ASSIGNMENT, short_rw_operations_vector, std::nullptr_t>::type;
-        using integral_type =  nil::crypto3::multiprecision::big_uint<257>;
+        using integral_type =  boost::multiprecision::big_uint<257>;
     public:
         // rw_table
         std::vector<TYPE> op;

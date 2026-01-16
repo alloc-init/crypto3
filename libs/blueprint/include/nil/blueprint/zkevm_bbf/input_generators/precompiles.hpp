@@ -85,7 +85,7 @@ namespace nil::blueprint::bbf {
 
     namespace detail {
 
-        using nil::crypto3::multiprecision::big_uint;
+        using boost::multiprecision::big_uint;
 
         // NOTE: EVM spec mandates "infinite length by appending zeroes as required"
         // for input data, hence all the padding staff below.
@@ -198,19 +198,19 @@ namespace nil::blueprint::bbf {
             auto raw_x = read_big_uint<384>(input);
 
             // first bit: is compressed
-            if (!raw_x.bit_test(383)) return std::nullopt;
+            if (!bit_test(raw_x, 383)) return std::nullopt;
             raw_x.bit_unset(383);
 
             // second bit: is point at infinity (everything else must be 0);
             // it is permmitted to be used in KZG by EIP!
-            if (raw_x.bit_test(382)) {
+            if (bit_test(raw_x, 382)) {
                 raw_x.bit_unset(382);
                 if (!raw_x.is_zero()) return std::nullopt;
                 return Point::zero();
             }
 
             // third bit: pick bigger root for y
-            bool pick_bigger_root = raw_x.bit_test(381);
+            bool pick_bigger_root = bit_test(raw_x, 381);
             raw_x.bit_unset(381);
 
             if (raw_x >= BaseField::modulus) return std::nullopt;

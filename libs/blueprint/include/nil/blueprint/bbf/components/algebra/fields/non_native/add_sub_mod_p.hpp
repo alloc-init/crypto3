@@ -103,7 +103,7 @@ namespace nil {
                         : generic_component<FieldType, stage>(context_object) {
                         using integral_type = typename FieldType::integral_type;
                         using extended_integral_type =
-                            nil::crypto3::multiprecision::big_uint<
+                            boost::multiprecision::big_uint<
                                 2 * NonNativeFieldType::modulus_bits>;
 
                         using Carry_On_Addition =

@@ -65,7 +65,7 @@ public:
     using input_type = mpt_node_input_type<FieldType, stage>;
 
     using value_type = typename FieldType::value_type;
-    using integral_type = nil::crypto3::multiprecision::big_uint<257>;
+    using integral_type = boost::multiprecision::big_uint<257>;
 
 /*
     // will probably be never used

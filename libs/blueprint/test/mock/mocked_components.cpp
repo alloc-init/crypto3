@@ -330,7 +330,7 @@ void test_big_signed_absolute() {
             256u, 256u, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked>>;
     using cpp_uint_type = boost::multiprecision::number<boost::multiprecision::cpp_int_backend<
             256u, 256u, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked>>;
-    using uint_type = nil::crypto3::multiprecision::big_uint<256u>;
+    using uint_type = boost::multiprecision::big_uint<256u>;
     
     boost::random::mt19937 seed_seq;
     boost::random::uniform_int_distribution<cpp_uint_type>

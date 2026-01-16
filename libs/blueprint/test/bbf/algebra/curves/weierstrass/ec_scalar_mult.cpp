@@ -44,7 +44,7 @@ void test_ec_scalar_mult(
     using FieldType = BlueprintFieldType;
     using TYPE = typename FieldType::value_type;
     using integral_type = typename BlueprintFieldType::integral_type;
-    typedef nil::crypto3::multiprecision::big_uint<2 *
+    typedef boost::multiprecision::big_uint<2 *
                                                    NonNativeFieldType::modulus_bits>
         non_native_integral_type;
 
@@ -129,10 +129,10 @@ void ec_scalar_mult_tests() {
     using scalar_value_type = typename CurveType::scalar_field_type::value_type;
     using foreign_integral_type = typename CurveType::base_field_type::integral_type;
 
-    typedef nil::crypto3::multiprecision::big_uint<2 *
+    typedef boost::multiprecision::big_uint<2 *
                                                    CurveType::base_field_type::modulus_bits>
         extended_integral_type;
-    typedef nil::crypto3::multiprecision::big_uint<2 *
+    typedef boost::multiprecision::big_uint<2 *
                                                    CurveType::scalar_field_type::modulus_bits>
         scalar_integral_type;
 

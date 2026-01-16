@@ -42,6 +42,10 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         crypto3::zk
         crypto3::random
         crypto3::hash
+        marshalling::crypto3_multiprecision
+        marshalling::crypto3_algebra
+        marshalling::crypto3_zk
+        marshalling::core
         Boost::unit_test_framework
         Boost::log
         Boost::log_setup

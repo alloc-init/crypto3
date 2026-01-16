@@ -44,7 +44,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
 
         using typename generic_component<FieldType, stage>::table_params;
         using typename generic_component<FieldType, stage>::TYPE;
-        using integral_type = nil::crypto3::multiprecision::big_uint<257>;
+        using integral_type = boost::multiprecision::big_uint<257>;
         using private_input_type =
             typename std::conditional<stage == GenerationStage::ASSIGNMENT,
                                     zkevm_keccak_buffers, std::nullptr_t>::type;

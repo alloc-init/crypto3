@@ -50,7 +50,7 @@ namespace nil {
                 constexpr static const std::uint32_t ratio = 4;    // 66,66,66,66 bits
                 using non_native_field_type = typename crypto3::algebra::curves::ed25519::base_field_type;
                 using native_field_type = typename crypto3::algebra::curves::pallas::base_field_type;
-                using extended_integral_type = nil::crypto3::multiprecision::big_uint<2 * native_field_type::policy_type::modulus_bits>;
+                using extended_integral_type = boost::multiprecision::big_uint<2 * native_field_type::policy_type::modulus_bits>;
 
                 using var = crypto3::zk::snark::plonk_variable<typename native_field_type::value_type>;
 
@@ -125,7 +125,7 @@ namespace nil {
                 constexpr static const std::uint32_t ratio = 2;    // 254, 1 bits
                 using non_native_field_type = typename crypto3::algebra::curves::pallas::scalar_field_type;
                 using native_field_type = typename crypto3::algebra::curves::pallas::base_field_type;
-                using extended_integral_type = nil::crypto3::multiprecision::big_uint<2 * native_field_type::policy_type::modulus_bits>;
+                using extended_integral_type = boost::multiprecision::big_uint<2 * native_field_type::policy_type::modulus_bits>;
                 using var = crypto3::zk::snark::plonk_variable<native_field_type>;
 
                 typedef std::array<var, ratio> non_native_var_type;
@@ -276,13 +276,13 @@ namespace nil {
             */
             template<typename BlueprintFieldType>
             struct basic_non_native_policy_field_type<BlueprintFieldType,
-                    nil::crypto3::multiprecision::big_uint<256>> {
+                    boost::multiprecision::big_uint<256>> {
 
                 constexpr static const std::uint32_t ratio = 2; // 128, 128 bits
                 // not actually a field, but we preserve the interface
-                using non_native_field_type = typename nil::crypto3::multiprecision::big_uint<256>;
+                using non_native_field_type = typename boost::multiprecision::big_uint<256>;
                 using native_field_type = typename crypto3::algebra::curves::pallas::base_field_type;
-                using extended_integral_type = nil::crypto3::multiprecision::big_uint<2 * native_field_type::policy_type::modulus_bits>;
+                using extended_integral_type = boost::multiprecision::big_uint<2 * native_field_type::policy_type::modulus_bits>;
                 using var = crypto3::zk::snark::plonk_variable<typename native_field_type::value_type>;
 
                 typedef std::array<var, ratio> non_native_var_type;

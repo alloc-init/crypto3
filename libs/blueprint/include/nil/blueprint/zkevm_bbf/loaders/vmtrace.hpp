@@ -284,7 +284,7 @@ namespace nil {
             };
 
             class zkevm_vmtrace_trace_checker:public zkevm_basic_evm{
-                using extended_integral_type = nil::crypto3::multiprecision::big_uint<512>;
+                using extended_integral_type = boost::multiprecision::big_uint<512>;
             protected:
                 std::size_t tx_order = 0;
                 std::size_t call_id = 0;

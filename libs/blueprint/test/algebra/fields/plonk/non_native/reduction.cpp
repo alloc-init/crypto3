@@ -91,7 +91,7 @@ void test_reduction(std::vector<typename BlueprintFieldType::value_type> public_
         component_instance, desc, public_input, result_check, instance_input);
 }
 
-using extended_integral_type = nil::crypto3::multiprecision::big_uint<513>;
+using extended_integral_type = boost::multiprecision::big_uint<513>;
 
 constexpr static const extended_integral_type ed25519_scalar_modulus =
     0x1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed_big_uint512;
