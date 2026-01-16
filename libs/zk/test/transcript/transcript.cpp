@@ -47,8 +47,7 @@
 
 #include <nil/crypto3/zk/transcript/fiat_shamir.hpp>
 
-#include <nil/crypto3/marshalling/algebra/processing/curve_element.hpp>#include <nil/crypto3/marshalling/algebra/processing/mnt4.hpp>
-#include <nil/crypto3/marshalling/algebra/processing/mnt6.hpp>
+#include <nil/crypto3/marshalling/algebra/processing/curve_element.hpp>
 
 using namespace nil::crypto3;
 using namespace nil::crypto3::zk;
@@ -167,14 +166,15 @@ BOOST_AUTO_TEST_CASE(mnt6_keccak) {
         (0x56d23a0a6f75fe3a7670906b341b29cdde80696fc418771e3c84910217546ef1_cppui_modular298);
 }
 
-BOOST_AUTO_TEST_CASE(bls12_keccak) {
-    test_transcript<algebra::curves::bls12_381, hashes::keccak_1600<256>>
-        (0x7cc24317960f68f067e0a1cfe610fe3db024d52b064ff2115ea0f594602f0784_cppui_modular381);
-    /* TODO: no marshalling for bls12-377 curve
-    test_transcript<algebra::curves::bls12_377, hashes::keccak_1600<256>>
-        (0x0_cppui_modular377);
-    */
-}
+// bc: no bls12_381 keccak h2f suite
+// BOOST_AUTO_TEST_CASE(bls12_keccak) {
+//     test_transcript<algebra::curves::bls12_381, hashes::keccak_1600<256>>
+//         (0x7cc24317960f68f067e0a1cfe610fe3db024d52b064ff2115ea0f594602f0784_cppui_modular381);
+//     /* TODO: no marshalling for bls12-377 curve
+//     test_transcript<algebra::curves::bls12_377, hashes::keccak_1600<256>>
+//         (0x0_cppui_modular377);
+//     */
+// }
 
 BOOST_AUTO_TEST_CASE(pallas_poseidon) {
     using curve_type = algebra::curves::pallas;
