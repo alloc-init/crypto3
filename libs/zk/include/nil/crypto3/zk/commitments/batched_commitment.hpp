@@ -238,7 +238,7 @@ namespace nil {
                                         _z.set(batch_id, i, j, batch_polys[i].evaluate(point));
                                     }
                                 },
-                                ThreadPool::PoolLevel::HIGH);
+                                thread_pool::pool_level::HIGH);
                         }
                     }
 

@@ -296,7 +296,7 @@ namespace nil::crypto3::zk::snark {
 
             parallel_for(0, T_splitted.size(), [&T_splitted, &T_splitted_dfs](std::size_t k) {
                 T_splitted_dfs[k].from_coefficients(T_splitted[k]);
-            }, ThreadPool::PoolLevel::HIGH);
+            }, thread_pool::pool_level::HIGH);
 
             // DO NOT CHANGE, sizes are different by design
             T_splitted_dfs.resize(split_polynomial_size);
@@ -320,7 +320,7 @@ namespace nil::crypto3::zk::snark {
                         return;
                     }
                     F_consolidated_dfs_parts[i] *= alphas[i];
-            }, ThreadPool::PoolLevel::HIGH);
+            }, thread_pool::pool_level::HIGH);
 
             polynomial_dfs_type F_consolidated_dfs = polynomial_sum<FieldType>(std::move(F_consolidated_dfs_parts));
 

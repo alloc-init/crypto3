@@ -710,7 +710,7 @@ namespace nil {
                             for (size_t i = range_begin; i < range_end; i++) {
                                 this->val[i] = result[i];
                             }
-                        }, ThreadPool::PoolLevel::LOW));
+                        }, thread_pool::pool_level::LOW));
                 }
 
                 template<typename ContainerType>
@@ -829,7 +829,7 @@ namespace nil {
                 parallel_foreach(result.begin(), result.end(),
                     [&B](FieldValueType& v) {
                         v *= B;
-                    }, ThreadPool::PoolLevel::LOW);
+                    }, thread_pool::pool_level::LOW);
                 return result;
             }
 
@@ -850,7 +850,7 @@ namespace nil {
                 parallel_foreach(result.begin(), result.end(),
                     [&B_inversed](FieldValueType& v) {
                         v *= B_inversed;
-                    }, ThreadPool::PoolLevel::LOW);
+                    }, thread_pool::pool_level::LOW);
 
                 return result;
             }
@@ -943,7 +943,7 @@ namespace nil {
 
                 nil::crypto3::parallel_for(0, grouped_addends.size(), [&grouped_addends_coefs, &grouped_addends] (std::size_t i) {
                     grouped_addends_coefs[i] = grouped_addends[i].coefficients();
-                }, ThreadPool::PoolLevel::HIGH);
+                }, thread_pool::pool_level::HIGH);
 
                 // We can parallelize this by adding pairwise, like it's done in multiplication, but it's pretty fast
                 // so skipping it for now.
@@ -989,7 +989,7 @@ namespace nil {
                 parallel_foreach(needed_domain_sizes.begin(), needed_domain_sizes.end(),
                     [&domain_cache](std::size_t domain_size) {
                         domain_cache[domain_size] = make_evaluation_domain<FieldType>(domain_size);
-                    }, ThreadPool::PoolLevel::HIGH);
+                    }, thread_pool::pool_level::HIGH);
 
                 for (std::size_t stride = 1; stride < multipliers.size(); stride <<= 1) {
                     const std::size_t double_stride = stride << 1;
@@ -1020,7 +1020,7 @@ namespace nil {
 
                             // Free the memory we are not going to use anymore.
                             multipliers[index2] = polynomial_dfs<typename FieldType::value_type>();
-                    }, ThreadPool::PoolLevel::HIGH);
+                    }, thread_pool::pool_level::HIGH);
                 }
                 return multipliers[0];
             }

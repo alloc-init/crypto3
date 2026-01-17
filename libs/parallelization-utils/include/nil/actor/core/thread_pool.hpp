@@ -38,7 +38,7 @@
 
 namespace nil {
     namespace crypto3 {
-        class ThreadPool {
+        class thread_pool {
         public:
             static std::size_t core_count() {
 #if defined(__linux__) && !defined(__ANDROID__)
@@ -53,7 +53,7 @@ namespace nil {
                 return std::thread::hardware_concurrency();
             }
 
-            enum class PoolLevel {
+            enum class pool_level {
                 LOW,
                 HIGH
             };
@@ -62,21 +62,21 @@ namespace nil {
              *  operations and fft. Any code that uses these operations and needs to be parallel will submit its tasks to pool with HIGH.
              *  Submission of higher level tasks to low level pool will immediately result in a deadlock.
              */
-            static ThreadPool &get_instance(PoolLevel pool_id) {
+            static thread_pool &get_instance(pool_level pool_id) {
                 static std::size_t pool_size = core_count();
-                static ThreadPool instance_for_low_level(pool_size);
-                static ThreadPool instance_for_middle_level(pool_size);
+                static thread_pool instance_for_low_level(pool_size);
+                static thread_pool instance_for_middle_level(pool_size);
 
-                if (pool_id == PoolLevel::LOW)
+                if (pool_id == pool_level::LOW)
                     return instance_for_low_level;
-                if (pool_id == PoolLevel::HIGH)
+                if (pool_id == pool_level::HIGH)
                     return instance_for_middle_level;
                 throw std::invalid_argument("Invalid instance of thread pool requested.");
             }
 
-            ThreadPool(const ThreadPool &obj) = delete;
+            thread_pool(const thread_pool &obj) = delete;
 
-            ThreadPool &operator=(const ThreadPool &obj) = delete;
+            thread_pool &operator=(const thread_pool &obj) = delete;
 
             template<class ReturnType>
             inline std::future<ReturnType> post(std::function<ReturnType()> task) {
@@ -96,7 +96,7 @@ namespace nil {
             }
 
         private:
-            inline ThreadPool(std::size_t pool_size)
+            inline thread_pool(std::size_t pool_size)
                 : pool(pool_size)
                   , pool_size(pool_size) {
             }

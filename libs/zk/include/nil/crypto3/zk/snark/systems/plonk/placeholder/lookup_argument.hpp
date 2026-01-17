@@ -172,7 +172,7 @@ namespace nil {
                                 reduced_input[i] = reduce_dfs_polynomial_domain(
                                     lookup_input[i], this->basic_domain_size);
                             },
-                            ThreadPool::PoolLevel::HIGH);
+                            thread_pool::pool_level::HIGH);
 
                         // Compute the counts of how many times a lookup input appears in the lookup values.
                         std::vector<polynomial_dfs_type> counts =
@@ -240,7 +240,7 @@ namespace nil {
                                     h_challenges[i] *
                                     (hs[i] * (alpha - lookup_input[i]) + one);
                             },
-                            ThreadPool::PoolLevel::HIGH);
+                            thread_pool::pool_level::HIGH);
                         PROFILE_SCOPE_END();
 
                         F_dfs[0] = polynomial_sum<FieldType>(std::move(h_constraint_parts));
@@ -267,7 +267,7 @@ namespace nil {
                                     g_challenges[i] *
                                     (gs[i] * (alpha - lookup_value[i]) - counts[i]);
                             },
-                            ThreadPool::PoolLevel::HIGH);
+                            thread_pool::pool_level::HIGH);
                         PROFILE_SCOPE_END();
 
                         PROFILE_SCOPE("Lookup argument compute F_dfs[0]");
@@ -310,7 +310,7 @@ namespace nil {
                         parallel_for(0, Hs.size(), [&Hs, &alpha](std::size_t i) {
                              Hs[i] -= alpha;
                              Hs[i].element_wise_inverse();
-                        }, ThreadPool::PoolLevel::HIGH);
+                        }, thread_pool::pool_level::HIGH);
 
                         return Hs;
                     }
@@ -334,7 +334,7 @@ namespace nil {
                             for (size_t j = 0; j < g.size(); ++j) {
                                 g[j] *= counts[i][j];
                             }
-                        }, ThreadPool::PoolLevel::HIGH);
+                        }, thread_pool::pool_level::HIGH);
                         return Gs;
                     }
 
@@ -428,7 +428,7 @@ namespace nil {
                                     }
                                     lookup_value[lookup_values_used + o_id] = v;
                                 },
-                                ThreadPool::PoolLevel::HIGH);
+                                thread_pool::pool_level::HIGH);
                         }
                         return lookup_value;
                     }

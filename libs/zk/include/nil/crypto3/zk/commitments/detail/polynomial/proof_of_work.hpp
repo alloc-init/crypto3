@@ -90,7 +90,7 @@ namespace nil {
                                         }
                                         ++i;
                                     }
-                                }, ThreadPool::PoolLevel::LOW));
+                                }, thread_pool::pool_level::LOW));
 
                             if (challenge_found) {
                                 break;
@@ -163,7 +163,7 @@ namespace nil {
                                         }
                                         ++i;
                                     }
-                                }, ThreadPool::PoolLevel::LOW));
+                                }, thread_pool::pool_level::LOW));
 
                             if (challenge_found) {
                                 break;

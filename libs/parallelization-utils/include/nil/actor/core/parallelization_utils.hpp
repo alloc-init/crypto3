@@ -53,9 +53,9 @@ namespace nil {
         std::vector<std::future<ReturnType>> parallel_run_in_chunks_with_thread_id(
                 std::size_t elements_count,
                 std::function<ReturnType(std::size_t thread_id, std::size_t begin, std::size_t end)> func,
-                ThreadPool::PoolLevel pool_id = ThreadPool::PoolLevel::LOW) {
+                thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
 
-            auto& thread_pool = ThreadPool::get_instance(pool_id);
+            auto& thread_pool = thread_pool::get_instance(pool_id);
 
             std::vector<std::future<ReturnType>> fut;
             std::size_t workers_to_use = std::max((size_t)1, std::min(elements_count, thread_pool.get_pool_size()));
@@ -66,7 +66,7 @@ namespace nil {
 
             // Pool #0 will take care of the lowest level of operations, like polynomial operations.
             // We want the minimal size of elements_per_worker to be 'POOL_0_MIN_CHUNK_SIZE', otherwise the cores are not loaded.
-            if (pool_id == ThreadPool::PoolLevel::LOW && elements_count / workers_to_use < POOL_0_MIN_CHUNK_SIZE) {
+            if (pool_id == thread_pool::pool_level::LOW && elements_count / workers_to_use < POOL_0_MIN_CHUNK_SIZE) {
                 workers_to_use = elements_count / POOL_0_MIN_CHUNK_SIZE + ((elements_count % POOL_0_MIN_CHUNK_SIZE) ? 1 : 0);
                 workers_to_use = std::max((size_t)1, workers_to_use);
             }
@@ -86,7 +86,7 @@ namespace nil {
         std::vector<std::future<ReturnType>> parallel_run_in_chunks(
                 std::size_t elements_count,
                 std::function<ReturnType(std::size_t begin, std::size_t end)> func,
-                ThreadPool::PoolLevel pool_id = ThreadPool::PoolLevel::LOW) {
+                thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
             return parallel_run_in_chunks_with_thread_id<ReturnType>(elements_count,
                 [func](std::size_t thread_id, std::size_t begin, std::size_t end) -> ReturnType {
                     return func(begin, end);
@@ -97,7 +97,7 @@ namespace nil {
         template<class InputIt1, class InputIt2, class OutputIt, class BinaryOperation>
         void parallel_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
                                 OutputIt d_first, BinaryOperation binary_op,
-                                ThreadPool::PoolLevel pool_id = ThreadPool::PoolLevel::LOW) {
+                                thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
 
             wait_for_all(parallel_run_in_chunks<void>(
                 std::distance(first1, last1),
@@ -119,7 +119,7 @@ namespace nil {
         template<class InputIt, class OutputIt, class UnaryOperation>
         void parallel_transform(InputIt first1, InputIt last1,
                                 OutputIt d_first, UnaryOperation unary_op,
-                                ThreadPool::PoolLevel pool_id = ThreadPool::PoolLevel::LOW) {
+                                thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
 
             wait_for_all(parallel_run_in_chunks<void>(
                 std::distance(first1, last1),
@@ -140,7 +140,7 @@ namespace nil {
         template<class InputIt1, class InputIt2, class BinaryOperation>
         void in_place_parallel_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
                                          BinaryOperation binary_op,
-                                         ThreadPool::PoolLevel pool_id = ThreadPool::PoolLevel::LOW) {
+                                         thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
 
             wait_for_all(parallel_run_in_chunks<void>(
                 std::distance(first1, last1),
@@ -160,7 +160,7 @@ namespace nil {
         // UnaryOperation is supposed to modify the object in-place.
         template<class InputIt, class UnaryOperation>
         void parallel_foreach(InputIt first1, InputIt last1, UnaryOperation unary_op,
-                              ThreadPool::PoolLevel pool_id = ThreadPool::PoolLevel::LOW) {
+                              thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
 
             wait_for_all(parallel_run_in_chunks<void>(
                 std::distance(first1, last1),
@@ -176,7 +176,7 @@ namespace nil {
 
         // Calls function func for each value between [start, end).
         inline void parallel_for(std::size_t start, std::size_t end, std::function<void(std::size_t index)> func,
-                                 ThreadPool::PoolLevel pool_id = ThreadPool::PoolLevel::LOW) {
+                                 thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
             wait_for_all(parallel_run_in_chunks<void>(
                 end - start,
                 [start, func](std::size_t range_begin, std::size_t range_end) {

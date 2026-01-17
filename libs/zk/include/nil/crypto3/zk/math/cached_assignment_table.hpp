@@ -197,7 +197,7 @@ namespace nil::crypto3::zk::snark {
                         *_assignment_table_coefficients[new_vars[i]], get_domain(size));
                     _cache[std::make_pair(new_vars[i], size)][0] = value_dfs;
                 },
-                ThreadPool::PoolLevel::HIGH);
+                thread_pool::pool_level::HIGH);
 
             // Ensure we have the required variable in the cache with required rotation.
             parallel_for(
@@ -211,7 +211,7 @@ namespace nil::crypto3::zk::snark {
                             math::polynomial_shift(*_cache[var_and_size_pair_type(v, size)][0],
                                 v_with_rotation.rotation, this->_original_domain_size));
                 },
-                ThreadPool::PoolLevel::HIGH);
+                thread_pool::pool_level::HIGH);
         }
 
         bool is_cached(const variable_type& v, std::size_t size) const {

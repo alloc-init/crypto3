@@ -128,7 +128,7 @@ namespace nil {
                     nil::crypto3::parallel_foreach(polys.begin(), polys.end(),
                         [this](std::vector<value_type>& p) {
                             detail::basic_radix2_fft_cached<FieldType>(p, this->fft_cache->first);
-                    }, ThreadPool::PoolLevel::HIGH);
+                    }, thread_pool::pool_level::HIGH);
                 }
 
                 /** \brief Batch version of the 'inverse_fft' function
@@ -148,7 +148,7 @@ namespace nil {
                             nil::crypto3::parallel_foreach(p.begin(), p.end(), [&sconst](value_type& p_i) {
                                 p_i *= sconst;
                             });
-                    }, ThreadPool::PoolLevel::HIGH);
+                    }, thread_pool::pool_level::HIGH);
                 }
 
                 void inverse_fft(std::vector<value_type> &a) override {

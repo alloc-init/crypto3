@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_SUITE(thread_pool_test_suite)
                 for (std::size_t i = begin; i < end; ++i) {
                     v[i] *= v[i];
                 }
-            }, nil::crypto3::ThreadPool::PoolLevel::HIGH));
+            }, nil::crypto3::thread_pool::pool_level::HIGH));
 
         for (std::size_t i = 0; i < size; ++i) {
             BOOST_CHECK_EQUAL(v[i], i * i);

@@ -133,7 +133,7 @@ namespace nil {
                             h_v[i] *= beta;
                             h_v[i] += gamma;
                             h_v[i] += column_polynomials[global_indices[i]];
-                        }, ThreadPool::PoolLevel::HIGH);
+                        }, thread_pool::pool_level::HIGH);
 
                         V_P[0] = FieldType::value_type::one();
 
@@ -148,7 +148,7 @@ namespace nil {
                                 denom *= h_v[i][j - 1];
                             }
                             (*V_P_parts)[j] = nom * denom.inversed();
-                        }, ThreadPool::PoolLevel::LOW);
+                        }, thread_pool::pool_level::LOW);
 
                         for (std::size_t j = 1; j < basic_domain->size(); ++j)
                             V_P[j] = V_P[j - 1] * (*V_P_parts)[j];
@@ -230,7 +230,7 @@ namespace nil {
                                     [&reduced_g, &reduced_h, &current_poly, &previous_poly](std::size_t j) {
                                         current_poly[j] = (previous_poly[j] * reduced_g[j]) * reduced_h[j].inversed();
                                     },
-                                    ThreadPool::PoolLevel::LOW);
+                                    thread_pool::pool_level::LOW);
 
                                 commitment_scheme.append_to_batch(PERMUTATION_BATCH, current_poly);
                                 all_polys.push_back(current_poly);
@@ -244,7 +244,7 @@ namespace nil {
                                     auto &h = hs[i];
                                     F_dfs_1_parts[i] = permutation_alphas[i] * (all_polys[i] * g - all_polys[i + 1] * h);
                                 },
-                                ThreadPool::PoolLevel::HIGH);
+                                thread_pool::pool_level::HIGH);
 
                             std::size_t last = permutation_alphas.size();
                             auto &g = gs[last];

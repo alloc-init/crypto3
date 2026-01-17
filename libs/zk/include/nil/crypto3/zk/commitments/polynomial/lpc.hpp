@@ -171,7 +171,7 @@ namespace nil {
                             auto [batch_id, poly_idx] = indices[i];
                             this->_polys_coefficients[batch_id][poly_idx] =
                                 this->_polys[batch_id][poly_idx].coefficients();
-                        }, ThreadPool::PoolLevel::HIGH);
+                        }, thread_pool::pool_level::HIGH);
                     }
 
                     commitment_type commit(std::size_t index) {
@@ -377,7 +377,7 @@ namespace nil {
                                 math::polynomial<value_type> V = {-point, 1};
                                 Q_normal /= V;
                             },
-                            ThreadPool::PoolLevel::HIGH);
+                            thread_pool::pool_level::HIGH);
                         PROFILE_SCOPE_END();
 
                         math::polynomial<value_type> combined_Q_normal = std::accumulate(
@@ -465,9 +465,9 @@ namespace nil {
                                             theta_acc *= theta;
                                         }
                                     },
-                                    ThreadPool::PoolLevel::LOW));
+                                    thread_pool::pool_level::LOW));
                             },
-                            ThreadPool::PoolLevel::HIGH);
+                            thread_pool::pool_level::HIGH);
 
                         return Q_normal_parts;
                     }

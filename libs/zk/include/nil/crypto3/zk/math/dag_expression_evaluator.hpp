@@ -111,7 +111,7 @@ namespace nil::crypto3::zk::snark {
                         }
                     }
                 },
-                ThreadPool::PoolLevel::HIGH
+                thread_pool::pool_level::HIGH
             ));
 
 

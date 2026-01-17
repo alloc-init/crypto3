@@ -572,7 +572,7 @@ namespace nil {
                 parallel_foreach(result.begin(), result.end(),
                     [&B](FieldValueType& v) {
                         v *= B;
-                    }, ThreadPool::PoolLevel::LOW);
+                    }, thread_pool::pool_level::LOW);
                 return result;
             }
 
@@ -593,7 +593,7 @@ namespace nil {
                 parallel_foreach(result.begin(), result.end(),
                     [&B_inversed](FieldValueType& v) {
                         v *= B_inversed;
-                    }, ThreadPool::PoolLevel::LOW);
+                    }, thread_pool::pool_level::LOW);
 
                 return result;
             }

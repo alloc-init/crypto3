@@ -63,7 +63,7 @@ namespace nil {
                             for (std::size_t i = begin + 1; i < end; ++i) {
                                 cache[i] = cache[i - 1] * omega;
                             }
-                        }, ThreadPool::PoolLevel::LOW));
+                        }, thread_pool::pool_level::LOW));
                 }
 
                 /*
@@ -125,7 +125,7 @@ namespace nil {
                                             return;
                                     }
                                 }
-                            }, ThreadPool::PoolLevel::LOW
+                            }, thread_pool::pool_level::LOW
                         ));
                     }
                 }

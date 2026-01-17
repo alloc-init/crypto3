@@ -265,7 +265,7 @@ namespace nil {
                                 addends[polys_idx] += theta_i * (f_i - this->get_U(k, i)) * diffpoly;
                                 theta_i *= theta;
                             }
-                        }, ThreadPool::PoolLevel::HIGH);
+                        }, thread_pool::pool_level::HIGH);
 
                         auto f = math::polynomial<typename CommitmentSchemeType::scalar_value_type>::zero();
                         for (const auto& addend : addends) {
@@ -297,7 +297,7 @@ namespace nil {
                                 addends[polys_idx] += theta_i * Z_T_S_i * (f_i - this->get_U(k, i).evaluate(theta_2));
                                 theta_i *= theta;
                             }
-                        }, ThreadPool::PoolLevel::HIGH);
+                        }, thread_pool::pool_level::HIGH);
 
                         auto L = math::polynomial<typename CommitmentSchemeType::scalar_value_type>::zero();
                         for (const auto& addend : addends) {

@@ -524,7 +524,7 @@ namespace nil {
                                 poly[i].resize(D->size());
                             }
                         },
-                        ThreadPool::PoolLevel::HIGH);
+                        thread_pool::pool_level::HIGH);
                     PROFILE_SCOPE_END();
 
                     TAGGED_PROFILE_SCOPE("{low level} hash",
@@ -1056,7 +1056,7 @@ namespace nil {
 
                             proof.initial_proofs[query_id] = std::move(initial_proof);
                         },
-                        ThreadPool::PoolLevel::HIGH);
+                        thread_pool::pool_level::HIGH);
 
                     return proof;
                 }
