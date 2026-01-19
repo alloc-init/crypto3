@@ -94,7 +94,7 @@ struct GoldilocksCustom {
 
 constexpr std::uint64_t x_31 = 0xaf6f977ULL;
 constexpr std::uint64_t y_31 = 0x9f93335ULL;
-constexpr big_uint<31> babybear_modulus_big_uint = 0x78000001_big_uint31;
+constexpr big_uint<31> babybear_modulus_big_uint = 0x78000001_cppui_modular31;
 
 struct BabyBearMontgomery {
     using big_mod_t = montgomery_big_mod<babybear_modulus_big_uint>;
@@ -117,7 +117,7 @@ struct BabyBearCustom {
     static constexpr auto name = "[    custom][    babybear]";
 };
 
-constexpr big_uint<31> mersenne31_modulus_big_uint = 0x7fffffff_big_uint31;
+constexpr big_uint<31> mersenne31_modulus_big_uint = 0x7fffffff_cppui_modular31;
 
 struct Mersenne31Montgomery {
     using big_mod_t = montgomery_big_mod<mersenne31_modulus_big_uint>;

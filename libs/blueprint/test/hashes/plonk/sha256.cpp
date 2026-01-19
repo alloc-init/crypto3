@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE(blueprint_plonk_sha256_test0) {
      {0x88b8aa87277a142cbe3d58e7a85ced04_cppui_modular255, 0x4fec5eb57f1828caf06b5fae9c8c67fd_cppui_modular255});
 
     test_sha256_with_stretching<BlueprintFieldType>(
-        {0xffffffffffffffff_big_uint64, 0xffffffffffffffff_big_uint64, 0xffffffffffffffff_big_uint64, 0xffffffffffffffff_big_uint64},
+        {0xffffffffffffffff_cppui_modular64, 0xffffffffffffffff_cppui_modular64, 0xffffffffffffffff_cppui_modular64, 0xffffffffffffffff_cppui_modular64},
         {0xf58ac0f0665e3f1886f2eae35542987b_cppui_modular255, 0x9d61cc98e5d3ed2a5a9d8e3b9b7d9f2f_cppui_modular255});
     test_sha256_with_stretching<BlueprintFieldType>(
         {1, 1, 1, 1},

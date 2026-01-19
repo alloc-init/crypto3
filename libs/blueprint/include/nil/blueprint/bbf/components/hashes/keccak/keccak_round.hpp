@@ -73,7 +73,7 @@ namespace nil {
                 const std::size_t perm[25] = {1,  10, 7,  11, 17, 18, 3,  5,  16, 8, 21, 24, 4,
                                               15, 23, 19, 13, 12, 2,  20, 14, 22, 9, 6,  1};
                 const integral_type sparse_3 =
-                    0x6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB_big_uint192;
+                    0x6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB6DB_cppui_modular192;
                 const integral_type sparse_x80 =
                     calculate_sparse(integral_type(0x8000000000000000));
                 const integral_type sparse_x7f =
