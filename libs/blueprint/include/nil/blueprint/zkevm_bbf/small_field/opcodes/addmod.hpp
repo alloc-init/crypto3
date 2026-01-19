@@ -30,7 +30,6 @@
 #include <numeric>
 #include <vector>
 #include "nil/blueprint/bbf/enums.hpp"
-#include "nil/crypto3/multiprecision/detail/big_uint/arithmetic.hpp"
 
 namespace nil::blueprint::bbf::zkevm_small_field {
 template<typename FieldType>

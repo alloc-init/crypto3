@@ -45,7 +45,6 @@
 #include "nil/crypto3/algebra/pairing/bls12.hpp"
 #include "nil/crypto3/hash/keccak.hpp"
 #include "nil/crypto3/hash/sha2.hpp"
-#include "nil/crypto3/multiprecision/big_uint.hpp"
 #include "nil/crypto3/zk/commitments/polynomial/kzg.hpp"
 
 namespace nil::blueprint::bbf {
@@ -200,19 +199,19 @@ namespace nil::blueprint::bbf {
 
             // first bit: is compressed
             if (!bit_test(raw_x, 383)) return std::nullopt;
-            raw_x.bit_unset(383);
+            bit_unset(raw_x, 383);
 
             // second bit: is point at infinity (everything else must be 0);
             // it is permmitted to be used in KZG by EIP!
             if (bit_test(raw_x, 382)) {
-                raw_x.bit_unset(382);
+                bit_unset(raw_x, 382);
                 if (!raw_x.is_zero()) return std::nullopt;
                 return Point::zero();
             }
 
             // third bit: pick bigger root for y
             bool pick_bigger_root = bit_test(raw_x, 381);
-            raw_x.bit_unset(381);
+            bit_unset(raw_x, 381);
 
             if (raw_x >= BaseField::modulus) return std::nullopt;
             BaseField::value_type x = raw_x;
@@ -501,8 +500,8 @@ namespace nil::blueprint::bbf {
             return {0, gas_fee, {}};
 
         std::vector<uint8_t> result(64);
-        kFieldElementsPerBlob.export_bits(result.rbegin() + 32, 8, false);
-        kBlsModulus.export_bits(result.rbegin(), 8, false);
+        export_bits(kFieldElementsPerBlob, result.rbegin() + 32, 8, false);
+        export_bits(kBlsModulus, result.rbegin(), 8, false);
 
         return {1, gas_fee, std::move(result)};
     }

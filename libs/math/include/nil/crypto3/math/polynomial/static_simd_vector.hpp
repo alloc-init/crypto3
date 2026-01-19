@@ -37,10 +37,6 @@
 
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
 
-namespace nil::crypto3::algebra::fields {
-    struct babybear;
-}
-
 namespace nil::crypto3::math {
     template<typename FieldValueType, std::size_t Size>
     class static_simd_vector {

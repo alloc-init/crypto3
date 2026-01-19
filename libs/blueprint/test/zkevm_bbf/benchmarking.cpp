@@ -34,7 +34,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <nil/crypto3/algebra/curves/alt_bn128.hpp>
-#include <nil/crypto3/algebra/fields/babybear.hpp>
+#include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/algebra/curves/pallas.hpp>
 #include <nil/crypto3/algebra/fields/goldilocks.hpp>
 

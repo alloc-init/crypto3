@@ -162,14 +162,15 @@ namespace nil {
                             zkevm_word_type b = current_state.stack_top(1);
                             zkevm_word_type N = current_state.stack_top(2);
 
-                            auto s_full = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>(a) + b;
-                            zkevm_word_type s = s_full.truncate<256>();
+                            using extended_type = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>;
+                            auto s_full = extended_type(a) + b;
+                            zkevm_word_type s = s_full;
                             s_overflow = bit_test(s_full, 256);
-                            auto r_full = N != 0u ? s_full / N : 0u;
+                            auto r_full = N != 0u ? s_full / (extended_type)N : 0u;
                             r_overflow = bit_test(r_full, 256);
-                            zkevm_word_type r = r_full.truncate<256>();
+                            zkevm_word_type r = r_full;
                             // word_type q = N != 0u ? s % N : s;
-                            zkevm_word_type q = (s_full - r_full * N).truncate<256>();
+                            zkevm_word_type q = (s_full - r_full * (extended_type)N);
                             zkevm_word_type q_out =
                                 N != 0u ? q : 0u;  // according to EVM spec s % 0 = 0
                             zkevm_word_type v = q - N;

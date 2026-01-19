@@ -620,7 +620,7 @@ namespace nil {
                     zkevm_word_type sign = (x << (8 * (32 - len))) >> 255;
                     zkevm_word_type result =
                         zkevm_word_type(
-                                ((zkevm_word_type(1) << 8 * (32 - len)) - 1)
+                                (((zkevm_word_type(1) << 8 * (32 - len)) - 1)
                                 << 8 * len) *
                                 sign) +
                         ((x << (8 * (32 - len))) >> (8 * (32 - len)));
@@ -1112,9 +1112,10 @@ namespace nil {
                     zkevm_word_type a = stack.back(); stack.pop_back();
                     zkevm_word_type b = stack.back(); stack.pop_back();
                     zkevm_word_type modulus = stack.back(); stack.pop_back();
-                    auto s_full = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>(a) + b;
-                    auto r_full = modulus != 0u ? s_full / modulus : 0u;
-                    zkevm_word_type q = (s_full - r_full * modulus).truncate<256>();
+                    using extended_type = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>;
+                    auto s_full = extended_type(a) + b;
+                    auto r_full = modulus != 0u ? s_full / (extended_type)modulus : 0u;
+                    zkevm_word_type q = (s_full - r_full * (extended_type)modulus);
                     zkevm_word_type result = modulus != 0u ? q : 0u;
 
                     stack.push_back(result);
