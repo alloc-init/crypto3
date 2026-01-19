@@ -169,16 +169,16 @@ void ec_double_tests() {
         foreign_integral_type xQ = foreign_integral_type(Q.X.to_integral());
         foreign_integral_type yQ = foreign_integral_type(Q.Y.to_integral());
         for (std::size_t j = 0; j < num_chunks; j++) {
-            public_input[j] = value_type(xQ & mask);
+            public_input[j] = value_type(xQ & (foreign_integral_type)mask);
             xQ >>= bit_size_chunk;
 
-            public_input[1 * num_chunks + j] = value_type(yQ & mask);
+            public_input[1 * num_chunks + j] = value_type(yQ & (foreign_integral_type)mask);
             yQ >>= bit_size_chunk;
 
-            public_input[2 * num_chunks + j] = value_type(p & mask);
+            public_input[2 * num_chunks + j] = value_type(p & (foreign_integral_type)mask);
             p >>= bit_size_chunk;
 
-            public_input[3 * num_chunks + j] = value_type(pp & mask);
+            public_input[3 * num_chunks + j] = value_type(pp & (foreign_integral_type)mask);
             pp >>= bit_size_chunk;
         }
         public_input[4 * num_chunks] = value_type(0);

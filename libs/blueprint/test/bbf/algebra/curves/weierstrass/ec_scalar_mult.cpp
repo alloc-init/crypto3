@@ -165,25 +165,25 @@ void ec_scalar_mult_tests() {
         foreign_integral_type xR = foreign_integral_type(R.X.to_integral());
         foreign_integral_type yR = foreign_integral_type(R.Y.to_integral());
         for (std::size_t j = 0; j < num_chunks; j++) {
-            public_input[j] = value_type(s & mask);
+            public_input[j] = value_type(s & (foreign_integral_type)mask);
             s >>= bit_size_chunk;
 
-            public_input[num_chunks + j] = value_type(x & mask);
+            public_input[num_chunks + j] = value_type(x & (foreign_integral_type)mask);
             x >>= bit_size_chunk;
 
-            public_input[2 * num_chunks + j] = value_type(y & mask);
+            public_input[2 * num_chunks + j] = value_type(y & (foreign_integral_type)mask);
             y >>= bit_size_chunk;
 
-            public_input[3 * num_chunks + j] = value_type(p & mask);
+            public_input[3 * num_chunks + j] = value_type(p & (foreign_integral_type)mask);
             p >>= bit_size_chunk;
 
-            public_input[4 * num_chunks + j] = value_type(pp & mask);
+            public_input[4 * num_chunks + j] = value_type(pp & (foreign_integral_type)mask);
             pp >>= bit_size_chunk;
 
-            public_input[5 * num_chunks + j] = value_type(n & mask);
+            public_input[5 * num_chunks + j] = value_type(n & (foreign_integral_type)mask);
             n >>= bit_size_chunk;
 
-            public_input[6 * num_chunks + j] = value_type(mp & mask);
+            public_input[6 * num_chunks + j] = value_type(mp & (foreign_integral_type)mask);
             mp >>= bit_size_chunk;
         }
 
