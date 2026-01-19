@@ -14,7 +14,7 @@ filter=""
 dryrun=""
 timelimit="5m"
 only_compile=""
-abort_for_compilation_failure=""
+abort_on_failure=""
 
 if [[ $(uname) == Darwin ]]; then
     arch=mac
@@ -33,10 +33,10 @@ function show_help() {
     echo "  -t LIMIT        limit compilation and runtime [$timelimit]"
     echo "  -o FILE         output file [$csv]"
     echo "  -c              only compile"
-    echo "  -C              only compile, stop after the first compilation failure"
+    echo "  -s              stop after the first failure"
 }
 
-while getopts "h?df:t:o:ocC" opt; do
+while getopts "h?df:t:o:ocs" opt; do
   case "$opt" in
     h|\?)
         show_help
@@ -57,9 +57,8 @@ while getopts "h?df:t:o:ocC" opt; do
     c)
         only_compile=1
         ;;
-    C)
-        only_compile=1
-        abort_for_compilation_failure=1
+    s)
+        abort_on_failure=1
         ;;
   esac
 done
@@ -86,6 +85,9 @@ if [[ $(wc -l "$csv" | perl -lane 'print $F[0]') -gt 0 ]]; then
         if [[ ! $(grep $test $csv) ]]; then
             # echo "adding $test"
             tests+=" $test"
+        elif [[ -z $only_compile && $(grep $test $csv | perl -F',\s*' -lane 'print $F[5]') == "" ]]; then
+            # if we are running tests and this test has been compiled but not tested, include it in the list
+            tests+=" $test"
         else 
             echo "skipping $test (logged already in $csv)"
         fi
@@ -94,60 +96,69 @@ else
     tests=$raw_tests
 fi
 
-
-function recorded_run() {
-    local func="$1"
-    local testname="$2"
-    if [[ $func == compile ]]; then
-        echo "======= compiling $testname ======="
-        timeout $timelimit make $testname
-    elif [[ $func == run ]]; then
-        exe=$(fd $testname)
-        if [[ -z $exe ]]; then
-            return 0; # possibly a compile test
-        fi
-        echo "======= running ./$exe ======="
-        timeout $timelimit ./$exe
-    else
-        echo "ERROR: unknown func=$func"
-        exit 1
-    fi
+function compile() {
+    local testname="$1"
+    compile_failed=0
+    compile_timed_out=0
+    echo "======= compiling $testname ======="
+    timeout $timelimit make $testname
     res=$?
     if [[ $res -eq 124 ]]; then
         echo "======= $func timed out ======="
-        if [[ $func == compile ]]; then
-            compile_timed_out=1
-        else
-            exec_timed_out=1
-        fi
+        compile_timed_out=1
     elif [[ $res -ne 0 ]]; then
-        if [[ $func == compile ]]; then
-            compile_failed=1
-        else
-            exec_failed=1
-        fi
+        compile_failed=1
     fi
-    return $res
+}
+
+function test() {
+    local testname="$1"
+    test_failed=0
+    test_timed_out=0
+    exe=$(fd $testname)
+    if [[ -z $exe ]]; then
+        # possibly a compile-only test
+        return
+    fi
+    echo "======= running ./$exe ======="
+    timeout $timelimit ./$exe
+    res=$?
+    if [[ $res -eq 124 ]]; then
+        echo "======= $func timed out ======="
+        test_timed_out=1
+    elif [[ $res -ne 0 ]]; then
+        test_failed=1
+    fi
+}
+
+function record_results() {
+    new_entry="$test, $arch, $compile_timed_out, $compile_failed, $test_timed_out, $test_failed"
+    old_entry_lineno=$(grep -n $test $csv | cut -d':' -f1)
+    if [[ -z $old_entry_lineno ]]; then 
+        # no entry yet, add a new one
+        echo "$new_entry" >> $csv
+    else
+        # replace existing line with new line
+        sed -i'' -e "${old_entry_lineno}s/.*/$new_entry/" $csv
+    fi
 }
 
 for test in $tests; do
-    compile_timed_out=0
-    exec_timed_out=0
-    compile_failed=0
-    exec_failed=0
+    compile_timed_out=""
+    compile_failed=""
+    test_timed_out=""
+    test_failed=""
 
     echo "======= starting $test ======="
-
     [[ -n $dryrun ]] && continue # if dryrun, skip to next iteraton
 
-    recorded_run compile $test
+    compile $test
+    [[ -n $abort_on_failure && $compile_failed == 1 ]] && exit 1
 
-    [[ -n $abort_for_compilation_failure && $compile_failed == 1 ]] && exit 1
-
-    if [[ -n $only_compile ]]; then
-        echo "$test, $arch, $compile_timed_out, $compile_failed, , " >> $csv
-    else
-        recorded_run run $test
-        echo "$test, $arch, $compile_timed_out, $compile_failed, $exec_timed_out, $exec_failed" >> $csv
+    if [[ ! $only_compile ]]; then
+        test $test
+        [[ -n $abort_on_failure && $test_failed == 1 ]] && exit 1
     fi
+
+    record_results
 done
