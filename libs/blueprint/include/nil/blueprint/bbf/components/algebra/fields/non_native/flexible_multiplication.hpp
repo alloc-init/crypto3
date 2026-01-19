@@ -105,9 +105,8 @@ namespace nil {
                                             bool make_links = true)
                         : generic_component<FieldType, stage>(context_object) {
 
-                        using extended_integral_type =
-                            boost::multiprecision::big_uint<
-                                2 * NonNativeFieldType::modulus_bits>;
+                        using extended_integral_type = boost::multiprecision::number<
+                            boost::multiprecision::cpp_int_modular_backend<2 * NonNativeFieldType::modulus_bits>>;
 
                         using integral_type = typename FieldType::integral_type;
 

@@ -111,16 +111,16 @@ namespace nil {
                         using BASE_TYPE = typename BaseField::value_type;
                         using base_basic_integral_type =
                             typename BaseField::integral_type;
-                        typedef boost::multiprecision::big_uint<
-                            2 * BaseField::modulus_bits>
+                        typedef boost::multiprecision::number<
+                            boost::multiprecision::cpp_int_modular_backend<2 * BaseField::modulus_bits>>
                             base_integral_type;
 
                         using ScalarField = typename CurveType::scalar_field_type;
                         using SCALAR_TYPE = typename ScalarField::value_type;
                         using scalar_basic_integral_type =
                             typename ScalarField::integral_type;
-                        typedef boost::multiprecision::big_uint<
-                            2 * ScalarField::modulus_bits>
+                        typedef boost::multiprecision::number<
+                            boost::multiprecision::cpp_int_modular_backend<2 * ScalarField::modulus_bits>>
                             scalar_integral_type;
 
                         using ec_point_value_type = typename CurveType::template g1_type<

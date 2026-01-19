@@ -43,8 +43,8 @@ void test_ec_double(
     using TYPE = typename FieldType::value_type;
     using NON_NATIVE_TYPE = typename NonNativeFieldType::value_type;
     using integral_type = typename BlueprintFieldType::integral_type;
-    typedef boost::multiprecision::big_uint<2 *
-                                                   NonNativeFieldType::modulus_bits>
+    typedef boost::multiprecision::number<
+        boost::multiprecision::cpp_int_modular_backend<2 * NonNativeFieldType::modulus_bits>>
         non_native_integral_type;
 
     non_native_integral_type pow = 1;

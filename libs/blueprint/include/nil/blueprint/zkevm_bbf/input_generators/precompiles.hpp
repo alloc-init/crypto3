@@ -85,7 +85,8 @@ namespace nil::blueprint::bbf {
 
     namespace detail {
 
-        using boost::multiprecision::big_uint;
+        template<size_t Bits>
+        using big_uint = boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<Bits>>;
 
         // NOTE: EVM spec mandates "infinite length by appending zeroes as required"
         // for input data, hence all the padding staff below.
