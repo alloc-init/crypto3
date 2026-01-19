@@ -162,7 +162,7 @@ namespace nil {
                             zkevm_word_type b = current_state.stack_top(1);
                             zkevm_word_type N = current_state.stack_top(2);
 
-                            auto s_full = boost::multiprecision::big_uint<257>(a) + b;
+                            auto s_full = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>(a) + b;
                             zkevm_word_type s = s_full.truncate<256>();
                             s_overflow = bit_test(s_full, 256);
                             auto r_full = N != 0u ? s_full / N : 0u;

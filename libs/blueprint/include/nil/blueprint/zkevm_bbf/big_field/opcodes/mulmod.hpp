@@ -138,7 +138,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
                         const opcode_input_type<FieldType, stage> &current_state,
                         bool make_links = true)
             : generic_component<FieldType, stage>(context_object, false), res(chunk_amount) {
-            using extended_integral_type = boost::multiprecision::big_uint<512>;
+            using extended_integral_type = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<512>>;
             // The central relation is a * b = s = Nr + q, q < N.
 
             std::vector<TYPE> v_chunks(chunk_amount);

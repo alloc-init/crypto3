@@ -41,7 +41,7 @@ void test_add_sub_mod_p(
     using FieldType = BlueprintFieldType;
     using TYPE = typename FieldType::value_type;
     using integral_type = typename BlueprintFieldType::integral_type;
-    typedef boost::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
+    typedef boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<2 * NonNativeFieldType::modulus_bits>>
         extended_integral_type;
 
     extended_integral_type x = 0, y = 0, p = 0, pow = 1;
@@ -141,7 +141,7 @@ void add_sub_mod_p_tests() {
     using value_type = typename BlueprintFieldType::value_type;
     using integral_type = typename BlueprintFieldType::integral_type;
     using foreign_value_type = typename NonNativeFieldType::value_type;
-    typedef boost::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
+    typedef boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<2 * NonNativeFieldType::modulus_bits>>
         extended_integral_type;
 
     static boost::random::mt19937 seed_seq;

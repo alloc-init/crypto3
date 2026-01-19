@@ -40,7 +40,7 @@ namespace nil::blueprint::bbf::zkevm_small_field{
     public:
         using typename generic_component<FieldType,stage>::TYPE;
         using input_type = typename std::conditional<stage==GenerationStage::ASSIGNMENT, std::vector<timeline_item>, std::nullptr_t>::type;
-        using integral_type =  boost::multiprecision::big_uint<257>;
+        using integral_type =  boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>;
 
     public:
         // timeline_table

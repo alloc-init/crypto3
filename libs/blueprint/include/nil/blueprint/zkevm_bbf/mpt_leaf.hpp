@@ -79,7 +79,7 @@ namespace nil::blueprint::bbf {
         //                                 _input_type, std::nullptr_t>::type;
 
         using value = typename FieldType::value_type;
-        using integral_type = boost::multiprecision::big_uint<257>;
+        using integral_type = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>;
 
         static table_params get_minimal_requirements(std::size_t max_mpt_query_size, mpt_type type) {
             std::size_t witnesses;

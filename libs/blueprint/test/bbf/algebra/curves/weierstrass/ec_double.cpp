@@ -144,7 +144,7 @@ void ec_double_tests() {
     using ec_point_value_type = typename Curve::template g1_type<
         nil::crypto3::algebra::curves::coordinates::affine>::value_type;
 
-    typedef boost::multiprecision::big_uint<2 * NonNativeFieldType::modulus_bits>
+    typedef boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<2 * NonNativeFieldType::modulus_bits>>
         extended_integral_type;
 
     static boost::random::mt19937 seed_seq;

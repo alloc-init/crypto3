@@ -49,7 +49,7 @@ namespace nil {
     namespace blueprint {
         namespace bbf {
             class zkevm_basic_input_generator: public zkevm_basic_evm{
-                using extended_integral_type = boost::multiprecision::big_uint<512>;
+                using extended_integral_type = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<512>>;
             protected:
                 std::size_t block_id;
                 std::size_t tx_id;

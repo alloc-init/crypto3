@@ -42,7 +42,7 @@ namespace nil::blueprint::bbf::zkevm_small_field{
 
         using state_table_type = state_table<FieldType, stage>;
         using value = typename FieldType::value_type;
-        using integral_type = boost::multiprecision::big_uint<257>;
+        using integral_type = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>;
 
         struct input_type{
             typename state_table_type::input_type state_trace;

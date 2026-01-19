@@ -37,7 +37,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
     public:
         using typename generic_component<FieldType,stage>::TYPE;
         using input_type = typename std::conditional<stage==GenerationStage::ASSIGNMENT, state_operations_vector, std::nullptr_t>::type;
-        using integral_type =  boost::multiprecision::big_uint<257>;
+        using integral_type =  boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>;
     public:
         // state_table
         std::vector<TYPE> op;                           // 0

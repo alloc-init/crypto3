@@ -32,12 +32,12 @@
 
 namespace nil {
     namespace blueprint {
-        using zkevm_word_type = boost::multiprecision::big_uint<256>;
+        using zkevm_word_type = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<256>>;
         inline static constexpr zkevm_word_type neg_one =
             zkevm_word_type(1).wrapping_neg();
         inline static constexpr zkevm_word_type min_neg = zkevm_word_type(1) << 255;
         inline static constexpr auto extended_zkevm_mod =
-            boost::multiprecision::big_uint<512>(1) << 256;
+            boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<512>>(1) << 256;
 
         template<typename BlueprintFieldType>
         std::vector<typename BlueprintFieldType::value_type> zkevm_word_to_field_element(

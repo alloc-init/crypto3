@@ -36,7 +36,7 @@ namespace nil::blueprint::bbf::zkevm_small_field{
 
     public:
         using typename generic_component<FieldType,stage>::TYPE;
-        using integral_type =  boost::multiprecision::big_uint<257>;
+        using integral_type =  boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>;
 
         struct input_type {
             std::conditional_t<stage == GenerationStage::ASSIGNMENT, std::vector<copy_event>, std::monostate> copy_events;
