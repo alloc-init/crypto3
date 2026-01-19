@@ -169,7 +169,7 @@ namespace nil {
 
                 for (std::size_t i = 0; i < 8; i++) {
                     assignment.witness(component.W(i), row + 3) = data[i];
-                    k = k + data[i] * shft;
+                    k = k + (boost::multiprecision::uint512_modular_t)data[i] * shft;
                     shft = (shft << 64) % L;
                 }
 
