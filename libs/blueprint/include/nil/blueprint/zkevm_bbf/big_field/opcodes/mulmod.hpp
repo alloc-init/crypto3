@@ -227,7 +227,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
                 zkevm_word_type Nr_p = zkevm_word_type(Nr_integral % extended_zkevm_mod);
                 zkevm_word_type Nr_pp = zkevm_word_type(Nr_integral / extended_zkevm_mod);
 
-                zkevm_word_type v = wrapping_sub(q, N);
+                zkevm_word_type v = q - N;
 
                 zkevm_word_type result = q;
 

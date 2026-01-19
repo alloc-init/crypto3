@@ -144,7 +144,7 @@ namespace nil::blueprint::bbf::zkevm_small_field {
                 // Extract input values from stack
                 zkevm_word_type a = current_state.stack_top();
                 zkevm_word_type b = current_state.stack_top(1);
-                zkevm_word_type r = wrapping_mul(a, b);      // Result
+                zkevm_word_type r = a * b;      // Result
 
                 // 16-bit chunks
                 a_chunks = zkevm_word_to_field_element<FieldType>(a);

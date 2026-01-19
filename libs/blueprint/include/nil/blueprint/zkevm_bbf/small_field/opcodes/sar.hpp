@@ -160,7 +160,7 @@ class zkevm_sar_bbf : public generic_component<FieldType, stage> {
             zkevm_word_type r = a >> shift;         // Shifted result
             zkevm_word_type sign_value = a >> 255;  // Sign bit
             sign_bit = sign_value;
-            zkevm_word_type mask = wrapping_sub(0, sign_value)
+            zkevm_word_type mask = 0 - sign_value
                                    << (256 - shift);  // Sign extension mask
             zkevm_word_type result = r + mask;        // Final result
 
@@ -170,7 +170,7 @@ class zkevm_sar_bbf : public generic_component<FieldType, stage> {
             zkevm_word_type q = a % b;  // Division remainder -- this results in the shift least significant bits of a,
                                         // i.e. those that will disappear as a result of the shift operation.
             // Now we have a = r * b + q
-            zkevm_word_type v = wrapping_sub(q, b);   // Difference v = q-b
+            zkevm_word_type v = q - b;   // Difference v = q-b
             // To prove that q < b, we'll show that v + b = q + 2^256 (i.e. there is always a carry)
 
             // Convert to field elements

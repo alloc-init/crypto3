@@ -200,7 +200,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
                         }else{
                             b = exp_a;
                         }
-                        e = wrapping_mul(a, b);
+                        e = a * b;
                         intermediate_triplets.push_back({a, b, e});
                     }
 

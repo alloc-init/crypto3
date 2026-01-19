@@ -203,7 +203,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
                 zkevm_word_type r = a >> shift;         // Shifted result
                 zkevm_word_type sign_value = a >> 255;  // Sign bit
                 sign_bit = sign_value;
-                zkevm_word_type mask = wrapping_sub(0, sign_value)
+                zkevm_word_type mask = 0 - sign_value
                                     << (256 - shift);  // Sign extension mask
                 zkevm_word_type result = r + mask;        // Final result
 
@@ -211,7 +211,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
                                     << shift;             // Power of 2 for shift (shift < 256 => b != 0)
                 zkevm_word_type q = a % b;  // Quotient
                 // Now we have a = r * b + q
-                zkevm_word_type v = wrapping_sub(q, b);   // Difference v = q-b
+                zkevm_word_type v = q - b;   // Difference v = q-b
                 // To prove that q < b, we'll show that v + b = q + 2^256 (i.e. there is always a carry)
 
                 // Convert to field elements

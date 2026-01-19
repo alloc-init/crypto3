@@ -96,7 +96,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
             if constexpr( stage == GenerationStage::ASSIGNMENT ){
                 auto a = w_to_16(current_state.stack_top());
                 auto b = w_to_16(current_state.stack_top(1));
-                auto r = w_to_16(wrapping_mul(current_state.stack_top(), current_state.stack_top(1)));
+                auto r = w_to_16(current_state.stack_top() * current_state.stack_top(1));
                 for( std::size_t i = 0; i < 16; i++){
                     A[i] = a[i];
                     B[i] = b[i];
@@ -104,7 +104,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
                 }
                 BOOST_LOG_TRIVIAL(trace) << "\tA = " << std::hex << current_state.stack_top();
                 BOOST_LOG_TRIVIAL(trace) << "\tB = " << std::hex << current_state.stack_top(1);
-                BOOST_LOG_TRIVIAL(trace) << "\tR = " << std::hex << wrapping_mul(current_state.stack_top(), current_state.stack_top(1));
+                BOOST_LOG_TRIVIAL(trace) << "\tR = " << std::hex << current_state.stack_top() * current_state.stack_top(1);
             }
             for( std::size_t i = 0; i < 16; i++){
                 allocate(A[i], i, 0);

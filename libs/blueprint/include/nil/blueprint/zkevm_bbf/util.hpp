@@ -97,9 +97,9 @@ namespace nil {
                 if (n == 0x01_cppui_modular256) return a;
 
                 zkevm_word_type exp = exp_by_squaring(a, n >> 1);
-                zkevm_word_type exp2 = wrapping_mul(exp, exp);
+                zkevm_word_type exp2 = exp * exp;
                 if (n & 1) {
-                    return wrapping_mul(exp2, a);
+                    return exp2 * a;
                 }
                 return exp2;
             }

@@ -101,13 +101,12 @@ namespace nil::blueprint::bbf::zkevm_small_field{
                 // 8*(32-len) = number of bits  to be dropped from x
                 zkevm_word_type sign = (x << (8 * (32 - len))) >> 255; // sign = most significant bit in the kept part of x
                 zkevm_word_type result =
-                    wrapping_add(
-                        wrapping_mul(                                                           // (32-len) bytes|len bytes
-                            (wrapping_sub(zkevm_word_type(1) << 8 * (32 - len), 1) << 8 * len), // 0xFF........FF|00.....00
-                            sign // Depending on sign the result is either 0x00...00 or 0xFF...FF00...00
-                        ),
-                        ((x << (8 * (32 - len))) >> (8 * (32 - len))) // leaves only len bytes in x
-                    );
+                    (                                                                // (32-len) bytes|len bytes
+                        (((zkevm_word_type(1) << 8 * (32 - len)) - 1) << 8 * len)    // 0xFF........FF|00.....00
+                        * sign    // Depending on sign the result is either 0x00...00 or 0xFF...FF00...00
+                        ) +
+                    ((x << (8 * (32 - len))) >> (8 * (32 - len)))    // leaves only len bytes in x
+                    ;
 
                 b_chunks = zkevm_word_to_field_element<FieldType>(b);
                 x_chunks = zkevm_word_to_field_element<FieldType>(x);

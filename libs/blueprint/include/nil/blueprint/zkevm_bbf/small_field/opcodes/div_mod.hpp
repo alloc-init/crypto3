@@ -180,7 +180,7 @@ namespace nil::blueprint::bbf::zkevm_small_field{
                 zkevm_word_type r = (b > 0) ? (a % b) : 0;
 
                 // At this point, a = q * b + r, so q is the result of DIV and r is the result of MOD
-                zkevm_word_type v = wrapping_sub(r, b);
+                zkevm_word_type v = r - b;
                 // To prove that r < b, we'll show that b + v = r + 2^256 (i.e. there is always a carry)
 
                 // 16-bit chunks

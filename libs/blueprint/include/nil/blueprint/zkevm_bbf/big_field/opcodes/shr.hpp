@@ -183,7 +183,7 @@ namespace nil::blueprint::bbf::zkevm_big_field{
 
                 zkevm_word_type q = b != 0u ? a % b : a;
 
-                zkevm_word_type v = wrapping_sub(q, b);
+                zkevm_word_type v = q - b;
 
                 input_b_chunks = zkevm_word_to_field_element<FieldType>(input_b);
                 a_chunks = zkevm_word_to_field_element<FieldType>(a);

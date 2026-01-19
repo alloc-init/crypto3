@@ -169,10 +169,10 @@ namespace nil {
                             r_overflow = bit_test(r_full, 256);
                             zkevm_word_type r = r_full.truncate<256>();
                             // word_type q = N != 0u ? s % N : s;
-                            zkevm_word_type q = wrapping_sub(s_full, wrapping_mul(r_full, N)).truncate<256>();
+                            zkevm_word_type q = (s_full - r_full * N).truncate<256>();
                             zkevm_word_type q_out =
                                 N != 0u ? q : 0u;  // according to EVM spec s % 0 = 0
-                            zkevm_word_type v = wrapping_sub(q, N);
+                            zkevm_word_type v = q - N;
 
                             a_chunks = zkevm_word_to_field_element<FieldType>(a);
                             b_chunks = zkevm_word_to_field_element<FieldType>(b);

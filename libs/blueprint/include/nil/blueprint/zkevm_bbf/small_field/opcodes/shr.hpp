@@ -168,7 +168,7 @@ class zkevm_shr_bbf : public generic_component<FieldType, stage> {
             // constraints for any b == 0 (mod 2).
 
             // To prove that q < b, we'll show that v + b = q + 2^256 (i.e. there is always a carry)
-            zkevm_word_type v = wrapping_sub(q, b);   // Difference v = q-b
+            zkevm_word_type v = q - b;   // Difference v = q-b
 
             // Convert to field elements
             input_b_chunks = zkevm_word_to_field_element<FieldType>(input_b);

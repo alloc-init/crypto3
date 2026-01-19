@@ -81,7 +81,7 @@ class zkevm_cmp_bbf : generic_component<Field, stage> {
 
             auto a = is_less ? y : x;
             auto s = is_less ? x : y;
-            auto b = wrapping_sub(s, a);
+            auto b = s - a;
 
             A = w_to_16_le<TYPE>(a);
             B = w_to_16_le<TYPE>(b);

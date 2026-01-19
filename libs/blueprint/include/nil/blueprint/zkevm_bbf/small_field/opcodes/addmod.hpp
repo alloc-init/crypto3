@@ -240,7 +240,7 @@ class zkevm_addmod_bbf : public generic_component<FieldType, stage> {
             zkevm_word_type r = (N >= 2) ? (s % N).truncate<256>() : 0;   // the truncate method is necessary to convert to the 256-bit int type, although q, r do not overflow 256 bits for any N >= 2.
             
             // At this point, a + b = q * N + r, so r is our result
-            zkevm_word_type v = wrapping_sub(r, N);   
+            zkevm_word_type v = r - N;   
             // To prove that r < N, we'll show that N + v = r + 2^256 (i.e. there is always a carry)
 
             // 16-bit chunks

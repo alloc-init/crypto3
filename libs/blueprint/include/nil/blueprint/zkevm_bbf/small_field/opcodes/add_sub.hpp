@@ -65,8 +65,8 @@ class zkevm_add_sub_bbf : generic_component<FieldType, stage> {
         if constexpr (stage == GenerationStage::ASSIGNMENT) {
             auto x = current_state.stack_top(0);
             auto y = current_state.stack_top(1);
-            auto result = is_add ? wrapping_add(x, y)
-                                 : wrapping_sub(x, y);
+            auto result = is_add ? x + y
+                                 : x - y;
 
             A = w_to_16_le<TYPE>(is_add ? x : result);
             B = w_to_16_le<TYPE>(y);

@@ -620,7 +620,7 @@ namespace nil {
                     zkevm_word_type sign = (x << (8 * (32 - len))) >> 255;
                     zkevm_word_type result =
                         zkevm_word_type(
-                                (wrapping_sub(zkevm_word_type(1) << 8 * (32 - len), 1)
+                                ((zkevm_word_type(1) << 8 * (32 - len)) - 1)
                                 << 8 * len) *
                                 sign) +
                         ((x << (8 * (32 - len))) >> (8 * (32 - len)));
@@ -1016,7 +1016,7 @@ namespace nil {
                 virtual void add(){
                     auto a = stack.back(); stack.pop_back();
                     auto b = stack.back(); stack.pop_back();
-                    zkevm_word_type result = wrapping_add(a, b);
+                    zkevm_word_type result = a + b;
                     stack.push_back(result);
                     decrease_gas(3);
                     pc++;
@@ -1024,7 +1024,7 @@ namespace nil {
                 virtual void sub(){
                     auto a = stack.back(); stack.pop_back();
                     auto b = stack.back(); stack.pop_back();
-                    zkevm_word_type result = wrapping_sub(a, b);
+                    zkevm_word_type result = a - b;
                     stack.push_back(result);
                     decrease_gas(3);
                     pc++;
@@ -1032,7 +1032,7 @@ namespace nil {
                 virtual void mul() {
                     auto a = stack.back(); stack.pop_back();
                     auto b = stack.back(); stack.pop_back();
-                    zkevm_word_type result = wrapping_mul(a, b);
+                    zkevm_word_type result = a * b;
                     stack.push_back(result);
                     decrease_gas(5);
                     pc++;
@@ -1114,7 +1114,7 @@ namespace nil {
                     zkevm_word_type modulus = stack.back(); stack.pop_back();
                     auto s_full = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>(a) + b;
                     auto r_full = modulus != 0u ? s_full / modulus : 0u;
-                    zkevm_word_type q = wrapping_sub(s_full, wrapping_mul(r_full, modulus)).truncate<256>();
+                    zkevm_word_type q = (s_full - r_full * modulus).truncate<256>();
                     zkevm_word_type result = modulus != 0u ? q : 0u;
 
                     stack.push_back(result);
