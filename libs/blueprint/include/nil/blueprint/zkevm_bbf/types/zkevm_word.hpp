@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include <nil/crypto3/multiprecision/literals.hpp>
+#include <nil/crypto3/multiprecision/cpp_int_modular/literals.hpp>
 
 #include <nil/crypto3/hash/type_traits.hpp>
 #include <nil/crypto3/hash/algorithm/hash.hpp>
@@ -33,8 +33,15 @@
 namespace nil {
     namespace blueprint {
         using zkevm_word_type = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<256>>;
-        inline static constexpr zkevm_word_type neg_one =
-            zkevm_word_type(1).wrapping_neg();
+
+        constexpr zkevm_word_type negate_word(const zkevm_word_type &x) {
+            if (x.is_zero()) {
+                return x;
+            }
+            return ~x;
+        }
+
+        inline static constexpr zkevm_word_type neg_one = negate_word(zkevm_word_type(1));
         inline static constexpr zkevm_word_type min_neg = zkevm_word_type(1) << 255;
         inline static constexpr auto extended_zkevm_mod =
             boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<512>>(1) << 256;
@@ -178,7 +185,7 @@ namespace nil {
         template <typename T = size_t>
         std::array<T, 16> w_to_16_le(const zkevm_word_type &val) {
             std::array<T, 16> result;
-            val.export_bits(result.begin(), 16, false);
+            export_bits(val, result.begin(), 16, false);
             return result;
         }
 
@@ -199,8 +206,6 @@ namespace nil {
         }
 
         bool is_negative(zkevm_word_type x) { return bit_test(x, 255); }
-
-        zkevm_word_type negate_word(const zkevm_word_type &x) { return x.wrapping_neg(); }
 
         zkevm_word_type abs_word(zkevm_word_type x) { return is_negative(x) ? negate_word(x) : x; }
 
