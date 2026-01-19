@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
 #include <nil/crypto3/multiprecision/cpp_int_modular/literals.hpp>
 
 #include <nil/crypto3/hash/type_traits.hpp>

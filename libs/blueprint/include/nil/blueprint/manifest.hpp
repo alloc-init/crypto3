@@ -37,6 +37,7 @@
 #include <ostream>
 #include <typeinfo>
 #include <typeindex>
+#include <iterator>
 
 #include <boost/integer/extended_euclidean.hpp>
 #include <boost/assert.hpp>
