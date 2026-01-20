@@ -228,15 +228,17 @@ class zkevm_addmod_bbf : public generic_component<FieldType, stage> {
             zkevm_word_type N = current_state.stack_top(2);
             
             // addition and modulo operation
-            auto s = boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>(a) + b;
+            using extended_type =
+                boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<257>>;
+            auto s = extended_type(a) + b;
             // If N == 0:
             //      q == 0
             //      r == 0
             // If N >= 2:
             //      q == s / N      (in this case, q < 2^256)
             //      r == (s - q*N) mod 2^256
-            zkevm_word_type q = (N >= 2) ? (s / N).truncate<256>() : 0;       
-            zkevm_word_type r = (N >= 2) ? (s % N).truncate<256>() : 0;   // the truncate method is necessary to convert to the 256-bit int type, although q, r do not overflow 256 bits for any N >= 2.
+            zkevm_word_type q = (N >= 2) ? (s / (extended_type)N) : 0;       
+            zkevm_word_type r = (N >= 2) ? (s % (extended_type)N) : 0;
             
             // At this point, a + b = q * N + r, so r is our result
             zkevm_word_type v = r - N;   

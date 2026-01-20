@@ -104,7 +104,7 @@ namespace nil::blueprint::bbf {
         big_uint<Bits> read_big_uint(std::span<const uint8_t> &input) {
             big_uint<Bits> result;
             auto bytes = read_bytes<(Bits + 7) / 8>(input);
-            result.import_bits(bytes.begin(), bytes.end());
+            import_bits(result, bytes.begin(), bytes.end());
             return result;
         }
 

@@ -370,7 +370,7 @@ namespace nil::blueprint::bbf::zkevm_small_field{
                 }
                 // 3. Gas chunks range checks
                 context_object.relative_lookup({context_object.relativize(gas_chunks[1][0], -1)}, "chunk_16_bits/full", 0, max_zkevm_rows-1);
-                context_object.relative_lookup({context_object.relativize((MAX_ZKEVM_GAS_BOUND >> 16 - 1) - gas_chunks[1][0], -1)}, "chunk_16_bits/full", 0, max_zkevm_rows-1);
+                context_object.relative_lookup({context_object.relativize(((MAX_ZKEVM_GAS_BOUND >> 16) - 1) - gas_chunks[1][0], -1)}, "chunk_16_bits/full", 0, max_zkevm_rows-1);
                 context_object.relative_lookup({context_object.relativize(gas_chunks[1][1], -1)}, "chunk_16_bits/full", 0, max_zkevm_rows-1);
 
                 std::vector<std::pair<TYPE, std::string>> erc; // every row constraints

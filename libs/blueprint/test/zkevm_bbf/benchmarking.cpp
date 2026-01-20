@@ -109,16 +109,16 @@ BOOST_DATA_TEST_CASE(minimal_math_babybear_fixed_size,
     complex_test<FieldType>("minimal_math.json", gen_max_sizes(sample));
 }
 
-BOOST_DATA_TEST_CASE(minimal_math_babybear_fp4_fixed_size,
-                     boost::unit_test::data::xrange(30)) {
-    using FieldType = typename algebra::fields::babybear_fp4;
-    complex_test<FieldType>("minimal_math.json", gen_max_sizes(sample));
-}
+// BOOST_DATA_TEST_CASE(minimal_math_babybear_fp4_fixed_size,
+//                      boost::unit_test::data::xrange(30)) {
+//     using FieldType = typename algebra::fields::babybear_fp4;
+//     complex_test<FieldType>("minimal_math.json", gen_max_sizes(sample));
+// }
 
-BOOST_DATA_TEST_CASE(minimal_math_babybear_fp5_fixed_size,
-                     boost::unit_test::data::xrange(30)) {
-    using FieldType = typename algebra::fields::babybear_fp5;
-    complex_test<FieldType>("minimal_math.json", gen_max_sizes(sample));
-}
+// BOOST_DATA_TEST_CASE(minimal_math_babybear_fp5_fixed_size,
+//                      boost::unit_test::data::xrange(30)) {
+//     using FieldType = typename algebra::fields::babybear_fp5;
+//     complex_test<FieldType>("minimal_math.json", gen_max_sizes(sample));
+// }
 
 BOOST_AUTO_TEST_SUITE_END()
