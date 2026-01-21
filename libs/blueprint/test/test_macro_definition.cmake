@@ -16,9 +16,9 @@ macro(define_custom_blueprint_test test prefix)
 
     set_target_properties(${full_test_name} PROPERTIES CXX_STANDARD 23)
 
-    file(INSTALL "${BLUEPRINT_TEST_ROOT}/zkevm_bbf/data" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+    # file(INSTALL "${BLUEPRINT_TEST_ROOT}/zkevm_bbf/data" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 
-    target_compile_definitions(${full_test_name} PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_BINARY_DIR}/data/")
+    target_compile_definitions(${full_test_name} PRIVATE TEST_DATA_DIR="${BLUEPRINT_TEST_ROOT}/zkevm_bbf/data/")
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${full_test_name} PRIVATE "${ARGV2}" "-fconstexpr-steps=2147483647" "-ftemplate-backtrace-limit=0")
