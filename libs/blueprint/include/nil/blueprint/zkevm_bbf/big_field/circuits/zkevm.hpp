@@ -422,7 +422,10 @@ namespace nil::blueprint::bbf::zkevm_big_field{
                     BOOST_ASSERT(current_opcode_rows_amount <= max_opcode_height);
                     
                     TYPE o4 = opcode_selectors[1][opcode_num/4];
-                    TYPE parity = opcode_num%2 ? all_states[1].opcode_parity: 1 - all_states[1].opcode_parity;
+                    TYPE parity = all_states[1].opcode_parity;
+                    if ((opcode_num % 2) == 0) {
+                        parity = TYPE(1) - all_states[1].opcode_parity;
+                    }
                     TYPE is_even = all_states[1].is_even;
                     TYPE zero_constraint;
                     std::size_t bit1 = (opcode_num % 4 == 3) ||  (opcode_num % 4 == 2);
@@ -453,7 +456,10 @@ namespace nil::blueprint::bbf::zkevm_big_field{
                         evm_opcode_constraint += zkevm_opcode_selectors[current_opcode];
                     for(std::size_t i = 0; i < max_opcode_height; i++){
                         TYPE row_sel = opcode_row_selectors[1][i/2];
-                        TYPE row_parity = i%2 ? is_even : 1 - is_even;
+                        TYPE row_parity = is_even;
+                        if ((i % 2) == 0) {
+                            row_parity = 1 - is_even;
+                        }
                         TYPE zero_constraint;
                         TYPE one_constraint = zero_constraint + 1;
                         //zkevm_opcode_row_selectors[std::make_pair(current_opcode, i)] = zkevm_opcode_selectors[current_opcode] * row_parity * row_sel;
