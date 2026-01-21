@@ -50,17 +50,17 @@ namespace nil::crypto3::bench::detail {
         return str;
     }
 
-    class ArithmeticCounters {
-      public:
+    class arithmetic_counters {
+    public:
         enum Counter { MUL, ADD, SUB, COUNT };
 
-      private:
+    private:
         static inline std::array<std::atomic_size_t, COUNT> global_counters;
 
-      public:
-        static constexpr ArithmeticCounters get_snapshot() {
+    public:
+        static constexpr arithmetic_counters get_snapshot() {
             if (!std::is_constant_evaluated()) {
-                ArithmeticCounters counters;
+                arithmetic_counters counters;
                 for (std::size_t i = 0; i < COUNT; ++i) {
                     counters.counters[i] = global_counters[i];
                 }
@@ -75,7 +75,7 @@ namespace nil::crypto3::bench::detail {
             global_counters[c]++;
         }
 
-        std::string compared_to(const ArithmeticCounters& other) const {
+        std::string compared_to(const arithmetic_counters &other) const {
             std::stringstream ss;
             bool first = true;
             for (std::size_t i = 0; i < COUNT; ++i) {
@@ -105,24 +105,24 @@ namespace nil::crypto3::bench::detail {
             return ss.str();
         }
 
-      private:
+    private:
         std::array<std::size_t, COUNT> counters;
     };
 
-    class FFTCounters {
+    class fft_counters {
         static constexpr std::size_t FFT_MAX_1 = 30;
         static constexpr std::size_t FFT_TYPE_MAX_1 = 2;
 
         static inline std::array<std::array<std::atomic_size_t, FFT_MAX_1>,
-                                 FFT_TYPE_MAX_1>
-            global_ffts;
+            FFT_TYPE_MAX_1>
+        global_ffts;
 
         template<typename FieldType>
         static constexpr std::size_t get_field_type() {
             return FieldType::modulus_bits * FieldType::arity >= 100;
         }
 
-      public:
+    public:
         template<typename FieldType>
         static void register_fft(std::size_t log_size) {
             if (log_size >= FFT_MAX_1) {
@@ -132,8 +132,8 @@ namespace nil::crypto3::bench::detail {
             global_ffts[get_field_type<FieldType>()][log_size]++;
         }
 
-        static FFTCounters get_snapshot() {
-            FFTCounters counters;
+        static fft_counters get_snapshot() {
+            fft_counters counters;
             for (std::size_t t = 0; t < FFT_TYPE_MAX_1; ++t) {
                 for (std::size_t i = 0; i < FFT_MAX_1; ++i) {
                     counters.ffts[t][i] = global_ffts[t][i];
@@ -142,7 +142,7 @@ namespace nil::crypto3::bench::detail {
             return counters;
         }
 
-        std::string compared_to(const FFTCounters& other) const {
+        std::string compared_to(const fft_counters &other) const {
             std::stringstream ss;
             bool first_type = true;
             for (std::size_t t = 0; t < FFT_TYPE_MAX_1; ++t) {
@@ -178,19 +178,19 @@ namespace nil::crypto3::bench::detail {
             return ss.str();
         }
 
-      private:
+    private:
         std::array<std::array<std::size_t, FFT_MAX_1>, FFT_TYPE_MAX_1> ffts;
     };
 
     // Measures execution time of a given function just once. Prints
     // the time when leaving the function in which this class was created.
     class base_scoped_profiler {
-      protected:
+    protected:
         static inline std::size_t global_level = 0;
         static inline std::atomic_bool global_last_open = false;
-        static inline std::vector<base_scoped_profiler*> global_stack;
+        static inline std::vector<base_scoped_profiler *> global_stack;
         static inline std::map<std::string, std::chrono::milliseconds>
-            global_tag_statistics;
+        global_tag_statistics;
 
         static void print_prefix() {
             for (std::size_t i = 0; i < global_level; ++i) {
@@ -228,9 +228,7 @@ namespace nil::crypto3::bench::detail {
             if (has_children) {
                 auto self_time = elapsed - inner_time;
                 auto self_percent =
-                    elapsed.count() == 0
-                        ? 0
-                        : 100 * (self_time.count() * 1.0 / elapsed.count());
+                        elapsed.count() == 0 ? 0 : 100 * (self_time.count() * 1.0 / elapsed.count());
                 std::cout << std::format(" total, {} ms self, {:.2f}% self",
                                          delimitate_number(self_time.count()),
                                          self_percent);
@@ -244,13 +242,11 @@ namespace nil::crypto3::bench::detail {
 
         static void print_tag_statistics(std::chrono::milliseconds elapsed) {
             std::cout << "Tag statistics:" << std::endl;
-            for (const auto& [key, value] : global_tag_statistics) {
-                auto percent = elapsed.count() == 0
-                                   ? 0
-                                   : 100 * (value.count() * 1.0 / elapsed.count());
+            for (const auto &[key, value]: global_tag_statistics) {
+                auto percent = elapsed.count() == 0 ? 0 : 100 * (value.count() * 1.0 / elapsed.count());
                 std::cout << std::format("{}: {} ms, {:.2f}%", key,
                                          delimitate_number(value.count()), percent)
-                          << std::endl;
+                        << std::endl;
             }
             global_tag_statistics.clear();
         }
@@ -287,9 +283,10 @@ namespace nil::crypto3::bench::detail {
 
         base_scoped_profiler(std::string name,
                              std::optional<std::string> tag = std::nullopt)
-            : start(std::chrono::high_resolution_clock::now()), name(name), tag(tag) {}
+            : start(std::chrono::high_resolution_clock::now()), name(name), tag(tag) {
+        }
 
-      public:
+    public:
         static void scoped_log(std::string_view text) {
             if (global_last_open) {
                 std::cout << std::endl;
@@ -299,7 +296,7 @@ namespace nil::crypto3::bench::detail {
             std::cout << "[info] " << text << std::endl;
         }
 
-      protected:
+    protected:
         std::chrono::milliseconds inner_time = std::chrono::milliseconds::zero();
         std::chrono::time_point<std::chrono::high_resolution_clock> start;
         std::string name;
@@ -307,26 +304,26 @@ namespace nil::crypto3::bench::detail {
     };
 
     class scoped_profiler : public base_scoped_profiler {
-      public:
+    public:
         scoped_profiler(std::string name, std::optional<std::string> tag = std::nullopt)
             : base_scoped_profiler(name, tag) {
             print_start();
 #ifdef NIL_CO3_PROFILE_COUNT_ARITHMETIC_OPS
-            arithmetic_counters = ArithmeticCounters::get_snapshot();
+            arithmetic_counters = arithmetic_counters::get_snapshot();
 #endif
-            fft_counters = FFTCounters::get_snapshot();
+            fft_counters = fft_counters::get_snapshot();
         }
 
         void close() {
             auto elapsed = print_end();
 #ifdef NIL_CO3_PROFILE_COUNT_ARITHMETIC_OPS
             auto arithmetic_str =
-                ArithmeticCounters::get_snapshot().compared_to(arithmetic_counters);
+                    arithmetic_counters::get_snapshot().compared_to(arithmetic_counters);
             if (!arithmetic_str.empty()) {
                 std::cout << ", arithmetic: " << arithmetic_str;
             }
 #endif
-            auto ffts_str = FFTCounters::get_snapshot().compared_to(fft_counters);
+            auto ffts_str = fft_counters::get_snapshot().compared_to(fft_counters);
             if (!ffts_str.empty()) {
                 std::cout << ", FFTs: " << ffts_str;
             }
@@ -340,8 +337,8 @@ namespace nil::crypto3::bench::detail {
 
         static void close_last() {
             // NOLINTNEXTLINE
-            static_cast<scoped_profiler*>(base_scoped_profiler::global_stack.back())
-                ->close();
+            static_cast<scoped_profiler *>(base_scoped_profiler::global_stack.back())
+                    ->close();
         }
 
         ~scoped_profiler() {
@@ -350,17 +347,19 @@ namespace nil::crypto3::bench::detail {
             }
         }
 
-      private:
+    private:
         bool closed = false;
-        ArithmeticCounters arithmetic_counters;
-        FFTCounters fft_counters;
+        arithmetic_counters arithmetic_counters;
+        fft_counters fft_counters;
     };
 
     class parallel_scoped_profiler : public base_scoped_profiler {
         static inline std::mutex global_output_lock;
 
-      public:
-        parallel_scoped_profiler(std::string name) : base_scoped_profiler(name) {}
+    public:
+        parallel_scoped_profiler(std::string name) : base_scoped_profiler(name) {
+        }
+
         ~parallel_scoped_profiler() {
             auto elapsed = get_elapsed();
             std::scoped_lock lock(global_output_lock);
@@ -376,14 +375,14 @@ namespace nil::crypto3::bench::detail {
             std::cout << std::endl;
         }
     };
-}  // namespace nil::crypto3::bench::detail
+} // namespace nil::crypto3::bench::detail
 
 namespace nil::crypto3::bench {
     inline constexpr void register_mul() {
 #ifdef NIL_CO3_MP_ENABLE_ARITHMETIC_COUNTERS
         if (!std::is_constant_evaluated()) {
-            detail::ArithmeticCounters::register_counter<
-                detail::ArithmeticCounters::MUL>();
+            detail::arithmetic_counters::register_counter<
+                detail::arithmetic_counters::MUL>();
         }
 #endif
     }
@@ -391,8 +390,8 @@ namespace nil::crypto3::bench {
     inline constexpr void register_add() {
 #ifdef NIL_CO3_MP_ENABLE_ARITHMETIC_COUNTERS
         if (!std::is_constant_evaluated()) {
-            detail::ArithmeticCounters::register_counter<
-                detail::ArithmeticCounters::ADD>();
+            detail::arithmetic_counters::register_counter<
+                detail::arithmetic_counters::ADD>();
         }
 #endif
     }
@@ -400,17 +399,17 @@ namespace nil::crypto3::bench {
     inline constexpr void register_sub() {
 #ifdef NIL_CO3_MP_ENABLE_ARITHMETIC_COUNTERS
         if (!std::is_constant_evaluated()) {
-            detail::ArithmeticCounters::register_counter<
-                detail::ArithmeticCounters::SUB>();
+            detail::arithmetic_counters::register_counter<
+                detail::arithmetic_counters::SUB>();
         }
 #endif
     }
 
     template<typename FieldType>
     void register_fft(std::size_t log_size) {
-        detail::FFTCounters::register_fft<FieldType>(log_size);
+        detail::fft_counters::register_fft<FieldType>(log_size);
     }
-}  // namespace nil::crypto3::bench
+} // namespace nil::crypto3::bench
 
 #ifdef PROFILING_ENABLED
 #define NIL_CO3_CONCAT_(x, y) x##y
