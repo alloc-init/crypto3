@@ -243,7 +243,7 @@ namespace {
 
         using namespace nil::crypto3::marshalling;
 
-        using TTypeBase = marshalling::field_type<Endianness>;
+        using TTypeBase = nil::marshalling::field_type<Endianness>;
         using proof_marshalling_type = nil::crypto3::marshalling::types::placeholder_proof<TTypeBase, ProofType>;
 
         auto filled_placeholder_proof = types::fill_placeholder_proof<Endianness, ProofType>(proof, params);
@@ -254,7 +254,7 @@ namespace {
         cv.resize(filled_placeholder_proof.length(), 0x00);
         auto write_iter = cv.begin();
         auto status = filled_placeholder_proof.write(write_iter, cv.size());
-        BOOST_CHECK(status == marshalling::status_type::success);
+        BOOST_CHECK(status == nil::marshalling::status_type::success);
 
         if (!output_file.empty()) {
             print_placeholder_proof(cv.cbegin(), cv.cend(), false, output_file.c_str());
@@ -263,7 +263,7 @@ namespace {
         proof_marshalling_type test_val_read;
         auto read_iter = cv.begin();
         status = test_val_read.read(read_iter, cv.size());
-        BOOST_CHECK(status == marshalling::status_type::success);
+        BOOST_CHECK(status == nil::marshalling::status_type::success);
         auto constructed_val_read = types::make_placeholder_proof<Endianness, ProofType>(test_val_read);
         BOOST_CHECK(proof == constructed_val_read);
     }
@@ -327,7 +327,7 @@ namespace {
 } // namespace
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit1)
-    using Endianness = marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -443,7 +443,7 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test, test_tools::random_test_initializer<fie
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit2)
-    using Endianness = marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
     using curve_type = algebra::curves::bls12<381>;
     using field_type = typename curve_type::scalar_field_type;
 
@@ -559,8 +559,8 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test, test_tools::random_test_initializer<fie
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit3)
-    using Endianness = marshalling::option::big_endian;
-    using TTypeBase = marshalling::field_type<Endianness>;
+    using Endianness = nil::marshalling::option::big_endian;
+    using TTypeBase = nil::marshalling::field_type<Endianness>;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -679,7 +679,7 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test, test_tools::random_test_initializer<fie
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit4)
-    using Endianness = marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -798,7 +798,7 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test, test_tools::random_test_initializer<fie
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit5)
-    using Endianness = marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -999,7 +999,7 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test100, test_tools::random_test_initializer<
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit6)
-    using Endianness = marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -1117,7 +1117,7 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test, test_tools::random_test_initializer<fie
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit7)
-    using Endianness = marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
     using curve_type = algebra::curves::pallas;
     using field_type = typename curve_type::base_field_type;
 
@@ -1278,7 +1278,7 @@ BOOST_FIXTURE_TEST_CASE(transpiler_test10, test_initializer) {
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuit2_kzg)
-    using Endianness = marshalling::option::big_endian;
+    using Endianness = nil::marshalling::option::big_endian;
     using curve_type = algebra::curves::alt_bn128_254;
     using field_type = typename curve_type::scalar_field_type;
 
