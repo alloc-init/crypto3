@@ -17,6 +17,8 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 
         marshalling::crypto3_algebra
         marshalling::crypto3_zk
+        marshalling::crypto3_math
+        marshalling::crypto3_containers
 
         Boost::unit_test_framework)
 set_target_properties(_cm_internal_tests-crypto3-transpiler-test PROPERTIES CXX_STANDARD 23)
