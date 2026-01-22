@@ -43,12 +43,12 @@ namespace nil {
                     typedef typename policy_type::modular_type modular_type;
                     typedef typename policy_type::integral_type integral_type;
 
-                    constexpr static const std::size_t s = 0x20;
-                    constexpr static const integral_type arithmetic_generator = 0x01;
-                    constexpr static const integral_type geometric_generator = 0x02;
-                    constexpr static const integral_type multiplicative_generator = 0x07;
-                    constexpr static const integral_type root_of_unity =
-                            0x185629DCDA58878C_cppui_modular64;
+                    constexpr static const std::size_t s = 27;
+                    constexpr static integral_type arithmetic_generator = 1u;
+                    constexpr static integral_type multiplicative_generator = 31u;
+                    constexpr static integral_type root_of_unity = 0x1a427a41u;
+
+                    constexpr static integral_type geometric_generator = 0u;
                 };
 
                 constexpr std::size_t const arithmetic_params<babybear_base_field>::s;
@@ -64,6 +64,20 @@ namespace nil {
 
                 constexpr typename arithmetic_params<babybear_base_field>::integral_type const
                         arithmetic_params<babybear_base_field>::multiplicative_generator;
+
+                template<>
+                struct arithmetic_params<babybear_fp4> : public params<babybear> {
+                    // It's actually 29 but that requires going into the extension field and we don't
+                    // want that
+                    constexpr static std::size_t s = 27;
+                    constexpr static babybear_fp4::value_type multiplicative_generator {
+                        {babybear::value_type(8), babybear::value_type(1), babybear::value_type(0),
+                         babybear::value_type(0)}};
+                    constexpr static integral_type root_of_unity = 0x1a427a41u;
+
+                    constexpr static integral_type arithmetic_generator = 0u;
+                    constexpr static integral_type geometric_generator = 0u;
+                };
             }    // namespace fields
         }        // namespace algebra
     }            // namespace crypto3

@@ -50,8 +50,15 @@ namespace nil {
     namespace crypto3 {
         namespace zk {
             namespace snark {
-
                 /************************* PLONK constraint system ****************************/
+                constexpr static std::size_t const PLONK_SPECIAL_SELECTOR_ALL_USABLE_ROWS_SELECTED =
+                    std::numeric_limits<std::size_t>::max();
+                constexpr static std::size_t const PLONK_SPECIAL_SELECTOR_ALL_NON_FIRST_USABLE_ROWS_SELECTED =
+                    std::numeric_limits<std::size_t>::max() - 1; // Useful for lookup tables
+                constexpr static std::size_t const PLONK_SPECIAL_SELECTOR_ALL_ROWS_SELECTED =
+                    std::numeric_limits<std::size_t>::max() - 2;
+                constexpr static std::size_t const PLONK_MAX_SELECTOR_ID =
+                    std::numeric_limits<std::size_t>::max() - 3;
 
                 template<typename FieldType>
                 struct plonk_constraint_system {
@@ -62,11 +69,11 @@ namespace nil {
                     typedef plonk_lookup_table<FieldType> lookup_table_type;
                     typedef std::vector<lookup_table_type> lookup_tables_type;
                     typedef std::vector<plonk_variable<typename FieldType::value_type>> public_input_gate_type;
-                    typedef math::expression_max_degree_visitor<variable_type> degree_visitor_type;
-                    typedef math::expression<variable_type> expression_type;
-                    typedef math::term<variable_type> term_type;
-                    typedef math::binary_arithmetic_operation<variable_type> binary_operation_type;
-                    typedef math::pow_operation<variable_type> pow_operation_type;
+                    typedef expression_max_degree_visitor<variable_type> degree_visitor_type;
+                    typedef expression<variable_type> expression_type;
+                    typedef term<variable_type> term_type;
+                    typedef binary_arithmetic_operation<variable_type> binary_operation_type;
+                    typedef pow_operation<variable_type> pow_operation_type;
                     typedef std::vector<std::size_t> public_input_sizes_type;
                     typedef FieldType field_type;
 
@@ -206,10 +213,12 @@ namespace nil {
 
                     std::size_t max_gates_degree() const {
                         std::size_t max_gates_degree = 0;
-                        math::expression_max_degree_visitor<variable_type> gates_visitor;
+                        expression_max_degree_visitor<variable_type> gates_visitor;
                         for (const auto& gate : _gates) {
                             for (const auto& constr : gate.constraints) {
                                 std::size_t deg = gates_visitor.compute_max_degree(constr);
+                                if (gate.selector_index == PLONK_SPECIAL_SELECTOR_ALL_ROWS_SELECTED)
+                                  deg = deg ? deg - 1 : 0;
                                 max_gates_degree = std::max(max_gates_degree, deg);
                             }
                         }
@@ -218,7 +227,7 @@ namespace nil {
 
                     std::size_t max_lookup_gates_degree() const {
                         std::size_t max_lookup_gates_degree = 0;
-                        math::expression_max_degree_visitor<variable_type> lookup_visitor;
+                        expression_max_degree_visitor<variable_type> lookup_visitor;
                         for (const auto& gate :_lookup_gates) {
                             for (const auto& constr : gate.constraints) {
                                 for (const auto& li : constr.lookup_input) {
@@ -261,8 +270,8 @@ namespace nil {
                             return {this->sorted_lookup_columns_number()};
                         }
 
-                        using variable_type = plonk_variable<typename FieldType::value_type>;
-                        typedef math::expression_max_degree_visitor<variable_type> degree_visitor_type;
+                        using VariableType = plonk_variable<typename FieldType::value_type>;
+                        typedef expression_max_degree_visitor<VariableType> degree_visitor_type;
                         std::vector<std::size_t> lookup_parts;
                         degree_visitor_type lookup_visitor;
 
@@ -290,7 +299,7 @@ namespace nil {
                             }
                         }
                         for (const auto& table : _lookup_tables) {
-                            for( const auto &lookup_options: table.lookup_options ){
+                            for (std::size_t i = 0; i < table.lookup_options.size(); ++i) {
                                 // +3 because now any lookup option is lookup_column * lookup_selector * (1-q_last-q_blind) -- three polynomials degree rows_amount-1
                                 if( lookup_chunk + 3 >= max_quotient_chunks ){
                                     lookup_parts.push_back(lookup_part);

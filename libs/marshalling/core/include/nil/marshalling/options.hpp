@@ -43,6 +43,13 @@
 
 namespace nil {
     namespace marshalling {
+
+        // Forward declare integral to avoid #include-order hell
+        namespace types {
+            template<typename TFieldBase, typename T, typename... TOptions>
+            class integral;
+        };
+
         namespace option {
             namespace detail {
 
@@ -285,6 +292,10 @@ namespace nil {
             /// @headerfile nil/marshalling/options.hpp
             template<typename TField>
             struct sequence_size_field_prefix { };
+
+            template <typename TTypeBase>
+            using size_t_sequence_size_field_prefix = sequence_size_field_prefix<
+               nil::marshalling::types::integral<TTypeBase, std::size_t>>;
 
             /// @brief Option that modifies the default behaviour of collection fields to
             ///     prepend the serialized data with number of @b bytes information.
@@ -1111,49 +1122,8 @@ namespace nil {
             /// @headerfile nil/marshalling/options.hpp
             struct has_custom_refresh { };
 
-            /// @brief Provide type to be used for versioning
-            /// @tparam T Type of the version value. Expected to be unsigned integral one.
-            template<typename T>
-            struct version_type {
-                static_assert(std::is_integral<T>::value, "Only unsigned integral types are supported for versions");
-                static_assert(std::is_unsigned<T>::value, "Only unsigned integral types are supported for versions");
-            };
-
-            /// @brief Mark this class to have custom
-            ///     implementation of version update functionality.
-            /// @headerfile nil/marshalling/options.hpp
-            struct has_custom_version_update { };
-
-            /// @brief Mark an @ref nil::marshalling::types::optional field as existing
-            ///     between specified versions.
-            /// @tparam TFrom First version when field has been added
-            /// @tparam TUntil Last version when field still hasn't been removed.
-            /// @pre @b TFrom <= @b TUntil
-            template<std::uintmax_t TFrom, std::uintmax_t TUntil>
-            struct exists_between_versions {
-                static_assert(TFrom <= TUntil, "Invalid version parameters");
-            };
-
-            /// @brief Mark an @ref nil::marshalling::types::optional field as existing
-            ///     starting from specified version.
-            /// @details Alias to @ref ExistsBetweenVersions
-            /// @tparam TVer First version when field has been added
-            template<std::uintmax_t TVer>
-            using exists_since_version = exists_between_versions<TVer, std::numeric_limits<std::uintmax_t>::max()>;
-
-            /// @brief Mark an @ref nil::marshalling::types::optional field as existing
-            ///     only until specified version.
-            /// @details Alias to @ref ExistsBetweenVersions
-            /// @tparam TVer Last version when field still hasn't been removed.
-            template<std::uintmax_t TVer>
-            using exists_until_version = exists_between_versions<0, TVer>;
-
             /// @brief Make the field's contents to be invalid by default.
             struct invalid_by_default { };
-
-            /// @brief Add storage of version information inside private data members.
-            /// @details The version information can be accessed using @b get_version() member function.
-            struct version_storage { };
 
         }    // namespace option
     }        // namespace marshalling

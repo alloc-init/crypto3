@@ -56,18 +56,6 @@ using namespace nil::crypto3::algebra::curves::detail;
 using namespace nil::crypto3::algebra::curves;
 using namespace nil::crypto3::hashes;
 
-namespace boost {
-    namespace test_tools {
-        namespace tt_detail {
-            template<template<typename, typename> class P, typename K, typename V>
-            struct print_log_value<P<K, V>> {
-                void operator()(std::ostream &, P<K, V> const &) {
-                }
-            };
-        }    // namespace tt_detail
-    }        // namespace test_tools
-}    // namespace boost
-
 template<typename Expander,
          typename DstType,
          typename MsgType,
@@ -87,7 +75,7 @@ void check_expand_message(std::size_t len_in_bytes, const DstType &dst, const Ms
         return ret;
     };
     std::vector<std::uint8_t> uniform_bytes(len_in_bytes, 0);
-    Expander::process(len_in_bytes, msg, dst, uniform_bytes);
+    Expander::template process<>(len_in_bytes, msg, dst, uniform_bytes);
     BOOST_CHECK(result_compare(uniform_bytes));
 }
 

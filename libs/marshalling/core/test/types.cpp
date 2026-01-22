@@ -49,7 +49,6 @@
 
 #include <nil/marshalling/compile_control.hpp>
 #include <nil/marshalling/units.hpp>
-#include <nil/marshalling/version.hpp>
 #include <nil/marshalling/inference.hpp>
 
 #include <nil/marshalling/algorithms/pack.hpp>
@@ -149,7 +148,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test_minus1) {
     BOOST_CHECK_EQUAL(v[3], 0x0d0e0f10);
 
     BOOST_CHECK(be_array.valid());
-    BOOST_CHECK(!be_array.set_version(5));
 }
 
 BOOST_AUTO_TEST_CASE(types_accumulator_test_minus2) {
@@ -170,7 +168,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test_minus2) {
     BOOST_CHECK_EQUAL(v[3], 0x100f0e0d);
 
     BOOST_CHECK(le_array.valid());
-    BOOST_CHECK(!le_array.set_version(5));
 }
 
 BOOST_AUTO_TEST_CASE(types_accumulator_test_minus3) {
@@ -203,13 +200,11 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test_minus3) {
     BOOST_CHECK_EQUAL((be_array.value())[4].value(), 0x11121314);
 
     BOOST_CHECK(be_array.valid());
-    BOOST_CHECK(!be_array.set_version(5));
 }
 
 BOOST_AUTO_TEST_CASE(types_accumulator_test1) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
     static const std::vector<std::uint8_t> Buf = {0x01, 0x02, 0x03, 0x04};
 
     status_type status;
@@ -218,13 +213,10 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test1) {
     BOOST_CHECK_EQUAL(field.length(), sizeof(std::uint32_t));
     BOOST_CHECK_EQUAL(field.value(), 0x01020304);
     BOOST_CHECK(field.valid());
-    BOOST_CHECK(!field.set_version(5));
 }
 
 BOOST_AUTO_TEST_CASE(types_accumulator_test2) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::fixed_length<3>> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static const std::vector<std::uint8_t> Buf = {0x01, 0x02, 0x03, 0x04};
 
@@ -238,8 +230,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test2) {
 
 BOOST_AUTO_TEST_CASE(types_accumulator_test3) {
     typedef types::integral<field_type<option::big_endian>, std::int16_t> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static const std::vector<std::uint8_t> Buf = {0x01, 0x02};
 
@@ -291,8 +281,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test7) {
                              option::num_value_ser_offset<-2000>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     static const std::vector<char> Buf = {13};
 
     status_type status;
@@ -316,7 +304,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test7) {
 //                              option::valid_num_value_range<0, 0x010200>>
 //         testing_type;
 
-//     static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 //     testing_type field;
 //     BOOST_CHECK(field.valid());
 //     BOOST_CHECK(field.value() == 0U);
@@ -341,8 +328,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test7) {
 // #endif
 //                              option::default_num_value<100>>
 //         testing_type;
-
-//     static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
 //     testing_type field;
 //     BOOST_CHECK(field.value() == 100);
@@ -369,7 +354,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test7) {
 BOOST_AUTO_TEST_CASE(types_accumulator_test10) {
     typedef types::bitmask_value<field_type<option::big_endian>, option::fixed_length<2>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
     testing_type field;
     BOOST_CHECK(field.valid());
     BOOST_CHECK(field.value() == 0U);
@@ -417,7 +401,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test11) {
                                  option::default_num_value<0xffffff>, option::bitmask_reserved_bits<0xff0000, 0>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
     testing_type field;
     BOOST_CHECK(!field.valid());
     BOOST_CHECK(field.value() == 0xffffff);
@@ -471,8 +454,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test12) {
                               option::default_num_value<Enum1_NumOfValues>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
 
     BOOST_CHECK(!field.valid());
@@ -500,7 +481,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test13) {
                               option::default_num_value<(int)Enum2::NumOfValues>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(!field.valid());
@@ -527,8 +507,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test14) {
     typedef types::array_list<field_type<option::big_endian>, types::integral<field_type<option::big_endian>, std::uint8_t>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     BOOST_CHECK(field.valid());
 
@@ -545,8 +523,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test15) {
     typedef types::array_list<field_type<option::big_endian>, types::integral<field_type<option::big_endian>, std::uint8_t>,
                               option::fixed_size_storage<32>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.valid());
@@ -570,13 +546,9 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test16) {
 
     typedef types::string<field_type<option::big_endian>, option::sequence_size_field_prefix<SizeField>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_size_field_prefix<SizeField>,
                           option::fixed_size_storage<256>>
         StaticStorageField;
-
-    static_assert(!StaticStorageField::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.valid());
@@ -607,11 +579,7 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test16) {
 BOOST_AUTO_TEST_CASE(types_accumulator_test17) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::valid_num_value_range<0, 4>> SizeField;
 
-    static_assert(!SizeField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_size_field_prefix<SizeField>> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     BOOST_CHECK(testing_type::min_length() == SizeField::max_length());
     BOOST_CHECK(testing_type::max_length() == SizeField::max_length() + std::numeric_limits<std::uint16_t>::max());
@@ -619,8 +587,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test17) {
     typedef types::string<field_type<option::big_endian>, option::sequence_size_field_prefix<SizeField>,
                           option::fixed_size_storage<256>>
         StaticStorageField;
-
-    static_assert(!StaticStorageField::is_version_dependent(), "Invalid version dependency assumption");
 
     BOOST_CHECK(StaticStorageField::min_length() == SizeField::max_length());
     BOOST_CHECK(StaticStorageField::max_length() == SizeField::max_length() + 255);
@@ -659,19 +625,13 @@ struct HelloInitialiser {
 BOOST_AUTO_TEST_CASE(types_accumulator_test18) {
     typedef types::integral<field_type<option::big_endian>, std::uint16_t> SizeField;
 
-    static_assert(!SizeField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_size_field_prefix<SizeField>,
                           option::default_value_initializer<HelloInitialiser>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_size_field_prefix<SizeField>,
                           option::default_value_initializer<HelloInitialiser>, option::fixed_size_storage<64>>
         StaticStorageField;
-
-    static_assert(!StaticStorageField::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.valid());
@@ -703,17 +663,11 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test18) {
 BOOST_AUTO_TEST_CASE(types_accumulator_test19) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t> SizeField;
 
-    static_assert(!SizeField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_size_field_prefix<SizeField>> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     typedef types::string<field_type<option::big_endian>, option::sequence_size_field_prefix<SizeField>,
                           option::fixed_size_storage<64>>
         StaticStorageField;
-
-    static_assert(!StaticStorageField::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     auto &fieldStr = field.value();
@@ -744,8 +698,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test19) {
 BOOST_AUTO_TEST_CASE(types_accumulator_test20) {
     typedef types::integral<field_type<option::little_endian>, std::uint16_t, option::var_length<1, 2>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     static const std::vector<char> Buf = {(char)0x81, 0x01};
 
     status_type status;
@@ -763,8 +715,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test20) {
 
 BOOST_AUTO_TEST_CASE(types_accumulator_test21) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::var_length<1, 3>> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static const std::vector<char> Buf = {(char)0x83, 0x0f};
 
@@ -795,8 +745,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test21) {
 BOOST_AUTO_TEST_CASE(types_accumulator_test22) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::var_length<1, 3>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     static const std::vector<char> Buf = {(char)0x83, (char)0x8f, (char)0x8c, (char)0x3f, (char)0xff};
 
     status_type status;
@@ -808,8 +756,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test22) {
 
 BOOST_AUTO_TEST_CASE(types_accumulator_test23) {
     typedef types::integral<field_type<option::little_endian>, std::int16_t, option::var_length<1, 2>> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
 
@@ -830,8 +776,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test24) {
     typedef types::integral<field_type<option::big_endian>, unsigned, option::fixed_length<2>,
                              option::num_value_ser_offset<2>, option::valid_num_value_range<0, 2>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static const std::vector<char> Buf = {0x00, 0x02};
 
@@ -854,8 +798,6 @@ BOOST_AUTO_TEST_CASE(types_accumulator_test25) {
         BitfileMembers;
 
     typedef types::bitfield<field_type<option::big_endian>, BitfileMembers> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     static_cast<void>(field);
@@ -882,8 +824,6 @@ BOOST_AUTO_TEST_CASE(test26) {
         BitfileMembers;
 
     typedef types::bitfield<field_type<option::big_endian>, BitfileMembers> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     static_cast<void>(field);
@@ -921,8 +861,6 @@ public:
 BOOST_AUTO_TEST_CASE(test27) {
     using testing_type = Test27_Field<>;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     BOOST_CHECK(field.length() == 2U);
     BOOST_CHECK(field.member_bit_length<testing_type::FieldIdx_mem1>() == 4U);
@@ -950,8 +888,6 @@ BOOST_AUTO_TEST_CASE(test28) {
         option::sequence_size_field_prefix<types::integral<field_type<option::big_endian>, std::uint16_t>>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     BOOST_CHECK(testing_type::min_length() == sizeof(std::uint16_t));
 
     testing_type field;
@@ -978,8 +914,6 @@ BOOST_AUTO_TEST_CASE(test29) {
                               option::default_num_value<Enum1_Value2>,
                               option::fail_on_invalid<status_type::protocol_error>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.valid());
@@ -1011,8 +945,6 @@ BOOST_AUTO_TEST_CASE(test30) {
                              option::valid_num_value_range<0x2, 0x2>, option::ignore_invalid>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     BOOST_CHECK(field.valid());
     BOOST_CHECK(field.value() == 0x2);
@@ -1038,8 +970,6 @@ BOOST_AUTO_TEST_CASE(test31) {
     typedef types::optional<
         types::integral<field_type<option::big_endian>, std::uint16_t, option::valid_num_value_range<0, 10>>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     typedef testing_type::Mode Mode;
 
@@ -1069,8 +999,6 @@ BOOST_AUTO_TEST_CASE(test32) {
                                      option::valid_num_value_range<0, Enum1_NumOfValues - 1>,
                                      option::default_num_value<Enum1_Value2>>>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static_assert(testing_type::min_length() == 3U, "Invalid min_length");
     static_assert(testing_type::min_length_from<1>() == 1U, "Invalid min_length");
@@ -1148,15 +1076,9 @@ BOOST_AUTO_TEST_CASE(test32) {
 BOOST_AUTO_TEST_CASE(test33) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t> SizeField;
 
-    static_assert(!SizeField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_size_field_prefix<SizeField>> StringField;
 
-    static_assert(!StringField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::array_list<field_type<option::big_endian>, StringField> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     BOOST_CHECK(testing_type::min_length() == 0U);
     BOOST_CHECK(testing_type::max_length() == 0xffff * StringField::max_length());
@@ -1181,8 +1103,6 @@ BOOST_AUTO_TEST_CASE(test33) {
 //                               option::sequence_size_forcing_enabled>
 //         testing_type;
 
-//     static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
 //     testing_type field;
 //     BOOST_CHECK(field.valid());
 //     BOOST_CHECK(field.value().empty());
@@ -1202,8 +1122,6 @@ BOOST_AUTO_TEST_CASE(test33) {
 
 BOOST_AUTO_TEST_CASE(test35) {
     typedef types::float_value<field_type<option::big_endian>, float> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(fpEquals(field.value(), 0.0f));
@@ -1230,8 +1148,6 @@ BOOST_AUTO_TEST_CASE(test35) {
 BOOST_AUTO_TEST_CASE(test36) {
     typedef types::array_list<field_type<option::big_endian>, std::uint8_t, option::sequence_fixed_size<5>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     static_assert(testing_type::min_length() == 5U, "Invalid min length");
     static_assert(testing_type::max_length() == 5U, "Invalid max length");
 
@@ -1256,8 +1172,6 @@ BOOST_AUTO_TEST_CASE(test37) {
                               option::sequence_fixed_size<3>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     static_assert(testing_type::min_length() == 6U, "Invalid min length");
     static_assert(testing_type::max_length() == 6U, "Invalid max length");
 
@@ -1279,13 +1193,9 @@ BOOST_AUTO_TEST_CASE(test37) {
 BOOST_AUTO_TEST_CASE(test38) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::valid_num_value_range<0, 0>> TrailField;
 
-    static_assert(!TrailField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_fixed_size<5>,
                           option::sequence_trailing_field_suffix<TrailField>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static_assert(std::is_same<testing_type::value_type, std::string>::value, "Invalid storage assumption assumption");
 
@@ -1316,8 +1226,6 @@ BOOST_AUTO_TEST_CASE(test38) {
 BOOST_AUTO_TEST_CASE(test39) {
     typedef types::float_value<field_type<option::big_endian>, float, option::valid_num_value_range<5, 10>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     BOOST_CHECK(fpEquals(field.value(), 0.0f));
     BOOST_CHECK(!field.valid());
@@ -1331,8 +1239,6 @@ BOOST_AUTO_TEST_CASE(test39) {
 
 BOOST_AUTO_TEST_CASE(test40) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::scaling_ratio<1, 100>> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.value() == 0U);
@@ -1352,11 +1258,7 @@ BOOST_AUTO_TEST_CASE(test40) {
 BOOST_AUTO_TEST_CASE(test41) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::valid_num_value_range<0, 0>> TermField;
 
-    static_assert(!TermField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_termination_field_suffix<TermField>> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.valid());
@@ -1379,8 +1281,6 @@ BOOST_AUTO_TEST_CASE(test41) {
 
 BOOST_AUTO_TEST_CASE(test42) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::var_length<1, 4>> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.value() == 0U);
@@ -1426,8 +1326,6 @@ BOOST_AUTO_TEST_CASE(test42) {
 BOOST_AUTO_TEST_CASE(test43) {
     typedef types::integral<field_type<option::little_endian>, std::uint32_t, option::var_length<1, 4>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     BOOST_CHECK(field.value() == 0U);
     BOOST_CHECK(field.length() == 1U);
@@ -1472,8 +1370,6 @@ BOOST_AUTO_TEST_CASE(test43) {
 BOOST_AUTO_TEST_CASE(test44) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::var_length<2, 4>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     BOOST_CHECK(field.value() == 0U);
     BOOST_CHECK(field.length() == 2U);
@@ -1497,8 +1393,6 @@ BOOST_AUTO_TEST_CASE(test44) {
 
 BOOST_AUTO_TEST_CASE(test45) {
     typedef types::integral<field_type<option::little_endian>, std::uint32_t, option::var_length<2, 4>> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.value() == 0U);
@@ -1524,8 +1418,6 @@ BOOST_AUTO_TEST_CASE(test45) {
 BOOST_AUTO_TEST_CASE(test46) {
     typedef types::no_value<field_type<option::big_endian>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
 
     static const std::vector<char> ExpectedBuf = {0};
@@ -1550,8 +1442,6 @@ BOOST_AUTO_TEST_CASE(test47) {
                           option::default_value_initializer<BundleInitialiserTest47>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     BOOST_CHECK(testing_type::min_length() == 3U);
     BOOST_CHECK(testing_type::max_length() == 3U);
 
@@ -1566,8 +1456,6 @@ BOOST_AUTO_TEST_CASE(test48) {
     typedef types::optional<types::integral<field_type<option::big_endian>, std::uint16_t>,
                             option::default_optional_mode<types::optional_mode::exists>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     typedef testing_type::Mode Mode;
 
@@ -1611,8 +1499,6 @@ struct BundleCustomReaderTest49 {
 //                                      types::optional<types::integral<field_type<option::big_endian>, std::uint16_t>>>,
 //                           option::custom_value_reader<BundleCustomReaderTest49>>
 //         testing_type;
-
-//     static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
 //     static_assert(testing_type::min_length() == 1U, "Invalid min_length");
 //     static_assert(testing_type::max_length() == 3U, "Invalid max_length");
@@ -1662,8 +1548,6 @@ public:
 BOOST_AUTO_TEST_CASE(test50) {
     using testing_type = Test50_Field;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     field.value() = 0xaa;
     BOOST_CHECK(field.getBitValue_first() == false);
@@ -1687,8 +1571,6 @@ BOOST_AUTO_TEST_CASE(test50) {
     using Field2 = Test50_Field2<>;
     Field2 field2;
     static_cast<void>(field2);
-
-    static_assert(!Field2::is_version_dependent(), "Invalid version dependency assumption");
 }
 
 class Field_51
@@ -1703,8 +1585,6 @@ public:
 
 BOOST_AUTO_TEST_CASE(test51) {
     typedef Field_51 testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.length() == 1U);
@@ -1729,8 +1609,6 @@ BOOST_AUTO_TEST_CASE(test52) {
 
     typedef types::bitfield<field_type<option::big_endian>, BitfildMembers> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     static_cast<void>(field);
     BOOST_CHECK(field.length() == 2U);
@@ -1754,8 +1632,6 @@ BOOST_AUTO_TEST_CASE(test53) {
                              option::scaling_ratio<180, 0x800000>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field(std::numeric_limits<std::int32_t>::max());
     static const double ExpVal1 = (static_cast<double>(std::numeric_limits<std::int32_t>::max()) * 180) / 0x800000;
     BOOST_CHECK(field.scale_as<double>() == ExpVal1);
@@ -1763,8 +1639,6 @@ BOOST_AUTO_TEST_CASE(test53) {
 
 BOOST_AUTO_TEST_CASE(test54) {
     typedef types::integral<field_type<option::big_endian>, std::int8_t, option::scaling_ratio<100, 1>> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field(1);
 
@@ -1784,8 +1658,6 @@ BOOST_AUTO_TEST_CASE(test54) {
 BOOST_AUTO_TEST_CASE(test55) {
     typedef types::integral<field_type<option::big_endian>, std::int16_t, option::scaling_ratio<1, 100>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
 
     field.set_scaled(-0.1);
@@ -1798,13 +1670,9 @@ BOOST_AUTO_TEST_CASE(test55) {
 BOOST_AUTO_TEST_CASE(test56) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::valid_num_value_range<0, 0>> TrailField;
 
-    static_assert(!TrailField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_fixed_size<5>, option::fixed_size_storage<5>,
                           option::sequence_trailing_field_suffix<TrailField>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static_assert(testing_type::min_length() == 6U, "Invalid min length");
     static_assert(testing_type::max_length() == 6U, "Invalid max length");
@@ -1835,8 +1703,6 @@ BOOST_AUTO_TEST_CASE(test57) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::scaling_ratio<1, 10>,
                              option::units_milliseconds>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static const std::uint32_t InitVal = 600000;
     testing_type field;
@@ -1907,8 +1773,6 @@ BOOST_AUTO_TEST_CASE(test58) {
                              option::units_nanoseconds>
         Field1;
 
-    static_assert(!Field1::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field1 field(1U);
         BOOST_CHECK(field.value() == 1U);
@@ -1920,8 +1784,6 @@ BOOST_AUTO_TEST_CASE(test58) {
                              option::units_microseconds>
         Field2;
 
-    static_assert(!Field2::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field2 field(5U);
         BOOST_CHECK(field.value() == 5U);
@@ -1930,8 +1792,6 @@ BOOST_AUTO_TEST_CASE(test58) {
     } while (false);
 
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::units_milliseconds> Field3;
-
-    static_assert(!Field3::is_version_dependent(), "Invalid version dependency assumption");
 
     do {
         Field3 field(200U);
@@ -1944,8 +1804,6 @@ BOOST_AUTO_TEST_CASE(test58) {
                              option::units_seconds>
         Field4;
 
-    static_assert(!Field4::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field4 field(1U);
         BOOST_CHECK(field.value() == 1U);
@@ -1957,8 +1815,6 @@ BOOST_AUTO_TEST_CASE(test58) {
                              option::units_minutes>
         Field5;
 
-    static_assert(!Field5::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field5 field(1U);
         BOOST_CHECK(field.value() == 1U);
@@ -1968,8 +1824,6 @@ BOOST_AUTO_TEST_CASE(test58) {
 
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::scaling_ratio<1, 10>, option::units_hours>
         Field6;
-
-    static_assert(!Field6::is_version_dependent(), "Invalid version dependency assumption");
 
     do {
         Field6 field(1U);
@@ -1981,8 +1835,6 @@ BOOST_AUTO_TEST_CASE(test58) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::scaling_ratio<1, 12>, option::units_days>
         Field7;
 
-    static_assert(!Field7::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field7 field(1U);
         BOOST_CHECK(field.value() == 1U);
@@ -1992,8 +1844,6 @@ BOOST_AUTO_TEST_CASE(test58) {
     } while (false);
 
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::units_weeks> Field8;
-
-    static_assert(!Field8::is_version_dependent(), "Invalid version dependency assumption");
 
     do {
         Field8 field(1U);
@@ -2005,8 +1855,6 @@ BOOST_AUTO_TEST_CASE(test58) {
 
 BOOST_AUTO_TEST_CASE(test59) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::units_millimeters> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     field.value() = 345U;
@@ -2044,8 +1892,6 @@ BOOST_AUTO_TEST_CASE(test60) {
                              option::units_nanometers>
         Field1;
 
-    static_assert(!Field1::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field1 field(1U);
         BOOST_CHECK(field.value() == 1U);
@@ -2057,8 +1903,6 @@ BOOST_AUTO_TEST_CASE(test60) {
                              option::units_micrometers>
         Field2;
 
-    static_assert(!Field2::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field2 field(5U);
         BOOST_CHECK(field.value() == 5U);
@@ -2067,8 +1911,6 @@ BOOST_AUTO_TEST_CASE(test60) {
     } while (false);
 
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::units_millimeters> Field3;
-
-    static_assert(!Field3::is_version_dependent(), "Invalid version dependency assumption");
 
     do {
         Field3 field(200U);
@@ -2079,8 +1921,6 @@ BOOST_AUTO_TEST_CASE(test60) {
 
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::scaling_ratio<1, 10>, option::units_meters>
         Field4;
-
-    static_assert(!Field4::is_version_dependent(), "Invalid version dependency assumption");
 
     do {
         Field4 field(1U);
@@ -2093,8 +1933,6 @@ BOOST_AUTO_TEST_CASE(test60) {
                              option::units_centimeters>
         Field5;
 
-    static_assert(!Field5::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field5 field(1U);
         BOOST_CHECK(field.value() == 1U);
@@ -2105,8 +1943,6 @@ BOOST_AUTO_TEST_CASE(test60) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::scaling_ratio<1, 10>,
                              option::units_kilometers>
         Field6;
-
-    static_assert(!Field6::is_version_dependent(), "Invalid version dependency assumption");
 
     do {
         Field6 field(1U);
@@ -2119,8 +1955,6 @@ BOOST_AUTO_TEST_CASE(test60) {
 BOOST_AUTO_TEST_CASE(test61) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::units_centimeters_per_second>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     field.value() = 10U;
@@ -2164,8 +1998,6 @@ BOOST_AUTO_TEST_CASE(test62) {
                              option::units_nanometers_per_second>
         Field1;
 
-    static_assert(!Field1::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field1 field(1U);
         BOOST_CHECK(field.value() == 1U);
@@ -2178,8 +2010,6 @@ BOOST_AUTO_TEST_CASE(test62) {
                              option::units_micrometers_per_second>
         Field2;
 
-    static_assert(!Field2::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field2 field(5U);
         BOOST_CHECK(field.value() == 5U);
@@ -2189,8 +2019,6 @@ BOOST_AUTO_TEST_CASE(test62) {
     } while (false);
 
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::units_millimeters_per_second> Field3;
-
-    static_assert(!Field3::is_version_dependent(), "Invalid version dependency assumption");
 
     do {
         Field3 field(200U);
@@ -2203,8 +2031,6 @@ BOOST_AUTO_TEST_CASE(test62) {
                              option::units_meters_per_second>
         Field4;
 
-    static_assert(!Field4::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field4 field(1U);
         BOOST_CHECK(field.value() == 1U);
@@ -2216,8 +2042,6 @@ BOOST_AUTO_TEST_CASE(test62) {
                              option::units_centimeters_per_second>
         Field5;
 
-    static_assert(!Field5::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field5 field(1U);
         BOOST_CHECK(field.value() == 1U);
@@ -2228,8 +2052,6 @@ BOOST_AUTO_TEST_CASE(test62) {
 
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::units_kilometers_per_hour> Field6;
 
-    static_assert(!Field6::is_version_dependent(), "Invalid version dependency assumption");
-
     do {
         Field6 field(36U);
         BOOST_CHECK(field.value() == 36U);
@@ -2237,8 +2059,6 @@ BOOST_AUTO_TEST_CASE(test62) {
     } while (false);
 
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::units_kilometers_per_second> Field7;
-
-    static_assert(!Field7::is_version_dependent(), "Invalid version dependency assumption");
 
     do {
         Field7 field(1U);
@@ -2249,8 +2069,6 @@ BOOST_AUTO_TEST_CASE(test62) {
 
 BOOST_AUTO_TEST_CASE(test63) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::units_kilohertz> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     field.value() = 10U;
@@ -2277,8 +2095,6 @@ BOOST_AUTO_TEST_CASE(test64) {
                              option::units_degrees>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     field.value() = 300U;
     BOOST_CHECK(units::getDegrees<unsigned>(field) == 30U);
@@ -2300,8 +2116,6 @@ BOOST_AUTO_TEST_CASE(test65) {
                              option::units_radians>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     field.value() = 100U;
     BOOST_CHECK(units::getRadians<unsigned>(field) == 1U);
@@ -2320,8 +2134,6 @@ BOOST_AUTO_TEST_CASE(test65) {
 
 BOOST_AUTO_TEST_CASE(test66) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::units_milliamps> testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     field.value() = 345U;
@@ -2353,8 +2165,6 @@ BOOST_AUTO_TEST_CASE(test66) {
 BOOST_AUTO_TEST_CASE(test67) {
     typedef types::integral<field_type<option::big_endian>, std::uint32_t, option::units_millivolts> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     field.value() = 345U;
     BOOST_CHECK(units::getNanovolts<unsigned long long>(field) == 345000000UL);
@@ -2385,8 +2195,6 @@ BOOST_AUTO_TEST_CASE(test67) {
 BOOST_AUTO_TEST_CASE(test68) {
     typedef types::float_value<field_type<option::big_endian>, float, option::units_seconds> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     field.value() = 1.345f;
 
@@ -2409,8 +2217,6 @@ BOOST_AUTO_TEST_CASE(test68) {
 
 BOOST_AUTO_TEST_CASE(test69) {
     struct LenField : public types::integral<field_type<option::big_endian>, std::uint8_t> { };
-
-    static_assert(!LenField::is_version_dependent(), "Invalid version dependency assumption");
 
     typedef types::array_list<field_type<option::big_endian>, types::integral<field_type<option::big_endian>, std::uint16_t>,
                               option::sequence_ser_length_field_prefix<LenField>>
@@ -2485,8 +2291,6 @@ private:
 
 BOOST_AUTO_TEST_CASE(test70) {
     using testing_type = Test70_Field<>;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(!field.valid());
@@ -2620,8 +2424,6 @@ struct Test71_Field
 BOOST_AUTO_TEST_CASE(test71) {
     using testing_type = Test71_Field;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     BOOST_CHECK(field.length() == 1U);
     BOOST_CHECK(field.field_val().is_missing());
@@ -2656,13 +2458,9 @@ BOOST_AUTO_TEST_CASE(test72) {
 
     typedef types::integral<field_type<option::big_endian>, std::uint8_t> SizeField;
 
-    static_assert(!SizeField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_size_field_prefix<SizeField>,
                           option::orig_data_view>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.valid());
@@ -2689,13 +2487,9 @@ BOOST_AUTO_TEST_CASE(test72) {
 BOOST_AUTO_TEST_CASE(test73) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::valid_num_value_range<0, 0>> TermField;
 
-    static_assert(!TermField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_termination_field_suffix<TermField>,
                           option::orig_data_view>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.valid());
@@ -2722,13 +2516,9 @@ BOOST_AUTO_TEST_CASE(test73) {
 BOOST_AUTO_TEST_CASE(test74) {
     typedef types::integral<field_type<option::big_endian>, std::uint8_t, option::valid_num_value_range<0, 0>> TrailField;
 
-    static_assert(!TrailField::is_version_dependent(), "Invalid version dependency assumption");
-
     typedef types::string<field_type<option::big_endian>, option::sequence_fixed_size<5>,
                           option::sequence_trailing_field_suffix<TrailField>, option::orig_data_view>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static_assert(testing_type::min_length() == 6U, "Invalid min length");
     static_assert(testing_type::max_length() == 6U, "Invalid max length");
@@ -2764,8 +2554,6 @@ BOOST_AUTO_TEST_CASE(test74) {
 BOOST_AUTO_TEST_CASE(test75) {
     typedef types::array_list<field_type<option::big_endian>, std::uint8_t, option::orig_data_view> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     static_assert(std::is_same<testing_type::value_type, container::array_view<std::uint8_t>>::value,
                   "Expected to be array view");
 
@@ -2794,8 +2582,6 @@ BOOST_AUTO_TEST_CASE(test76) {
         option::orig_data_view>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     BOOST_CHECK(testing_type::min_length() == sizeof(std::uint16_t));
 
     testing_type field;
@@ -2821,8 +2607,6 @@ BOOST_AUTO_TEST_CASE(test77) {
     typedef types::array_list<field_type<option::big_endian>, std::uint8_t, option::sequence_fixed_size<6>,
                               option::orig_data_view>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static_assert(testing_type::min_length() == 6U, "Invalid min length");
     static_assert(testing_type::max_length() == 6U, "Invalid max length");
@@ -2867,8 +2651,6 @@ public:
 BOOST_AUTO_TEST_CASE(test78) {
     Test78_Field field;
 
-    static_assert(!Test78_Field::is_version_dependent(), "Invalid version dependency assumption");
-
     auto &mem1_1 = field.initField_mem1();
     static_cast<void>(mem1_1);
     auto &mem1_2 = field.accessField_mem1();
@@ -2889,8 +2671,6 @@ BOOST_AUTO_TEST_CASE(test79) {
             force_read_elem_length(2U);
         }
     };
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     testing_type field;
     BOOST_CHECK(field.valid());
@@ -2922,8 +2702,6 @@ BOOST_AUTO_TEST_CASE(test80) {
                                      option::valid_num_value_range<0, Enum1_NumOfValues - 1>,
                                      option::default_num_value<Enum1_Value2>>>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static_assert(testing_type::min_length() == 3U, "Invalid min_length");
     static_assert(testing_type::max_length() == 3U, "Invalid max_length");
@@ -2977,8 +2755,6 @@ BOOST_AUTO_TEST_CASE(test81) {
         option::valid_big_unsigned_num_value_range<0xffffffff, std::numeric_limits<std::uintmax_t>::max() - 1>,
         option::default_big_unsigned_num_value<std::numeric_limits<std::uintmax_t>::max()>>;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     BOOST_CHECK(!field.valid());
     BOOST_CHECK(field.value() == std::numeric_limits<std::uintmax_t>::max());
@@ -2991,8 +2767,6 @@ BOOST_AUTO_TEST_CASE(test82) {
         std::tuple<types::integral<field_type<option::big_endian>, std::uint16_t, option::valid_num_value_range<0, 10>,
                                     option::default_num_value<5>>>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static_assert(testing_type::min_length() == 2U, "Invalid min_length");
     static_assert(testing_type::min_length_from<0>() == 2U, "Invalid min_length");
@@ -3037,8 +2811,6 @@ BOOST_AUTO_TEST_CASE(test83) {
     typedef types::array_list<field_type<option::big_endian>, std::uint8_t, option::sequence_fixed_size<5>,
                               option::sequence_fixed_size_use_fixed_size_storage>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     static_assert(testing_type::min_length() == 5U, "Invalid min length");
     static_assert(testing_type::max_length() == 5U, "Invalid max length");
@@ -3097,8 +2869,6 @@ BOOST_AUTO_TEST_CASE(test84) {
 BOOST_AUTO_TEST_CASE(test85) {
     typedef types::string<field_type<option::big_endian>, option::sequence_fixed_size<5>> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     static_assert(testing_type::min_length() == 5U, "Invalid min length");
     static_assert(testing_type::max_length() == 5U, "Invalid max length");
 
@@ -3123,8 +2893,6 @@ BOOST_AUTO_TEST_CASE(test86) {
                              option::valid_num_value_range<20, 30>, option::default_num_value<20>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     BOOST_CHECK(field.value() == 20);
     BOOST_CHECK(!field.valid());
@@ -3139,8 +2907,6 @@ BOOST_AUTO_TEST_CASE(test87) {
         option::sequence_size_field_prefix<types::integral<field_type<option::big_endian>, std::uint16_t>>,
         option::sequence_elem_ser_length_field_prefix<types::integral<field_type<option::big_endian>, std::uint8_t>>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     BOOST_CHECK(testing_type::min_length() == sizeof(std::uint16_t));
 
@@ -3186,8 +2952,6 @@ BOOST_AUTO_TEST_CASE(test88) {
         option::sequence_elem_ser_length_field_prefix<
             types::integral<field_type<option::big_endian>, std::uint32_t, option::var_length<1, 4>>>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     BOOST_CHECK(testing_type::min_length() == sizeof(std::uint8_t));
 
@@ -3248,8 +3012,6 @@ BOOST_AUTO_TEST_CASE(test89) {
         option::sequence_elem_ser_length_field_prefix<
             types::integral<field_type<option::little_endian>, std::uint32_t, option::var_length<1, 4>>>>
         testing_type;
-
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
     BOOST_CHECK(testing_type::min_length() == sizeof(std::uint8_t));
 
@@ -3314,8 +3076,6 @@ BOOST_AUTO_TEST_CASE(test90) {
             types::integral<field_type<option::big_endian>, std::uint32_t, option::var_length<1, 4>>>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     BOOST_CHECK(testing_type::min_length() == 2U);
 
     testing_type field;
@@ -3355,8 +3115,6 @@ BOOST_AUTO_TEST_CASE(test91) {
             types::integral<field_type<option::big_endian>, std::uint32_t, option::var_length<1, 4>>>>
         testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     BOOST_CHECK(testing_type::min_length() == 7U);
 
     testing_type field;
@@ -3388,10 +3146,7 @@ BOOST_AUTO_TEST_CASE(test92) {
 
     typedef types::bitfield<field_type<option::little_endian>, BitfileMembers> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
-    BOOST_CHECK(!field.set_version(5U));
     static_cast<void>(field);
     BOOST_CHECK(field.length() == 3U);
     BOOST_CHECK(field.member_bit_length<0>() == 8U);
@@ -3424,8 +3179,6 @@ BOOST_AUTO_TEST_CASE(test93) {
 
     typedef types::bitfield<field_type<option::little_endian>, BitfileMembers> testing_type;
 
-    static_assert(!testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
     testing_type field;
     static_cast<void>(field);
     BOOST_CHECK(field.length() == 3U);
@@ -3446,75 +3199,16 @@ BOOST_AUTO_TEST_CASE(test93) {
     write_read_field(field, ExpectedBuf.begin(), ExpectedBuf.size());
 }
 
-BOOST_AUTO_TEST_CASE(test94) {
-    using Mem1 = types::integral<field_type<option::big_endian>, std::uint16_t>;
-
-    struct Mem2 : public types::integral<field_type<option::big_endian>, std::uint16_t, option::has_custom_version_update> {
-        bool set_version(unsigned) {
-            return true;
-        }
-    };
-
-    typedef types::bundle<field_type<option::big_endian>, std::tuple<Mem1, Mem2>> testing_type;
-
-    static_assert(testing_type::is_version_dependent(), "Invalid version dependency assumption");
-    testing_type field;
-    BOOST_CHECK(field.set_version(5U));
-}
-
-BOOST_AUTO_TEST_CASE(test95) {
-    using Mem1 = types::integral<field_type<option::big_endian>, std::uint16_t>;
-
-    using Mem2 = types::optional<Mem1, option::exists_since_version<5>, option::exists_by_default>;
-
-    typedef types::bundle<field_type<option::big_endian>, std::tuple<Mem1, Mem2>> testing_type;
-
-    static_assert(testing_type::is_version_dependent(), "Invalid version dependency assumption");
-
-    testing_type field;
-    BOOST_CHECK(field.length() == 4U);
-    BOOST_CHECK(!field.set_version(5U));
-    BOOST_CHECK(field.length() == 4U);
-    BOOST_CHECK(field.set_version(4U));
-    BOOST_CHECK(field.length() == 2U);
-    BOOST_CHECK(field.set_version(15U));
-    BOOST_CHECK(field.length() == 4U);
-}
-
-BOOST_AUTO_TEST_CASE(test96) {
-    using Mem1 = types::integral<field_type<option::big_endian>, std::uint8_t, option::fixed_bit_length<4>>;
-
-    struct Mem2 : public types::integral<field_type<option::big_endian>, std::uint8_t, option::has_custom_version_update,
-                                          option::fixed_bit_length<4>> {
-        bool set_version(unsigned) {
-            return true;
-        }
-    };
-
-    typedef types::bitfield<field_type<option::big_endian>, std::tuple<Mem1, Mem2>> testing_type;
-
-    static_assert(testing_type::is_version_dependent(), "Invalid version dependency assumption");
-    testing_type field;
-    BOOST_CHECK(field.set_version(5U));
-}
-
 // BOOST_AUTO_TEST_CASE(test97) {
 //     using Mem1 = types::integral<field_type<option::big_endian>, std::uint16_t>;
 
-//     using Mem2 = types::optional<Mem1, option::exists_since_version<5>, option::exists_by_default>;
-
 //     using ListElem = types::bundle<field_type<option::big_endian>, std::tuple<Mem1, Mem2>>;
 
-//     static_assert(ListElem::is_version_dependent(), "Invalid version dependency assumption");
-
 //     using testing_type = types::array_list<field_type<option::big_endian>, ListElem>;
-
-//     static_assert(testing_type::is_version_dependent(), "Invalid version dependency assumption");
 
 //     testing_type field;
 //     field.value().resize(1);
 //     BOOST_CHECK(field.length() == 4U);
-//     BOOST_CHECK(field.set_version(1U));
 //     BOOST_CHECK(field.length() == 2U);
 
 //     do {
@@ -3530,7 +3224,6 @@ BOOST_AUTO_TEST_CASE(test96) {
 //         BOOST_CHECK(mem1.value() == 0x102);
 //         BOOST_CHECK(mem2.is_missing());
 
-//         BOOST_CHECK(field.set_version(15U));
 //         BOOST_CHECK(mem2.does_exist());
 //         BOOST_CHECK(field.length() == 4U);
 //     } while (false);
@@ -3552,30 +3245,8 @@ BOOST_AUTO_TEST_CASE(test96) {
 //     } while (false);
 // }
 
-BOOST_AUTO_TEST_CASE(test98) {
-    using testing_type
-        = types::integral<field_type<option::big_endian>, std::uint8_t, option::invalid_by_default, option::version_storage>;
-
-    testing_type field;
-    BOOST_CHECK(!field.valid());
-    BOOST_CHECK(field.get_version() == 0U);
-    BOOST_CHECK(field.set_version(5U));
-    BOOST_CHECK(field.get_version() == 5U);
-
-    using Field2
-        = types::bitmask_value<field_type<option::big_endian>, option::fixed_length<1U>, option::default_num_value<0x6U>,
-                               option::version_storage, option::bitmask_reserved_bits<0xc2U, 0x2U>>;
-
-    Field2 field2;
-    BOOST_CHECK(field2.get_version() == 0U);
-    BOOST_CHECK(field2.set_version(5U));
-    BOOST_CHECK(field2.get_version() == 5U);
-}
-
 // BOOST_AUTO_TEST_CASE(test99) {
 //     typedef types::array_list<field_type<option::big_endian>, std::uint8_t, option::sequence_length_forcing_enabled> Field1;
-
-//     static_assert(!Field1::is_version_dependent(), "Invalid version dependency assumption");
 
 //     Field1 field1;
 //     BOOST_CHECK(field1.valid());
@@ -3593,8 +3264,6 @@ BOOST_AUTO_TEST_CASE(test98) {
 //     field1.clear_read_length_forcing();
 
 //     typedef types::string<field_type<option::big_endian>, option::sequence_length_forcing_enabled> Field2;
-
-//     static_assert(!Field2::is_version_dependent(), "Invalid version dependency assumption");
 
 //     Field2 field2;
 //     BOOST_CHECK(field2.valid());

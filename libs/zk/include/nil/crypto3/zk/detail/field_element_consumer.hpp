@@ -58,16 +58,17 @@ namespace nil {
                     >>;
                     using iterator = typename base_class::iterator;
 
-                    /**
-                     * @brief Constant expression that determines the size multiplier.
-                     *        If the word type is a field element, the size is 1; otherwise,
-                     *        it multiplies by the length of the field element representation.
-                     */
-                    static constexpr std::size_t field_element_holder_size_multiplier = std::conditional_t<
-                            algebra::is_field_element<Target>::value,
-                            std::integral_constant<std::size_t, 1>,
-                            std::integral_constant<std::size_t, Marshalling::length()>
-                    >::value;
+                        /**
+                         * @brief Constant expression that determines the size multiplier.
+                         *        If the word type is a field element, the size is 1; otherwise,
+                         *        it multiplies by the length of the field element representation.
+                         */
+                        static constexpr std::size_t
+                            field_element_holder_size_multiplier = std::conditional_t<
+                                algebra::is_field_element<Target>::value,
+                                std::integral_constant<std::size_t, 1>,
+                                std::integral_constant<std::size_t,
+                                                       Marshalling::max_length()>>::value;
 
                     // Default ctor is used for single values
                     field_element_consumer() : field_element_consumer(1) {
@@ -84,13 +85,16 @@ namespace nil {
                     }
 
 
-                    void consume(const typename FieldType::value_type &field_element) {
+                    void consume(const typename FieldType::value_type& field_element) {
                         BOOST_ASSERT(current_iter <= this->end() - field_element_holder_size_multiplier);
                         if constexpr (algebra::is_field_element<Target>::value) {
                             *current_iter++ = field_element;
                         } else {
                             Marshalling field_val(field_element);
-                            field_val.write(current_iter, Marshalling::length());
+                            if (field_val.length() != Marshalling::max_length()) {
+                                throw std::runtime_error("non-static length");
+                            }
+                            field_val.write(current_iter, Marshalling::max_length());
                         }
                     }
 
@@ -99,9 +103,9 @@ namespace nil {
                         return *this;
                     }
 
-                private:
-                    iterator current_iter;
-                };
+                    private:
+                        iterator current_iter;
+                    };
 
             }    // namespace detail
         }    // namespace zk

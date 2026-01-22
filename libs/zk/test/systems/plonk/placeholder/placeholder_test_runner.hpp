@@ -94,18 +94,21 @@ struct placeholder_test_runner {
 
         typename placeholder_public_preprocessor<field_type, lpc_placeholder_params_type>::preprocessed_data_type
                 lpc_preprocessed_public_data = placeholder_public_preprocessor<field_type, lpc_placeholder_params_type>::process(
-                constraint_system, assignments.move_public_table(), desc, lpc_scheme, max_quotient_poly_chunks);
+                constraint_system, assignments.public_table(), desc, lpc_scheme, max_quotient_poly_chunks);
 
         typename placeholder_private_preprocessor<field_type, lpc_placeholder_params_type>::preprocessed_data_type
                 lpc_preprocessed_private_data = placeholder_private_preprocessor<field_type, lpc_placeholder_params_type>::process(
-                constraint_system, assignments.move_private_table(), desc);
+                constraint_system, assignments.private_table(), desc);
 
         auto lpc_proof = placeholder_prover<field_type, lpc_placeholder_params_type>::process(
                 lpc_preprocessed_public_data, std::move(lpc_preprocessed_private_data), desc, constraint_system,
                 lpc_scheme);
 
+        // We must not use the same instance of lpc_scheme.
+        lpc_scheme_type verifier_lpc_scheme(fri_params);
+
         bool verifier_res = placeholder_verifier<field_type, lpc_placeholder_params_type>::process(
-                lpc_preprocessed_public_data.common_data, lpc_proof, desc, constraint_system, lpc_scheme);
+                *lpc_preprocessed_public_data.common_data, lpc_proof, desc, constraint_system, verifier_lpc_scheme);
         return verifier_res;
     }
 
@@ -174,8 +177,10 @@ struct placeholder_kzg_test_runner {
                 kzg_preprocessed_public_data, std::move(kzg_preprocessed_private_data), desc, constraint_system,
                 kzg_scheme);
 
+        kzg_scheme = kzg_scheme_type(kzg_params);
+
         verifier_res = placeholder_verifier<field_type, kzg_placeholder_params_type>::process(
-                kzg_preprocessed_public_data.common_data, kzg_proof, desc, constraint_system, kzg_scheme);
+                *kzg_preprocessed_public_data.common_data, kzg_proof, desc, constraint_system, kzg_scheme);
         return verifier_res;
     }
 
@@ -239,8 +244,10 @@ struct placeholder_kzg_test_runner_v2 {
                 kzg_preprocessed_public_data, std::move(kzg_preprocessed_private_data), desc, constraint_system,
                 kzg_scheme);
 
+        kzg_scheme = kzg_scheme_type(kzg_params);
+
         verifier_res = placeholder_verifier<field_type, kzg_placeholder_params_type>::process(
-                kzg_preprocessed_public_data.common_data, kzg_proof, desc, constraint_system, kzg_scheme);
+                *kzg_preprocessed_public_data.common_data, kzg_proof, desc, constraint_system, kzg_scheme);
         return verifier_res;
     }
 

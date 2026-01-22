@@ -48,10 +48,7 @@
 #include <nil/marshalling/types/adapter/fail_on_invalid.hpp>
 #include <nil/marshalling/types/adapter/ignore_invalid.hpp>
 #include <nil/marshalling/types/adapter/empty_serialization.hpp>
-#include <nil/marshalling/types/adapter/exists_between_versions.hpp>
 #include <nil/marshalling/types/adapter/invalid_by_default.hpp>
-#include <nil/marshalling/types/adapter/version_storage.hpp>
-
 #include <nil/marshalling/types/detail/options_parser.hpp>
 
 namespace nil {
@@ -71,24 +68,6 @@ namespace nil {
                                                      + static_cast<std::size_t>(T5) + static_cast<std::size_t>(T6);
                 };
 
-                template<bool THasVersionStorage>
-                struct adapt_field_version_storage;
-
-                template<>
-                struct adapt_field_version_storage<true> {
-                    template<typename TField>
-                    using type = types::adapter::version_storage<TField>;
-                };
-
-                template<>
-                struct adapt_field_version_storage<false> {
-                    template<typename TField>
-                    using type = TField;
-                };
-
-                template<typename TField, typename TOpts>
-                using adapt_field_version_storage_type =
-                    typename adapt_field_version_storage<TOpts::has_version_storage>::template type<TField>;
 
                 template<bool THasInvalidByDefault>
                 struct adapt_field_invalid_by_default;
@@ -149,26 +128,6 @@ namespace nil {
                 template<typename TField, typename TOpts>
                 using adapt_field_ser_offset_type =
                     typename adapt_field_ser_offset<TOpts::has_ser_offset>::template type<TField, TOpts>;
-
-                template<bool THasVersionsRange>
-                struct adapt_field_versions_range;
-
-                template<>
-                struct adapt_field_versions_range<true> {
-                    template<typename TField, typename TOpts>
-                    using type = types::adapter::
-                        exists_between_versions<TOpts::exists_from_version, TOpts::exists_until_version, TField>;
-                };
-
-                template<>
-                struct adapt_field_versions_range<false> {
-                    template<typename TField, typename TOpts>
-                    using type = TField;
-                };
-
-                template<typename TField, typename TOpts>
-                using adapt_field_versions_range_type =
-                    typename adapt_field_versions_range<TOpts::has_versions_range>::template type<TField, TOpts>;
 
                 template<bool THasFixedLength>
                 struct adapt_field_fixed_length;
@@ -328,7 +287,7 @@ namespace nil {
                 using adapt_field_sequence_size_field_prefix_type = typename adapt_field_sequence_size_field_prefix<
                     TOpts::has_sequence_size_field_prefix>::template type<TField, TOpts>;
 
-                //--
+     //--
                 template<bool THasSequenceSerLengthFieldPrefix>
                 struct adapt_field_sequence_ser_length_field_prefix;
 
@@ -584,7 +543,7 @@ namespace nil {
                 template<typename TField, typename TOpts>
                 using adapt_field_empty_serialization_type =
                     typename adapt_field_empty_serialization<TOpts::has_empty_serialization>::template type<TField>;
-
+                
                 template<typename TBasic, typename... TOptions>
                 class adapt_basic_field {
                     using parsed_options_type = options_parser<TOptions...>;
@@ -669,15 +628,11 @@ namespace nil {
                                   "SequenceFixedSizeUseFixedSizeStorage, fixed_size_storage");
 
                     using invalid_by_default_adapted = adapt_field_invalid_by_default_type<TBasic, parsed_options_type>;
-                    using version_storage_adapted
-                        = adapt_field_version_storage_type<invalid_by_default_adapted, parsed_options_type>;
                     using custom_reader_adapted
-                        = adapt_field_custom_value_reader_type<version_storage_adapted, parsed_options_type>;
+                        = adapt_field_custom_value_reader_type<invalid_by_default_adapted, parsed_options_type>;
                     using ser_offset_adapted = adapt_field_ser_offset_type<custom_reader_adapted, parsed_options_type>;
-                    using versions_range_adapted
-                        = adapt_field_versions_range_type<ser_offset_adapted, parsed_options_type>;
                     using fixed_length_adapted
-                        = adapt_field_fixed_length_type<versions_range_adapted, parsed_options_type>;
+                        = adapt_field_fixed_length_type<ser_offset_adapted, parsed_options_type>;
                     using fixed_bit_length_adapted
                         = adapt_field_fixed_bit_length_type<fixed_length_adapted, parsed_options_type>;
                     using var_length_adapted

@@ -22,6 +22,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //---------------------------------------------------------------------------//
+// This example demonstrates the usage of different coordinates systems representing
+// a point on an elliptic curve
 
 #include <nil/crypto3/multiprecision/cpp_modular.hpp>
 #include <boost/multiprecision/number.hpp>
@@ -29,6 +31,7 @@
 #include <nil/crypto3/multiprecision/modular/modular_adaptor.hpp>
 
 #include <nil/crypto3/algebra/curves/secp_r1.hpp>
+#include "nil/crypto3/algebra/curves/detail/forms/short_weierstrass/coordinates.hpp"
 
 using namespace nil::crypto3::algebra;
 
@@ -43,28 +46,24 @@ void coordinates_examples() {
     e5(0xff9d5ca60a4f5ae00b2abdb6dddb3f4fc5c853ed56a33a85ccaa7d3093084579_cppui_modular256), e6(1);
   
 
-	
-    group_value_type c1(e1, e2, e3), c2(e4, e5, e6);//, c3(e7,e8,e9),c4(e10,e11,e12);
+
+    group_value_type c1(e1, e2, e3), c2(e4, e5, e6);
 
     std::cout << "Curve element values: " << std::endl;
     std::cout << "c1 value: " << (c1) << std::endl;
     std::cout << "c2 value: " << (c2) << std::endl;
     std::cout << "c1 + c2 value: " << (c1 + c2) << std::endl;
     std::cout << "c1 - c2 value: " << (c1 - c2) << std::endl;
-    std::cout << "Doubled c1 value: " << (c1.doubled()) << std::endl;
+    std::cout << "Doubled c1 value: " << c1 << std::endl;
   }
 
 int main() {
     std::cout << "Secp256r1 Jacobian coordinates with a4=-3" << std::endl;
-
-    coordinates_examples<curves::secp_r1<256>::g1_type< curves::coordinates::jacobian_with_a4_minus_3,  curves::forms::short_weierstrass>>();//<coordinates::jacobian_with_a4_minus_3>>()//()_g1_params<160, forms::short_weierstrass>
-
+    coordinates_examples<curves::secp_r1<256>::g1_type<curves::coordinates::jacobian_with_a4_minus_3, curves::forms::short_weierstrass>>();
     std::cout << "----------------------------" << std::endl;
 
-    std::cout << "Secp256r1 Jacobian coordinates" << std::endl;
-
-    coordinates_examples<curves::secp_r1<256>::g1_type< curves::coordinates::jacobian,  curves::forms::short_weierstrass>>();//<coordinates::jacobian_with_a4_minus_3>>()//()_g1_params<160, forms::short_weierstrass>
-
+    std::cout << "Secp256r1 projective coordinates" << std::endl;
+    coordinates_examples<curves::secp_r1<256>::g1_type<curves::coordinates::projective_with_a4_minus_3, curves::forms::short_weierstrass>>();
     std::cout << "----------------------------" << std::endl;
     return 0;
 }

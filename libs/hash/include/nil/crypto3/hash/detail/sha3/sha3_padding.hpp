@@ -63,7 +63,7 @@ namespace nil {
                         std::vector<block_type> padded_blocks;
                         block_type new_block = block;
                         // set variable to 01
-                        word_type sha_specific_bits = unbounded_shr(high_bits<word_bits>(~word_type(), 1), 1);
+                        word_type sha_specific_bits = nil::crypto3::detail::unbounded_shr(high_bits<word_bits>(~word_type(), 1), 1);
                         // get how many bits from it could fit into current block
                         const std::size_t sha_specific_bits_n_for_first_block = std::min(block_bits - block_seen,
                                                                                          std::size_t{2});

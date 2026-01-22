@@ -74,7 +74,6 @@ namespace nil {
 
                 public:
                     using endian_type = typename base_impl_type::endian_type;
-                    using version_type = typename base_impl_type::version_type;
                     using value_type = TMembers;
 
                     basic_bitfield() = default;
@@ -163,14 +162,6 @@ namespace nil {
 
                         using field_type = typename std::tuple_element<TIdx, value_type>::type;
                         return detail::bitfield_member_length_retriever<field_type>::value;
-                    }
-
-                    static constexpr bool is_version_dependent() {
-                        return common_funcs::are_members_version_dependent<value_type>();
-                    }
-
-                    bool set_version(version_type version) {
-                        return common_funcs::set_version_for_members(value(), version);
                     }
 
                 private:

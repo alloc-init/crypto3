@@ -26,7 +26,7 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#define BOOST_TEST_MODULE lpc_test
+#define BOOST_TEST_MODULE parallel_lpc_test
 
 #include <string>
 #include <random>
@@ -58,58 +58,13 @@ using namespace nil::crypto3;
 
 using dist_type = std::uniform_int_distribution<int>;
 
-inline std::vector<std::size_t>
-generate_random_step_list(const std::size_t r, const std::size_t max_step, boost::random::mt11213b &rnd) {
-    std::vector<std::size_t> step_list;
-    std::size_t steps_sum = 0;
-    while (steps_sum != r) {
-        if (r - steps_sum <= max_step) {
-            while (r - steps_sum != 1) {
-                step_list.emplace_back(r - steps_sum - 1);
-                steps_sum += step_list.back();
-            }
-            step_list.emplace_back(1);
-            steps_sum += step_list.back();
-        } else {
-            step_list.emplace_back(dist_type(1, max_step)(rnd));
-            steps_sum += step_list.back();
-        }
-    }
-    return step_list;
-}
-
-template<typename FieldType>
-inline math::polynomial<typename FieldType::value_type> generate_random_polynomial(
-        std::size_t degree,
-        nil::crypto3::random::algebraic_engine<FieldType> &rnd
-) {
-    math::polynomial<typename FieldType::value_type> result(degree);
-    std::generate(std::begin(result), std::end(result), [&rnd]() { return rnd(); });
-    return result;
-}
-
 template<typename FieldType>
 inline math::polynomial_dfs<typename FieldType::value_type> generate_random_polynomial_dfs(
         std::size_t degree,
         nil::crypto3::random::algebraic_engine<FieldType> &rnd
 ) {
-    math::polynomial<typename FieldType::value_type> data = generate_random_polynomial(degree, rnd);
-    math::polynomial_dfs<typename FieldType::value_type> result;
-    result.from_coefficients(data);
-    return result;
-}
-
-template<typename FieldType>
-inline std::vector<math::polynomial<typename FieldType::value_type>> generate_random_polynomial_batch(
-        std::size_t batch_size,
-        std::size_t degree,
-        nil::crypto3::random::algebraic_engine<FieldType> &rnd
-) {
-    std::vector<math::polynomial<typename FieldType::value_type>> result;
-
-    for (std::size_t i = 0; i < batch_size; i++) {
-        result.push_back(generate_random_polynomial(degree, rnd));
-    }
+    math::polynomial_dfs<typename FieldType::value_type> result(degree, degree + 1);
+    std::generate(std::begin(result), std::end(result), [&rnd]() { return rnd(); });
     return result;
 }
 
@@ -119,13 +74,10 @@ inline std::vector<math::polynomial_dfs<typename FieldType::value_type>> generat
         std::size_t degree,
         nil::crypto3::random::algebraic_engine<FieldType> &rnd
 ) {
-    auto data = generate_random_polynomial_batch(batch_size, degree, rnd);
     std::vector<math::polynomial_dfs<typename FieldType::value_type>> result;
 
-    for (std::size_t i = 0; i < data.size(); i++) {
-        math::polynomial_dfs<typename FieldType::value_type> dfs;
-        dfs.from_coefficients(data[i]);
-        result.push_back(dfs);
+    for (std::size_t i = 0; i < batch_size; i++) {
+        result.push_back(generate_random_polynomial_dfs(degree, rnd));
     }
     return result;
 }
@@ -167,18 +119,21 @@ struct test_fixture {
 };
 
 BOOST_AUTO_TEST_SUITE(lpc_math_polynomial_suite);
+
     BOOST_FIXTURE_TEST_CASE(lpc_basic_test, test_fixture) {
         // Setup types.
         typedef algebra::curves::bls12<381> curve_type;
         typedef typename curve_type::scalar_field_type FieldType;
+        typedef typename FieldType::value_type value_type;
         typedef hashes::sha2<256> merkle_hash_type;
         typedef hashes::sha2<256> transcript_hash_type;
         typedef typename containers::merkle_tree<merkle_hash_type, 2> merkle_tree_type;
+        typedef typename math::polynomial_dfs<value_type> poly_type;
 
         constexpr static const std::size_t lambda = 10;
         constexpr static const std::size_t k = 1;
 
-        constexpr static const std::size_t d = 16;
+        constexpr static const std::size_t d = 15;
         constexpr static const std::size_t r = boost::static_log2<(d - k)>::value;
 
         constexpr static const std::size_t m = 2;
@@ -203,28 +158,28 @@ BOOST_AUTO_TEST_SUITE(lpc_math_polynomial_suite);
 
 
         // Setup params
+        std::size_t degree_log = std::ceil(std::log2(d - 1));
         typename fri_type::params_type fri_params(
-                d - 1, // max_degree
-                D,
-                generate_random_step_list(r, 1, test_global_rnd_engine),
-                2, //expand_factor
+                1, /*max_step*/
+                degree_log,
                 lambda,
-                true,
-                12
-        );
+                2, //expand_factor
+                true, // use_grinding
+                12 // grinding_parameter
+                );
 
-        using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, math::polynomial<typename FieldType::value_type>>;
+        using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, poly_type>;
         lpc_scheme_type lpc_scheme_prover(fri_params);
         lpc_scheme_type lpc_scheme_verifier(fri_params);
 
         // Generate polynomials
-        lpc_scheme_prover.append_to_batch(0, {1u, 13u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u});
-        lpc_scheme_prover.append_to_batch(1, {0u, 1u});
-        lpc_scheme_prover.append_to_batch(1, {0u, 1u, 2u});
-        lpc_scheme_prover.append_to_batch(1, {0u, 1u, 3u});
-        lpc_scheme_prover.append_to_batch(2, {0u});
-        lpc_scheme_prover.append_to_batch(3, generate_random_polynomial(4, test_global_alg_rnd_engine<FieldType>));
-        lpc_scheme_prover.append_to_batch(3, generate_random_polynomial(9, test_global_alg_rnd_engine<FieldType>));
+        lpc_scheme_prover.append_to_batch(0, poly_type(15, {1u, 13u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u}));
+        lpc_scheme_prover.append_to_batch(1, poly_type(1, {0u, 1u}));
+        lpc_scheme_prover.append_to_batch(1, poly_type(2, {0u, 1u, 2u, 3u}));
+        lpc_scheme_prover.append_to_batch(1, poly_type(2, {0u, 1u, 3u, 4u}));
+        lpc_scheme_prover.append_to_batch(2, poly_type(0, std::initializer_list<value_type>{0u}));
+        lpc_scheme_prover.append_to_batch(3, generate_random_polynomial_dfs(3, test_global_alg_rnd_engine<FieldType>));
+        lpc_scheme_prover.append_to_batch(3, generate_random_polynomial_dfs(7, test_global_alg_rnd_engine<FieldType>));
 
         // Commit
         std::map<std::size_t, typename lpc_type::commitment_type> commitments;
@@ -257,6 +212,7 @@ BOOST_AUTO_TEST_SUITE(lpc_math_polynomial_suite);
         lpc_scheme_verifier.append_eval_point(1, point);
         lpc_scheme_verifier.append_eval_point(2, point);
         lpc_scheme_verifier.append_eval_point(3, point);
+
         BOOST_CHECK(lpc_scheme_verifier.verify_eval(proof, commitments, transcript_verifier));
 
         // Check transcript state
@@ -269,6 +225,7 @@ BOOST_AUTO_TEST_SUITE(lpc_math_polynomial_suite);
         // Setup types
         typedef algebra::curves::bls12<381> curve_type;
         typedef typename curve_type::scalar_field_type FieldType;
+        typedef typename FieldType::value_type value_type;
 
         typedef hashes::sha2<256> merkle_hash_type;
         typedef hashes::sha2<256> transcript_hash_type;
@@ -278,7 +235,7 @@ BOOST_AUTO_TEST_SUITE(lpc_math_polynomial_suite);
         constexpr static const std::size_t lambda = 10;
         constexpr static const std::size_t k = 1;
 
-        constexpr static const std::size_t d = 2048;
+        constexpr static const std::size_t d = 2047;
 
         constexpr static const std::size_t r = boost::static_log2<(d - k)>::value;
         constexpr static const std::size_t m = 2;
@@ -304,26 +261,26 @@ BOOST_AUTO_TEST_SUITE(lpc_math_polynomial_suite);
         typedef zk::commitments::fri<FieldType, merkle_hash_type, transcript_hash_type, m> fri_type;
 
         // Setup params
+        std::size_t degree_log = std::ceil(std::log2(d - 1));
         typename fri_type::params_type fri_params(
-                d - 1, // max_degree
-                D,
-                generate_random_step_list(r, 5, test_global_rnd_engine),
-                2, //expand_factor
-                lambda
-        );
+                5, /*max_step*/
+                degree_log,
+                lambda,
+                2 //expand_factor
+                );
 
-        using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, math::polynomial<typename FieldType::value_type>>;
+        using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, math::polynomial_dfs<value_type>>;
         lpc_scheme_type lpc_scheme_prover(fri_params);
         lpc_scheme_type lpc_scheme_verifier(fri_params);
 
         // Generate polynomials
-        lpc_scheme_prover.append_to_batch(0, generate_random_polynomial_batch<FieldType>(
+        lpc_scheme_prover.append_many_to_batch(0, generate_random_polynomial_dfs_batch<FieldType>(
                 dist_type(1, 10)(test_global_rnd_engine), d, test_global_alg_rnd_engine<FieldType>));
-        lpc_scheme_prover.append_to_batch(1, generate_random_polynomial_batch<FieldType>(
+        lpc_scheme_prover.append_many_to_batch(1, generate_random_polynomial_dfs_batch<FieldType>(
                 dist_type(1, 10)(test_global_rnd_engine), d, test_global_alg_rnd_engine<FieldType>));
-        lpc_scheme_prover.append_to_batch(2, generate_random_polynomial_batch<FieldType>(
+        lpc_scheme_prover.append_many_to_batch(2, generate_random_polynomial_dfs_batch<FieldType>(
                 dist_type(1, 10)(test_global_rnd_engine), d, test_global_alg_rnd_engine<FieldType>));
-        lpc_scheme_prover.append_to_batch(3, generate_random_polynomial_batch<FieldType>(
+        lpc_scheme_prover.append_many_to_batch(3, generate_random_polynomial_dfs_batch<FieldType>(
                 dist_type(1, 10)(test_global_rnd_engine), d, test_global_alg_rnd_engine<FieldType>));
 
         std::map<std::size_t, typename lpc_type::commitment_type> commitments;
@@ -377,7 +334,7 @@ BOOST_AUTO_TEST_SUITE(lpc_math_polynomial_suite);
         constexpr static const std::size_t lambda = 10;
         constexpr static const std::size_t k = 1;
 
-        constexpr static const std::size_t d = 16;
+        constexpr static const std::size_t d = 15;
 
         constexpr static const std::size_t r = boost::static_log2<(d - k)>::value;
         constexpr static const std::size_t m = 2;
@@ -396,20 +353,14 @@ BOOST_AUTO_TEST_SUITE(lpc_math_polynomial_suite);
         static_assert(!zk::is_commitment<std::size_t>::value);
 
         // Setup params
-        constexpr static const std::size_t d_extended = d;
-        std::size_t extended_log = boost::static_log2<d_extended>::value;
-        std::vector<std::shared_ptr<math::evaluation_domain<FieldType>>> D =
-                math::calculate_domain_set<FieldType>(extended_log, r + 1);
-
-        // Setup params
+        std::size_t degree_log = std::ceil(std::log2(d - 1));
         typename fri_type::params_type fri_params(
-                d - 1, // max_degree
-                D,
-                generate_random_step_list(r, 1, test_global_rnd_engine),
-                2, //expand_factor
+                1, /*max_step*/
+                degree_log,
                 lambda,
-                true
-        );
+                2, //expand_factor
+                true // use_grinding
+                );
 
         using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type>;
         lpc_scheme_type lpc_scheme_prover(fri_params);
@@ -417,13 +368,13 @@ BOOST_AUTO_TEST_SUITE(lpc_math_polynomial_suite);
 
         // Generate polynomials
         std::array<std::vector<math::polynomial_dfs<typename FieldType::value_type>>, 4> f;
-        lpc_scheme_prover.append_to_batch(0, generate_random_polynomial_dfs_batch<FieldType>(
+        lpc_scheme_prover.append_many_to_batch(0, generate_random_polynomial_dfs_batch<FieldType>(
                 dist_type(1, 10)(test_global_rnd_engine), d, test_global_alg_rnd_engine<FieldType>));
-        lpc_scheme_prover.append_to_batch(1, generate_random_polynomial_dfs_batch<FieldType>(
+        lpc_scheme_prover.append_many_to_batch(1, generate_random_polynomial_dfs_batch<FieldType>(
                 dist_type(1, 10)(test_global_rnd_engine), d, test_global_alg_rnd_engine<FieldType>));
-        lpc_scheme_prover.append_to_batch(2, generate_random_polynomial_dfs_batch<FieldType>(
+        lpc_scheme_prover.append_many_to_batch(2, generate_random_polynomial_dfs_batch<FieldType>(
                 dist_type(1, 10)(test_global_rnd_engine), d, test_global_alg_rnd_engine<FieldType>));
-        lpc_scheme_prover.append_to_batch(3, generate_random_polynomial_dfs_batch<FieldType>(
+        lpc_scheme_prover.append_many_to_batch(3, generate_random_polynomial_dfs_batch<FieldType>(
                 dist_type(1, 10)(test_global_rnd_engine), d, test_global_alg_rnd_engine<FieldType>));
 
         std::map<std::size_t, typename lpc_type::commitment_type> commitments;
@@ -473,14 +424,16 @@ BOOST_AUTO_TEST_SUITE(lpc_params_test_suite)
         // Setup types.
         typedef algebra::curves::bls12<381> curve_type;
         typedef typename curve_type::scalar_field_type FieldType;
+        typedef typename FieldType::value_type value_type;
         typedef hashes::sha2<256> merkle_hash_type;
         typedef hashes::sha2<256> transcript_hash_type;
         typedef typename containers::merkle_tree<merkle_hash_type, 2> merkle_tree_type;
+        typedef typename math::polynomial_dfs<value_type> poly_type;
 
         constexpr static const std::size_t lambda = 40;
         constexpr static const std::size_t k = 1;
 
-        constexpr static const std::size_t d = 16;
+        constexpr static const std::size_t d = 15;
 
         constexpr static const std::size_t r = boost::static_log2<(d - k)>::value;
         constexpr static const std::size_t m = 2;
@@ -498,32 +451,28 @@ BOOST_AUTO_TEST_SUITE(lpc_params_test_suite)
         static_assert(!zk::is_commitment<merkle_tree_type>::value);
         static_assert(!zk::is_commitment<std::size_t>::value);
 
-        constexpr static const std::size_t d_extended = d;
-        std::size_t extended_log = boost::static_log2<d_extended>::value;
-        std::vector<std::shared_ptr<math::evaluation_domain<FieldType>>> D =
-                math::calculate_domain_set<FieldType>(extended_log, r);
-
+        // Setup params
+        std::size_t degree_log = std::ceil(std::log2(d - 1));
         typename fri_type::params_type fri_params(
-                d - 1, // max_degree
-                D,
-                generate_random_step_list(r, 1, test_global_rnd_engine),
-                2,  //expand_factor
+                1, /*max_step*/
+                degree_log,
                 lambda,
-                true,
+                2, // expand_factor
+                true, // use_grinding
                 8
-        );
+                );
 
-        using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, math::polynomial<typename FieldType::value_type>>;
+        using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, poly_type>;
         lpc_scheme_type lpc_scheme_prover(fri_params);
         lpc_scheme_type lpc_scheme_verifier(fri_params);
 
         // Generate polynomials
-        lpc_scheme_prover.append_to_batch(0, {1u, 13u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u});
-        lpc_scheme_prover.append_to_batch(2, {0u, 1u});
-        lpc_scheme_prover.append_to_batch(2, {0u, 1u, 2u});
-        lpc_scheme_prover.append_to_batch(2, {0u, 1u, 3u});
-        lpc_scheme_prover.append_to_batch(3, {0u});
-
+        lpc_scheme_prover.append_to_batch(0, poly_type(15, {1u, 13u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u}));
+        lpc_scheme_prover.append_to_batch(2, poly_type(1, {0u, 1u}));
+        lpc_scheme_prover.append_to_batch(2, poly_type(2, {0u, 1u, 2u, 3u}));
+        lpc_scheme_prover.append_to_batch(2, poly_type(2, {0u, 1u, 3u, 4u}));
+        lpc_scheme_prover.append_to_batch(3, poly_type(0, std::initializer_list<value_type>{0u}));
+ 
         // Commit
         std::map<std::size_t, typename lpc_type::commitment_type> commitments;
         commitments[0] = lpc_scheme_prover.commit(0);
@@ -565,14 +514,16 @@ BOOST_AUTO_TEST_SUITE(lpc_params_test_suite)
         // Setup types.
         typedef algebra::curves::bls12<381> curve_type;
         typedef typename curve_type::scalar_field_type FieldType;
+        typedef typename FieldType::value_type value_type;
         typedef hashes::keccak_1600<256> merkle_hash_type;
         typedef hashes::sha2<256> transcript_hash_type;
         typedef typename containers::merkle_tree<merkle_hash_type, 2> merkle_tree_type;
+        typedef typename math::polynomial_dfs<value_type> poly_type;
 
         constexpr static const std::size_t lambda = 10;
         constexpr static const std::size_t k = 1;
 
-        constexpr static const std::size_t d = 16;
+        constexpr static const std::size_t d = 15;
         constexpr static const std::size_t r = boost::static_log2<(d - k)>::value;
 
         constexpr static const std::size_t m = 2;
@@ -595,26 +546,27 @@ BOOST_AUTO_TEST_SUITE(lpc_params_test_suite)
         std::vector<std::shared_ptr<math::evaluation_domain<FieldType>>> D =
                 math::calculate_domain_set<FieldType>(extended_log, r);
 
+        // Setup params
+        std::size_t degree_log = std::ceil(std::log2(d - 1));
         typename fri_type::params_type fri_params(
-                d - 1, // max_degree
-                D,
-                generate_random_step_list(r, 1, test_global_rnd_engine),
-                2, //expand_factor
-                lambda
-        );
+                1, /*max_step*/
+                degree_log,
+                lambda,
+                2 //expand_factor
+                );
 
-        using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, math::polynomial<typename FieldType::value_type>>;
+        using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, poly_type>;
         lpc_scheme_type lpc_scheme_prover(fri_params);
         lpc_scheme_type lpc_scheme_verifier(fri_params);
 
         // Generate polynomials
-        lpc_scheme_prover.append_to_batch(0, {1u, 13u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u});
-        lpc_scheme_prover.append_to_batch(1, {0u, 1u});
-        lpc_scheme_prover.append_to_batch(1, {0u, 1u, 2u});
-        lpc_scheme_prover.append_to_batch(1, {0u, 1u, 3u});
-        lpc_scheme_prover.append_to_batch(2, {0u});
-        lpc_scheme_prover.append_to_batch(3, generate_random_polynomial(4, test_global_alg_rnd_engine<FieldType>));
-        lpc_scheme_prover.append_to_batch(3, generate_random_polynomial(9, test_global_alg_rnd_engine<FieldType>));
+        lpc_scheme_prover.append_to_batch(0, poly_type(15, {1u, 13u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u}));
+        lpc_scheme_prover.append_to_batch(2, poly_type(1, {0u, 1u}));
+        lpc_scheme_prover.append_to_batch(2, poly_type(2, {0u, 1u, 2u, 3u}));
+        lpc_scheme_prover.append_to_batch(2, poly_type(2, {0u, 1u, 3u, 4u}));
+        lpc_scheme_prover.append_to_batch(3, poly_type(0, std::initializer_list<value_type>{0u}));
+        lpc_scheme_prover.append_to_batch(3, generate_random_polynomial_dfs(3, test_global_alg_rnd_engine<FieldType>));
+        lpc_scheme_prover.append_to_batch(3, generate_random_polynomial_dfs(7, test_global_alg_rnd_engine<FieldType>));
 
         // Commit
         std::map<std::size_t, typename lpc_type::commitment_type> commitments;

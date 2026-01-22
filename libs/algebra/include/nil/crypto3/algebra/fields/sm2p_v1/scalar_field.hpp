@@ -49,6 +49,8 @@ namespace nil {
                 struct sm2p_v1_scalar_field<256> : public field<256> {
                     typedef field<256> policy_type;
 
+                    using small_subfield = sm2p_v1_scalar_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 

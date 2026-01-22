@@ -39,9 +39,6 @@ namespace nil {
                     using base_impl_type = TBase;
                     using term_field_type = TTermFieldType;
 
-                    static_assert(!term_field_type::is_version_dependent(),
-                                  "Suffix fields must not be version dependent");
-
                 public:
                     using value_type = typename base_impl_type::value_type;
                     using element_type = typename base_impl_type::element_type;

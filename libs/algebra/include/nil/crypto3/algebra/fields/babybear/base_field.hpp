@@ -29,6 +29,7 @@
 
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/field.hpp>
+#include <nil/crypto3/algebra/fields/fpn.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -37,6 +38,8 @@ namespace nil {
                 class babybear_base_field : public field<32> {
                 public:
                     typedef field<32> policy_type;
+
+                    using small_subfield = babybear_base_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
@@ -79,6 +82,22 @@ namespace nil {
                 using babybear_fq = babybear_base_field;
 
                 using babybear = babybear_base_field;
+
+                namespace detail {
+                    template<typename FieldType>
+                    struct babybear_fp4_binomial_extension_params {
+                        constexpr static std::size_t dimension = 4;
+                        using field_type = FieldType;
+                        using base_field_type = babybear;
+                        constexpr static base_field_type::value_type non_residue = 11;
+                        constexpr static base_field_type::value_type dim_unity_root = 1728404513;
+                    };
+                }    // namespace detail
+
+                struct babybear_fp4
+                : public fpn<detail::babybear_fp4_binomial_extension_params<babybear_fp4>> {
+                    using small_subfield = babybear;
+                };
 
             }    // namespace fields
         }        // namespace algebra

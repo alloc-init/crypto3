@@ -91,7 +91,8 @@ namespace nil {
                         } else {
                             nil::marshalling::status_type status;
                             typename hash_type::construction::type::block_type byte_data =
-                                    nil::marshalling::pack(data, status);
+                                nil::marshalling::pack(data, status);
+                            THROW_IF_ERROR_STATUS(status, "fiat_shamir_heuristic_accumulative::operator()");
                             acc(byte_data);
                         }
                     }
@@ -148,8 +149,9 @@ namespace nil {
                     }
 
                     template<typename InputRange>
-                    typename std::enable_if_t<!algebra::is_group_element<InputRange>::value &&
-                                              !algebra::is_field_element<InputRange>::value>
+                    typename std::enable_if_t<
+                        !algebra::is_curve_element<InputRange>::value &&
+                        !algebra::is_field_element<InputRange>::value>
                     operator()(const InputRange &r) {
                         auto acc_convertible = hash<hash_type>(state);
                         state = accumulators::extract::hash<hash_type>(
@@ -165,13 +167,15 @@ namespace nil {
                     }
 
                     template<typename element>
-                    typename std::enable_if_t<algebra::is_group_element<element>::value ||
-                                              algebra::is_field_element<element>::value>
-                    operator()(element const &data) {
+                    typename std::enable_if_t<
+                        algebra::is_curve_element<element>::value ||
+                        algebra::is_field_element<element>::value
+                        >
+                    operator()(element const& data) {
                         nil::marshalling::status_type status;
                         std::vector<std::uint8_t> byte_data =
-                                nil::marshalling::pack<nil::marshalling::option::big_endian>(data, status);
-                        BOOST_ASSERT(status == nil::marshalling::status_type::success);
+                            nil::marshalling::pack<nil::marshalling::option::big_endian>(data, status);
+                        THROW_IF_ERROR_STATUS(status, "fiat_shamir_heuristic_sequential::operator()");
                         auto acc_convertible = hash<hash_type>(state);
                         state = accumulators::extract::hash<hash_type>(
                             hash<hash_type>(byte_data, static_cast<accumulator_set<hash_type> &>(acc_convertible)));
@@ -181,22 +185,11 @@ namespace nil {
                     typename std::enable_if<(HashType::digest_bits >= FieldType::modulus_bits),
                         typename FieldType::value_type>::type
                     challenge() {
-                        using digest_value_type = typename hash_type::digest_type::value_type;
-                        const std::size_t digest_value_bits = sizeof(digest_value_type) * CHAR_BIT;
-                        const std::size_t element_size = FieldType::number_bits / digest_value_bits +
-                                                         (FieldType::number_bits % digest_value_bits == 0 ? 0 : 1);
-
-                        std::array<digest_value_type, element_size> data;
                         state = hash<hash_type>(state);
-
-                        std::size_t count = std::min(data.size(), state.size());
-                        std::copy(state.begin(), state.begin() + count, data.begin() + data.size() - count);
-
                         nil::marshalling::status_type status;
-                        boost::multiprecision::number<modular_backend_of_hash_size> raw_result =
+                        typename FieldType::value_type raw_result =
                                 nil::marshalling::pack(state, status);
                         BOOST_ASSERT(status == nil::marshalling::status_type::success);
-
                         return raw_result;
                     }
 
@@ -249,6 +242,17 @@ namespace nil {
                         return result;
                     }
 
+                    template<typename FieldType>
+                    std::vector<typename FieldType::value_type> challenges(std::size_t N) {
+
+                        std::vector<typename FieldType::value_type> result;
+                        for (std::size_t i = 0; i < N; ++i) {
+                            result.push_back(challenge<FieldType>());
+                        }
+
+                        return result;
+                    }
+
                 private:
                     typename hash_type::digest_type state;
                 };
@@ -271,8 +275,8 @@ namespace nil {
                     // Not to replace current hacks with new bigger ones, we'll just keep it.
 
                     typedef HashType hash_type;
-                    using field_type = nil::crypto3::algebra::curves::pallas::base_field_type;
-                    using poseidon_policy = nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>;
+                    using field_type = typename HashType::policy_type::field_type;
+                    using poseidon_policy = typename HashType::policy_type;
                     using permutation_type = nil::crypto3::hashes::detail::poseidon_permutation<poseidon_policy>;
                     using state_type = typename permutation_type::state_type;
 
@@ -296,14 +300,18 @@ namespace nil {
                     }
 
                     template<typename InputRange>
-                    typename std::enable_if_t<!algebra::is_group_element<InputRange>::value>
+                    typename std::enable_if_t<
+                        !algebra::is_curve_element<InputRange>::value
+                        >
                     operator()(const InputRange &r) {
                         sponge.absorb(static_cast<typename hash_type::digest_type>(hash<hash_type>(r)));
                     }
 
                     template<typename element>
-                    typename std::enable_if_t<algebra::is_group_element<element>::value>
-                    operator()(element const &data) {
+                    typename std::enable_if_t<
+                        algebra::is_curve_element<element>::value
+                        >
+                    operator()(element const& data) {
                         auto affine = data.to_affine();
                         sponge.absorb(affine.X);
                         sponge.absorb(affine.Y);
@@ -325,7 +333,8 @@ namespace nil {
                         auto c = challenge<field_type>();
 
                         typename field_type::integral_type intermediate_result =
-                                static_cast<typename field_type::integral_type>(c.data);
+                            static_cast<typename field_type::integral_type>(
+                                c.to_integral());
                         Integral result = 0u;
                         Integral factor = 1u;
                         size_t bytes_to_fill = sizeof(Integral);
@@ -346,6 +355,17 @@ namespace nil {
                         std::array<typename FieldType::value_type, N> result;
                         for (auto &ch: result) {
                             ch = challenge<FieldType>();
+                        }
+
+                        return result;
+                    }
+
+                    template<typename FieldType>
+                    std::vector<typename FieldType::value_type> challenges(std::size_t N) {
+
+                        std::vector<typename FieldType::value_type> result;
+                        for (std::size_t i = 0; i < N; ++i) {
+                            result.push_back(challenge<FieldType>());
                         }
 
                         return result;

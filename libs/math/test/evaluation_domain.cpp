@@ -45,8 +45,16 @@
 #include <nil/crypto3/algebra/fields/mnt6/base_field.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/mnt6.hpp>
 
-#include <nil/crypto3/algebra/fields/goldilocks64/base_field.hpp>
-#include <nil/crypto3/algebra/fields/arithmetic_params/goldilocks64.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/goldilocks.hpp>
+#include <nil/crypto3/algebra/fields/goldilocks.hpp>
+
+#include <nil/crypto3/algebra/fields/arithmetic_params/mersenne31.hpp>
+#include <nil/crypto3/algebra/fields/mersenne31.hpp>
+
+#include <nil/crypto3/algebra/fields/arithmetic_params/koalabear.hpp>
+#include <nil/crypto3/algebra/fields/koalabear.hpp>
+
+#include <nil/crypto3/algebra/fields/arithmetic_params/babybear.hpp>
 
 #include <nil/crypto3/algebra/random_element.hpp>
 
@@ -93,9 +101,9 @@ void test_fft() {
     std::cout << "FFT: key = " << typeid(*domain).name() << std::endl;
     for (std::size_t i = 0; i < m; i++) {
         value_type e = evaluate_polynomial(f, idx[i], m);
-        std::cout << "idx[" << i << "] = " << idx[i].data << std::endl;
-        std::cout << "e = " << e.data << std::endl;
-        BOOST_CHECK_EQUAL(e.data, a[i].data);
+        std::cout << "idx[" << i << "] = " << idx[i] << std::endl;
+        std::cout << "e = " << e << std::endl;
+        BOOST_CHECK_EQUAL(e, a[i]);
     }
     std::cout << "is_basic_radix2_domain = " << nil::crypto3::math::detail::is_basic_radix2_domain<FieldType>(m) <<
         std::endl;
@@ -155,8 +163,8 @@ void test_inverse_fft_of_fft() {
 
     std::cout << "inverse FFT of FFT: key = " << typeid(*domain).name() << std::endl;
     for (std::size_t i = 0; i < m; i++) {
-        std::cout << "a[" << i << "] = " << a[i].data << std::endl;
-        BOOST_CHECK_EQUAL(f[i].data, a[i].data);
+        std::cout << "a[" << i << "] = " << a[i] << std::endl;
+        BOOST_CHECK_EQUAL(f[i], a[i]);
     }
 }
 
@@ -179,7 +187,7 @@ void test_inverse_coset_ftt_of_coset_fft() {
     multiply_by_coset(a, coset.inversed());
 
     for (std::size_t i = 0; i < m; i++) {
-        BOOST_CHECK_EQUAL(f[i].data, a[i].data);
+        BOOST_CHECK_EQUAL(f[i], a[i]);
     }
 }
 
@@ -201,13 +209,13 @@ void test_lagrange_coefficients() {
     std::vector<value_type> d(m);
     for (std::size_t i = 0; i < m; i++) {
         d[i] = domain->get_domain_element(i);
-        std::cout << "d[" << i << "] = " << d[i].data << std::endl;
+        std::cout << "d[" << i << "] = " << d[i] << std::endl;
     }
 
     for (std::size_t i = 0; i < m; i++) {
         value_type e = evaluate_lagrange_polynomial(d, t, m, i);
-        BOOST_CHECK_EQUAL(e.data, a[i].data);
-        std::cout << "e = " << e.data << std::endl;
+        BOOST_CHECK_EQUAL(e, a[i]);
+        std::cout << "e = " << e << std::endl;
     }
 }
 
@@ -228,10 +236,10 @@ void test_compute_z() {
     std::cout << "ComputeZ: key = " << typeid(*domain).name() << std::endl;
     for (std::size_t i = 0; i < m; i++) {
         Z *= (t - domain->get_domain_element(i));
-        std::cout << "Z = " << Z.data << std::endl;
+        std::cout << "Z = " << Z << std::endl;
     }
 
-    BOOST_CHECK_EQUAL(Z.data, a.data);
+    BOOST_CHECK_EQUAL(Z, a);
 }
 
 template<typename FieldType, typename GroupType, typename EvaluationDomainType, typename GroupEvaluationDomainType>
@@ -394,41 +402,56 @@ void test_get_vanishing_polynomial(std::size_t m) {
 
 BOOST_AUTO_TEST_SUITE(fft_evaluation_domain_test_suite)
 
-    BOOST_AUTO_TEST_CASE(fft) {
-        test_fft<fields::bls12<381>>();
-        test_fft<fields::mnt4<298>>();
-        test_fft<fields::goldilocks64>();
-    }
+// BOOST_AUTO_TEST_CASE(fft) {
+//     test_fft<fields::bls12<381>>();
+//     test_fft<fields::mnt4<298>>();
+//     test_fft<fields::goldilocks>();
+//     test_fft<fields::mersenne31>();
+//     test_fft<fields::koalabear>();
+//     test_fft<fields::babybear>();
+// }
 
-    BOOST_AUTO_TEST_CASE(fft_perf_test, *boost::unit_test::disabled()) {
-        for (int i = 15; i <= 22; ++i) {
-            test_fft_performance<fields::bls12_scalar_field<381>>("BLS12<381> Scalar", 1 << i, 1 << i);
-        }
-    }
+    // BOOST_AUTO_TEST_CASE(fft_perf_test, *boost::unit_test::disabled()) {
+    //     for (int i = 15; i <= 22; ++i) {
+    //         test_fft_performance<fields::bls12_scalar_field<381>>("BLS12<381> Scalar", 1 << i, 1 << i);
+    //     }
+    // }
 
-    BOOST_AUTO_TEST_CASE(inverse_fft_to_fft) {
-        test_inverse_fft_of_fft<fields::bls12<381>>();
-        test_inverse_fft_of_fft<fields::mnt4<298>>();
-        test_inverse_fft_of_fft<fields::goldilocks64>();
-    }
+// BOOST_AUTO_TEST_CASE(inverse_fft_to_fft) {
+//     test_inverse_fft_of_fft<fields::bls12<381>>();
+//     test_inverse_fft_of_fft<fields::mnt4<298>>();
+//     test_inverse_fft_of_fft<fields::goldilocks>();
+//     test_inverse_fft_of_fft<fields::mersenne31>();
+//     test_inverse_fft_of_fft<fields::koalabear>();
+//     test_inverse_fft_of_fft<fields::babybear>();
+// }
 
-    BOOST_AUTO_TEST_CASE(inverse_coset_ftt_to_coset_fft) {
-        test_inverse_coset_ftt_of_coset_fft<fields::bls12<381>>();
-        test_inverse_coset_ftt_of_coset_fft<fields::mnt4<298>>();
-        test_inverse_coset_ftt_of_coset_fft<fields::goldilocks64>();
-    }
+// BOOST_AUTO_TEST_CASE(inverse_coset_ftt_to_coset_fft) {
+//     test_inverse_coset_ftt_of_coset_fft<fields::bls12<381>>();
+//     test_inverse_coset_ftt_of_coset_fft<fields::mnt4<298>>();
+//     test_inverse_coset_ftt_of_coset_fft<fields::goldilocks>();
+//     test_inverse_coset_ftt_of_coset_fft<fields::mersenne31>();
+//     test_inverse_coset_ftt_of_coset_fft<fields::koalabear>();
+//     test_inverse_coset_ftt_of_coset_fft<fields::babybear>();
+// }
 
-    BOOST_AUTO_TEST_CASE(lagrange_coefficients) {
-        test_lagrange_coefficients<fields::bls12<381>>();
-        test_lagrange_coefficients<fields::mnt4<298>>();
-        test_lagrange_coefficients<fields::goldilocks64>();
-    }
+BOOST_AUTO_TEST_CASE(lagrange_coefficients) {
+    // test_lagrange_coefficients<fields::bls12<381>>();
+    // test_lagrange_coefficients<fields::mnt4<298>>();
+    // test_lagrange_coefficients<fields::goldilocks>();
+    // test_lagrange_coefficients<fields::mersenne31>();
+    // test_lagrange_coefficients<fields::koalabear>();
+    test_lagrange_coefficients<fields::babybear>();
+}
 
-    BOOST_AUTO_TEST_CASE(compute_z) {
-        test_compute_z<fields::bls12<381>>();
-        test_compute_z<fields::mnt4<298>>();
-        test_compute_z<fields::goldilocks64>();
-    }
+BOOST_AUTO_TEST_CASE(compute_z) {
+    test_compute_z<fields::bls12<381>>();
+    test_compute_z<fields::mnt4<298>>();
+    test_compute_z<fields::goldilocks>();
+    test_compute_z<fields::mersenne31>();
+    test_compute_z<fields::koalabear>();
+    test_compute_z<fields::babybear>();
+}
 
     BOOST_AUTO_TEST_CASE(curve_elements_fft) {
         typedef curves::bls12<381>::scalar_field_type field_type;

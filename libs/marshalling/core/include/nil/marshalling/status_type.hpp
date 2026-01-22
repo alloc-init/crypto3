@@ -114,5 +114,20 @@ inline std::error_code make_error_code(nil::marshalling::status_type e)
     return {static_cast<int>(e), category};
 }
 
+#if defined(CRYPTO3_MARSHALLING_THROWS)
+
+#define THROW_IF_ERROR_STATUS(status, message) \
+    if (nil::marshalling::status_type::success != status) { \
+        std::stringstream os; os << "While performing operation " << std::string(message) \
+        << " marshalling error status received: " << make_error_code(status) \
+        << " @" << __FILE__ << ":" << __LINE__ << std::endl; \
+        throw std::invalid_argument(os); \
+    }
+
+#else
+
+#define THROW_IF_ERROR_STATUS(status, message) \
+    BOOST_VERIFY_MSG(nil::marshalling::status_type::success == status, message)
+#endif
 
 #endif    // MARSHALLING_STATUS_TYPE_HPP

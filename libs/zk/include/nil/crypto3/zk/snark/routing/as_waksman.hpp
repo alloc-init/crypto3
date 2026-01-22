@@ -138,12 +138,12 @@ namespace nil {
                 /**
                  * Route the given permutation on an AS-Waksman network of suitable size.
                  */
-                as_waksman_routing get_as_waksman_routing(const math::integer_permutation &permutation);
+                as_waksman_routing get_as_waksman_routing(const integer_permutation &permutation);
 
                 /**
                  * Check if a routing "implements" the given permutation.
                  */
-                bool valid_as_waksman_routing(const math::integer_permutation &permutation,
+                bool valid_as_waksman_routing(const integer_permutation &permutation,
                                               const as_waksman_routing &routing);
 
                 /**
@@ -398,8 +398,8 @@ namespace nil {
                                                    std::size_t right,
                                                    std::size_t lo,
                                                    std::size_t hi,
-                                                   const math::integer_permutation &permutation,
-                                                   const math::integer_permutation &permutation_inv,
+                                                   const integer_permutation &permutation,
+                                                   const integer_permutation &permutation_inv,
                                                    as_waksman_routing &routing) {
                     if (left > right) {
                         return;
@@ -433,8 +433,8 @@ namespace nil {
                          * If this enforces a LHS switch setting, then forward-route that;
                          * otherwise we will select the next value from LHS to route.
                          */
-                        math::integer_permutation new_permutation(lo, hi);
-                        math::integer_permutation new_permutation_inv(lo, hi);
+                        integer_permutation new_permutation(lo, hi);
+                        integer_permutation new_permutation_inv(lo, hi);
                         std::vector<bool> lhs_routed(subnetwork_size,
                                                      false); /* offset by lo, i.e. lhs_routed[packet_idx-lo] is set if
                                                                                          packet packet_idx is routed */
@@ -594,13 +594,13 @@ namespace nil {
                         }
 
                         const std::size_t d = as_waksman_top_height(subnetwork_size);
-                        const math::integer_permutation new_permutation_upper = new_permutation.slice(lo, lo + d - 1);
-                        const math::integer_permutation new_permutation_lower = new_permutation.slice(lo + d, hi);
+                        const integer_permutation new_permutation_upper = new_permutation.slice(lo, lo + d - 1);
+                        const integer_permutation new_permutation_lower = new_permutation.slice(lo + d, hi);
 
-                        const math::integer_permutation new_permutation_inv_upper = new_permutation_inv.slice(lo,
+                        const integer_permutation new_permutation_inv_upper = new_permutation_inv.slice(lo,
                                                                                                               lo + d -
                                                                                                               1);
-                        const math::integer_permutation new_permutation_inv_lower = new_permutation_inv.slice(lo + d,
+                        const integer_permutation new_permutation_inv_lower = new_permutation_inv.slice(lo + d,
                                                                                                               hi);
 
                         as_waksman_route_inner(left + 1,
@@ -615,7 +615,7 @@ namespace nil {
                     }
                 }
 
-                inline as_waksman_routing get_as_waksman_routing(const math::integer_permutation &permutation) {
+                inline as_waksman_routing get_as_waksman_routing(const integer_permutation &permutation) {
                     const std::size_t num_packets = permutation.size();
                     const std::size_t width = as_waksman_num_columns(num_packets);
 
@@ -625,16 +625,16 @@ namespace nil {
                     return routing;
                 }
 
-                inline bool valid_as_waksman_routing(const math::integer_permutation &permutation,
+                inline bool valid_as_waksman_routing(const integer_permutation &permutation,
                                                      const as_waksman_routing &routing) {
                     const std::size_t num_packets = permutation.size();
                     const std::size_t width = as_waksman_num_columns(num_packets);
                     as_waksman_topology neighbors = generate_as_waksman_topology(num_packets);
 
-                    math::integer_permutation curperm(num_packets);
+                    integer_permutation curperm(num_packets);
 
                     for (std::size_t column_idx = 0; column_idx < width; ++column_idx) {
-                        math::integer_permutation nextperm(num_packets);
+                        integer_permutation nextperm(num_packets);
                         for (std::size_t packet_idx = 0; packet_idx < num_packets; ++packet_idx) {
                             std::size_t routed_packet_idx;
                             if (neighbors[column_idx][packet_idx].first == neighbors[column_idx][packet_idx].second) {

@@ -15,14 +15,14 @@ target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTER
 cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         ${CMAKE_WORKSPACE_NAME}::random
 
-        marshalling::${CMAKE_WORKSPACE_NAME}_zk
+        marshalling::crypto3_zk
 
-        Boost::unit_test_framework)
+        Boost::unit_test_framework
+        Boost::log)
+set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
 
-option(ZK_PLACEHOLDER_PROFILING_ENABLED "Build with placeholder profiling" FALSE)
-
-if(ZK_PLACEHOLDER_PROFILING)
-    add_definitions(-DZK_PLACEHOLDER_PROFILING_ENABLED)
+if(PROFILING_ENABLED)
+    add_definitions(-DPROFILING_ENABLED)
 endif()
 
 macro(define_zk_test test)
@@ -33,18 +33,18 @@ macro(define_zk_test test)
 
     target_include_directories(${full_test_name} PRIVATE
             "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../test_tools/include>"
             "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(${full_test_name} PROPERTIES CXX_STANDARD 20)
+    set_target_properties(${full_test_name} PROPERTIES CXX_STANDARD 23)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${full_test_name} PRIVATE "-fconstexpr-steps=2147483647")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(${full_test_name} PRIVATE "-fconstexpr-ops-limit=4294967295")
     endif()
-
 endmacro()
 
 set(TESTS_NAMES
@@ -60,6 +60,7 @@ set(TESTS_NAMES
         "commitment/proof_of_work"
 
         "math/expression"
+        "math/dag_expression_evaluator"
 
         "routing_algorithms/test_routing_algorithms"
 
@@ -67,7 +68,12 @@ set(TESTS_NAMES
         "relations/numeric/sap"
 
         "systems/plonk/placeholder/placeholder_circuits"
-        "systems/plonk/placeholder/placeholder_goldilocks"
+        "systems/plonk/placeholder/placeholder_circuits_dFRI"
+        # TODO(ioxid): Mersenne31 is unsupported for now.
+        # "systems/plonk/placeholder/placeholder_mersenne31"
+        "systems/plonk/placeholder/placeholder_koalabear"
+        # bc: disabling babybear for now, Nil changes require special multiprecision interface for 32 bit integers
+        # "systems/plonk/placeholder/placeholder_babybear"
         "systems/plonk/placeholder/placeholder_lookup_argument"
         "systems/plonk/placeholder/placeholder_gate_argument"
         "systems/plonk/placeholder/placeholder_permutation_argument"
