@@ -39,6 +39,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <concepts>
 
 namespace nil::crypto3::bench::detail {
     template<std::integral T>
@@ -309,21 +310,21 @@ namespace nil::crypto3::bench::detail {
             : base_scoped_profiler(name, tag) {
             print_start();
 #ifdef NIL_CO3_PROFILE_COUNT_ARITHMETIC_OPS
-            arithmetic_counters = arithmetic_counters::get_snapshot();
+            arithmetic_counters_ = arithmetic_counters::get_snapshot();
 #endif
-            fft_counters = fft_counters::get_snapshot();
+            fft_counters_ = fft_counters::get_snapshot();
         }
 
         void close() {
             auto elapsed = print_end();
 #ifdef NIL_CO3_PROFILE_COUNT_ARITHMETIC_OPS
             auto arithmetic_str =
-                    arithmetic_counters::get_snapshot().compared_to(arithmetic_counters);
+                    arithmetic_counters::get_snapshot().compared_to(arithmetic_counters_);
             if (!arithmetic_str.empty()) {
                 std::cout << ", arithmetic: " << arithmetic_str;
             }
 #endif
-            auto ffts_str = fft_counters::get_snapshot().compared_to(fft_counters);
+            auto ffts_str = fft_counters::get_snapshot().compared_to(fft_counters_);
             if (!ffts_str.empty()) {
                 std::cout << ", FFTs: " << ffts_str;
             }
@@ -349,8 +350,8 @@ namespace nil::crypto3::bench::detail {
 
     private:
         bool closed = false;
-        arithmetic_counters arithmetic_counters;
-        fft_counters fft_counters;
+        arithmetic_counters arithmetic_counters_;
+        fft_counters fft_counters_;
     };
 
     class parallel_scoped_profiler : public base_scoped_profiler {
