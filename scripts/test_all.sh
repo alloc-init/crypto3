@@ -101,7 +101,7 @@ function compile() {
     compile_failed=0
     compile_timed_out=0
     echo "======= compiling $testname ======="
-    timeout $timelimit make $testname
+    timeout -f $timelimit make $testname
     res=$?
     if [[ $res -eq 124 ]]; then
         echo "======= $func timed out ======="
@@ -121,7 +121,7 @@ function test() {
         return
     fi
     echo "======= running ./$exe ======="
-    timeout $timelimit ./$exe
+    timeout -f $timelimit ./$exe
     res=$?
     if [[ $res -eq 124 ]]; then
         echo "======= $func timed out ======="
