@@ -29,7 +29,6 @@ root
 ├── libs: all directories added as submodules which are independent projects.
 │   ├── algebra: algebraic operations and structures being used for elliptic-curve cryptography
 │   ├── block: block ciphers
-│   ├── blueprint: components and circuits for zk schemes
 │   ├── codec: encoding/decoding algorithms
 │   ├── containers:containers and generic commitment schemes for accumulating data, includes Merkle Tree
 │   ├── hash: hashing algorithms
