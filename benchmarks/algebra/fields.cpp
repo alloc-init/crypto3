@@ -44,6 +44,7 @@
 #include <boost/core/demangle.hpp>
 
 #include <nil/crypto3/algebra/fields/alt_bn128/scalar_field.hpp>
+#include <nil/crypto3/algebra/curves/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/bls12/base_field.hpp>
 #include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/curve25519/base_field.hpp>
@@ -75,7 +76,7 @@ void run_perf_test(std::string const& field_name) {
     std::cout << std::endl;
 
     auto bench_name = [&](std::string const& op) {
-        return std::format("{:29} {:7}:", field_name, op);
+        return std::format("{:29} {:7}:", boost::core::demangle(typeid(Field).name()), op);
     };
 
     constexpr std::size_t INDEPENDENT_FOLDS = 10;
@@ -98,23 +99,24 @@ void run_perf_test(std::string const& field_name) {
     nil::crypto3::bench::run_independent_folds_benchmark<INDEPENDENT_FOLDS, Field>(
         bench_name("sub_thr"), [](V& a, V const& b) { a -= b; });
 
-    nil::crypto3::bench::run_benchmark<Field>(bench_name("sqr"),
-                                              [](V& a) { a.square_inplace(); });
+    // nil::crypto3::bench::run_benchmark<Field>(bench_name("sqr"),
+    //                                           [](V& a) { a.square_inplace(); });
 
     nil::crypto3::bench::run_benchmark<Field>(bench_name("inv"),
                                               [](V& a) { a = a.inversed(); });
 }
 
 using field_types = std::tuple<
-    nil::crypto3::algebra::fields::alt_bn128_scalar_field<254u>,
-    nil::crypto3::algebra::fields::goldilocks, nil::crypto3::algebra::fields::goldilocks_fp2, nil::crypto3::algebra::fields::mersenne31,
-    nil::crypto3::algebra::fields::koalabear,
-    nil::crypto3::algebra::fields::pallas_base_field,
-    nil::crypto3::algebra::fields::mnt4_base_field<298>,
-    nil::crypto3::algebra::fields::mnt6_base_field<298>,
-    nil::crypto3::algebra::fields::ed25519,
-    nil::crypto3::algebra::fields::bls12_base_field<381u>,
-    nil::crypto3::algebra::fields::bls12_scalar_field<381u>>;
+    nil::crypto3::algebra::curves::alt_bn128<254>::gt_type
+    // nil::crypto3::algebra::fields::goldilocks, nil::crypto3::algebra::fields::goldilocks_fp2, nil::crypto3::algebra::fields::mersenne31,
+    // nil::crypto3::algebra::fields::koalabear,
+    // nil::crypto3::algebra::fields::pallas_base_field,
+    // nil::crypto3::algebra::fields::mnt4_base_field<298>,
+    // nil::crypto3::algebra::fields::mnt6_base_field<298>,
+    // nil::crypto3::algebra::fields::ed25519,
+    // nil::crypto3::algebra::fields::bls12_base_field<381u>,
+    // nil::crypto3::algebra::fields::bls12_scalar_field<381u>>;
+    >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(field_operation_perf_test, Field, field_types) {
     run_perf_test<Field>(field_name<Field>());
