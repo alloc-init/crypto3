@@ -51,8 +51,6 @@ namespace nil {
                         typedef FieldParams policy_type;
 
                       public:
-                        typedef typename policy_type::field_type field_type;
-
                         typedef typename policy_type::modular_type modular_type;
                         typedef typename policy_type::integral_type integral_type;
                         typedef typename policy_type::modular_backend modular_backend;
@@ -84,8 +82,8 @@ namespace nil {
                         constexpr element_fp(const element_fp &&B) BOOST_NOEXCEPT
                                 : data(std::move(B.data)) {}
 
-                        constexpr typename field_type::integral_type to_integral() const {
-                            return (typename field_type::integral_type)data;
+                        constexpr integral_type to_integral() const {
+                            return (integral_type)data;
                         }
 
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
