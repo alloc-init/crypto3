@@ -145,7 +145,6 @@ namespace std {
         static BOOST_MP_CXX14_CONSTEXPR bool has_infinity = false;
         static BOOST_MP_CXX14_CONSTEXPR bool has_quiet_NaN = false;
         static BOOST_MP_CXX14_CONSTEXPR bool has_signaling_NaN = false;
-        static BOOST_MP_CXX14_CONSTEXPR float_denorm_style has_denorm = denorm_absent;
         static BOOST_MP_CXX14_CONSTEXPR bool has_denorm_loss = false;
         static BOOST_CXX14_CONSTEXPR_IF_DETECTION number_type infinity() {
             return 0;
@@ -237,11 +236,6 @@ namespace std {
     BOOST_MP_CXX14_CONSTEXPR bool numeric_limits<boost::multiprecision::number<
         boost::multiprecision::backends::cpp_int_modular_backend<Bits>,
         ExpressionTemplates>>::has_signaling_NaN;
-    template<unsigned Bits,
-             boost::multiprecision::expression_template_option ExpressionTemplates>
-    BOOST_MP_CXX14_CONSTEXPR float_denorm_style numeric_limits<boost::multiprecision::number<
-        boost::multiprecision::backends::cpp_int_modular_backend<Bits>,
-        ExpressionTemplates>>::has_denorm;
     template<unsigned Bits,
              boost::multiprecision::expression_template_option ExpressionTemplates>
     BOOST_MP_CXX14_CONSTEXPR bool numeric_limits<boost::multiprecision::number<

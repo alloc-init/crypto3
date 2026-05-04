@@ -73,7 +73,6 @@ void test() {
     PRINT(has_infinity);
     PRINT(has_quiet_NaN);
     PRINT(has_signaling_NaN);
-    PRINT(has_denorm);
     PRINT(has_denorm_loss);
     PRINT(infinity());
     PRINT(quiet_NaN());

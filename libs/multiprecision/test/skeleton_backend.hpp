@@ -1244,7 +1244,6 @@ namespace std {
         BOOST_STATIC_CONSTEXPR bool has_infinity = false;
         BOOST_STATIC_CONSTEXPR bool has_quiet_NaN = false;
         BOOST_STATIC_CONSTEXPR bool has_signaling_NaN = false;
-        BOOST_STATIC_CONSTEXPR float_denorm_style has_denorm = denorm_absent;
         BOOST_STATIC_CONSTEXPR bool has_denorm_loss = false;
         static number_type infinity();
         static number_type quiet_NaN();
@@ -1303,8 +1302,6 @@ namespace std {
     BOOST_CONSTEXPR_OR_CONST bool numeric_limits<boost::multiprecision::number<
         boost::multiprecision::skeleton_backend, ExpressionTemplates>>::has_signaling_NaN;
     template<boost::multiprecision::expression_template_option ExpressionTemplates>
-    BOOST_CONSTEXPR_OR_CONST float_denorm_style numeric_limits<boost::multiprecision::number<
-        boost::multiprecision::skeleton_backend, ExpressionTemplates>>::has_denorm;
     template<boost::multiprecision::expression_template_option ExpressionTemplates>
     BOOST_CONSTEXPR_OR_CONST bool numeric_limits<boost::multiprecision::number<
         boost::multiprecision::skeleton_backend, ExpressionTemplates>>::has_denorm_loss;

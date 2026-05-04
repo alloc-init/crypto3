@@ -277,24 +277,6 @@ BOOST_AUTO_TEST_CASE(test_numeric_limits_snips) {
         (void)b;    // warning suppression
     }
 
-    {
-        //[denorm_min_1
-        std::cout.precision(std::numeric_limits<double>::max_digits10);
-        if (std::numeric_limits<double>::has_denorm == std::denorm_present) {
-            double d = std::numeric_limits<double>::denorm_min();
-
-            std::cout << d << std::endl;    //  4.9406564584124654e-324
-
-            int exponent;
-
-            double significand = frexp(d, &exponent);
-            std::cout << "exponent = " << std::hex << exponent << std::endl;          //  fffffbcf
-            std::cout << "significand = " << std::hex << significand << std::endl;    // 0.50000000000000000
-        } else {
-            std::cout << "No denormalization. " << std::endl;
-        }
-        //] [denorm_min_1]
-    }
 
     {
         //[round_error_1
