@@ -204,10 +204,10 @@ function record_result_row() {
 
 function run_one() {
     local testname="$1"
-    compile_timed_out=""
-    compile_failed=""
-    test_timed_out=""
-    test_failed=""
+    compile_timed_out=0
+    compile_failed=0
+    test_timed_out=0
+    test_failed=0
 
     echo "======= starting $testname ======="
 
