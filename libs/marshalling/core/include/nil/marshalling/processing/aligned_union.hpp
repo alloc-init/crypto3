@@ -54,13 +54,13 @@ namespace nil {
             public:
                 /// Type that has proper size and proper alignment to keep any of the
                 /// specified types
-                using type = typename raw_storage<max_size, max_alignment>::type;
+                using type = raw_storage<max_size, max_alignment>;
             };
 
             template<typename TType>
             class aligned_union<TType> {
             public:
-                using type = typename raw_storage<sizeof(TType), std::alignment_of<TType>::value>::type;
+                using type = raw_storage<sizeof(TType), std::alignment_of<TType>::value>;
             };
 
             /// @endcond
