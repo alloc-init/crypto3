@@ -634,3 +634,4 @@ callgrind.*
 
 .ycm_extra_config.py
 .color_coded
+.vscode
