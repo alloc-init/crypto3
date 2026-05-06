@@ -53,8 +53,9 @@ namespace nil {
                     using reverse_iterator = std::reverse_iterator<iterator>;
                     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-                    using cell_type = alignas(std::alignment_of<T>) std::byte[sizeof(T)];
-
+                    struct alignas(T) cell_type {
+                        std::byte data[sizeof(T)];
+                    };
 
                     static_assert(sizeof(cell_type) == sizeof(T), "type T must be padded");
 
@@ -474,7 +475,7 @@ namespace nil {
 
                 template<typename T, std::size_t TSize>
                 struct static_vector_storage_base {
-                    using element_type = std::byte[TSize];
+                    using element_type = typename static_vector_base<T>::cell_type;
                     using storage_type = std::array<element_type, TSize>;
                     storage_type data_;
                 };
