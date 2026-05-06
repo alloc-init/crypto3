@@ -13,7 +13,7 @@ macro(define_pkpad_test name)
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(${test_name} PROPERTIES CXX_STANDARD 20)
+    set_target_properties(${test_name} PROPERTIES CXX_STANDARD 23)
     target_compile_definitions(${test_name} PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
 
 endmacro()
