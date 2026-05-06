@@ -28,7 +28,6 @@
 #ifdef __ZKLLVM__
 #else
 
-#include <nil/crypto3/detail/type_traits.hpp>
 #include <nil/crypto3/hash/hash_value.hpp>
 #include <nil/crypto3/hash/hash_state.hpp>
 #include <nil/crypto3/hash/type_traits.hpp>

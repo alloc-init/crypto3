@@ -29,8 +29,6 @@
 #include <iterator>
 #include <type_traits>
 
-#include <nil/crypto3/algebra/type_traits.hpp>
-
 #include <nil/crypto3/hash/algorithm/hash.hpp>
 
 #include <nil/crypto3/marshalling/algebra/types/field_element.hpp>
