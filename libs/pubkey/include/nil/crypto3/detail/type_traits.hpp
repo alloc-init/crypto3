@@ -29,6 +29,22 @@
 #include <complex>
 #include <type_traits>
 
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#pragma push_macro("GENERATE_HAS_MEMBER_TYPE")
+#pragma push_macro("GENERATE_HAS_MEMBER")
+#pragma push_macro("GENERATE_HAS_MEMBER_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_CONST_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_RETURN_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION")
+#endif
+
+#undef GENERATE_HAS_MEMBER_TYPE
+#undef GENERATE_HAS_MEMBER
+#undef GENERATE_HAS_MEMBER_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_FUNCTION
+#undef GENERATE_HAS_MEMBER_RETURN_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
+
 #ifndef GENERATE_HAS_MEMBER_TYPE
 #define GENERATE_HAS_MEMBER_TYPE(Type)                                                                                 \
     template<class T, typename Enable = void>                                                                          \
@@ -462,5 +478,21 @@ namespace nil {
         }    // namespace detail
     }        // namespace crypto3
 }    // namespace nil
+
+#undef GENERATE_HAS_MEMBER_TYPE
+#undef GENERATE_HAS_MEMBER
+#undef GENERATE_HAS_MEMBER_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_FUNCTION
+#undef GENERATE_HAS_MEMBER_RETURN_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
+
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#pragma pop_macro("GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_RETURN_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_CONST_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER")
+#pragma pop_macro("GENERATE_HAS_MEMBER_TYPE")
+#endif
 
 #endif    // CRYPTO3_TYPE_TRAITS_HPP
