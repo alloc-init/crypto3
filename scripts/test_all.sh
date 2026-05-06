@@ -11,6 +11,7 @@ if ! which fd 2>&1>/dev/null; then
 fi
 
 filter=""
+rerun_test=""
 dryrun=""
 timelimit="5m"
 only_compile=""
@@ -31,6 +32,7 @@ function show_help() {
     echo "  -h              this message"
     echo "  -d              dry run"
     echo "  -f FILTER       filter test names"
+    echo "  -r TEST         rerun one exact test and update the csv even if logged"
     echo "  -t LIMIT        limit compilation and runtime [$timelimit]"
     echo "  -o FILE         output file [$csv]"
     echo "  -c              only compile"
@@ -38,7 +40,7 @@ function show_help() {
     echo "  -j JOBS         tests to run in parallel [$parallel_jobs]"
 }
 
-while getopts "h?df:t:o:ocsj:" opt; do
+while getopts "h?df:r:t:o:ocsj:" opt; do
   case "$opt" in
     h|\?)
         show_help
@@ -49,6 +51,9 @@ while getopts "h?df:t:o:ocsj:" opt; do
         ;;
     f)  
         filter=$OPTARG
+        ;;
+    r)
+        rerun_test=$OPTARG
         ;;
     t)
         timelimit=$OPTARG
@@ -82,6 +87,11 @@ if [[ -n $abort_on_failure && $parallel_jobs -gt 1 ]]; then
     exit 1
 fi
 
+if [[ -n $rerun_test && -n $filter ]]; then
+    echo "ERROR: -r cannot be combined with -f"
+    exit 1
+fi
+
 if [[ -z ${NO_COLOR:-} && ( -t 1 || -n ${FORCE_COLOR:-} ) ]]; then
     color_red=$'\033[31m'
     color_green=$'\033[32m'
@@ -107,7 +117,15 @@ function list_make_targets() {
         | sort -u
 }
 
-raw_tests=$(list_make_targets | grep "$filter")
+if [[ -n $rerun_test ]]; then
+    raw_tests=$(list_make_targets | awk -v testname="$rerun_test" '$0 == testname')
+    if [[ -z $raw_tests ]]; then
+        echo "ERROR: no test target named $rerun_test"
+        exit 1
+    fi
+else
+    raw_tests=$(list_make_targets | grep "$filter")
+fi
 logs_dir="$csv.logs"
 
 function csv_has_test() {
@@ -128,7 +146,9 @@ function csv_has_runtime_result() {
 
 # drop tests which we've logged already to the csv file (allowing resumption)
 touch "$csv"
-if [[ $(wc -l "$csv" | perl -lane 'print $F[0]') -gt 0 ]]; then
+if [[ -n $rerun_test ]]; then
+    tests=$raw_tests
+elif [[ $(wc -l "$csv" | perl -lane 'print $F[0]') -gt 0 ]]; then
     for test in $raw_tests; do
         if ! csv_has_test "$test"; then
             # echo "adding $test"
