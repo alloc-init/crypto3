@@ -108,6 +108,7 @@ function list_make_targets() {
 }
 
 raw_tests=$(list_make_targets | grep "$filter")
+logs_dir="$csv.logs"
 
 function csv_has_test() {
     local testname="$1"
@@ -144,11 +145,15 @@ else
 fi
 
 if [[ -z $tests ]]; then
-    echo "no tests selected"
-    exit 0
+    no_tests_selected=1
 fi
 
 if [[ -n $dryrun ]]; then
+    if [[ -n $no_tests_selected ]]; then
+        echo "no tests selected"
+        exit 0
+    fi
+
     for test in $tests; do
         echo "======= starting $test ======="
     done
@@ -157,7 +162,6 @@ fi
 
 results_dir=$(mktemp -d "${TMPDIR:-/tmp}/test_all.XXXXXX")
 rows_dir="$results_dir/rows"
-logs_dir="$csv.logs"
 mkdir -p "$rows_dir" "$logs_dir"
 
 function stop_running_jobs() {
@@ -237,7 +241,7 @@ function count_selected_tests() {
     local count=0
     local test
 
-    for test in $tests; do
+    for test in $raw_tests; do
         count=$((count + 1))
     done
 
@@ -268,13 +272,13 @@ function print_test_report() {
 
     selected_count=$(count_selected_tests)
 
-    for test in $tests; do
-        if [[ ! -f "$rows_dir/$test.csv" ]]; then
+    for test in $raw_tests; do
+        if ! csv_has_test "$test"; then
             continue
         fi
 
         completed_count=$((completed_count + 1))
-        IFS= read -r row < "$rows_dir/$test.csv"
+        row=$(awk -F', *' -v testname="$test" '$1 == testname { print; exit }' "$csv")
         IFS=',' read -r row_testname row_arch row_compile_timed_out row_compile_failed row_test_timed_out row_test_failed <<< "$row"
         row_compile_timed_out=${row_compile_timed_out//[[:space:]]/}
         row_compile_failed=${row_compile_failed//[[:space:]]/}
@@ -403,6 +407,14 @@ function merge_results() {
         }
     ' "$new_rows" "$csv" > "$tmp_csv" && mv "$tmp_csv" "$csv"
 }
+
+if [[ -n $no_tests_selected ]]; then
+    echo "no tests selected"
+    echo "======= results written to $csv ======="
+    echo "======= logs written to $logs_dir ======="
+    print_test_report
+    exit 0
+fi
 
 function run_serial() {
     local failures=0
