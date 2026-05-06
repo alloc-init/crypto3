@@ -257,11 +257,19 @@ function join_reasons() {
     echo "$joined"
 }
 
-function count_selected_tests() {
+function report_tests_list() {
+    if [[ -n $rerun_test ]]; then
+        awk -F', *' '$1 != "" && !seen[$1]++ { print $1 }' "$csv"
+    else
+        printf '%s\n' $raw_tests
+    fi
+}
+
+function count_report_tests() {
     local count=0
     local test
 
-    for test in $raw_tests; do
+    for test in $(report_tests_list); do
         count=$((count + 1))
     done
 
@@ -269,7 +277,8 @@ function count_selected_tests() {
 }
 
 function print_test_report() {
-    local selected_count
+    local report_count
+    local report_label="selected"
     local completed_count=0
     local failed_count=0
     local passed_count=0
@@ -290,9 +299,12 @@ function print_test_report() {
     local reason_color
     local failed_lines=()
 
-    selected_count=$(count_selected_tests)
+    if [[ -n $rerun_test ]]; then
+        report_label="csv rows"
+    fi
+    report_count=$(count_report_tests)
 
-    for test in $raw_tests; do
+    for test in $(report_tests_list); do
         if ! csv_has_test "$test"; then
             continue
         fi
@@ -338,11 +350,11 @@ function print_test_report() {
         fi
     done
 
-    not_run_count=$((selected_count - completed_count))
+    not_run_count=$((report_count - completed_count))
 
     echo
     echo "${color_bold}${color_blue}======= test report =======${color_reset}"
-    echo "selected: $selected_count, completed: $completed_count, ${color_green}passed: $passed_count${color_reset}, ${color_red}failed: $failed_count${color_reset}"
+    echo "$report_label: $report_count, completed: $completed_count, ${color_green}passed: $passed_count${color_reset}, ${color_red}failed: $failed_count${color_reset}"
 
     if [[ $not_run_count -gt 0 ]]; then
         echo "${color_yellow}not run: $not_run_count${color_reset}"
