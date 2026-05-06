@@ -23,7 +23,7 @@ macro(define_mac_test name)
 
                                ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(${name}_test PROPERTIES CXX_STANDARD 23)
+    set_target_properties(${name}_test PROPERTIES CXX_STANDARD 14)
 
 endmacro()
 
