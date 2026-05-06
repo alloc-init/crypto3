@@ -82,6 +82,22 @@ if [[ -n $abort_on_failure && $parallel_jobs -gt 1 ]]; then
     exit 1
 fi
 
+if [[ -z ${NO_COLOR:-} && ( -t 1 || -n ${FORCE_COLOR:-} ) ]]; then
+    color_red=$'\033[31m'
+    color_green=$'\033[32m'
+    color_yellow=$'\033[33m'
+    color_blue=$'\033[34m'
+    color_bold=$'\033[1m'
+    color_reset=$'\033[0m'
+else
+    color_red=""
+    color_green=""
+    color_yellow=""
+    color_blue=""
+    color_bold=""
+    color_reset=""
+fi
+
 
 
 function list_make_targets() {
@@ -202,6 +218,122 @@ function record_result_row() {
         > "$rows_dir/$testname.csv"
 }
 
+function join_reasons() {
+    local joined=""
+    local reason
+
+    for reason in "$@"; do
+        if [[ -z $joined ]]; then
+            joined="$reason"
+        else
+            joined="$joined, $reason"
+        fi
+    done
+
+    echo "$joined"
+}
+
+function count_selected_tests() {
+    local count=0
+    local test
+
+    for test in $tests; do
+        count=$((count + 1))
+    done
+
+    echo "$count"
+}
+
+function print_test_report() {
+    local selected_count
+    local completed_count=0
+    local failed_count=0
+    local passed_count=0
+    local not_run_count
+    local compile_timeout_count=0
+    local compile_error_count=0
+    local test_timeout_count=0
+    local test_error_count=0
+    local test
+    local row
+    local row_testname
+    local row_arch
+    local row_compile_timed_out
+    local row_compile_failed
+    local row_test_timed_out
+    local row_test_failed
+    local reasons
+    local reason_color
+    local failed_lines=()
+
+    selected_count=$(count_selected_tests)
+
+    for test in $tests; do
+        if [[ ! -f "$rows_dir/$test.csv" ]]; then
+            continue
+        fi
+
+        completed_count=$((completed_count + 1))
+        IFS= read -r row < "$rows_dir/$test.csv"
+        IFS=',' read -r row_testname row_arch row_compile_timed_out row_compile_failed row_test_timed_out row_test_failed <<< "$row"
+        row_compile_timed_out=${row_compile_timed_out//[[:space:]]/}
+        row_compile_failed=${row_compile_failed//[[:space:]]/}
+        row_test_timed_out=${row_test_timed_out//[[:space:]]/}
+        row_test_failed=${row_test_failed//[[:space:]]/}
+
+        if [[ $row_compile_timed_out == 1 || $row_compile_failed == 1 || $row_test_timed_out == 1 || $row_test_failed == 1 ]]; then
+            local failure_reasons=()
+            failed_count=$((failed_count + 1))
+
+            if [[ $row_compile_timed_out == 1 ]]; then
+                failure_reasons+=("compilation timeout")
+                compile_timeout_count=$((compile_timeout_count + 1))
+            fi
+            if [[ $row_compile_failed == 1 ]]; then
+                failure_reasons+=("compilation error")
+                compile_error_count=$((compile_error_count + 1))
+            fi
+            if [[ $row_test_timed_out == 1 ]]; then
+                failure_reasons+=("test timeout")
+                test_timeout_count=$((test_timeout_count + 1))
+            fi
+            if [[ $row_test_failed == 1 ]]; then
+                failure_reasons+=("test error")
+                test_error_count=$((test_error_count + 1))
+            fi
+
+            reasons=$(join_reasons "${failure_reasons[@]}")
+            if [[ $reasons == *timeout* ]]; then
+                reason_color=$color_yellow
+            else
+                reason_color=$color_red
+            fi
+            failed_lines+=("  ${color_red}FAIL${color_reset} $test ${reason_color}[$reasons]${color_reset} log: $logs_dir/$test.log")
+        else
+            passed_count=$((passed_count + 1))
+        fi
+    done
+
+    not_run_count=$((selected_count - completed_count))
+
+    echo
+    echo "${color_bold}${color_blue}======= test report =======${color_reset}"
+    echo "selected: $selected_count, completed: $completed_count, ${color_green}passed: $passed_count${color_reset}, ${color_red}failed: $failed_count${color_reset}"
+
+    if [[ $not_run_count -gt 0 ]]; then
+        echo "${color_yellow}not run: $not_run_count${color_reset}"
+    fi
+
+    if [[ $failed_count -eq 0 ]]; then
+        echo "${color_green}all completed tests passed${color_reset}"
+        return
+    fi
+
+    echo "${color_bold}failure types:${color_reset} compilation timeouts: $compile_timeout_count, compilation errors: $compile_error_count, test timeouts: $test_timeout_count, test errors: $test_error_count"
+    echo "${color_bold}failed tests:${color_reset}"
+    printf '%s\n' "${failed_lines[@]}"
+}
+
 function run_one() {
     local testname="$1"
     compile_timed_out=0
@@ -286,8 +418,7 @@ function run_serial() {
             failures=$((failures + 1))
             echo "======= $test failed (log: $log_file) ======="
             if [[ -n $abort_on_failure ]]; then
-                merge_results
-                exit 1
+                return 1
             fi
         else
             echo "======= $test finished (log: $log_file) ======="
@@ -343,10 +474,14 @@ function run_parallel() {
 
 if [[ $parallel_jobs -eq 1 ]]; then
     run_serial
+    run_status=$?
 else
     run_parallel
+    run_status=$?
 fi
 
 merge_results
 echo "======= results written to $csv ======="
 echo "======= logs written to $logs_dir ======="
+print_test_report
+exit "$run_status"
