@@ -847,7 +847,7 @@ using Test27_FieldBase = field_type<option::big_endian>;
 
 typedef std::tuple<types::integral<Test27_FieldBase, std::uint8_t, option::fixed_bit_length<4>>,
                    types::bitmask_value<Test27_FieldBase, option::fixed_length<1>, option::fixed_bit_length<8>>,
-                   types::enumeration<Test27_FieldBase, types_fixture::Enum1, option::fixed_bit_length<4>>>
+                   types::enumeration<Test27_FieldBase, types_fixture::Enum2, option::fixed_bit_length<4>>>
     Test27_BitfildMembers;
 
 template<typename... TExtraOpts>
@@ -878,7 +878,7 @@ BOOST_AUTO_TEST_CASE(test27) {
     BOOST_CHECK(mem2.value() == 0xfa);
 
     auto &mem3 = field.field_mem3();
-    BOOST_CHECK(mem3.value() == 0x4);
+    BOOST_CHECK(mem3.value() == types_fixture::Enum2::NumOfValues);
 }
 
 BOOST_AUTO_TEST_CASE(test28) {
