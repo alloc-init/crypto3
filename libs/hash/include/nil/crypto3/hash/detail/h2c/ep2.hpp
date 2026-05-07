@@ -32,6 +32,8 @@
 
 #include <type_traits>
 
+#include <nil/crypto3/algebra/curves/detail/scalar_mul.hpp>
+
 #include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
 
 namespace nil {
@@ -110,7 +112,9 @@ namespace nil {
                 }
 
                 static inline group_value_type clear_cofactor(const group_value_type &R) {
-                    return R * suite_type::h_eff;
+                    group_value_type result = R;
+                    algebra::curves::detail::scalar_mul_inplace(result, suite_type::h_eff);
+                    return result;
                 }
             };
         }    // namespace hashes
