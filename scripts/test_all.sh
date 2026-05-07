@@ -418,12 +418,13 @@ function print_test_report() {
 
     if [[ $failed_count -eq 0 ]]; then
         echo "${color_green}all completed tests passed${color_reset}"
-        return
+        return 0
     fi
 
     echo "${color_bold}failure types:${color_reset} compilation timeouts: $compile_timeout_count, compilation errors: $compile_error_count, test timeouts: $test_timeout_count, test errors: $test_error_count"
     echo "${color_bold}failed tests:${color_reset}"
     printf '%s\n' "${failed_lines[@]}"
+    return 1
 }
 
 function run_one() {
@@ -501,7 +502,7 @@ if [[ -n $no_tests_selected ]]; then
     echo "======= results written to $csv ======="
     echo "======= logs written to $logs_dir ======="
     print_test_report
-    exit 0
+    exit $?
 fi
 
 function run_serial() {
@@ -527,7 +528,10 @@ function run_serial() {
 
     if [[ $failures -gt 0 ]]; then
         echo "======= $failures test(s) failed or timed out ======="
+        return 1
     fi
+
+    return 0
 }
 
 function running_jobs_count() {
@@ -569,7 +573,10 @@ function run_parallel() {
 
     if [[ $failures -gt 0 ]]; then
         echo "======= $failures test(s) failed or timed out ======="
+        return 1
     fi
+
+    return 0
 }
 
 if [[ $parallel_jobs -eq 1 ]]; then
@@ -584,4 +591,10 @@ merge_results
 echo "======= results written to $csv ======="
 echo "======= logs written to $logs_dir ======="
 print_test_report
-exit "$run_status"
+report_status=$?
+
+if [[ $run_status -ne 0 || $report_status -ne 0 ]]; then
+    exit 1
+fi
+
+exit 0
