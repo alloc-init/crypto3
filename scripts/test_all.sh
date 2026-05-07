@@ -144,6 +144,16 @@ function csv_has_runtime_result() {
     ' "$csv"
 }
 
+function test_needs_rebuild() {
+    local testname="$1"
+    local status
+
+    make -q "$testname" >/dev/null 2>&1
+    status=$?
+
+    [[ $status -eq 1 ]]
+}
+
 # drop tests which we've logged already to the csv file (allowing resumption)
 touch "$csv"
 if [[ -n $rerun_test ]]; then
@@ -152,6 +162,9 @@ elif [[ $(wc -l "$csv" | perl -lane 'print $F[0]') -gt 0 ]]; then
     for test in $raw_tests; do
         if ! csv_has_test "$test"; then
             # echo "adding $test"
+            tests+=" $test"
+        elif test_needs_rebuild "$test"; then
+            echo "rerunning $test (needs rebuild)"
             tests+=" $test"
         elif [[ -z $only_compile ]] && ! csv_has_runtime_result "$test"; then
             # if we are running tests and this test has been compiled but not tested, include it in the list
