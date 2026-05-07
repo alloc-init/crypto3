@@ -11,6 +11,7 @@ dryrun=""
 timelimit="5m"
 only_compile=""
 abort_on_failure=""
+print_failure_logs=""
 parallel_jobs="${TEST_ALL_JOBS:-1}"
 
 if [[ $(uname) == Darwin ]]; then
@@ -33,9 +34,10 @@ function show_help() {
     echo "  -c              only compile"
     echo "  -s              stop after the first failure"
     echo "  -j JOBS         tests to run in parallel [$parallel_jobs]"
+    echo "  -l              print logs for failed tests"
 }
 
-while getopts "h?df:r:t:o:ocsj:" opt; do
+while getopts "h?df:r:t:o:ocsj:l" opt; do
   case "$opt" in
     h|\?)
         show_help
@@ -64,6 +66,9 @@ while getopts "h?df:r:t:o:ocsj:" opt; do
         ;;
     j)
         parallel_jobs=$OPTARG
+        ;;
+    l)
+        print_failure_logs=1
         ;;
   esac
 done
@@ -349,6 +354,7 @@ function print_test_report() {
     local reasons
     local reason_color
     local failed_lines=()
+    local failed_tests=()
 
     if [[ -n $rerun_test ]]; then
         report_label="csv rows"
@@ -396,6 +402,7 @@ function print_test_report() {
                 reason_color=$color_red
             fi
             failed_lines+=("  ${color_red}FAIL${color_reset} $test ${reason_color}[$reasons]${color_reset} log: $logs_dir/$test.log")
+            failed_tests+=("$test")
         else
             passed_count=$((passed_count + 1))
         fi
@@ -419,7 +426,32 @@ function print_test_report() {
     echo "${color_bold}failure types:${color_reset} compilation timeouts: $compile_timeout_count, compilation errors: $compile_error_count, test timeouts: $test_timeout_count, test errors: $test_error_count"
     echo "${color_bold}failed tests:${color_reset}"
     printf '%s\n' "${failed_lines[@]}"
+
+    if [[ -n $print_failure_logs ]]; then
+        print_failed_test_logs "${failed_tests[@]}"
+    fi
+
     return 1
+}
+
+function print_failed_test_logs() {
+    local test
+    local log_file
+
+    echo
+    echo "${color_bold}${color_blue}======= failed test logs =======${color_reset}"
+
+    for test in "$@"; do
+        log_file="$logs_dir/$test.log"
+        echo
+        echo "${color_bold}======= $test ($log_file) =======${color_reset}"
+
+        if [[ -f $log_file ]]; then
+            cat "$log_file"
+        else
+            echo "${color_yellow}missing log: $log_file${color_reset}"
+        fi
+    done
 }
 
 function run_one() {
