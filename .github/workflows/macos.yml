@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: install dependencies
-      run: brew install boost llvm
+      run: brew install boost llvm coreutils
     - uses: actions/checkout@v4
       with:
         submodules: recursive
