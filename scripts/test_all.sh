@@ -149,6 +149,11 @@ function find_test_executable() {
     fd -t f "^$testname$" | head -n 1
 }
 
+function find_test_target_dir() {
+    local testname="$1"
+    fd -u -t d "^${testname}\\.dir$" | awk '/\/CMakeFiles\// { print; exit }'
+}
+
 function find_test_build_output() {
     local testname="$1"
     local exe
@@ -160,7 +165,7 @@ function find_test_build_output() {
         return
     fi
 
-    target_dir=$(fd -u -t d "^${testname}\\.dir$" | awk '/\/CMakeFiles\// { print; exit }')
+    target_dir=$(find_test_target_dir "$testname")
     if [[ -n $target_dir ]]; then
         target_dir=${target_dir%/}
         echo "${target_dir%/CMakeFiles/$testname.dir}/$testname"
@@ -170,6 +175,7 @@ function find_test_build_output() {
 function test_needs_rebuild() {
     local testname="$1"
     local output
+    local target_dir
     local status
 
     output=$(find_test_build_output "$testname")
@@ -177,10 +183,18 @@ function test_needs_rebuild() {
         return 1
     fi
 
-    make -q "$output" >/dev/null 2>&1
+    target_dir=$(find_test_target_dir "$testname")
+    if [[ -n $target_dir ]]; then
+        target_dir=${target_dir%/}
+        make -f "$target_dir/build.make" "$target_dir/depend" >/dev/null 2>&1 || return 0
+        make -q -f "$target_dir/build.make" "$output" >/dev/null 2>&1
+    else
+        make -q "$output" >/dev/null 2>&1
+    fi
+
     status=$?
 
-    [[ $status -eq 1 ]]
+    [[ $status -ne 0 ]]
 }
 
 # drop tests which we've logged already to the csv file (allowing resumption)
