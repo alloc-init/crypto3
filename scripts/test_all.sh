@@ -144,11 +144,40 @@ function csv_has_runtime_result() {
     ' "$csv"
 }
 
+function find_test_executable() {
+    local testname="$1"
+    fd -t f "^$testname$" | head -n 1
+}
+
+function find_test_build_output() {
+    local testname="$1"
+    local exe
+    local target_dir
+
+    exe=$(find_test_executable "$testname")
+    if [[ -n $exe ]]; then
+        echo "$exe"
+        return
+    fi
+
+    target_dir=$(fd -u -t d "^${testname}\\.dir$" | awk '/\/CMakeFiles\// { print; exit }')
+    if [[ -n $target_dir ]]; then
+        target_dir=${target_dir%/}
+        echo "${target_dir%/CMakeFiles/$testname.dir}/$testname"
+    fi
+}
+
 function test_needs_rebuild() {
     local testname="$1"
+    local output
     local status
 
-    make -q "$testname" >/dev/null 2>&1
+    output=$(find_test_build_output "$testname")
+    if [[ -z $output ]]; then
+        return 1
+    fi
+
+    make -q "$output" >/dev/null 2>&1
     status=$?
 
     [[ $status -eq 1 ]]
@@ -232,7 +261,7 @@ function run_test() {
     local testname="$1"
     test_failed=0
     test_timed_out=0
-    exe=$(fd "$testname" | head -n 1)
+    exe=$(find_test_executable "$testname")
     if [[ -z $exe ]]; then
         # possibly a compile-only test
         return
