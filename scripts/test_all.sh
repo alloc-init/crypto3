@@ -5,6 +5,13 @@ if ! which timeout 2>&1>/dev/null; then
     exit 1
 fi
 
+timeout_foreground_arg=""
+if timeout -f 1 true >/dev/null 2>&1; then
+    timeout_foreground_arg="-f"
+elif timeout --foreground 1 true >/dev/null 2>&1; then
+    timeout_foreground_arg="--foreground"
+fi
+
 filter=""
 rerun_test=""
 dryrun=""
@@ -256,12 +263,23 @@ trap cleanup EXIT
 trap 'stop_running_jobs; cleanup; exit 130' INT
 trap 'stop_running_jobs; cleanup; exit 143' TERM
 
+function run_with_timeout() {
+    local limit="$1"
+    shift
+
+    if [[ -n $timeout_foreground_arg ]]; then
+        timeout "$timeout_foreground_arg" "$limit" "$@"
+    else
+        timeout "$limit" "$@"
+    fi
+}
+
 function compile() {
     local testname="$1"
     compile_failed=0
     compile_timed_out=0
     echo "======= compiling $testname ======="
-    timeout -f "$timelimit" make "$testname"
+    run_with_timeout "$timelimit" make "$testname"
     res=$?
     if [[ $res -eq 124 ]]; then
         echo "======= compiling $testname timed out ======="
@@ -281,7 +299,7 @@ function run_test() {
         return
     fi
     echo "======= running ./$exe ======="
-    timeout -f "$timelimit" "./$exe"
+    run_with_timeout "$timelimit" "./$exe"
     res=$?
     if [[ $res -eq 124 ]]; then
         echo "======= running $testname timed out ======="
