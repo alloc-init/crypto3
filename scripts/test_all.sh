@@ -5,11 +5,6 @@ if ! which timeout 2>&1>/dev/null; then
     exit 1
 fi
 
-if ! which fd 2>&1>/dev/null; then
-    echo "ERROR: missing required command fd (brew install fd)"
-    exit 1
-fi
-
 filter=""
 rerun_test=""
 dryrun=""
@@ -146,12 +141,12 @@ function csv_has_runtime_result() {
 
 function find_test_executable() {
     local testname="$1"
-    fd -t f "^$testname$" | head -n 1
+    find . -type f -name "$testname" -print | sed 's#^\./##' | head -n 1
 }
 
 function find_test_target_dir() {
     local testname="$1"
-    fd -u -t d "^${testname}\\.dir$" | awk '/\/CMakeFiles\// { print; exit }'
+    find . -type d -path "*/CMakeFiles/${testname}.dir" -print | sed 's#^\./##' | head -n 1
 }
 
 function find_test_build_output() {
