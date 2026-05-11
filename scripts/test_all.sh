@@ -274,13 +274,26 @@ function run_with_timeout() {
     fi
 }
 
+function now_seconds() {
+    perl -MTime::HiRes=time -e 'printf "%.6f\n", time'
+}
+
+function elapsed_seconds() {
+    perl -e 'printf "%.3f\n", $ARGV[1] - $ARGV[0]' "$1" "$2"
+}
+
 function compile() {
     local testname="$1"
+    local start_time
+    local end_time
     compile_failed=0
     compile_timed_out=0
     echo "======= compiling $testname ======="
+    start_time=$(now_seconds)
     run_with_timeout "$timelimit" make "$testname"
     res=$?
+    end_time=$(now_seconds)
+    compile_seconds=$(elapsed_seconds "$start_time" "$end_time")
     if [[ $res -eq 124 ]]; then
         echo "======= compiling $testname timed out ======="
         compile_timed_out=1
@@ -291,6 +304,8 @@ function compile() {
 
 function run_test() {
     local testname="$1"
+    local start_time
+    local end_time
     test_failed=0
     test_timed_out=0
     exe=$(find_test_executable "$testname")
@@ -299,8 +314,11 @@ function run_test() {
         return
     fi
     echo "======= running ./$exe ======="
+    start_time=$(now_seconds)
     run_with_timeout "$timelimit" "./$exe"
     res=$?
+    end_time=$(now_seconds)
+    test_seconds=$(elapsed_seconds "$start_time" "$end_time")
     if [[ $res -eq 124 ]]; then
         echo "======= running $testname timed out ======="
         test_timed_out=1
@@ -311,8 +329,8 @@ function run_test() {
 
 function record_result_row() {
     local testname="$1"
-    printf '%s, %s, %s, %s, %s, %s\n' \
-        "$testname" "$arch" "$compile_timed_out" "$compile_failed" "$test_timed_out" "$test_failed" \
+    printf '%s, %s, %s, %s, %s, %s, %s, %s\n' \
+        "$testname" "$arch" "$compile_timed_out" "$compile_failed" "$test_timed_out" "$test_failed" "$compile_seconds" "$test_seconds" \
         > "$rows_dir/$testname.csv"
 }
 
@@ -369,6 +387,9 @@ function print_test_report() {
     local row_compile_failed
     local row_test_timed_out
     local row_test_failed
+    local row_compile_seconds
+    local row_test_seconds
+    local row_extra
     local reasons
     local reason_color
     local failed_lines=()
@@ -386,7 +407,7 @@ function print_test_report() {
 
         completed_count=$((completed_count + 1))
         row=$(awk -F', *' -v testname="$test" '$1 == testname { print; exit }' "$csv")
-        IFS=',' read -r row_testname row_arch row_compile_timed_out row_compile_failed row_test_timed_out row_test_failed <<< "$row"
+        IFS=',' read -r row_testname row_arch row_compile_timed_out row_compile_failed row_test_timed_out row_test_failed row_compile_seconds row_test_seconds row_extra <<< "$row"
         row_compile_timed_out=${row_compile_timed_out//[[:space:]]/}
         row_compile_failed=${row_compile_failed//[[:space:]]/}
         row_test_timed_out=${row_test_timed_out//[[:space:]]/}
@@ -478,6 +499,8 @@ function run_one() {
     compile_failed=0
     test_timed_out=0
     test_failed=0
+    compile_seconds=""
+    test_seconds=""
 
     echo "======= starting $testname ======="
 
