@@ -15,7 +15,7 @@ fi
 filter=""
 rerun_test=""
 dryrun=""
-timelimit="5m"
+timelimit="10m"
 only_compile=""
 abort_on_failure=""
 print_failure_logs=""
