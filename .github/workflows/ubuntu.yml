@@ -8,11 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ubuntu:26.04
 
     steps:
     - name: install boost
-      run: apt-get update && apt-get install -y libboost-all-dev expect
+      run: sudo apt-get update && sudo apt-get install -y libboost-all-dev expect
     - uses: actions/checkout@v4
       with:
         submodules: recursive
