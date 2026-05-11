@@ -31,11 +31,49 @@ macro(define_benchmark benchmark)
         ${CMAKE_WORKSPACE_NAME}::math
         ${CMAKE_WORKSPACE_NAME}::algebra
         ${CMAKE_WORKSPACE_NAME}::multiprecision
-        ${CMAKE_WORKSPACE_NAME}::zk
         ${CMAKE_WORKSPACE_NAME}::benchmark_tools
 
         Boost::unit_test_framework
         Boost::timer
+        Boost::random)
+
+    if (TARGET ${CMAKE_WORKSPACE_NAME}::zk)
+        target_link_libraries(${full_name} ${CMAKE_WORKSPACE_NAME}::zk)
+    endif()
+
+    set_target_properties(${full_name}
+        PROPERTIES
+        CXX_STANDARD 23
+        CXX_STANDARD_REQUIRED TRUE)
+
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(${full_name} PRIVATE "-fconstexpr-steps=2147483647")
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(${full_name} PRIVATE "-fconstexpr-ops-limit=4294967295")
+    endif()
+
+endmacro()
+
+macro(define_standalone_benchmark benchmark)
+
+    string(REPLACE "/" "_" full_name ${benchmark}_benchmark)
+
+    add_dependencies(crypto3_benchmarks ${full_name})
+
+    add_executable(${full_name} ${benchmark}.cpp)
+
+    target_include_directories(
+        ${full_name} PRIVATE
+            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+            "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
+            ${Boost_INCLUDE_DIRS})
+
+    target_link_libraries(${full_name}
+        ${CMAKE_WORKSPACE_NAME}::random
+        ${CMAKE_WORKSPACE_NAME}::math
+        ${CMAKE_WORKSPACE_NAME}::algebra
+        ${CMAKE_WORKSPACE_NAME}::multiprecision
+
         Boost::random)
 
     set_target_properties(${full_name}
@@ -67,4 +105,10 @@ foreach(BENCHMARK_NAME ${BENCHMARK_NAMES})
     define_benchmark(${BENCHMARK_NAME})
 endforeach()
 
+set(STANDALONE_BENCHMARK_NAMES
+    "algebra/bn254_fp12"
+)
 
+foreach(BENCHMARK_NAME ${STANDALONE_BENCHMARK_NAMES})
+    define_standalone_benchmark(${BENCHMARK_NAME})
+endforeach()
