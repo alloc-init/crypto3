@@ -391,7 +391,7 @@ static inline typename boost::uint_t<Size>::exact extract_uint_t(Integer v, std:
 template<typename Integer>
 std::array<std::uint8_t, sizeof(Integer)> to_byte_array(Integer i) {
     std::array<std::uint8_t, sizeof(Integer)> res;
-    for (int itr = 0; itr < sizeof(Integer); itr++) {
+    for (int itr = 0; itr < (int)sizeof(Integer); itr++) {
         res[itr] = extract_uint_t<CHAR_BIT>(i, itr);
     }
     return res;
