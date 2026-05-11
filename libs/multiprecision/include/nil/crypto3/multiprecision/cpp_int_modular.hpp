@@ -302,7 +302,9 @@ namespace boost {
 #endif
                     {
                         if (this != &o) {
-                            std::memcpy(limbs(), o.limbs(), o.size() * sizeof(limbs()[0]));
+                            for (unsigned i = 0; i < internal_limb_count; ++i) {
+                                limbs()[i] = o.limbs()[i];
+                            }
                         }
                     }
                 }

@@ -159,11 +159,12 @@ namespace nil {
                         if (cache.empty()) {
                             ob = codec_mode_type::process_block(block);
                         } else {
-                            input_block_type b = make_array<input_block_values>(cache.begin(), cache.end());
+                            input_block_type b = {0};
+                            typename input_block_type::iterator out = std::move(cache.begin(), cache.end(), b.begin());
                             typename input_block_type::const_iterator itr =
                                 block.begin() + (cache.max_size() - cache.size());
 
-                            std::move(block.begin(), itr, b.end());
+                            std::move(block.begin(), itr, out);
 
                             ob = codec_mode_type::process_block(b);
 

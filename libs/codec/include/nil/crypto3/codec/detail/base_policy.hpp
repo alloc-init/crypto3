@@ -231,7 +231,7 @@ namespace nil {
                              */
                             if (std::distance(it, encoded.end()) == 1 && std::distance(output_buffer.begin(), oit)) {
                                 for (auto itr = oit;
-                                     std::distance(output_buffer.begin(), itr) < decoded_block_bits / CHAR_BIT;
+                                     std::distance(output_buffer.begin(), itr) < (std::ptrdiff_t)decoded_block_bits / CHAR_BIT;
                                      ++itr) {
                                     *itr = 0x00U;
                                 }
@@ -386,7 +386,7 @@ namespace nil {
                              */
                             if (std::distance(it, encoded.end()) == 1 && std::distance(output_buffer.begin(), oit)) {
                                 for (auto itr = oit;
-                                     std::distance(output_buffer.begin(), itr) < decoded_block_bits / CHAR_BIT;
+                                     std::distance(output_buffer.begin(), itr) < (std::ptrdiff_t)decoded_block_bits / CHAR_BIT;
                                      ++itr) {
                                     *itr = 0x00;
                                 }

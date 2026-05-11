@@ -44,7 +44,7 @@ namespace nil {
                 
                     constexpr static const std::size_t state_words = Rate + Capacity;
                     using state_type = std::array<word_type, state_words>;
-                    constexpr static const std::size_t state_bits = state_words * state_bits;
+                    constexpr static const std::size_t state_bits = state_words * word_bits;
 
                     constexpr static const std::size_t digest_bits = word_bits;
                     using digest_type = word_type;
