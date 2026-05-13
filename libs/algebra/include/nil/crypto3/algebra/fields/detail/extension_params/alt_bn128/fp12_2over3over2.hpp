@@ -116,6 +116,36 @@ namespace nil {
                         };
 
                         constexpr static const non_residue_type non_residue = non_residue_type(0x09, 0x01);
+
+                        static non_residue_type mul_by_xi(const non_residue_type &x) {
+                            return non_residue_type(
+                                x.data[0].doubled().doubled().doubled() + x.data[0] - x.data[1],
+                                x.data[1].doubled().doubled().doubled() + x.data[1] + x.data[0]);
+                        }
+
+                        static underlying_type mul_by_v(const underlying_type &x) {
+                            return underlying_type(mul_by_xi(x.data[2]), x.data[0], x.data[1]);
+                        }
+
+                        static underlying_type mul_v_add(const underlying_type &x,
+                                                         const underlying_type &y) {
+                            return underlying_type(mul_by_xi(x.data[2]) + y.data[0],
+                                                   x.data[0] + y.data[1],
+                                                   x.data[1] + y.data[2]);
+                        }
+
+                        template<typename Fp12Value>
+                        static Fp12Value multiply(const Fp12Value &x, const Fp12Value &y) {
+                            const underlying_type &a = x.data[0];
+                            const underlying_type &b = x.data[1];
+                            const underlying_type &c = y.data[0];
+                            const underlying_type &d = y.data[1];
+
+                            const underlying_type ac = a * c;
+                            const underlying_type bd = b * d;
+
+                            return Fp12Value(mul_v_add(bd, ac), (a + b) * (c + d) - ac - bd);
+                        }
                     };
 
                     template<std::size_t Version>

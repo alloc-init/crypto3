@@ -28,7 +28,6 @@
 #define CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP12_2OVER3OVER2_HPP
 
 #include <nil/crypto3/algebra/fields/detail/exponentiation.hpp>
-#include <nil/crypto3/algebra/fields/detail/element/alt_bn128_fp12_ops.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/operations.hpp>
 
 namespace nil {
@@ -43,7 +42,6 @@ namespace nil {
 
                     public:
                         typedef typename policy_type::field_type field_type;
-                        typedef typename field_type::base_field_type base_field_type;
                         typedef typename policy_type::non_residue_type non_residue_type;
                         constexpr static const non_residue_type non_residue = policy_type::non_residue;
 
@@ -127,8 +125,8 @@ namespace nil {
                         }
 
                         element_fp12_2over3over2 operator*(const element_fp12_2over3over2 &B) const {
-                            if constexpr (alt_bn128_fp12_ops<base_field_type>::is_supported) {
-                                return alt_bn128_fp12_ops<base_field_type>::mul_reduced_mcl_shape(*this, B);
+                            if constexpr (requires { policy_type::multiply(*this, B); }) {
+                                return policy_type::multiply(*this, B);
                             }
 
                             const underlying_type A0B0 = data[0] * B.data[0], A1B1 = data[1] * B.data[1];
@@ -139,8 +137,8 @@ namespace nil {
                         }
 
                         element_fp12_2over3over2& operator*=(const element_fp12_2over3over2 &B) {
-                            if constexpr (alt_bn128_fp12_ops<base_field_type>::is_supported) {
-                                *this = alt_bn128_fp12_ops<base_field_type>::mul_reduced_mcl_shape(*this, B);
+                            if constexpr (requires { policy_type::multiply(*this, B); }) {
+                                *this = policy_type::multiply(*this, B);
                                 return *this;
                             }
 
