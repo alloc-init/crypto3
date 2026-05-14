@@ -69,7 +69,15 @@ namespace nil {
                         typedef fields::fp6_3over2<base_field_type> underlying_field_type;
                         typedef typename underlying_field_type::value_type underlying_type;
                         typedef typename base_field_type::value_type base_value_type;
-                        typedef boost::multiprecision::cpp_int wide_integral_type;
+                        typedef boost::multiprecision::number<
+                            boost::multiprecision::cpp_int_backend<
+                                2 * base_field_type::modulus_bits + 32,
+                                2 * base_field_type::modulus_bits + 32,
+                                boost::multiprecision::signed_magnitude,
+                                boost::multiprecision::unchecked,
+                                void>>
+                            wide_integral_type;
+                        typedef typename integral_type::backend_type::cpp_int_type base_cpp_int_type;
 
                         constexpr static const std::array<integral_type, 12 * 2> Frobenius_coeffs_c1 = {
                             0x01,
@@ -114,7 +122,9 @@ namespace nil {
                             if (x < 0) {
                                 x += p;
                             }
-                            return base_value_type(integral_type(x.str()));
+                            const base_cpp_int_type reduced(x.backend());
+                            const integral_type reduced_value{typename integral_type::backend_type(reduced)};
+                            return base_value_type(reduced_value);
                         }
 
                         struct fp_dbl {
