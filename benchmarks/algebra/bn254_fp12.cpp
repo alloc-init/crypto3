@@ -10,15 +10,27 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include <nil/crypto3/algebra/curves/alt_bn128.hpp>
+#include <nil/crypto3/algebra/fields/fp2.hpp>
+#include <nil/crypto3/algebra/fields/fp6_3over2.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
 
 using curve_type = nil::crypto3::algebra::curves::alt_bn128<254>;
+using base_field_type = typename curve_type::base_field_type;
+using fp2_type = nil::crypto3::algebra::fields::fp2<base_field_type>;
+using fp6_type = nil::crypto3::algebra::fields::fp6_3over2<base_field_type>;
 using fp12_type = typename curve_type::gt_type;
+
+using base_value_type = typename base_field_type::value_type;
+using fp2_value_type = typename fp2_type::value_type;
+using fp6_value_type = typename fp6_type::value_type;
 using fp12_value_type = typename fp12_type::value_type;
+using fp12_policy_type = typename fp12_type::extension_policy;
 
 static std::uint64_t now_ns() {
     using clock = std::chrono::steady_clock;
@@ -37,50 +49,142 @@ static void do_not_optimize(void const* value) {
 #endif
 }
 
+struct bench_result {
+    double total_ns = 0.0;
+    double ns_per = 0.0;
+};
+
+template<typename Body>
+bench_result run_stage(std::size_t iters, std::size_t warmup, Body&& body) {
+    for (std::size_t i = 0; i < warmup; ++i) {
+        body(i);
+    }
+
+    const std::uint64_t t0 = now_ns();
+    for (std::size_t i = 0; i < iters; ++i) {
+        body(i);
+    }
+    const std::uint64_t t1 = now_ns();
+
+    bench_result result;
+    result.total_ns = static_cast<double>(t1 - t0);
+    result.ns_per = result.total_ns / static_cast<double>(iters);
+    return result;
+}
+
+static void print_stage(const std::string& name, const bench_result& result) {
+    std::cout << std::left << std::setw(24) << name
+              << " total=" << std::right << std::setw(10) << result.total_ns * 1e-9 << " s"
+              << " per=" << std::setw(10) << result.ns_per << " ns"
+              << " throughput=" << std::setw(12) << (1e9 / result.ns_per) << "/s\n";
+}
+
 int main(int argc, char** argv) {
     std::size_t iters = (argc >= 2) ? std::strtoull(argv[1], nullptr, 10) : 100'000ULL;
     std::size_t poolN = (argc >= 3) ? std::strtoull(argv[2], nullptr, 10) : 1024ULL;
-    std::size_t warmup = (argc >= 4) ? std::strtoull(argv[3], nullptr, 10) : 1'000'000ULL;
+    std::size_t warmup = (argc >= 4) ? std::strtoull(argv[3], nullptr, 10) : 10'000ULL;
 
     if (iters == 0 || poolN == 0) {
         std::cerr << "usage: " << argv[0] << " [iters>0] [poolN>0] [warmup]\n";
         return 1;
     }
 
+    boost::random::mt19937 rng(0);
+
+    std::vector<base_value_type> fpxs(poolN);
+    std::vector<base_value_type> fpys(poolN);
+    std::vector<fp2_value_type> fp2xs(poolN);
+    std::vector<fp2_value_type> fp2ys(poolN);
+    std::vector<fp6_value_type> fp6xs(poolN);
+    std::vector<fp6_value_type> fp6ys(poolN);
     std::vector<fp12_value_type> xs(poolN);
     std::vector<fp12_value_type> ys(poolN);
+    std::vector<typename fp12_policy_type::base_limb_array_type> fp_limbs_x(poolN);
+    std::vector<typename fp12_policy_type::base_limb_array_type> fp_limbs_y(poolN);
+    std::vector<typename fp12_policy_type::wide_limb_array_type> fp_products(poolN);
 
     for (std::size_t i = 0; i < poolN; ++i) {
-        xs[i] = nil::crypto3::algebra::random_element<fp12_type>();
-        ys[i] = nil::crypto3::algebra::random_element<fp12_type>();
+        fpxs[i] = nil::crypto3::algebra::random_element<base_field_type>(rng);
+        fpys[i] = nil::crypto3::algebra::random_element<base_field_type>(rng);
+        fp2xs[i] = nil::crypto3::algebra::random_element<fp2_type>(rng);
+        fp2ys[i] = nil::crypto3::algebra::random_element<fp2_type>(rng);
+        fp6xs[i] = nil::crypto3::algebra::random_element<fp6_type>(rng);
+        fp6ys[i] = nil::crypto3::algebra::random_element<fp6_type>(rng);
+        xs[i] = nil::crypto3::algebra::random_element<fp12_type>(rng);
+        ys[i] = nil::crypto3::algebra::random_element<fp12_type>(rng);
+        fp_limbs_x[i] = fp12_policy_type::as_base_limbs(fpxs[i]);
+        fp_limbs_y[i] = fp12_policy_type::as_base_limbs(fpys[i]);
+        fp_products[i] = fp12_policy_type::fp_dbl::mul_pre(fp_limbs_x[i], fp_limbs_y[i]).data;
     }
 
-    fp12_value_type acc;
-    for (std::size_t i = 0; i < warmup; ++i) {
-        const fp12_value_type& a = xs[i % poolN];
-        const fp12_value_type& b = ys[i % poolN];
-        acc = a * b;
-        do_not_optimize(&acc);
-    }
+    base_value_type fp_acc;
+    typename fp12_policy_type::wide_limb_array_type pre_acc;
+    typename fp12_policy_type::base_limb_array_type redc_acc;
+    fp2_value_type fp2_acc;
+    fp6_value_type fp6_acc;
+    fp12_value_type fp12_acc;
 
-    const std::uint64_t t0 = now_ns();
-    for (std::size_t i = 0; i < iters; ++i) {
-        const fp12_value_type& a = xs[i % poolN];
-        const fp12_value_type& b = ys[i % poolN];
-        acc = a * b;
-        do_not_optimize(&acc);
-    }
-    const std::uint64_t t1 = now_ns();
-
-    const double total_ns = static_cast<double>(t1 - t0);
-    const double ns_per = total_ns / static_cast<double>(iters);
-
-    std::cout << "BN254 Fp12 mul benchmark (crypto3)\n";
+    std::cout << "BN254 tower mul benchmark (crypto3)\n";
     std::cout << "iters=" << iters << " poolN=" << poolN << " warmup=" << warmup << "\n";
-    std::cout << "total: " << total_ns * 1e-9 << " s\n";
-    std::cout << "per mul: " << ns_per << " ns\n";
-    std::cout << "throughput: " << (1e9 / ns_per) << " mul/s\n";
-    std::cout << "acc: " << acc << "\n";
+
+    print_stage("Fp mul", run_stage(iters, warmup, [&](std::size_t i) {
+        const std::size_t idx = i % poolN;
+        fp_acc = fpxs[idx] * fpys[idx];
+        do_not_optimize(&fp_acc);
+    }));
+
+    print_stage("Fp mul_pre", run_stage(iters, warmup, [&](std::size_t i) {
+        const std::size_t idx = i % poolN;
+        pre_acc = fp12_policy_type::fp_dbl::mul_pre(fp_limbs_x[idx], fp_limbs_y[idx]).data;
+        do_not_optimize(&pre_acc);
+    }));
+
+    print_stage("Fp redc", run_stage(iters, warmup, [&](std::size_t i) {
+        const std::size_t idx = i % poolN;
+        redc_acc = fp12_policy_type::montgomery_reduce_abs(fp_products[idx]);
+        do_not_optimize(&redc_acc);
+    }));
+
+    print_stage("Fp dbl reduce", run_stage(iters, warmup, [&](std::size_t i) {
+        const std::size_t idx = i % poolN;
+        fp_acc = fp12_policy_type::fp_dbl::reduce(
+            fp12_policy_type::fp_dbl(fp_products[idx]));
+        do_not_optimize(&fp_acc);
+    }));
+
+    print_stage("Fp2 mul", run_stage(iters, warmup, [&](std::size_t i) {
+        const std::size_t idx = i % poolN;
+        fp2_acc = fp2xs[idx] * fp2ys[idx];
+        do_not_optimize(&fp2_acc);
+    }));
+
+    print_stage("Fp2 lazy mul", run_stage(iters, warmup, [&](std::size_t i) {
+        const std::size_t idx = i % poolN;
+        fp2_acc = fp12_policy_type::fp2_dbl::reduce(
+            fp12_policy_type::fp2_dbl::mul_pre(fp2xs[idx], fp2ys[idx]));
+        do_not_optimize(&fp2_acc);
+    }));
+
+    print_stage("Fp6 mul", run_stage(iters, warmup, [&](std::size_t i) {
+        const std::size_t idx = i % poolN;
+        fp6_acc = fp6xs[idx] * fp6ys[idx];
+        do_not_optimize(&fp6_acc);
+    }));
+
+    print_stage("Fp6 lazy mul", run_stage(iters, warmup, [&](std::size_t i) {
+        const std::size_t idx = i % poolN;
+        fp6_acc = fp12_policy_type::fp6_dbl::reduce(
+            fp12_policy_type::fp6_dbl::mul_pre(fp6xs[idx], fp6ys[idx]));
+        do_not_optimize(&fp6_acc);
+    }));
+
+    print_stage("Fp12 mul", run_stage(iters, warmup, [&](std::size_t i) {
+        const std::size_t idx = i % poolN;
+        fp12_acc = xs[idx] * ys[idx];
+        do_not_optimize(&fp12_acc);
+    }));
+
+    std::cout << "acc: " << fp12_acc << "\n";
 
     return 0;
 }
