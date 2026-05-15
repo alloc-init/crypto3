@@ -37,7 +37,6 @@
 #include <nil/crypto3/algebra/fields/fp2.hpp>
 #include <nil/crypto3/multiprecision/modular/modular_policy_fixed.hpp>
 
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -56,7 +55,7 @@ namespace nil {
 
                     template<size_t Version>
                     class fp12_2over3over2_extension_params<fields::alt_bn128<Version>>
-                            : public params<fields::alt_bn128<Version>> {
+                        : public params<fields::alt_bn128<Version>> {
                         typedef fields::alt_bn128<Version> base_field_type;
                         typedef params<base_field_type> policy_type;
 
@@ -96,8 +95,7 @@ namespace nil {
                             0x59E26BCEA0D48BACD4F263F1ACDB5C4F5763473177FFFFFF_cppui_modular191,
                             0x00,
                             0x290C83BF3D14634DB120850727BB392D6A86D50BD34B19B929BC44B896723B38_cppui_modular254,
-                            0x23BD9E3DA9136A739F668E1ADC9EF7F0F575EC93F71A8DF953C846338C32A1AB_cppui_modular254
-                        };
+                            0x23BD9E3DA9136A739F668E1ADC9EF7F0F575EC93F71A8DF953C846338C32A1AB_cppui_modular254};
 
                         /////////////////////////////////////////////////////
 
@@ -105,8 +103,7 @@ namespace nil {
                         typedef typename base_field_type::modular_backend modular_backend_type;
                         typedef boost::multiprecision::backends::modular_policy<modular_backend_type>
                             modular_policy_type;
-                        typedef typename modular_policy_type::Backend_doubled_padded_limbs
-                            reduction_backend_type;
+                        typedef typename modular_policy_type::Backend_doubled_padded_limbs reduction_backend_type;
                         typedef reduction_backend_type lazy_backend_type;
 
                         constexpr static const size_t limb_bits = sizeof(limb_type) * CHAR_BIT;
@@ -168,9 +165,8 @@ namespace nil {
                             bool negative = false;
 
                             fp_dbl() = default;
-                            explicit fp_dbl(const wide_limb_array_type &in_data,
-                                            bool in_negative = false)
-                                : data(in_data), negative(in_negative) {
+                            explicit fp_dbl(const wide_limb_array_type &in_data, bool in_negative = false) :
+                                data(in_data), negative(in_negative) {
                                 normalize();
                             }
 
@@ -205,7 +201,6 @@ namespace nil {
                                     boost::multiprecision::backends::eval_add(data, other.data);
                                     return *this;
                                 }
-
                                 const int cmp = data.compare(other.data);
                                 if (cmp == 0) {
                                     data = {};
@@ -228,7 +223,6 @@ namespace nil {
                                     boost::multiprecision::backends::eval_add(data, other.data);
                                     return *this;
                                 }
-
                                 const int cmp = data.compare(other.data);
                                 if (cmp == 0) {
                                     data = {};
@@ -262,7 +256,6 @@ namespace nil {
                                 if (factor == 9u) {
                                     return result.mul_by_9_inplace();
                                 }
-
                                 boost::multiprecision::backends::eval_multiply(result.data, factor);
                                 result.normalize();
                                 return result;
@@ -277,21 +270,14 @@ namespace nil {
                                 return *this;
                             }
 
-                            static fp_dbl mul_pre(const base_limb_array_type &x,
-                                                  const base_limb_array_type &y) {
+                            static fp_dbl mul_pre(const base_limb_array_type &x, const base_limb_array_type &y) {
                                 wide_limb_array_type product = x;
                                 boost::multiprecision::backends::eval_multiply(product, y);
                                 return fp_dbl(product);
                             }
 
-                            static fp_dbl mul_pre(const base_value_type &x,
-                                                  const base_value_type &y) {
+                            static fp_dbl mul_pre(const base_value_type &x, const base_value_type &y) {
                                 return mul_pre(as_base_limbs(x), as_base_limbs(y));
-                            }
-
-                            static fp_dbl sqr_pre(const base_value_type &x) {
-                                const base_limb_array_type x_limbs = as_base_limbs(x);
-                                return mul_pre(x_limbs, x_limbs);
                             }
 
                             static base_value_type reduce(const fp_dbl &x) {
@@ -309,15 +295,14 @@ namespace nil {
                             std::array<base_limb_array_type, 2> data;
 
                             fp2_base() = default;
-                            fp2_base(const base_limb_array_type &c0,
-                                     const base_limb_array_type &c1) : data({c0, c1}) {}
+                            fp2_base(const base_limb_array_type &c0, const base_limb_array_type &c1) : data({c0, c1}) {
+                            }
 
                             static fp2_base from(const non_residue_type &x) {
                                 return fp2_base(as_base_limbs(x.data[0]), as_base_limbs(x.data[1]));
                             }
 
-                            static fp2_base from_sum(const non_residue_type &x,
-                                                     const non_residue_type &y) {
+                            static fp2_base from_sum(const non_residue_type &x, const non_residue_type &y) {
                                 fp2_base result = from(x);
                                 const base_limb_array_type y0 = as_base_limbs(y.data[0]);
                                 const base_limb_array_type y1 = as_base_limbs(y.data[1]);
@@ -338,7 +323,8 @@ namespace nil {
                             std::array<fp_dbl, 2> data;
 
                             fp2_dbl() = default;
-                            fp2_dbl(const fp_dbl &c0, const fp_dbl &c1) : data({c0, c1}) {}
+                            fp2_dbl(const fp_dbl &c0, const fp_dbl &c1) : data({c0, c1}) {
+                            }
 
                             fp2_dbl operator+(const fp2_dbl &other) const {
                                 return fp2_dbl(data[0] + other.data[0], data[1] + other.data[1]);
@@ -360,13 +346,11 @@ namespace nil {
                                 return *this;
                             }
 
-                            static fp2_dbl mul_pre(const non_residue_type &x,
-                                                   const non_residue_type &y) {
+                            static fp2_dbl mul_pre(const non_residue_type &x, const non_residue_type &y) {
                                 return mul_pre(fp2_base::from(x), fp2_base::from(y));
                             }
 
-                            static fp2_dbl mul_pre(const fp2_base &x,
-                                                   const fp2_base &y) {
+                            static fp2_dbl mul_pre(const fp2_base &x, const fp2_base &y) {
                                 const base_limb_array_type &a = x.data[0];
                                 const base_limb_array_type &b = x.data[1];
                                 const base_limb_array_type &c = y.data[0];
@@ -378,8 +362,7 @@ namespace nil {
                                 boost::multiprecision::backends::eval_add(ab, b);
                                 boost::multiprecision::backends::eval_add(cd, d);
 
-                                return fp2_dbl(ac - bd,
-                                               fp_dbl::mul_pre(ab, cd) - ac - bd);
+                                return fp2_dbl(ac - bd, fp_dbl::mul_pre(ab, cd) - ac - bd);
                             }
 
                             static fp2_dbl mul_pre_loose_sum(const fp2_base &x0,
@@ -403,8 +386,7 @@ namespace nil {
                                 boost::multiprecision::backends::eval_add(ab, b);
                                 boost::multiprecision::backends::eval_add(cd, d);
 
-                                return fp2_dbl(ac - bd,
-                                               fp_dbl::mul_pre(ab, cd) - ac - bd);
+                                return fp2_dbl(ac - bd, fp_dbl::mul_pre(ab, cd) - ac - bd);
                             }
 
                             static fp2_dbl sqr_pre(const non_residue_type &x) {
@@ -436,8 +418,7 @@ namespace nil {
                             }
 
                             static non_residue_type reduce(const fp2_dbl &x) {
-                                return non_residue_type(fp_dbl::reduce(x.data[0]),
-                                                        fp_dbl::reduce(x.data[1]));
+                                return non_residue_type(fp_dbl::reduce(x.data[0]), fp_dbl::reduce(x.data[1]));
                             }
                         };
 
@@ -445,19 +426,16 @@ namespace nil {
                             std::array<fp2_dbl, 3> data;
 
                             fp6_dbl() = default;
-                            fp6_dbl(const fp2_dbl &c0, const fp2_dbl &c1,
-                                    const fp2_dbl &c2)
-                                : data({c0, c1, c2}) {}
+                            fp6_dbl(const fp2_dbl &c0, const fp2_dbl &c1, const fp2_dbl &c2) : data({c0, c1, c2}) {
+                            }
 
                             fp6_dbl operator+(const fp6_dbl &other) const {
-                                return fp6_dbl(data[0] + other.data[0],
-                                               data[1] + other.data[1],
+                                return fp6_dbl(data[0] + other.data[0], data[1] + other.data[1],
                                                data[2] + other.data[2]);
                             }
 
                             fp6_dbl operator-(const fp6_dbl &other) const {
-                                return fp6_dbl(data[0] - other.data[0],
-                                               data[1] - other.data[1],
+                                return fp6_dbl(data[0] - other.data[0], data[1] - other.data[1],
                                                data[2] - other.data[2]);
                             }
 
@@ -476,9 +454,8 @@ namespace nil {
                             }
 
                             template<typename SumProduct>
-                            static fp6_dbl mul_pre_impl(const fp2_base &a, const fp2_base &b,
-                                                        const fp2_base &c, const fp2_base &d,
-                                                        const fp2_base &e, const fp2_base &f,
+                            static fp6_dbl mul_pre_impl(const fp2_base &a, const fp2_base &b, const fp2_base &c,
+                                                        const fp2_base &d, const fp2_base &e, const fp2_base &f,
                                                         SumProduct sum_product) {
                                 // Fp6 is Fp2[v]/(v^3 - xi); multiplying by xi folds v^3
                                 // terms back into the constant coefficient.
@@ -504,8 +481,7 @@ namespace nil {
                                 return fp6_dbl(za, zb, zc);
                             }
 
-                            static fp6_dbl mul_pre(const underlying_type &x,
-                                                   const underlying_type &y) {
+                            static fp6_dbl mul_pre(const underlying_type &x, const underlying_type &y) {
                                 const fp2_base a = fp2_base::from(x.data[0]);
                                 const fp2_base b = fp2_base::from(x.data[1]);
                                 const fp2_base c = fp2_base::from(x.data[2]);
@@ -515,8 +491,7 @@ namespace nil {
 
                                 return mul_pre_impl(
                                     a, b, c, d, e, f,
-                                    [](const fp2_base &x0, const fp2_base &x1,
-                                       const fp2_base &y0, const fp2_base &y1) {
+                                    [](const fp2_base &x0, const fp2_base &x1, const fp2_base &y0, const fp2_base &y1) {
                                         return fp2_dbl::mul_pre(x0 + x1, y0 + y1);
                                     });
                             }
@@ -536,8 +511,7 @@ namespace nil {
 
                                 return mul_pre_impl(
                                     a, b, c, d, e, f,
-                                    [](const fp2_base &a0, const fp2_base &a1,
-                                       const fp2_base &b0, const fp2_base &b1) {
+                                    [](const fp2_base &a0, const fp2_base &a1, const fp2_base &b0, const fp2_base &b1) {
                                         return fp2_dbl::mul_pre_loose_sum(a0, a1, b0, b1);
                                     });
                             }
@@ -565,17 +539,15 @@ namespace nil {
                             }
 
                             static underlying_type reduce(const fp6_dbl &x) {
-                                return underlying_type(fp2_dbl::reduce(x.data[0]),
-                                                       fp2_dbl::reduce(x.data[1]),
+                                return underlying_type(fp2_dbl::reduce(x.data[0]), fp2_dbl::reduce(x.data[1]),
                                                        fp2_dbl::reduce(x.data[2]));
                             }
                         };
 
                         static non_residue_type mul_by_xi(const non_residue_type &x) {
                             // In Fp2, xi = 9 + u.
-                            return non_residue_type(
-                                x.data[0].doubled().doubled().doubled() + x.data[0] - x.data[1],
-                                x.data[1].doubled().doubled().doubled() + x.data[1] + x.data[0]);
+                            return non_residue_type(x.data[0].doubled().doubled().doubled() + x.data[0] - x.data[1],
+                                                    x.data[1].doubled().doubled().doubled() + x.data[1] + x.data[0]);
                         }
 
                         static underlying_type mul_by_v(const underlying_type &x) {
@@ -584,11 +556,9 @@ namespace nil {
                             return underlying_type(mul_by_xi(x.data[2]), x.data[0], x.data[1]);
                         }
 
-                        static underlying_type mul_v_add(const underlying_type &x,
-                                                         const underlying_type &y) {
+                        static underlying_type mul_v_add(const underlying_type &x, const underlying_type &y) {
                             // Fused x*v + y in Fp6; used because Fp12 has w^2 = v.
-                            return underlying_type(mul_by_xi(x.data[2]) + y.data[0],
-                                                   x.data[0] + y.data[1],
+                            return underlying_type(mul_by_xi(x.data[2]) + y.data[0], x.data[0] + y.data[1],
                                                    x.data[1] + y.data[2]);
                         }
 
@@ -623,17 +593,17 @@ namespace nil {
                     template<size_t Version>
                     constexpr typename fp12_2over3over2_extension_params<
                         alt_bn128_base_field<Version>>::non_residue_type const
-                    fp12_2over3over2_extension_params<alt_bn128_base_field<Version>>::non_residue;
+                        fp12_2over3over2_extension_params<alt_bn128_base_field<Version>>::non_residue;
 
                     template<size_t Version>
                     constexpr std::array<
                         typename fp12_2over3over2_extension_params<alt_bn128_base_field<Version>>::integral_type,
                         12 * 2> const
-                    fp12_2over3over2_extension_params<alt_bn128_base_field<Version>>::Frobenius_coeffs_c1;
-                } // namespace detail
-            } // namespace fields
-        } // namespace algebra
-    } // namespace crypto3
-} // namespace nil
+                        fp12_2over3over2_extension_params<alt_bn128_base_field<Version>>::Frobenius_coeffs_c1;
+                }    // namespace detail
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_ALT_BN128_FP12_2OVER3OVER2_EXTENSION_PARAMS_HPP
