@@ -35,6 +35,7 @@
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/algebra/fields/fp6_3over2.hpp>
 #include <nil/crypto3/algebra/fields/fp2.hpp>
+#include <nil/crypto3/multiprecision/modular/modular_policy_fixed.hpp>
 
 
 namespace nil {
@@ -53,7 +54,7 @@ namespace nil {
 
                     /************************* ALT_BN128 ***********************************/
 
-                    template<std::size_t Version>
+                    template<size_t Version>
                     class fp12_2over3over2_extension_params<fields::alt_bn128<Version>>
                             : public params<fields::alt_bn128<Version>> {
                         typedef fields::alt_bn128<Version> base_field_type;
@@ -70,25 +71,6 @@ namespace nil {
                         typedef fields::fp6_3over2<base_field_type> underlying_field_type;
                         typedef typename underlying_field_type::value_type underlying_type;
                         typedef typename base_field_type::value_type base_value_type;
-                        typedef boost::multiprecision::limb_type limb_type;
-                        typedef boost::multiprecision::double_limb_type double_limb_type;
-
-                        constexpr static const std::size_t limb_bits = sizeof(limb_type) * CHAR_BIT;
-                        constexpr static const std::size_t base_limb_count =
-                            (base_field_type::modulus_bits + limb_bits - 1) / limb_bits;
-                        constexpr static const std::size_t wide_limb_count =
-                            (2 * base_field_type::modulus_bits + 32 + limb_bits - 1) / limb_bits;
-                        constexpr static const std::size_t extended_limb_count = base_limb_count + 1;
-                        constexpr static const limb_type max_limb = ~limb_type(0u);
-
-                        typedef std::array<limb_type, base_limb_count> base_limb_array_type;
-                        typedef std::array<limb_type, extended_limb_count> extended_limb_array_type;
-                        typedef std::array<limb_type, wide_limb_count> wide_limb_array_type;
-                        typedef std::array<limb_type, wide_limb_count + 1> redc_limb_array_type;
-                        constexpr static const std::size_t montgomery_limb_count =
-                            wide_limb_count + 1 - base_limb_count;
-                        typedef std::array<limb_type, montgomery_limb_count> montgomery_limb_array_type;
-                        typedef std::array<limb_type, montgomery_limb_count + 1> montgomery_division_limb_array_type;
 
                         constexpr static const std::array<integral_type, 12 * 2> Frobenius_coeffs_c1 = {
                             0x01,
@@ -117,13 +99,36 @@ namespace nil {
                             0x23BD9E3DA9136A739F668E1ADC9EF7F0F575EC93F71A8DF953C846338C32A1AB_cppui_modular254
                         };
 
+                        /////////////////////////////////////////////////////
+
+                        typedef boost::multiprecision::limb_type limb_type;
+                        typedef boost::multiprecision::double_limb_type double_limb_type;
+                        typedef typename base_field_type::modular_backend modular_backend_type;
+                        typedef boost::multiprecision::backends::modular_policy<modular_backend_type>
+                            modular_policy_type;
+                        typedef typename modular_policy_type::Backend_doubled_padded_limbs
+                            reduction_backend_type;
+
+                        constexpr static const size_t limb_bits = sizeof(limb_type) * CHAR_BIT;
+                        constexpr static const size_t base_limb_count =
+                            (base_field_type::modulus_bits + limb_bits - 1) / limb_bits;
+                        constexpr static const size_t wide_limb_count =
+                            (2 * base_field_type::modulus_bits + 32 + limb_bits - 1) / limb_bits;
+                        constexpr static const size_t extended_limb_count = base_limb_count + 1;
+
+                        typedef std::array<limb_type, base_limb_count> base_limb_array_type;
+                        typedef std::array<limb_type, extended_limb_count> extended_limb_array_type;
+                        typedef std::array<limb_type, wide_limb_count> wide_limb_array_type;
+                        static_assert(reduction_backend_type::internal_limb_count >= wide_limb_count,
+                                      "Fp12 lazy product must fit the padded Montgomery reduction backend");
+
                         // Tower: Fp2 = Fp[u]/(u^2 + 1), Fp6 = Fp2[v]/(v^3 - xi),
                         // Fp12 = Fp6[w]/(w^2 - v). Here xi = 9 + u.
                         constexpr static const non_residue_type non_residue = non_residue_type(0x09, 0x01);
 
-                        template<typename T, size_t N>
-                        static bool array_is_zero(const std::array<T, N> &x) {
-                            for (std::size_t i = 0; i < N; ++i) {
+                        template<size_t N>
+                        static bool limb_is_zero(const std::array<limb_type, N> &x) {
+                            for (size_t i = 0; i < N; ++i) {
                                 if (x[i] != 0u) {
                                     return false;
                                 }
@@ -131,65 +136,43 @@ namespace nil {
                             return true;
                         }
 
-                        template<typename T, size_t N>
-                        static int array_cmp(const std::array<T, N> &x,
-                                               const std::array<T, N> &y) {
-                            for (std::size_t i = N; i > 0; --i) {
-                                const std::size_t idx = i - 1;
-                                if (x[idx] < y[idx]) {
+                        template<size_t N>
+                        static int limb_cmp(const std::array<limb_type, N> &x, const std::array<limb_type, N> &y) {
+                            for (int i = N - 1; i >= 0; --i) {
+                                if (x[i] < y[i]) {
                                     return -1;
                                 }
-                                if (x[idx] > y[idx]) {
+                                if (x[i] > y[i]) {
                                     return 1;
                                 }
                             }
                             return 0;
                         }
 
-                        static wide_limb_array_type add_abs(const wide_limb_array_type &x,
-                                                            const wide_limb_array_type &y) {
-                            wide_limb_array_type result = {};
+                        template<size_t N>
+                        static void limb_add_inplace(std::array<limb_type, N> &x, const std::array<limb_type, N> &y) {
                             double_limb_type carry = 0;
-                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
+                            for (size_t i = 0; i < N; ++i) {
                                 const double_limb_type sum =
-                                    static_cast<double_limb_type>(x[i]) +
-                                    static_cast<double_limb_type>(y[i]) + carry;
-                                result[i] = static_cast<limb_type>(sum);
-                                carry = sum >> limb_bits;
-                            }
-                            return result;
-                        }
-
-                        static void add_abs_inplace(wide_limb_array_type &x,
-                                                    const wide_limb_array_type &y) {
-                            double_limb_type carry = 0;
-                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
-                                const double_limb_type sum =
-                                    static_cast<double_limb_type>(x[i]) +
-                                    static_cast<double_limb_type>(y[i]) + carry;
+                                    static_cast<double_limb_type>(x[i]) + static_cast<double_limb_type>(y[i]) + carry;
                                 x[i] = static_cast<limb_type>(sum);
                                 carry = sum >> limb_bits;
                             }
                         }
 
-                        static wide_limb_array_type sub_abs(const wide_limb_array_type &x,
-                                                            const wide_limb_array_type &y) {
-                            wide_limb_array_type result = {};
-                            limb_type borrow = 0;
-                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
-                                const limb_type yi = y[i] + borrow;
-                                const bool carry_from_borrow = yi < y[i];
-                                const bool needs_borrow = carry_from_borrow || x[i] < yi;
-                                result[i] = x[i] - yi;
-                                borrow = needs_borrow ? 1u : 0u;
-                            }
+                        template<size_t N>
+                        static std::array<limb_type, N> limb_add(const std::array<limb_type, N> &x,
+                                                                 const std::array<limb_type, N> &y) {
+                            auto result = x;
+                            limb_add_inplace(result, y);
                             return result;
                         }
 
-                        static void sub_abs_inplace(wide_limb_array_type &x,
-                                                    const wide_limb_array_type &y) {
+                        template<size_t N>
+                        static void limb_sub_inplace(std::array<limb_type, N> &x,
+                                                    const std::array<limb_type, N> &y) {
                             limb_type borrow = 0;
-                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
+                            for (size_t i = 0; i < N; ++i) {
                                 const limb_type yi = y[i] + borrow;
                                 const bool carry_from_borrow = yi < y[i];
                                 const bool needs_borrow = carry_from_borrow || x[i] < yi;
@@ -198,46 +181,27 @@ namespace nil {
                             }
                         }
 
-                        static base_limb_array_type sub_base(const base_limb_array_type &x,
-                                                             const base_limb_array_type &y) {
-                            base_limb_array_type result = x;
-                            limb_type borrow = 0;
-                            for (std::size_t i = 0; i < base_limb_count; ++i) {
-                                const limb_type yi = y[i] + borrow;
-                                const bool carry_from_borrow = yi < y[i];
-                                const bool needs_borrow = carry_from_borrow || result[i] < yi;
-                                result[i] -= yi;
-                                borrow = needs_borrow ? 1u : 0u;
-                            }
+                        template<size_t N>
+                        static std::array<limb_type, N> limb_sub(const std::array<limb_type, N> &x,
+                                                                 const std::array<limb_type, N> &y) {
+                            auto result = x;
+                            limb_sub_inplace(result, y);
                             return result;
                         }
 
-                        static base_limb_array_type add_base(const base_limb_array_type &x,
-                                                             const base_limb_array_type &y) {
-                            base_limb_array_type result = {};
+                        // includes final carry
+                        template<size_t N>
+                        static std::array<limb_type, N + 1> limb_add_extended(const std::array<limb_type, N> &x,
+                                                                              const std::array<limb_type, N> &y) {
+                            std::array<limb_type, N + 1> result = {};
                             double_limb_type carry = 0;
-                            for (std::size_t i = 0; i < base_limb_count; ++i) {
+                            for (size_t i = 0; i < N; ++i) {
                                 const double_limb_type sum =
-                                    static_cast<double_limb_type>(x[i]) +
-                                    static_cast<double_limb_type>(y[i]) + carry;
+                                    static_cast<double_limb_type>(x[i]) + static_cast<double_limb_type>(y[i]) + carry;
                                 result[i] = static_cast<limb_type>(sum);
                                 carry = sum >> limb_bits;
                             }
-                            return result;
-                        }
-
-                        static extended_limb_array_type add_base_extended(const base_limb_array_type &x,
-                                                                         const base_limb_array_type &y) {
-                            extended_limb_array_type result = {};
-                            double_limb_type carry = 0;
-                            for (std::size_t i = 0; i < base_limb_count; ++i) {
-                                const double_limb_type sum =
-                                    static_cast<double_limb_type>(x[i]) +
-                                    static_cast<double_limb_type>(y[i]) + carry;
-                                result[i] = static_cast<limb_type>(sum);
-                                carry = sum >> limb_bits;
-                            }
-                            result[base_limb_count] = static_cast<limb_type>(carry);
+                            result[N] = static_cast<limb_type>(carry);
                             return result;
                         }
 
@@ -245,7 +209,7 @@ namespace nil {
                                                                   limb_type factor) {
                             wide_limb_array_type result = {};
                             double_limb_type carry = 0;
-                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
+                            for (size_t i = 0; i < wide_limb_count; ++i) {
                                 const double_limb_type product =
                                     static_cast<double_limb_type>(x[i]) *
                                     static_cast<double_limb_type>(factor) + carry;
@@ -258,7 +222,7 @@ namespace nil {
                         static void mul_abs_small_inplace(wide_limb_array_type &x,
                                                           limb_type factor) {
                             double_limb_type carry = 0;
-                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
+                            for (size_t i = 0; i < wide_limb_count; ++i) {
                                 const double_limb_type product =
                                     static_cast<double_limb_type>(x[i]) *
                                     static_cast<double_limb_type>(factor) + carry;
@@ -269,7 +233,7 @@ namespace nil {
 
                         template<typename LimbArray>
                         static void mul_add_limb(LimbArray &result,
-                                                 std::size_t idx,
+                                                 size_t idx,
                                                  limb_type x,
                                                  limb_type y,
                                                  limb_type &carry) {
@@ -283,7 +247,7 @@ namespace nil {
 
                         template<typename LimbArray>
                         static void add_limb_carry(LimbArray &result,
-                                                   std::size_t idx,
+                                                   size_t idx,
                                                    limb_type carry) {
                             while (carry != 0u && idx < result.size()) {
                                 const double_limb_type sum =
@@ -316,7 +280,7 @@ namespace nil {
                         }
 
                         static void mul_comba_emit(wide_limb_array_type &result,
-                                                   std::size_t idx,
+                                                   size_t idx,
                                                    limb_type &acc0,
                                                    limb_type &acc1,
                                                    limb_type &acc2) {
@@ -377,10 +341,10 @@ namespace nil {
                             }
 
                             wide_limb_array_type result = {};
-                            for (std::size_t i = 0; i < base_limb_count; ++i) {
+                            for (size_t i = 0; i < base_limb_count; ++i) {
                                 double_limb_type carry = 0;
-                                for (std::size_t j = 0; j < base_limb_count; ++j) {
-                                    const std::size_t idx = i + j;
+                                for (size_t j = 0; j < base_limb_count; ++j) {
+                                    const size_t idx = i + j;
                                     const double_limb_type product =
                                         static_cast<double_limb_type>(x[i]) *
                                         static_cast<double_limb_type>(y[j]) +
@@ -389,7 +353,7 @@ namespace nil {
                                     carry = product >> limb_bits;
                                 }
 
-                                for (std::size_t idx = i + base_limb_count;
+                                for (size_t idx = i + base_limb_count;
                                      carry != 0u && idx < wide_limb_count; ++idx) {
                                     const double_limb_type sum =
                                         static_cast<double_limb_type>(result[idx]) + carry;
@@ -403,9 +367,9 @@ namespace nil {
                         static wide_limb_array_type mul_extended_abs(const extended_limb_array_type &x,
                                                                      const extended_limb_array_type &y) {
                             wide_limb_array_type result = {};
-                            for (std::size_t i = 0; i < extended_limb_count; ++i) {
+                            for (size_t i = 0; i < extended_limb_count; ++i) {
                                 limb_type carry = 0;
-                                for (std::size_t j = 0; j < extended_limb_count; ++j) {
+                                for (size_t j = 0; j < extended_limb_count; ++j) {
                                     mul_add_limb(result, i + j, x[i], y[j], carry);
                                 }
                                 add_limb_carry(result, i + extended_limb_count, carry);
@@ -413,10 +377,10 @@ namespace nil {
                             return result;
                         }
 
-                        static base_limb_array_type backend_to_base_limbs(
-                            const typename integral_type::backend_type &backend) {
+                        template<typename Backend>
+                        static base_limb_array_type backend_to_base_limbs(const Backend &backend) {
                             base_limb_array_type result = {};
-                            for (std::size_t i = 0; i < base_limb_count && i < backend.size(); ++i) {
+                            for (size_t i = 0; i < base_limb_count && i < backend.size(); ++i) {
                                 result[i] = backend.limbs()[i];
                             }
                             return result;
@@ -431,312 +395,26 @@ namespace nil {
                             return backend_to_base_limbs(x.data.backend().base_data());
                         }
 
-                        static unsigned leading_zeroes(limb_type x) {
-                            unsigned result = 0;
-                            for (std::size_t i = limb_bits; i > 0; --i) {
-                                if (((x >> (i - 1)) & 1u) != 0u) {
-                                    break;
-                                }
-                                ++result;
+                        static reduction_backend_type wide_backend(const wide_limb_array_type &x) {
+                            reduction_backend_type result;
+                            for (size_t i = 0; i < wide_limb_count; ++i) {
+                                result.limbs()[i] = x[i];
                             }
+                            result.zero_after(wide_limb_count);
+                            result.set_carry(false);
+                            result.normalize();
                             return result;
-                        }
-
-                        static base_limb_array_type shift_left_base(const base_limb_array_type &x,
-                                                                    unsigned shift) {
-                            if (shift == 0u) {
-                                return x;
-                            }
-
-                            base_limb_array_type result = {};
-                            limb_type carry = 0;
-                            for (std::size_t i = 0; i < base_limb_count; ++i) {
-                                result[i] = (x[i] << shift) | carry;
-                                carry = x[i] >> (limb_bits - shift);
-                            }
-                            return result;
-                        }
-
-                        template<typename LimbArray>
-                        static void add_divisor_back(LimbArray &u,
-                                                     const base_limb_array_type &v,
-                                                     std::size_t offset) {
-                            double_limb_type carry = 0;
-                            for (std::size_t i = 0; i < base_limb_count; ++i) {
-                                const double_limb_type sum =
-                                    static_cast<double_limb_type>(u[offset + i]) +
-                                    static_cast<double_limb_type>(v[i]) + carry;
-                                u[offset + i] = static_cast<limb_type>(sum);
-                                carry = sum >> limb_bits;
-                            }
-
-                            for (std::size_t idx = offset + base_limb_count;
-                                 carry != 0u && idx < u.size(); ++idx) {
-                                const double_limb_type sum =
-                                    static_cast<double_limb_type>(u[idx]) + carry;
-                                u[idx] = static_cast<limb_type>(sum);
-                                carry = sum >> limb_bits;
-                            }
-                        }
-
-                        template<typename LimbArray>
-                        static bool sub_mul_divisor(LimbArray &u,
-                                                    const base_limb_array_type &v,
-                                                    limb_type qhat,
-                                                    std::size_t offset) {
-                            limb_type borrow = 0;
-                            double_limb_type carry = 0;
-
-                            for (std::size_t i = 0; i < base_limb_count; ++i) {
-                                const double_limb_type product =
-                                    static_cast<double_limb_type>(qhat) *
-                                    static_cast<double_limb_type>(v[i]) + carry;
-                                const limb_type product_low = static_cast<limb_type>(product);
-                                carry = product >> limb_bits;
-
-                                const limb_type subtrahend = product_low + borrow;
-                                const bool subtrahend_carry = subtrahend < product_low;
-                                const limb_type current = u[offset + i];
-                                u[offset + i] = current - subtrahend;
-                                borrow = (subtrahend_carry || current < subtrahend) ? 1u : 0u;
-                            }
-
-                            const double_limb_type final_subtrahend =
-                                carry + static_cast<double_limb_type>(borrow);
-                            const limb_type final_low = static_cast<limb_type>(final_subtrahend);
-                            const bool final_carry = (final_subtrahend >> limb_bits) != 0u;
-                            const limb_type current = u[offset + base_limb_count];
-                            u[offset + base_limb_count] = current - final_low;
-                            return final_carry || current < final_low;
-                        }
-
-                        template<typename LimbArray>
-                        static base_limb_array_type shift_right_remainder(const LimbArray &u,
-                                                                          unsigned shift) {
-                            base_limb_array_type result = {};
-                            if (shift == 0u) {
-                                for (std::size_t i = 0; i < base_limb_count; ++i) {
-                                    result[i] = u[i];
-                                }
-                                return result;
-                            }
-
-                            for (std::size_t i = 0; i < base_limb_count; ++i) {
-                                const limb_type high = (i + 1 < u.size()) ? u[i + 1] : 0u;
-                                result[i] = (u[i] >> shift) | (high << (limb_bits - shift));
-                            }
-                            return result;
-                        }
-
-                        static int compare_montgomery_with_base(const montgomery_limb_array_type &x,
-                                                                const base_limb_array_type &y) {
-                            for (std::size_t i = montgomery_limb_count; i > base_limb_count; --i) {
-                                if (x[i - 1] != 0u) {
-                                    return 1;
-                                }
-                            }
-
-                            for (std::size_t i = base_limb_count; i > 0; --i) {
-                                const std::size_t idx = i - 1;
-                                if (x[idx] < y[idx]) {
-                                    return -1;
-                                }
-                                if (x[idx] > y[idx]) {
-                                    return 1;
-                                }
-                            }
-                            return 0;
-                        }
-
-                        static void sub_montgomery_base_inplace(montgomery_limb_array_type &x,
-                                                                const base_limb_array_type &y) {
-                            limb_type borrow = 0;
-                            for (std::size_t i = 0; i < montgomery_limb_count; ++i) {
-                                const limb_type yi = (i < base_limb_count ? y[i] : 0u) + borrow;
-                                const bool carry_from_borrow = yi < (i < base_limb_count ? y[i] : 0u);
-                                const bool needs_borrow = carry_from_borrow || x[i] < yi;
-                                x[i] -= yi;
-                                borrow = needs_borrow ? 1u : 0u;
-                            }
-                        }
-
-                        static base_limb_array_type lower_base_limbs(const montgomery_limb_array_type &x) {
-                            base_limb_array_type result = {};
-                            for (std::size_t i = 0; i < base_limb_count; ++i) {
-                                result[i] = x[i];
-                            }
-                            return result;
-                        }
-
-                        static montgomery_division_limb_array_type shift_left_montgomery(
-                            const montgomery_limb_array_type &x,
-                            unsigned shift) {
-                            montgomery_division_limb_array_type result = {};
-                            if (shift == 0u) {
-                                for (std::size_t i = 0; i < montgomery_limb_count; ++i) {
-                                    result[i] = x[i];
-                                }
-                                return result;
-                            }
-
-                            limb_type carry = 0;
-                            for (std::size_t i = 0; i < montgomery_limb_count; ++i) {
-                                result[i] = (x[i] << shift) | carry;
-                                carry = x[i] >> (limb_bits - shift);
-                            }
-                            result[montgomery_limb_count] = carry;
-                            return result;
-                        }
-
-                        static base_limb_array_type reduce_montgomery_result_abs(
-                            const montgomery_limb_array_type &x) {
-                            const base_limb_array_type &p = modulus_limbs();
-                            montgomery_limb_array_type reduced = x;
-
-                            for (std::size_t i = 0;
-                                 i < 16 && compare_montgomery_with_base(reduced, p) >= 0; ++i) {
-                                sub_montgomery_base_inplace(reduced, p);
-                            }
-                            if (compare_montgomery_with_base(reduced, p) < 0) {
-                                return lower_base_limbs(reduced);
-                            }
-
-                            const unsigned shift = leading_zeroes(p[base_limb_count - 1]);
-                            const base_limb_array_type v = shift_left_base(p, shift);
-                            montgomery_division_limb_array_type u = shift_left_montgomery(x, shift);
-
-                            constexpr std::size_t quotient_steps =
-                                montgomery_limb_count - base_limb_count;
-                            for (std::size_t step = quotient_steps + 1; step > 0; --step) {
-                                const std::size_t j = step - 1;
-                                const double_limb_type numerator =
-                                    (static_cast<double_limb_type>(u[j + base_limb_count]) << limb_bits) |
-                                    static_cast<double_limb_type>(u[j + base_limb_count - 1]);
-
-                                double_limb_type qhat_wide =
-                                    numerator / static_cast<double_limb_type>(v[base_limb_count - 1]);
-                                limb_type qhat =
-                                    qhat_wide > static_cast<double_limb_type>(max_limb) ?
-                                        max_limb :
-                                        static_cast<limb_type>(qhat_wide);
-                                double_limb_type rhat =
-                                    numerator -
-                                    static_cast<double_limb_type>(qhat) *
-                                        static_cast<double_limb_type>(v[base_limb_count - 1]);
-
-                                while ((rhat >> limb_bits) == 0u &&
-                                       static_cast<double_limb_type>(qhat) *
-                                               static_cast<double_limb_type>(v[base_limb_count - 2]) >
-                                           ((rhat << limb_bits) |
-                                            static_cast<double_limb_type>(u[j + base_limb_count - 2]))) {
-                                    --qhat;
-                                    rhat += static_cast<double_limb_type>(v[base_limb_count - 1]);
-                                }
-
-                                if (sub_mul_divisor(u, v, qhat, j)) {
-                                    add_divisor_back(u, v, j);
-                                }
-                            }
-
-                            return shift_right_remainder(u, shift);
-                        }
-
-                        static limb_type montgomery_neg_inverse() {
-                            static const limb_type value = []() {
-                                limb_type inverse = 1u;
-                                const limb_type p0 = modulus_limbs()[0];
-                                for (std::size_t i = 0; i < limb_bits; ++i) {
-                                    inverse *= limb_type(2u) - p0 * inverse;
-                                }
-                                return limb_type(0u) - inverse;
-                            }();
-                            return value;
-                        }
-
-                        static void redc_step_4(redc_limb_array_type &t,
-                                                const base_limb_array_type &p,
-                                                limb_type p_dash,
-                                                std::size_t i) {
-                            const limb_type m = t[i] * p_dash;
-                            limb_type carry = 0;
-                            mul_add_limb(t, i, m, p[0], carry);
-                            mul_add_limb(t, i + 1, m, p[1], carry);
-                            mul_add_limb(t, i + 2, m, p[2], carry);
-                            mul_add_limb(t, i + 3, m, p[3], carry);
-                            add_limb_carry(t, i + 4, carry);
-                        }
-
-                        static base_limb_array_type montgomery_reduce_abs_4(const wide_limb_array_type &x) {
-                            static_assert(base_limb_count == 4, "BN254 fast REDC expects four base limbs");
-
-                            redc_limb_array_type t = {};
-                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
-                                t[i] = x[i];
-                            }
-
-                            const base_limb_array_type &p = modulus_limbs();
-                            const limb_type p_dash = montgomery_neg_inverse();
-
-                            redc_step_4(t, p, p_dash, 0);
-                            redc_step_4(t, p, p_dash, 1);
-                            redc_step_4(t, p, p_dash, 2);
-                            redc_step_4(t, p, p_dash, 3);
-
-                            montgomery_limb_array_type shifted = {};
-                            for (std::size_t i = 0; i < montgomery_limb_count; ++i) {
-                                shifted[i] = t[i + base_limb_count];
-                            }
-
-                            return reduce_montgomery_result_abs(shifted);
                         }
 
                         static base_limb_array_type montgomery_reduce_abs(const wide_limb_array_type &x) {
-                            if constexpr (base_limb_count == 4) {
-                                return montgomery_reduce_abs_4(x);
-                            }
-
-                            redc_limb_array_type t = {};
-                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
-                                t[i] = x[i];
-                            }
-
-                            const base_limb_array_type &p = modulus_limbs();
-                            const limb_type p_dash = montgomery_neg_inverse();
-
-                            for (std::size_t i = 0; i < base_limb_count; ++i) {
-                                const limb_type m = t[i] * p_dash;
-                                double_limb_type carry = 0;
-
-                                for (std::size_t j = 0; j < base_limb_count; ++j) {
-                                    const std::size_t idx = i + j;
-                                    const double_limb_type product =
-                                        static_cast<double_limb_type>(m) *
-                                        static_cast<double_limb_type>(p[j]) +
-                                        static_cast<double_limb_type>(t[idx]) + carry;
-                                    t[idx] = static_cast<limb_type>(product);
-                                    carry = product >> limb_bits;
-                                }
-
-                                for (std::size_t idx = i + base_limb_count;
-                                     carry != 0u && idx < t.size(); ++idx) {
-                                    const double_limb_type sum =
-                                        static_cast<double_limb_type>(t[idx]) + carry;
-                                    t[idx] = static_cast<limb_type>(sum);
-                                    carry = sum >> limb_bits;
-                                }
-                            }
-
-                            montgomery_limb_array_type shifted = {};
-                            for (std::size_t i = 0; i < montgomery_limb_count; ++i) {
-                                shifted[i] = t[i + base_limb_count];
-                            }
-
-                            return reduce_montgomery_result_abs(shifted);
+                            reduction_backend_type backend = wide_backend(x);
+                            base_field_type::modulus_params.get_mod_obj().montgomery_reduce(backend);
+                            return backend_to_base_limbs(backend);
                         }
 
                         static base_value_type make_montgomery_base_value(const base_limb_array_type &x) {
                             typename integral_type::backend_type backend;
-                            for (std::size_t i = 0; i < base_limb_count && i < backend.size(); ++i) {
+                            for (size_t i = 0; i < base_limb_count && i < backend.size(); ++i) {
                                 backend.limbs()[i] = x[i];
                             }
                             backend.zero_after(base_limb_count);
@@ -758,14 +436,14 @@ namespace nil {
                             }
 
                             void normalize() {
-                                if (array_is_zero(data)) {
+                                if (limb_is_zero(data)) {
                                     negative = false;
                                 }
                             }
 
                             fp_dbl operator-() const {
                                 fp_dbl result(*this);
-                                if (!array_is_zero(result.data)) {
+                                if (!limb_is_zero(result.data)) {
                                     result.negative = !result.negative;
                                 }
                                 return result;
@@ -785,48 +463,48 @@ namespace nil {
 
                             fp_dbl &operator+=(const fp_dbl &other) {
                                 if (negative == other.negative) {
-                                    add_abs_inplace(data, other.data);
+                                    limb_add_inplace(data, other.data);
                                     return *this;
                                 }
 
-                                const int cmp = array_cmp(data, other.data);
+                                const int cmp = limb_cmp(data, other.data);
                                 if (cmp == 0) {
                                     data = {};
                                     negative = false;
                                     return *this;
                                 }
                                 if (cmp > 0) {
-                                    sub_abs_inplace(data, other.data);
+                                    limb_sub_inplace(data, other.data);
                                     return *this;
                                 }
-                                data = sub_abs(other.data, data);
+                                data = limb_sub(other.data, data);
                                 negative = other.negative;
                                 return *this;
                             }
 
                             fp_dbl &operator-=(const fp_dbl &other) {
                                 if (negative != other.negative) {
-                                    add_abs_inplace(data, other.data);
+                                    limb_add_inplace(data, other.data);
                                     return *this;
                                 }
 
-                                const int cmp = array_cmp(data, other.data);
+                                const int cmp = limb_cmp(data, other.data);
                                 if (cmp == 0) {
                                     data = {};
                                     negative = false;
                                     return *this;
                                 }
                                 if (cmp > 0) {
-                                    sub_abs_inplace(data, other.data);
+                                    limb_sub_inplace(data, other.data);
                                     return *this;
                                 }
-                                data = sub_abs(other.data, data);
+                                data = limb_sub(other.data, data);
                                 negative = !other.negative;
                                 return *this;
                             }
 
                             fp_dbl mul_small(limb_type factor) const {
-                                if (factor == 0u || array_is_zero(data)) {
+                                if (factor == 0u || limb_is_zero(data)) {
                                     return fp_dbl();
                                 }
                                 return fp_dbl(mul_abs_small(data, factor), negative);
@@ -859,8 +537,8 @@ namespace nil {
 
                             static base_value_type reduce(const fp_dbl &x) {
                                 base_limb_array_type reduced = montgomery_reduce_abs(x.data);
-                                if (x.negative && !array_is_zero(reduced)) {
-                                    reduced = sub_base(modulus_limbs(), reduced);
+                                if (x.negative && !limb_is_zero(reduced)) {
+                                    reduced = limb_sub(modulus_limbs(), reduced);
                                 }
                                 return make_montgomery_base_value(reduced);
                             }
@@ -879,15 +557,15 @@ namespace nil {
 
                             static fp2_base from_sum(const non_residue_type &x,
                                                      const non_residue_type &y) {
-                                return fp2_base(add_base(as_base_limbs(x.data[0]),
+                                return fp2_base(limb_add(as_base_limbs(x.data[0]),
                                                          as_base_limbs(y.data[0])),
-                                                add_base(as_base_limbs(x.data[1]),
+                                                limb_add(as_base_limbs(x.data[1]),
                                                          as_base_limbs(y.data[1])));
                             }
 
                             fp2_base operator+(const fp2_base &other) const {
-                                return fp2_base(add_base(data[0], other.data[0]),
-                                                add_base(data[1], other.data[1]));
+                                return fp2_base(limb_add(data[0], other.data[0]),
+                                                limb_add(data[1], other.data[1]));
                             }
                         };
 
@@ -932,7 +610,7 @@ namespace nil {
                                 const fp_dbl bd = fp_dbl::mul_pre(b, d);
 
                                 return fp2_dbl(ac - bd,
-                                               fp_dbl::mul_pre(add_base(a, b), add_base(c, d)) - ac - bd);
+                                               fp_dbl::mul_pre(limb_add(a, b), limb_add(c, d)) - ac - bd);
                             }
 
                             static fp2_dbl mul_pre_loose_sum(const fp2_base &x0,
@@ -941,16 +619,16 @@ namespace nil {
                                                              const fp2_base &y1) {
                                 // Used by the Fp12 cross term: the Fp2 inputs are already sums,
                                 // so the inner Karatsuba sum needs one extra limb for range.
-                                const base_limb_array_type a = add_base(x0.data[0], x1.data[0]);
-                                const base_limb_array_type b = add_base(x0.data[1], x1.data[1]);
-                                const base_limb_array_type c = add_base(y0.data[0], y1.data[0]);
-                                const base_limb_array_type d = add_base(y0.data[1], y1.data[1]);
+                                const base_limb_array_type a = limb_add(x0.data[0], x1.data[0]);
+                                const base_limb_array_type b = limb_add(x0.data[1], x1.data[1]);
+                                const base_limb_array_type c = limb_add(y0.data[0], y1.data[0]);
+                                const base_limb_array_type d = limb_add(y0.data[1], y1.data[1]);
                                 const fp_dbl ac = fp_dbl::mul_pre(a, c);
                                 const fp_dbl bd = fp_dbl::mul_pre(b, d);
 
                                 return fp2_dbl(ac - bd,
-                                               fp_dbl::mul_pre(add_base_extended(a, b),
-                                                               add_base_extended(c, d)) - ac - bd);
+                                               fp_dbl::mul_pre(limb_add_extended(a, b),
+                                                               limb_add_extended(c, d)) - ac - bd);
                             }
 
                             static fp2_dbl sqr_pre(const non_residue_type &x) {
@@ -1166,12 +844,12 @@ namespace nil {
                         }
                     };
 
-                    template<std::size_t Version>
+                    template<size_t Version>
                     constexpr typename fp12_2over3over2_extension_params<
                         alt_bn128_base_field<Version>>::non_residue_type const
                     fp12_2over3over2_extension_params<alt_bn128_base_field<Version>>::non_residue;
 
-                    template<std::size_t Version>
+                    template<size_t Version>
                     constexpr std::array<
                         typename fp12_2over3over2_extension_params<alt_bn128_base_field<Version>>::integral_type,
                         12 * 2> const

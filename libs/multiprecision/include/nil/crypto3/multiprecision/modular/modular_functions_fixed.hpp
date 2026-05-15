@@ -372,6 +372,9 @@ namespace boost {
                         // result should fit in the output parameter
                         typename = typename boost::enable_if_c<Bits1 >= Bits>::type>
                 BOOST_MP_CXX14_CONSTEXPR void montgomery_reduce(cpp_int_modular_backend<Bits1> &result) const {
+                    if (try_montgomery_reduce_4(result)) {
+                        return;
+                    }
 
                     Backend_doubled_padded_limbs accum(result);
                     Backend_doubled_padded_limbs prod;
@@ -847,6 +850,122 @@ namespace boost {
                 }
 
             protected:
+                // Fixed-width CIOS REDC for four-limb moduli. Other backends keep using
+                // the generic eval_multiply/eval_shift reducer above.
+                static BOOST_MP_CXX14_CONSTEXPR bool limbs_ge_modulus_4(const internal_limb_type *x,
+                                                                         const internal_limb_type *p) {
+                    for (std::size_t step = 4u; step > 0u; --step) {
+                        const std::size_t idx = step - 1u;
+                        if (x[idx] < p[idx]) {
+                            return false;
+                        }
+                        if (x[idx] > p[idx]) {
+                            return true;
+                        }
+                    }
+                    return true;
+                }
+
+                static BOOST_MP_CXX14_CONSTEXPR bool redc_result_ge_modulus_4(const internal_limb_type *x,
+                                                                              const internal_limb_type *p) {
+                    return x[4] != 0u || limbs_ge_modulus_4(x, p);
+                }
+
+                static BOOST_MP_CXX14_CONSTEXPR void subtract_modulus_4(internal_limb_type *x,
+                                                                        const internal_limb_type *p) {
+                    internal_limb_type borrow = 0;
+                    for (std::size_t i = 0; i < 4u; ++i) {
+                        const internal_limb_type subtrahend = p[i] + borrow;
+                        const bool subtrahend_carry = subtrahend < p[i];
+                        const internal_limb_type current = x[i];
+                        x[i] = current - subtrahend;
+                        borrow = (subtrahend_carry || current < subtrahend) ? 1u : 0u;
+                    }
+                    x[4] -= borrow;
+                }
+
+                template<unsigned Bits1>
+                BOOST_MP_CXX14_CONSTEXPR bool
+                try_montgomery_reduce_4(cpp_int_modular_backend<Bits1> &result) const {
+                    typedef std::integral_constant<
+                        bool,
+                        !is_trivial_cpp_int_modular<Backend>::value &&
+                            policy_type::limbs_count == 4> use_fast_path;
+                    return try_montgomery_reduce_4(result, use_fast_path());
+                }
+
+                template<unsigned Bits1>
+                BOOST_MP_CXX14_CONSTEXPR bool
+                try_montgomery_reduce_4(cpp_int_modular_backend<Bits1> &result,
+                                        std::integral_constant<bool, true> const &) const {
+                    if (result.size() > 9u) {
+                        return false;
+                    }
+
+                    internal_limb_type t[9] = {};
+                    for (std::size_t i = 0; i < result.size(); ++i) {
+                        t[i] = result.limbs()[i];
+                    }
+
+                    const internal_limb_type *p = m_mod.limbs();
+                    for (std::size_t i = 0; i < 4u; ++i) {
+                        const internal_limb_type m = t[i] * m_montgomery_p_dash;
+                        internal_limb_type carry = 0;
+
+                        for (std::size_t j = 0; j < 4u; ++j) {
+                            const internal_double_limb_type product =
+                                static_cast<internal_double_limb_type>(m) *
+                                    static_cast<internal_double_limb_type>(p[j]) +
+                                static_cast<internal_double_limb_type>(t[i + j]) + carry;
+                            t[i + j] = static_cast<internal_limb_type>(product);
+                            carry = static_cast<internal_limb_type>(product >> limb_bits);
+                        }
+
+                        for (std::size_t idx = i + 4u; carry != 0u && idx < 9u; ++idx) {
+                            const internal_double_limb_type sum =
+                                static_cast<internal_double_limb_type>(t[idx]) + carry;
+                            t[idx] = static_cast<internal_limb_type>(sum);
+                            carry = static_cast<internal_limb_type>(sum >> limb_bits);
+                        }
+                    }
+
+                    for (std::size_t i = 0u; i < 16u && redc_result_ge_modulus_4(t + 4u, p); ++i) {
+                        subtract_modulus_4(t + 4u, p);
+                    }
+
+                    bool needs_modulus = redc_result_ge_modulus_4(t + 4u, p);
+
+                    if (needs_modulus) {
+                        Backend_doubled_padded_limbs normalized;
+                        for (std::size_t i = 0; i < 5u; ++i) {
+                            normalized.limbs()[i] = t[4u + i];
+                        }
+                        normalized.zero_after(5u);
+                        normalized.set_carry(false);
+                        normalized.normalize();
+
+                        Backend_doubled_padded_limbs large_mod = m_mod;
+                        eval_modulus(normalized, large_mod);
+                        result = normalized;
+                        return true;
+                    }
+
+                    for (std::size_t i = 0; i < 4u; ++i) {
+                        result.limbs()[i] = t[4u + i];
+                    }
+                    result.zero_after(4u);
+                    result.set_carry(false);
+                    result.normalize();
+                    return true;
+                }
+
+                template<unsigned Bits1>
+                BOOST_MP_CXX14_CONSTEXPR bool
+                try_montgomery_reduce_4(cpp_int_modular_backend<Bits1> &,
+                                        std::integral_constant<bool, false> const &) const {
+                    return false;
+                }
+
                 Backend m_mod;
                 // This is 2^Bits - m_mod, precomputed.
                 Backend m_mod_compliment;
@@ -863,4 +982,3 @@ namespace boost {
 }   // namespace boost
 
 #endif    // CRYPTO3_MULTIPRECISION_MODULAR_FUNCTIONS_FIXED_PRECISION_HPP
-
