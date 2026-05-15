@@ -145,7 +145,7 @@ namespace nil {
                         static lazy_backend_type montgomery_reduce_abs(const lazy_backend_type &x) {
                             reduction_backend_type backend = x;
                             base_field_type::modulus_params.get_mod_obj().montgomery_reduce(backend);
-                            return backend_to_base_limbs(backend);
+                            return backend;
                         }
 
                         static base_value_type make_montgomery_base_value(const lazy_backend_type &x) {
