@@ -117,6 +117,8 @@ namespace nil {
                             0x23BD9E3DA9136A739F668E1ADC9EF7F0F575EC93F71A8DF953C846338C32A1AB_cppui_modular254
                         };
 
+                        // Tower: Fp2 = Fp[u]/(u^2 + 1), Fp6 = Fp2[v]/(v^3 - xi),
+                        // Fp12 = Fp6[w]/(w^2 - v). Here xi = 9 + u.
                         constexpr static const non_residue_type non_residue = non_residue_type(0x09, 0x01);
 
                         static bool is_zero(const wide_limb_array_type &x) {
@@ -924,6 +926,8 @@ namespace nil {
                                                              const fp2_base &x1,
                                                              const fp2_base &y0,
                                                              const fp2_base &y1) {
+                                // Used by the Fp12 cross term: the Fp2 inputs are already sums,
+                                // so the inner Karatsuba sum needs one extra limb for range.
                                 const base_limb_array_type a = add_base(x0.data[0], x1.data[0]);
                                 const base_limb_array_type b = add_base(x0.data[1], x1.data[1]);
                                 const base_limb_array_type c = add_base(y0.data[0], y1.data[0]);
@@ -955,6 +959,8 @@ namespace nil {
                             }
 
                             void mul_xi_inplace() {
+                                // Lazy multiply by xi = 9 + u:
+                                // (a + b*u) * xi = (9a - b) + (a + 9b) * u.
                                 const fp_dbl c0 = data[0];
                                 data[0].mul_by_9_inplace();
                                 data[0] -= data[1];
@@ -1007,6 +1013,8 @@ namespace nil {
                                                         const fp2_base &c, const fp2_base &d,
                                                         const fp2_base &e, const fp2_base &f,
                                                         SumProduct sum_product) {
+                                // Fp6 is Fp2[v]/(v^3 - xi); multiplying by xi folds v^3
+                                // terms back into the constant coefficient.
                                 fp2_dbl za = sum_product(b, c, e, f);
                                 fp2_dbl zb = sum_product(a, b, e, d);
                                 fp2_dbl zc = sum_product(a, c, d, f);
@@ -1050,6 +1058,8 @@ namespace nil {
                                                        const underlying_type &x1,
                                                        const underlying_type &y0,
                                                        const underlying_type &y1) {
+                                // Computes (x0 + x1) * (y0 + y1) for the Fp12 Karatsuba
+                                // cross term without constructing generic Fp6 field sums.
                                 const fp2_base a = fp2_base::from_sum(x0.data[0], x1.data[0]);
                                 const fp2_base b = fp2_base::from_sum(x0.data[1], x1.data[1]);
                                 const fp2_base c = fp2_base::from_sum(x0.data[2], x1.data[2]);
@@ -1095,17 +1105,21 @@ namespace nil {
                         };
 
                         static non_residue_type mul_by_xi(const non_residue_type &x) {
+                            // In Fp2, xi = 9 + u.
                             return non_residue_type(
                                 x.data[0].doubled().doubled().doubled() + x.data[0] - x.data[1],
                                 x.data[1].doubled().doubled().doubled() + x.data[1] + x.data[0]);
                         }
 
                         static underlying_type mul_by_v(const underlying_type &x) {
+                            // In Fp6, v^3 = xi, so (a + b*v + c*v^2) * v
+                            // becomes c*xi + a*v + b*v^2.
                             return underlying_type(mul_by_xi(x.data[2]), x.data[0], x.data[1]);
                         }
 
                         static underlying_type mul_v_add(const underlying_type &x,
                                                          const underlying_type &y) {
+                            // Fused x*v + y in Fp6; used because Fp12 has w^2 = v.
                             return underlying_type(mul_by_xi(x.data[2]) + y.data[0],
                                                    x.data[0] + y.data[1],
                                                    x.data[1] + y.data[2]);
@@ -1120,6 +1134,8 @@ namespace nil {
 
                         template<typename Fp12Value>
                         static Fp12Value multiply(const Fp12Value &x, const Fp12Value &y) {
+                            // For Fp12 = Fp6[w]/(w^2 - v):
+                            // (a + b*w)(c + d*w) = (ac + bd*v) + ((a+b)(c+d)-ac-bd)*w.
                             const underlying_type &a = x.data[0];
                             const underlying_type &b = x.data[1];
                             const underlying_type &c = y.data[0];
