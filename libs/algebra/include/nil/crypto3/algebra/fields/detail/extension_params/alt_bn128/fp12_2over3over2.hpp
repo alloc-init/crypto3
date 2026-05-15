@@ -127,9 +127,6 @@ namespace nil {
                             for (size_t i = 0; i < base_limb_count && i < backend.size(); ++i) {
                                 result.limbs()[i] = backend.limbs()[i];
                             }
-                            result.zero_after(base_limb_count);
-                            result.set_carry(false);
-                            result.normalize();
                             return result;
                         }
 
@@ -149,14 +146,12 @@ namespace nil {
                         }
 
                         static base_value_type make_montgomery_base_value(const lazy_backend_type &x) {
-                            typename integral_type::backend_type backend;
+                            typename base_value_type::data_type data;
+                            typename integral_type::backend_type &backend = data.backend().base_data();
                             for (size_t i = 0; i < base_limb_count && i < backend.size(); ++i) {
                                 backend.limbs()[i] = x.limbs()[i];
                             }
                             backend.zero_after(base_limb_count);
-
-                            typename base_value_type::data_type data;
-                            data.backend().base_data() = backend;
                             return base_value_type(data);
                         }
 
@@ -262,10 +257,7 @@ namespace nil {
                             }
 
                             fp_dbl &mul_by_9_inplace() {
-                                wide_limb_array_type shifted = data;
-                                boost::multiprecision::backends::eval_left_shift(shifted, 3u);
-                                boost::multiprecision::backends::eval_add(shifted, data);
-                                data = shifted;
+                                boost::multiprecision::backends::eval_multiply(data, limb_type(9u));
                                 normalize();
                                 return *this;
                             }
@@ -273,6 +265,31 @@ namespace nil {
                             static fp_dbl mul_pre(const base_limb_array_type &x, const base_limb_array_type &y) {
                                 wide_limb_array_type product = x;
                                 boost::multiprecision::backends::eval_multiply(product, y);
+                                return fp_dbl(product);
+                            }
+
+                            static fp_dbl mul_pre_4limb(const base_limb_array_type &x,
+                                                        const base_limb_array_type &y) {
+                                if (base_limb_count != 4u) {
+                                    return mul_pre(x, y);
+                                }
+                                // Most tower products multiply values below 4p, so they fit
+                                // in the low four 64-bit limbs. The loose Fp12 cross term has
+                                // a separate five-limb path for its wider Karatsuba sum.
+                                wide_limb_array_type product;
+                                boost::multiprecision::backends::eval_multiply_4x4(
+                                    product, x.limbs(), y.limbs());
+                                return fp_dbl(product);
+                            }
+
+                            static fp_dbl mul_pre_5limb(const base_limb_array_type &x,
+                                                        const base_limb_array_type &y) {
+                                if (base_limb_count != 4u) {
+                                    return mul_pre(x, y);
+                                }
+                                wide_limb_array_type product;
+                                boost::multiprecision::backends::eval_multiply_low_limbs<5u>(
+                                    product, x.limbs(), y.limbs());
                                 return fp_dbl(product);
                             }
 
@@ -363,8 +380,8 @@ namespace nil {
                                 const base_limb_array_type &b = x.data[1];
                                 const base_limb_array_type &c = y.data[0];
                                 const base_limb_array_type &d = y.data[1];
-                                const fp_dbl ac = fp_dbl::mul_pre(a, c);
-                                const fp_dbl bd = fp_dbl::mul_pre(b, d);
+                                const fp_dbl ac = fp_dbl::mul_pre_4limb(a, c);
+                                const fp_dbl bd = fp_dbl::mul_pre_4limb(b, d);
                                 base_limb_array_type ab = a;
                                 base_limb_array_type cd = c;
                                 boost::multiprecision::backends::eval_add(ab, b);
@@ -372,7 +389,7 @@ namespace nil {
 
                                 result.data[0] = ac;
                                 result.data[0] -= bd;
-                                result.data[1] = fp_dbl::mul_pre(ab, cd);
+                                result.data[1] = fp_dbl::mul_pre_4limb(ab, cd);
                                 result.data[1] -= ac;
                                 result.data[1] -= bd;
                             }
@@ -398,8 +415,8 @@ namespace nil {
                                 boost::multiprecision::backends::eval_add(b, x1.data[1]);
                                 boost::multiprecision::backends::eval_add(c, y1.data[0]);
                                 boost::multiprecision::backends::eval_add(d, y1.data[1]);
-                                const fp_dbl ac = fp_dbl::mul_pre(a, c);
-                                const fp_dbl bd = fp_dbl::mul_pre(b, d);
+                                const fp_dbl ac = fp_dbl::mul_pre_4limb(a, c);
+                                const fp_dbl bd = fp_dbl::mul_pre_4limb(b, d);
                                 base_limb_array_type ab = a;
                                 base_limb_array_type cd = c;
                                 boost::multiprecision::backends::eval_add(ab, b);
@@ -407,7 +424,7 @@ namespace nil {
 
                                 result.data[0] = ac;
                                 result.data[0] -= bd;
-                                result.data[1] = fp_dbl::mul_pre(ab, cd);
+                                result.data[1] = fp_dbl::mul_pre_5limb(ab, cd);
                                 result.data[1] -= ac;
                                 result.data[1] -= bd;
                             }
@@ -428,9 +445,9 @@ namespace nil {
                             static fp2_dbl sqr_pre(const fp2_base &x) {
                                 const base_limb_array_type &a = x.data[0];
                                 const base_limb_array_type &b = x.data[1];
-                                const fp_dbl aa = fp_dbl::mul_pre(a, a);
-                                const fp_dbl bb = fp_dbl::mul_pre(b, b);
-                                return fp2_dbl(aa - bb, fp_dbl::mul_pre(a, b).mul_small(2u));
+                                const fp_dbl aa = fp_dbl::mul_pre_4limb(a, a);
+                                const fp_dbl bb = fp_dbl::mul_pre_4limb(b, b);
+                                return fp2_dbl(aa - bb, fp_dbl::mul_pre_4limb(a, b).mul_small(2u));
                             }
 
                             static fp2_dbl mul_xi(const fp2_dbl &x) {

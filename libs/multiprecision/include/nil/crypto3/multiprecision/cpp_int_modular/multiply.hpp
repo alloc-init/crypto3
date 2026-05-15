@@ -109,6 +109,40 @@ namespace boost {
                 result.normalize();
             }
 
+            template<std::size_t InputLimbs, unsigned Bits>
+            inline constexpr void eval_multiply_low_limbs(
+                    cpp_int_modular_backend<Bits> &result,
+                    const limb_type *x,
+                    const limb_type *y) noexcept {
+                result.zero_after(0u);
+                result.set_carry(false);
+
+                for (std::size_t i = 0; i < InputLimbs; ++i) {
+                    limb_type carry = 0u;
+                    for (std::size_t j = 0; j < InputLimbs && i + j < result.size(); ++j) {
+                        const double_limb_type product =
+                            static_cast<double_limb_type>(x[i]) *
+                                static_cast<double_limb_type>(y[j]) +
+                            static_cast<double_limb_type>(result.limbs()[i + j]) +
+                            carry;
+                        result.limbs()[i + j] = static_cast<limb_type>(product);
+                        carry = static_cast<limb_type>(
+                            product >> cpp_int_modular_backend<Bits>::limb_bits);
+                    }
+
+                    for (std::size_t idx = i + InputLimbs; carry != 0u && idx < result.size(); ++idx) {
+                        const double_limb_type sum =
+                            static_cast<double_limb_type>(result.limbs()[idx]) +
+                            carry;
+                        result.limbs()[idx] = static_cast<limb_type>(sum);
+                        carry = static_cast<limb_type>(
+                            sum >> cpp_int_modular_backend<Bits>::limb_bits);
+                    }
+                }
+
+                result.normalize();
+            }
+
             template<unsigned Bits1, unsigned Bits2>
             inline constexpr void
             eval_multiply(cpp_int_modular_backend<Bits1 + Bits2> &result,
