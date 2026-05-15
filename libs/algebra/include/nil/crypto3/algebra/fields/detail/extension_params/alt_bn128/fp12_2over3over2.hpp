@@ -78,9 +78,11 @@ namespace nil {
                             (base_field_type::modulus_bits + limb_bits - 1) / limb_bits;
                         constexpr static const std::size_t wide_limb_count =
                             (2 * base_field_type::modulus_bits + 32 + limb_bits - 1) / limb_bits;
+                        constexpr static const std::size_t extended_limb_count = base_limb_count + 1;
                         constexpr static const limb_type max_limb = ~limb_type(0u);
 
                         typedef std::array<limb_type, base_limb_count> base_limb_array_type;
+                        typedef std::array<limb_type, extended_limb_count> extended_limb_array_type;
                         typedef std::array<limb_type, wide_limb_count> wide_limb_array_type;
                         typedef std::array<limb_type, wide_limb_count + 1> redc_limb_array_type;
                         constexpr static const std::size_t montgomery_limb_count =
@@ -118,6 +120,11 @@ namespace nil {
                         constexpr static const non_residue_type non_residue = non_residue_type(0x09, 0x01);
 
                         static bool is_zero(const wide_limb_array_type &x) {
+                            if constexpr (wide_limb_count == 9) {
+                                return (x[0] | x[1] | x[2] | x[3] | x[4] |
+                                        x[5] | x[6] | x[7] | x[8]) == 0u;
+                            }
+
                             for (std::size_t i = 0; i < wide_limb_count; ++i) {
                                 if (x[i] != 0u) {
                                     return false;
@@ -137,6 +144,37 @@ namespace nil {
 
                         static int compare_abs(const wide_limb_array_type &x,
                                                const wide_limb_array_type &y) {
+                            if constexpr (wide_limb_count == 9) {
+                                if (x[8] != y[8]) {
+                                    return x[8] < y[8] ? -1 : 1;
+                                }
+                                if (x[7] != y[7]) {
+                                    return x[7] < y[7] ? -1 : 1;
+                                }
+                                if (x[6] != y[6]) {
+                                    return x[6] < y[6] ? -1 : 1;
+                                }
+                                if (x[5] != y[5]) {
+                                    return x[5] < y[5] ? -1 : 1;
+                                }
+                                if (x[4] != y[4]) {
+                                    return x[4] < y[4] ? -1 : 1;
+                                }
+                                if (x[3] != y[3]) {
+                                    return x[3] < y[3] ? -1 : 1;
+                                }
+                                if (x[2] != y[2]) {
+                                    return x[2] < y[2] ? -1 : 1;
+                                }
+                                if (x[1] != y[1]) {
+                                    return x[1] < y[1] ? -1 : 1;
+                                }
+                                if (x[0] != y[0]) {
+                                    return x[0] < y[0] ? -1 : 1;
+                                }
+                                return 0;
+                            }
+
                             for (std::size_t i = wide_limb_count; i > 0; --i) {
                                 const std::size_t idx = i - 1;
                                 if (x[idx] < y[idx]) {
@@ -177,6 +215,18 @@ namespace nil {
                             return result;
                         }
 
+                        static void add_abs_inplace(wide_limb_array_type &x,
+                                                    const wide_limb_array_type &y) {
+                            double_limb_type carry = 0;
+                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
+                                const double_limb_type sum =
+                                    static_cast<double_limb_type>(x[i]) +
+                                    static_cast<double_limb_type>(y[i]) + carry;
+                                x[i] = static_cast<limb_type>(sum);
+                                carry = sum >> limb_bits;
+                            }
+                        }
+
                         static wide_limb_array_type sub_abs(const wide_limb_array_type &x,
                                                             const wide_limb_array_type &y) {
                             wide_limb_array_type result = {};
@@ -189,6 +239,18 @@ namespace nil {
                                 borrow = needs_borrow ? 1u : 0u;
                             }
                             return result;
+                        }
+
+                        static void sub_abs_inplace(wide_limb_array_type &x,
+                                                    const wide_limb_array_type &y) {
+                            limb_type borrow = 0;
+                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
+                                const limb_type yi = y[i] + borrow;
+                                const bool carry_from_borrow = yi < y[i];
+                                const bool needs_borrow = carry_from_borrow || x[i] < yi;
+                                x[i] -= yi;
+                                borrow = needs_borrow ? 1u : 0u;
+                            }
                         }
 
                         static void sub_base_inplace(base_limb_array_type &x,
@@ -224,6 +286,21 @@ namespace nil {
                             return result;
                         }
 
+                        static extended_limb_array_type add_base_extended(const base_limb_array_type &x,
+                                                                         const base_limb_array_type &y) {
+                            extended_limb_array_type result = {};
+                            double_limb_type carry = 0;
+                            for (std::size_t i = 0; i < base_limb_count; ++i) {
+                                const double_limb_type sum =
+                                    static_cast<double_limb_type>(x[i]) +
+                                    static_cast<double_limb_type>(y[i]) + carry;
+                                result[i] = static_cast<limb_type>(sum);
+                                carry = sum >> limb_bits;
+                            }
+                            result[base_limb_count] = static_cast<limb_type>(carry);
+                            return result;
+                        }
+
                         static wide_limb_array_type mul_abs_small(const wide_limb_array_type &x,
                                                                   limb_type factor) {
                             wide_limb_array_type result = {};
@@ -238,8 +315,86 @@ namespace nil {
                             return result;
                         }
 
+                        static void mul_abs_small_inplace(wide_limb_array_type &x,
+                                                          limb_type factor) {
+                            double_limb_type carry = 0;
+                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
+                                const double_limb_type product =
+                                    static_cast<double_limb_type>(x[i]) *
+                                    static_cast<double_limb_type>(factor) + carry;
+                                x[i] = static_cast<limb_type>(product);
+                                carry = product >> limb_bits;
+                            }
+                        }
+
+                        static void mul_add_limb(wide_limb_array_type &result,
+                                                 std::size_t idx,
+                                                 limb_type x,
+                                                 limb_type y,
+                                                 limb_type &carry) {
+                            const double_limb_type product =
+                                static_cast<double_limb_type>(x) *
+                                static_cast<double_limb_type>(y) +
+                                static_cast<double_limb_type>(result[idx]) + carry;
+                            result[idx] = static_cast<limb_type>(product);
+                            carry = static_cast<limb_type>(product >> limb_bits);
+                        }
+
+                        static void add_limb_carry(wide_limb_array_type &result,
+                                                   std::size_t idx,
+                                                   limb_type carry) {
+                            while (carry != 0u && idx < wide_limb_count) {
+                                const double_limb_type sum =
+                                    static_cast<double_limb_type>(result[idx]) + carry;
+                                result[idx] = static_cast<limb_type>(sum);
+                                carry = static_cast<limb_type>(sum >> limb_bits);
+                                ++idx;
+                            }
+                        }
+
+                        static wide_limb_array_type mul_base_abs_4(const base_limb_array_type &x,
+                                                                   const base_limb_array_type &y) {
+                            static_assert(base_limb_count == 4, "BN254 fast multiply expects four base limbs");
+
+                            wide_limb_array_type result = {};
+                            limb_type carry = 0;
+
+                            mul_add_limb(result, 0, x[0], y[0], carry);
+                            mul_add_limb(result, 1, x[0], y[1], carry);
+                            mul_add_limb(result, 2, x[0], y[2], carry);
+                            mul_add_limb(result, 3, x[0], y[3], carry);
+                            add_limb_carry(result, 4, carry);
+
+                            carry = 0;
+                            mul_add_limb(result, 1, x[1], y[0], carry);
+                            mul_add_limb(result, 2, x[1], y[1], carry);
+                            mul_add_limb(result, 3, x[1], y[2], carry);
+                            mul_add_limb(result, 4, x[1], y[3], carry);
+                            add_limb_carry(result, 5, carry);
+
+                            carry = 0;
+                            mul_add_limb(result, 2, x[2], y[0], carry);
+                            mul_add_limb(result, 3, x[2], y[1], carry);
+                            mul_add_limb(result, 4, x[2], y[2], carry);
+                            mul_add_limb(result, 5, x[2], y[3], carry);
+                            add_limb_carry(result, 6, carry);
+
+                            carry = 0;
+                            mul_add_limb(result, 3, x[3], y[0], carry);
+                            mul_add_limb(result, 4, x[3], y[1], carry);
+                            mul_add_limb(result, 5, x[3], y[2], carry);
+                            mul_add_limb(result, 6, x[3], y[3], carry);
+                            add_limb_carry(result, 7, carry);
+
+                            return result;
+                        }
+
                         static wide_limb_array_type mul_base_abs(const base_limb_array_type &x,
                                                                  const base_limb_array_type &y) {
+                            if constexpr (base_limb_count == 4) {
+                                return mul_base_abs_4(x, y);
+                            }
+
                             wide_limb_array_type result = {};
                             for (std::size_t i = 0; i < base_limb_count; ++i) {
                                 double_limb_type carry = 0;
@@ -260,6 +415,19 @@ namespace nil {
                                     result[idx] = static_cast<limb_type>(sum);
                                     carry = sum >> limb_bits;
                                 }
+                            }
+                            return result;
+                        }
+
+                        static wide_limb_array_type mul_extended_abs(const extended_limb_array_type &x,
+                                                                     const extended_limb_array_type &y) {
+                            wide_limb_array_type result = {};
+                            for (std::size_t i = 0; i < extended_limb_count; ++i) {
+                                limb_type carry = 0;
+                                for (std::size_t j = 0; j < extended_limb_count; ++j) {
+                                    mul_add_limb(result, i + j, x[i], y[j], carry);
+                                }
+                                add_limb_carry(result, i + extended_limb_count, carry);
                             }
                             return result;
                         }
@@ -379,6 +547,46 @@ namespace nil {
                             return result;
                         }
 
+                        static int compare_montgomery_with_base(const montgomery_limb_array_type &x,
+                                                                const base_limb_array_type &y) {
+                            for (std::size_t i = montgomery_limb_count; i > base_limb_count; --i) {
+                                if (x[i - 1] != 0u) {
+                                    return 1;
+                                }
+                            }
+
+                            for (std::size_t i = base_limb_count; i > 0; --i) {
+                                const std::size_t idx = i - 1;
+                                if (x[idx] < y[idx]) {
+                                    return -1;
+                                }
+                                if (x[idx] > y[idx]) {
+                                    return 1;
+                                }
+                            }
+                            return 0;
+                        }
+
+                        static void sub_montgomery_base_inplace(montgomery_limb_array_type &x,
+                                                                const base_limb_array_type &y) {
+                            limb_type borrow = 0;
+                            for (std::size_t i = 0; i < montgomery_limb_count; ++i) {
+                                const limb_type yi = (i < base_limb_count ? y[i] : 0u) + borrow;
+                                const bool carry_from_borrow = yi < (i < base_limb_count ? y[i] : 0u);
+                                const bool needs_borrow = carry_from_borrow || x[i] < yi;
+                                x[i] -= yi;
+                                borrow = needs_borrow ? 1u : 0u;
+                            }
+                        }
+
+                        static base_limb_array_type lower_base_limbs(const montgomery_limb_array_type &x) {
+                            base_limb_array_type result = {};
+                            for (std::size_t i = 0; i < base_limb_count; ++i) {
+                                result[i] = x[i];
+                            }
+                            return result;
+                        }
+
                         static montgomery_division_limb_array_type shift_left_montgomery(
                             const montgomery_limb_array_type &x,
                             unsigned shift) {
@@ -402,6 +610,16 @@ namespace nil {
                         static base_limb_array_type reduce_montgomery_result_abs(
                             const montgomery_limb_array_type &x) {
                             const base_limb_array_type &p = modulus_limbs();
+                            montgomery_limb_array_type reduced = x;
+
+                            for (std::size_t i = 0;
+                                 i < 16 && compare_montgomery_with_base(reduced, p) >= 0; ++i) {
+                                sub_montgomery_base_inplace(reduced, p);
+                            }
+                            if (compare_montgomery_with_base(reduced, p) < 0) {
+                                return lower_base_limbs(reduced);
+                            }
+
                             const unsigned shift = leading_zeroes(p[base_limb_count - 1]);
                             const base_limb_array_type v = shift_left_base(p, shift);
                             montgomery_division_limb_array_type u = shift_left_montgomery(x, shift);
@@ -454,7 +672,73 @@ namespace nil {
                             return value;
                         }
 
+                        static void redc_mul_add_limb(redc_limb_array_type &t,
+                                                      std::size_t idx,
+                                                      limb_type x,
+                                                      limb_type y,
+                                                      limb_type &carry) {
+                            const double_limb_type product =
+                                static_cast<double_limb_type>(x) *
+                                static_cast<double_limb_type>(y) +
+                                static_cast<double_limb_type>(t[idx]) + carry;
+                            t[idx] = static_cast<limb_type>(product);
+                            carry = static_cast<limb_type>(product >> limb_bits);
+                        }
+
+                        static void add_redc_carry(redc_limb_array_type &t,
+                                                   std::size_t idx,
+                                                   limb_type carry) {
+                            while (carry != 0u && idx < t.size()) {
+                                const double_limb_type sum =
+                                    static_cast<double_limb_type>(t[idx]) + carry;
+                                t[idx] = static_cast<limb_type>(sum);
+                                carry = static_cast<limb_type>(sum >> limb_bits);
+                                ++idx;
+                            }
+                        }
+
+                        static void redc_step_4(redc_limb_array_type &t,
+                                                const base_limb_array_type &p,
+                                                limb_type p_dash,
+                                                std::size_t i) {
+                            const limb_type m = t[i] * p_dash;
+                            limb_type carry = 0;
+                            redc_mul_add_limb(t, i, m, p[0], carry);
+                            redc_mul_add_limb(t, i + 1, m, p[1], carry);
+                            redc_mul_add_limb(t, i + 2, m, p[2], carry);
+                            redc_mul_add_limb(t, i + 3, m, p[3], carry);
+                            add_redc_carry(t, i + 4, carry);
+                        }
+
+                        static base_limb_array_type montgomery_reduce_abs_4(const wide_limb_array_type &x) {
+                            static_assert(base_limb_count == 4, "BN254 fast REDC expects four base limbs");
+
+                            redc_limb_array_type t = {};
+                            for (std::size_t i = 0; i < wide_limb_count; ++i) {
+                                t[i] = x[i];
+                            }
+
+                            const base_limb_array_type &p = modulus_limbs();
+                            const limb_type p_dash = montgomery_neg_inverse();
+
+                            redc_step_4(t, p, p_dash, 0);
+                            redc_step_4(t, p, p_dash, 1);
+                            redc_step_4(t, p, p_dash, 2);
+                            redc_step_4(t, p, p_dash, 3);
+
+                            montgomery_limb_array_type shifted = {};
+                            for (std::size_t i = 0; i < montgomery_limb_count; ++i) {
+                                shifted[i] = t[i + base_limb_count];
+                            }
+
+                            return reduce_montgomery_result_abs(shifted);
+                        }
+
                         static base_limb_array_type montgomery_reduce_abs(const wide_limb_array_type &x) {
+                            if constexpr (base_limb_count == 4) {
+                                return montgomery_reduce_abs_4(x);
+                            }
+
                             redc_limb_array_type t = {};
                             for (std::size_t i = 0; i < wide_limb_count; ++i) {
                                 t[i] = x[i];
@@ -500,7 +784,6 @@ namespace nil {
                                 backend.limbs()[i] = x[i];
                             }
                             backend.zero_after(base_limb_count);
-                            backend.normalize();
 
                             typename base_value_type::data_type data;
                             data.backend().base_data() = backend;
@@ -533,31 +816,56 @@ namespace nil {
                             }
 
                             fp_dbl operator+(const fp_dbl &other) const {
+                                fp_dbl result(*this);
+                                result += other;
+                                return result;
+                            }
+
+                            fp_dbl operator-(const fp_dbl &other) const {
+                                fp_dbl result(*this);
+                                result -= other;
+                                return result;
+                            }
+
+                            fp_dbl &operator+=(const fp_dbl &other) {
                                 if (negative == other.negative) {
-                                    return fp_dbl(add_abs(data, other.data), negative);
+                                    add_abs_inplace(data, other.data);
+                                    return *this;
                                 }
 
                                 const int cmp = compare_abs(data, other.data);
                                 if (cmp == 0) {
-                                    return fp_dbl();
+                                    data = {};
+                                    negative = false;
+                                    return *this;
                                 }
                                 if (cmp > 0) {
-                                    return fp_dbl(sub_abs(data, other.data), negative);
+                                    sub_abs_inplace(data, other.data);
+                                    return *this;
                                 }
-                                return fp_dbl(sub_abs(other.data, data), other.negative);
-                            }
-
-                            fp_dbl operator-(const fp_dbl &other) const {
-                                return *this + (-other);
-                            }
-
-                            fp_dbl &operator+=(const fp_dbl &other) {
-                                *this = *this + other;
+                                data = sub_abs(other.data, data);
+                                negative = other.negative;
                                 return *this;
                             }
 
                             fp_dbl &operator-=(const fp_dbl &other) {
-                                *this = *this - other;
+                                if (negative != other.negative) {
+                                    add_abs_inplace(data, other.data);
+                                    return *this;
+                                }
+
+                                const int cmp = compare_abs(data, other.data);
+                                if (cmp == 0) {
+                                    data = {};
+                                    negative = false;
+                                    return *this;
+                                }
+                                if (cmp > 0) {
+                                    sub_abs_inplace(data, other.data);
+                                    return *this;
+                                }
+                                data = sub_abs(other.data, data);
+                                negative = !other.negative;
                                 return *this;
                             }
 
@@ -568,9 +876,19 @@ namespace nil {
                                 return fp_dbl(mul_abs_small(data, factor), negative);
                             }
 
+                            fp_dbl &mul_by_9_inplace() {
+                                mul_abs_small_inplace(data, 9u);
+                                return *this;
+                            }
+
                             static fp_dbl mul_pre(const base_limb_array_type &x,
                                                   const base_limb_array_type &y) {
                                 return fp_dbl(mul_base_abs(x, y));
+                            }
+
+                            static fp_dbl mul_pre(const extended_limb_array_type &x,
+                                                  const extended_limb_array_type &y) {
+                                return fp_dbl(mul_extended_abs(x, y));
                             }
 
                             static fp_dbl mul_pre(const base_value_type &x,
@@ -589,6 +907,61 @@ namespace nil {
                                     reduced = sub_base(modulus_limbs(), reduced);
                                 }
                                 return make_montgomery_base_value(reduced);
+                            }
+                        };
+
+                        struct fp2_base {
+                            std::array<base_limb_array_type, 2> data;
+
+                            fp2_base() = default;
+                            fp2_base(const base_limb_array_type &c0,
+                                     const base_limb_array_type &c1) : data({c0, c1}) {}
+
+                            static fp2_base from(const non_residue_type &x) {
+                                return fp2_base(as_base_limbs(x.data[0]), as_base_limbs(x.data[1]));
+                            }
+
+                            static fp2_base from_sum(const non_residue_type &x,
+                                                     const non_residue_type &y) {
+                                return fp2_base(add_base(as_base_limbs(x.data[0]),
+                                                         as_base_limbs(y.data[0])),
+                                                add_base(as_base_limbs(x.data[1]),
+                                                         as_base_limbs(y.data[1])));
+                            }
+
+                            fp2_base operator+(const fp2_base &other) const {
+                                return fp2_base(add_base(data[0], other.data[0]),
+                                                add_base(data[1], other.data[1]));
+                            }
+                        };
+
+                        struct fp2_loose_base {
+                            std::array<base_limb_array_type, 2> data;
+
+                            fp2_loose_base() = default;
+                            fp2_loose_base(const base_limb_array_type &c0,
+                                           const base_limb_array_type &c1) : data({c0, c1}) {}
+
+                            static fp2_loose_base from_sum(const fp2_base &x,
+                                                           const fp2_base &y) {
+                                return fp2_loose_base(add_base(x.data[0], y.data[0]),
+                                                      add_base(x.data[1], y.data[1]));
+                            }
+                        };
+
+                        struct fp6_base {
+                            std::array<fp2_base, 3> data;
+
+                            fp6_base() = default;
+                            fp6_base(const fp2_base &c0,
+                                     const fp2_base &c1,
+                                     const fp2_base &c2) : data({c0, c1, c2}) {}
+
+                            static fp6_base from_sum(const underlying_type &x,
+                                                     const underlying_type &y) {
+                                return fp6_base(fp2_base::from_sum(x.data[0], y.data[0]),
+                                                fp2_base::from_sum(x.data[1], y.data[1]),
+                                                fp2_base::from_sum(x.data[2], y.data[2]));
                             }
                         };
 
@@ -620,10 +993,15 @@ namespace nil {
 
                             static fp2_dbl mul_pre(const non_residue_type &x,
                                                    const non_residue_type &y) {
-                                const base_limb_array_type a = as_base_limbs(x.data[0]);
-                                const base_limb_array_type b = as_base_limbs(x.data[1]);
-                                const base_limb_array_type c = as_base_limbs(y.data[0]);
-                                const base_limb_array_type d = as_base_limbs(y.data[1]);
+                                return mul_pre(fp2_base::from(x), fp2_base::from(y));
+                            }
+
+                            static fp2_dbl mul_pre(const fp2_base &x,
+                                                   const fp2_base &y) {
+                                const base_limb_array_type &a = x.data[0];
+                                const base_limb_array_type &b = x.data[1];
+                                const base_limb_array_type &c = y.data[0];
+                                const base_limb_array_type &d = y.data[1];
                                 const fp_dbl ac = fp_dbl::mul_pre(a, c);
                                 const fp_dbl bd = fp_dbl::mul_pre(b, d);
 
@@ -631,17 +1009,44 @@ namespace nil {
                                                fp_dbl::mul_pre(add_base(a, b), add_base(c, d)) - ac - bd);
                             }
 
+                            static fp2_dbl mul_pre(const fp2_loose_base &x,
+                                                   const fp2_loose_base &y) {
+                                const base_limb_array_type &a = x.data[0];
+                                const base_limb_array_type &b = x.data[1];
+                                const base_limb_array_type &c = y.data[0];
+                                const base_limb_array_type &d = y.data[1];
+                                const fp_dbl ac = fp_dbl::mul_pre(a, c);
+                                const fp_dbl bd = fp_dbl::mul_pre(b, d);
+
+                                return fp2_dbl(ac - bd,
+                                               fp_dbl::mul_pre(add_base_extended(a, b),
+                                                               add_base_extended(c, d)) - ac - bd);
+                            }
+
                             static fp2_dbl sqr_pre(const non_residue_type &x) {
-                                const base_limb_array_type a = as_base_limbs(x.data[0]);
-                                const base_limb_array_type b = as_base_limbs(x.data[1]);
+                                return sqr_pre(fp2_base::from(x));
+                            }
+
+                            static fp2_dbl sqr_pre(const fp2_base &x) {
+                                const base_limb_array_type &a = x.data[0];
+                                const base_limb_array_type &b = x.data[1];
                                 const fp_dbl aa = fp_dbl::mul_pre(a, a);
                                 const fp_dbl bb = fp_dbl::mul_pre(b, b);
                                 return fp2_dbl(aa - bb, fp_dbl::mul_pre(a, b).mul_small(2u));
                             }
 
                             static fp2_dbl mul_xi(const fp2_dbl &x) {
-                                return fp2_dbl(x.data[0].mul_small(9u) - x.data[1],
-                                               x.data[0] + x.data[1].mul_small(9u));
+                                fp2_dbl result(x);
+                                result.mul_xi_inplace();
+                                return result;
+                            }
+
+                            void mul_xi_inplace() {
+                                const fp_dbl c0 = data[0];
+                                data[0].mul_by_9_inplace();
+                                data[0] -= data[1];
+                                data[1].mul_by_9_inplace();
+                                data[1] += c0;
                             }
 
                             static non_residue_type reduce(const fp2_dbl &x) {
@@ -686,12 +1091,12 @@ namespace nil {
 
                             static fp6_dbl mul_pre(const underlying_type &x,
                                                    const underlying_type &y) {
-                                const non_residue_type &a = x.data[0];
-                                const non_residue_type &b = x.data[1];
-                                const non_residue_type &c = x.data[2];
-                                const non_residue_type &d = y.data[0];
-                                const non_residue_type &e = y.data[1];
-                                const non_residue_type &f = y.data[2];
+                                const fp2_base a = fp2_base::from(x.data[0]);
+                                const fp2_base b = fp2_base::from(x.data[1]);
+                                const fp2_base c = fp2_base::from(x.data[2]);
+                                const fp2_base d = fp2_base::from(y.data[0]);
+                                const fp2_base e = fp2_base::from(y.data[1]);
+                                const fp2_base f = fp2_base::from(y.data[2]);
 
                                 fp2_dbl za = fp2_dbl::mul_pre(b + c, e + f);
                                 fp2_dbl zb = fp2_dbl::mul_pre(a + b, e + d);
@@ -706,9 +1111,43 @@ namespace nil {
                                 zb -= be;
                                 zc -= ad;
                                 zc -= cf;
-                                za = fp2_dbl::mul_xi(za);
+                                za.mul_xi_inplace();
                                 za += ad;
-                                cf = fp2_dbl::mul_xi(cf);
+                                cf.mul_xi_inplace();
+                                zb += cf;
+                                zc += be;
+
+                                return fp6_dbl(za, zb, zc);
+                            }
+
+                            static fp6_dbl mul_pre(const fp6_base &x,
+                                                   const fp6_base &y) {
+                                const fp2_base &a = x.data[0];
+                                const fp2_base &b = x.data[1];
+                                const fp2_base &c = x.data[2];
+                                const fp2_base &d = y.data[0];
+                                const fp2_base &e = y.data[1];
+                                const fp2_base &f = y.data[2];
+
+                                fp2_dbl za = fp2_dbl::mul_pre(fp2_loose_base::from_sum(b, c),
+                                                              fp2_loose_base::from_sum(e, f));
+                                fp2_dbl zb = fp2_dbl::mul_pre(fp2_loose_base::from_sum(a, b),
+                                                              fp2_loose_base::from_sum(e, d));
+                                fp2_dbl zc = fp2_dbl::mul_pre(fp2_loose_base::from_sum(a, c),
+                                                              fp2_loose_base::from_sum(d, f));
+                                const fp2_dbl be = fp2_dbl::mul_pre(b, e);
+                                fp2_dbl cf = fp2_dbl::mul_pre(c, f);
+                                const fp2_dbl ad = fp2_dbl::mul_pre(a, d);
+
+                                za -= be;
+                                za -= cf;
+                                zb -= ad;
+                                zb -= be;
+                                zc -= ad;
+                                zc -= cf;
+                                za.mul_xi_inplace();
+                                za += ad;
+                                cf.mul_xi_inplace();
                                 zb += cf;
                                 zc += be;
 
@@ -716,11 +1155,10 @@ namespace nil {
                             }
 
                             static fp6_dbl sqr_pre(const underlying_type &x) {
-                                const non_residue_type &a = x.data[0];
-                                const non_residue_type &b = x.data[1];
-                                const non_residue_type &c = x.data[2];
-
-                                const non_residue_type two_b = b.doubled();
+                                const fp2_base a = fp2_base::from(x.data[0]);
+                                const fp2_base b = fp2_base::from(x.data[1]);
+                                const fp2_base c = fp2_base::from(x.data[2]);
+                                const fp2_base two_b = b + b;
                                 fp2_dbl bc2 = fp2_dbl::mul_pre(two_b, c);
                                 const fp2_dbl ab2 = fp2_dbl::mul_pre(two_b, a);
                                 const fp2_dbl aa = fp2_dbl::sqr_pre(a);
@@ -730,9 +1168,9 @@ namespace nil {
                                 t -= bc2;
                                 t -= cc;
                                 const fp2_dbl yc = t - ab2;
-                                bc2 = fp2_dbl::mul_xi(bc2);
+                                bc2.mul_xi_inplace();
                                 const fp2_dbl ya = aa + bc2;
-                                cc = fp2_dbl::mul_xi(cc);
+                                cc.mul_xi_inplace();
                                 const fp2_dbl yb = cc + ab2;
 
                                 return fp6_dbl(ya, yb, yc);
@@ -763,9 +1201,10 @@ namespace nil {
                         }
 
                         static fp6_dbl mul_v_add(const fp6_dbl &x, const fp6_dbl &y) {
-                            return fp6_dbl(fp2_dbl::mul_xi(x.data[2]) + y.data[0],
-                                           x.data[0] + y.data[1],
-                                           x.data[1] + y.data[2]);
+                            fp2_dbl z0 = x.data[2];
+                            z0.mul_xi_inplace();
+                            z0 += y.data[0];
+                            return fp6_dbl(z0, x.data[0] + y.data[1], x.data[1] + y.data[2]);
                         }
 
                         template<typename Fp12Value>
@@ -779,7 +1218,9 @@ namespace nil {
                             const fp6_dbl bd = fp6_dbl::mul_pre(b, d);
                             const underlying_type z0 = fp6_dbl::reduce(mul_v_add(bd, ac));
 
-                            fp6_dbl z1 = fp6_dbl::mul_pre(a + b, c + d);
+                            const fp6_base ab = fp6_base::from_sum(a, b);
+                            const fp6_base cd = fp6_base::from_sum(c, d);
+                            fp6_dbl z1 = fp6_dbl::mul_pre(ab, cd);
                             z1 -= ac;
                             z1 -= bd;
 
