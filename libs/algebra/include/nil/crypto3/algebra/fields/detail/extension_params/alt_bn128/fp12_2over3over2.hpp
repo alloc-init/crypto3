@@ -120,11 +120,6 @@ namespace nil {
                         constexpr static const non_residue_type non_residue = non_residue_type(0x09, 0x01);
 
                         static bool is_zero(const wide_limb_array_type &x) {
-                            if constexpr (wide_limb_count == 9) {
-                                return (x[0] | x[1] | x[2] | x[3] | x[4] |
-                                        x[5] | x[6] | x[7] | x[8]) == 0u;
-                            }
-
                             for (std::size_t i = 0; i < wide_limb_count; ++i) {
                                 if (x[i] != 0u) {
                                     return false;
@@ -144,37 +139,6 @@ namespace nil {
 
                         static int compare_abs(const wide_limb_array_type &x,
                                                const wide_limb_array_type &y) {
-                            if constexpr (wide_limb_count == 9) {
-                                if (x[8] != y[8]) {
-                                    return x[8] < y[8] ? -1 : 1;
-                                }
-                                if (x[7] != y[7]) {
-                                    return x[7] < y[7] ? -1 : 1;
-                                }
-                                if (x[6] != y[6]) {
-                                    return x[6] < y[6] ? -1 : 1;
-                                }
-                                if (x[5] != y[5]) {
-                                    return x[5] < y[5] ? -1 : 1;
-                                }
-                                if (x[4] != y[4]) {
-                                    return x[4] < y[4] ? -1 : 1;
-                                }
-                                if (x[3] != y[3]) {
-                                    return x[3] < y[3] ? -1 : 1;
-                                }
-                                if (x[2] != y[2]) {
-                                    return x[2] < y[2] ? -1 : 1;
-                                }
-                                if (x[1] != y[1]) {
-                                    return x[1] < y[1] ? -1 : 1;
-                                }
-                                if (x[0] != y[0]) {
-                                    return x[0] < y[0] ? -1 : 1;
-                                }
-                                return 0;
-                            }
-
                             for (std::size_t i = wide_limb_count; i > 0; --i) {
                                 const std::size_t idx = i - 1;
                                 if (x[idx] < y[idx]) {
@@ -327,7 +291,8 @@ namespace nil {
                             }
                         }
 
-                        static void mul_add_limb(wide_limb_array_type &result,
+                        template<typename LimbArray>
+                        static void mul_add_limb(LimbArray &result,
                                                  std::size_t idx,
                                                  limb_type x,
                                                  limb_type y,
@@ -340,10 +305,11 @@ namespace nil {
                             carry = static_cast<limb_type>(product >> limb_bits);
                         }
 
-                        static void add_limb_carry(wide_limb_array_type &result,
+                        template<typename LimbArray>
+                        static void add_limb_carry(LimbArray &result,
                                                    std::size_t idx,
                                                    limb_type carry) {
-                            while (carry != 0u && idx < wide_limb_count) {
+                            while (carry != 0u && idx < result.size()) {
                                 const double_limb_type sum =
                                     static_cast<double_limb_type>(result[idx]) + carry;
                                 result[idx] = static_cast<limb_type>(sum);
@@ -672,42 +638,17 @@ namespace nil {
                             return value;
                         }
 
-                        static void redc_mul_add_limb(redc_limb_array_type &t,
-                                                      std::size_t idx,
-                                                      limb_type x,
-                                                      limb_type y,
-                                                      limb_type &carry) {
-                            const double_limb_type product =
-                                static_cast<double_limb_type>(x) *
-                                static_cast<double_limb_type>(y) +
-                                static_cast<double_limb_type>(t[idx]) + carry;
-                            t[idx] = static_cast<limb_type>(product);
-                            carry = static_cast<limb_type>(product >> limb_bits);
-                        }
-
-                        static void add_redc_carry(redc_limb_array_type &t,
-                                                   std::size_t idx,
-                                                   limb_type carry) {
-                            while (carry != 0u && idx < t.size()) {
-                                const double_limb_type sum =
-                                    static_cast<double_limb_type>(t[idx]) + carry;
-                                t[idx] = static_cast<limb_type>(sum);
-                                carry = static_cast<limb_type>(sum >> limb_bits);
-                                ++idx;
-                            }
-                        }
-
                         static void redc_step_4(redc_limb_array_type &t,
                                                 const base_limb_array_type &p,
                                                 limb_type p_dash,
                                                 std::size_t i) {
                             const limb_type m = t[i] * p_dash;
                             limb_type carry = 0;
-                            redc_mul_add_limb(t, i, m, p[0], carry);
-                            redc_mul_add_limb(t, i + 1, m, p[1], carry);
-                            redc_mul_add_limb(t, i + 2, m, p[2], carry);
-                            redc_mul_add_limb(t, i + 3, m, p[3], carry);
-                            add_redc_carry(t, i + 4, carry);
+                            mul_add_limb(t, i, m, p[0], carry);
+                            mul_add_limb(t, i + 1, m, p[1], carry);
+                            mul_add_limb(t, i + 2, m, p[2], carry);
+                            mul_add_limb(t, i + 3, m, p[3], carry);
+                            add_limb_carry(t, i + 4, carry);
                         }
 
                         static base_limb_array_type montgomery_reduce_abs_4(const wide_limb_array_type &x) {
@@ -935,36 +876,6 @@ namespace nil {
                             }
                         };
 
-                        struct fp2_loose_base {
-                            std::array<base_limb_array_type, 2> data;
-
-                            fp2_loose_base() = default;
-                            fp2_loose_base(const base_limb_array_type &c0,
-                                           const base_limb_array_type &c1) : data({c0, c1}) {}
-
-                            static fp2_loose_base from_sum(const fp2_base &x,
-                                                           const fp2_base &y) {
-                                return fp2_loose_base(add_base(x.data[0], y.data[0]),
-                                                      add_base(x.data[1], y.data[1]));
-                            }
-                        };
-
-                        struct fp6_base {
-                            std::array<fp2_base, 3> data;
-
-                            fp6_base() = default;
-                            fp6_base(const fp2_base &c0,
-                                     const fp2_base &c1,
-                                     const fp2_base &c2) : data({c0, c1, c2}) {}
-
-                            static fp6_base from_sum(const underlying_type &x,
-                                                     const underlying_type &y) {
-                                return fp6_base(fp2_base::from_sum(x.data[0], y.data[0]),
-                                                fp2_base::from_sum(x.data[1], y.data[1]),
-                                                fp2_base::from_sum(x.data[2], y.data[2]));
-                            }
-                        };
-
                         struct fp2_dbl {
                             std::array<fp_dbl, 2> data;
 
@@ -1009,12 +920,14 @@ namespace nil {
                                                fp_dbl::mul_pre(add_base(a, b), add_base(c, d)) - ac - bd);
                             }
 
-                            static fp2_dbl mul_pre(const fp2_loose_base &x,
-                                                   const fp2_loose_base &y) {
-                                const base_limb_array_type &a = x.data[0];
-                                const base_limb_array_type &b = x.data[1];
-                                const base_limb_array_type &c = y.data[0];
-                                const base_limb_array_type &d = y.data[1];
+                            static fp2_dbl mul_pre_loose_sum(const fp2_base &x0,
+                                                             const fp2_base &x1,
+                                                             const fp2_base &y0,
+                                                             const fp2_base &y1) {
+                                const base_limb_array_type a = add_base(x0.data[0], x1.data[0]);
+                                const base_limb_array_type b = add_base(x0.data[1], x1.data[1]);
+                                const base_limb_array_type c = add_base(y0.data[0], y1.data[0]);
+                                const base_limb_array_type d = add_base(y0.data[1], y1.data[1]);
                                 const fp_dbl ac = fp_dbl::mul_pre(a, c);
                                 const fp_dbl bd = fp_dbl::mul_pre(b, d);
 
@@ -1089,18 +1002,14 @@ namespace nil {
                                 return *this;
                             }
 
-                            static fp6_dbl mul_pre(const underlying_type &x,
-                                                   const underlying_type &y) {
-                                const fp2_base a = fp2_base::from(x.data[0]);
-                                const fp2_base b = fp2_base::from(x.data[1]);
-                                const fp2_base c = fp2_base::from(x.data[2]);
-                                const fp2_base d = fp2_base::from(y.data[0]);
-                                const fp2_base e = fp2_base::from(y.data[1]);
-                                const fp2_base f = fp2_base::from(y.data[2]);
-
-                                fp2_dbl za = fp2_dbl::mul_pre(b + c, e + f);
-                                fp2_dbl zb = fp2_dbl::mul_pre(a + b, e + d);
-                                fp2_dbl zc = fp2_dbl::mul_pre(a + c, d + f);
+                            template<typename SumProduct>
+                            static fp6_dbl mul_pre_impl(const fp2_base &a, const fp2_base &b,
+                                                        const fp2_base &c, const fp2_base &d,
+                                                        const fp2_base &e, const fp2_base &f,
+                                                        SumProduct sum_product) {
+                                fp2_dbl za = sum_product(b, c, e, f);
+                                fp2_dbl zb = sum_product(a, b, e, d);
+                                fp2_dbl zc = sum_product(a, c, d, f);
                                 const fp2_dbl be = fp2_dbl::mul_pre(b, e);
                                 fp2_dbl cf = fp2_dbl::mul_pre(c, f);
                                 const fp2_dbl ad = fp2_dbl::mul_pre(a, d);
@@ -1120,38 +1029,40 @@ namespace nil {
                                 return fp6_dbl(za, zb, zc);
                             }
 
-                            static fp6_dbl mul_pre(const fp6_base &x,
-                                                   const fp6_base &y) {
-                                const fp2_base &a = x.data[0];
-                                const fp2_base &b = x.data[1];
-                                const fp2_base &c = x.data[2];
-                                const fp2_base &d = y.data[0];
-                                const fp2_base &e = y.data[1];
-                                const fp2_base &f = y.data[2];
+                            static fp6_dbl mul_pre(const underlying_type &x,
+                                                   const underlying_type &y) {
+                                const fp2_base a = fp2_base::from(x.data[0]);
+                                const fp2_base b = fp2_base::from(x.data[1]);
+                                const fp2_base c = fp2_base::from(x.data[2]);
+                                const fp2_base d = fp2_base::from(y.data[0]);
+                                const fp2_base e = fp2_base::from(y.data[1]);
+                                const fp2_base f = fp2_base::from(y.data[2]);
 
-                                fp2_dbl za = fp2_dbl::mul_pre(fp2_loose_base::from_sum(b, c),
-                                                              fp2_loose_base::from_sum(e, f));
-                                fp2_dbl zb = fp2_dbl::mul_pre(fp2_loose_base::from_sum(a, b),
-                                                              fp2_loose_base::from_sum(e, d));
-                                fp2_dbl zc = fp2_dbl::mul_pre(fp2_loose_base::from_sum(a, c),
-                                                              fp2_loose_base::from_sum(d, f));
-                                const fp2_dbl be = fp2_dbl::mul_pre(b, e);
-                                fp2_dbl cf = fp2_dbl::mul_pre(c, f);
-                                const fp2_dbl ad = fp2_dbl::mul_pre(a, d);
+                                return mul_pre_impl(
+                                    a, b, c, d, e, f,
+                                    [](const fp2_base &x0, const fp2_base &x1,
+                                       const fp2_base &y0, const fp2_base &y1) {
+                                        return fp2_dbl::mul_pre(x0 + x1, y0 + y1);
+                                    });
+                            }
 
-                                za -= be;
-                                za -= cf;
-                                zb -= ad;
-                                zb -= be;
-                                zc -= ad;
-                                zc -= cf;
-                                za.mul_xi_inplace();
-                                za += ad;
-                                cf.mul_xi_inplace();
-                                zb += cf;
-                                zc += be;
+                            static fp6_dbl mul_pre_sum(const underlying_type &x0,
+                                                       const underlying_type &x1,
+                                                       const underlying_type &y0,
+                                                       const underlying_type &y1) {
+                                const fp2_base a = fp2_base::from_sum(x0.data[0], x1.data[0]);
+                                const fp2_base b = fp2_base::from_sum(x0.data[1], x1.data[1]);
+                                const fp2_base c = fp2_base::from_sum(x0.data[2], x1.data[2]);
+                                const fp2_base d = fp2_base::from_sum(y0.data[0], y1.data[0]);
+                                const fp2_base e = fp2_base::from_sum(y0.data[1], y1.data[1]);
+                                const fp2_base f = fp2_base::from_sum(y0.data[2], y1.data[2]);
 
-                                return fp6_dbl(za, zb, zc);
+                                return mul_pre_impl(
+                                    a, b, c, d, e, f,
+                                    [](const fp2_base &a0, const fp2_base &a1,
+                                       const fp2_base &b0, const fp2_base &b1) {
+                                        return fp2_dbl::mul_pre_loose_sum(a0, a1, b0, b1);
+                                    });
                             }
 
                             static fp6_dbl sqr_pre(const underlying_type &x) {
@@ -1218,9 +1129,7 @@ namespace nil {
                             const fp6_dbl bd = fp6_dbl::mul_pre(b, d);
                             const underlying_type z0 = fp6_dbl::reduce(mul_v_add(bd, ac));
 
-                            const fp6_base ab = fp6_base::from_sum(a, b);
-                            const fp6_base cd = fp6_base::from_sum(c, d);
-                            fp6_dbl z1 = fp6_dbl::mul_pre(ab, cd);
+                            fp6_dbl z1 = fp6_dbl::mul_pre_sum(a, b, c, d);
                             z1 -= ac;
                             z1 -= bd;
 
