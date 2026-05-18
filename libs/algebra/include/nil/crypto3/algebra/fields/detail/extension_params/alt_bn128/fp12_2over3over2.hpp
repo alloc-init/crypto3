@@ -97,70 +97,83 @@ namespace nil {
                             0x290C83BF3D14634DB120850727BB392D6A86D50BD34B19B929BC44B896723B38_cppui_modular254,
                             0x23BD9E3DA9136A739F668E1ADC9EF7F0F575EC93F71A8DF953C846338C32A1AB_cppui_modular254};
 
+
+                        // Tower: Fp2  = Fp[u]/(u^2 + 1)
+                        //        Fp6  = Fp2[v]/(v^3 - xi),
+                        //        Fp12 = Fp6[w]/(w^2 - v).
+                        // Here xi = 9 + u.
+                        constexpr static const non_residue_type non_residue = non_residue_type(0x09, 0x01);
+
                         /////////////////////////////////////////////////////
 
                         typedef boost::multiprecision::limb_type limb_type;
                         typedef typename base_field_type::modular_backend modular_backend_type;
                         typedef boost::multiprecision::backends::modular_policy<modular_backend_type>
                             modular_policy_type;
-                        typedef typename modular_policy_type::Backend_doubled_padded_limbs reduction_backend_type;
-                        typedef reduction_backend_type lazy_backend_type;
+                        typedef typename modular_policy_type::Backend_doubled_padded_limbs
+                            padded_limb_storage_type;
 
                         constexpr static const size_t limb_bits = sizeof(limb_type) * CHAR_BIT;
-                        constexpr static const size_t base_limb_count =
+                        constexpr static const size_t base_value_limb_count =
                             (base_field_type::modulus_bits + limb_bits - 1) / limb_bits;
-                        constexpr static const size_t wide_limb_count =
+                        constexpr static const size_t lazy_product_limb_count =
                             (2 * base_field_type::modulus_bits + 32 + limb_bits - 1) / limb_bits;
+                        constexpr static const size_t padded_storage_limb_count =
+                            padded_limb_storage_type::internal_limb_count;
 
-                        typedef lazy_backend_type base_limb_array_type;
-                        typedef lazy_backend_type wide_limb_array_type;
-                        static_assert(reduction_backend_type::internal_limb_count >= wide_limb_count,
+                        // For BN254 with 64-bit limbs, base_value_limb_count is 4 and
+                        // padded_storage_limb_count is 9.
+                        // Both aliases are the same padded backend storage. base_limb_storage_type
+                        // means only the low base_value_limb_count limbs carry a base Fp value;
+                        // lazy_limb_storage_type may use up to lazy_product_limb_count limbs for
+                        // unreduced products and tower sums before Montgomery reduction.
+                        typedef padded_limb_storage_type base_limb_storage_type;
+                        typedef padded_limb_storage_type lazy_limb_storage_type;
+
+                        static_assert(padded_storage_limb_count >= lazy_product_limb_count,
                                       "Fp12 lazy product must fit the padded Montgomery reduction backend");
 
-                        // Tower: Fp2 = Fp[u]/(u^2 + 1), Fp6 = Fp2[v]/(v^3 - xi),
-                        // Fp12 = Fp6[w]/(w^2 - v). Here xi = 9 + u.
-                        constexpr static const non_residue_type non_residue = non_residue_type(0x09, 0x01);
-
                         template<typename Backend>
-                        static lazy_backend_type backend_to_base_limbs(const Backend &backend) {
-                            lazy_backend_type result;
-                            for (size_t i = 0; i < base_limb_count && i < backend.size(); ++i) {
+                        static base_limb_storage_type backend_to_base_limb_storage(const Backend &backend) {
+                            base_limb_storage_type result;
+                            for (size_t i = 0; i < base_value_limb_count && i < backend.size(); ++i) {
                                 result.limbs()[i] = backend.limbs()[i];
                             }
                             return result;
                         }
 
-                        static const base_limb_array_type &modulus_limbs() {
-                            static const base_limb_array_type value = backend_to_base_limbs(modulus.backend());
+                        static const base_limb_storage_type &modulus_limbs() {
+                            static const base_limb_storage_type value =
+                                backend_to_base_limb_storage(modulus.backend());
                             return value;
                         }
 
-                        static lazy_backend_type as_base_limbs(const base_value_type &x) {
-                            return backend_to_base_limbs(x.data.backend().base_data());
+                        static base_limb_storage_type as_base_limbs(const base_value_type &x) {
+                            return backend_to_base_limb_storage(x.data.backend().base_data());
                         }
 
-                        static lazy_backend_type montgomery_reduce_abs(const lazy_backend_type &x) {
-                            reduction_backend_type backend = x;
+                        static base_limb_storage_type montgomery_reduce_abs(const lazy_limb_storage_type &x) {
+                            lazy_limb_storage_type backend = x;
                             base_field_type::modulus_params.get_mod_obj().montgomery_reduce(backend);
                             return backend;
                         }
 
-                        static base_value_type make_montgomery_base_value(const lazy_backend_type &x) {
+                        static base_value_type make_montgomery_base_value(const base_limb_storage_type &x) {
                             typename base_value_type::data_type data;
                             typename integral_type::backend_type &backend = data.backend().base_data();
-                            for (size_t i = 0; i < base_limb_count && i < backend.size(); ++i) {
+                            for (size_t i = 0; i < base_value_limb_count && i < backend.size(); ++i) {
                                 backend.limbs()[i] = x.limbs()[i];
                             }
-                            backend.zero_after(base_limb_count);
+                            backend.zero_after(base_value_limb_count);
                             return base_value_type(data);
                         }
 
                         struct fp_dbl {
-                            wide_limb_array_type data = {};
+                            lazy_limb_storage_type data = {};
                             bool negative = false;
 
                             fp_dbl() = default;
-                            explicit fp_dbl(const wide_limb_array_type &in_data, bool in_negative = false) :
+                            explicit fp_dbl(const lazy_limb_storage_type &in_data, bool in_negative = false) :
                                 data(in_data), negative(in_negative) {
                                 normalize();
                             }
@@ -206,7 +219,7 @@ namespace nil {
                                     boost::multiprecision::backends::eval_subtract(data, other.data);
                                     return *this;
                                 }
-                                wide_limb_array_type magnitude = other.data;
+                                lazy_limb_storage_type magnitude = other.data;
                                 boost::multiprecision::backends::eval_subtract(magnitude, data);
                                 data = magnitude;
                                 negative = other.negative;
@@ -228,7 +241,7 @@ namespace nil {
                                     boost::multiprecision::backends::eval_subtract(data, other.data);
                                     return *this;
                                 }
-                                wide_limb_array_type magnitude = other.data;
+                                lazy_limb_storage_type magnitude = other.data;
                                 boost::multiprecision::backends::eval_subtract(magnitude, data);
                                 data = magnitude;
                                 negative = !other.negative;
@@ -262,32 +275,32 @@ namespace nil {
                                 return *this;
                             }
 
-                            static fp_dbl mul_pre(const base_limb_array_type &x, const base_limb_array_type &y) {
-                                wide_limb_array_type product = x;
+                            static fp_dbl mul_pre(const base_limb_storage_type &x, const base_limb_storage_type &y) {
+                                lazy_limb_storage_type product = x;
                                 boost::multiprecision::backends::eval_multiply(product, y);
                                 return fp_dbl(product);
                             }
 
-                            static fp_dbl mul_pre_4limb(const base_limb_array_type &x,
-                                                        const base_limb_array_type &y) {
-                                if (base_limb_count != 4u) {
+                            static fp_dbl mul_pre_4limb(const base_limb_storage_type &x,
+                                                        const base_limb_storage_type &y) {
+                                if (base_value_limb_count != 4u) {
                                     return mul_pre(x, y);
                                 }
                                 // Most tower products multiply values below 4p, so they fit
                                 // in the low four 64-bit limbs. The loose Fp12 cross term has
                                 // a separate five-limb path for its wider Karatsuba sum.
-                                wide_limb_array_type product;
+                                lazy_limb_storage_type product;
                                 boost::multiprecision::backends::eval_multiply_4x4(
                                     product, x.limbs(), y.limbs());
                                 return fp_dbl(product);
                             }
 
-                            static fp_dbl mul_pre_5limb(const base_limb_array_type &x,
-                                                        const base_limb_array_type &y) {
-                                if (base_limb_count != 4u) {
+                            static fp_dbl mul_pre_5limb(const base_limb_storage_type &x,
+                                                        const base_limb_storage_type &y) {
+                                if (base_value_limb_count != 4u) {
                                     return mul_pre(x, y);
                                 }
-                                wide_limb_array_type product;
+                                lazy_limb_storage_type product;
                                 boost::multiprecision::backends::eval_multiply_low_limbs<5u>(
                                     product, x.limbs(), y.limbs());
                                 return fp_dbl(product);
@@ -298,9 +311,9 @@ namespace nil {
                             }
 
                             static base_value_type reduce(const fp_dbl &x) {
-                                base_limb_array_type reduced = montgomery_reduce_abs(x.data);
+                                base_limb_storage_type reduced = montgomery_reduce_abs(x.data);
                                 if (x.negative && reduced.compare(limb_type(0u)) != 0) {
-                                    base_limb_array_type negated = modulus_limbs();
+                                    base_limb_storage_type negated = modulus_limbs();
                                     boost::multiprecision::backends::eval_subtract(negated, reduced);
                                     reduced = negated;
                                 }
@@ -309,10 +322,10 @@ namespace nil {
                         };
 
                         struct fp2_base {
-                            std::array<base_limb_array_type, 2> data;
+                            std::array<base_limb_storage_type, 2> data;
 
                             fp2_base() = default;
-                            fp2_base(const base_limb_array_type &c0, const base_limb_array_type &c1) : data({c0, c1}) {
+                            fp2_base(const base_limb_storage_type &c0, const base_limb_storage_type &c1) : data({c0, c1}) {
                             }
 
                             static fp2_base from(const non_residue_type &x) {
@@ -321,8 +334,8 @@ namespace nil {
 
                             static fp2_base from_sum(const non_residue_type &x, const non_residue_type &y) {
                                 fp2_base result = from(x);
-                                const base_limb_array_type y0 = as_base_limbs(y.data[0]);
-                                const base_limb_array_type y1 = as_base_limbs(y.data[1]);
+                                const base_limb_storage_type y0 = as_base_limbs(y.data[0]);
+                                const base_limb_storage_type y1 = as_base_limbs(y.data[1]);
                                 boost::multiprecision::backends::eval_add(result.data[0], y0);
                                 boost::multiprecision::backends::eval_add(result.data[1], y1);
                                 return result;
@@ -337,6 +350,9 @@ namespace nil {
                         };
 
                         struct fp2_dbl {
+                            // Lazy Fp2 value in the same coefficient order as generic fp2:
+                            //   data[0] + data[1] * u, with u^2 = -1.
+                            // Each coefficient is an unreduced signed double-width Fp value.
                             std::array<fp_dbl, 2> data;
 
                             fp2_dbl() = default;
@@ -376,14 +392,21 @@ namespace nil {
                             }
 
                             static void mul_pre(fp2_dbl &result, const fp2_base &x, const fp2_base &y) {
-                                const base_limb_array_type &a = x.data[0];
-                                const base_limb_array_type &b = x.data[1];
-                                const base_limb_array_type &c = y.data[0];
-                                const base_limb_array_type &d = y.data[1];
+                                // For x = a + bu and y = c + du:
+                                //   xy = (a + bu) * (c + du)
+                                //      = ac + adu + bcu + bdu^2
+                                //      = ac + (ad + bc)u - bd      # since u^2 = -1
+                                //      = (ac - bd) + (ad + bc)u
+                                // Karatsuba computes the cross term with one product:
+                                //   ad + bc = (a + b)(c + d) - ac - bd.
+                                const base_limb_storage_type &a = x.data[0];
+                                const base_limb_storage_type &b = x.data[1];
+                                const base_limb_storage_type &c = y.data[0];
+                                const base_limb_storage_type &d = y.data[1];
                                 const fp_dbl ac = fp_dbl::mul_pre_4limb(a, c);
                                 const fp_dbl bd = fp_dbl::mul_pre_4limb(b, d);
-                                base_limb_array_type ab = a;
-                                base_limb_array_type cd = c;
+                                base_limb_storage_type ab = a;
+                                base_limb_storage_type cd = c;
                                 boost::multiprecision::backends::eval_add(ab, b);
                                 boost::multiprecision::backends::eval_add(cd, d);
 
@@ -405,25 +428,29 @@ namespace nil {
                                                           const fp2_base &x1,
                                                           const fp2_base &y0,
                                                           const fp2_base &y1) {
-                                // Used by the Fp12 cross term: the Fp2 inputs are already sums,
-                                // so the inner Karatsuba sum needs one extra limb for range.
-                                base_limb_array_type a = x0.data[0];
-                                base_limb_array_type b = x0.data[1];
-                                base_limb_array_type c = y0.data[0];
-                                base_limb_array_type d = y0.data[1];
+                                // Same Karatsuba Fp2 multiply as mul_pre(), but used when the
+                                // logical inputs are (x0 + x1) and (y0 + y1). This is the
+                                // Fp12 cross term path, so we form those Fp2 sums here and
+                                // avoid constructing generic field elements or reducing them.
+                                base_limb_storage_type a = x0.data[0];
+                                base_limb_storage_type b = x0.data[1];
+                                base_limb_storage_type c = y0.data[0];
+                                base_limb_storage_type d = y0.data[1];
                                 boost::multiprecision::backends::eval_add(a, x1.data[0]);
                                 boost::multiprecision::backends::eval_add(b, x1.data[1]);
                                 boost::multiprecision::backends::eval_add(c, y1.data[0]);
                                 boost::multiprecision::backends::eval_add(d, y1.data[1]);
                                 const fp_dbl ac = fp_dbl::mul_pre_4limb(a, c);
                                 const fp_dbl bd = fp_dbl::mul_pre_4limb(b, d);
-                                base_limb_array_type ab = a;
-                                base_limb_array_type cd = c;
+                                base_limb_storage_type ab = a;
+                                base_limb_storage_type cd = c;
                                 boost::multiprecision::backends::eval_add(ab, b);
                                 boost::multiprecision::backends::eval_add(cd, d);
 
                                 result.data[0] = ac;
                                 result.data[0] -= bd;
+                                // After the outer sums, (a+b) and (c+d) can use a fifth limb,
+                                // so this product uses the wider fixed-limb helper.
                                 result.data[1] = fp_dbl::mul_pre_5limb(ab, cd);
                                 result.data[1] -= ac;
                                 result.data[1] -= bd;
@@ -443,8 +470,9 @@ namespace nil {
                             }
 
                             static fp2_dbl sqr_pre(const fp2_base &x) {
-                                const base_limb_array_type &a = x.data[0];
-                                const base_limb_array_type &b = x.data[1];
+                                // (a + b*u)^2 = (a^2 - b^2) + 2ab*u, again using u^2 = -1.
+                                const base_limb_storage_type &a = x.data[0];
+                                const base_limb_storage_type &b = x.data[1];
                                 const fp_dbl aa = fp_dbl::mul_pre_4limb(a, a);
                                 const fp_dbl bb = fp_dbl::mul_pre_4limb(b, b);
                                 return fp2_dbl(aa - bb, fp_dbl::mul_pre_4limb(a, b).mul_small(2u));
@@ -645,8 +673,26 @@ namespace nil {
 
                         template<typename Fp12Value>
                         static Fp12Value multiply(const Fp12Value &x, const Fp12Value &y) {
-                            // For Fp12 = Fp6[w]/(w^2 - v):
-                            // (a + b*w)(c + d*w) = (ac + bd*v) + ((a+b)(c+d)-ac-bd)*w.
+                            // Tower layout:
+                            //   Fp2  = Fp[u]  / (u^2 + 1)
+                            //   Fp6  = Fp2[v] / (v^3 - xi), xi = 9 + u
+                            //   Fp12 = Fp6[w] / (w^2 - v)
+                            // xi is the chosen Fp2 cubic non-residue; adjoining v with
+                            // v^3 = xi turns Fp2 into the degree-3 extension Fp6.
+                            //
+                            // Write x = a + b*w and y = c + d*w with a,b,c,d in Fp6.
+                            // Since w^2 = v, the constant coefficient gets bd multiplied by v:
+                            //   z0 = ac + v*bd
+                            //   z1 = ad + bc = (a + b)(c + d) - ac - bd
+                            //
+                            // The Fp6 multiply-by-v is just a coefficient rotation with one
+                            // xi multiplication because v^3 = xi:
+                            //   (r0 + r1*v + r2*v^2) * v = xi*r2 + r0*v + r1*v^2.
+                            //
+                            // ac, bd, and z1 stay in the lazy doubled representation until
+                            // the two final Fp6 reductions. mul_pre_sum computes the
+                            // (a+b)(c+d) term directly in the lazy tower, avoiding generic
+                            // Fp6 temporaries and intermediate Montgomery reductions.
                             const underlying_type &a = x.data[0];
                             const underlying_type &b = x.data[1];
                             const underlying_type &c = y.data[0];

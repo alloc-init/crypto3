@@ -99,9 +99,9 @@ int main(int argc, char** argv) {
     std::vector<fp6_value_type> fp6ys(poolN);
     std::vector<fp12_value_type> xs(poolN);
     std::vector<fp12_value_type> ys(poolN);
-    std::vector<typename fp12_policy_type::base_limb_array_type> fp_limbs_x(poolN);
-    std::vector<typename fp12_policy_type::base_limb_array_type> fp_limbs_y(poolN);
-    std::vector<typename fp12_policy_type::wide_limb_array_type> fp_products(poolN);
+    std::vector<typename fp12_policy_type::base_limb_storage_type> fp_limbs_x(poolN);
+    std::vector<typename fp12_policy_type::base_limb_storage_type> fp_limbs_y(poolN);
+    std::vector<typename fp12_policy_type::lazy_limb_storage_type> fp_products(poolN);
     std::vector<typename fp12_policy_type::fp_dbl> fp_dbl_x(poolN);
     std::vector<typename fp12_policy_type::fp_dbl> fp_dbl_y(poolN);
     std::vector<typename fp12_policy_type::fp2_dbl> fp2_dbl_x(poolN);
@@ -133,8 +133,8 @@ int main(int argc, char** argv) {
     }
 
     base_value_type fp_acc;
-    typename fp12_policy_type::wide_limb_array_type pre_acc;
-    typename fp12_policy_type::base_limb_array_type redc_acc;
+    typename fp12_policy_type::lazy_limb_storage_type pre_acc;
+    typename fp12_policy_type::base_limb_storage_type redc_acc;
     typename fp12_policy_type::fp_dbl fp_dbl_acc;
     typename fp12_policy_type::fp2_dbl fp2_pre_acc;
     fp2_value_type fp2_acc;
