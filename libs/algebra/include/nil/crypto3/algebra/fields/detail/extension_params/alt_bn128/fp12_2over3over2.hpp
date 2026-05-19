@@ -107,30 +107,25 @@ namespace nil {
                         /////////////////////////////////////////////////////
 
                         typedef boost::multiprecision::limb_type limb_type;
-                        typedef typename base_field_type::modular_backend modular_backend_type;
-                        typedef boost::multiprecision::backends::modular_policy<modular_backend_type>
-                            modular_policy_type;
-                        typedef typename modular_policy_type::Backend_doubled_padded_limbs
+                        typedef boost::multiprecision::backends::modular_policy<
+                            typename base_field_type::modular_backend>::Backend_doubled_padded_limbs
                             padded_limb_storage_type;
 
+                        // The following aliases are the same padded backend storage.
+                        // base_limb_storage_type means only the low base_value_limb_count limbs carry a base Fp value;
+                        typedef padded_limb_storage_type base_limb_storage_type;
+                        // lazy_limb_storage_type may use up to lazy_product_limb_count limbs for unreduced products and
+                        // tower sums before Montgomery reduction.
+                        typedef padded_limb_storage_type lazy_limb_storage_type;
+
+                        // For BN254 with 64-bit limbs, base_value_limb_count is 4 and lazy_product_limb_count is 9.
                         constexpr static const size_t limb_bits = sizeof(limb_type) * CHAR_BIT;
                         constexpr static const size_t base_value_limb_count =
                             (base_field_type::modulus_bits + limb_bits - 1) / limb_bits;
                         constexpr static const size_t lazy_product_limb_count =
                             (2 * base_field_type::modulus_bits + 32 + limb_bits - 1) / limb_bits;
-                        constexpr static const size_t padded_storage_limb_count =
-                            padded_limb_storage_type::internal_limb_count;
 
-                        // For BN254 with 64-bit limbs, base_value_limb_count is 4 and
-                        // padded_storage_limb_count is 9.
-                        // Both aliases are the same padded backend storage. base_limb_storage_type
-                        // means only the low base_value_limb_count limbs carry a base Fp value;
-                        // lazy_limb_storage_type may use up to lazy_product_limb_count limbs for
-                        // unreduced products and tower sums before Montgomery reduction.
-                        typedef padded_limb_storage_type base_limb_storage_type;
-                        typedef padded_limb_storage_type lazy_limb_storage_type;
-
-                        static_assert(padded_storage_limb_count >= lazy_product_limb_count,
+                        static_assert(padded_limb_storage_type::internal_limb_count >= lazy_product_limb_count,
                                       "Fp12 lazy product must fit the padded Montgomery reduction backend");
 
                         template<typename Backend>
