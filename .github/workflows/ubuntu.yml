@@ -19,6 +19,10 @@ jobs:
     container:
       image: ubuntu:26.04
     timeout-minutes: 360
+    env:
+      CCACHE_COMPRESS: "true"
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 5G
 
     steps:
     - name: install dependencies
@@ -29,22 +33,43 @@ jobs:
         apt-get install -y --no-install-recommends \
           build-essential \
           ca-certificates \
+          ccache \
           cmake \
           expect \
           git \
           libboost-all-dev \
-          perl
+          perl \
+          zstd
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+    - name: restore compiler cache
+      uses: actions/cache@v4
+      with:
+        path: .ccache
+        key: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
+        restore-keys:  ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}
+    - name: configure compiler cache
+      run: |
+        ccache --max-size="$CCACHE_MAXSIZE"
+        ccache --zero-stats
     - name: configure
-      run: cmake -S . -B build -DCMAKE_CXX_FLAGS="-Werror -fsanitize=address,undefined -fno-omit-frame-pointer" -DCMAKE_BUILD_TYPE=Release
+      run: |
+        cmake -S . -B build \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_CXX_FLAGS="-Werror -fsanitize=address,undefined -fno-omit-frame-pointer" \
+          -DBUILD_TESTS=ON \
+          -DCMAKE_BUILD_TYPE=Release
     - name: run test harness
       working-directory: build
       run: |
         jobs="$(nproc)"
         echo "Running test harness with $jobs parallel jobs"
         ../scripts/test_all.sh -j"$jobs" -l -t45m
+    - name: show compiler cache stats
+      if: always()
+      run: ccache --show-stats
     - name: upload test logs
       if: always()
       uses: actions/upload-artifact@v4
