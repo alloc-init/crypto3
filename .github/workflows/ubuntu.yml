@@ -3,7 +3,6 @@ name: Ubuntu CI
 on:
   pull_request:
     branches: [ "master" ]
-    types: [ opened, synchronize, reopened, ready_for_review ]
   workflow_dispatch:
 
 permissions:
@@ -54,7 +53,7 @@ jobs:
       with:
         path: .ccache
         key: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
-        restore-keys: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}-
+        restore-keys: ccache-${{ runner.os }}-ubuntu-26-${{ github.head_ref || github.ref_name }}-
 
     - name: Configure compiler cache
       run: ccache --max-size="$CCACHE_MAXSIZE"
