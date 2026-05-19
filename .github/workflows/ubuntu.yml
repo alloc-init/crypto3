@@ -5,17 +5,39 @@ on:
     branches: [ "master" ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, Linux, X64, hetzner-public]
+    timeout-minutes: 360
 
     steps:
-    - name: install boost
-      run: sudo apt-get update && sudo apt-get install -y libboost-all-dev expect
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libboost-all-dev expect
     - name: configure
-      run: mkdir -p build && cd build && cmake -DCMAKE_CXX_FLAGS="-Werror -fsanitize=address,undefined -fno-omit-frame-pointer"  -DCMAKE_BUILD_TYPE=Release ..
+      run: cmake -S . -B build -DCMAKE_CXX_FLAGS="-Werror -fsanitize=address,undefined -fno-omit-frame-pointer" -DCMAKE_BUILD_TYPE=Release
     - name: run test harness
-      run: cd build && ../scripts/test_all.sh -j4 -l -t0s
+      working-directory: build
+      run: |
+        jobs="$(nproc)"
+        echo "Running test harness with $jobs parallel jobs"
+        ../scripts/test_all.sh -j"$jobs" -l -t45m
+    - name: upload test logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ubuntu-ci-test-logs
+        path: |
+          build/linux.csv
+          build/linux.csv.logs/
+        if-no-files-found: ignore
