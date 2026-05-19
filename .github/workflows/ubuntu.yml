@@ -13,15 +13,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  discover-test-groups:
+    name: linux / discover test groups
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, Linux, X64, hetzner-public]
+    container:
+      image: ubuntu:26.04
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+
+    steps:
+    - name: install dependencies
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates git
+    - uses: actions/checkout@v4
+    - name: discover test groups
+      id: discover
+      run: |
+        matrix="$(.github/scripts/discover-test-groups.sh)"
+        echo "$matrix"
+        echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
   build:
+    name: linux / ${{ matrix.group }}
+    needs: discover-test-groups
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, Linux, X64, hetzner-public]
     container:
       image: ubuntu:26.04
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover-test-groups.outputs.matrix) }}
     env:
+      CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_COMPRESS: "true"
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache/${{ matrix.group }}
       CCACHE_MAXSIZE: 5G
 
     steps:
@@ -35,7 +65,6 @@ jobs:
           ca-certificates \
           ccache \
           cmake \
-          expect \
           git \
           libboost-all-dev \
           perl \
@@ -46,11 +75,12 @@ jobs:
     - name: restore compiler cache
       uses: actions/cache@v4
       with:
-        path: .ccache
-        key: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
-        restore-keys:  ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}
+        path: .ccache/${{ matrix.group }}
+        key: ccache-${{ runner.os }}-${{ matrix.group }}-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
+        restore-keys: ccache-${{ runner.os }}-${{ matrix.group }}-${{ github.head_ref || github.ref_name }}-
     - name: configure compiler cache
       run: |
+        mkdir -p "$CCACHE_DIR"
         ccache --max-size="$CCACHE_MAXSIZE"
         ccache --zero-stats
     - name: configure
@@ -61,12 +91,28 @@ jobs:
           -DCMAKE_CXX_FLAGS="-Werror -fsanitize=address,undefined -fno-omit-frame-pointer" \
           -DBUILD_TESTS=ON \
           -DCMAKE_BUILD_TYPE=Release
-    - name: run test harness
-      working-directory: build
+    - name: list selected tests
+      env:
+        GROUP: ${{ matrix.group }}
+        CTEST_LABEL: ${{ matrix.ctest_label }}
+      run: |
+        ctest --test-dir build -L "^${CTEST_LABEL}$" -N | tee "build/$GROUP-ctest-tests.txt"
+    - name: compile selected tests
+      env:
+        GROUP: ${{ matrix.group }}
+        BUILD_TARGET: ${{ matrix.build_target }}
       run: |
         jobs="$(nproc)"
-        echo "Running test harness with $jobs parallel jobs"
-        ../scripts/test_all.sh -j"$jobs" -l -t45m
+        echo "Compiling $GROUP tests with $jobs parallel jobs"
+        cmake --build build --target "$BUILD_TARGET" --parallel "$jobs"
+    - name: run selected tests
+      env:
+        GROUP: ${{ matrix.group }}
+        CTEST_LABEL: ${{ matrix.ctest_label }}
+      run: |
+        jobs="$(nproc)"
+        echo "Running $GROUP tests with $jobs parallel jobs"
+        ctest --test-dir build -L "^${CTEST_LABEL}$" --output-on-failure --parallel "$jobs" --timeout 2700 --output-junit "build/$GROUP-ctest-results.xml"
     - name: show compiler cache stats
       if: always()
       run: ccache --show-stats
@@ -74,8 +120,9 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: ubuntu-ci-test-logs
+        name: ubuntu-ci-${{ matrix.group }}-logs
         path: |
-          build/linux.csv
-          build/linux.csv.logs/
+          build/${{ matrix.group }}-ctest-tests.txt
+          build/${{ matrix.group }}-ctest-results.xml
+          build/Testing/
         if-no-files-found: ignore
