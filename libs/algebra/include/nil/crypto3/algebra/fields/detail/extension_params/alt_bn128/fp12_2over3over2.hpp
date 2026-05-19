@@ -147,22 +147,6 @@ namespace nil {
                             return backend_to_base_limb_storage(x.data.backend().base_data());
                         }
 
-                        static base_limb_storage_type montgomery_reduce_abs(const lazy_limb_storage_type &x) {
-                            lazy_limb_storage_type backend = x;
-                            base_field_type::modulus_params.get_mod_obj().montgomery_reduce(backend);
-                            return backend;
-                        }
-
-                        static base_value_type make_montgomery_base_value(const base_limb_storage_type &x) {
-                            typename base_value_type::data_type data;
-                            typename integral_type::backend_type &backend = data.backend().base_data();
-                            for (size_t i = 0; i < base_value_limb_count && i < backend.size(); ++i) {
-                                backend.limbs()[i] = x.limbs()[i];
-                            }
-                            backend.zero_after(base_value_limb_count);
-                            return base_value_type(data);
-                        }
-
                         struct fp_dbl {
                             lazy_limb_storage_type data = {};
                             bool negative = false;
@@ -306,13 +290,20 @@ namespace nil {
                             }
 
                             static base_value_type reduce(const fp_dbl &x) {
-                                base_limb_storage_type reduced = montgomery_reduce_abs(x.data);
+                                base_limb_storage_type reduced = x.data;
+                                base_field_type::modulus_params.get_mod_obj().montgomery_reduce(reduced);
                                 if (x.negative && reduced.compare(limb_type(0u)) != 0) {
                                     base_limb_storage_type negated = modulus_limbs();
                                     boost::multiprecision::backends::eval_subtract(negated, reduced);
                                     reduced = negated;
                                 }
-                                return make_montgomery_base_value(reduced);
+                                typename base_value_type::data_type data;
+                                typename integral_type::backend_type &backend = data.backend().base_data();
+                                for (size_t i = 0; i < base_value_limb_count && i < backend.size(); ++i) {
+                                    backend.limbs()[i] = reduced.limbs()[i];
+                                }
+                                backend.zero_after(base_value_limb_count);
+                                return base_value_type(data);
                             }
                         };
 

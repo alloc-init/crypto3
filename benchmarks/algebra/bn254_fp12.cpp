@@ -157,12 +157,6 @@ int main(int argc, char** argv) {
         do_not_optimize(&pre_acc);
     }));
 
-    print_stage("Fp redc", run_stage(iters, warmup, [&](std::size_t i) {
-        const std::size_t idx = i % poolN;
-        redc_acc = fp12_policy_type::montgomery_reduce_abs(fp_products[idx]);
-        do_not_optimize(&redc_acc);
-    }));
-
     print_stage("Fp dbl reduce", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
         fp_acc = fp12_policy_type::fp_dbl::reduce(
