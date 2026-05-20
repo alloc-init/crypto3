@@ -150,8 +150,9 @@ int main(int argc, char** argv) {
 
     print_stage("Fp dbl reduce", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
-        fp_acc = fp12_policy_type::fp_dbl::reduce(
-            fp12_policy_type::fp_dbl(fp_products[idx]));
+        typename fp12_policy_type::fp_dbl value(fp_products[idx]);
+        value.reduce_inplace();
+        fp_acc = value.to_base_value();
         do_not_optimize(&fp_acc);
     }));
 
@@ -196,14 +197,17 @@ int main(int argc, char** argv) {
 
     print_stage("Fp2 reduce", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
-        fp2_acc = fp12_policy_type::fp2_dbl::reduce(fp2_dbl_x[idx]);
+        typename fp12_policy_type::fp2_dbl value(fp2_dbl_x[idx]);
+        value.reduce_inplace();
+        fp2_acc = value.to_non_residue();
         do_not_optimize(&fp2_acc);
     }));
 
     print_stage("Fp2 lazy mul", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
         fp12_policy_type::fp2_dbl::mul_pre(fp2_pre_acc, fp2xs[idx], fp2ys[idx]);
-        fp2_acc = fp12_policy_type::fp2_dbl::reduce(fp2_pre_acc);
+        fp2_pre_acc.reduce_inplace();
+        fp2_acc = fp2_pre_acc.to_non_residue();
         do_not_optimize(&fp2_acc);
     }));
 
@@ -243,14 +247,17 @@ int main(int argc, char** argv) {
 
     print_stage("Fp6 reduce", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
-        fp6_acc = fp12_policy_type::fp6_dbl::reduce(fp6_dbl_x[idx]);
+        typename fp12_policy_type::fp6_dbl value(fp6_dbl_x[idx]);
+        value.reduce_inplace();
+        fp6_acc = value.to_underlying();
         do_not_optimize(&fp6_acc);
     }));
 
     print_stage("Fp6 lazy mul", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
         fp12_policy_type::fp6_dbl::mul_pre(fp6_pre_acc, fp6xs[idx], fp6ys[idx]);
-        fp6_acc = fp12_policy_type::fp6_dbl::reduce(fp6_pre_acc);
+        fp6_pre_acc.reduce_inplace();
+        fp6_acc = fp6_pre_acc.to_underlying();
         do_not_optimize(&fp6_acc);
     }));
 

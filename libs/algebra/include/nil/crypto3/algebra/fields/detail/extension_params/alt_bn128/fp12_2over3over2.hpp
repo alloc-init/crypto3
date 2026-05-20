@@ -157,8 +157,8 @@ namespace nil {
                         // the coefficient is needed as a normal Fp value, for example ac - bd in Fp2.
                         // fp_dbl stores those bounded pre-REDC expressions so the tower can combine
                         // products first and call REDC only for each final coefficient. The underlying
-                        // backend stores an unsigned magnitude, so `fb_dbl::negative` records the integer
-                        // sign until reduce() maps the signed result back into Fp.
+                        // backend stores an unsigned magnitude, so `fp_dbl::negative` records the integer
+                        // sign until reduce() maps the signed result back into reduced Montgomery limbs.
                         struct fp_dbl {
                             // Magnitude of a bounded pre-REDC expression. For BN254 this may occupy up to
                             // lazy_product_limb_count limbs, while normal Fp values use only the low four.
@@ -280,25 +280,31 @@ namespace nil {
                                 return product;
                             }
 
-                            static base_value_type reduce(const fp_dbl &x) {
-                                // Convert a bounded signed pre-REDC expression back to canonical base Fp.
+                            void reduce() {
+                                // Convert a bounded signed pre-REDC expression to reduced Montgomery limbs.
                                 // REDC removes one Montgomery factor; a negative integer representative is
                                 // then mapped to p - reduced, which is the same value modulo p.
-                                base_limb_storage_type reduced = x.data;
-                                base_field_type::modulus_params.get_mod_obj().montgomery_reduce(reduced);
-                                if (x.negative && reduced.compare(limb_type(0u)) != 0) {
+                                base_field_type::modulus_params.get_mod_obj().montgomery_reduce(data);
+                                if (negative && data.compare(limb_type(0u)) != 0) {
                                     base_limb_storage_type negated = modulus_limbs();
-                                    boost::multiprecision::backends::eval_subtract(negated, reduced);
-                                    reduced = negated;
+                                    boost::multiprecision::backends::eval_subtract(negated, data);
+                                    data = negated;
                                 }
-                                typename base_value_type::data_type data;
-                                typename integral_type::backend_type &backend = data.backend().base_data();
+                                negative = false;
+                            }
+
+                            base_value_type to_base_value() const {
+                                // The data limbs must already be reduced Montgomery base-Fp limbs. Construct
+                                // base_value_type directly from those limbs to avoid converting them again.
+                                typename base_value_type::data_type out_data;
+                                typename integral_type::backend_type &backend = out_data.backend().base_data();
                                 for (size_t i = 0; i < base_value_limb_count && i < backend.size(); ++i) {
-                                    backend.limbs()[i] = reduced.limbs()[i];
+                                    backend.limbs()[i] = data.limbs()[i];
                                 }
                                 backend.zero_after(base_value_limb_count);
-                                return base_value_type(data);
+                                return base_value_type(out_data);
                             }
+
                         };
 
                         struct fp2_base {
@@ -473,9 +479,15 @@ namespace nil {
                                 data[1] += c0;
                             }
 
-                            static non_residue_type reduce(const fp2_dbl &x) {
-                                return non_residue_type(fp_dbl::reduce(x.data[0]), fp_dbl::reduce(x.data[1]));
+                            void reduce() {
+                                data[0].reduce();
+                                data[1].reduce();
                             }
+
+                            non_residue_type to_non_residue() const {
+                                return non_residue_type(data[0].to_base_value(), data[1].to_base_value());
+                            }
+
                         };
 
                         struct fp6_dbl {
@@ -629,10 +641,17 @@ namespace nil {
                                 return fp6_dbl(ya, yb, yc);
                             }
 
-                            static underlying_type reduce(const fp6_dbl &x) {
-                                return underlying_type(fp2_dbl::reduce(x.data[0]), fp2_dbl::reduce(x.data[1]),
-                                                       fp2_dbl::reduce(x.data[2]));
+                            void reduce() {
+                                data[0].reduce();
+                                data[1].reduce();
+                                data[2].reduce();
                             }
+
+                            underlying_type to_underlying() const {
+                                return underlying_type(data[0].to_non_residue(), data[1].to_non_residue(),
+                                                       data[2].to_non_residue());
+                            }
+
                         };
 
                         static void mul_v_add(fp6_dbl &result, const fp6_dbl &x, const fp6_dbl &y) {
@@ -678,14 +697,16 @@ namespace nil {
                             fp6_dbl::mul_pre(bd, b, d);
                             fp6_dbl z0_dbl;
                             mul_v_add(z0_dbl, bd, ac);
-                            const underlying_type z0 = fp6_dbl::reduce(z0_dbl);
+                            z0_dbl.reduce();
+                            const underlying_type z0 = z0_dbl.to_underlying();
 
                             fp6_dbl z1;
                             fp6_dbl::mul_pre_sum(z1, a, b, c, d);
                             z1 -= ac;
                             z1 -= bd;
+                            z1.reduce();
 
-                            return Fp12Value(z0, fp6_dbl::reduce(z1));
+                            return Fp12Value(z0, z1.to_underlying());
                         }
                     };
 
