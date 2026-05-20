@@ -423,8 +423,8 @@ namespace nil {
                                 boost::multiprecision::backends::eval_add(d, y1.data[1]);
                                 const fp_dbl ac = fp_dbl::mul_pre_4limb(a, c);
                                 const fp_dbl bd = fp_dbl::mul_pre_4limb(b, d);
-                                base_limb_storage_type ab = a;
-                                base_limb_storage_type cd = c;
+                                base_limb_storage_type &ab = a;
+                                base_limb_storage_type &cd = c;
                                 boost::multiprecision::backends::eval_add(ab, b);
                                 boost::multiprecision::backends::eval_add(cd, d);
 
@@ -435,19 +435,6 @@ namespace nil {
                                 result.data[1] = fp_dbl::mul_pre_5limb(ab, cd);
                                 result.data[1] -= ac;
                                 result.data[1] -= bd;
-                            }
-
-                            static fp2_dbl mul_pre_loose_sum(const fp2_base &x0,
-                                                             const fp2_base &x1,
-                                                             const fp2_base &y0,
-                                                             const fp2_base &y1) {
-                                fp2_dbl result;
-                                mul_pre_loose_sum(result, x0, x1, y0, y1);
-                                return result;
-                            }
-
-                            static fp2_dbl sqr_pre(const non_residue_type &x) {
-                                return sqr_pre(fp2_base::from(x));
                             }
 
                             static fp2_dbl sqr_pre(const fp2_base &x) {
@@ -462,11 +449,11 @@ namespace nil {
                             void mul_by_xi() {
                                 // Lazy multiply by xi = 9 + u:
                                 // (a + b*u) * xi = (9a - b) + (a + 9b) * u.
-                                const fp_dbl c0 = data[0];
+                                const fp_dbl tmp_a = data[0];
                                 data[0].mul_by_9();
                                 data[0] -= data[1];
                                 data[1].mul_by_9();
-                                data[1] += c0;
+                                data[1] += tmp_a;
                             }
 
                             void reduce() {
