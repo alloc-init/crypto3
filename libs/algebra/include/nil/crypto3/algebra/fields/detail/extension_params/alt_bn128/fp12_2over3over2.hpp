@@ -303,6 +303,8 @@ namespace nil {
                             }
                         };
 
+                        struct fp2_dbl;
+
                         struct fp2_base {
                             std::array<base_limb_storage_type, 2> data;
 
@@ -323,6 +325,12 @@ namespace nil {
                             fp2_base operator+(const fp2_base &other) const {
                                 fp2_base result(*this);
                                 result += other;
+                                return result;
+                            }
+
+                            fp2_dbl mul_pre(const fp2_base &other) const {
+                                fp2_dbl result;
+                                fp2_dbl::mul_pre(result, *this, other);
                                 return result;
                             }
                         };
@@ -416,15 +424,6 @@ namespace nil {
                                 result.data[1] -= bd;
                             }
 
-                            static fp2_dbl sqr_pre(const fp2_base &x) {
-                                // (a + b*u)^2 = (a^2 - b^2) + 2ab*u, again using u^2 = -1.
-                                const base_limb_storage_type &a = x.data[0];
-                                const base_limb_storage_type &b = x.data[1];
-                                const fp_dbl aa = fp_dbl::mul_pre_4limb(a, a);
-                                const fp_dbl bb = fp_dbl::mul_pre_4limb(b, b);
-                                return fp2_dbl(aa - bb, fp_dbl::mul_pre_4limb(a, b).doubled());
-                            }
-
                             void mul_by_xi() {
                                 // Lazy multiply by xi = 9 + u:
                                 // (a + b*u) * xi = (9a - b) + (a + 9b) * u.
@@ -476,102 +475,79 @@ namespace nil {
                                 return *this;
                             }
 
-                            template<typename SumProduct>
-                            static void mul_pre_impl(fp6_dbl &result,
-                                                     const fp2_base &a,
-                                                     const fp2_base &b,
-                                                     const fp2_base &c,
-                                                     const fp2_base &d,
-                                                     const fp2_base &e,
-                                                     const fp2_base &f,
-                                                     SumProduct sum_product) {
-                                // Fp6 is Fp2[v]/(v^3 - xi); multiplying by xi folds v^3
-                                // terms back into the constant coefficient.
-                                fp2_dbl za;
-                                fp2_dbl zb;
-                                fp2_dbl zc;
-                                fp2_dbl be;
-                                fp2_dbl cf;
-                                fp2_dbl ad;
-                                sum_product(za, b, c, e, f);
-                                sum_product(zb, a, b, e, d);
-                                sum_product(zc, a, c, d, f);
-                                fp2_dbl::mul_pre(be, b, e);
-                                fp2_dbl::mul_pre(cf, c, f);
-                                fp2_dbl::mul_pre(ad, a, d);
-
+                            template<bool LooseSumProduct>
+                            static fp6_dbl mul_pre(const fp2_base &a,
+                                                   const fp2_base &b,
+                                                   const fp2_base &c,
+                                                   const fp2_base &d,
+                                                   const fp2_base &e,
+                                                   const fp2_base &f) {
+                                // Multiply two Fp6 values in the tower Fp6 = Fp2[v]/(v^3 - xi):
+                                //   x = a + b*v + c*v^2
+                                //   y = d + e*v + f*v^2
+                                //
+                                // Expanding and replacing v^3 with xi gives:
+                                //   z0 = a*d + xi*(b*f + c*e)
+                                //   z1 = a*e + b*d + xi*(c*f)
+                                //   z2 = a*f + b*e + c*d
+                                //
+                                // This function computes those cross terms with three Karatsuba-style
+                                // sum products, so only six Fp2 products are needed instead of nine:
+                                //   za = (b + c)(e + f) - b*e - c*f = b*f + c*e
+                                //   zb = (a + b)(d + e) - a*d - b*e = a*e + b*d
+                                //   zc = (a + c)(d + f) - a*d - c*f = a*f + c*d
+                                fp6_dbl result;
+                                fp2_dbl &za = result.data[0];
+                                fp2_dbl &zb = result.data[1];
+                                fp2_dbl &zc = result.data[2];
+                                // LooseSumProduct selects how those three summed Fp2 products are
+                                // formed below. false is the ordinary Fp6 path; true is the Fp12
+                                // cross-term path where the Fp6 inputs are already coefficient sums,
+                                // so the inner Fp2 sum product needs one extra limb of headroom.
+                                if constexpr (LooseSumProduct) {
+                                    // Fp12 cross-term path:
+                                    //   (x0 + x1) and (y0 + y1) have already been formed at the Fp6
+                                    //   coefficient level, so these Fp2 sum products are wider.
+                                    fp2_dbl::mul_pre_loose_sum(za, b, c, e, f);
+                                    fp2_dbl::mul_pre_loose_sum(zb, a, b, e, d);
+                                    fp2_dbl::mul_pre_loose_sum(zc, a, c, d, f);
+                                } else {
+                                    // Ordinary Fp6 path:
+                                    //   products like (b + c) * (e + f) sum only two reduced Fp2
+                                    //   coefficients, so the regular Fp2 pre-multiply path is enough.
+                                    const fp2_base bc = b + c;
+                                    const fp2_base ef = e + f;
+                                    const fp2_base ab = a + b;
+                                    const fp2_base ed = e + d;
+                                    const fp2_base ac = a + c;
+                                    const fp2_base df = d + f;
+                                    fp2_dbl::mul_pre(za, bc, ef);
+                                    fp2_dbl::mul_pre(zb, ab, ed);
+                                    fp2_dbl::mul_pre(zc, ac, df);
+                                }
+                                // Direct products reused by the three Karatsuba corrections.
+                                fp2_dbl be = b.mul_pre(e);
+                                fp2_dbl cf = c.mul_pre(f);
+                                fp2_dbl ad = a.mul_pre(d);
+                                // Finish the Karatsuba corrections:
+                                //   za = b*f + c*e
+                                //   zb = a*e + b*d
+                                //   zc = a*f + c*d
                                 za -= be;
                                 za -= cf;
                                 zb -= ad;
                                 zb -= be;
                                 zc -= ad;
                                 zc -= cf;
+                                // Fold the v^3 and v^4 terms back into the tower:
+                                //   z0 = ad + xi*za
+                                //   z1 = zb + xi*cf
+                                //   z2 = zc + be
                                 za.mul_by_xi();
                                 za += ad;
                                 cf.mul_by_xi();
                                 zb += cf;
                                 zc += be;
-
-                                result.data[0] = za;
-                                result.data[1] = zb;
-                                result.data[2] = zc;
-                            }
-
-                            static void mul_pre(fp6_dbl &result, const underlying_type &x, const underlying_type &y) {
-                                const fp2_base a(x.data[0]);
-                                const fp2_base b(x.data[1]);
-                                const fp2_base c(x.data[2]);
-                                const fp2_base d(y.data[0]);
-                                const fp2_base e(y.data[1]);
-                                const fp2_base f(y.data[2]);
-
-                                mul_pre_impl(result, a, b, c, d, e, f,
-                                             [](fp2_dbl &out,
-                                                const fp2_base &x0,
-                                                const fp2_base &x1,
-                                                const fp2_base &y0,
-                                                const fp2_base &y1) {
-                                                 fp2_base x_sum = x0 + x1;
-                                                 fp2_base y_sum = y0 + y1;
-                                                 fp2_dbl::mul_pre(out, x_sum, y_sum);
-                                             });
-                            }
-
-                            static fp6_dbl mul_pre(const underlying_type &x, const underlying_type &y) {
-                                fp6_dbl result;
-                                mul_pre(result, x, y);
-                                return result;
-                            }
-
-                            static void mul_pre_sum(fp6_dbl &result,
-                                                    const underlying_type &x0,
-                                                    const underlying_type &x1,
-                                                    const underlying_type &y0,
-                                                    const underlying_type &y1) {
-                                // Computes (x0 + x1) * (y0 + y1) for the Fp12 Karatsuba
-                                // cross term without constructing generic Fp6 field sums.
-                                const fp2_base a = fp2_base(x0.data[0]) + x1.data[0];
-                                const fp2_base b = fp2_base(x0.data[1]) + x1.data[1];
-                                const fp2_base c = fp2_base(x0.data[2]) + x1.data[2];
-                                const fp2_base d = fp2_base(y0.data[0]) + y1.data[0];
-                                const fp2_base e = fp2_base(y0.data[1]) + y1.data[1];
-                                const fp2_base f = fp2_base(y0.data[2]) + y1.data[2];
-
-                                mul_pre_impl(
-                                    result, a, b, c, d, e, f,
-                                    [](fp2_dbl &out,
-                                       const fp2_base &a0,
-                                       const fp2_base &a1,
-                                       const fp2_base &b0,
-                                       const fp2_base &b1) { fp2_dbl::mul_pre_loose_sum(out, a0, a1, b0, b1); });
-                            }
-
-                            static fp6_dbl mul_pre_sum(const underlying_type &x0,
-                                                       const underlying_type &x1,
-                                                       const underlying_type &y0,
-                                                       const underlying_type &y1) {
-                                fp6_dbl result;
-                                mul_pre_sum(result, x0, x1, y0, y1);
                                 return result;
                             }
 
@@ -585,17 +561,19 @@ namespace nil {
                                 return underlying_type(data[0].to_non_residue(), data[1].to_non_residue(),
                                                        data[2].to_non_residue());
                             }
-                        };
 
-                        static void mul_v_add(fp6_dbl &result, const fp6_dbl &x, const fp6_dbl &y) {
-                            result.data[0] = x.data[2];
-                            result.data[0].mul_by_xi();
-                            result.data[0] += y.data[0];
-                            result.data[1] = x.data[0];
-                            result.data[1] += y.data[1];
-                            result.data[2] = x.data[1];
-                            result.data[2] += y.data[2];
-                        }
+                            fp6_dbl mul_v_add(const fp6_dbl &other) const {
+                                fp6_dbl result;
+                                result.data[0] = data[2];
+                                result.data[0].mul_by_xi();
+                                result.data[0] += other.data[0];
+                                result.data[1] = data[0];
+                                result.data[1] += other.data[1];
+                                result.data[2] = data[1];
+                                result.data[2] += other.data[2];
+                                return result;
+                            }
+                        };
 
                         template<typename Fp12Value>
                         static Fp12Value multiply(const Fp12Value &x, const Fp12Value &y) {
@@ -615,31 +593,41 @@ namespace nil {
                             // xi multiplication because v^3 = xi:
                             //   (r0 + r1*v + r2*v^2) * v = xi*r2 + r0*v + r1*v^2.
                             //
-                            // ac, bd, and z1 stay in the lazy doubled representation until
-                            // the two final Fp6 reductions. mul_pre_sum computes the
-                            // (a+b)(c+d) term directly in the lazy tower, avoiding generic
-                            // Fp6 temporaries and intermediate Montgomery reductions.
+                            // ac, bd, and z1 stay in the lazy doubled representation until the
+                            // two final Fp6 reductions. mul_pre_impl<true> computes (a+b)(c+d)
+                            // directly in the lazy tower, avoiding generic Fp6 temporaries and
+                            // intermediate Montgomery reductions.
                             const underlying_type &a = x.data[0];
                             const underlying_type &b = x.data[1];
                             const underlying_type &c = y.data[0];
                             const underlying_type &d = y.data[1];
 
-                            fp6_dbl ac;
-                            fp6_dbl bd;
-                            fp6_dbl::mul_pre(ac, a, c);
-                            fp6_dbl::mul_pre(bd, b, d);
-                            fp6_dbl z0_dbl;
-                            mul_v_add(z0_dbl, bd, ac);
+                            // false = ordinary Fp6 multiplication; inner Fp2 sums fit mul_pre().
+                            fp6_dbl ac = fp6_dbl::template mul_pre<false>(fp2_base(a.data[0]), fp2_base(a.data[1]),
+                                                                          fp2_base(a.data[2]), fp2_base(c.data[0]),
+                                                                          fp2_base(c.data[1]), fp2_base(c.data[2]));
+                            fp6_dbl bd = fp6_dbl::template mul_pre<false>(fp2_base(b.data[0]), fp2_base(b.data[1]),
+                                                                          fp2_base(b.data[2]), fp2_base(d.data[0]),
+                                                                          fp2_base(d.data[1]), fp2_base(d.data[2]));
+
+                            fp6_dbl z0_dbl = bd.mul_v_add(ac);
+
+                            // true = Fp12 cross-term multiplication; inner Fp2 sums need the loose path.
+                            fp6_dbl z1_dbl = fp6_dbl::template mul_pre<true>(fp2_base(a.data[0]) + fp2_base(b.data[0]),
+                                                                         fp2_base(a.data[1]) + fp2_base(b.data[1]),
+                                                                         fp2_base(a.data[2]) + fp2_base(b.data[2]),
+                                                                         fp2_base(c.data[0]) + fp2_base(d.data[0]),
+                                                                         fp2_base(c.data[1]) + fp2_base(d.data[1]),
+                                                                         fp2_base(c.data[2]) + fp2_base(d.data[2]));
+                            z1_dbl -= ac;
+                            z1_dbl -= bd;
+
                             z0_dbl.reduce();
+                            z1_dbl.reduce();
                             const underlying_type z0 = z0_dbl.to_underlying();
+                            const underlying_type z1 = z1_dbl.to_underlying();
 
-                            fp6_dbl z1;
-                            fp6_dbl::mul_pre_sum(z1, a, b, c, d);
-                            z1 -= ac;
-                            z1 -= bd;
-                            z1.reduce();
-
-                            return Fp12Value(z0, z1.to_underlying());
+                            return Fp12Value(z0, z1);
                         }
                     };
 

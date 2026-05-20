@@ -31,6 +31,8 @@ using fp2_value_type = typename fp2_type::value_type;
 using fp6_value_type = typename fp6_type::value_type;
 using fp12_value_type = typename fp12_type::value_type;
 using fp12_policy_type = typename fp12_type::extension_policy;
+using fp2_base_type = typename fp12_policy_type::fp2_base;
+using fp6_dbl_type = typename fp12_policy_type::fp6_dbl;
 
 static std::uint64_t now_ns() {
     using clock = std::chrono::steady_clock;
@@ -101,13 +103,15 @@ int main(int argc, char** argv) {
     std::vector<fp12_value_type> ys(poolN);
     std::vector<typename fp12_policy_type::base_limb_storage_type> fp_limbs_x(poolN);
     std::vector<typename fp12_policy_type::base_limb_storage_type> fp_limbs_y(poolN);
+    std::vector<fp2_base_type> fp2_base_x(poolN);
+    std::vector<fp2_base_type> fp2_base_y(poolN);
     std::vector<typename fp12_policy_type::lazy_limb_storage_type> fp_products(poolN);
     std::vector<typename fp12_policy_type::fp_dbl> fp_dbl_x(poolN);
     std::vector<typename fp12_policy_type::fp_dbl> fp_dbl_y(poolN);
     std::vector<typename fp12_policy_type::fp2_dbl> fp2_dbl_x(poolN);
     std::vector<typename fp12_policy_type::fp2_dbl> fp2_dbl_y(poolN);
-    std::vector<typename fp12_policy_type::fp6_dbl> fp6_dbl_x(poolN);
-    std::vector<typename fp12_policy_type::fp6_dbl> fp6_dbl_y(poolN);
+    std::vector<fp6_dbl_type> fp6_dbl_x(poolN);
+    std::vector<fp6_dbl_type> fp6_dbl_y(poolN);
 
     for (std::size_t i = 0; i < poolN; ++i) {
         fpxs[i] = nil::crypto3::algebra::random_element<base_field_type>(rng);
@@ -120,13 +124,22 @@ int main(int argc, char** argv) {
         ys[i] = nil::crypto3::algebra::random_element<fp12_type>(rng);
         fp_limbs_x[i] = fp12_policy_type::as_base_limbs(fpxs[i]);
         fp_limbs_y[i] = fp12_policy_type::as_base_limbs(fpys[i]);
+        fp2_base_x[i] = fp2_base_type(fp2xs[i]);
+        fp2_base_y[i] = fp2_base_type(fp2ys[i]);
     }
     for (std::size_t i = 0; i < poolN; ++i) {
         const std::size_t next = (i + 1) % poolN;
         fp_dbl_x[i] = fp12_policy_type::fp_dbl(fp_products[i], (i & 1u) != 0u);
-        fp12_policy_type::fp2_dbl::mul_pre(fp2_dbl_y[i], fp2ys[i], fp2xs[next]);
-        fp12_policy_type::fp6_dbl::mul_pre(fp6_dbl_x[i], fp6xs[i], fp6ys[i]);
-        fp12_policy_type::fp6_dbl::mul_pre(fp6_dbl_y[i], fp6ys[i], fp6xs[next]);
+        fp2_dbl_x[i] = fp2_base_x[i].mul_pre(fp2_base_y[i]);
+        fp2_dbl_y[i] = fp2_base_y[i].mul_pre(fp2_base_x[next]);
+        fp6_dbl_x[i] = fp6_dbl_type::mul_pre<false>(
+            fp2_base_type(fp6xs[i].data[0]), fp2_base_type(fp6xs[i].data[1]),
+            fp2_base_type(fp6xs[i].data[2]), fp2_base_type(fp6ys[i].data[0]),
+            fp2_base_type(fp6ys[i].data[1]), fp2_base_type(fp6ys[i].data[2]));
+        fp6_dbl_y[i] = fp6_dbl_type::mul_pre<false>(
+            fp2_base_type(fp6ys[i].data[0]), fp2_base_type(fp6ys[i].data[1]),
+            fp2_base_type(fp6ys[i].data[2]), fp2_base_type(fp6xs[next].data[0]),
+            fp2_base_type(fp6xs[next].data[1]), fp2_base_type(fp6xs[next].data[2]));
     }
 
     base_value_type fp_acc;
@@ -135,7 +148,7 @@ int main(int argc, char** argv) {
     typename fp12_policy_type::fp_dbl fp_dbl_acc;
     typename fp12_policy_type::fp2_dbl fp2_pre_acc;
     fp2_value_type fp2_acc;
-    typename fp12_policy_type::fp6_dbl fp6_pre_acc;
+    fp6_dbl_type fp6_pre_acc;
     fp6_value_type fp6_acc;
     fp12_value_type fp12_acc;
 
@@ -191,7 +204,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp2 pre mul", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
-        fp12_policy_type::fp2_dbl::mul_pre(fp2_pre_acc, fp2xs[idx], fp2ys[idx]);
+        fp2_pre_acc = fp2_base_x[idx].mul_pre(fp2_base_y[idx]);
         do_not_optimize(&fp2_pre_acc);
     }));
 
@@ -205,7 +218,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp2 lazy mul", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
-        fp12_policy_type::fp2_dbl::mul_pre(fp2_pre_acc, fp2xs[idx], fp2ys[idx]);
+        fp2_pre_acc = fp2_base_x[idx].mul_pre(fp2_base_y[idx]);
         fp2_pre_acc.reduce();
         fp2_acc = fp2_pre_acc.to_non_residue();
         do_not_optimize(&fp2_acc);
@@ -233,21 +246,29 @@ int main(int argc, char** argv) {
 
     print_stage("Fp6 pre mul", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
-        fp12_policy_type::fp6_dbl::mul_pre(fp6_pre_acc, fp6xs[idx], fp6ys[idx]);
+        fp6_pre_acc = fp6_dbl_type::mul_pre<false>(
+            fp2_base_type(fp6xs[idx].data[0]), fp2_base_type(fp6xs[idx].data[1]),
+            fp2_base_type(fp6xs[idx].data[2]), fp2_base_type(fp6ys[idx].data[0]),
+            fp2_base_type(fp6ys[idx].data[1]), fp2_base_type(fp6ys[idx].data[2]));
         do_not_optimize(&fp6_pre_acc);
     }));
 
     print_stage("Fp6 pre sum", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
         const std::size_t next = (idx + 1) % poolN;
-        fp12_policy_type::fp6_dbl::mul_pre_sum(fp6_pre_acc, fp6xs[idx], fp6ys[idx],
-                                               fp6xs[next], fp6ys[next]);
+        fp6_pre_acc = fp6_dbl_type::mul_pre<true>(
+            fp2_base_type(fp6xs[idx].data[0]) + fp2_base_type(fp6ys[idx].data[0]),
+            fp2_base_type(fp6xs[idx].data[1]) + fp2_base_type(fp6ys[idx].data[1]),
+            fp2_base_type(fp6xs[idx].data[2]) + fp2_base_type(fp6ys[idx].data[2]),
+            fp2_base_type(fp6xs[next].data[0]) + fp2_base_type(fp6ys[next].data[0]),
+            fp2_base_type(fp6xs[next].data[1]) + fp2_base_type(fp6ys[next].data[1]),
+            fp2_base_type(fp6xs[next].data[2]) + fp2_base_type(fp6ys[next].data[2]));
         do_not_optimize(&fp6_pre_acc);
     }));
 
     print_stage("Fp6 reduce", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
-        typename fp12_policy_type::fp6_dbl value(fp6_dbl_x[idx]);
+        fp6_dbl_type value(fp6_dbl_x[idx]);
         value.reduce();
         fp6_acc = value.to_underlying();
         do_not_optimize(&fp6_acc);
@@ -255,7 +276,10 @@ int main(int argc, char** argv) {
 
     print_stage("Fp6 lazy mul", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
-        fp12_policy_type::fp6_dbl::mul_pre(fp6_pre_acc, fp6xs[idx], fp6ys[idx]);
+        fp6_pre_acc = fp6_dbl_type::mul_pre<false>(
+            fp2_base_type(fp6xs[idx].data[0]), fp2_base_type(fp6xs[idx].data[1]),
+            fp2_base_type(fp6xs[idx].data[2]), fp2_base_type(fp6ys[idx].data[0]),
+            fp2_base_type(fp6ys[idx].data[1]), fp2_base_type(fp6ys[idx].data[2]));
         fp6_pre_acc.reduce();
         fp6_acc = fp6_pre_acc.to_underlying();
         do_not_optimize(&fp6_acc);
