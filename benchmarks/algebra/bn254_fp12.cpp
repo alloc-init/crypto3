@@ -120,13 +120,10 @@ int main(int argc, char** argv) {
         ys[i] = nil::crypto3::algebra::random_element<fp12_type>(rng);
         fp_limbs_x[i] = fp12_policy_type::as_base_limbs(fpxs[i]);
         fp_limbs_y[i] = fp12_policy_type::as_base_limbs(fpys[i]);
-        fp_products[i] = fp12_policy_type::fp_dbl::mul_pre(fp_limbs_x[i], fp_limbs_y[i]).data;
     }
     for (std::size_t i = 0; i < poolN; ++i) {
         const std::size_t next = (i + 1) % poolN;
         fp_dbl_x[i] = fp12_policy_type::fp_dbl(fp_products[i], (i & 1u) != 0u);
-        fp_dbl_y[i] = fp12_policy_type::fp_dbl::mul_pre(fp_limbs_y[i], fp_limbs_x[next]);
-        fp12_policy_type::fp2_dbl::mul_pre(fp2_dbl_x[i], fp2xs[i], fp2ys[i]);
         fp12_policy_type::fp2_dbl::mul_pre(fp2_dbl_y[i], fp2ys[i], fp2xs[next]);
         fp12_policy_type::fp6_dbl::mul_pre(fp6_dbl_x[i], fp6xs[i], fp6ys[i]);
         fp12_policy_type::fp6_dbl::mul_pre(fp6_dbl_y[i], fp6ys[i], fp6xs[next]);
@@ -149,12 +146,6 @@ int main(int argc, char** argv) {
         const std::size_t idx = i % poolN;
         fp_acc = fpxs[idx] * fpys[idx];
         do_not_optimize(&fp_acc);
-    }));
-
-    print_stage("Fp mul_pre", run_stage(iters, warmup, [&](std::size_t i) {
-        const std::size_t idx = i % poolN;
-        pre_acc = fp12_policy_type::fp_dbl::mul_pre(fp_limbs_x[idx], fp_limbs_y[idx]).data;
-        do_not_optimize(&pre_acc);
     }));
 
     print_stage("Fp dbl reduce", run_stage(iters, warmup, [&](std::size_t i) {

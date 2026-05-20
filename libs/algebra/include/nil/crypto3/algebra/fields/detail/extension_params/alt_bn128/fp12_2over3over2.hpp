@@ -97,7 +97,6 @@ namespace nil {
                             0x290C83BF3D14634DB120850727BB392D6A86D50BD34B19B929BC44B896723B38_cppui_modular254,
                             0x23BD9E3DA9136A739F668E1ADC9EF7F0F575EC93F71A8DF953C846338C32A1AB_cppui_modular254};
 
-
                         // Tower: Fp2  = Fp[u]/(u^2 + 1)
                         //        Fp6  = Fp2[v]/(v^3 - xi),
                         //        Fp12 = Fp6[w]/(w^2 - v).
@@ -138,8 +137,7 @@ namespace nil {
                         }
 
                         static const base_limb_storage_type &modulus_limbs() {
-                            static const base_limb_storage_type value =
-                                backend_to_base_limb_storage(modulus.backend());
+                            static const base_limb_storage_type value = backend_to_base_limb_storage(modulus.backend());
                             return value;
                         }
 
@@ -147,22 +145,38 @@ namespace nil {
                             return backend_to_base_limb_storage(x.data.backend().base_data());
                         }
 
+                        // Lazy, signed, double-width base-Fp value used inside the tower fast path.
+                        //
+                        // A normal base_value_type is a canonical Montgomery residue x*R mod p in the
+                        // low base_value_limb_count limbs. Multiplying two such residues first produces
+                        // a double-width integer:
+                        //   (x*R) * (y*R) = x*y*R^2.
+                        // REDC/Montgomery reduction removes one factor of R and returns x*y*R mod p.
+                        //
+                        // The Fp2/Fp6/Fp12 formulas often add or subtract several raw products before
+                        // the coefficient is needed as a normal Fp value, for example ac - bd in Fp2.
+                        // fp_dbl stores those bounded pre-REDC expressions so the tower can combine
+                        // products first and call REDC only for each final coefficient. The underlying
+                        // backend stores an unsigned magnitude, so `fb_dbl::negative` records the integer
+                        // sign until reduce() maps the signed result back into Fp.
                         struct fp_dbl {
+                            // Magnitude of a bounded pre-REDC expression. For BN254 this may occupy up to
+                            // lazy_product_limb_count limbs, while normal Fp values use only the low four.
                             lazy_limb_storage_type data = {};
+                            // Sign of the integer expression represented by data
+                            // Zero is non-negative
                             bool negative = false;
 
                             fp_dbl() = default;
                             explicit fp_dbl(const lazy_limb_storage_type &in_data, bool in_negative = false) :
                                 data(in_data), negative(in_negative) {
-                                normalize();
-                            }
-
-                            void normalize() {
                                 if (data.compare(limb_type(0u)) == 0) {
+                                    // Enforce that 0 is positive
                                     negative = false;
                                 }
                             }
 
+                            // If this value is not zero, flip the sign
                             fp_dbl operator-() const {
                                 fp_dbl result(*this);
                                 if (result.data.compare(limb_type(0u)) != 0) {
@@ -183,113 +197,93 @@ namespace nil {
                                 return result;
                             }
 
-                            fp_dbl &operator+=(const fp_dbl &other) {
-                                if (negative == other.negative) {
+                            fp_dbl &add_magnitude(const fp_dbl &other, bool other_negative) {
+                                if (negative == other_negative) {
+                                    // if they both have the same sign, you can just add
                                     boost::multiprecision::backends::eval_add(data, other.data);
                                     return *this;
                                 }
+                                // .. they have different signs
                                 const int cmp = data.compare(other.data);
                                 if (cmp == 0) {
+                                    // same value but different signs, result is 0
                                     data = {};
                                     negative = false;
                                     return *this;
                                 }
                                 if (cmp > 0) {
+                                    // 'this' is greater, subtract the other
+                                    // if 'this' is negative, result will be negative, and vice versa
                                     boost::multiprecision::backends::eval_subtract(data, other.data);
                                     return *this;
                                 }
+                                // .. 'this' is less than 'other' in magnitude
+                                // if 'other' is negative, result will be negative, and vice versa
                                 lazy_limb_storage_type magnitude = other.data;
                                 boost::multiprecision::backends::eval_subtract(magnitude, data);
                                 data = magnitude;
-                                negative = other.negative;
+                                negative = other_negative;
                                 return *this;
+                            }
+
+                            fp_dbl &operator+=(const fp_dbl &other) {
+                                return add_magnitude(other, other.negative);
                             }
 
                             fp_dbl &operator-=(const fp_dbl &other) {
-                                if (negative != other.negative) {
-                                    boost::multiprecision::backends::eval_add(data, other.data);
-                                    return *this;
-                                }
-                                const int cmp = data.compare(other.data);
-                                if (cmp == 0) {
-                                    data = {};
-                                    negative = false;
-                                    return *this;
-                                }
-                                if (cmp > 0) {
-                                    boost::multiprecision::backends::eval_subtract(data, other.data);
-                                    return *this;
-                                }
-                                lazy_limb_storage_type magnitude = other.data;
-                                boost::multiprecision::backends::eval_subtract(magnitude, data);
-                                data = magnitude;
-                                negative = !other.negative;
-                                return *this;
+                                return add_magnitude(other, !other.negative);
                             }
 
-                            fp_dbl mul_small(limb_type factor) const {
-                                if (factor == 0u || data.compare(limb_type(0u)) == 0) {
-                                    return fp_dbl();
-                                }
+                            fp_dbl doubled() const {
                                 fp_dbl result(*this);
-                                if (factor == 1u) {
-                                    return result;
-                                }
-                                if (factor == 2u) {
-                                    boost::multiprecision::backends::eval_left_shift(result.data, 1u);
-                                    result.normalize();
-                                    return result;
-                                }
-                                if (factor == 9u) {
-                                    return result.mul_by_9_inplace();
-                                }
-                                boost::multiprecision::backends::eval_multiply(result.data, factor);
-                                result.normalize();
+                                boost::multiprecision::backends::eval_left_shift(result.data, 1u);
                                 return result;
                             }
 
                             fp_dbl &mul_by_9_inplace() {
                                 boost::multiprecision::backends::eval_multiply(data, limb_type(9u));
-                                normalize();
                                 return *this;
                             }
 
-                            static fp_dbl mul_pre(const base_limb_storage_type &x, const base_limb_storage_type &y) {
-                                lazy_limb_storage_type product = x;
-                                boost::multiprecision::backends::eval_multiply(product, y);
-                                return fp_dbl(product);
-                            }
-
+                            // "pre" means before Montgomery reduction
+                            // x = aR and y = bR are Montgomery residues,
+                            // and the result is the raw x*y product still scaled by R^2
+                            // ie. xy = abR^2
+                            // We leave it in this form because we have wide enough limb type to support extra
+                            // additions and subtractions before reducing.
                             static fp_dbl mul_pre_4limb(const base_limb_storage_type &x,
                                                         const base_limb_storage_type &y) {
+                                fp_dbl product;
                                 if (base_value_limb_count != 4u) {
-                                    return mul_pre(x, y);
+                                    product.data = x;
+                                    boost::multiprecision::backends::eval_multiply(product.data, y);
+                                } else {
+                                    // Most tower products multiply values below 4p, so they fit
+                                    // in the low four 64-bit limbs. The loose Fp12 cross term has
+                                    // a separate five-limb path for its wider Karatsuba sum.
+                                    boost::multiprecision::backends::eval_multiply_4x4(product.data, x.limbs(),
+                                                                                       y.limbs());
                                 }
-                                // Most tower products multiply values below 4p, so they fit
-                                // in the low four 64-bit limbs. The loose Fp12 cross term has
-                                // a separate five-limb path for its wider Karatsuba sum.
-                                lazy_limb_storage_type product;
-                                boost::multiprecision::backends::eval_multiply_4x4(
-                                    product, x.limbs(), y.limbs());
-                                return fp_dbl(product);
+                                return product;
                             }
 
                             static fp_dbl mul_pre_5limb(const base_limb_storage_type &x,
                                                         const base_limb_storage_type &y) {
+                                fp_dbl product;
                                 if (base_value_limb_count != 4u) {
-                                    return mul_pre(x, y);
+                                    product.data = x;
+                                    boost::multiprecision::backends::eval_multiply(product.data, y);
+                                } else {
+                                    boost::multiprecision::backends::eval_multiply_low_limbs<5u>(product.data,
+                                                                                                 x.limbs(), y.limbs());
                                 }
-                                lazy_limb_storage_type product;
-                                boost::multiprecision::backends::eval_multiply_low_limbs<5u>(
-                                    product, x.limbs(), y.limbs());
-                                return fp_dbl(product);
-                            }
-
-                            static fp_dbl mul_pre(const base_value_type &x, const base_value_type &y) {
-                                return mul_pre(as_base_limbs(x), as_base_limbs(y));
+                                return product;
                             }
 
                             static base_value_type reduce(const fp_dbl &x) {
+                                // Convert a bounded signed pre-REDC expression back to canonical base Fp.
+                                // REDC removes one Montgomery factor; a negative integer representative is
+                                // then mapped to p - reduced, which is the same value modulo p.
                                 base_limb_storage_type reduced = x.data;
                                 base_field_type::modulus_params.get_mod_obj().montgomery_reduce(reduced);
                                 if (x.negative && reduced.compare(limb_type(0u)) != 0) {
@@ -311,7 +305,8 @@ namespace nil {
                             std::array<base_limb_storage_type, 2> data;
 
                             fp2_base() = default;
-                            fp2_base(const base_limb_storage_type &c0, const base_limb_storage_type &c1) : data({c0, c1}) {
+                            fp2_base(const base_limb_storage_type &c0, const base_limb_storage_type &c1) :
+                                data({c0, c1}) {
                             }
 
                             static fp2_base from(const non_residue_type &x) {
@@ -365,9 +360,7 @@ namespace nil {
                                 return *this;
                             }
 
-                            static void mul_pre(fp2_dbl &result,
-                                                const non_residue_type &x,
-                                                const non_residue_type &y) {
+                            static void mul_pre(fp2_dbl &result, const non_residue_type &x, const non_residue_type &y) {
                                 mul_pre(result, fp2_base::from(x), fp2_base::from(y));
                             }
 
@@ -461,7 +454,7 @@ namespace nil {
                                 const base_limb_storage_type &b = x.data[1];
                                 const fp_dbl aa = fp_dbl::mul_pre_4limb(a, a);
                                 const fp_dbl bb = fp_dbl::mul_pre_4limb(b, b);
-                                return fp2_dbl(aa - bb, fp_dbl::mul_pre_4limb(a, b).mul_small(2u));
+                                return fp2_dbl(aa - bb, fp_dbl::mul_pre_4limb(a, b).doubled());
                             }
 
                             static fp2_dbl mul_xi(const fp2_dbl &x) {
@@ -565,18 +558,16 @@ namespace nil {
                                 const fp2_base e = fp2_base::from(y.data[1]);
                                 const fp2_base f = fp2_base::from(y.data[2]);
 
-                                mul_pre_impl(
-                                    result,
-                                    a, b, c, d, e, f,
-                                    [](fp2_dbl &out,
-                                       const fp2_base &x0,
-                                       const fp2_base &x1,
-                                       const fp2_base &y0,
-                                       const fp2_base &y1) {
-                                        fp2_base x_sum = x0 + x1;
-                                        fp2_base y_sum = y0 + y1;
-                                        fp2_dbl::mul_pre(out, x_sum, y_sum);
-                                    });
+                                mul_pre_impl(result, a, b, c, d, e, f,
+                                             [](fp2_dbl &out,
+                                                const fp2_base &x0,
+                                                const fp2_base &x1,
+                                                const fp2_base &y0,
+                                                const fp2_base &y1) {
+                                                 fp2_base x_sum = x0 + x1;
+                                                 fp2_base y_sum = y0 + y1;
+                                                 fp2_dbl::mul_pre(out, x_sum, y_sum);
+                                             });
                             }
 
                             static fp6_dbl mul_pre(const underlying_type &x, const underlying_type &y) {
@@ -600,15 +591,12 @@ namespace nil {
                                 const fp2_base f = fp2_base::from_sum(y0.data[2], y1.data[2]);
 
                                 mul_pre_impl(
-                                    result,
-                                    a, b, c, d, e, f,
+                                    result, a, b, c, d, e, f,
                                     [](fp2_dbl &out,
                                        const fp2_base &a0,
                                        const fp2_base &a1,
                                        const fp2_base &b0,
-                                       const fp2_base &b1) {
-                                        fp2_dbl::mul_pre_loose_sum(out, a0, a1, b0, b1);
-                                    });
+                                       const fp2_base &b1) { fp2_dbl::mul_pre_loose_sum(out, a0, a1, b0, b1); });
                             }
 
                             static fp6_dbl mul_pre_sum(const underlying_type &x0,
