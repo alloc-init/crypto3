@@ -293,13 +293,13 @@ namespace nil {
                             base_value_type to_base_value() const {
                                 // The data limbs must already be reduced Montgomery base-Fp limbs. Construct
                                 // base_value_type directly from those limbs to avoid converting them again.
-                                typename base_value_type::data_type out_data;
-                                typename integral_type::backend_type &backend = out_data.backend().base_data();
+                                base_value_type out;
+                                typename integral_type::backend_type &backend = out.data.backend().base_data();
                                 for (size_t i = 0; i < base_value_limb_count && i < backend.size(); ++i) {
                                     backend.limbs()[i] = data.limbs()[i];
                                 }
                                 backend.zero_after(base_value_limb_count);
-                                return base_value_type(out_data);
+                                return out;
                             }
                         };
 
