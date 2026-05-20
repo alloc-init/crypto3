@@ -136,11 +136,6 @@ namespace nil {
                             return result;
                         }
 
-                        static const base_limb_storage_type &modulus_limbs() {
-                            static const base_limb_storage_type value = backend_to_base_limb_storage(modulus.backend());
-                            return value;
-                        }
-
                         static base_limb_storage_type as_base_limbs(const base_value_type &x) {
                             return backend_to_base_limb_storage(x.data.backend().base_data());
                         }
@@ -240,7 +235,7 @@ namespace nil {
                                 return result;
                             }
 
-                            fp_dbl &mul_by_9_inplace() {
+                            fp_dbl &mul_by_9() {
                                 boost::multiprecision::backends::eval_multiply(data, limb_type(9u));
                                 return *this;
                             }
@@ -286,7 +281,9 @@ namespace nil {
                                 // then mapped to p - reduced, which is the same value modulo p.
                                 base_field_type::modulus_params.get_mod_obj().montgomery_reduce(data);
                                 if (negative && data.compare(limb_type(0u)) != 0) {
-                                    base_limb_storage_type negated = modulus_limbs();
+                                    static const base_limb_storage_type modulus_limbs =
+                                        backend_to_base_limb_storage(modulus.backend());
+                                    base_limb_storage_type negated = modulus_limbs;
                                     boost::multiprecision::backends::eval_subtract(negated, data);
                                     data = negated;
                                 }
@@ -304,7 +301,6 @@ namespace nil {
                                 backend.zero_after(base_value_limb_count);
                                 return base_value_type(out_data);
                             }
-
                         };
 
                         struct fp2_base {
@@ -463,19 +459,13 @@ namespace nil {
                                 return fp2_dbl(aa - bb, fp_dbl::mul_pre_4limb(a, b).doubled());
                             }
 
-                            static fp2_dbl mul_xi(const fp2_dbl &x) {
-                                fp2_dbl result(x);
-                                result.mul_xi_inplace();
-                                return result;
-                            }
-
-                            void mul_xi_inplace() {
+                            void mul_by_xi() {
                                 // Lazy multiply by xi = 9 + u:
                                 // (a + b*u) * xi = (9a - b) + (a + 9b) * u.
                                 const fp_dbl c0 = data[0];
-                                data[0].mul_by_9_inplace();
+                                data[0].mul_by_9();
                                 data[0] -= data[1];
-                                data[1].mul_by_9_inplace();
+                                data[1].mul_by_9();
                                 data[1] += c0;
                             }
 
@@ -487,7 +477,6 @@ namespace nil {
                             non_residue_type to_non_residue() const {
                                 return non_residue_type(data[0].to_base_value(), data[1].to_base_value());
                             }
-
                         };
 
                         struct fp6_dbl {
@@ -551,9 +540,9 @@ namespace nil {
                                 zb -= be;
                                 zc -= ad;
                                 zc -= cf;
-                                za.mul_xi_inplace();
+                                za.mul_by_xi();
                                 za += ad;
-                                cf.mul_xi_inplace();
+                                cf.mul_by_xi();
                                 zb += cf;
                                 zc += be;
 
@@ -633,8 +622,8 @@ namespace nil {
                                 t -= aa;
                                 t -= bc2;
                                 t -= cc;
-                                bc2.mul_xi_inplace();
-                                cc.mul_xi_inplace();
+                                bc2.mul_by_xi();
+                                cc.mul_by_xi();
                                 const fp2_dbl ya = aa + bc2;
                                 const fp2_dbl yb = cc + ab2;
                                 const fp2_dbl yc = t - ab2;
@@ -651,12 +640,11 @@ namespace nil {
                                 return underlying_type(data[0].to_non_residue(), data[1].to_non_residue(),
                                                        data[2].to_non_residue());
                             }
-
                         };
 
                         static void mul_v_add(fp6_dbl &result, const fp6_dbl &x, const fp6_dbl &y) {
                             result.data[0] = x.data[2];
-                            result.data[0].mul_xi_inplace();
+                            result.data[0].mul_by_xi();
                             result.data[0] += y.data[0];
                             result.data[1] = x.data[0];
                             result.data[1] += y.data[1];
