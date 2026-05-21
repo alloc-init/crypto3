@@ -444,6 +444,33 @@ namespace nil {
                             }
                         };
 
+                        // Raw-limb input view of an Fp6 value:
+                        //   data[0] + data[1] * v + data[2] * v^2.
+                        // Each coefficient is an fp2_base, so this is still an input-side
+                        // representation, not a lazy/pre-REDC result.
+                        struct fp6_base {
+                            std::array<fp2_base, 3> data;
+
+                            fp6_base() = default;
+                            fp6_base(const fp2_base &c0, const fp2_base &c1, const fp2_base &c2) : data({c0, c1, c2}) {
+                            }
+                            explicit fp6_base(const underlying_type &x) :
+                                data({fp2_base(x.data[0]), fp2_base(x.data[1]), fp2_base(x.data[2])}) {
+                            }
+
+                            fp6_base &operator+=(const fp6_base &other) {
+                                data[0] += other.data[0];
+                                data[1] += other.data[1];
+                                data[2] += other.data[2];
+                                return *this;
+                            }
+
+                            fp6_base operator+(const fp6_base &other) const {
+                                fp6_base result(*this);
+                                result += other;
+                                return result;
+                            }
+                        };
                         struct fp6_dbl {
                             std::array<fp2_dbl, 3> data;
 
@@ -476,12 +503,7 @@ namespace nil {
                             }
 
                             template<bool LooseSumProduct>
-                            static fp6_dbl mul_pre(const fp2_base &a,
-                                                   const fp2_base &b,
-                                                   const fp2_base &c,
-                                                   const fp2_base &d,
-                                                   const fp2_base &e,
-                                                   const fp2_base &f) {
+                            static fp6_dbl mul_pre(const fp6_base &x, const fp6_base &y) {
                                 // Multiply two Fp6 values in the tower Fp6 = Fp2[v]/(v^3 - xi):
                                 //   x = a + b*v + c*v^2
                                 //   y = d + e*v + f*v^2
@@ -496,6 +518,12 @@ namespace nil {
                                 //   za = (b + c)(e + f) - b*e - c*f = b*f + c*e
                                 //   zb = (a + b)(d + e) - a*d - b*e = a*e + b*d
                                 //   zc = (a + c)(d + f) - a*d - c*f = a*f + c*d
+                                const fp2_base &a = x.data[0];
+                                const fp2_base &b = x.data[1];
+                                const fp2_base &c = x.data[2];
+                                const fp2_base &d = y.data[0];
+                                const fp2_base &e = y.data[1];
+                                const fp2_base &f = y.data[2];
                                 fp6_dbl result;
                                 fp2_dbl &za = result.data[0];
                                 fp2_dbl &zb = result.data[1];
@@ -597,28 +625,19 @@ namespace nil {
                             // two final Fp6 reductions. mul_pre_impl<true> computes (a+b)(c+d)
                             // directly in the lazy tower, avoiding generic Fp6 temporaries and
                             // intermediate Montgomery reductions.
-                            const underlying_type &a = x.data[0];
-                            const underlying_type &b = x.data[1];
-                            const underlying_type &c = y.data[0];
-                            const underlying_type &d = y.data[1];
+                            const fp6_base a(x.data[0]);
+                            const fp6_base b(x.data[1]);
+                            const fp6_base c(y.data[0]);
+                            const fp6_base d(y.data[1]);
 
                             // false = ordinary Fp6 multiplication; inner Fp2 sums fit mul_pre().
-                            fp6_dbl ac = fp6_dbl::template mul_pre<false>(fp2_base(a.data[0]), fp2_base(a.data[1]),
-                                                                          fp2_base(a.data[2]), fp2_base(c.data[0]),
-                                                                          fp2_base(c.data[1]), fp2_base(c.data[2]));
-                            fp6_dbl bd = fp6_dbl::template mul_pre<false>(fp2_base(b.data[0]), fp2_base(b.data[1]),
-                                                                          fp2_base(b.data[2]), fp2_base(d.data[0]),
-                                                                          fp2_base(d.data[1]), fp2_base(d.data[2]));
+                            fp6_dbl ac = fp6_dbl::template mul_pre<false>(a, c);
+                            fp6_dbl bd = fp6_dbl::template mul_pre<false>(b, d);
 
                             fp6_dbl z0_dbl = bd.mul_v_add(ac);
 
                             // true = Fp12 cross-term multiplication; inner Fp2 sums need the loose path.
-                            fp6_dbl z1_dbl = fp6_dbl::template mul_pre<true>(fp2_base(a.data[0]) + fp2_base(b.data[0]),
-                                                                         fp2_base(a.data[1]) + fp2_base(b.data[1]),
-                                                                         fp2_base(a.data[2]) + fp2_base(b.data[2]),
-                                                                         fp2_base(c.data[0]) + fp2_base(d.data[0]),
-                                                                         fp2_base(c.data[1]) + fp2_base(d.data[1]),
-                                                                         fp2_base(c.data[2]) + fp2_base(d.data[2]));
+                            fp6_dbl z1_dbl = fp6_dbl::template mul_pre<true>(a + b, c + d);
                             z1_dbl -= ac;
                             z1_dbl -= bd;
 
