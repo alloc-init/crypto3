@@ -135,8 +135,8 @@ int main(int argc, char** argv) {
     for (std::size_t i = 0; i < poolN; ++i) {
         const std::size_t next = (i + 1) % poolN;
         fp_dbl_x[i] = fp12_policy_type::fp_dbl(fp_products[i], (i & 1u) != 0u);
-        fp2_dbl_x[i] = fp2_base_x[i].mul_pre(fp2_base_y[i]);
-        fp2_dbl_y[i] = fp2_base_y[i].mul_pre(fp2_base_x[next]);
+        fp2_dbl_x[i] = fp12_policy_type::fp2_dbl::mul_pre(fp2_base_x[i], fp2_base_y[i]);
+        fp2_dbl_y[i] = fp12_policy_type::fp2_dbl::mul_pre(fp2_base_y[i], fp2_base_x[next]);
         fp6_dbl_x[i] = fp6_dbl_type::mul_pre<false>(fp6_base_x[i], fp6_base_y[i]);
         fp6_dbl_y[i] = fp6_dbl_type::mul_pre<false>(fp6_base_y[i], fp6_base_x[next]);
     }
@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp2 pre mul", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
-        fp2_pre_acc = fp2_base_x[idx].mul_pre(fp2_base_y[idx]);
+        fp2_pre_acc = fp12_policy_type::fp2_dbl::mul_pre(fp2_base_x[idx], fp2_base_y[idx]);
         do_not_optimize(&fp2_pre_acc);
     }));
 
@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp2 lazy mul", run_stage(iters, warmup, [&](std::size_t i) {
         const std::size_t idx = i % poolN;
-        fp2_pre_acc = fp2_base_x[idx].mul_pre(fp2_base_y[idx]);
+        fp2_pre_acc = fp12_policy_type::fp2_dbl::mul_pre(fp2_base_x[idx], fp2_base_y[idx]);
         fp2_pre_acc.reduce();
         fp2_acc = fp2_pre_acc.to_non_residue();
         do_not_optimize(&fp2_acc);
