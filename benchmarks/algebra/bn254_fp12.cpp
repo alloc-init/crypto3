@@ -36,6 +36,7 @@ using fp12_fast_type =
 using fp2_base_type = typename fp12_fast_type::fp2_base;
 using fp6_base_type = typename fp12_fast_type::fp6_base;
 using fp6_dbl_type = typename fp12_fast_type::fp6_dbl;
+namespace limb_ops = nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops;
 
 static std::uint64_t now_ns() {
     using clock = std::chrono::steady_clock;
@@ -108,7 +109,10 @@ int main(int argc, char** argv) {
     std::vector<fp2_base_type> fp2_base_y(poolN);
     std::vector<fp6_base_type> fp6_base_x(poolN);
     std::vector<fp6_base_type> fp6_base_y(poolN);
+    std::vector<typename fp12_fast_type::base_limb_storage_type> fp_sum_x(poolN);
+    std::vector<typename fp12_fast_type::base_limb_storage_type> fp_sum_y(poolN);
     std::vector<typename fp12_fast_type::lazy_limb_storage_type> fp_products(poolN);
+    std::vector<typename fp12_fast_type::lazy_limb_storage_type> fp_sum_products(poolN);
     std::vector<typename fp12_fast_type::fp_dbl> fp_dbl_x(poolN);
     std::vector<typename fp12_fast_type::fp_dbl> fp_dbl_y(poolN);
     std::vector<typename fp12_fast_type::fp2_dbl> fp2_dbl_x(poolN);
@@ -125,8 +129,8 @@ int main(int argc, char** argv) {
         fp6ys[i] = nil::crypto3::algebra::random_element<fp6_type>(rng);
         xs[i] = nil::crypto3::algebra::random_element<fp12_type>(rng);
         ys[i] = nil::crypto3::algebra::random_element<fp12_type>(rng);
-        fp_limbs_x[i] = fp12_fast_type::as_base_limbs(fpxs[i]);
-        fp_limbs_y[i] = fp12_fast_type::as_base_limbs(fpys[i]);
+        fp_limbs_x[i] = fp12_fast_type::load_storage(fpxs[i].data.backend().base_data());
+        fp_limbs_y[i] = fp12_fast_type::load_storage(fpys[i].data.backend().base_data());
         fp2_base_x[i] = fp2_base_type(fp2xs[i]);
         fp2_base_y[i] = fp2_base_type(fp2ys[i]);
         fp6_base_x[i] = fp6_base_type(fp6xs[i]);
@@ -134,7 +138,19 @@ int main(int argc, char** argv) {
     }
     for (std::size_t i = 0; i < poolN; ++i) {
         const std::size_t next = (i + 1) % poolN;
+        const std::size_t next2 = (i + 2) % poolN;
+        fp_sum_x[i] = fp_limbs_x[i];
+        fp_sum_y[i] = fp_limbs_y[i];
+        limb_ops::add_limbs(fp_sum_x[i], fp_limbs_y[i]);
+        limb_ops::add_limbs(fp_sum_x[i], fp_limbs_x[next]);
+        limb_ops::add_limbs(fp_sum_x[i], fp_limbs_y[next]);
+        limb_ops::add_limbs(fp_sum_y[i], fp_limbs_x[next]);
+        limb_ops::add_limbs(fp_sum_y[i], fp_limbs_y[next]);
+        limb_ops::add_limbs(fp_sum_y[i], fp_limbs_x[next2]);
+        limb_ops::multiply_4x4(fp_products[i], fp_limbs_x[i], fp_limbs_y[i]);
+        limb_ops::multiply_5x5(fp_sum_products[i], fp_sum_x[i], fp_sum_y[i]);
         fp_dbl_x[i] = fp12_fast_type::fp_dbl(fp_products[i], (i & 1u) != 0u);
+        fp_dbl_y[i] = fp12_fast_type::fp_dbl(fp_sum_products[i], (i & 2u) != 0u);
         fp2_dbl_x[i] = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_x[i], fp2_base_y[i]);
         fp2_dbl_y[i] = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_y[i], fp2_base_x[next]);
         fp6_dbl_x[i] = fp6_dbl_type::mul_pre<false>(fp6_base_x[i], fp6_base_y[i]);
@@ -142,8 +158,7 @@ int main(int argc, char** argv) {
     }
 
     base_value_type fp_acc;
-    typename fp12_fast_type::lazy_limb_storage_type pre_acc;
-    typename fp12_fast_type::base_limb_storage_type redc_acc;
+    typename fp12_fast_type::lazy_limb_storage_type fp_limb_acc;
     typename fp12_fast_type::fp_dbl fp_dbl_acc;
     typename fp12_fast_type::fp2_dbl fp2_pre_acc;
     fp2_value_type fp2_acc;
@@ -158,6 +173,25 @@ int main(int argc, char** argv) {
                     const std::size_t idx = i % poolN;
                     fp_acc = fpxs[idx] * fpys[idx];
                     do_not_optimize(&fp_acc);
+                }));
+
+    print_stage("Fp limb 4x4", run_stage(iters, warmup, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    limb_ops::multiply_4x4(fp_limb_acc, fp_limbs_x[idx], fp_limbs_y[idx]);
+                    do_not_optimize(&fp_limb_acc);
+                }));
+
+    print_stage("Fp limb 5x5", run_stage(iters, warmup, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    limb_ops::multiply_5x5(fp_limb_acc, fp_sum_x[idx], fp_sum_y[idx]);
+                    do_not_optimize(&fp_limb_acc);
+                }));
+
+    print_stage("Fp limb REDC", run_stage(iters, warmup, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    fp_limb_acc = fp_products[idx];
+                    limb_ops::montgomery_reduce_4<base_field_type>(fp_limb_acc);
+                    do_not_optimize(&fp_limb_acc);
                 }));
 
     print_stage("Fp dbl reduce", run_stage(iters, warmup, [&](std::size_t i) {
