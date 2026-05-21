@@ -6,6 +6,7 @@
 
 #include <boost/multiprecision/cpp_int.hpp>
 
+#include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_ops.hpp>
 #include <nil/crypto3/multiprecision/modular/modular_policy_fixed.hpp>
 
 namespace nil {
@@ -155,7 +156,7 @@ namespace nil {
                             }
 
                             fp_dbl &mul_by_9() {
-                                boost::multiprecision::backends::eval_multiply(data, limb_type(9u));
+                                alt_bn128_fp12_limb_ops::multiply_by_limb(data, limb_type(9u));
                                 return *this;
                             }
 
@@ -175,8 +176,7 @@ namespace nil {
                                     // Most tower products multiply values below 4p, so they fit
                                     // in the low four 64-bit limbs. The loose Fp12 cross term has
                                     // a separate five-limb path for its wider Karatsuba sum.
-                                    boost::multiprecision::backends::eval_multiply_4x4(product.data, x.limbs(),
-                                                                                       y.limbs());
+                                    alt_bn128_fp12_limb_ops::multiply_4x4(product.data, x.limbs(), y.limbs());
                                 }
                                 return product;
                             }
@@ -188,8 +188,7 @@ namespace nil {
                                     product.data = x;
                                     boost::multiprecision::backends::eval_multiply(product.data, y);
                                 } else {
-                                    boost::multiprecision::backends::eval_multiply_low_limbs<5u>(product.data,
-                                                                                                 x.limbs(), y.limbs());
+                                    alt_bn128_fp12_limb_ops::multiply_low_limbs<5u>(product.data, x.limbs(), y.limbs());
                                 }
                                 return product;
                             }
@@ -198,7 +197,14 @@ namespace nil {
                                 // Convert a bounded signed pre-REDC expression to reduced Montgomery limbs.
                                 // REDC removes one Montgomery factor; a negative integer representative is
                                 // then mapped to p - reduced, which is the same value modulo p.
-                                base_field_type::modulus_params.get_mod_obj().montgomery_reduce(data);
+                                if constexpr (base_value_limb_count == 4u) {
+                                    if (!alt_bn128_fp12_limb_ops::try_montgomery_reduce_4(
+                                            data, base_field_type::modulus_params.get_mod_obj())) {
+                                        base_field_type::modulus_params.get_mod_obj().montgomery_reduce(data);
+                                    }
+                                } else {
+                                    base_field_type::modulus_params.get_mod_obj().montgomery_reduce(data);
+                                }
                                 if (negative && data.compare(limb_type(0u)) != 0) {
                                     static const base_limb_storage_type modulus_limbs =
                                         backend_to_base_limb_storage(extension_policy::modulus.backend());
