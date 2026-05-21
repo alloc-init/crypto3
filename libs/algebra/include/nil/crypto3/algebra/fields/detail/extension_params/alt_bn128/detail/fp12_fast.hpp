@@ -1,13 +1,10 @@
 #pragma once
 
 #include <array>
-#include <climits>
+#include <cstddef>
 #include <tuple>
 
-#include <boost/multiprecision/cpp_int.hpp>
-
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_ops.hpp>
-#include <nil/crypto3/multiprecision/modular/modular_policy_fixed.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -24,45 +21,99 @@ namespace nil {
                         typedef typename extension_policy::non_residue_type non_residue_type;    // fp2
                         typedef typename extension_policy::underlying_type underlying_type;      // fp6
 
-                        typedef boost::multiprecision::limb_type limb_type;
-                        typedef boost::multiprecision::backends::modular_policy<
-                            typename base_field_type::modular_backend>::Backend_doubled_padded_limbs
-                            padded_limb_storage_type;
+                        // Limb contract with fp12_limb_ops:
+                        // - limb_bits == 64.
+                        // - base_value_limb_count == 4: a normal BN254 Fp residue or modulus value.
+                        // - fp2_sum_limb_count == 5: an Fp2 Karatsuba sum such as (a + b), which may carry once.
+                        // - storage_limb_count == 9: shared storage for base residues and bounded pre-REDC values.
+                        constexpr static const std::size_t limb_bits = alt_bn128_fp12_limb_ops::limb_bits;
+                        constexpr static const std::size_t base_value_limb_count =
+                            alt_bn128_fp12_limb_ops::base_value_limb_count;
+                        constexpr static const std::size_t fp2_sum_limb_count =
+                            alt_bn128_fp12_limb_ops::fp2_sum_limb_count;
+                        constexpr static const std::size_t storage_limb_count =
+                            alt_bn128_fp12_limb_ops::storage_limb_count;
 
-                        // The following aliases are the same padded backend storage.
-                        // base_limb_storage_type means only the low base_value_limb_count limbs carry a base Fp value;
-                        typedef padded_limb_storage_type base_limb_storage_type;
-                        // lazy_limb_storage_type may use up to lazy_product_limb_count limbs for unreduced products and
-                        // tower sums before Montgomery reduction.
-                        typedef padded_limb_storage_type lazy_limb_storage_type;
-
-                        // For BN254 with 64-bit limbs, base_value_limb_count is 4 and lazy_product_limb_count is 9.
-                        constexpr static const size_t limb_bits = sizeof(limb_type) * CHAR_BIT;
-                        constexpr static const size_t base_value_limb_count =
+                        constexpr static const std::size_t field_limb_count =
                             (base_field_type::modulus_bits + limb_bits - 1) / limb_bits;
-                        constexpr static const size_t lazy_product_limb_count =
+                        constexpr static const std::size_t bounded_product_limb_count =
                             (2 * base_field_type::modulus_bits + 32 + limb_bits - 1) / limb_bits;
 
-                        static_assert(padded_limb_storage_type::internal_limb_count >= lazy_product_limb_count,
-                                      "Fp12 lazy product must fit the padded Montgomery reduction backend");
+                        static_assert(limb_bits == 64u, "alt_bn128 fp12 limb ops assume 64-bit limbs");
+                        static_assert(base_value_limb_count == 4u,
+                                      "alt_bn128 fp12 limb ops assume four base-value limbs");
+                        static_assert(fp2_sum_limb_count == 5u,
+                                      "alt_bn128 fp12 limb ops assume five limbs for Fp2 coefficient sums");
+                        static_assert(storage_limb_count == 9u, "alt_bn128 fp12 limb ops assume nine storage limbs");
+                        static_assert(field_limb_count == base_value_limb_count,
+                                      "alt_bn128 fp12 fast path expects four 64-bit base-field limbs");
+                        static_assert(bounded_product_limb_count == storage_limb_count,
+                                      "alt_bn128 fp12 fast path expects nine lazy product limbs");
 
-                        template<typename Backend>
-                        static base_limb_storage_type backend_to_base_limb_storage(const Backend &backend) {
-                            base_limb_storage_type result;
-                            for (size_t i = 0; i < base_value_limb_count && i < backend.size(); ++i) {
-                                result.limbs()[i] = backend.limbs()[i];
+                        // Base Fp values are kept in the nine-limb storage shape so tower additions and lazy products
+                        // use one container type. Only the low four limbs hold the actual base-field value.
+                        typedef alt_bn128_fp12_limb_ops::storage_limb_array base_limb_storage_type;
+                        // Lazy pre-REDC values may use all nine storage limbs before Montgomery reduction.
+                        typedef alt_bn128_fp12_limb_ops::storage_limb_array lazy_limb_storage_type;
+
+                        template<std::size_t LimbCount, typename Backend>
+                        static alt_bn128_fp12_limb_ops::limb_array<LimbCount> load_limbs(const Backend &backend) {
+                            static_assert(Backend::limb_bits == limb_bits,
+                                          "alt_bn128 fp12 fast path expects 64-bit field limbs");
+                            alt_bn128_fp12_limb_ops::limb_array<LimbCount> result = {};
+                            const std::size_t count = backend.size() < LimbCount ? backend.size() : LimbCount;
+                            for (std::size_t i = 0; i < count; ++i) {
+                                result[i] = static_cast<alt_bn128_fp12_limb_ops::limb_type>(backend.limbs()[i]);
                             }
                             return result;
                         }
 
+                        template<std::size_t LimbCount, typename Backend>
+                        static void store_limbs(Backend &backend,
+                                                const alt_bn128_fp12_limb_ops::limb_array<LimbCount> &limbs) {
+                            static_assert(Backend::limb_bits == limb_bits,
+                                          "alt_bn128 fp12 fast path expects 64-bit field limbs");
+                            const std::size_t count = backend.size() < LimbCount ? backend.size() : LimbCount;
+                            for (std::size_t i = 0; i < count; ++i) {
+                                backend.limbs()[i] = limbs[i];
+                            }
+                            backend.zero_after(count);
+                            backend.set_carry(false);
+                            backend.normalize();
+                        }
+
+                        template<typename Backend>
+                        static lazy_limb_storage_type load_storage(const Backend &backend) {
+                            return load_limbs<storage_limb_count>(backend);
+                        }
+
+                        template<typename Backend>
+                        static void store_storage(Backend &backend, const lazy_limb_storage_type &limbs) {
+                            store_limbs(backend, limbs);
+                        }
+
                         static base_limb_storage_type as_base_limbs(const base_value_type &x) {
-                            return backend_to_base_limb_storage(x.data.backend().base_data());
+                            return load_storage(x.data.backend().base_data());
+                        }
+
+                        static base_limb_storage_type modulus_limbs() {
+                            return load_storage(extension_policy::modulus.backend());
+                        }
+
+                        static alt_bn128_fp12_limb_ops::base_value_limb_array modulus_4() {
+                            return load_limbs<base_value_limb_count>(
+                                base_field_type::modulus_params.get_mod_obj().get_mod());
+                        }
+
+                        static alt_bn128_fp12_limb_ops::limb_type p_dash() {
+                            return static_cast<alt_bn128_fp12_limb_ops::limb_type>(
+                                base_field_type::modulus_params.get_mod_obj().get_p_dash());
                         }
 
                         // Lazy, signed, double-width base-Fp value used inside the tower fast path.
                         //
                         // A normal base_value_type is a canonical Montgomery residue x*R mod p in the
-                        // low base_value_limb_count limbs. Multiplying two such residues first produces
+                        // low four limbs. Multiplying two such residues first produces
                         // a double-width integer:
                         //   (x*R) * (y*R) = x*y*R^2.
                         // REDC/Montgomery reduction removes one factor of R and returns x*y*R mod p.
@@ -70,12 +121,12 @@ namespace nil {
                         // The Fp2/Fp6/Fp12 formulas often add or subtract several raw products before
                         // the coefficient is needed as a normal Fp value, for example ac - bd in Fp2.
                         // fp_dbl stores those bounded pre-REDC expressions so the tower can combine
-                        // products first and call REDC only for each final coefficient. The underlying
-                        // backend stores an unsigned magnitude, so `fp_dbl::negative` records the integer
-                        // sign until reduce() maps the signed result back into reduced Montgomery limbs.
+                        // products first and call REDC only for each final coefficient. The limb storage
+                        // stores an unsigned magnitude, so `fp_dbl::negative` records the integer sign
+                        // until reduce() maps the signed result back into reduced Montgomery limbs.
                         struct fp_dbl {
                             // Magnitude of a bounded pre-REDC expression. For BN254 this may occupy up to
-                            // lazy_product_limb_count limbs, while normal Fp values use only the low four.
+                            // nine storage limbs, while normal Fp values use only the low four.
                             lazy_limb_storage_type data = {};
                             // Sign of the integer expression represented by data
                             // Zero is non-negative
@@ -85,7 +136,7 @@ namespace nil {
 
                             explicit fp_dbl(const lazy_limb_storage_type &in_data, bool in_negative = false) :
                                 data(in_data), negative(in_negative) {
-                                if (data.compare(limb_type(0u)) == 0) {
+                                if (alt_bn128_fp12_limb_ops::is_zero(data)) {
                                     // Enforce that 0 is positive
                                     negative = false;
                                 }
@@ -94,7 +145,7 @@ namespace nil {
                             // If this value is not zero, flip the sign
                             fp_dbl operator-() const {
                                 fp_dbl result(*this);
-                                if (result.data.compare(limb_type(0u)) != 0) {
+                                if (!alt_bn128_fp12_limb_ops::is_zero(result.data)) {
                                     result.negative = !result.negative;
                                 }
                                 return result;
@@ -115,11 +166,11 @@ namespace nil {
                             fp_dbl &add_magnitude(const fp_dbl &other, bool other_negative) {
                                 if (negative == other_negative) {
                                     // if they both have the same sign, you can just add
-                                    boost::multiprecision::backends::eval_add(data, other.data);
+                                    alt_bn128_fp12_limb_ops::add_limbs(data, other.data);
                                     return *this;
                                 }
                                 // .. they have different signs
-                                const int cmp = data.compare(other.data);
+                                const int cmp = alt_bn128_fp12_limb_ops::compare_limbs(data, other.data);
                                 if (cmp == 0) {
                                     // same value but different signs, result is 0
                                     data = {};
@@ -129,13 +180,13 @@ namespace nil {
                                 if (cmp > 0) {
                                     // 'this' is greater, subtract the other
                                     // if 'this' is negative, result will be negative, and vice versa
-                                    boost::multiprecision::backends::eval_subtract(data, other.data);
+                                    alt_bn128_fp12_limb_ops::subtract_limbs(data, other.data);
                                     return *this;
                                 }
                                 // .. 'this' is less than 'other' in magnitude
                                 // if 'other' is negative, result will be negative, and vice versa
                                 lazy_limb_storage_type magnitude = other.data;
-                                boost::multiprecision::backends::eval_subtract(magnitude, data);
+                                alt_bn128_fp12_limb_ops::subtract_limbs(magnitude, data);
                                 data = magnitude;
                                 negative = other_negative;
                                 return *this;
@@ -151,12 +202,12 @@ namespace nil {
 
                             fp_dbl doubled() const {
                                 fp_dbl result(*this);
-                                boost::multiprecision::backends::eval_left_shift(result.data, 1u);
+                                alt_bn128_fp12_limb_ops::left_shift_one(result.data);
                                 return result;
                             }
 
                             fp_dbl &mul_by_9() {
-                                alt_bn128_fp12_limb_ops::multiply_by_limb(data, limb_type(9u));
+                                alt_bn128_fp12_limb_ops::multiply_by_limb(data, alt_bn128_fp12_limb_ops::limb_type(9u));
                                 return *this;
                             }
 
@@ -169,47 +220,31 @@ namespace nil {
                             static fp_dbl mul_pre_4limb(const base_limb_storage_type &x,
                                                         const base_limb_storage_type &y) {
                                 fp_dbl product;
-                                if (base_value_limb_count != 4u) {
-                                    product.data = x;
-                                    boost::multiprecision::backends::eval_multiply(product.data, y);
-                                } else {
-                                    // Most tower products multiply values below 4p, so they fit
-                                    // in the low four 64-bit limbs. The loose Fp12 cross term has
-                                    // a separate five-limb path for its wider Karatsuba sum.
-                                    alt_bn128_fp12_limb_ops::multiply_4x4(product.data, x.limbs(), y.limbs());
-                                }
+                                // Most tower products multiply normal base values, so limb_ops reads only
+                                // the low four limbs from each nine-limb storage value.
+                                alt_bn128_fp12_limb_ops::multiply_4x4(product.data, x, y);
                                 return product;
                             }
 
                             static fp_dbl mul_pre_5limb(const base_limb_storage_type &x,
                                                         const base_limb_storage_type &y) {
                                 fp_dbl product;
-                                if (base_value_limb_count != 4u) {
-                                    product.data = x;
-                                    boost::multiprecision::backends::eval_multiply(product.data, y);
-                                } else {
-                                    alt_bn128_fp12_limb_ops::multiply_low_limbs<5u>(product.data, x.limbs(), y.limbs());
-                                }
+                                // The Fp2 Karatsuba cross term multiplies coefficient sums; limb_ops reads
+                                // the low five limbs because each sum may carry once past the four-limb field.
+                                alt_bn128_fp12_limb_ops::multiply_5x5(product.data, x, y);
                                 return product;
                             }
 
                             void reduce() {
-                                // Convert a bounded signed pre-REDC expression to reduced Montgomery limbs.
-                                // REDC removes one Montgomery factor; a negative integer representative is
-                                // then mapped to p - reduced, which is the same value modulo p.
-                                if constexpr (base_value_limb_count == 4u) {
-                                    if (!alt_bn128_fp12_limb_ops::try_montgomery_reduce_4(
-                                            data, base_field_type::modulus_params.get_mod_obj())) {
-                                        base_field_type::modulus_params.get_mod_obj().montgomery_reduce(data);
-                                    }
-                                } else {
-                                    base_field_type::modulus_params.get_mod_obj().montgomery_reduce(data);
-                                }
-                                if (negative && data.compare(limb_type(0u)) != 0) {
-                                    static const base_limb_storage_type modulus_limbs =
-                                        backend_to_base_limb_storage(extension_policy::modulus.backend());
-                                    base_limb_storage_type negated = modulus_limbs;
-                                    boost::multiprecision::backends::eval_subtract(negated, data);
+                                // Convert a bounded signed nine-limb pre-REDC expression to reduced four-limb
+                                // Montgomery limbs. REDC removes one Montgomery factor; a negative integer
+                                // representative is then mapped to p - reduced, which is the same value modulo p.
+                                alt_bn128_fp12_limb_ops::montgomery_reduce_4(data, modulus_4(), p_dash());
+                                if (negative && !alt_bn128_fp12_limb_ops::is_zero(data)) {
+                                    // if this fp_dbl went negative, compute x = p - x
+                                    static const base_limb_storage_type modulus_storage = modulus_limbs();
+                                    base_limb_storage_type negated = modulus_storage;
+                                    alt_bn128_fp12_limb_ops::subtract_limbs(negated, data);
                                     data = negated;
                                 }
                                 negative = false;
@@ -220,10 +255,7 @@ namespace nil {
                                 // base_value_type directly from those limbs to avoid converting them again.
                                 base_value_type out;
                                 typename integral_type::backend_type &backend = out.data.backend().base_data();
-                                for (size_t i = 0; i < base_value_limb_count && i < backend.size(); ++i) {
-                                    backend.limbs()[i] = data.limbs()[i];
-                                }
-                                backend.zero_after(base_value_limb_count);
+                                store_limbs(backend, alt_bn128_fp12_limb_ops::as_base_value_limbs(data));
                                 return out;
                             }
                         };
@@ -238,13 +270,14 @@ namespace nil {
                             fp2_base(const base_limb_storage_type &c0, const base_limb_storage_type &c1) :
                                 data({c0, c1}) {
                             }
+
                             fp2_base(const non_residue_type &x) :
                                 data({as_base_limbs(x.data[0]), as_base_limbs(x.data[1])}) {
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
-                                boost::multiprecision::backends::eval_add(data[0], other.data[0]);
-                                boost::multiprecision::backends::eval_add(data[1], other.data[1]);
+                                alt_bn128_fp12_limb_ops::add_limbs(data[0], other.data[0]);
+                                alt_bn128_fp12_limb_ops::add_limbs(data[1], other.data[1]);
                                 return *this;
                             }
 
@@ -303,8 +336,8 @@ namespace nil {
                                 const fp_dbl bd = fp_dbl::mul_pre_4limb(b, d);
                                 base_limb_storage_type a_plus_b = a;
                                 base_limb_storage_type c_plus_d = c;
-                                boost::multiprecision::backends::eval_add(a_plus_b, b);
-                                boost::multiprecision::backends::eval_add(c_plus_d, d);
+                                alt_bn128_fp12_limb_ops::add_limbs(a_plus_b, b);
+                                alt_bn128_fp12_limb_ops::add_limbs(c_plus_d, d);
                                 result.data[0] = ac;
                                 result.data[0] -= bd;
                                 if constexpr (WideMult) {
