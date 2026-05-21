@@ -19,9 +19,9 @@ namespace nil {
                         typedef BaseField base_field_type;
                         typedef ExtensionParams extension_policy;
                         typedef typename extension_policy::integral_type integral_type;
-                        typedef typename extension_policy::non_residue_type non_residue_type;
-                        typedef typename extension_policy::underlying_type underlying_type;
-                        typedef typename extension_policy::base_value_type base_value_type;
+                        typedef typename extension_policy::base_value_type base_value_type;      // fp
+                        typedef typename extension_policy::non_residue_type non_residue_type;    // fp2
+                        typedef typename extension_policy::underlying_type underlying_type;      // fp6
 
                         typedef boost::multiprecision::limb_type limb_type;
                         typedef boost::multiprecision::backends::modular_policy<
