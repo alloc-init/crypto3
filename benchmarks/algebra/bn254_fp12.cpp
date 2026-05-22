@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
     print_stage("Fp limb REDC", run_stage(iters, warmup, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp_limb_acc = fp_products[idx];
-                    limb_ops::montgomery_reduce_4<base_field_type>(fp_limb_acc);
+                    limb_ops::montgomery_reduce<base_field_type>(fp_limb_acc);
                     do_not_optimize(&fp_limb_acc);
                 }));
 

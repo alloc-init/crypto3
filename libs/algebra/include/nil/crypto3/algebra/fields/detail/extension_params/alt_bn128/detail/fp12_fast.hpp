@@ -177,7 +177,7 @@ namespace nil {
                                 // Convert a bounded signed nine-limb pre-REDC expression to reduced four-limb
                                 // Montgomery limbs. REDC removes one Montgomery factor; a negative integer
                                 // representative is then mapped to p - reduced, which is the same value modulo p.
-                                alt_bn128_fp12_limb_ops::montgomery_reduce_4<base_field_type>(data);
+                                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(data);
                                 if (negative && !alt_bn128_fp12_limb_ops::is_zero(data)) {
                                     // if this fp_dbl went negative, compute x = p - x
                                     static const base_limb_storage_type modulus_storage =
