@@ -19,9 +19,9 @@ namespace nil {
 #error "alt_bn128 fp12 limb ops require unsigned __int128 support"
 #endif
 
-                        const std::size_t limb_bits = sizeof(limb_type) * CHAR_BIT;
-                        const std::size_t base_value_limb_count = 4u;
-                        const std::size_t storage_limb_count = 9u;
+                        const size_t limb_bits = sizeof(limb_type) * CHAR_BIT;
+                        const size_t base_value_limb_count = 4u;
+                        const size_t storage_limb_count = 9u;
 
                         using limb_array = std::array<limb_type, storage_limb_count>;
 
@@ -30,17 +30,17 @@ namespace nil {
                         static limb_array load_limbs(const Backend &backend) {
                             static_assert(Backend::limb_bits == limb_bits,
                                           "alt_bn128 fp12 fast path expects 64-bit field limbs");
+                            static_assert(backend.size() == base_value_limb_count,
+                                          "alt_bn128 fp12 fast path expects 4 64-bit limbs");
                             limb_array result = {};
-                            const std::size_t count =
-                                backend.size() < storage_limb_count ? backend.size() : storage_limb_count;
-                            for (std::size_t i = 0; i < count; ++i) {
+                            for (size_t i = 0; i < base_value_limb_count; i++) {
                                 result[i] = static_cast<limb_type>(backend.limbs()[i]);
                             }
                             return result;
                         }
 
                         bool is_zero(const limb_array &x) noexcept {
-                            for (std::size_t i = 0; i < x.size(); ++i) {
+                            for (size_t i = 0; i < x.size(); i++) {
                                 if (x[i] != 0u) {
                                     return false;
                                 }
@@ -49,12 +49,11 @@ namespace nil {
                         }
 
                         int compare_limbs(const limb_array &x, const limb_array &y) noexcept {
-                            for (std::size_t step = x.size(); step > 0u; --step) {
-                                const std::size_t idx = step - 1u;
-                                if (x[idx] < y[idx]) {
+                            for (int i = x.size() - 1; i >= 0; i--) {
+                                if (x[i] < y[i]) {
                                     return -1;
                                 }
-                                if (x[idx] > y[idx]) {
+                                if (x[i] > y[i]) {
                                     return 1;
                                 }
                             }
@@ -63,17 +62,16 @@ namespace nil {
 
                         void add_limbs(limb_array &result, const limb_array &other) noexcept {
                             limb_type carry = 0u;
-                            for (std::size_t i = 0; i < result.size(); ++i) {
-                                const double_limb_type sum =
-                                    static_cast<double_limb_type>(result[i]) + other[i] + carry;
-                                result[i] = static_cast<limb_type>(sum);
-                                carry = static_cast<limb_type>(sum >> limb_bits);
+                            for (size_t i = 0; i < result.size(); i++) {
+                                const auto sum = (double_limb_type)result[i] + other[i] + carry;
+                                result[i] = (limb_type)sum;
+                                carry = (limb_type)(sum >> limb_bits);
                             }
                         }
 
                         void subtract_limbs(limb_array &result, const limb_array &other) noexcept {
                             limb_type borrow = 0u;
-                            for (std::size_t i = 0; i < result.size(); ++i) {
+                            for (size_t i = 0; i < result.size(); i++) {
                                 const limb_type subtrahend = other[i] + borrow;
                                 const bool subtrahend_carry = subtrahend < other[i];
                                 const limb_type current = result[i];
@@ -84,7 +82,7 @@ namespace nil {
 
                         void left_shift_one(limb_array &result) noexcept {
                             limb_type carry = 0u;
-                            for (std::size_t i = 0; i < result.size(); ++i) {
+                            for (size_t i = 0; i < result.size(); i++) {
                                 const limb_type next_carry = result[i] >> (limb_bits - 1u);
                                 result[i] = (result[i] << 1u) | carry;
                                 carry = next_carry;
@@ -116,7 +114,7 @@ namespace nil {
                         //
                         // After this, acc0/acc1 contain the carry state for the next column and acc2 is clear for
                         // new overflow. This is shared by the fixed 4x4 and 5x5 kernels.
-                        void multiply_emit(limb_array &result, std::size_t idx, limb_type &acc0, limb_type &acc1,
+                        void multiply_emit(limb_array &result, size_t idx, limb_type &acc0, limb_type &acc1,
                                            limb_type &acc2) noexcept {
                             result[idx] = acc0;
                             acc0 = acc1;
@@ -224,7 +222,7 @@ namespace nil {
 
                         void multiply_by_limb(limb_array &result, limb_type value) noexcept {
                             limb_type carry = 0u;
-                            for (std::size_t i = 0; i < result.size(); ++i) {
+                            for (size_t i = 0; i < result.size(); i++) {
                                 const double_limb_type product =
                                     static_cast<double_limb_type>(result[i]) * static_cast<double_limb_type>(value) +
                                     carry;
@@ -234,8 +232,8 @@ namespace nil {
                         }
 
                         bool limbs_ge_modulus_4(const limb_type *x, const limb_type *p) noexcept {
-                            for (std::size_t step = 4u; step > 0u; --step) {
-                                const std::size_t idx = step - 1u;
+                            for (size_t step = 4u; step > 0u; --step) {
+                                const size_t idx = step - 1u;
                                 if (x[idx] < p[idx]) {
                                     return false;
                                 }
@@ -252,7 +250,7 @@ namespace nil {
 
                         void subtract_modulus_4(limb_type *x, const limb_type *p) noexcept {
                             limb_type borrow = 0;
-                            for (std::size_t i = 0; i < 4u; ++i) {
+                            for (size_t i = 0; i < 4u; i++) {
                                 const limb_type subtrahend = p[i] + borrow;
                                 const bool subtrahend_carry = subtrahend < p[i];
                                 const limb_type current = x[i];
@@ -268,11 +266,11 @@ namespace nil {
                             limb_type p_dash = static_cast<limb_type>(Field::modulus_params.get_mod_obj().get_p_dash());
 
                             limb_array t = data;
-                            for (std::size_t i = 0; i < base_value_limb_count; ++i) {
+                            for (size_t i = 0; i < base_value_limb_count; i++) {
                                 const limb_type m = t[i] * p_dash;
                                 limb_type carry = 0;
 
-                                for (std::size_t j = 0; j < base_value_limb_count; ++j) {
+                                for (size_t j = 0; j < base_value_limb_count; ++j) {
                                     const double_limb_type product =
                                         static_cast<double_limb_type>(m) * static_cast<double_limb_type>(p[j]) +
                                         static_cast<double_limb_type>(t[i + j]) + carry;
@@ -280,24 +278,23 @@ namespace nil {
                                     carry = static_cast<limb_type>(product >> limb_bits);
                                 }
 
-                                for (std::size_t idx = i + base_value_limb_count; carry != 0u && idx < t.size();
-                                     ++idx) {
+                                for (size_t idx = i + base_value_limb_count; carry != 0u && idx < t.size(); idx++) {
                                     const double_limb_type sum = static_cast<double_limb_type>(t[idx]) + carry;
                                     t[idx] = static_cast<limb_type>(sum);
                                     carry = static_cast<limb_type>(sum >> limb_bits);
                                 }
                             }
 
-                            for (std::size_t i = 0u;
+                            for (size_t i = 0u;
                                  i < 16u && redc_result_ge_modulus_4(t.data() + base_value_limb_count, p.data());
-                                 ++i) {
+                                 i++) {
                                 subtract_modulus_4(t.data() + base_value_limb_count, p.data());
                             }
 
-                            for (std::size_t i = 0; i < base_value_limb_count; ++i) {
+                            for (size_t i = 0; i < base_value_limb_count; i++) {
                                 data[i] = t[base_value_limb_count + i];
                             }
-                            for (std::size_t i = base_value_limb_count; i < data.size(); i++) {
+                            for (size_t i = base_value_limb_count; i < data.size(); i++) {
                                 data[i] = 0;
                             }
                         }
