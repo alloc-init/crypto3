@@ -22,41 +22,12 @@ namespace nil {
                         const std::size_t limb_bits = sizeof(limb_type) * CHAR_BIT;
                         const std::size_t base_value_limb_count = 4u;
                         const std::size_t storage_limb_count = 9u;
-                        const std::size_t fp2_sum_limb_count = base_value_limb_count + 1u;
 
                         template<std::size_t LimbCount>
                         using limb_array = std::array<limb_type, LimbCount>;
 
                         using base_value_limb_array = limb_array<base_value_limb_count>;
                         using storage_limb_array = limb_array<storage_limb_count>;
-                        using fp2_sum_limb_array = limb_array<fp2_sum_limb_count>;
-                        using fp2_sum_product_limb_array = limb_array<fp2_sum_limb_count * 2u>;
-
-                        template<std::size_t OutputLimbs, std::size_t InputLimbs>
-                        limb_array<OutputLimbs> resize_limbs(const limb_array<InputLimbs> &input) noexcept {
-                            limb_array<OutputLimbs> result = {};
-                            std::size_t count = OutputLimbs < InputLimbs ? OutputLimbs : InputLimbs;
-                            for (std::size_t i = 0; i < count; ++i) {
-                                result[i] = input[i];
-                            }
-                            return result;
-                        }
-
-                        base_value_limb_array as_base_value_limbs(const storage_limb_array &input) noexcept {
-                            return resize_limbs<base_value_limb_count>(input);
-                        }
-
-                        fp2_sum_limb_array as_fp2_sum_limbs(const storage_limb_array &input) noexcept {
-                            return resize_limbs<fp2_sum_limb_count>(input);
-                        }
-
-                        storage_limb_array as_storage_limbs(const base_value_limb_array &input) noexcept {
-                            return resize_limbs<storage_limb_count>(input);
-                        }
-
-                        storage_limb_array as_storage_limbs(const fp2_sum_product_limb_array &input) noexcept {
-                            return resize_limbs<storage_limb_count>(input);
-                        }
 
                         template<std::size_t LimbCount, typename Backend>
                         static alt_bn128_fp12_limb_ops::limb_array<LimbCount> load_limbs(const Backend &backend) {
@@ -70,18 +41,9 @@ namespace nil {
                             return result;
                         }
 
-                        template<std::size_t LimbCount, typename Backend>
-                        static void store_limbs(Backend &backend,
-                                                const alt_bn128_fp12_limb_ops::limb_array<LimbCount> &limbs) {
-                            static_assert(Backend::limb_bits == limb_bits,
-                                          "alt_bn128 fp12 fast path expects 64-bit field limbs");
-                            const std::size_t count = backend.size() < LimbCount ? backend.size() : LimbCount;
-                            for (std::size_t i = 0; i < count; ++i) {
-                                backend.limbs()[i] = limbs[i];
-                            }
-                            backend.zero_after(count);
-                            backend.set_carry(false);
-                            backend.normalize();
+                        template<typename Backend>
+                        static storage_limb_array load_storage(const Backend &backend) {
+                            return alt_bn128_fp12_limb_ops::load_limbs<storage_limb_count>(backend);
                         }
 
                         template<std::size_t LimbCount>
@@ -224,7 +186,7 @@ namespace nil {
                         //
                         // Fp2 Karatsuba sums such as (a + b) can carry once past the four-limb base field value,
                         // so the cross-term product needs a 5x5 kernel. These inputs are bounded by the tower
-                        // formulas, and their product fits in the nine-limb pre-REDC storage used by this fast path.
+                        // formulas, and their product fits the nine-limb pre-REDC storage used by this fast path.
                         void multiply_5x5(storage_limb_array &result, const storage_limb_array &x,
                                           const storage_limb_array &y) noexcept {
                             result = {};
@@ -319,10 +281,9 @@ namespace nil {
 
                         template<class Field>
                         void montgomery_reduce_4(storage_limb_array &data) noexcept {
-                            static base_value_limb_array p =
-                                load_limbs<base_value_limb_count>(Field::modulus_params.get_mod_obj().get_mod());
-                            limb_type p_dash = static_cast<alt_bn128_fp12_limb_ops::limb_type>(
-                                Field::modulus_params.get_mod_obj().get_p_dash());
+                            static storage_limb_array p =
+                                load_limbs<storage_limb_count>(Field::modulus_params.get_mod_obj().get_mod());
+                            limb_type p_dash = static_cast<limb_type>(Field::modulus_params.get_mod_obj().get_p_dash());
 
                             storage_limb_array t = data;
                             for (std::size_t i = 0; i < base_value_limb_count; ++i) {

@@ -24,13 +24,10 @@ namespace nil {
                         // Limb contract with fp12_limb_ops:
                         // - limb_bits == 64.
                         // - base_value_limb_count == 4: a normal BN254 Fp residue or modulus value.
-                        // - fp2_sum_limb_count == 5: an Fp2 Karatsuba sum such as (a + b), which may carry once.
                         // - storage_limb_count == 9: shared storage for base residues and bounded pre-REDC values.
                         constexpr static const std::size_t limb_bits = alt_bn128_fp12_limb_ops::limb_bits;
                         constexpr static const std::size_t base_value_limb_count =
                             alt_bn128_fp12_limb_ops::base_value_limb_count;
-                        constexpr static const std::size_t fp2_sum_limb_count =
-                            alt_bn128_fp12_limb_ops::fp2_sum_limb_count;
                         constexpr static const std::size_t storage_limb_count =
                             alt_bn128_fp12_limb_ops::storage_limb_count;
 
@@ -42,8 +39,6 @@ namespace nil {
                         static_assert(limb_bits == 64u, "alt_bn128 fp12 limb ops assume 64-bit limbs");
                         static_assert(base_value_limb_count == 4u,
                                       "alt_bn128 fp12 limb ops assume four base-value limbs");
-                        static_assert(fp2_sum_limb_count == 5u,
-                                      "alt_bn128 fp12 limb ops assume five limbs for Fp2 coefficient sums");
                         static_assert(storage_limb_count == 9u, "alt_bn128 fp12 limb ops assume nine storage limbs");
                         static_assert(field_limb_count == base_value_limb_count,
                                       "alt_bn128 fp12 fast path expects four 64-bit base-field limbs");
@@ -55,11 +50,6 @@ namespace nil {
                         typedef alt_bn128_fp12_limb_ops::storage_limb_array base_limb_storage_type;
                         // Lazy pre-REDC values may use all nine storage limbs before Montgomery reduction.
                         typedef alt_bn128_fp12_limb_ops::storage_limb_array lazy_limb_storage_type;
-
-                        template<typename Backend>
-                        static lazy_limb_storage_type load_storage(const Backend &backend) {
-                            return alt_bn128_fp12_limb_ops::load_limbs<storage_limb_count>(backend);
-                        }
 
                         // Lazy, signed, double-width base-Fp value used inside the tower fast path.
                         //
@@ -191,7 +181,7 @@ namespace nil {
                                 if (negative && !alt_bn128_fp12_limb_ops::is_zero(data)) {
                                     // if this fp_dbl went negative, compute x = p - x
                                     static const base_limb_storage_type modulus_storage =
-                                        load_storage(extension_policy::modulus.backend());
+                                        alt_bn128_fp12_limb_ops::load_storage(extension_policy::modulus.backend());
                                     base_limb_storage_type negated = modulus_storage;
                                     alt_bn128_fp12_limb_ops::subtract_limbs(negated, data);
                                     data = negated;
@@ -204,13 +194,14 @@ namespace nil {
                                 // base_value_type directly from those limbs to avoid converting them again.
                                 base_value_type out;
                                 typename integral_type::backend_type &backend = out.data.backend().base_data();
-                                alt_bn128_fp12_limb_ops::store_limbs(
-                                    backend, alt_bn128_fp12_limb_ops::as_base_value_limbs(data));
+                                for (std::size_t i = 0; i < backend.size(); ++i) {
+                                    backend.limbs()[i] = data[i];
+                                }
+                                backend.set_carry(false);
+                                backend.normalize();
                                 return out;
                             }
                         };
-
-                        struct fp2_dbl;
 
                         struct fp2_base {
                             std::array<base_limb_storage_type, 2> data;
@@ -222,8 +213,8 @@ namespace nil {
                             }
 
                             fp2_base(const non_residue_type &x) :
-                                data({load_storage(x.data[0].data.backend().base_data()),
-                                      load_storage(x.data[1].data.backend().base_data())}) {
+                                data({alt_bn128_fp12_limb_ops::load_storage(x.data[0].data.backend().base_data()),
+                                      alt_bn128_fp12_limb_ops::load_storage(x.data[1].data.backend().base_data())}) {
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
