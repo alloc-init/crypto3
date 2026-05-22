@@ -148,7 +148,7 @@ namespace nil {
                             }
 
                             fp_dbl &mul_by_9() {
-                                alt_bn128_fp12_limb_ops::multiply_by_limb(data, alt_bn128_fp12_limb_ops::limb_type(9u));
+                                alt_bn128_fp12_limb_ops::multiply_by_limb(data, alt_bn128_fp12_limb_ops::limb(9u));
                                 return *this;
                             }
 
