@@ -47,9 +47,9 @@ namespace nil {
 
                         // Base Fp values are kept in the nine-limb storage shape so tower additions and lazy products
                         // use one container type. Only the low four limbs hold the actual base-field value.
-                        typedef alt_bn128_fp12_limb_ops::storage_limb_array base_limb_storage_type;
+                        typedef alt_bn128_fp12_limb_ops::limb_array base_limb_storage_type;
                         // Lazy pre-REDC values may use all nine storage limbs before Montgomery reduction.
-                        typedef alt_bn128_fp12_limb_ops::storage_limb_array lazy_limb_storage_type;
+                        typedef alt_bn128_fp12_limb_ops::limb_array lazy_limb_storage_type;
 
                         // Lazy, signed, double-width base-Fp value used inside the tower fast path.
                         //
@@ -181,7 +181,7 @@ namespace nil {
                                 if (negative && !alt_bn128_fp12_limb_ops::is_zero(data)) {
                                     // if this fp_dbl went negative, compute x = p - x
                                     static const base_limb_storage_type modulus_storage =
-                                        alt_bn128_fp12_limb_ops::load_storage(extension_policy::modulus.backend());
+                                        alt_bn128_fp12_limb_ops::load_limbs(extension_policy::modulus.backend());
                                     base_limb_storage_type negated = modulus_storage;
                                     alt_bn128_fp12_limb_ops::subtract_limbs(negated, data);
                                     data = negated;
@@ -213,8 +213,8 @@ namespace nil {
                             }
 
                             fp2_base(const non_residue_type &x) :
-                                data({alt_bn128_fp12_limb_ops::load_storage(x.data[0].data.backend().base_data()),
-                                      alt_bn128_fp12_limb_ops::load_storage(x.data[1].data.backend().base_data())}) {
+                                data({alt_bn128_fp12_limb_ops::load_limbs(x.data[0].data.backend().base_data()),
+                                      alt_bn128_fp12_limb_ops::load_limbs(x.data[1].data.backend().base_data())}) {
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {

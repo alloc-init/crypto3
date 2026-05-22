@@ -129,8 +129,8 @@ int main(int argc, char** argv) {
         fp6ys[i] = nil::crypto3::algebra::random_element<fp6_type>(rng);
         xs[i] = nil::crypto3::algebra::random_element<fp12_type>(rng);
         ys[i] = nil::crypto3::algebra::random_element<fp12_type>(rng);
-        fp_limbs_x[i] = limb_ops::load_storage(fpxs[i].data.backend().base_data());
-        fp_limbs_y[i] = limb_ops::load_storage(fpys[i].data.backend().base_data());
+        fp_limbs_x[i] = limb_ops::load_limbs(fpxs[i].data.backend().base_data());
+        fp_limbs_y[i] = limb_ops::load_limbs(fpys[i].data.backend().base_data());
         fp2_base_x[i] = fp2_base_type(fp2xs[i]);
         fp2_base_y[i] = fp2_base_type(fp2ys[i]);
         fp6_base_x[i] = fp6_base_type(fp6xs[i]);

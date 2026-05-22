@@ -23,32 +23,24 @@ namespace nil {
                         const std::size_t base_value_limb_count = 4u;
                         const std::size_t storage_limb_count = 9u;
 
-                        template<std::size_t LimbCount>
-                        using limb_array = std::array<limb_type, LimbCount>;
+                        using limb_array = std::array<limb_type, storage_limb_count>;
 
-                        using base_value_limb_array = limb_array<base_value_limb_count>;
-                        using storage_limb_array = limb_array<storage_limb_count>;
-
-                        template<std::size_t LimbCount, typename Backend>
-                        static alt_bn128_fp12_limb_ops::limb_array<LimbCount> load_limbs(const Backend &backend) {
+                        // Loads limbs from a multiprecision backend value
+                        template<typename Backend>
+                        static limb_array load_limbs(const Backend &backend) {
                             static_assert(Backend::limb_bits == limb_bits,
                                           "alt_bn128 fp12 fast path expects 64-bit field limbs");
-                            alt_bn128_fp12_limb_ops::limb_array<LimbCount> result = {};
-                            const std::size_t count = backend.size() < LimbCount ? backend.size() : LimbCount;
+                            limb_array result = {};
+                            const std::size_t count =
+                                backend.size() < storage_limb_count ? backend.size() : storage_limb_count;
                             for (std::size_t i = 0; i < count; ++i) {
-                                result[i] = static_cast<alt_bn128_fp12_limb_ops::limb_type>(backend.limbs()[i]);
+                                result[i] = static_cast<limb_type>(backend.limbs()[i]);
                             }
                             return result;
                         }
 
-                        template<typename Backend>
-                        static storage_limb_array load_storage(const Backend &backend) {
-                            return alt_bn128_fp12_limb_ops::load_limbs<storage_limb_count>(backend);
-                        }
-
-                        template<std::size_t LimbCount>
-                        bool is_zero(const limb_array<LimbCount> &x) noexcept {
-                            for (std::size_t i = 0; i < LimbCount; ++i) {
+                        bool is_zero(const limb_array &x) noexcept {
+                            for (std::size_t i = 0; i < x.size(); ++i) {
                                 if (x[i] != 0u) {
                                     return false;
                                 }
@@ -56,9 +48,8 @@ namespace nil {
                             return true;
                         }
 
-                        template<std::size_t LimbCount>
-                        int compare_limbs(const limb_array<LimbCount> &x, const limb_array<LimbCount> &y) noexcept {
-                            for (std::size_t step = LimbCount; step > 0u; --step) {
+                        int compare_limbs(const limb_array &x, const limb_array &y) noexcept {
+                            for (std::size_t step = x.size(); step > 0u; --step) {
                                 const std::size_t idx = step - 1u;
                                 if (x[idx] < y[idx]) {
                                     return -1;
@@ -70,10 +61,9 @@ namespace nil {
                             return 0;
                         }
 
-                        template<std::size_t LimbCount>
-                        void add_limbs(limb_array<LimbCount> &result, const limb_array<LimbCount> &other) noexcept {
+                        void add_limbs(limb_array &result, const limb_array &other) noexcept {
                             limb_type carry = 0u;
-                            for (std::size_t i = 0; i < LimbCount; ++i) {
+                            for (std::size_t i = 0; i < result.size(); ++i) {
                                 const double_limb_type sum =
                                     static_cast<double_limb_type>(result[i]) + other[i] + carry;
                                 result[i] = static_cast<limb_type>(sum);
@@ -81,11 +71,9 @@ namespace nil {
                             }
                         }
 
-                        template<std::size_t LimbCount>
-                        void subtract_limbs(limb_array<LimbCount> &result,
-                                            const limb_array<LimbCount> &other) noexcept {
+                        void subtract_limbs(limb_array &result, const limb_array &other) noexcept {
                             limb_type borrow = 0u;
-                            for (std::size_t i = 0; i < LimbCount; ++i) {
+                            for (std::size_t i = 0; i < result.size(); ++i) {
                                 const limb_type subtrahend = other[i] + borrow;
                                 const bool subtrahend_carry = subtrahend < other[i];
                                 const limb_type current = result[i];
@@ -94,10 +82,9 @@ namespace nil {
                             }
                         }
 
-                        template<std::size_t LimbCount>
-                        void left_shift_one(limb_array<LimbCount> &result) noexcept {
+                        void left_shift_one(limb_array &result) noexcept {
                             limb_type carry = 0u;
-                            for (std::size_t i = 0; i < LimbCount; ++i) {
+                            for (std::size_t i = 0; i < result.size(); ++i) {
                                 const limb_type next_carry = result[i] >> (limb_bits - 1u);
                                 result[i] = (result[i] << 1u) | carry;
                                 carry = next_carry;
@@ -129,9 +116,8 @@ namespace nil {
                         //
                         // After this, acc0/acc1 contain the carry state for the next column and acc2 is clear for
                         // new overflow. This is shared by the fixed 4x4 and 5x5 kernels.
-                        template<std::size_t LimbCount>
-                        void multiply_emit(limb_array<LimbCount> &result, std::size_t idx, limb_type &acc0,
-                                           limb_type &acc1, limb_type &acc2) noexcept {
+                        void multiply_emit(limb_array &result, std::size_t idx, limb_type &acc0, limb_type &acc1,
+                                           limb_type &acc2) noexcept {
                             result[idx] = acc0;
                             acc0 = acc1;
                             acc1 = acc2;
@@ -142,8 +128,7 @@ namespace nil {
                         //
                         // The result is the full 8-limb product placed in the 9-limb storage shape. This is the
                         // common path for products of ordinary BN254 Fp Montgomery residues.
-                        void multiply_4x4(storage_limb_array &result, const storage_limb_array &x,
-                                          const storage_limb_array &y) noexcept {
+                        void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) noexcept {
                             result = {};
                             limb_type acc0 = 0u;
                             limb_type acc1 = 0u;
@@ -187,8 +172,7 @@ namespace nil {
                         // Fp2 Karatsuba sums such as (a + b) can carry once past the four-limb base field value,
                         // so the cross-term product needs a 5x5 kernel. These inputs are bounded by the tower
                         // formulas, and their product fits the nine-limb pre-REDC storage used by this fast path.
-                        void multiply_5x5(storage_limb_array &result, const storage_limb_array &x,
-                                          const storage_limb_array &y) noexcept {
+                        void multiply_5x5(limb_array &result, const limb_array &x, const limb_array &y) noexcept {
                             result = {};
                             limb_type acc0 = 0u;
                             limb_type acc1 = 0u;
@@ -238,10 +222,9 @@ namespace nil {
                             multiply_emit(result, 8u, acc0, acc1, acc2);
                         }
 
-                        template<std::size_t LimbCount>
-                        void multiply_by_limb(limb_array<LimbCount> &result, limb_type value) noexcept {
+                        void multiply_by_limb(limb_array &result, limb_type value) noexcept {
                             limb_type carry = 0u;
-                            for (std::size_t i = 0; i < LimbCount; ++i) {
+                            for (std::size_t i = 0; i < result.size(); ++i) {
                                 const double_limb_type product =
                                     static_cast<double_limb_type>(result[i]) * static_cast<double_limb_type>(value) +
                                     carry;
@@ -280,12 +263,11 @@ namespace nil {
                         }
 
                         template<class Field>
-                        void montgomery_reduce_4(storage_limb_array &data) noexcept {
-                            static storage_limb_array p =
-                                load_limbs<storage_limb_count>(Field::modulus_params.get_mod_obj().get_mod());
+                        void montgomery_reduce_4(limb_array &data) noexcept {
+                            static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             limb_type p_dash = static_cast<limb_type>(Field::modulus_params.get_mod_obj().get_p_dash());
 
-                            storage_limb_array t = data;
+                            limb_array t = data;
                             for (std::size_t i = 0; i < base_value_limb_count; ++i) {
                                 const limb_type m = t[i] * p_dash;
                                 limb_type carry = 0;
