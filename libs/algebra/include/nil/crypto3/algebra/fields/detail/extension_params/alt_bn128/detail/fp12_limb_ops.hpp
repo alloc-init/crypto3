@@ -34,7 +34,7 @@ namespace nil {
                                           "alt_bn128 fp12 fast path expects 4 64-bit limbs");
                             limb_array result = {};
                             for (size_t i = 0; i < base_value_limb_count; i++) {
-                                result[i] = (limb_type)(backend.limbs()[i]);
+                                result[i] = (limb_type)backend.limbs()[i];
                             }
                             return result;
                         }
@@ -221,8 +221,8 @@ namespace nil {
                             limb_type carry = 0u;
                             for (size_t i = 0; i < result.size(); i++) {
                                 const double_limb_type product =
-                                    (double_limb_type)(result[i]) * (double_limb_type)(value) + carry;
-                                result[i] = (limb_type)(product);
+                                    (double_limb_type)result[i] * (double_limb_type)value + carry;
+                                result[i] = (limb_type)product;
                                 carry = (limb_type)(product >> limb_bits);
                             }
                         }
@@ -259,7 +259,7 @@ namespace nil {
                         template<class Field>
                         void montgomery_reduce_4(limb_array &data) noexcept {
                             static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                            limb_type p_dash = (limb_type)(Field::modulus_params.get_mod_obj().get_p_dash());
+                            limb_type p_dash = (limb_type)Field::modulus_params.get_mod_obj().get_p_dash();
 
                             limb_array t = data;
                             for (size_t i = 0; i < base_value_limb_count; i++) {
@@ -267,15 +267,15 @@ namespace nil {
                                 limb_type carry = 0;
 
                                 for (size_t j = 0; j < base_value_limb_count; ++j) {
-                                    const double_limb_type product = (double_limb_type)(m) * (double_limb_type)(p[j]) +
-                                                                     (double_limb_type)(t[i + j]) + carry;
-                                    t[i + j] = (limb_type)(product);
+                                    const double_limb_type product = (double_limb_type)m * (double_limb_type)p[j] +
+                                                                     (double_limb_type)t[i + j] + carry;
+                                    t[i + j] = (limb_type)product;
                                     carry = (limb_type)(product >> limb_bits);
                                 }
 
                                 for (size_t idx = i + base_value_limb_count; carry != 0u && idx < t.size(); idx++) {
-                                    const double_limb_type sum = (double_limb_type)(t[idx]) + carry;
-                                    t[idx] = (limb_type)(sum);
+                                    const double_limb_type sum = (double_limb_type)t[idx] + carry;
+                                    t[idx] = (limb_type)sum;
                                     carry = (limb_type)(sum >> limb_bits);
                                 }
                             }
