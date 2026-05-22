@@ -89,6 +89,15 @@ namespace nil {
                             }
                         }
 
+                        void multiply_by_limb(limb_array &result, limb value) {
+                            limb carry = 0u;
+                            for (size_t i = 0; i < result.size(); i++) {
+                                const wide_limb product = (wide_limb)result[i] * (wide_limb)value + carry;
+                                result[i] = (limb)product;
+                                carry = (limb)(product >> limb_bits);
+                            }
+                        }
+
                         // Add one limb product into the current Comba column accumulator.
                         //
                         // acc0 holds the limb being emitted for the current output column, acc1 holds the next
@@ -219,30 +228,21 @@ namespace nil {
                             multiply_emit(result, 8u, acc0, acc1, acc2);
                         }
 
-                        void multiply_by_limb(limb_array &result, limb value) {
-                            limb carry = 0u;
-                            for (size_t i = 0; i < result.size(); i++) {
-                                const wide_limb product = (wide_limb)result[i] * (wide_limb)value + carry;
-                                result[i] = (limb)product;
-                                carry = (limb)(product >> limb_bits);
-                            }
-                        }
-
-                        bool limbs_ge_modulus_4(const limb *x, const limb *p) {
-                            for (size_t step = 4u; step > 0u; --step) {
-                                const size_t idx = step - 1u;
-                                if (x[idx] < p[idx]) {
-                                    return false;
+                        bool ge_modulus_4(const limb *x, const limb *p) {
+                            if (x[4] != 0u) {
+                                // p has 4 limbs, so if x has a nonzero 5th digit, it is greater
+                                return true;
+                            } else {
+                                for (int i = 4; i >= 0; i--) {
+                                    if (x[i] < p[i]) {
+                                        return false;
+                                    }
+                                    if (x[i] > p[i]) {
+                                        return true;
+                                    }
                                 }
-                                if (x[idx] > p[idx]) {
-                                    return true;
-                                }
+                                return true;
                             }
-                            return true;
-                        }
-
-                        bool redc_result_ge_modulus_4(const limb *x, const limb *p) {
-                            return x[4] != 0u || limbs_ge_modulus_4(x, p);
                         }
 
                         void subtract_modulus_4(limb *x, const limb *p) {
@@ -281,8 +281,7 @@ namespace nil {
                                 }
                             }
 
-                            for (size_t i = 0u;
-                                 i < 16u && redc_result_ge_modulus_4(t.data() + base_value_limb_count, p.data());
+                            for (size_t i = 0u; i < 16u && ge_modulus_4(t.data() + base_value_limb_count, p.data());
                                  i++) {
                                 subtract_modulus_4(t.data() + base_value_limb_count, p.data());
                             }
