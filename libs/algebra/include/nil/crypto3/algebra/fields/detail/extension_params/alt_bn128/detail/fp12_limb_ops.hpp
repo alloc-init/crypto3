@@ -64,18 +64,43 @@ namespace nil {
                             return 0;
                         }
 
+#if defined(__x86_64__) && defined(__ADX__)
+                        inline unsigned char addcarry_limb(unsigned char carry, limb x, limb y, limb &result) {
+                            static_assert(sizeof(unsigned long long) == sizeof(limb),
+                                          "x86 addcarry path expects 64-bit unsigned long long");
+                            unsigned long long out = 0u;
+                            carry = _addcarryx_u64(carry, static_cast<unsigned long long>(x),
+                                                   static_cast<unsigned long long>(y), &out);
+                            result = static_cast<limb>(out);
+                            return carry;
+                        }
+#endif
+
+#if defined(__x86_64__) && defined(__BMI2__)
+                        inline limb multiply_limb(limb x, limb y, limb &high) {
+                            static_assert(sizeof(unsigned long long) == sizeof(limb),
+                                          "x86 mulx path expects 64-bit unsigned long long");
+                            unsigned long long high_out = 0u;
+                            const unsigned long long low =
+                                _mulx_u64(static_cast<unsigned long long>(x), static_cast<unsigned long long>(y),
+                                          &high_out);
+                            high = static_cast<limb>(high_out);
+                            return static_cast<limb>(low);
+                        }
+#endif
+
                         inline void add_limbs(limb_array &result, const limb_array &x, const limb_array &y) {
 #if defined(__x86_64__) && defined(__ADX__)
                             unsigned char carry = 0;
-                            carry = _addcarryx_u64(carry, x[0], y[0], &result[0]);
-                            carry = _addcarryx_u64(carry, x[1], y[1], &result[1]);
-                            carry = _addcarryx_u64(carry, x[2], y[2], &result[2]);
-                            carry = _addcarryx_u64(carry, x[3], y[3], &result[3]);
-                            carry = _addcarryx_u64(carry, x[4], y[4], &result[4]);
-                            carry = _addcarryx_u64(carry, x[5], y[5], &result[5]);
-                            carry = _addcarryx_u64(carry, x[6], y[6], &result[6]);
-                            carry = _addcarryx_u64(carry, x[7], y[7], &result[7]);
-                            _addcarryx_u64(carry, x[8], y[8], &result[8]);
+                            carry = addcarry_limb(carry, x[0], y[0], result[0]);
+                            carry = addcarry_limb(carry, x[1], y[1], result[1]);
+                            carry = addcarry_limb(carry, x[2], y[2], result[2]);
+                            carry = addcarry_limb(carry, x[3], y[3], result[3]);
+                            carry = addcarry_limb(carry, x[4], y[4], result[4]);
+                            carry = addcarry_limb(carry, x[5], y[5], result[5]);
+                            carry = addcarry_limb(carry, x[6], y[6], result[6]);
+                            carry = addcarry_limb(carry, x[7], y[7], result[7]);
+                            addcarry_limb(carry, x[8], y[8], result[8]);
 #else
                             limb carry = 0u;
                             for (size_t i = 0; i < result.size(); i++) {
@@ -121,7 +146,14 @@ namespace nil {
                         // carry limb, and acc2 collects overflow from acc1. Each x*y product is 128 bits, so adding
                         // its low half to acc0 and high half to acc1 lets a column accumulate several partial
                         // products before multiply_emit advances to the next column.
-                        void multiply_partial(limb &acc0, limb &acc1, limb &acc2, limb x, limb y) {
+                        inline void multiply_partial(limb &acc0, limb &acc1, limb &acc2, limb x, limb y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+                            limb product_high = 0u;
+                            const limb product_low = multiply_limb(x, y, product_high);
+                            unsigned char carry = addcarry_limb(0u, acc0, product_low, acc0);
+                            carry = addcarry_limb(carry, acc1, product_high, acc1);
+                            acc2 += (limb)carry;
+#else
                             // compute the base product x * y
                             const wide_limb product = (wide_limb)x * y;
                             // add the low bits of the new product to the lowest accumulator
@@ -134,6 +166,7 @@ namespace nil {
                             acc1 = (limb)sum1;
                             // finally, add any overflow from the middle accumulator to the high accumulator
                             acc2 += (limb)(sum1 >> limb_bits);
+#endif
                         }
 
                         // Emit the completed low limb for one output column and shift the accumulator forward.
