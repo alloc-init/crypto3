@@ -1,0 +1,40 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "BN254 fp12 asm benchmark (gdb)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/benchmarks/algebra_bn254_fp12_asm_benchmark",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "Build BN254 fp12 asm benchmark",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Use Intel assembly syntax",
+                    "text": "set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "BN254 fp12 asm benchmark (lldb)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/benchmarks/algebra_bn254_fp12_asm_benchmark",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build BN254 fp12 asm benchmark",
+            "stopOnEntry": false
+        }
+    ]
+}

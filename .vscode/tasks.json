@@ -1,0 +1,54 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Configure crypto3 benchmarks",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S",
+                "${workspaceFolder}",
+                "-B",
+                "${workspaceFolder}/build",
+                "-DBUILD_CRYPTO3_BENCH_TESTS=ON",
+                "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+                "-DCMAKE_BUILD_TYPE=Release"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Build BN254 fp12 asm benchmark",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "${workspaceFolder}/build",
+                "--target",
+                "algebra_bn254_fp12_asm_benchmark",
+                "--parallel",
+                "8"
+            ],
+            "dependsOn": "Configure crypto3 benchmarks",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Generate BN254 fp12 assembly",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "${workspaceFolder}/build",
+                "--target",
+                "algebra_bn254_fp12_asm_assembly",
+                "--parallel",
+                "8"
+            ],
+            "dependsOn": "Configure crypto3 benchmarks",
+            "problemMatcher": "$gcc"
+        }
+    ]
+}
