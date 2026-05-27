@@ -134,7 +134,7 @@ namespace nil {
                         //
                         // The result is the full 8-limb product placed in the 9-limb storage shape. This is the
                         // common path for products of ordinary BN254 Fp Montgomery residues.
-                        void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
+                        void multiply_4x4_portable(limb_array &result, const limb_array &x, const limb_array &y) {
                             result = {};
                             limb acc0 = 0u;
                             limb acc1 = 0u;
@@ -171,6 +171,29 @@ namespace nil {
                             multiply_emit(result, 6u, acc0, acc1, acc2);
                             result[7] = acc0;
                             result[8] = acc1;
+                        }
+
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
+                        inline void multiply_4x4_x86_bmi2_adx(limb_array &result, const limb_array &x,
+                                                              const limb_array &y) {
+                            limb *r = result.data();
+                            const limb *xp = x.data();
+                            const limb *yp = y.data();
+
+                            // asm volatile(
+                            //     // full mulx/adcx/adox Comba kernel here
+                            //     :
+                            //     : [r] "r"(r), [x] "r"(xp), [y] "r"(yp)
+                            //     : "rax", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "cc", "memory");
+                        }
+#endif
+
+                        inline void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
+                            multiply_4x4_x86_bmi2_adx(result, x, y);
+#else
+                            multiply_4x4_portable(result, x, y);
+#endif
                         }
 
                         // Multiply two Fp2-sum-width values using their low five limbs.
