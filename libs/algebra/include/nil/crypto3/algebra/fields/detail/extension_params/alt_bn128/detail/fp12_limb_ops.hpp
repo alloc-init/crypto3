@@ -69,12 +69,12 @@ namespace nil {
                             }
                         }
 
-                        void subtract_limbs(limb_array &result, const limb_array &other) {
+                        void subtract_limbs(limb_array &result, const limb_array &x, const limb_array &y) {
                             limb borrow = 0u;
                             for (size_t i = 0; i < result.size(); i++) {
-                                const limb subtrahend = other[i] + borrow;
-                                const bool subtrahend_carry = subtrahend < other[i];
-                                const limb current = result[i];
+                                const limb subtrahend = y[i] + borrow;
+                                const bool subtrahend_carry = subtrahend < y[i];
+                                const limb current = x[i];
                                 result[i] = current - subtrahend;
                                 borrow = (subtrahend_carry || current < subtrahend) ? 1u : 0u;
                             }

@@ -121,13 +121,13 @@ namespace nil {
                                 if (cmp > 0) {
                                     // 'this' is greater, subtract the other
                                     // if 'this' is negative, result will be negative, and vice versa
-                                    alt_bn128_fp12_limb_ops::subtract_limbs(data, other.data);
+                                    alt_bn128_fp12_limb_ops::subtract_limbs(data, data, other.data);
                                     return *this;
                                 }
                                 // .. 'this' is less than 'other' in magnitude
                                 // if 'other' is negative, result will be negative, and vice versa
-                                lazy_limb_storage_type magnitude = other.data;
-                                alt_bn128_fp12_limb_ops::subtract_limbs(magnitude, data);
+                                lazy_limb_storage_type magnitude;
+                                alt_bn128_fp12_limb_ops::subtract_limbs(magnitude, other.data, data);
                                 data = magnitude;
                                 negative = other_negative;
                                 return *this;
@@ -180,11 +180,9 @@ namespace nil {
                                 alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(data);
                                 if (negative && !alt_bn128_fp12_limb_ops::is_zero(data)) {
                                     // if this fp_dbl went negative, compute x = p - x
-                                    static const base_limb_storage_type modulus_storage =
+                                    static const base_limb_storage_type mod =
                                         alt_bn128_fp12_limb_ops::load_limbs(extension_policy::modulus.backend());
-                                    base_limb_storage_type negated = modulus_storage;
-                                    alt_bn128_fp12_limb_ops::subtract_limbs(negated, data);
-                                    data = negated;
+                                    alt_bn128_fp12_limb_ops::subtract_limbs(data, mod, data);
                                 }
                                 negative = false;
                             }
