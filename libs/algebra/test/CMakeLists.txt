@@ -57,6 +57,7 @@ set(RUNTIME_TESTS_NAMES
         "short_weierstrass_coordinates"
         "curves_static"
         "fields"
+        "bn254_fp12"
         "fields_static"
         "pairing"
         "type_traits"
