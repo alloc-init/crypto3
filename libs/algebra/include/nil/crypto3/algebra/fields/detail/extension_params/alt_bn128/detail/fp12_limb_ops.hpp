@@ -5,6 +5,10 @@
 #include <cstddef>
 #include <cstdint>
 
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+#include <immintrin.h>
+#endif
+
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -60,13 +64,26 @@ namespace nil {
                             return 0;
                         }
 
-                        void add_limbs(limb_array &result, const limb_array &x, const limb_array &y) {
+                        inline void add_limbs(limb_array &result, const limb_array &x, const limb_array &y) {
+#if defined(__x86_64__) && defined(__ADX__)
+                            unsigned char carry = 0;
+                            carry = _addcarryx_u64(carry, x[0], y[0], &result[0]);
+                            carry = _addcarryx_u64(carry, x[1], y[1], &result[1]);
+                            carry = _addcarryx_u64(carry, x[2], y[2], &result[2]);
+                            carry = _addcarryx_u64(carry, x[3], y[3], &result[3]);
+                            carry = _addcarryx_u64(carry, x[4], y[4], &result[4]);
+                            carry = _addcarryx_u64(carry, x[5], y[5], &result[5]);
+                            carry = _addcarryx_u64(carry, x[6], y[6], &result[6]);
+                            carry = _addcarryx_u64(carry, x[7], y[7], &result[7]);
+                            _addcarryx_u64(carry, x[8], y[8], &result[8]);
+#else
                             limb carry = 0u;
                             for (size_t i = 0; i < result.size(); i++) {
                                 const auto sum = (wide_limb)x[i] + y[i] + carry;
                                 result[i] = (limb)sum;
                                 carry = (limb)(sum >> limb_bits);
                             }
+#endif
                         }
 
                         void subtract_limbs(limb_array &result, const limb_array &x, const limb_array &y) {
