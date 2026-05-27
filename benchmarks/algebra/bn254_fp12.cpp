@@ -141,12 +141,12 @@ int main(int argc, char** argv) {
         const std::size_t next2 = (i + 2) % poolN;
         fp_sum_x[i] = fp_limbs_x[i];
         fp_sum_y[i] = fp_limbs_y[i];
-        limb_ops::add_limbs(fp_sum_x[i], fp_limbs_y[i]);
-        limb_ops::add_limbs(fp_sum_x[i], fp_limbs_x[next]);
-        limb_ops::add_limbs(fp_sum_x[i], fp_limbs_y[next]);
-        limb_ops::add_limbs(fp_sum_y[i], fp_limbs_x[next]);
-        limb_ops::add_limbs(fp_sum_y[i], fp_limbs_y[next]);
-        limb_ops::add_limbs(fp_sum_y[i], fp_limbs_x[next2]);
+        limb_ops::add_limbs(fp_sum_x[i], fp_sum_x[i], fp_limbs_y[i]);
+        limb_ops::add_limbs(fp_sum_x[i], fp_sum_x[i], fp_limbs_x[next]);
+        limb_ops::add_limbs(fp_sum_x[i], fp_sum_x[i], fp_limbs_y[next]);
+        limb_ops::add_limbs(fp_sum_y[i], fp_sum_y[i], fp_limbs_x[next]);
+        limb_ops::add_limbs(fp_sum_y[i], fp_sum_y[i], fp_limbs_y[next]);
+        limb_ops::add_limbs(fp_sum_y[i], fp_sum_y[i], fp_limbs_x[next2]);
         limb_ops::multiply_4x4(fp_products[i], fp_limbs_x[i], fp_limbs_y[i]);
         limb_ops::multiply_5x5(fp_sum_products[i], fp_sum_x[i], fp_sum_y[i]);
         fp_dbl_x[i] = fp12_fast_type::fp_dbl(fp_products[i], (i & 1u) != 0u);
@@ -187,6 +187,12 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp_limb_acc);
                 }));
 
+    print_stage("Fp limb add", run_stage(iters, warmup, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    limb_ops::add_limbs(fp_limb_acc, fp_products[idx], fp_sum_products[idx]);
+                    do_not_optimize(&fp_limb_acc);
+                }));
+
     print_stage("Fp limb REDC", run_stage(iters, warmup, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp_limb_acc = fp_products[idx];
@@ -205,6 +211,13 @@ int main(int argc, char** argv) {
     print_stage("Fp dbl copy", run_stage(iters, warmup, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp_dbl_acc = fp_dbl_x[idx];
+                    do_not_optimize(&fp_dbl_acc);
+                }));
+
+    print_stage("Fp dbl add_magnitude", run_stage(iters, warmup, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    fp_dbl_acc = fp_dbl_x[idx];
+                    fp_dbl_acc.add_magnitude(fp_dbl_y[idx], fp_dbl_y[idx].negative);
                     do_not_optimize(&fp_dbl_acc);
                 }));
 

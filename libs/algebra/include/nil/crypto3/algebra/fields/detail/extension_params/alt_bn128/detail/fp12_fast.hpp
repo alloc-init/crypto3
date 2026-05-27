@@ -107,7 +107,7 @@ namespace nil {
                             fp_dbl &add_magnitude(const fp_dbl &other, bool other_negative) {
                                 if (negative == other_negative) {
                                     // if they both have the same sign, you can just add
-                                    alt_bn128_fp12_limb_ops::add_limbs(data, other.data);
+                                    alt_bn128_fp12_limb_ops::add_limbs(data, data, other.data);
                                     return *this;
                                 }
                                 // .. they have different signs
@@ -126,9 +126,7 @@ namespace nil {
                                 }
                                 // .. 'this' is less than 'other' in magnitude
                                 // if 'other' is negative, result will be negative, and vice versa
-                                lazy_limb_storage_type magnitude;
-                                alt_bn128_fp12_limb_ops::subtract_limbs(magnitude, other.data, data);
-                                data = magnitude;
+                                alt_bn128_fp12_limb_ops::subtract_limbs(data, other.data, data);
                                 negative = other_negative;
                                 return *this;
                             }
@@ -216,8 +214,8 @@ namespace nil {
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
-                                alt_bn128_fp12_limb_ops::add_limbs(data[0], other.data[0]);
-                                alt_bn128_fp12_limb_ops::add_limbs(data[1], other.data[1]);
+                                alt_bn128_fp12_limb_ops::add_limbs(data[0], data[0], other.data[0]);
+                                alt_bn128_fp12_limb_ops::add_limbs(data[1], data[1], other.data[1]);
                                 return *this;
                             }
 
@@ -274,10 +272,9 @@ namespace nil {
                                 const base_limb_storage_type &d = y.data[1];
                                 const fp_dbl ac = fp_dbl::mul_pre(a, c);
                                 const fp_dbl bd = fp_dbl::mul_pre(b, d);
-                                base_limb_storage_type a_plus_b = a;
-                                base_limb_storage_type c_plus_d = c;
-                                alt_bn128_fp12_limb_ops::add_limbs(a_plus_b, b);
-                                alt_bn128_fp12_limb_ops::add_limbs(c_plus_d, d);
+                                base_limb_storage_type a_plus_b, c_plus_d;
+                                alt_bn128_fp12_limb_ops::add_limbs(a_plus_b, a, b);
+                                alt_bn128_fp12_limb_ops::add_limbs(c_plus_d, c, d);
                                 result.data[0] = ac;
                                 result.data[0] -= bd;
                                 result.data[1] = fp_dbl::template mul_pre<Wide>(a_plus_b, c_plus_d);

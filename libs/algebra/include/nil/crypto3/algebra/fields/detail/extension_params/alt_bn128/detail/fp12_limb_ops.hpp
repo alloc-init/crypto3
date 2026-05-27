@@ -60,10 +60,10 @@ namespace nil {
                             return 0;
                         }
 
-                        void add_limbs(limb_array &result, const limb_array &other) {
+                        void add_limbs(limb_array &result, const limb_array &x, const limb_array &y) {
                             limb carry = 0u;
                             for (size_t i = 0; i < result.size(); i++) {
-                                const auto sum = (wide_limb)result[i] + other[i] + carry;
+                                const auto sum = (wide_limb)x[i] + y[i] + carry;
                                 result[i] = (limb)sum;
                                 carry = (limb)(sum >> limb_bits);
                             }
