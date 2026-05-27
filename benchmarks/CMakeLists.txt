@@ -114,6 +114,10 @@ foreach(BENCHMARK_NAME ${STANDALONE_BENCHMARK_NAMES})
     define_standalone_benchmark(${BENCHMARK_NAME})
 endforeach()
 
+if (CMAKE_TARGET_ARCHITECTURE MATCHES "x86|X86|amd64|AMD64")
+    target_compile_options(algebra_bn254_fp12_asm_benchmark PRIVATE "-march=native")
+endif()
+
 set(BN254_FP12_ASM_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/algebra/bn254_fp12_asm.cpp")
 set(BN254_FP12_ASM_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/assembly/bn254_fp12_asm.s")
 
@@ -142,7 +146,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 if (CMAKE_TARGET_ARCHITECTURE MATCHES "x86|X86|amd64|AMD64")
-    list(APPEND BN254_FP12_ASM_FLAGS "-masm=intel")
+    list(APPEND BN254_FP12_ASM_FLAGS "-march=native" "-masm=intel")
 endif()
 
 set(BN254_FP12_ASM_INCLUDE_DIRS
