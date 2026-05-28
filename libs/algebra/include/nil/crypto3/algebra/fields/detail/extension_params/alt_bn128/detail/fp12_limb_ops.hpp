@@ -4,6 +4,7 @@
 #include <climits>
 #include <cstddef>
 #include <cstdint>
+#include <ostream>
 
 namespace nil {
     namespace crypto3 {
@@ -184,7 +185,8 @@ namespace nil {
                             //     // full mulx/adcx/adox Comba kernel here
                             //     :
                             //     : [r] "r"(r), [x] "r"(xp), [y] "r"(yp)
-                            //     : "rax", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "cc", "memory");
+                            //     : "rax", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "cc",
+                            //     "memory");
                         }
 #endif
 
