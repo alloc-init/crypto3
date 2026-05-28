@@ -1,10 +1,7 @@
 #pragma once
 
-#include <array>
-#include <climits>
-#include <cstddef>
-#include <cstdint>
-#include <ostream>
+#include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
+#include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_ops_x86.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -12,20 +9,6 @@ namespace nil {
             namespace fields {
                 namespace detail {
                     namespace alt_bn128_fp12_limb_ops {
-
-                        using limb = std::uint64_t;
-#if defined(__SIZEOF_INT128__)
-                        using wide_limb = unsigned __int128;
-#else
-#error "alt_bn128 fp12 limb ops require unsigned __int128 support"
-#endif
-
-                        const size_t limb_bits = sizeof(limb) * CHAR_BIT;
-                        const size_t base_value_limb_count = 4u;
-                        const size_t storage_limb_count = 9u;
-
-                        using limb_array = std::array<limb, storage_limb_count>;
-
                         // Loads limbs from a multiprecision backend value
                         template<typename Backend>
                         static limb_array load_limbs(const Backend &backend) {
@@ -173,22 +156,6 @@ namespace nil {
                             result[7] = acc0;
                             result[8] = acc1;
                         }
-
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
-                        inline void multiply_4x4_x86_bmi2_adx(limb_array &result, const limb_array &x,
-                                                              const limb_array &y) {
-                            limb *r = result.data();
-                            const limb *xp = x.data();
-                            const limb *yp = y.data();
-
-                            // asm volatile(
-                            //     // full mulx/adcx/adox Comba kernel here
-                            //     :
-                            //     : [r] "r"(r), [x] "r"(xp), [y] "r"(yp)
-                            //     : "rax", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "cc",
-                            //     "memory");
-                        }
-#endif
 
                         inline void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
