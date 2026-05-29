@@ -42,6 +42,7 @@ BOOST_AUTO_TEST_CASE(mul_4x4_x86_correct) {
     boost::random::mt19937 rng(0x2545);
     boost::random::uniform_int_distribution<limb> d;
     for (size_t i = 0; i < 100; i++) {
+        std::cout << "test " << i << std::endl;
         limb_array x, y;
         limb_array z0 = {};
         limb_array z1 = {};
@@ -49,6 +50,15 @@ BOOST_AUTO_TEST_CASE(mul_4x4_x86_correct) {
             x[i] = d(rng);
             y[i] = d(rng);
         }
+        std::cout << "x=[ " << std::hex;
+        for (size_t i = 0; i < 4; i++) {
+            std::cout << x[i] << " ";
+        }
+        std::cout << "]\ny=[ ";
+        for (size_t i = 0; i < 4; i++) {
+            std::cout << y[i] << " ";
+        }
+        std::cout << "]\n";
         multiply_4x4_portable(z0, x, y);
         multiply_4x4_x86_bmi2_adx(z1, x, y);
         BOOST_REQUIRE_EQUAL_COLLECTIONS(z0.begin(), z0.end(), z1.begin(), z1.end());
