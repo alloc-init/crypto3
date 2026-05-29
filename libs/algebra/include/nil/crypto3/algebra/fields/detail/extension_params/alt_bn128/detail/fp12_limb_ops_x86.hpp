@@ -10,34 +10,34 @@
     "adcx %%r11, %[acc2]\n"
 
 // two of the multiply_partials with dual carry chains
-#define bn254_fp12_multiply_partial_x86_interleaved2(X1_INDEX, Y1_INDEX, X2_INDEX, Y2_INDEX) \
-    "movq " #X1_INDEX "(%[x]), %%rdx\n"                                                    \
-    "mulx " #Y1_INDEX "(%[y]), %[low], %[high]\n"                                             \
-    "movq " #X2_INDEX "(%[x]), %%rdx\n"                                                    \
+#define bn254_fp12_multiply_partial_x86_interleaved2(X1_INDEX, Y1_INDEX, X2_INDEX, Y2_INDEX)    \
+    "movq " #X1_INDEX "(%[x]), %%rdx\n"                                                         \
+    "mulx " #Y1_INDEX "(%[y]), %[low], %[high]\n"                                               \
+    "movq " #X2_INDEX "(%[x]), %%rdx\n"                                                         \
     "adcx %[low], %[acc0]\n"                                                                    \
     "mulx " #Y2_INDEX "(%[y]), %[low2], %[high2]\n"                                             \
-    "adcx %[high], %[acc1]\n"                                                                    \
-    "adox %[low2], %[acc0]\n"                                                                    \
-    "adcx %%r11, %[acc2]\n"                                                                 \
-    "adox %[high2], %[acc1]\n"                                                                    \
+    "adcx %[high], %[acc1]\n"                                                                   \
+    "adox %[low2], %[acc0]\n"                                                                   \
+    "adcx %%r11, %[acc2]\n"                                                                     \
+    "adox %[high2], %[acc1]\n"                                                                  \
     "adox %%r11, %[acc2]\n"
 
 // three of the multiply_partials with dual carry chains
-#define bn254_fp12_multiply_partial_x86_interleaved3(X1_INDEX, Y1_INDEX, X2_INDEX, Y2_INDEX, X3_INDEX, Y3_INDEX) \
-    "movq " #X1_INDEX "(%[x]), %%rdx\n"                                                    \
-    "mulx " #Y1_INDEX "(%[y]), %[low], %[high]\n"                                             \
-    "movq " #X2_INDEX "(%[x]), %%rdx\n"                                                    \
-    "adcx %[low], %[acc0]\n"                                                                    \
-    "mulx " #Y2_INDEX "(%[y]), %[low2], %[high2]\n"                                             \
-    "movq " #X3_INDEX "(%[x]), %%rdx\n"                                                 \
-    "adcx %[high], %[acc1]\n"                                                                    \
-    "mulx " #Y3_INDEX "(%[y]), %[low], %[high]\n"                       \
-    "adox %[low2], %[acc0]\n"                                                                    \
-    "adcx %%r11, %[acc2]\n"                                                                 \
-    "adcx %[low], %[acc0]\n"                                                                \
-    "adox %[high2], %[acc1]\n"                                                                    \
-    "adcx %[high], %[acc1]\n"                                                                   \
-    "adox %%r11, %[acc2]\n"                                                         \
+#define bn254_fp12_multiply_partial_x86_interleaved3(X1_INDEX, Y1_INDEX, X2_INDEX, Y2_INDEX, X3_INDEX, Y3_INDEX)    \
+    "movq " #X1_INDEX "(%[x]), %%rdx\n"                                                                             \
+    "mulx " #Y1_INDEX "(%[y]), %[low], %[high]\n"                                                                   \
+    "movq " #X2_INDEX "(%[x]), %%rdx\n"                                                                             \
+    "adcx %[low], %[acc0]\n"                                                                                        \
+    "mulx " #Y2_INDEX "(%[y]), %[low2], %[high2]\n"                                                                 \
+    "movq " #X3_INDEX "(%[x]), %%rdx\n"                                                                             \
+    "adcx %[high], %[acc1]\n"                                                                                       \
+    "mulx " #Y3_INDEX "(%[y]), %[low], %[high]\n"                                                                   \
+    "adox %[low2], %[acc0]\n"                                                                                       \
+    "adcx %%r11, %[acc2]\n"                                                                                         \
+    "adcx %[low], %[acc0]\n"                                                                                        \
+    "adox %[high2], %[acc1]\n"                                                                                      \
+    "adcx %[high], %[acc1]\n"                                                                                       \
+    "adox %%r11, %[acc2]\n"                                                                                         \
     "adcx %%r11, %[acc2]\n" 
 
 #define bn254_fp12_multiply_emit_x86(INDEX) \
