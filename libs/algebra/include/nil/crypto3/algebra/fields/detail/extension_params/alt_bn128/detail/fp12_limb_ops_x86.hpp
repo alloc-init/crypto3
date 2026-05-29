@@ -1,5 +1,7 @@
 #pragma once
 
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
+
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
 
 #define bn254_fp12_multiply_partial_x86(X_INDEX, Y_INDEX) \
@@ -177,3 +179,5 @@ namespace nil {
         }    // namespace algebra
     }    // namespace crypto3
 }    // namespace nil
+
+#endif
