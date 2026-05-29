@@ -157,20 +157,12 @@ namespace nil {
                             result[8] = acc1;
                         }
 
-                        inline void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
-                            multiply_4x4_x86_bmi2_adx(result, x, y);
-#else
-                            multiply_4x4_portable(result, x, y);
-#endif
-                        }
-
                         // Multiply two Fp2-sum-width values using their low five limbs.
                         //
                         // Fp2 Karatsuba sums such as (a + b) can carry once past the four-limb base field value,
                         // so the cross-term product needs a 5x5 kernel. These inputs are bounded by the tower
                         // formulas, and their product fits the nine-limb pre-REDC storage used by this fast path.
-                        void multiply_5x5(limb_array &result, const limb_array &x, const limb_array &y) {
+                        void multiply_5x5_portable(limb_array &result, const limb_array &x, const limb_array &y) {
                             result = {};
                             limb acc0 = 0u;
                             limb acc1 = 0u;
@@ -218,6 +210,22 @@ namespace nil {
 
                             multiply_partial(acc0, acc1, acc2, x[4], y[4]);
                             multiply_emit(result, 8u, acc0, acc1, acc2);
+                        }
+
+                        inline void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
+                            multiply_4x4_x86_bmi2_adx(result, x, y);
+#else
+                            multiply_4x4_portable(result, x, y);
+#endif
+                        }
+
+                        inline void multiply_5x5(limb_array &result, const limb_array &x, const limb_array &y) {
+// #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
+//                             multiply_5x5_x86_bmi2_adx(result, x, y);
+// #else
+                            multiply_5x5_portable(result, x, y);
+// #endif
                         }
 
                         bool ge_modulus(const limb *x, const limb *p) {
