@@ -46,16 +46,6 @@ jobs:
           parallel_jobs: auto
           asan_options: detect_leaks=1:halt_on_error=1:strict_init_order=1:strict_string_checks=1
           ubsan_options: print_stacktrace=1:halt_on_error=1
-        - scenario: UBSan
-          artifact_name: ubsan
-          build_dir: build/ubsan
-          build_type: Release
-          cxx_flags: -Werror -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
-          cmake_flags: -DBUILD_TESTS=ON
-          test_launcher: ""
-          parallel_jobs: auto
-          asan_options: ""
-          ubsan_options: print_stacktrace=1:halt_on_error=1
         - scenario: Valgrind
           artifact_name: valgrind
           build_dir: build/valgrind
