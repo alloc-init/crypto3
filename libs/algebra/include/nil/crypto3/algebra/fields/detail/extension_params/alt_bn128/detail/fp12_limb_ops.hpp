@@ -162,6 +162,10 @@ namespace nil {
                         // Fp2 Karatsuba sums such as (a + b) can carry once past the four-limb base field value,
                         // so the cross-term product needs a 5x5 kernel. These inputs are bounded by the tower
                         // formulas, and their product fits the nine-limb pre-REDC storage used by this fast path.
+                        //
+                        // Note: This is not a generic 5x5 multiplier: a full 5x5 product has ten limbs. The omitted
+                        // top limb is assumed to be zero for the bounded tower inputs; arbitrary five-limb values
+                        // can overflow this storage shape.
                         void multiply_5x5_portable(limb_array &result, const limb_array &x, const limb_array &y) {
                             result = {};
                             limb acc0 = 0u;
