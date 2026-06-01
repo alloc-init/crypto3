@@ -169,12 +169,6 @@ int main(int argc, char** argv) {
     std::cout << "BN254 tower mul benchmark (crypto3)\n";
     std::cout << "iters=" << iters << " poolN=" << poolN << " warmup=" << warmup << "\n";
 
-    print_stage("Fp mul", run_stage(iters, warmup, [&](std::size_t i) {
-                    const std::size_t idx = i % poolN;
-                    fp_acc = fpxs[idx] * fpys[idx];
-                    do_not_optimize(&fp_acc);
-                }));
-
     print_stage("Fp limb 4x4", run_stage(iters, warmup, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     limb_ops::multiply_4x4(fp_limb_acc, fp_limbs_x[idx], fp_limbs_y[idx]);
