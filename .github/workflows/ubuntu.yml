@@ -1,6 +1,8 @@
 name: Ubuntu CI
 
 on:
+  push:
+    branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
   workflow_dispatch:
@@ -14,12 +16,56 @@ concurrency:
 
 jobs:
   build:
-    name: Linux
+    name: Linux / ${{ matrix.scenario }}
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, Linux, X64, hetzner-public]
     container:
       image: ubuntu:26.04
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - scenario: Release
+          artifact_name: release
+          build_dir: build/release
+          build_type: Release
+          cxx_flags: -Werror
+          cmake_flags: -DBUILD_TESTS=ON
+          test_launcher: ""
+          parallel_jobs: auto
+          asan_options: ""
+          ubsan_options: ""
+        - scenario: ASan UBSan
+          artifact_name: asan-ubsan
+          build_dir: build/asan-ubsan
+          build_type: Release
+          cxx_flags: -Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
+          cmake_flags: -DBUILD_TESTS=ON
+          test_launcher: ""
+          parallel_jobs: auto
+          asan_options: detect_leaks=1:halt_on_error=1:strict_init_order=1:strict_string_checks=1
+          ubsan_options: print_stacktrace=1:halt_on_error=1
+        - scenario: UBSan
+          artifact_name: ubsan
+          build_dir: build/ubsan
+          build_type: Release
+          cxx_flags: -Werror -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
+          cmake_flags: -DBUILD_TESTS=ON
+          test_launcher: ""
+          parallel_jobs: auto
+          asan_options: ""
+          ubsan_options: print_stacktrace=1:halt_on_error=1
+        - scenario: Valgrind
+          artifact_name: valgrind
+          build_dir: build/valgrind
+          build_type: Debug
+          cxx_flags: -Werror -g -fno-omit-frame-pointer
+          cmake_flags: -DBUILD_TESTS=ON
+          test_launcher: valgrind
+          parallel_jobs: 1
+          asan_options: ""
+          ubsan_options: ""
     env:
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_COMPRESS: "true"
@@ -41,6 +87,7 @@ jobs:
           git \
           libboost-all-dev \
           perl \
+          valgrind \
           zstd
 
     - name: Checkout
@@ -60,35 +107,57 @@ jobs:
 
     - name: Configure
       run: |
-        cmake -S . -B build \
-          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-          -DCMAKE_CXX_FLAGS="-Werror -fsanitize=address,undefined -fno-omit-frame-pointer" \
-          -DBUILD_TESTS=ON \
-          -DCMAKE_BUILD_TYPE=Release
+        cmake_args=(
+          -S .
+          -B "${{ matrix.build_dir }}"
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }}"
+          -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"
+        )
+
+        test_launcher="${{ matrix.test_launcher }}"
+        if [ "$test_launcher" = "valgrind" ]; then
+          test_launcher="valgrind;--leak-check=full;--show-leak-kinds=definite,possible;--errors-for-leak-kinds=definite,possible;--track-origins=yes;--error-exitcode=1;--log-file=${GITHUB_WORKSPACE}/${{ matrix.build_dir }}/valgrind-%p.log"
+        fi
+
+        if [ -n "$test_launcher" ]; then
+          cmake_args+=("-DCMAKE_TEST_LAUNCHER=$test_launcher")
+        fi
+
+        cmake "${cmake_args[@]}" ${{ matrix.cmake_flags }}
 
     - name: List tests
-      run: ctest --test-dir build -N | tee build/ctest-tests.txt
+      run: ctest --test-dir "${{ matrix.build_dir }}" -N | tee "${{ matrix.build_dir }}/ctest-tests.txt"
 
     - name: Compile tests
       run: |
         jobs="$(nproc)"
         echo "Compiling tests with $jobs parallel jobs"
-        cmake --build build --target tests --parallel "$jobs"
+        cmake --build "${{ matrix.build_dir }}" --target tests --parallel "$jobs"
 
     - name: Run tests
+      env:
+        ASAN_OPTIONS: ${{ matrix.asan_options }}
+        UBSAN_OPTIONS: ${{ matrix.ubsan_options }}
       run: |
-        jobs="$(nproc)"
+        if [ "${{ matrix.parallel_jobs }}" = "auto" ]; then
+          jobs="$(nproc)"
+        else
+          jobs="${{ matrix.parallel_jobs }}"
+        fi
+
         echo "Running tests with $jobs parallel jobs"
-        ctest --test-dir build --output-on-failure --parallel "$jobs" --timeout "$CTEST_TIMEOUT_SECONDS" --output-junit build/ctest-results.xml
+        ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure --parallel "$jobs" --timeout "$CTEST_TIMEOUT_SECONDS" --output-junit "${{ matrix.build_dir }}/ctest-results.xml"
 
     - name: Upload test logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: ubuntu-ci-test-results
+        name: ubuntu-ci-${{ matrix.artifact_name }}-test-results
         path: |
-          build/ctest-tests.txt
-          build/ctest-results.xml
-          build/Testing/
+          ${{ matrix.build_dir }}/ctest-tests.txt
+          ${{ matrix.build_dir }}/ctest-results.xml
+          ${{ matrix.build_dir }}/valgrind-*.log
+          ${{ matrix.build_dir }}/Testing/
         if-no-files-found: ignore
