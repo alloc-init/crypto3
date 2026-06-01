@@ -42,7 +42,7 @@ using fp_value_type = typename fp2_value_type::underlying_type;
 
 namespace {
 
-constexpr std::size_t random_samples = 32;
+constexpr std::size_t random_samples = 10000;
 
 fp2_value_type ref_add(const fp2_value_type &x, const fp2_value_type &y) {
     return fp2_value_type(x.data[0] + y.data[0], x.data[1] + y.data[1]);
