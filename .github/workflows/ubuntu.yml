@@ -33,7 +33,6 @@ jobs:
           cxx_flags: -Werror
           cmake_flags: -DBUILD_TESTS=ON
           test_launcher: ""
-          parallel_jobs: auto
           asan_options: ""
           ubsan_options: ""
         - scenario: ASan UBSan
@@ -43,7 +42,6 @@ jobs:
           cxx_flags: -Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
           cmake_flags: -DBUILD_TESTS=ON
           test_launcher: ""
-          parallel_jobs: auto
           asan_options: detect_leaks=1:halt_on_error=1:strict_init_order=1:strict_string_checks=1
           ubsan_options: print_stacktrace=1:halt_on_error=1
         - scenario: Valgrind
@@ -53,7 +51,6 @@ jobs:
           cxx_flags: -Werror -g -fno-omit-frame-pointer
           cmake_flags: -DBUILD_TESTS=ON
           test_launcher: valgrind
-          parallel_jobs: 1
           asan_options: ""
           ubsan_options: ""
     env:
@@ -61,7 +58,7 @@ jobs:
       CCACHE_COMPRESS: "true"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_MAXSIZE: 5G
-      CTEST_TIMEOUT_SECONDS: 2700
+      CTEST_TIMEOUT_SECONDS: 1800
 
     steps:
     - name: Install dependencies
@@ -90,7 +87,7 @@ jobs:
       with:
         path: .ccache
         key: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
-        restore-keys: ccache-${{ runner.os }}-ubuntu-26-${{ github.head_ref || github.ref_name }}-
+        restore-keys: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}-
 
     - name: Configure compiler cache
       run: ccache --max-size="$CCACHE_MAXSIZE"
@@ -123,23 +120,14 @@ jobs:
 
     - name: Compile tests
       run: |
-        jobs="$(nproc)"
-        echo "Compiling tests with $jobs parallel jobs"
-        cmake --build "${{ matrix.build_dir }}" --target tests --parallel "$jobs"
+        cmake --build "${{ matrix.build_dir }}" --target tests --parallel "$(nproc)"
 
     - name: Run tests
       env:
         ASAN_OPTIONS: ${{ matrix.asan_options }}
         UBSAN_OPTIONS: ${{ matrix.ubsan_options }}
       run: |
-        if [ "${{ matrix.parallel_jobs }}" = "auto" ]; then
-          jobs="$(nproc)"
-        else
-          jobs="${{ matrix.parallel_jobs }}"
-        fi
-
-        echo "Running tests with $jobs parallel jobs"
-        ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure --parallel "$jobs" --timeout "$CTEST_TIMEOUT_SECONDS" --output-junit "${{ matrix.build_dir }}/ctest-results.xml"
+        ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure --parallel "$(nproc)" --timeout "$CTEST_TIMEOUT_SECONDS" --output-junit "${{ matrix.build_dir }}/ctest-results.xml"
 
     - name: Upload test logs
       if: always()
