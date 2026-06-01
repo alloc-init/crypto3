@@ -229,12 +229,6 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp_dbl_acc);
                 }));
 
-    print_stage("Fp2 mul", run_stage(iters, warmup, [&](std::size_t i) {
-                    const std::size_t idx = i % poolN;
-                    fp2_acc = fp2xs[idx] * fp2ys[idx];
-                    do_not_optimize(&fp2_acc);
-                }));
-
     print_stage("Fp2 pre mul", run_stage(iters, warmup, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp2_pre_acc = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_x[idx], fp2_base_y[idx]);
@@ -269,12 +263,6 @@ int main(int argc, char** argv) {
                     fp2_pre_acc = fp2_dbl_x[idx];
                     fp2_pre_acc -= fp2_dbl_y[idx];
                     do_not_optimize(&fp2_pre_acc);
-                }));
-
-    print_stage("Fp6 mul", run_stage(iters, warmup, [&](std::size_t i) {
-                    const std::size_t idx = i % poolN;
-                    fp6_acc = fp6xs[idx] * fp6ys[idx];
-                    do_not_optimize(&fp6_acc);
                 }));
 
     print_stage("Fp6 pre mul", run_stage(iters, warmup, [&](std::size_t i) {
