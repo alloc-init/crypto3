@@ -256,10 +256,9 @@ namespace nil {
                             limb borrow = 0;
                             for (size_t i = 0; i < 4u; i++) {
                                 const limb subtrahend = p[i] + borrow;
-                                const bool subtrahend_carry = subtrahend < p[i];
                                 const limb current = x[i];
                                 x[i] = current - subtrahend;
-                                borrow = (subtrahend_carry || current < subtrahend) ? 1u : 0u;
+                                borrow = (subtrahend < p[i] || current < subtrahend) ? 1u : 0u;
                             }
                             x[4] -= borrow;
                         }
@@ -319,11 +318,11 @@ namespace nil {
                             // one-limb factor m that makes t[i] + m * p[0] == 0 mod B.
                             limb p_dash = Field::modulus_params.get_mod_obj().get_p_dash();
 
-                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            //                             montgomery_reduce_x86(data, p, p_dash);
-                            // #else
-                            montgomery_reduce_portable(data, p, p_dash);
-                            // #endif
+                            #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                                montgomery_reduce_x86(data, p, p_dash);
+                            #else
+                                montgomery_reduce_portable(data, p, p_dash);
+                            #endif
                         }
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail

@@ -3,8 +3,8 @@
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
 #include <boost/preprocessor.hpp>
 
-#define STR_IMPL(x) #x
-#define STR(x) STR_IMPL(x)
+#define STR_IMPL(X) #X
+#define STR(X) STR_IMPL(X)
 #define BYTE_OFFSET(I) STR(BOOST_PP_MUL(I, 8))
 #define BYTE_OFFSET2(I, J) STR(BOOST_PP_ADD(BOOST_PP_MUL(I, 8), BOOST_PP_MUL(J, 8)))
 
@@ -21,25 +21,48 @@
     "movq %[acc2], %[acc1]\n"               \
     "xor %[acc2], %[acc2]\n"
 
-#define bn254_fp12_montgomery_reduce_mul_m_impl(I, J, IPLUSJ) \
-    "movq " #IPLUSJ "(%[p]), %%rda\n" \
+#define bn254_fp12_montgomery_reduce_mul_mp(I, J) \
+    /* rax, rdx = m * p[j] */ \
+    "movq " BYTE_OFFSET(J) "(%[p]), %%rdx\n" \
     "mulq %[m]\n" \
-    "add %%rax, "
+    /* rcx += data[i+j] // add data to carry accumulator */ \
+    "add " BYTE_OFFSET2(I, J) "(%[data]), %%rcx\n" \
+    /* add any overflow to high */ \
+    "adc $0, %%rdx\n" \
+    /* add carry/accumulator to low */ \
+    "add %%rcx, %%rax\n" \
+    /* add overflow to high */ \
+    "adc $0, %%rdx\n" \
+    /* data[i,j] = low */ \
+    "movq %%rax, " BYTE_OFFSET2(I, J) "(%[data])\n" \
+    /* carry = high */ \
+    "movq %%rdx, %%rcx\n"
 
-#define bn254_fp12_montgomery_reduce_mul_m(I, J) \
-    bn254_fp12_montgomery_reduce_mul_m_impl(I, J, BOOST_PP_ADD(I, J))
-    
 // main body of loop in montgomery reduce
 #define bn254_fp12_montgomery_reduce_cancel_low(I) \
-    "movq " #I "(%[data]), %%rax\n" \
+    /* m = data[i] * p_dash */ \
+    "movq " BYTE_OFFSET(I) "(%[data]), %%rax\n" \
     "mulq %[p_dash]\n" \
     "movq %%rax, %[m]\n" \
-    bn254_fp12_montgomery_reduce_mul_m(I, 0, I) \
-    bn254_fp12_montgomery_reduce_mul_m(I, 8) \
-    bn254_fp12_montgomery_reduce_mul_m(I, 16) \
-    bn254_fp12_montgomery_reduce_mul_m(I, 24)
+    /* main loop, multiply limbs by m*p */ \
+    "xor %%rcx, %%rcx\n" /* clear carry */ \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 0) \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 1) \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 2) \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 3) \
+    "shr $1, %%rcx\n" \
+    /* propagate carry to higher limbs */ \
+    "adcq $0, " BYTE_OFFSET(4) "(%[data])\n" \
+    "adcq $0, " BYTE_OFFSET(5) "(%[data])\n" \
+    "adcq $0, " BYTE_OFFSET(6) "(%[data])\n" \
+    "adcq $0, " BYTE_OFFSET(7) "(%[data])\n"
 
 
+#define bn254_fp12_montgomery_reduce_modulus_loop_cmp(I) \
+    "movq " BYTE_OFFSET(I) "(%[p]), %%rax\n" \
+    "cmpq " BYTE_OFFSET2(I, 4) "(%[data]), %%rax\n" \
+    "ja modulus_loop_subtract\n" \
+    "jb modulus_loop_end\n" 
 
 namespace nil {
     namespace crypto3 {
@@ -51,6 +74,7 @@ namespace nil {
                             limb acc0 = 0;
                             limb acc1 = 0;
                             limb acc2 = 0;
+                            limb carry = 0;
 
                             asm volatile(
                                 // round 1, x0*y0
@@ -176,14 +200,53 @@ namespace nil {
                         void montgomery_reduce_x86(limb_array &data, limb_array &p, limb p_dash) {
                             limb m;
 
-                            asm volatile(""
-                                // bn254_fp12_montgomery_reduce_cancel_low(0)
-                                // bn254_fp12_montgomery_reduce_cancel_low(8)
-                                // bn254_fp12_montgomery_reduce_cancel_low(16)
-                                // bn254_fp12_montgomery_reduce_cancel_low(24)
+                            asm volatile(
+                                // initial loop: for each limb, compute m and multiply each limb by m*p
+                                bn254_fp12_montgomery_reduce_cancel_low(0)
+                                bn254_fp12_montgomery_reduce_cancel_low(1)
+                                bn254_fp12_montgomery_reduce_cancel_low(2)
+                                bn254_fp12_montgomery_reduce_cancel_low(3)
+
+                                // subtract modulus
+                                "modulus_loop_start:\n"
+                                // data[9] is nonzero, its definitely greater than p
+                                "cmpq $0, " BYTE_OFFSET(9) "(%[data])\n"
+                                "jne modulus_loop_subtract\n"
+                                bn254_fp12_montgomery_reduce_modulus_loop_cmp(3)
+                                bn254_fp12_montgomery_reduce_modulus_loop_cmp(2)
+                                bn254_fp12_montgomery_reduce_modulus_loop_cmp(1)
+                                bn254_fp12_montgomery_reduce_modulus_loop_cmp(0)
+                                "jmp modulus_loop_end\n"
+                                "modulus_loop_subtract:\n"
+                                "movq " BYTE_OFFSET(0) "(%[p]), %%rax\n"
+                                "subq %%rax, " BYTE_OFFSET(4) "(%[data])\n"
+                                "movq " BYTE_OFFSET(1) "(%[p]), %%rax\n"
+                                "sbbq %%rax, " BYTE_OFFSET(5) "(%[data])\n"
+                                "movq " BYTE_OFFSET(2) "(%[p]), %%rax\n"
+                                "sbbq %%rax, " BYTE_OFFSET(6) "(%[data])\n"
+                                "movq " BYTE_OFFSET(3) "(%[p]), %%rax\n"
+                                "sbbq %%rax, " BYTE_OFFSET(7) "(%[data])\n"
+                                "sbbq $0, " BYTE_OFFSET(8) "(%[data])\n"
+                                "jmp modulus_loop_start\n"
+                                "modulus_loop_end:\n"
+
+                                "movq " BYTE_OFFSET(4) "(%[data]), %%rax\n"
+                                "movq %%rax, " BYTE_OFFSET(0) "(%[data])\n"
+                                "movq " BYTE_OFFSET(5) "(%[data]), %%rax\n"
+                                "movq %%rax, " BYTE_OFFSET(1) "(%[data])\n"
+                                "movq " BYTE_OFFSET(6) "(%[data]), %%rax\n"
+                                "movq %%rax, " BYTE_OFFSET(2) "(%[data])\n"
+                                "movq " BYTE_OFFSET(7) "(%[data]), %%rax\n"
+                                "movq %%rax, " BYTE_OFFSET(3) "(%[data])\n"
+                                "movq $0, " BYTE_OFFSET(4) "(%[data])\n"
+                                "movq $0, " BYTE_OFFSET(5) "(%[data])\n"
+                                "movq $0, " BYTE_OFFSET(6) "(%[data])\n"
+                                "movq $0, " BYTE_OFFSET(7) "(%[data])\n"
+                                "movq $0, " BYTE_OFFSET(8) "(%[data])\n"
+
                                 : [m]"=&r"(m)
                                 : [data]"r"(data.data()), [p]"r"(p.data()), [p_dash]"r"(p_dash)
-                                : "rax", "rdx", "cc", "memory"
+                                : "rax", "rcx", "rdx", "cc", "memory"
                             );
                         }
 
