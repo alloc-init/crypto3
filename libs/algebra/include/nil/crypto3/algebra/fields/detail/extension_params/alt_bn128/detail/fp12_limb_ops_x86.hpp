@@ -9,52 +9,52 @@
 #define BYTE_OFFSET2(I, J) STR(BOOST_PP_ADD(BOOST_PP_MUL(I, 8), BOOST_PP_MUL(J, 8)))
 
 #define bn254_fp12_multiply_partial_x86(X, Y)   \
-    "movq " BYTE_OFFSET(X) "(%[x]), %%rax\n"                      \
-    "mulq " BYTE_OFFSET(Y) "(%[y])\n"                             \
-    "add %%rax, %[acc0]\n"                                  \
-    "adc %%rdx, %[acc1]\n"                                  \
+    "movq " BYTE_OFFSET(X) "(%[x]), %%rax\n"    \
+    "mulq " BYTE_OFFSET(Y) "(%[y])\n"           \
+    "add %%rax, %[acc0]\n"                      \
+    "adc %%rdx, %[acc1]\n"                      \
     "adc $0, %[acc2]\n"
 
-#define bn254_fp12_multiply_emit_x86(I) \
+#define bn254_fp12_multiply_emit_x86(I)             \
     "movq %[acc0], " BYTE_OFFSET(I) "(%[result])\n" \
-    "movq %[acc1], %[acc0]\n"               \
-    "movq %[acc2], %[acc1]\n"               \
+    "movq %[acc1], %[acc0]\n"                       \
+    "movq %[acc2], %[acc1]\n"                       \
     "xor %[acc2], %[acc2]\n"
 
-#define bn254_fp12_montgomery_reduce_mul_mp(I, J) \
-    /* rax, rdx = m * p[j] */ \
-    "movq " BYTE_OFFSET(J) "(%[p]), %%rax\n" \
-    "mulq %[m]\n" \
+#define bn254_fp12_montgomery_reduce_mul_mp(I, J)           \
+    /* rax, rdx = m * p[j] */                               \
+    "movq " BYTE_OFFSET(J) "(%[p]), %%rax\n"                \
+    "mulq %[m]\n"                                           \
     /* rcx += data[i+j] // add data to carry accumulator */ \
-    "add " BYTE_OFFSET2(I, J) "(%[data]), %%rcx\n" \
-    /* add any overflow to high */ \
-    "adc $0, %%rdx\n" \
-    /* add carry/accumulator to low */ \
-    "add %%rcx, %%rax\n" \
-    /* add overflow to high */ \
-    "adc $0, %%rdx\n" \
-    /* data[i,j] = low */ \
-    "movq %%rax, " BYTE_OFFSET2(I, J) "(%[data])\n" \
-    /* carry = high */ \
+    "add " BYTE_OFFSET2(I, J) "(%[data]), %%rcx\n"          \
+    /* add any overflow to high */                          \
+    "adc $0, %%rdx\n"                                       \
+    /* add carry/accumulator to low */                      \
+    "add %%rcx, %%rax\n"                                    \
+    /* add overflow to high */                              \
+    "adc $0, %%rdx\n"                                       \
+    /* data[i,j] = low */                                   \
+    "movq %%rax, " BYTE_OFFSET2(I, J) "(%[data])\n"         \
+    /* carry = high */                                      \
     "movq %%rdx, %%rcx\n"
 
 // main body of loop in montgomery reduce
-#define bn254_fp12_montgomery_reduce_cancel_low(I) \
-    /* m = data[i] * p_dash */ \
-    "movq " BYTE_OFFSET(I) "(%[data]), %%rax\n" \
-    "mulq %[p_dash]\n" \
-    "movq %%rax, %[m]\n" \
-    /* main loop, multiply limbs by m*p */ \
-    "xor %%rcx, %%rcx\n" /* clear carry */ \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 0) \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 1) \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 2) \
+#define bn254_fp12_montgomery_reduce_cancel_low(I)  \
+    /* m = data[i] * p_dash */                      \
+    "movq " BYTE_OFFSET(I) "(%[data]), %%rax\n"     \
+    "mulq %[p_dash]\n"                              \
+    "movq %%rax, %[m]\n"                            \
+    /* main loop, multiply limbs by m*p */          \
+    "xor %%rcx, %%rcx\n" /* clear carry */          \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 0)       \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 1)       \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 2)       \
     bn254_fp12_montgomery_reduce_mul_mp(I, 3)
 
-#define bn254_fp12_montgomery_reduce_modulus_loop_cmp(I) \
-    "movq " BYTE_OFFSET(I) "(%[p]), %%rax\n" \
-    "cmpq %%rax, " BYTE_OFFSET2(I, 4) "(%[data])\n" \
-    "ja modulus_loop_subtract\n" \
+#define bn254_fp12_montgomery_reduce_modulus_loop_cmp(I)    \
+    "movq " BYTE_OFFSET(I) "(%[p]), %%rax\n"                \
+    "cmpq %%rax, " BYTE_OFFSET2(I, 4) "(%[data])\n"         \
+    "ja modulus_loop_subtract\n"                            \
     "jb modulus_loop_end\n" 
 
 namespace nil {
@@ -224,7 +224,6 @@ namespace nil {
                                 bn254_fp12_montgomery_reduce_modulus_loop_cmp(2)
                                 bn254_fp12_montgomery_reduce_modulus_loop_cmp(1)
                                 bn254_fp12_montgomery_reduce_modulus_loop_cmp(0)
-                                "jmp modulus_loop_end\n"
                                 "modulus_loop_subtract:\n"
                                 "movq " BYTE_OFFSET(0) "(%[p]), %%rax\n"
                                 "subq %%rax, " BYTE_OFFSET(4) "(%[data])\n"
