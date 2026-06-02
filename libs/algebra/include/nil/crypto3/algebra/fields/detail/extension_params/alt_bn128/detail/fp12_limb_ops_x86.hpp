@@ -23,7 +23,7 @@
 
 #define bn254_fp12_montgomery_reduce_mul_mp(I, J) \
     /* rax, rdx = m * p[j] */ \
-    "movq " BYTE_OFFSET(J) "(%[p]), %%rdx\n" \
+    "movq " BYTE_OFFSET(J) "(%[p]), %%rax\n" \
     "mulq %[m]\n" \
     /* rcx += data[i+j] // add data to carry accumulator */ \
     "add " BYTE_OFFSET2(I, J) "(%[data]), %%rcx\n" \
@@ -49,18 +49,11 @@
     bn254_fp12_montgomery_reduce_mul_mp(I, 0) \
     bn254_fp12_montgomery_reduce_mul_mp(I, 1) \
     bn254_fp12_montgomery_reduce_mul_mp(I, 2) \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 3) \
-    "shr $1, %%rcx\n" \
-    /* propagate carry to higher limbs */ \
-    "adcq $0, " BYTE_OFFSET(4) "(%[data])\n" \
-    "adcq $0, " BYTE_OFFSET(5) "(%[data])\n" \
-    "adcq $0, " BYTE_OFFSET(6) "(%[data])\n" \
-    "adcq $0, " BYTE_OFFSET(7) "(%[data])\n"
-
+    bn254_fp12_montgomery_reduce_mul_mp(I, 3)
 
 #define bn254_fp12_montgomery_reduce_modulus_loop_cmp(I) \
     "movq " BYTE_OFFSET(I) "(%[p]), %%rax\n" \
-    "cmpq " BYTE_OFFSET2(I, 4) "(%[data]), %%rax\n" \
+    "cmpq %%rax, " BYTE_OFFSET2(I, 4) "(%[data])\n" \
     "ja modulus_loop_subtract\n" \
     "jb modulus_loop_end\n" 
 
@@ -203,14 +196,29 @@ namespace nil {
                             asm volatile(
                                 // initial loop: for each limb, compute m and multiply each limb by m*p
                                 bn254_fp12_montgomery_reduce_cancel_low(0)
+                                // propagate carry to higher limbs 
+                                "addq %%rcx, " BYTE_OFFSET(4) "(%[data])\n"
+                                "adcq $0, " BYTE_OFFSET(5) "(%[data])\n" 
+                                "adcq $0, " BYTE_OFFSET(6) "(%[data])\n" 
+                                "adcq $0, " BYTE_OFFSET(7) "(%[data])\n"
+                                "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(1)
+                                "addq %%rcx, " BYTE_OFFSET(5) "(%[data])\n"
+                                "adcq $0, " BYTE_OFFSET(6) "(%[data])\n" 
+                                "adcq $0, " BYTE_OFFSET(7) "(%[data])\n"
+                                "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(2)
+                                "addq %%rcx, " BYTE_OFFSET(6) "(%[data])\n"
+                                "adcq $0, " BYTE_OFFSET(7) "(%[data])\n"
+                                "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(3)
+                                "addq %%rcx, " BYTE_OFFSET(7) "(%[data])\n"
+                                "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
 
                                 // subtract modulus
                                 "modulus_loop_start:\n"
                                 // data[9] is nonzero, its definitely greater than p
-                                "cmpq $0, " BYTE_OFFSET(9) "(%[data])\n"
+                                "cmpq $0, " BYTE_OFFSET(8) "(%[data])\n"
                                 "jne modulus_loop_subtract\n"
                                 bn254_fp12_montgomery_reduce_modulus_loop_cmp(3)
                                 bn254_fp12_montgomery_reduce_modulus_loop_cmp(2)
