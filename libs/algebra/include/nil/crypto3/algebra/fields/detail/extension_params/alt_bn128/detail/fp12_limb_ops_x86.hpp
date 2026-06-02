@@ -148,7 +148,12 @@ namespace nil {
                         }
 
                         void montgomery_reduce_x86(limb_array &data, limb_array &p, limb p_dash) {
-                            return;
+
+                            asm volatile( "\n"
+                                : 
+                                : [data]"r"(data.data()), [p]"r"(p.data()), [p_dash]"r"(p_dash)
+                                : "rax", "rdx", "cc", "memory"
+                            );
                         }
 
                     }    // namespace alt_bn128_fp12_limb_ops

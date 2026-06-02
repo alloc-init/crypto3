@@ -265,46 +265,45 @@ namespace nil {
                         }
 
                         void montgomery_reduce_portable(limb_array &data, limb_array &p, limb p_dash) {
-                            limb_array t = data;
                             // REDC over R = 2^(64 * 4). At step i, choose m so adding
-                            // m * p shifted by i limbs makes t[i] zero modulo 2^64.
+                            // m * p shifted by i limbs makes data[i] zero modulo 2^64.
                             // After four steps the low four limbs have been cancelled,
                             // so the high four limbs contain data * R^-1 modulo p.
                             for (size_t i = 0; i < base_value_limb_count; i++) {
                                 // Only the low limb of this product is used. Because
-                                // p[0] * p_dash == -1 mod B, this m cancels t[i] when
+                                // p[0] * p_dash == -1 mod B, this m cancels data[i] when
                                 // m * p is added into the current REDC column.
-                                const limb m = t[i] * p_dash;
+                                const limb m = data[i] * p_dash;
                                 limb carry = 0;
 
-                                // Add m * p into t starting at limb i. The low limb of
-                                // this sum is constructed to cancel t[i].
+                                // Add m * p into data starting at limb i. The low limb of
+                                // this sum is constructed to cancel data[i].
                                 for (size_t j = 0; j < base_value_limb_count; ++j) {
                                     const wide_limb product =
-                                        (wide_limb)m * (wide_limb)p[j] + (wide_limb)t[i + j] + carry;
-                                    t[i + j] = (limb)product;
+                                        (wide_limb)m * (wide_limb)p[j] + (wide_limb)data[i + j] + carry;
+                                    data[i + j] = (limb)product;
                                     carry = (limb)(product >> limb_bits);
                                 }
 
                                 // Propagate any carry beyond the four modulus limbs.
-                                for (size_t j = i + base_value_limb_count; carry != 0 && j < t.size(); j++) {
-                                    const wide_limb sum = (wide_limb)t[j] + carry;
-                                    t[j] = (limb)sum;
+                                for (size_t j = i + base_value_limb_count; carry != 0 && j < data.size(); j++) {
+                                    const wide_limb sum = (wide_limb)data[j] + carry;
+                                    data[j] = (limb)sum;
                                     carry = (limb)(sum >> limb_bits);
                                 }
                             }
 
-                            // The REDC output lives in t[4..8]. Bring it back into the
-                            // canonical field range before copying out the low four limbs.
-                            while (ge_modulus(t.data() + base_value_limb_count, p.data())) {
+                            // The REDC output lives in data[4..8]. Bring it back into the
+                            // canonical field range before moving the low four limbs.
+                            while (ge_modulus(data.data() + base_value_limb_count, p.data())) {
                                 // Could be as many as 18 reductions for the wide path
-                                subtract_modulus(t.data() + base_value_limb_count, p.data());
+                                subtract_modulus(data.data() + base_value_limb_count, p.data());
                             }
 
                             // Keep the reduced 4-limb field value and clear the lazy
                             // extension limbs in the shared storage shape.
                             for (size_t i = 0; i < base_value_limb_count; i++) {
-                                data[i] = t[base_value_limb_count + i];
+                                data[i] = data[base_value_limb_count + i];
                             }
                             for (size_t i = base_value_limb_count; i < data.size(); i++) {
                                 data[i] = 0;
@@ -319,12 +318,12 @@ namespace nil {
                             // Multiplying the current low limb by p_dash gives the
                             // one-limb factor m that makes t[i] + m * p[0] == 0 mod B.
                             limb p_dash = Field::modulus_params.get_mod_obj().get_p_dash();
-                            
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            montgomery_reduce_x86(data, p, p_dash);
-#else
+
+                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            //                             montgomery_reduce_x86(data, p, p_dash);
+                            // #else
                             montgomery_reduce_portable(data, p, p_dash);
-#endif
+                            // #endif
                         }
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail
