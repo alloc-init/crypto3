@@ -146,6 +146,11 @@ namespace nil {
                                 :   "rax", "rdx", "cc", "memory"
                             );
                         }
+
+                        void montgomery_reduce_x86(limb_array &data, limb_array &p, limb p_dash) {
+                            return;
+                        }
+
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail
             }    // namespace fields
