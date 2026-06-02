@@ -37,7 +37,7 @@ using namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops;
 
 BOOST_AUTO_TEST_SUITE(bn254_fp12_fast_unit_tests)
 
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
+#if defined(__x86_64__) && defined(__BMI2__) && (defined(__GNUC__) || defined(__clang__))
 BOOST_AUTO_TEST_CASE(mul_4x4_x86_random) {
     boost::random::mt19937 rng(0x2545);
     boost::random::uniform_int_distribution<limb> d;

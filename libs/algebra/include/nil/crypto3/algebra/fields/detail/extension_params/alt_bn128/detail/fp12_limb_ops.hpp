@@ -2,7 +2,7 @@
 
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
 
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
+#if defined(__x86_64__) && defined(__BMI2__) && (defined(__GNUC__) || defined(__clang__))
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_ops_x86.hpp>
 #endif
 
@@ -220,7 +220,7 @@ namespace nil {
                         }
 
                         inline void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
+#if defined(__x86_64__) && defined(__BMI2__) && (defined(__GNUC__) || defined(__clang__))
                             multiply_4x4_x86_bmi2_adx(result, x, y);
 #else
                             multiply_4x4_portable(result, x, y);
@@ -228,7 +228,7 @@ namespace nil {
                         }
 
                         inline void multiply_5x5(limb_array &result, const limb_array &x, const limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__) && (defined(__GNUC__) || defined(__clang__))
+#if defined(__x86_64__) && defined(__BMI2__) && (defined(__GNUC__) || defined(__clang__))
                             multiply_5x5_x86_bmi2_adx(result, x, y);
 #else
                             multiply_5x5_portable(result, x, y);

@@ -5,9 +5,9 @@
 #define bn254_fp12_multiply_partial_x86(X_INDEX, Y_INDEX) \
     "movq " #X_INDEX "(%[x]), %%rdx\n"                    \
     "mulx " #Y_INDEX "(%[y]), %[low], %[high]\n"          \
-    "adcx %[low], %[acc0]\n"                              \
-    "adcx %[high], %[acc1]\n"                             \
-    "adcx %%r11, %[acc2]\n"
+    "adc %[low], %[acc0]\n"                              \
+    "adc %[high], %[acc1]\n"                             \
+    "adc $0, %[acc2]\n"
 
 #define bn254_fp12_multiply_emit_x86(INDEX) \
     "movq %[acc0], " #INDEX "(%[result])\n" \
@@ -29,8 +29,6 @@ namespace nil {
                             limb acc2 = 0;
 
                             asm volatile(
-                                "xor %%r11, %%r11\n" // clear zero register
-
                                 // round 1, x0*y0
                                 bn254_fp12_multiply_partial_x86(0, 0)
                                 bn254_fp12_multiply_emit_x86(0)
@@ -79,7 +77,7 @@ namespace nil {
                                 :   [result]"r"(result.data()),
                                     [x]"r"(x.data()),
                                     [y]"r"(y.data())
-                                :   "rdx", "r11", "cc", "memory"
+                                :   "rdx", "cc", "memory"
                             );
                         }
 
@@ -91,8 +89,6 @@ namespace nil {
                             limb acc2 = 0;
 
                             asm volatile(
-                                "xor %%r11, %%r11\n" // clear zero register
-
                                 // round 1, x0*y0
                                 bn254_fp12_multiply_partial_x86(0, 0)
                                 bn254_fp12_multiply_emit_x86(0)
@@ -144,7 +140,7 @@ namespace nil {
                                  // round 9, x4*y4, drop high bits (see note in portable version)
                                 "movq 32(%[x]), %%rdx\n"
                                 "mulx 32(%[y]), %[low], %[high]\n"
-                                "adcx %[low], %[acc0]\n"
+                                "adc %[low], %[acc0]\n"
                                 "movq %[acc0], 64(%[result])\n"
 
                                 :   [acc0]"+r"(acc0),
@@ -155,7 +151,7 @@ namespace nil {
                                 :   [result]"r"(result.data()),
                                     [x]"r"(x.data()),
                                     [y]"r"(y.data())
-                                :   "rdx", "r11", "cc", "memory"
+                                :   "rdx", "cc", "memory"
                             );
                         }
                     }    // namespace alt_bn128_fp12_limb_ops
