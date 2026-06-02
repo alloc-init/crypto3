@@ -2,11 +2,11 @@
 
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
 
-#define bn254_fp12_multiply_partial_x86(X_INDEX, Y_INDEX) \
-    "movq " #X_INDEX "(%[x]), %%rdx\n"                    \
-    "mulx " #Y_INDEX "(%[y]), %[low], %[high]\n"          \
-    "adc %[low], %[acc0]\n"                              \
-    "adc %[high], %[acc1]\n"                             \
+#define bn254_fp12_multiply_partial_x86(X_INDEX, Y_INDEX)   \
+    "movq " #X_INDEX "(%[x]), %%rax\n"                      \
+    "mulq " #Y_INDEX "(%[y])\n"                             \
+    "add %%rax, %[acc0]\n"                                  \
+    "adc %%rdx, %[acc1]\n"                                  \
     "adc $0, %[acc2]\n"
 
 #define bn254_fp12_multiply_emit_x86(INDEX) \
@@ -21,9 +21,7 @@ namespace nil {
             namespace fields {
                 namespace detail {
                     namespace alt_bn128_fp12_limb_ops {
-                        inline void multiply_4x4_x86_bmi2_adx(limb_array &result, const limb_array &x,
-                                                              const limb_array &y) {
-                            limb low, high, low2, high2;
+                        inline void multiply_4x4_x86(limb_array &result, const limb_array &x, const limb_array &y) {
                             limb acc0 = 0;
                             limb acc1 = 0;
                             limb acc2 = 0;
@@ -71,19 +69,15 @@ namespace nil {
 
                                 :   [acc0]"+r"(acc0),
                                     [acc1]"+r"(acc1),
-                                    [acc2]"+r"(acc2),
-                                    [low]"=&r"(low),
-                                    [high]"=&r"(high)
+                                    [acc2]"+r"(acc2)
                                 :   [result]"r"(result.data()),
                                     [x]"r"(x.data()),
                                     [y]"r"(y.data())
-                                :   "rdx", "cc", "memory"
+                                :   "rax", "rdx", "cc", "memory"
                             );
                         }
 
-                        inline void multiply_5x5_x86_bmi2_adx(limb_array &result, const limb_array &x,
-                                                              const limb_array &y) {
-                            limb low, high, low2, high2;
+                        inline void multiply_5x5_x86(limb_array &result, const limb_array &x, const limb_array &y) {
                             limb acc0 = 0;
                             limb acc1 = 0;
                             limb acc2 = 0;
@@ -138,20 +132,18 @@ namespace nil {
                                 bn254_fp12_multiply_emit_x86(56)
 
                                  // round 9, x4*y4, drop high bits (see note in portable version)
-                                "movq 32(%[x]), %%rdx\n"
-                                "mulx 32(%[y]), %[low], %[high]\n"
-                                "adc %[low], %[acc0]\n"
+                                "movq 32(%[x]), %%rax\n"
+                                "mulq 32(%[y])\n"
+                                "add %%rax, %[acc0]\n"
                                 "movq %[acc0], 64(%[result])\n"
 
                                 :   [acc0]"+r"(acc0),
                                     [acc1]"+r"(acc1),
-                                    [acc2]"+r"(acc2),
-                                    [low]"=&r"(low),
-                                    [high]"=&r"(high)
+                                    [acc2]"+r"(acc2)
                                 :   [result]"r"(result.data()),
                                     [x]"r"(x.data()),
                                     [y]"r"(y.data())
-                                :   "rdx", "cc", "memory"
+                                :   "rax", "rdx", "cc", "memory"
                             );
                         }
                     }    // namespace alt_bn128_fp12_limb_ops

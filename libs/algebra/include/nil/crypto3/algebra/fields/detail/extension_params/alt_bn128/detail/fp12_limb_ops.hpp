@@ -2,7 +2,7 @@
 
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
 
-#if defined(__x86_64__) && defined(__BMI2__) && (defined(__GNUC__) || defined(__clang__))
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_ops_x86.hpp>
 #endif
 
@@ -220,16 +220,16 @@ namespace nil {
                         }
 
                         inline void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && (defined(__GNUC__) || defined(__clang__))
-                            multiply_4x4_x86_bmi2_adx(result, x, y);
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            multiply_4x4_x86(result, x, y);
 #else
                             multiply_4x4_portable(result, x, y);
 #endif
                         }
 
                         inline void multiply_5x5(limb_array &result, const limb_array &x, const limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && (defined(__GNUC__) || defined(__clang__))
-                            multiply_5x5_x86_bmi2_adx(result, x, y);
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            multiply_5x5_x86(result, x, y);
 #else
                             multiply_5x5_portable(result, x, y);
 #endif
@@ -265,7 +265,7 @@ namespace nil {
                         }
 
                         template<class Field>
-                        void montgomery_reduce(limb_array &data) {
+                        void montgomery_reduce_portable(limb_array &data) {
                             // p is the field modulus as 4 limbs
                             static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // p_dash is -p^{-1} modulo one limb, B = 2^64.
@@ -317,6 +317,15 @@ namespace nil {
                             for (size_t i = base_value_limb_count; i < data.size(); i++) {
                                 data[i] = 0;
                             }
+                        }
+
+                        template<class Field>
+                        inline void montgomery_reduce(limb_array &data) {
+// #if defined(__x86_64__) && defined(__BMI2__) && (defined(__GNUC__) || defined(__clang__))
+                            // multiply_4x4_x86_bmi2_adx(result, x, y);
+// #else
+                            montgomery_reduce_portable<Field>(data);
+// #endif
                         }
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail

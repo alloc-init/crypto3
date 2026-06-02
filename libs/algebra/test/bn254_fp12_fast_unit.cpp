@@ -37,7 +37,7 @@ using namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops;
 
 BOOST_AUTO_TEST_SUITE(bn254_fp12_fast_unit_tests)
 
-#if defined(__x86_64__) && defined(__BMI2__) && (defined(__GNUC__) || defined(__clang__))
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
 BOOST_AUTO_TEST_CASE(mul_4x4_x86_random) {
     boost::random::mt19937 rng(0x2545);
     boost::random::uniform_int_distribution<limb> d;
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(mul_4x4_x86_random) {
         // }
         // std::cout << "]\n";
         multiply_4x4_portable(z0, x, y);
-        multiply_4x4_x86_bmi2_adx(z1, x, y);
+        multiply_4x4_x86(z1, x, y);
         BOOST_REQUIRE_EQUAL_COLLECTIONS(z0.begin(), z0.end(), z1.begin(), z1.end());
     }
 }
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(mul_5x5_x86_random) {
         // }
         // std::cout << "]\n";
         multiply_5x5_portable(z0, x, y);
-        multiply_5x5_x86_bmi2_adx(z1, x, y);
+        multiply_5x5_x86(z1, x, y);
         BOOST_REQUIRE_EQUAL_COLLECTIONS(z0.begin(), z0.end(), z1.begin(), z1.end());
     }
 }
