@@ -28,6 +28,22 @@
 #define REG_T_IJ(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 #define VAR_T_AT(I) CAT(t, BOOST_PP_MOD(BOOST_PP_ADD(I, 4), 5))
 
+#define BN254_FP12_REDC_PROPAGATE_HIGH_0 \
+    "adcq $0, " BYTE_OFFSET(6) "(%[data])\n" \
+    "adcq $0, " BYTE_OFFSET(7) "(%[data])\n" \
+    "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
+
+#define BN254_FP12_REDC_PROPAGATE_HIGH_1 \
+    "adcq $0, " BYTE_OFFSET(7) "(%[data])\n" \
+    "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
+
+#define BN254_FP12_REDC_PROPAGATE_HIGH_2 \
+    "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
+
+#define BN254_FP12_REDC_PROPAGATE_HIGH_3
+
+#define BN254_FP12_REDC_PROPAGATE_HIGH(I) CAT(BN254_FP12_REDC_PROPAGATE_HIGH_, I)
+
 #define bn254_fp12_montgomery_reduce_mul_mp(I, J)           \
     /* compute m * p[j], m is in rdx */                     \
     /* rax = low, rsi = high */                             \
@@ -47,8 +63,6 @@
 
 // main body of loop in montgomery reduce
 #define bn254_fp12_montgomery_reduce_cancel_low(I)                  \
-    /* load next limb */                                            \
-    "movq " BYTE_OFFSET2(I, 4) "(%[data]), " REG_T_IJ(I, 4) "\n"    \
     /* m = data[i] * p_dash */                                      \
     "movq %[t" #I "], %%rdx\n"                                      \
     /* dont modify rdx in mul_mp */                                 \
@@ -61,7 +75,10 @@
     bn254_fp12_montgomery_reduce_mul_mp(I, 2)                       \
     bn254_fp12_montgomery_reduce_mul_mp(I, 3)                       \
     /* propagate carry */                                           \
-    "add %%rcx, " REG_T_IJ(I, 4) "\n" 
+    "movq " BYTE_OFFSET2(I, 5) "(%[data]), " REG_T_I(I) "\n"        \
+    "add %%rcx, " REG_T_IJ(I, 4) "\n"                               \
+    "adcq $0, " REG_T_I(I) "\n"                                     \
+    BN254_FP12_REDC_PROPAGATE_HIGH(I)
 
 namespace nil {
     namespace crypto3 {
