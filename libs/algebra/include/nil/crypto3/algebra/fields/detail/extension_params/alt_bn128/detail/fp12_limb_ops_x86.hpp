@@ -44,7 +44,7 @@
     /* m = data[i] * p_dash */                      \
     "movq %[t" #I "], %%rdx\n"                      \
     /* dont modify rdx in mul_mp */                 \
-    "mulxq %[p_dash], %%rdx, %%rax\n"               \
+    "imulq %[p_dash], %%rdx\n"                      \
     /* clear carry */                               \
     "xor %%rcx, %%rcx\n"                            \
     /* main loop, multiply limbs by m*p */          \
@@ -265,7 +265,7 @@ namespace nil {
                                   [p2]"m"(p2),
                                   [p3]"m"(p3),
                                   [p_dash]"m"(p_dash)
-                                : "rax", "rcx", "rdx", "rsi", "cc", "memory"
+                                : "rax", "rcx", "rdx", "rsi", "cc"
                             );
 
                             data[0] = t4;
