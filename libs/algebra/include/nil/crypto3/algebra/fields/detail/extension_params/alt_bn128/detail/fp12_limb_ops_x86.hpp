@@ -9,6 +9,7 @@
 #define CAT(a, b) CAT_IMPL(a, b)
 
 #define BYTE_OFFSET(I) STR(BOOST_PP_MUL(I, 8))
+#define BYTE_OFFSET2(I, J) STR(BOOST_PP_MUL(BOOST_PP_ADD(I, J), 8))
 
 #define bn254_fp12_multiply_partial_x86(X, Y)   \
     "movq " BYTE_OFFSET(X) "(%[x]), %%rax\n"    \
@@ -47,7 +48,7 @@
 // main body of loop in montgomery reduce
 #define bn254_fp12_montgomery_reduce_cancel_low(I)      \
     /* load next limb */                                \
-    "movq " BYTE_OFFSET(I) "(%[data]), " REG_T_I(I) "\n"  \
+    "movq " BYTE_OFFSET2(I, 4) "(%[data]), " REG_T_IJ(I, 4) "\n" \
     /* m = data[i] * p_dash */                          \
     "movq %[t" #I "], %%rdx\n"                          \
     /* dont modify rdx in mul_mp */                     \
@@ -58,7 +59,9 @@
     bn254_fp12_montgomery_reduce_mul_mp(I, 0)           \
     bn254_fp12_montgomery_reduce_mul_mp(I, 1)           \
     bn254_fp12_montgomery_reduce_mul_mp(I, 2)           \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 3)           
+    bn254_fp12_montgomery_reduce_mul_mp(I, 3)           \
+    /* propagate carry */                               \
+    "add %%rcx, " REG_T_IJ(I, 4) "\n" 
 
 namespace nil {
     namespace crypto3 {
