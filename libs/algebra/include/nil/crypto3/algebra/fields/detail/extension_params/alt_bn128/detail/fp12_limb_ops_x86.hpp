@@ -6,7 +6,7 @@
 #define STR_IMPL(X) #X
 #define STR(X) STR_IMPL(X)
 #define BYTE_OFFSET(I) STR(BOOST_PP_MUL(I, 8))
-#define BYTE_OFFSET2(I, J) STR(BOOST_PP_ADD(BOOST_PP_MUL(I, 8), BOOST_PP_MUL(J, 8)))
+#define REG_T_IJ(I, J) "%[t" STR(BOOST_PP_ADD(I, J)) "]"
 
 #define bn254_fp12_multiply_partial_x86(X, Y)   \
     "movq " BYTE_OFFSET(X) "(%[x]), %%rax\n"    \
@@ -23,10 +23,10 @@
 
 #define bn254_fp12_montgomery_reduce_mul_mp(I, J)           \
     /* rax, rdx = m * p[j] */                               \
-    "movq " BYTE_OFFSET(J) "(%[p]), %%rax\n"                \
+    "movq %[p" #J "], %%rax\n"                              \
     "mulq %[m]\n"                                           \
     /* rcx += data[i+j] // add data to carry accumulator */ \
-    "add " BYTE_OFFSET2(I, J) "(%[data]), %%rcx\n"          \
+    "add " REG_T_IJ(I, J) ", %%rcx\n"                       \
     /* add any overflow to high */                          \
     "adc $0, %%rdx\n"                                       \
     /* add carry/accumulator to low */                      \
@@ -34,14 +34,14 @@
     /* add overflow to high */                              \
     "adc $0, %%rdx\n"                                       \
     /* data[i,j] = low */                                   \
-    "movq %%rax, " BYTE_OFFSET2(I, J) "(%[data])\n"         \
+    "movq %%rax, " REG_T_IJ(I, J) "\n"                      \
     /* carry = high */                                      \
     "movq %%rdx, %%rcx\n"
 
 // main body of loop in montgomery reduce
 #define bn254_fp12_montgomery_reduce_cancel_low(I)  \
     /* m = data[i] * p_dash */                      \
-    "movq " BYTE_OFFSET(I) "(%[data]), %%rax\n"     \
+    "movq %[t" #I "], %%rax\n"                      \
     "mulq %[p_dash]\n"                              \
     "movq %%rax, %[m]\n"                            \
     /* main loop, multiply limbs by m*p */          \
@@ -50,12 +50,6 @@
     bn254_fp12_montgomery_reduce_mul_mp(I, 1)       \
     bn254_fp12_montgomery_reduce_mul_mp(I, 2)       \
     bn254_fp12_montgomery_reduce_mul_mp(I, 3)
-
-#define bn254_fp12_montgomery_reduce_modulus_loop_cmp(I)    \
-    "movq " BYTE_OFFSET(I) "(%[p]), %%rax\n"                \
-    "cmpq %%rax, " BYTE_OFFSET2(I, 4) "(%[data])\n"         \
-    "ja modulus_loop_subtract\n"                            \
-    "jb modulus_loop_end\n" 
 
 namespace nil {
     namespace crypto3 {
@@ -190,61 +184,71 @@ namespace nil {
                             );
                         }
 
-                        void montgomery_reduce_x86(limb_array &data, limb_array &p, limb p_dash) {
+                        template <class Field>
+                        void montgomery_reduce_x86(limb_array &data) {
+                            constexpr auto mod_obj = Field::modulus_params.get_mod_obj();
+                            static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);
+                            static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);
+                            static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);
+                            static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);
+                            static constexpr limb p_dash = limb(mod_obj.get_p_dash());
+
                             limb m;
 
                             asm volatile(
                                 // initial loop: for each limb, compute m and multiply each limb by m*p
                                 bn254_fp12_montgomery_reduce_cancel_low(0)
                                 // propagate carry to higher limbs 
-                                "addq %%rcx, " BYTE_OFFSET(4) "(%[data])\n"
-                                "adcq $0, " BYTE_OFFSET(5) "(%[data])\n" 
-                                "adcq $0, " BYTE_OFFSET(6) "(%[data])\n" 
-                                "adcq $0, " BYTE_OFFSET(7) "(%[data])\n"
-                                "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
+                                "addq %%rcx, %[t4]\n"
+                                "adcq $0, %[t5]\n"
+                                "adcq $0, %[t6]\n"
+                                "adcq $0, %[t7]\n"
+                                "adcq $0, %[t8]\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(1)
-                                "addq %%rcx, " BYTE_OFFSET(5) "(%[data])\n"
-                                "adcq $0, " BYTE_OFFSET(6) "(%[data])\n" 
-                                "adcq $0, " BYTE_OFFSET(7) "(%[data])\n"
-                                "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
+                                "addq %%rcx, %[t5]\n"
+                                "adcq $0, %[t6]\n"
+                                "adcq $0, %[t7]\n"
+                                "adcq $0, %[t8]\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(2)
-                                "addq %%rcx, " BYTE_OFFSET(6) "(%[data])\n"
-                                "adcq $0, " BYTE_OFFSET(7) "(%[data])\n"
-                                "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
+                                "addq %%rcx, %[t6]\n"
+                                "adcq $0, %[t7]\n"
+                                "adcq $0, %[t8]\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(3)
-                                "addq %%rcx, " BYTE_OFFSET(7) "(%[data])\n"
-                                "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
+                                "addq %%rcx, %[t7]\n"
+                                "adcq $0, %[t8]\n"
 
                                 // subtract modulus
                                 "modulus_loop_start:\n"
-                                // data[9] is nonzero, its definitely greater than p
-                                "cmpq $0, " BYTE_OFFSET(8) "(%[data])\n"
+                                "cmpq $0, %[t8]\n"
                                 "jne modulus_loop_subtract\n"
-                                bn254_fp12_montgomery_reduce_modulus_loop_cmp(3)
-                                bn254_fp12_montgomery_reduce_modulus_loop_cmp(2)
-                                bn254_fp12_montgomery_reduce_modulus_loop_cmp(1)
-                                bn254_fp12_montgomery_reduce_modulus_loop_cmp(0)
+                                "movq %[p3], %%rax\n"
+                                "cmpq %%rax, %[t7]\n"
+                                "ja modulus_loop_subtract\n"
+                                "jb modulus_loop_end\n"
+                                "movq %[p2], %%rax\n"
+                                "cmpq %%rax, %[t6]\n"
+                                "ja modulus_loop_subtract\n"
+                                "jb modulus_loop_end\n"
+                                "movq %[p1], %%rax\n"
+                                "cmpq %%rax, %[t5]\n"
+                                "ja modulus_loop_subtract\n"
+                                "jb modulus_loop_end\n"
+                                "movq %[p0], %%rax\n"
+                                "cmpq %%rax, %[t4]\n"
+                                "jb modulus_loop_end\n"
                                 "modulus_loop_subtract:\n"
-                                "movq " BYTE_OFFSET(0) "(%[p]), %%rax\n"
-                                "subq %%rax, " BYTE_OFFSET(4) "(%[data])\n"
-                                "movq " BYTE_OFFSET(1) "(%[p]), %%rax\n"
-                                "sbbq %%rax, " BYTE_OFFSET(5) "(%[data])\n"
-                                "movq " BYTE_OFFSET(2) "(%[p]), %%rax\n"
-                                "sbbq %%rax, " BYTE_OFFSET(6) "(%[data])\n"
-                                "movq " BYTE_OFFSET(3) "(%[p]), %%rax\n"
-                                "sbbq %%rax, " BYTE_OFFSET(7) "(%[data])\n"
-                                "sbbq $0, " BYTE_OFFSET(8) "(%[data])\n"
+                                "subq %[p0], %[t4]\n"
+                                "sbbq %[p1], %[t5]\n"
+                                "sbbq %[p2], %[t6]\n"
+                                "sbbq %[p3], %[t7]\n"
+                                "sbbq $0, %[t8]\n"
                                 "jmp modulus_loop_start\n"
                                 "modulus_loop_end:\n"
 
-                                "movq " BYTE_OFFSET(4) "(%[data]), %%rax\n"
-                                "movq %%rax, " BYTE_OFFSET(0) "(%[data])\n"
-                                "movq " BYTE_OFFSET(5) "(%[data]), %%rax\n"
-                                "movq %%rax, " BYTE_OFFSET(1) "(%[data])\n"
-                                "movq " BYTE_OFFSET(6) "(%[data]), %%rax\n"
-                                "movq %%rax, " BYTE_OFFSET(2) "(%[data])\n"
-                                "movq " BYTE_OFFSET(7) "(%[data]), %%rax\n"
-                                "movq %%rax, " BYTE_OFFSET(3) "(%[data])\n"
+                                "movq %[t4], " BYTE_OFFSET(0) "(%[data])\n"
+                                "movq %[t5], " BYTE_OFFSET(1) "(%[data])\n"
+                                "movq %[t6], " BYTE_OFFSET(2) "(%[data])\n"
+                                "movq %[t7], " BYTE_OFFSET(3) "(%[data])\n"
                                 "movq $0, " BYTE_OFFSET(4) "(%[data])\n"
                                 "movq $0, " BYTE_OFFSET(5) "(%[data])\n"
                                 "movq $0, " BYTE_OFFSET(6) "(%[data])\n"
@@ -252,7 +256,21 @@ namespace nil {
                                 "movq $0, " BYTE_OFFSET(8) "(%[data])\n"
 
                                 : [m]"=&r"(m)
-                                : [data]"r"(data.data()), [p]"r"(p.data()), [p_dash]"r"(p_dash)
+                                : [data]"r"(data.data()),
+                                  [t0]"r"(data[0]),
+                                  [t1]"r"(data[1]),
+                                  [t2]"r"(data[2]),
+                                  [t3]"r"(data[3]),
+                                  [t4]"r"(data[4]),
+                                  [t5]"r"(data[5]),
+                                  [t6]"r"(data[6]),
+                                  [t7]"r"(data[7]),
+                                  [t8]"r"(data[8]),
+                                  [p0]"m"(p0),
+                                  [p1]"m"(p1),
+                                  [p2]"m"(p2),
+                                  [p3]"m"(p3),
+                                  [p_dash]"m"(p_dash)
                                 : "rax", "rcx", "rdx", "cc", "memory"
                             );
                         }

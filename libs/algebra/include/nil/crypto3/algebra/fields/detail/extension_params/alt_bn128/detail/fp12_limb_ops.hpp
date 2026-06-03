@@ -263,7 +263,15 @@ namespace nil {
                             x[4] -= borrow;
                         }
 
-                        void montgomery_reduce_portable(limb_array &data, limb_array &p, limb p_dash) {
+                        template<class Field>
+                        void montgomery_reduce_portable(limb_array &data) {
+                            // p is the field modulus as 4 limbs
+                            static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                            // p_dash is -p^{-1} modulo one limb, B = 2^64.
+                            // Multiplying the current low limb by p_dash gives the
+                            // one-limb factor m that makes t[i] + m * p[0] == 0 mod B.
+                            limb p_dash = Field::modulus_params.get_mod_obj().get_p_dash();
+
                             // REDC over R = 2^(64 * 4). At step i, choose m so adding
                             // m * p shifted by i limbs makes data[i] zero modulo 2^64.
                             // After four steps the low four limbs have been cancelled,
@@ -311,18 +319,11 @@ namespace nil {
 
                         template<class Field>
                         inline void montgomery_reduce(limb_array &data) {
-                            // p is the field modulus as 4 limbs
-                            static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                            // p_dash is -p^{-1} modulo one limb, B = 2^64.
-                            // Multiplying the current low limb by p_dash gives the
-                            // one-limb factor m that makes t[i] + m * p[0] == 0 mod B.
-                            limb p_dash = Field::modulus_params.get_mod_obj().get_p_dash();
-
-                            #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                                montgomery_reduce_x86(data, p, p_dash);
-                            #else
-                                montgomery_reduce_portable(data, p, p_dash);
-                            #endif
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            montgomery_reduce_x86<Field>(data);
+#else
+                            montgomery_reduce_portable<Field>(data);
+#endif
                         }
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail
