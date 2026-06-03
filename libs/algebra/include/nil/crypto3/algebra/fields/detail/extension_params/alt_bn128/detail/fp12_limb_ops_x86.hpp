@@ -5,6 +5,9 @@
 
 #define STR_IMPL(X) #X
 #define STR(X) STR_IMPL(X)
+#define CAT_IMPL(a, b) a##b
+#define CAT(a, b) CAT_IMPL(a, b)
+
 #define BYTE_OFFSET(I) STR(BOOST_PP_MUL(I, 8))
 
 #define bn254_fp12_multiply_partial_x86(X, Y)   \
@@ -20,7 +23,9 @@
     "movq %[acc2], %[acc1]\n"                       \
     "xor %[acc2], %[acc2]\n"
 
-#define REG_T_IJ(I, J) "%[t" STR(BOOST_PP_ADD(I, J)) "]"
+#define REG_T_I(I) "%[t" STR(BOOST_PP_MOD(I, 5)) "]"
+#define REG_T_IJ(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
+#define VAR_T_AT(I) CAT(t, BOOST_PP_MOD(BOOST_PP_ADD(I, 4), 5))
 
 #define bn254_fp12_montgomery_reduce_mul_mp(I, J)           \
     /* compute m * p[j], m is in rdx */                     \
@@ -40,18 +45,20 @@
     "movq %%rsi, %%rcx\n"
 
 // main body of loop in montgomery reduce
-#define bn254_fp12_montgomery_reduce_cancel_low(I)  \
-    /* m = data[i] * p_dash */                      \
-    "movq %[t" #I "], %%rdx\n"                      \
-    /* dont modify rdx in mul_mp */                 \
-    "imulq %[p_dash], %%rdx\n"                      \
-    /* clear carry */                               \
-    "xor %%rcx, %%rcx\n"                            \
-    /* main loop, multiply limbs by m*p */          \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 0)       \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 1)       \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 2)       \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 3)
+#define bn254_fp12_montgomery_reduce_cancel_low(I)      \
+    /* load next limb */                                \
+    "movq " BYTE_OFFSET(I) "(%[data]), " REG_T_I(I) "\n"  \
+    /* m = data[i] * p_dash */                          \
+    "movq %[t" #I "], %%rdx\n"                          \
+    /* dont modify rdx in mul_mp */                     \
+    "imulq %[p_dash], %%rdx\n"                          \
+    /* clear carry */                                   \
+    "xor %%rcx, %%rcx\n"                                \
+    /* main loop, multiply limbs by m*p */              \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 0)           \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 1)           \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 2)           \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 3)           
 
 namespace nil {
     namespace crypto3 {
@@ -200,54 +207,35 @@ namespace nil {
                             limb t2 = data[2];
                             limb t3 = data[3];
                             limb t4 = data[4];
-                            limb t5 = data[5];
-                            limb t6 = data[6];
-                            limb t7 = data[7];
-                            limb t8 = data[8];
 
                             asm volatile(
                                 // initial loop: for each limb, compute m and multiply each limb by m*p
                                 bn254_fp12_montgomery_reduce_cancel_low(0)
-                                // propagate carry to higher limbs 
-                                "addq %%rcx, %[t4]\n"
-                                "adcq $0, %[t5]\n"
-                                "adcq $0, %[t6]\n"
-                                "adcq $0, %[t7]\n"
-                                "adcq $0, %[t8]\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(1)
-                                "addq %%rcx, %[t5]\n"
-                                "adcq $0, %[t6]\n"
-                                "adcq $0, %[t7]\n"
-                                "adcq $0, %[t8]\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(2)
-                                "addq %%rcx, %[t6]\n"
-                                "adcq $0, %[t7]\n"
-                                "adcq $0, %[t8]\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(3)
-                                "addq %%rcx, %[t7]\n"
-                                "adcq $0, %[t8]\n"
 
                                 // subtract modulus
                                 "modulus_loop_start%=:\n"
-                                "testq %[t8], %[t8]\n"
+                                "testq " REG_T_IJ(4, 4) ", " REG_T_IJ(4, 4) "\n"
                                 "jnz modulus_loop_subtract%=\n"
-                                "cmpq %[p3], %[t7]\n"
+                                "cmpq %[p3], " REG_T_IJ(3, 4) "\n"
                                 "ja modulus_loop_subtract%=\n"
                                 "jb modulus_loop_end%=\n"
-                                "cmpq %[p2], %[t6]\n"
+                                "cmpq %[p2], " REG_T_IJ(2, 4) "\n"
                                 "ja modulus_loop_subtract%=\n"
                                 "jb modulus_loop_end%=\n"
-                                "cmpq %[p1], %[t5]\n"
+                                "cmpq %[p1], " REG_T_IJ(1, 4) "\n"
                                 "ja modulus_loop_subtract%=\n"
                                 "jb modulus_loop_end%=\n"
-                                "cmpq %[p0], %[t4]\n"
+                                "cmpq %[p0], " REG_T_IJ(0, 4) "\n"
                                 "jb modulus_loop_end%=\n"
                                 "modulus_loop_subtract%=:\n"
-                                "subq %[p0], %[t4]\n"
-                                "sbbq %[p1], %[t5]\n"
-                                "sbbq %[p2], %[t6]\n"
-                                "sbbq %[p3], %[t7]\n"
-                                "sbbq $0, %[t8]\n"
+                                "subq %[p0], " REG_T_IJ(0, 4) "\n"
+                                "sbbq %[p1], " REG_T_IJ(1, 4) "\n"
+                                "sbbq %[p2], " REG_T_IJ(2, 4) "\n"
+                                "sbbq %[p3], " REG_T_IJ(3, 4) "\n"
+                                "sbbq $0, " REG_T_IJ(4, 4) "\n"
                                 "jmp modulus_loop_start%=\n"
                                 "modulus_loop_end%=:\n"
 
@@ -255,23 +243,20 @@ namespace nil {
                                   [t1]"+r"(t1),
                                   [t2]"+r"(t2),
                                   [t3]"+r"(t3),
-                                  [t4]"+r"(t4),
-                                  [t5]"+r"(t5),
-                                  [t6]"+r"(t6),
-                                  [t7]"+r"(t7),
-                                  [t8]"+r"(t8)
-                                : [p0]"m"(p0),
+                                  [t4]"+r"(t4)
+                                : [data]"r"(data.data()),
+                                  [p0]"m"(p0),
                                   [p1]"m"(p1),
                                   [p2]"m"(p2),
                                   [p3]"m"(p3),
                                   [p_dash]"m"(p_dash)
-                                : "rax", "rcx", "rdx", "rsi", "cc"
+                                : "rax", "rcx", "rdx", "rsi", "cc", "memory"
                             );
 
-                            data[0] = t4;
-                            data[1] = t5;
-                            data[2] = t6;
-                            data[3] = t7;
+                            data[0] = VAR_T_AT(0);
+                            data[1] = VAR_T_AT(1);
+                            data[2] = VAR_T_AT(2);
+                            data[3] = VAR_T_AT(3);
                             data[4] = 0;
                             data[5] = 0;
                             data[6] = 0;

@@ -31,7 +31,8 @@
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/random/mersenne_twister.hpp>
 
-#include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_ops.hpp>
+#include <nil/crypto3/algebra/fields/bn128/base_field.hpp>
+#include <nil/crypto3/algebra/curves/alt_bn128.hpp>
 
 using namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops;
 
@@ -42,7 +43,6 @@ BOOST_AUTO_TEST_CASE(mul_4x4_x86_random) {
     boost::random::mt19937 rng(0x2545);
     boost::random::uniform_int_distribution<limb> d;
     for (size_t i = 0; i < 100; i++) {
-        // std::cout << "test " << i << std::endl;
         limb_array x, y;
         limb_array z0 = {};
         limb_array z1 = {};
@@ -50,15 +50,6 @@ BOOST_AUTO_TEST_CASE(mul_4x4_x86_random) {
             x[i] = d(rng);
             y[i] = d(rng);
         }
-        // std::cout << "x=[ " << std::hex;
-        // for (size_t i = 0; i < 4; i++) {
-        //     std::cout << x[i] << " ";
-        // }
-        // std::cout << "]\ny=[ ";
-        // for (size_t i = 0; i < 4; i++) {
-        //     std::cout << y[i] << " ";
-        // }
-        // std::cout << "]\n";
         multiply_4x4_portable(z0, x, y);
         multiply_4x4_x86(z1, x, y);
         BOOST_REQUIRE_EQUAL_COLLECTIONS(z0.begin(), z0.end(), z1.begin(), z1.end());
@@ -69,7 +60,6 @@ BOOST_AUTO_TEST_CASE(mul_5x5_x86_random) {
     boost::random::mt19937 rng(0x2545);
     boost::random::uniform_int_distribution<limb> d;
     for (size_t i = 0; i < 100; i++) {
-        // std::cout << "test " << i << std::endl;
         limb_array x, y;
         limb_array z0 = {};
         limb_array z1 = {};
@@ -77,18 +67,25 @@ BOOST_AUTO_TEST_CASE(mul_5x5_x86_random) {
             x[i] = d(rng);
             y[i] = d(rng);
         }
-        // std::cout << "x=[ " << std::hex;
-        // for (size_t i = 0; i < 4; i++) {
-        //     std::cout << x[i] << " ";
-        // }
-        // std::cout << "]\ny=[ ";
-        // for (size_t i = 0; i < 4; i++) {
-        //     std::cout << y[i] << " ";
-        // }
-        // std::cout << "]\n";
         multiply_5x5_portable(z0, x, y);
         multiply_5x5_x86(z1, x, y);
         BOOST_REQUIRE_EQUAL_COLLECTIONS(z0.begin(), z0.end(), z1.begin(), z1.end());
+    }
+}
+
+BOOST_AUTO_TEST_CASE(reduce_x86_random) {
+    using field_type = nil::crypto3::algebra::fields::alt_bn128<254>;
+    boost::random::mt19937 rng(0x2545);
+    boost::random::uniform_int_distribution<limb> d;
+    for (size_t i = 0; i < 100; i++) {
+        limb_array x0;
+        for (size_t i = 0; i < 9; i++) {
+            x0[i] = d(rng);
+        }
+        limb_array x1 = x0;
+        montgomery_reduce_portable<field_type>(x0);
+        montgomery_reduce_x86<field_type>(x1);
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(x0.begin(), x0.end(), x1.begin(), x1.end());
     }
 }
 #endif
