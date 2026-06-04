@@ -158,8 +158,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #define REG_T_I(I) "%[t" STR(BOOST_PP_MOD(I, 5)) "]"
 // same but add J too
 #define REG_T_IJ(I, J) REG_T_I(BOOST_PP_ADD(I, J))
-// do the same thing for the c++ variables
-#define VAR_T_AT(I) CAT(t, BOOST_PP_MOD(BOOST_PP_ADD(I, 4), 5))
 
 // multiply bottom limb by m*p and propagate carries
 #define bn254_fp12_montgomery_reduce_mul_mp(I, J)               \
@@ -208,15 +206,15 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);
         static constexpr limb p_dash = limb(mod_obj.get_p_dash());
 
-        limb t0 = data[0];
-        limb t1 = data[1];
-        limb t2 = data[2];
-        limb t3 = data[3];
-        limb t4 = data[4];
-
-        limb low, high, pending, carry;
+        limb t0, t1, t2, t3, t4, low, high, pending, carry;
 
         asm volatile(
+            "movq 0(%[data]), %[t0]\n"
+            "movq " BYTE_OFFSET(1) "(%[data]), %[t1]\n"
+            "movq " BYTE_OFFSET(2) "(%[data]), %[t2]\n"
+            "movq " BYTE_OFFSET(3) "(%[data]), %[t3]\n"
+            "movq " BYTE_OFFSET(4) "(%[data]), %[t4]\n"
+
             // initial loop: for each limb, compute m and multiply each limb by m*p
             // make sure window carry is initialized
             "xor %[pending], %[pending]\n"
@@ -249,33 +247,33 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "jmp modulus_loop_start%=\n"
             "modulus_loop_end%=:\n"
 
+            "movq " REG_T_IJ(0, 4) ", " BYTE_OFFSET(0) "(%[data])\n"
+            "movq " REG_T_IJ(1, 4) ", " BYTE_OFFSET(1) "(%[data])\n"
+            "movq " REG_T_IJ(2, 4) ", " BYTE_OFFSET(2) "(%[data])\n"
+            "movq " REG_T_IJ(3, 4) ", " BYTE_OFFSET(3) "(%[data])\n"
+            "movq $0, " BYTE_OFFSET(4) "(%[data])\n"
+            "movq $0, " BYTE_OFFSET(5) "(%[data])\n"
+            "movq $0, " BYTE_OFFSET(6) "(%[data])\n"
+            "movq $0, " BYTE_OFFSET(7) "(%[data])\n"
+            "movq $0, " BYTE_OFFSET(8) "(%[data])\n"
+
             : [t0]"+r"(t0),
-                [t1]"+r"(t1),
-                [t2]"+r"(t2),
-                [t3]"+r"(t3),
-                [t4]"+r"(t4),
-                [low]"=&r"(low),
-                [high]"=&r"(high),
-                [pending]"=&r"(pending),
-                [carry]"=&r"(carry)
+              [t1]"+r"(t1),
+              [t2]"+r"(t2),
+              [t3]"+r"(t3),
+              [t4]"+r"(t4),
+              [low]"=&r"(low),
+              [high]"=&r"(high),
+              [pending]"=&r"(pending),
+              [carry]"=&r"(carry)
             : [data]"r"(data.data()),
-                [p0]"m"(p0),
-                [p1]"m"(p1),
-                [p2]"m"(p2),
-                [p3]"m"(p3),
-                [p_dash]"m"(p_dash)
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3),
+              [p_dash]"m"(p_dash)
             : "rdx", "cc", "memory"
         );
-
-        data[0] = VAR_T_AT(0);
-        data[1] = VAR_T_AT(1);
-        data[2] = VAR_T_AT(2);
-        data[3] = VAR_T_AT(3);
-        data[4] = 0;
-        data[5] = 0;
-        data[6] = 0;
-        data[7] = 0;
-        data[8] = 0;
     }
 
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
