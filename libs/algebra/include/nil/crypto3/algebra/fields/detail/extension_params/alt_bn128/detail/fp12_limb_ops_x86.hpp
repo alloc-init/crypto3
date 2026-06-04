@@ -69,13 +69,13 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "movq %[acc0], " PTR(result, 7) "\n"
             "movq %[acc1], " PTR(result, 8) "\n"
 
-            :   [acc0]"+r"(acc0),
-                [acc1]"+r"(acc1),
-                [acc2]"+r"(acc2)
-            :   [result]"r"(result.data()),
-                [x]"r"(x.data()),
-                [y]"r"(y.data())
-            :   "rax", "rdx", "cc", "memory"
+            : [acc0]"+r"(acc0),
+              [acc1]"+r"(acc1),
+              [acc2]"+r"(acc2)
+            : [result]"r"(result.data()),
+              [x]"r"(x.data()),
+              [y]"r"(y.data())
+            : "rax", "rdx", "cc", "memory"
         );
     }
 
@@ -139,13 +139,13 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "add %%rax, %[acc0]\n"
             "movq %[acc0], " PTR(result, 8) "\n"
 
-            :   [acc0]"+r"(acc0),
-                [acc1]"+r"(acc1),
-                [acc2]"+r"(acc2)
-            :   [result]"r"(result.data()),
-                [x]"r"(x.data()),
-                [y]"r"(y.data())
-            :   "rax", "rdx", "cc", "memory"
+            : [acc0]"+r"(acc0),
+              [acc1]"+r"(acc1),
+              [acc2]"+r"(acc2)
+            : [result]"r"(result.data()),
+              [x]"r"(x.data()),
+              [y]"r"(y.data())
+            : "rax", "rdx", "cc", "memory"
         );
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
