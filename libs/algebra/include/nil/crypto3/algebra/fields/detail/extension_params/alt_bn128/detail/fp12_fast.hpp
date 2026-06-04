@@ -107,7 +107,7 @@ namespace nil {
                             fp_dbl &add_magnitude(const fp_dbl &other, bool other_negative) {
                                 if (negative == other_negative) {
                                     // if they both have the same sign, you can just add
-                                    alt_bn128_fp12_limb_ops::add_limbs(data, other.data);
+                                    alt_bn128_fp12_limb_ops::add_limbs<9>(data, other.data);
                                     return *this;
                                 }
                                 // .. they have different signs
@@ -214,8 +214,8 @@ namespace nil {
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
-                                alt_bn128_fp12_limb_ops::add_limbs(data[0], other.data[0]);
-                                alt_bn128_fp12_limb_ops::add_limbs(data[1], other.data[1]);
+                                alt_bn128_fp12_limb_ops::add_limbs<4>(data[0], other.data[0]);
+                                alt_bn128_fp12_limb_ops::add_limbs<4>(data[1], other.data[1]);
                                 return *this;
                             }
 
@@ -274,8 +274,8 @@ namespace nil {
                                 const fp_dbl bd = fp_dbl::mul_pre(b, d);
                                 base_limb_storage_type a_plus_b = a;
                                 base_limb_storage_type c_plus_d = c;
-                                alt_bn128_fp12_limb_ops::add_limbs(a_plus_b, b);
-                                alt_bn128_fp12_limb_ops::add_limbs(c_plus_d, d);
+                                alt_bn128_fp12_limb_ops::add_limbs<9>(a_plus_b, b);
+                                alt_bn128_fp12_limb_ops::add_limbs<9>(c_plus_d, d);
                                 result.data[0] = ac;
                                 result.data[0] -= bd;
                                 result.data[1] = fp_dbl::template mul_pre<Wide>(a_plus_b, c_plus_d);

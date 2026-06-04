@@ -26,7 +26,7 @@ namespace nil {
                             return result;
                         }
 
-                        bool is_zero(const limb_array &x) {
+                        inline bool is_zero(const limb_array &x) {
                             for (size_t i = 0; i < x.size(); i++) {
                                 if (x[i] != 0u) {
                                     return false;
@@ -35,7 +35,7 @@ namespace nil {
                             return true;
                         }
 
-                        int compare_limbs(const limb_array &x, const limb_array &y) {
+                        inline int compare_limbs(const limb_array &x, const limb_array &y) {
                             for (int i = x.size() - 1; i >= 0; i--) {
                                 if (x[i] < y[i]) {
                                     return -1;
@@ -47,13 +47,28 @@ namespace nil {
                             return 0;
                         }
 
-                        void add_limbs(limb_array &result, const limb_array &other) {
+                        template<size_t N>
+                        inline void add_limbs_portable(limb_array &result, const limb_array &other) {
                             limb carry = 0u;
-                            for (size_t i = 0; i < result.size(); i++) {
+                            for (size_t i = 0; i < N; i++) {
                                 const auto sum = (wide_limb)result[i] + other[i] + carry;
                                 result[i] = (limb)sum;
                                 carry = (limb)(sum >> limb_bits);
                             }
+                        }
+
+                        template<size_t N>
+                        inline void add_limbs(limb_array &result, const limb_array &other) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            if constexpr (N == 4)
+                                add_4_limbs_x86(result, other);
+                            else if constexpr (N == 9)
+                                add_9_limbs_x86(result, other);
+                            else
+                                add_limbs_portable<N>(result, other);
+#else
+                            add_limbs_portable<N>(result, other);
+#endif
                         }
 
                         inline void subtract_limbs_portable(limb_array &result, const limb_array &other) {
@@ -75,14 +90,14 @@ namespace nil {
 #endif
                         }
 
-                        template <class Field>
+                        template<class Field>
                         inline void negate_limbs_portable(limb_array &data) {
                             static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             subtract_limbs_portable(data, p);
                         }
 
                         // Note: requires reduced form - 4 limbs max
-                        template <class Field>
+                        template<class Field>
                         inline void negate_limbs(limb_array &data) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             negate_limbs_x86<Field>(data);
@@ -91,7 +106,7 @@ namespace nil {
 #endif
                         }
 
-                        void left_shift_one(limb_array &result) {
+                        inline void left_shift_one(limb_array &result) {
                             limb carry = 0u;
                             for (size_t i = 0; i < result.size(); i++) {
                                 const limb next_carry = result[i] >> (limb_bits - 1u);
@@ -100,7 +115,7 @@ namespace nil {
                             }
                         }
 
-                        void multiply_by_limb(limb_array &result, limb value) {
+                        inline void multiply_by_limb(limb_array &result, limb value) {
                             limb carry = 0u;
                             for (size_t i = 0; i < result.size(); i++) {
                                 const wide_limb product = (wide_limb)result[i] * (wide_limb)value + carry;
@@ -115,7 +130,7 @@ namespace nil {
                         // carry limb, and acc2 collects overflow from acc1. Each x*y product is 128 bits, so adding
                         // its low half to acc0 and high half to acc1 lets a column accumulate several partial
                         // products before multiply_emit advances to the next column.
-                        void multiply_partial(limb &acc0, limb &acc1, limb &acc2, limb x, limb y) {
+                        inline void multiply_partial(limb &acc0, limb &acc1, limb &acc2, limb x, limb y) {
                             // compute the base product x * y
                             const wide_limb product = (wide_limb)x * y;
                             // add the low bits of the new product to the lowest accumulator
@@ -134,7 +149,7 @@ namespace nil {
                         //
                         // After this, acc0/acc1 contain the carry state for the next column and acc2 is clear for
                         // new overflow. This is shared by the fixed 4x4 and 5x5 kernels.
-                        void multiply_emit(limb_array &result, size_t idx, limb &acc0, limb &acc1, limb &acc2) {
+                        inline void multiply_emit(limb_array &result, size_t idx, limb &acc0, limb &acc1, limb &acc2) {
                             result[idx] = acc0;
                             acc0 = acc1;
                             acc1 = acc2;
@@ -145,7 +160,8 @@ namespace nil {
                         //
                         // The result is the full 8-limb product placed in the 9-limb storage shape. This is the
                         // common path for products of ordinary BN254 Fp Montgomery residues.
-                        void multiply_4x4_portable(limb_array &result, const limb_array &x, const limb_array &y) {
+                        inline void
+                            multiply_4x4_portable(limb_array &result, const limb_array &x, const limb_array &y) {
                             result = {};
                             limb acc0 = 0u;
                             limb acc1 = 0u;
@@ -193,7 +209,8 @@ namespace nil {
                         // Note: This is not a generic 5x5 multiplier: a full 5x5 product has ten limbs. The omitted
                         // top limb is assumed to be zero for the bounded tower inputs; arbitrary five-limb values
                         // can overflow this storage shape.
-                        void multiply_5x5_portable(limb_array &result, const limb_array &x, const limb_array &y) {
+                        inline void
+                            multiply_5x5_portable(limb_array &result, const limb_array &x, const limb_array &y) {
                             result = {};
                             limb acc0 = 0u;
                             limb acc1 = 0u;
@@ -259,7 +276,7 @@ namespace nil {
 #endif
                         }
 
-                        bool ge_modulus(const limb *x, const limb *p) {
+                        inline bool ge_modulus(const limb *x, const limb *p) {
                             if (x[4] != 0u) {
                                 // p has 4 limbs, so if x has a nonzero 5th digit, it is greater
                                 return true;
@@ -276,7 +293,7 @@ namespace nil {
                             }
                         }
 
-                        void subtract_modulus(limb *x, const limb *p) {
+                        inline void subtract_modulus(limb *x, const limb *p) {
                             limb borrow = 0;
                             for (size_t i = 0; i < 4u; i++) {
                                 const limb subtrahend = p[i] + borrow;
@@ -288,7 +305,7 @@ namespace nil {
                         }
 
                         template<class Field>
-                        void montgomery_reduce_portable(limb_array &data) {
+                        inline void montgomery_reduce_portable(limb_array &data) {
                             // p is the field modulus as 4 limbs
                             static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // p_dash is -p^{-1} modulo one limb, B = 2^64.
