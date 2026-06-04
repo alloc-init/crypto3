@@ -32,7 +32,6 @@ jobs:
           build_type: Release
           cxx_flags: -Werror
           cmake_flags: -DBUILD_TESTS=ON
-          test_launcher: ""
           asan_options: ""
           ubsan_options: ""
         - scenario: ASan UBSan
@@ -41,7 +40,6 @@ jobs:
           build_type: Release
           cxx_flags: -Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
           cmake_flags: -DBUILD_TESTS=ON
-          test_launcher: ""
           asan_options: detect_leaks=1:halt_on_error=1:strict_init_order=1:strict_string_checks=1
           ubsan_options: print_stacktrace=1:halt_on_error=1
         - scenario: Valgrind
@@ -50,7 +48,6 @@ jobs:
           build_type: Debug
           cxx_flags: -Werror -g -fno-omit-frame-pointer
           cmake_flags: -DBUILD_TESTS=ON
-          test_launcher: valgrind
           asan_options: ""
           ubsan_options: ""
     env:
@@ -104,13 +101,8 @@ jobs:
           -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"
         )
 
-        test_launcher="${{ matrix.test_launcher }}"
-        if [ "$test_launcher" = "valgrind" ]; then
-          test_launcher="valgrind;--leak-check=full;--show-leak-kinds=definite,possible;--errors-for-leak-kinds=definite,possible;--track-origins=yes;--error-exitcode=1;--log-file=${GITHUB_WORKSPACE}/${{ matrix.build_dir }}/valgrind-%p.log"
-        fi
-
-        if [ -n "$test_launcher" ]; then
-          cmake_args+=("-DCMAKE_TEST_LAUNCHER=$test_launcher")
+        if [ "${{ matrix.artifact_name }}" = "valgrind" ]; then
+          cmake_args+=("-DCMAKE_TEST_LAUNCHER=valgrind;--leak-check=full;--show-leak-kinds=definite,possible;--errors-for-leak-kinds=definite,possible;--track-origins=yes;--error-exitcode=1;--log-file=${GITHUB_WORKSPACE}/${{ matrix.build_dir }}/valgrind-%p.log")
         fi
 
         cmake "${cmake_args[@]}" ${{ matrix.cmake_flags }}

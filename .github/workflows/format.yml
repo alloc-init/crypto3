@@ -1,0 +1,42 @@
+name: Format
+
+on:
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  clang-format:
+    name: Clang format
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, Linux, X64, hetzner-public]
+    container:
+      image: ubuntu:26.04
+    timeout-minutes: 15
+
+    steps:
+    - name: Install dependencies
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          clang-format \
+          git
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Check C++ formatting
+      shell: bash
+      run: |
+        git ls-files -z -- \
+          '*.c' '*.cc' '*.cpp' '*.cxx' \
+          '*.h' '*.hh' '*.hpp' '*.hxx' \
+          | xargs -0 -r clang-format --dry-run --Werror
