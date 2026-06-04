@@ -149,8 +149,8 @@ int main(int argc, char** argv) {
         limb_ops::add_limbs<9>(fp_sum_y[i], fp_limbs_x[next2]);
         limb_ops::multiply_4x4(fp_products[i], fp_limbs_x[i], fp_limbs_y[i]);
         limb_ops::multiply_5x5(fp_sum_products[i], fp_sum_x[i], fp_sum_y[i]);
-        fp_dbl_x[i] = fp12_fast_type::fp_dbl(fp_products[i], (i & 1u) != 0u);
-        fp_dbl_y[i] = fp12_fast_type::fp_dbl(fp_sum_products[i], (i & 2u) != 0u);
+        fp_dbl_x[i] = fp12_fast_type::fp_dbl(fp_products[i]);
+        fp_dbl_y[i] = fp12_fast_type::fp_dbl(fp_sum_products[i]);
         fp2_dbl_x[i] = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_x[i], fp2_base_y[i]);
         fp2_dbl_y[i] = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_y[i], fp2_base_x[next]);
         fp6_dbl_x[i] = fp6_dbl_type::mul_pre<false>(fp6_base_x[i], fp6_base_y[i]);

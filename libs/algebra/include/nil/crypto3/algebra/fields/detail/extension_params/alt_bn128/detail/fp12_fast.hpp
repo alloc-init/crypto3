@@ -66,30 +66,13 @@ namespace nil {
                         // stores an unsigned magnitude, so `fp_dbl::negative` records the integer sign
                         // until reduce() maps the signed result back into reduced Montgomery limbs.
                         struct fp_dbl {
-                            // Magnitude of a bounded pre-REDC expression. For BN254 this may occupy up to
-                            // nine storage limbs, while normal Fp values use only the low four.
+                            // For BN254 this may occupy up to nine storage limbs, while normal Fp values
+                            // use only the low four.
                             lazy_limb_storage_type data = {};
-                            // Sign of the integer expression represented by data
-                            // Zero is non-negative
-                            bool negative = false;
 
                             fp_dbl() = default;
 
-                            explicit fp_dbl(const lazy_limb_storage_type &in_data, bool in_negative = false) :
-                                data(in_data), negative(in_negative) {
-                                if (alt_bn128_fp12_limb_ops::is_zero(data)) {
-                                    // Enforce that 0 is positive
-                                    negative = false;
-                                }
-                            }
-
-                            // If this value is not zero, flip the sign
-                            fp_dbl operator-() const {
-                                fp_dbl result(*this);
-                                if (!alt_bn128_fp12_limb_ops::is_zero(result.data)) {
-                                    result.negative = !result.negative;
-                                }
-                                return result;
+                            explicit fp_dbl(const lazy_limb_storage_type &in_data) : data(in_data) {
                             }
 
                             fp_dbl operator+(const fp_dbl &other) const {
@@ -104,41 +87,19 @@ namespace nil {
                                 return result;
                             }
 
-                            fp_dbl &add_magnitude(const fp_dbl &other, bool other_negative) {
-                                if (negative == other_negative) {
-                                    // if they both have the same sign, you can just add
-                                    alt_bn128_fp12_limb_ops::add_limbs<9>(data, other.data);
-                                    return *this;
-                                }
-                                // .. they have different signs
-                                const int cmp = alt_bn128_fp12_limb_ops::compare_limbs(data, other.data);
-                                if (cmp == 0) {
-                                    // same value but different signs, result is 0
-                                    data = {};
-                                    negative = false;
-                                    return *this;
-                                }
-                                if (cmp > 0) {
-                                    // 'this' is greater, subtract the other
-                                    // if 'this' is negative, result will be negative, and vice versa
-                                    alt_bn128_fp12_limb_ops::subtract_limbs(data, other.data);
-                                    return *this;
-                                }
-                                // .. 'this' is less than 'other' in magnitude
-                                // if 'other' is negative, result will be negative, and vice versa
-                                lazy_limb_storage_type magnitude = other.data;
-                                alt_bn128_fp12_limb_ops::subtract_limbs(magnitude, data);
-                                data = magnitude;
-                                negative = other_negative;
+                            fp_dbl &operator+=(const fp_dbl &other) {
+                                alt_bn128_fp12_limb_ops::add_limbs<9>(data, other.data);
                                 return *this;
                             }
 
-                            fp_dbl &operator+=(const fp_dbl &other) {
-                                return add_magnitude(other, other.negative);
-                            }
-
                             fp_dbl &operator-=(const fp_dbl &other) {
-                                return add_magnitude(other, !other.negative);
+                                bool borrow = alt_bn128_fp12_limb_ops::subtract_limbs(data, other.data);
+                                if (borrow) {
+                                    static base_limb_storage_type p = alt_bn128_fp12_limb_ops::load_limbs(
+                                        base_field_type::modulus_params.get_mod_obj().get_mod());
+                                    alt_bn128_fp12_limb_ops::add_limbs<4>(data.data() + 4, p.data());
+                                }
+                                return *this;
                             }
 
                             fp_dbl doubled() const {
@@ -175,14 +136,8 @@ namespace nil {
 
                             void reduce() {
                                 // Convert a bounded signed nine-limb pre-REDC expression to reduced four-limb
-                                // Montgomery limbs. REDC removes one Montgomery factor; a negative integer
-                                // representative is then mapped to p - reduced, which is the same value modulo p.
+                                // Montgomery limbs. REDC removes one Montgomery factor.
                                 alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(data);
-                                if (negative && !alt_bn128_fp12_limb_ops::is_zero(data)) {
-                                    // if this fp_dbl went negative, compute x = p - x
-                                    alt_bn128_fp12_limb_ops::negate_limbs<base_field_type>(data);
-                                }
-                                negative = false;
                             }
 
                             base_value_type to_base_value() const {

@@ -35,20 +35,8 @@ namespace nil {
                             return true;
                         }
 
-                        inline int compare_limbs(const limb_array &x, const limb_array &y) {
-                            for (int i = x.size() - 1; i >= 0; i--) {
-                                if (x[i] < y[i]) {
-                                    return -1;
-                                }
-                                if (x[i] > y[i]) {
-                                    return 1;
-                                }
-                            }
-                            return 0;
-                        }
-
                         template<size_t N>
-                        inline void add_limbs_portable(limb_array &result, const limb_array &other) {
+                        inline void add_limbs_portable(limb *result, const limb *other) {
                             limb carry = 0u;
                             for (size_t i = 0; i < N; i++) {
                                 const auto sum = (wide_limb)result[i] + other[i] + carry;
@@ -58,7 +46,7 @@ namespace nil {
                         }
 
                         template<size_t N>
-                        inline void add_limbs(limb_array &result, const limb_array &other) {
+                        inline void add_limbs(limb *result, const limb *other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             if constexpr (N == 4)
                                 add_4_limbs_x86(result, other);
@@ -71,22 +59,28 @@ namespace nil {
 #endif
                         }
 
-                        inline void subtract_limbs_portable(limb_array &result, const limb_array &other) {
-                            limb borrow = 0u;
+                        template<size_t N>
+                        inline void add_limbs(limb_array &result, const limb_array &other) {
+                            add_limbs<N>(result.data(), other.data());
+                        }
+
+                        inline bool subtract_limbs_portable(limb_array &result, const limb_array &other) {
+                            bool borrow = false;
                             for (size_t i = 0; i < result.size(); i++) {
-                                const limb subtrahend = other[i] + borrow;
+                                const limb subtrahend = other[i] + (limb)borrow;
                                 const bool subtrahend_carry = subtrahend < other[i];
                                 const limb current = result[i];
                                 result[i] = current - subtrahend;
-                                borrow = (subtrahend_carry || current < subtrahend) ? 1u : 0u;
+                                borrow = subtrahend_carry || current < subtrahend;
                             }
+                            return borrow;
                         }
 
-                        inline void subtract_limbs(limb_array &result, const limb_array &other) {
+                        inline bool subtract_limbs(limb_array &result, const limb_array &other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            subtract_limbs_x86(result, other);
+                            return subtract_limbs_x86(result, other);
 #else
-                            subtract_limbs_portable(result, other);
+                            return subtract_limbs_portable(result, other);
 #endif
                         }
 

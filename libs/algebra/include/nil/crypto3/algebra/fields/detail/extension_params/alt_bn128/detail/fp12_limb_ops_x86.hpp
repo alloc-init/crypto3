@@ -301,7 +301,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
-    inline void subtract_limbs_x86(limb_array &result, const limb_array &other) {
+    inline bool subtract_limbs_x86(limb_array &result, const limb_array &other) {
+        bool borrow;
         asm volatile(
             "movq " PTR(result, 0) ", %%rax\n"
             "subq " PTR(other, 0) ", %%rax\n"
@@ -330,16 +331,18 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "movq " PTR(result, 8) ", %%rax\n"
             "sbbq " PTR(other, 8) ", %%rax\n"
             "movq %%rax, " PTR(result, 8) "\n"
-            :
+            "setc %[borrow]\n"
+            : [borrow]"=r"(borrow)
             : [result]"r"(result.data()),
               [other]"r"(other.data())
             : "rax", "cc", "memory"
         );
+        return borrow;
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
-    inline void add_4_limbs_x86(limb_array &result, const limb_array &other) {
+    inline void add_4_limbs_x86(limb *result, const limb *other) {
        asm volatile(
             "movq " PTR(other, 0) ", %%rax\n"
             "addq %%rax, " PTR(result, 0) "\n"
@@ -350,12 +353,12 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "movq " PTR(other, 3) ", %%rax\n"
             "adcq %%rax, " PTR(result, 3) "\n"
             :
-            : [result]"r"(result.data()),
-              [other]"r"(other.data())
+            : [result]"r"(result),
+              [other]"r"(other)
             : "rax", "cc", "memory"
         );
     }
-    inline void add_9_limbs_x86(limb_array &result, const limb_array &other) {
+    inline void add_9_limbs_x86(limb *result, const limb *other) {
        asm volatile(
             "movq " PTR(other, 0) ", %%rax\n"
             "addq %%rax, " PTR(result, 0) "\n"
@@ -376,8 +379,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "movq " PTR(other, 8) ", %%rax\n"
             "adcq %%rax, " PTR(result, 8) "\n"
             :
-            : [result]"r"(result.data()),
-              [other]"r"(other.data())
+            : [result]"r"(result),
+              [other]"r"(other)
             : "rax", "cc", "memory"
         );
     }
