@@ -187,7 +187,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     bn254_fp12_montgomery_reduce_mul_mp(I, 3, carry, high)              \
     /* load next limb */                                                \
     "movq " PTR2(data, I, 5) ", %[t" #I "]\n"                           \
-    "add %[carry], " T(I, 4) "\n"                                        \
+    "add %[carry], " T(I, 4) "\n"                                       \
     "adcq %[pending], %[t" #I "]\n"                                     \
     "setc %b[pending]\n"
 
