@@ -154,44 +154,45 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #define T(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 
 // multiply bottom limb by m*p and propagate carries
-#define bn254_fp12_montgomery_reduce_mul_mp(I, J)               \
+// HIGH and CARRY are parameterized so you can alternate them and avoid a copy
+#define bn254_fp12_montgomery_reduce_mul_mp(I, J, HIGH, CARRY)  \
     /* compute m * p[j], m is in rdx */                         \
-    "mulxq %[p" #J "], %[low], %[high] \n"                      \
+    "mulxq %[p" #J "], %[low], %[" #HIGH "] \n"                 \
     /* carry += data[i+j] // add data to carry accumulator */   \
-    "add " T(I, J) ", %[carry]\n"                               \
+    "add " T(I, J) ", %[" #CARRY "]\n"                          \
     /* add any overflow to high */                              \
-    "adc $0, %[high]\n"                                         \
+    "adc $0, %[" #HIGH "]\n"                                    \
     /* add carry/accumulator to low */                          \
-    "add %[carry], %[low]\n"                                    \
+    "add %[" #CARRY "], %[low]\n"                               \
     /* add overflow to high */                                  \
-    "adc $0, %[high]\n"                                         \
+    "adc $0, %[" #HIGH "]\n"                                    \
     /* data[i,j] = low */                                       \
     "movq %[low], " T(I, J) "\n"                                \
     /* carry = high */                                          \
-    "movq %[high], %[carry]\n"
+    "movq %[" #HIGH "], %[" #CARRY "]\n"
 
 // main body of loop in montgomery reduce
-#define bn254_fp12_montgomery_reduce_cancel_low(I)              \
-    /* m = data[i] * p_dash */                                  \
-    "movq %[t" #I "], %%rdx\n"                                  \
-    /* dont modify rdx in mul_mp */                             \
-    "imulq %[p_dash], %%rdx\n"                                  \
-    /* first iteration - avoid generic loop body w carry */     \
-    "mulxq %[p0], %[low], %[high]\n"                           \
-    "add %[t" #I "], %[low]\n" \
-    /* add overflow to high */                                  \
-    "adc $0, %[high]\n"    \
-    /* dont have to store low since it t[i] canceled this round */ \
-    "movq %[high], %[carry]\n"                                  \
-    /* main loop, multiply limbs by m*p */                      \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 1)                   \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 2)                   \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 3)                   \
-    /* load next limb */                                        \
-    "movq " PTR2(data, I, 5) ", %[t" #I "]\n"                   \
-    /* propagate carries */                                     \
-    "add %[carry], " T(I, 4) "\n"                               \
-    "adcq %[pending], %[t" #I "]\n"                             \
+#define bn254_fp12_montgomery_reduce_cancel_low(I)                      \
+    /* m = data[i] * p_dash */                                          \
+    "movq %[t" #I "], %%rdx\n"                                          \
+    /* dont modify rdx in mul_mp */                                     \
+    "imulq %[p_dash], %%rdx\n"                                          \
+    /* first iteration - avoid generic loop body w carry */             \
+    "mulxq %[p0], %[low], %[high]\n"                                    \
+    "add %[t" #I "], %[low]\n"                                          \
+    /* add overflow to high */                                          \
+    "adc $0, %[high]\n"                                                 \
+    /* dont have to store low since it t[i] canceled this round */      \
+    /* high becomes carry */                                            \
+    /* main loop, multiply limbs by m*p */                              \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 1, carry, high)              \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 2, high, carry)              \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 3, carry, high)              \
+    /* load next limb */                                                \
+    "movq " PTR2(data, I, 5) ", %[t" #I "]\n"                           \
+    /* propagate carries, row carry is currently in high register */    \
+    "add %[high], " T(I, 4) "\n"                                        \
+    "adcq %[pending], %[t" #I "]\n"                                     \
     "setc %b[pending]\n"
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
