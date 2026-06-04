@@ -29,40 +29,40 @@
 #define VAR_T_AT(I) CAT(t, BOOST_PP_MOD(BOOST_PP_ADD(I, 4), 5))
 
 // multiply bottom limb by m*p and propagate carries
-#define bn254_fp12_montgomery_reduce_mul_mp(I, J)           \
-    /* compute m * p[j], m is in rdx */                     \
-    "mulxq %[p" #J "], %[low], %[high] \n"                     \
-    /* carry += data[i+j] // add data to carry accumulator */ \
-    "add " REG_T_IJ(I, J) ", %[carry]\n"                       \
-    /* add any overflow to high */                          \
-    "adc $0, %[high]\n"                                       \
-    /* add carry/accumulator to low */                      \
+#define bn254_fp12_montgomery_reduce_mul_mp(I, J)               \
+    /* compute m * p[j], m is in rdx */                         \
+    "mulxq %[p" #J "], %[low], %[high] \n"                      \
+    /* carry += data[i+j] // add data to carry accumulator */   \
+    "add " REG_T_IJ(I, J) ", %[carry]\n"                        \
+    /* add any overflow to high */                              \
+    "adc $0, %[high]\n"                                         \
+    /* add carry/accumulator to low */                          \
     "add %[carry], %[low]\n"                                    \
-    /* add overflow to high */                              \
-    "adc $0, %[high]\n"                                       \
-    /* data[i,j] = low */                                   \
-    "movq %[low], " REG_T_IJ(I, J) "\n"                      \
-    /* carry = high */                                      \
+    /* add overflow to high */                                  \
+    "adc $0, %[high]\n"                                         \
+    /* data[i,j] = low */                                       \
+    "movq %[low], " REG_T_IJ(I, J) "\n"                         \
+    /* carry = high */                                          \
     "movq %[high], %[carry]\n"
 
 // main body of loop in montgomery reduce
-#define bn254_fp12_montgomery_reduce_cancel_low(I)                  \
-    /* m = data[i] * p_dash */                                      \
-    "movq %[t" #I "], %%rdx\n"                                      \
-    /* dont modify rdx in mul_mp */                                 \
-    "imulq %[p_dash], %%rdx\n"                                      \
-    /* clear carry */                                               \
-    "xor %[carry], %[carry]\n"                                            \
-    /* main loop, multiply limbs by m*p */                          \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 0)                       \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 1)                       \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 2)                       \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 3)                       \
-    /* load next limb */                                            \
-    "movq " BYTE_OFFSET2(I, 5) "(%[data]), " REG_T_I(I) "\n"        \
-    /* propagate carries */                                         \
-    "add %[carry], " REG_T_IJ(I, 4) "\n"                               \
-    "adcq %[pending], " REG_T_I(I) "\n"                                  \
+#define bn254_fp12_montgomery_reduce_cancel_low(I)              \
+    /* m = data[i] * p_dash */                                  \
+    "movq %[t" #I "], %%rdx\n"                                  \
+    /* dont modify rdx in mul_mp */                             \
+    "imulq %[p_dash], %%rdx\n"                                  \
+    /* clear carry */                                           \
+    "xor %[carry], %[carry]\n"                                  \
+    /* main loop, multiply limbs by m*p */                      \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 0)                   \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 1)                   \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 2)                   \
+    bn254_fp12_montgomery_reduce_mul_mp(I, 3)                   \
+    /* load next limb */                                        \
+    "movq " BYTE_OFFSET2(I, 5) "(%[data]), " REG_T_I(I) "\n"    \
+    /* propagate carries */                                     \
+    "add %[carry], " REG_T_IJ(I, 4) "\n"                        \
+    "adcq %[pending], " REG_T_I(I) "\n"                         \
     "setc %b[pending]\n"                                                 
 
 namespace nil {
