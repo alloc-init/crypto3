@@ -29,39 +29,30 @@
 #define VAR_T_AT(I) CAT(t, BOOST_PP_MOD(BOOST_PP_ADD(I, 4), 5))
 
 // multiply bottom limb by m*p and propagate carries
-// regs:
-//      * rdx: m
-//      * rax, rsi: low, high
-//      * rcx: row carry
 #define bn254_fp12_montgomery_reduce_mul_mp(I, J)           \
     /* compute m * p[j], m is in rdx */                     \
-    /* rax = low, rsi = high */                             \
-    "mulxq %[p" #J "], %%rax, %%rsi \n"                     \
-    /* rcx += data[i+j] // add data to carry accumulator */ \
-    "add " REG_T_IJ(I, J) ", %%rcx\n"                       \
+    "mulxq %[p" #J "], %[low], %[high] \n"                     \
+    /* carry += data[i+j] // add data to carry accumulator */ \
+    "add " REG_T_IJ(I, J) ", %[carry]\n"                       \
     /* add any overflow to high */                          \
-    "adc $0, %%rsi\n"                                       \
+    "adc $0, %[high]\n"                                       \
     /* add carry/accumulator to low */                      \
-    "add %%rcx, %%rax\n"                                    \
+    "add %[carry], %[low]\n"                                    \
     /* add overflow to high */                              \
-    "adc $0, %%rsi\n"                                       \
+    "adc $0, %[high]\n"                                       \
     /* data[i,j] = low */                                   \
-    "movq %%rax, " REG_T_IJ(I, J) "\n"                      \
+    "movq %[low], " REG_T_IJ(I, J) "\n"                      \
     /* carry = high */                                      \
-    "movq %%rsi, %%rcx\n"
+    "movq %[high], %[carry]\n"
 
 // main body of loop in montgomery reduce
-// regs:
-//      * rdx: m
-//      * rcx: row carry
-//      * dil: window carry - needs to be zeroed outside loop
 #define bn254_fp12_montgomery_reduce_cancel_low(I)                  \
     /* m = data[i] * p_dash */                                      \
     "movq %[t" #I "], %%rdx\n"                                      \
     /* dont modify rdx in mul_mp */                                 \
     "imulq %[p_dash], %%rdx\n"                                      \
     /* clear carry */                                               \
-    "xor %%rcx, %%rcx\n"                                            \
+    "xor %[carry], %[carry]\n"                                            \
     /* main loop, multiply limbs by m*p */                          \
     bn254_fp12_montgomery_reduce_mul_mp(I, 0)                       \
     bn254_fp12_montgomery_reduce_mul_mp(I, 1)                       \
@@ -70,9 +61,9 @@
     /* load next limb */                                            \
     "movq " BYTE_OFFSET2(I, 5) "(%[data]), " REG_T_I(I) "\n"        \
     /* propagate carries */                                         \
-    "add %%rcx, " REG_T_IJ(I, 4) "\n"                               \
-    "adcq %%rdi, " REG_T_I(I) "\n"                                  \
-    "setc %%dil\n"                                                 
+    "add %[carry], " REG_T_IJ(I, 4) "\n"                               \
+    "adcq %[pending], " REG_T_I(I) "\n"                                  \
+    "setc %b[pending]\n"                                                 
 
 namespace nil {
     namespace crypto3 {
@@ -222,10 +213,12 @@ namespace nil {
                             limb t3 = data[3];
                             limb t4 = data[4];
 
+                            limb low, high, pending, carry;
+
                             asm volatile(
                                 // initial loop: for each limb, compute m and multiply each limb by m*p
                                 // make sure window carry is initialized
-                                "xor %%rdi, %%rdi\n"
+                                "xor %[pending], %[pending]\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(0)
                                 bn254_fp12_montgomery_reduce_cancel_low(1)
                                 bn254_fp12_montgomery_reduce_cancel_low(2)
@@ -259,14 +252,18 @@ namespace nil {
                                   [t1]"+r"(t1),
                                   [t2]"+r"(t2),
                                   [t3]"+r"(t3),
-                                  [t4]"+r"(t4)
+                                  [t4]"+r"(t4),
+                                  [low]"=&r"(low),
+                                  [high]"=&r"(high),
+                                  [pending]"=&r"(pending),
+                                  [carry]"=&r"(carry)
                                 : [data]"r"(data.data()),
                                   [p0]"m"(p0),
                                   [p1]"m"(p1),
                                   [p2]"m"(p2),
                                   [p3]"m"(p3),
                                   [p_dash]"m"(p_dash)
-                                : "rax", "rcx", "rdx", "rsi", "rdi", "cc", "memory"
+                                : "rdx", "cc", "memory"
                             );
 
                             data[0] = VAR_T_AT(0);
