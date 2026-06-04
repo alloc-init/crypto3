@@ -56,7 +56,7 @@ namespace nil {
                             }
                         }
 
-                        void subtract_limbs(limb_array &result, const limb_array &other) {
+                        void subtract_limbs_portable(limb_array &result, const limb_array &other) {
                             limb borrow = 0u;
                             for (size_t i = 0; i < result.size(); i++) {
                                 const limb subtrahend = other[i] + borrow;
@@ -65,6 +65,30 @@ namespace nil {
                                 result[i] = current - subtrahend;
                                 borrow = (subtrahend_carry || current < subtrahend) ? 1u : 0u;
                             }
+                        }
+
+                        inline void subtract_limbs(limb_array &result, const limb_array &other) {
+// #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            // subtract_limbs_x86(result, other);
+// #else
+                            subtract_limbs_portable(result, other);
+// #endif
+                        }
+
+                        template <class Field>
+                        inline void negate_limbs_portable(limb_array &data) {
+                            static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                            subtract_limbs_portable(data, p);
+                        }
+
+                        // Note: requires reduced form - 4 limbs max
+                        template <class Field>
+                        inline void negate_limbs(limb_array &data) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            negate_limbs_x86<Field>(data);
+#else
+                            negate_limbs_portable<Field>(data);
+#endif
                         }
 
                         void left_shift_one(limb_array &result) {
