@@ -152,8 +152,8 @@ namespace nil {
                             static fp_dbl mul_pre(const base_limb_storage_type &x, const base_limb_storage_type &y) {
                                 fp_dbl product;
                                 if constexpr (Wide) {
-                                    // The wide tower path multiplies coefficient sums; limb_ops reads the low
-                                    // five limbs and then folds the product back into the pR residue range.
+                                    // The wide path is only for callers that intentionally pass values wider than
+                                    // a canonical base-field residue.
                                     alt_bn128_fp12_limb_ops::multiply_5x5(product.data, x, y);
                                     product.reduce_mod_pR();
                                 } else {
@@ -199,8 +199,15 @@ namespace nil {
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
-                                alt_bn128_fp12_limb_ops::add_limbs<9>(data[0], other.data[0]);
-                                alt_bn128_fp12_limb_ops::add_limbs<9>(data[1], other.data[1]);
+                                const base_limb_storage_type &p = fp_dbl::modulus_storage();
+                                alt_bn128_fp12_limb_ops::add_limbs<4>(data[0], other.data[0]);
+                                if (alt_bn128_fp12_limb_ops::ge_modulus(data[0].data(), p.data())) {
+                                    alt_bn128_fp12_limb_ops::subtract_modulus(data[0].data(), p.data());
+                                }
+                                alt_bn128_fp12_limb_ops::add_limbs<4>(data[1], other.data[1]);
+                                if (alt_bn128_fp12_limb_ops::ge_modulus(data[1].data(), p.data())) {
+                                    alt_bn128_fp12_limb_ops::subtract_modulus(data[1].data(), p.data());
+                                }
                                 return *this;
                             }
 
@@ -242,7 +249,6 @@ namespace nil {
                                 return *this;
                             }
 
-                            template<bool Wide = false>
                             static void mul_pre(fp2_dbl &result, const fp2_base &x, const fp2_base &y) {
                                 // For x = a + bu and y = c + du:
                                 //   xy = (a + bu) * (c + du)
@@ -255,23 +261,22 @@ namespace nil {
                                 const base_limb_storage_type &b = x.data[1];
                                 const base_limb_storage_type &c = y.data[0];
                                 const base_limb_storage_type &d = y.data[1];
-                                const fp_dbl ac = fp_dbl::template mul_pre<Wide>(a, c);
-                                const fp_dbl bd = fp_dbl::template mul_pre<Wide>(b, d);
+                                const fp_dbl ac = fp_dbl::mul_pre(a, c);
+                                const fp_dbl bd = fp_dbl::mul_pre(b, d);
                                 base_limb_storage_type a_plus_b = a;
                                 base_limb_storage_type c_plus_d = c;
                                 alt_bn128_fp12_limb_ops::add_limbs<9>(a_plus_b, b);
                                 alt_bn128_fp12_limb_ops::add_limbs<9>(c_plus_d, d);
                                 result.data[0] = ac;
                                 result.data[0] -= bd;
-                                result.data[1] = fp_dbl::template mul_pre<Wide>(a_plus_b, c_plus_d);
+                                result.data[1] = fp_dbl::mul_pre(a_plus_b, c_plus_d);
                                 result.data[1] -= ac;
                                 result.data[1] -= bd;
                             }
 
-                            template<bool Wide = false>
                             static fp2_dbl mul_pre(const fp2_base &x, const fp2_base &y) {
                                 fp2_dbl result;
-                                fp2_dbl::template mul_pre<Wide>(result, x, y);
+                                fp2_dbl::mul_pre(result, x, y);
                                 return result;
                             }
 
@@ -361,7 +366,6 @@ namespace nil {
                                 return *this;
                             }
 
-                            template<bool Wide = false>
                             static fp6_dbl mul_pre(const fp6_base &x, const fp6_base &y) {
                                 // Multiply two Fp6 values in the tower Fp6 = Fp2[v]/(v^3 - xi):
                                 //   x = a + b*v + c*v^2
@@ -380,15 +384,13 @@ namespace nil {
                                 const auto &[a, b, c] = x.coeffs();    // a, b, c are fp2_base
                                 const auto &[d, e, f] = y.coeffs();
                                 fp2_dbl za, zb, zc;
-                                // Use Wide when x and y already contain sums, so every inner Fp2 product is
-                                // normalized back into the pR residue range before lazy corrections.
-                                fp2_dbl::template mul_pre<Wide>(za, b + c, e + f);
-                                fp2_dbl::template mul_pre<Wide>(zb, a + b, e + d);
-                                fp2_dbl::template mul_pre<Wide>(zc, a + c, d + f);
+                                fp2_dbl::mul_pre(za, b + c, e + f);
+                                fp2_dbl::mul_pre(zb, a + b, e + d);
+                                fp2_dbl::mul_pre(zc, a + c, d + f);
                                 // Direct products reused by the three Karatsuba corrections.
-                                fp2_dbl be = fp2_dbl::template mul_pre<Wide>(b, e);
-                                fp2_dbl cf = fp2_dbl::template mul_pre<Wide>(c, f);
-                                fp2_dbl ad = fp2_dbl::template mul_pre<Wide>(a, d);
+                                fp2_dbl be = fp2_dbl::mul_pre(b, e);
+                                fp2_dbl cf = fp2_dbl::mul_pre(c, f);
+                                fp2_dbl ad = fp2_dbl::mul_pre(a, d);
                                 // Finish the Karatsuba corrections
                                 za -= be;
                                 za -= cf;
@@ -457,9 +459,8 @@ namespace nil {
                             //   z1 = (a + b)(c + d) - ac - bd
                             //
                             // ac, bd, and z1 stay in the lazy doubled representation until the
-                            // two final Fp6 reductions. mul_pre<true> computes (a+b)(c+d)
-                            // directly in the lazy tower, avoiding generic Fp6 temporaries and
-                            // intermediate Montgomery reductions.
+                            // two final Fp6 reductions. The input-side fp6 sums are reduced modulo p,
+                            // so z1 can use the ordinary pre-REDC multiply path.
                             const fp6_base a(x.data[0]);
                             const fp6_base b(x.data[1]);
                             const fp6_base c(y.data[0]);
@@ -471,9 +472,7 @@ namespace nil {
 
                             fp6_dbl z0_dbl = ac + bd.mul_v();
 
-                            // Inner Fp2 sums need the wide multiplication path because they already include two
-                            // rounds of addition.
-                            fp6_dbl z1_dbl = fp6_dbl::template mul_pre<true>(a + b, c + d);
+                            fp6_dbl z1_dbl = fp6_dbl::mul_pre(a + b, c + d);
                             z1_dbl -= ac;    // first correction (see above)
                             z1_dbl -= bd;    // second correction
 
