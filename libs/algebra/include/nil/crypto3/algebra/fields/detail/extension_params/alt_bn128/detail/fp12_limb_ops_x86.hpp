@@ -28,22 +28,11 @@
 #define REG_T_IJ(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 #define VAR_T_AT(I) CAT(t, BOOST_PP_MOD(BOOST_PP_ADD(I, 4), 5))
 
-#define BN254_FP12_REDC_PROPAGATE_HIGH_0 \
-    "adcq $0, " BYTE_OFFSET(6) "(%[data])\n" \
-    "adcq $0, " BYTE_OFFSET(7) "(%[data])\n" \
-    "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
-
-#define BN254_FP12_REDC_PROPAGATE_HIGH_1 \
-    "adcq $0, " BYTE_OFFSET(7) "(%[data])\n" \
-    "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
-
-#define BN254_FP12_REDC_PROPAGATE_HIGH_2 \
-    "adcq $0, " BYTE_OFFSET(8) "(%[data])\n"
-
-#define BN254_FP12_REDC_PROPAGATE_HIGH_3
-
-#define BN254_FP12_REDC_PROPAGATE_HIGH(I) CAT(BN254_FP12_REDC_PROPAGATE_HIGH_, I)
-
+// multiply bottom limb by m*p and propagate carries
+// regs:
+//      * rdx: m
+//      * rax, rsi: low, high
+//      * rcx: row carry
 #define bn254_fp12_montgomery_reduce_mul_mp(I, J)           \
     /* compute m * p[j], m is in rdx */                     \
     /* rax = low, rsi = high */                             \
@@ -62,6 +51,10 @@
     "movq %%rsi, %%rcx\n"
 
 // main body of loop in montgomery reduce
+// regs:
+//      * rdx: m
+//      * rcx: row carry
+//      * dil: window carry - needs to be zeroed outside loop
 #define bn254_fp12_montgomery_reduce_cancel_low(I)                  \
     /* m = data[i] * p_dash */                                      \
     "movq %[t" #I "], %%rdx\n"                                      \
@@ -74,11 +67,12 @@
     bn254_fp12_montgomery_reduce_mul_mp(I, 1)                       \
     bn254_fp12_montgomery_reduce_mul_mp(I, 2)                       \
     bn254_fp12_montgomery_reduce_mul_mp(I, 3)                       \
-    /* propagate carry */                                           \
+    /* load next limb */                                            \
     "movq " BYTE_OFFSET2(I, 5) "(%[data]), " REG_T_I(I) "\n"        \
+    /* propagate carries */                                         \
     "add %%rcx, " REG_T_IJ(I, 4) "\n"                               \
-    "adcq $0, " REG_T_I(I) "\n"                                     \
-    BN254_FP12_REDC_PROPAGATE_HIGH(I)
+    "adcq %%rdi, " REG_T_I(I) "\n"                                  \
+    "setc %%dil\n"                                                 
 
 namespace nil {
     namespace crypto3 {
@@ -230,6 +224,8 @@ namespace nil {
 
                             asm volatile(
                                 // initial loop: for each limb, compute m and multiply each limb by m*p
+                                // make sure window carry is initialized
+                                "xor %%rdi, %%rdi\n"
                                 bn254_fp12_montgomery_reduce_cancel_low(0)
                                 bn254_fp12_montgomery_reduce_cancel_low(1)
                                 bn254_fp12_montgomery_reduce_cancel_low(2)
@@ -270,7 +266,7 @@ namespace nil {
                                   [p2]"m"(p2),
                                   [p3]"m"(p3),
                                   [p_dash]"m"(p_dash)
-                                : "rax", "rcx", "rdx", "rsi", "cc", "memory"
+                                : "rax", "rcx", "rdx", "rsi", "rdi", "cc", "memory"
                             );
 
                             data[0] = VAR_T_AT(0);
