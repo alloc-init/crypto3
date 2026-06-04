@@ -193,7 +193,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
-    void montgomery_reduce_x86(limb_array &data) {
+    inline void montgomery_reduce_x86(limb_array &data) {
         constexpr auto mod_obj = Field::modulus_params.get_mod_obj();
         static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);
         static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);
@@ -252,11 +252,11 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "movq $0, " PTR(data, 7) "\n"
             "movq $0, " PTR(data, 8) "\n"
 
-            : [t0]"+r"(t0),
-              [t1]"+r"(t1),
-              [t2]"+r"(t2),
-              [t3]"+r"(t3),
-              [t4]"+r"(t4),
+            : [t0]"=&r"(t0),
+              [t1]"=&r"(t1),
+              [t2]"=&r"(t2),
+              [t3]"=&r"(t3),
+              [t4]"=&r"(t4),
               [low]"=&r"(low),
               [high]"=&r"(high),
               [pending]"=&r"(pending),
@@ -266,7 +266,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [p1]"m"(p1),
               [p2]"m"(p2),
               [p3]"m"(p3),
-              [p_dash]"m"(p_dash)
+              [p_dash]"r"(p_dash)
             : "rdx", "cc", "memory"
         );
     }
