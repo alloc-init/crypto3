@@ -176,10 +176,14 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "movq %[t" #I "], %%rdx\n"                                  \
     /* dont modify rdx in mul_mp */                             \
     "imulq %[p_dash], %%rdx\n"                                  \
-    /* clear carry */                                           \
-    "xor %[carry], %[carry]\n"                                  \
+    /* first iteration - avoid generic loop body w carry */     \
+    "mulxq %[p0], %[low], %[high]\n"                           \
+    "add %[t" #I "], %[low]\n" \
+    /* add overflow to high */                                  \
+    "adc $0, %[high]\n"    \
+    /* dont have to store low since it t[i] canceled this round */ \
+    "movq %[high], %[carry]\n"                                  \
     /* main loop, multiply limbs by m*p */                      \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 0)                   \
     bn254_fp12_montgomery_reduce_mul_mp(I, 1)                   \
     bn254_fp12_montgomery_reduce_mul_mp(I, 2)                   \
     bn254_fp12_montgomery_reduce_mul_mp(I, 3)                   \
