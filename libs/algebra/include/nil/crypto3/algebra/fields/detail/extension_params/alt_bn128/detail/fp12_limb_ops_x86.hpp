@@ -300,6 +300,44 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
+namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
+    inline void subtract_limbs_x86(limb_array &result, const limb_array &other) {
+        asm volatile(
+            "movq " PTR(result, 0) ", %%rax\n"
+            "subq " PTR(other, 0) ", %%rax\n"
+            "movq %%rax, " PTR(result, 0) "\n"
+            "movq " PTR(result, 1) ", %%rax\n"
+            "sbbq " PTR(other, 1) ", %%rax\n"
+            "movq %%rax, " PTR(result, 1) "\n"
+            "movq " PTR(result, 2) ", %%rax\n"
+            "sbbq " PTR(other, 2) ", %%rax\n"
+            "movq %%rax, " PTR(result, 2) "\n"
+            "movq " PTR(result, 3) ", %%rax\n"
+            "sbbq " PTR(other, 3) ", %%rax\n"
+            "movq %%rax, " PTR(result, 3) "\n"
+            "movq " PTR(result, 4) ", %%rax\n"
+            "sbbq " PTR(other, 4) ", %%rax\n"
+            "movq %%rax, " PTR(result, 4) "\n"
+            "movq " PTR(result, 5) ", %%rax\n"
+            "sbbq " PTR(other, 5) ", %%rax\n"
+            "movq %%rax, " PTR(result, 5) "\n"
+            "movq " PTR(result, 6) ", %%rax\n"
+            "sbbq " PTR(other, 6) ", %%rax\n"
+            "movq %%rax, " PTR(result, 6) "\n"
+            "movq " PTR(result, 7) ", %%rax\n"
+            "sbbq " PTR(other, 7) ", %%rax\n"
+            "movq %%rax, " PTR(result, 7) "\n"
+            "movq " PTR(result, 8) ", %%rax\n"
+            "sbbq " PTR(other, 8) ", %%rax\n"
+            "movq %%rax, " PTR(result, 8) "\n"
+            :
+            : [result]"r"(result.data()),
+              [other]"r"(other.data())
+            : "rax", "cc", "memory"
+        );
+    }
+}    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
+
 #undef STR_IMPL
 #undef STR
 #undef PTR

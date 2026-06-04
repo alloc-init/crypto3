@@ -56,7 +56,7 @@ namespace nil {
                             }
                         }
 
-                        void subtract_limbs_portable(limb_array &result, const limb_array &other) {
+                        inline void subtract_limbs_portable(limb_array &result, const limb_array &other) {
                             limb borrow = 0u;
                             for (size_t i = 0; i < result.size(); i++) {
                                 const limb subtrahend = other[i] + borrow;
@@ -68,11 +68,11 @@ namespace nil {
                         }
 
                         inline void subtract_limbs(limb_array &result, const limb_array &other) {
-// #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            // subtract_limbs_x86(result, other);
-// #else
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            subtract_limbs_x86(result, other);
+#else
                             subtract_limbs_portable(result, other);
-// #endif
+#endif
                         }
 
                         template <class Field>
