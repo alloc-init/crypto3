@@ -51,7 +51,7 @@ namespace nil {
                         // Lazy pre-REDC values may use all nine storage limbs before Montgomery reduction.
                         typedef alt_bn128_fp12_limb_ops::limb_array lazy_limb_storage_type;
 
-                        // Lazy, signed, double-width base-Fp value used inside the tower fast path.
+                        // Lazy double-width base-Fp value used inside the tower fast path.
                         //
                         // A normal base_value_type is a canonical Montgomery residue x*R mod p in the
                         // low four limbs. Multiplying two such residues first produces
@@ -61,18 +61,31 @@ namespace nil {
                         //
                         // The Fp2/Fp6/Fp12 formulas often add or subtract several raw products before
                         // the coefficient is needed as a normal Fp value, for example ac - bd in Fp2.
-                        // fp_dbl stores those bounded pre-REDC expressions so the tower can combine
-                        // products first and call REDC only for each final coefficient. The limb storage
-                        // stores an unsigned magnitude, so `fp_dbl::negative` records the integer sign
-                        // until reduce() maps the signed result back into reduced Montgomery limbs.
+                        // fp_dbl stores those bounded pre-REDC expressions modulo p * R, where
+                        // R = 2^(64 * 4). This keeps subtractions non-negative without a separate sign bit.
                         struct fp_dbl {
-                            // For BN254 this may occupy up to nine storage limbs, while normal Fp values
-                            // use only the low four.
+                            // For BN254 this may occupy up to eight storage limbs. The ninth storage limb is
+                            // kept available for product/reducer scratch, but normalized fp_dbl values keep it zero.
                             lazy_limb_storage_type data = {};
 
                             fp_dbl() = default;
 
                             explicit fp_dbl(const lazy_limb_storage_type &in_data) : data(in_data) {
+                            }
+
+                            static const base_limb_storage_type &modulus_storage() {
+                                static const base_limb_storage_type p = alt_bn128_fp12_limb_ops::load_limbs(
+                                    base_field_type::modulus_params.get_mod_obj().get_mod());
+                                return p;
+                            }
+
+                            void reduce_mod_pR() {
+                                const base_limb_storage_type &p = modulus_storage();
+                                while (alt_bn128_fp12_limb_ops::ge_modulus(data.data() + base_value_limb_count,
+                                                                           p.data())) {
+                                    alt_bn128_fp12_limb_ops::subtract_modulus(data.data() + base_value_limb_count,
+                                                                              p.data());
+                                }
                             }
 
                             fp_dbl operator+(const fp_dbl &other) const {
@@ -89,27 +102,43 @@ namespace nil {
 
                             fp_dbl &operator+=(const fp_dbl &other) {
                                 alt_bn128_fp12_limb_ops::add_limbs<9>(data, other.data);
+                                reduce_mod_pR();
                                 return *this;
                             }
 
                             fp_dbl &operator-=(const fp_dbl &other) {
-                                bool borrow = alt_bn128_fp12_limb_ops::subtract_limbs(data, other.data);
+                                bool borrow = false;
+                                for (std::size_t i = 0; i < 2 * base_value_limb_count; ++i) {
+                                    const auto subtrahend =
+                                        other.data[i] + static_cast<alt_bn128_fp12_limb_ops::limb>(borrow);
+                                    const bool subtrahend_carry = subtrahend < other.data[i];
+                                    const auto current = data[i];
+                                    data[i] = current - subtrahend;
+                                    borrow = subtrahend_carry || current < subtrahend;
+                                }
+                                data[2 * base_value_limb_count] = 0u;
                                 if (borrow) {
-                                    static base_limb_storage_type p = alt_bn128_fp12_limb_ops::load_limbs(
-                                        base_field_type::modulus_params.get_mod_obj().get_mod());
-                                    alt_bn128_fp12_limb_ops::add_limbs<4>(data.data() + 4, p.data());
+                                    const base_limb_storage_type &p = modulus_storage();
+                                    alt_bn128_fp12_limb_ops::add_limbs<4>(data.data() + base_value_limb_count,
+                                                                          p.data());
                                 }
                                 return *this;
                             }
 
                             fp_dbl doubled() const {
                                 fp_dbl result(*this);
-                                alt_bn128_fp12_limb_ops::left_shift_one(result.data);
+                                result += *this;
                                 return result;
                             }
 
                             fp_dbl &mul_by_9() {
-                                alt_bn128_fp12_limb_ops::multiply_by_limb(data, alt_bn128_fp12_limb_ops::limb(9u));
+                                const fp_dbl x(*this);
+                                fp_dbl t(*this);
+                                t += x;    // 2x
+                                t += t;    // 4x
+                                t += t;    // 8x
+                                t += x;    // 9x
+                                *this = t;
                                 return *this;
                             }
 
@@ -123,9 +152,10 @@ namespace nil {
                             static fp_dbl mul_pre(const base_limb_storage_type &x, const base_limb_storage_type &y) {
                                 fp_dbl product;
                                 if constexpr (Wide) {
-                                    // The Fp2 Karatsuba cross term multiplies coefficient sums; limb_ops reads
-                                    // the low five limbs because each sum may carry once past the four-limb field.
+                                    // The wide tower path multiplies coefficient sums; limb_ops reads the low
+                                    // five limbs and then folds the product back into the pR residue range.
                                     alt_bn128_fp12_limb_ops::multiply_5x5(product.data, x, y);
+                                    product.reduce_mod_pR();
                                 } else {
                                     // Most tower products multiply normal base values, so limb_ops reads only
                                     // the low four limbs from each nine-limb storage value.
@@ -135,7 +165,7 @@ namespace nil {
                             }
 
                             void reduce() {
-                                // Convert a bounded signed nine-limb pre-REDC expression to reduced four-limb
+                                // Convert a bounded pR-residue pre-REDC expression to reduced four-limb
                                 // Montgomery limbs. REDC removes one Montgomery factor.
                                 alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(data);
                             }
@@ -169,8 +199,8 @@ namespace nil {
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
-                                alt_bn128_fp12_limb_ops::add_limbs<4>(data[0], other.data[0]);
-                                alt_bn128_fp12_limb_ops::add_limbs<4>(data[1], other.data[1]);
+                                alt_bn128_fp12_limb_ops::add_limbs<9>(data[0], other.data[0]);
+                                alt_bn128_fp12_limb_ops::add_limbs<9>(data[1], other.data[1]);
                                 return *this;
                             }
 
@@ -184,7 +214,7 @@ namespace nil {
                         struct fp2_dbl {
                             // Lazy Fp2 value in the same coefficient order as generic fp2:
                             //   data[0] + data[1] * u, with u^2 = -1.
-                            // Each coefficient is an unreduced signed double-width Fp value.
+                            // Each coefficient is an unreduced double-width Fp value represented modulo p * R.
                             std::array<fp_dbl, 2> data;
 
                             fp2_dbl() = default;
@@ -225,8 +255,8 @@ namespace nil {
                                 const base_limb_storage_type &b = x.data[1];
                                 const base_limb_storage_type &c = y.data[0];
                                 const base_limb_storage_type &d = y.data[1];
-                                const fp_dbl ac = fp_dbl::mul_pre(a, c);
-                                const fp_dbl bd = fp_dbl::mul_pre(b, d);
+                                const fp_dbl ac = fp_dbl::template mul_pre<Wide>(a, c);
+                                const fp_dbl bd = fp_dbl::template mul_pre<Wide>(b, d);
                                 base_limb_storage_type a_plus_b = a;
                                 base_limb_storage_type c_plus_d = c;
                                 alt_bn128_fp12_limb_ops::add_limbs<9>(a_plus_b, b);
@@ -238,9 +268,10 @@ namespace nil {
                                 result.data[1] -= bd;
                             }
 
+                            template<bool Wide = false>
                             static fp2_dbl mul_pre(const fp2_base &x, const fp2_base &y) {
                                 fp2_dbl result;
-                                fp2_dbl::mul_pre(result, x, y);
+                                fp2_dbl::template mul_pre<Wide>(result, x, y);
                                 return result;
                             }
 
@@ -349,14 +380,15 @@ namespace nil {
                                 const auto &[a, b, c] = x.coeffs();    // a, b, c are fp2_base
                                 const auto &[d, e, f] = y.coeffs();
                                 fp2_dbl za, zb, zc;
-                                // Use Wide when x and y already contain sums, so inner Fp2 cross terms need five limbs.
+                                // Use Wide when x and y already contain sums, so every inner Fp2 product is
+                                // normalized back into the pR residue range before lazy corrections.
                                 fp2_dbl::template mul_pre<Wide>(za, b + c, e + f);
                                 fp2_dbl::template mul_pre<Wide>(zb, a + b, e + d);
                                 fp2_dbl::template mul_pre<Wide>(zc, a + c, d + f);
                                 // Direct products reused by the three Karatsuba corrections.
-                                fp2_dbl be = fp2_dbl::mul_pre(b, e);
-                                fp2_dbl cf = fp2_dbl::mul_pre(c, f);
-                                fp2_dbl ad = fp2_dbl::mul_pre(a, d);
+                                fp2_dbl be = fp2_dbl::template mul_pre<Wide>(b, e);
+                                fp2_dbl cf = fp2_dbl::template mul_pre<Wide>(c, f);
+                                fp2_dbl ad = fp2_dbl::template mul_pre<Wide>(a, d);
                                 // Finish the Karatsuba corrections
                                 za -= be;
                                 za -= cf;
