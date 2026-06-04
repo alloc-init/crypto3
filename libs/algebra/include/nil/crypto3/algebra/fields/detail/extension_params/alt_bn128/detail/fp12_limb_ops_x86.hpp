@@ -167,9 +167,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     /* add overflow to high */                                  \
     "adc $0, %[" #HIGH "]\n"                                    \
     /* data[i,j] = low */                                       \
-    "movq %[low], " T(I, J) "\n"                                \
-    /* carry = high */                                          \
-    "movq %[" #HIGH "], %[" #CARRY "]\n"
+    "movq %[low], " T(I, J) "\n"
 
 // main body of loop in montgomery reduce
 #define bn254_fp12_montgomery_reduce_cancel_low(I)                      \
@@ -183,8 +181,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     /* add overflow to high */                                          \
     "adc $0, %[high]\n"                                                 \
     /* dont have to store low since it t[i] canceled this round */      \
-    /* high becomes carry */                                            \
-    /* main loop, multiply limbs by m*p */                              \
+    /* high becomes carry in next round */                              \
     bn254_fp12_montgomery_reduce_mul_mp(I, 1, carry, high)              \
     bn254_fp12_montgomery_reduce_mul_mp(I, 2, high, carry)              \
     bn254_fp12_montgomery_reduce_mul_mp(I, 3, carry, high)              \
