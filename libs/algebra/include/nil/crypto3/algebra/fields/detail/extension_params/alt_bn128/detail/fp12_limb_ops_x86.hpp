@@ -3,6 +3,8 @@
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
 #include <boost/preprocessor.hpp>
 
+// clang-format off
+
 #define STR_IMPL(X) #X
 #define STR(X) STR_IMPL(X)
 
@@ -22,6 +24,7 @@
     "movq %[acc2], %[acc1]\n"            \
     "xor %[acc2], %[acc2]\n"
 
+// clang-format on
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline void multiply_4x4_x86(limb_array &result, const limb_array &x, const limb_array &y) {
         limb acc0 = 0;
@@ -153,6 +156,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 // get the i+j%5-th "t" register
 #define T(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 
+// clang-format off
+
 // multiply bottom limb by m*p and propagate carries
 // HIGH and CARRY are parameterized so you can alternate them and avoid a copy
 #define bn254_fp12_montgomery_reduce_mul_mp(I, J, HIGH, CARRY)  \
@@ -191,6 +196,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "adcq %[pending], %[t" #I "]\n"                                     \
     "setc %b[pending]\n"
 
+// clang-format on
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
     inline void montgomery_reduce_x86(limb_array &data) {
@@ -315,7 +321,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline void add_4_limbs_x86(limb *result, const limb *other) {
-       asm volatile(
+        asm volatile(
             "movq " PTR(other, 0) ", %%rax\n"
             "addq %%rax, " PTR(result, 0) "\n"
             "movq " PTR(other, 1) ", %%rax\n"
@@ -331,7 +337,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         );
     }
     inline void add_9_limbs_x86(limb *result, const limb *other) {
-       asm volatile(
+        asm volatile(
             "movq " PTR(other, 0) ", %%rax\n"
             "addq %%rax, " PTR(result, 0) "\n"
             "movq " PTR(other, 1) ", %%rax\n"
@@ -356,7 +362,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             : "rax", "cc", "memory"
         );
     }
-}
+}    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 #undef STR_IMPL
 #undef STR
