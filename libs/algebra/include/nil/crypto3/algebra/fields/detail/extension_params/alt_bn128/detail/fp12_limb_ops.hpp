@@ -136,16 +136,9 @@ namespace nil {
 
                         template<class Field>
                         inline void subtract_limbs_mod(limb_array &data, const limb_array &other) {
-                            bool borrow = false;
-                            for (size_t i = 0; i < 8; ++i) {
-                                const auto subtrahend = other[i] + (limb)borrow;
-                                const bool subtrahend_carry = subtrahend < other[i];
-                                const auto current = data[i];
-                                data[i] = current - subtrahend;
-                                borrow = subtrahend_carry || current < subtrahend;
-                            }
-                            data[2 * base_value_limb_count] = 0u;
+                            bool borrow = subtract_limbs<8>(data.data(), other.data());
                             if (borrow) {
+                                // if we went negative, add p
                                 static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                                 add_limbs<4>(data.data() + base_value_limb_count, p.data());
                             }
