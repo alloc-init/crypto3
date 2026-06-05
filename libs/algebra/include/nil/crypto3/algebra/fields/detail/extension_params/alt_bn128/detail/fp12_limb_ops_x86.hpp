@@ -273,34 +273,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
-    template <class Field>
-    void negate_limbs_x86(limb_array &data) {
-        constexpr auto mod_obj = Field::modulus_params.get_mod_obj();
-        static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);
-        static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);
-        static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);
-        static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);
-        asm volatile(
-            "subq " PTR(data, 0) ", %[p0]\n"
-            "sbbq " PTR(data, 1) ", %[p1]\n"
-            "sbbq " PTR(data, 2) ", %[p2]\n"
-            "sbbq " PTR(data, 3) ", %[p3]\n"
-            "movq %[p0], " PTR(data, 0) "\n"
-            "movq %[p1], " PTR(data, 1) "\n"
-            "movq %[p2], " PTR(data, 2) "\n"
-            "movq %[p3], " PTR(data, 3) "\n"
-            :
-            : [data]"r"(data.data()),
-              [p0]"r"(p0),
-              [p1]"r"(p1),
-              [p2]"r"(p2),
-              [p3]"r"(p3)
-            : "cc", "memory"
-        );
-    }
-}    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
-
-namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline bool subtract_limbs_x86(limb_array &result, const limb_array &other) {
         bool borrow;
         asm volatile(

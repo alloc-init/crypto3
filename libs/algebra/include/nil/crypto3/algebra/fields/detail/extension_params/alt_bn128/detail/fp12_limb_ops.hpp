@@ -76,27 +76,13 @@ namespace nil {
                             return borrow;
                         }
 
+                        // template<
+
                         inline bool subtract_limbs(limb_array &result, const limb_array &other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             return subtract_limbs_x86(result, other);
 #else
                             return subtract_limbs_portable(result, other);
-#endif
-                        }
-
-                        template<class Field>
-                        inline void negate_limbs_portable(limb_array &data) {
-                            static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                            subtract_limbs_portable(data, p);
-                        }
-
-                        // Note: requires reduced form - 4 limbs max
-                        template<class Field>
-                        inline void negate_limbs(limb_array &data) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            negate_limbs_x86<Field>(data);
-#else
-                            negate_limbs_portable<Field>(data);
 #endif
                         }
 
