@@ -17,7 +17,7 @@ namespace nil {
                         static limb_array load_limbs(const Backend &backend) {
                             static_assert(Backend::limb_bits == limb_bits,
                                           "alt_bn128 fp12 fast path expects 64-bit field limbs");
-                            static_assert(backend.size() == base_value_limb_count,
+                            static_assert(Backend::internal_limb_count == base_value_limb_count,
                                           "alt_bn128 fp12 fast path expects 4 64-bit limbs");
                             limb_array result = {};
                             for (size_t i = 0; i < base_value_limb_count; i++) {
