@@ -273,7 +273,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
-    inline bool subtract_limbs_x86(limb_array &result, const limb_array &other) {
+    inline bool subtract_9_limbs_x86(limb *result, const limb *other) {
         bool borrow;
         asm volatile(
             "movq " PTR(result, 0) ", %%rax\n"
@@ -305,8 +305,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "movq %%rax, " PTR(result, 8) "\n"
             "setc %[borrow]\n"
             : [borrow]"=r"(borrow)
-            : [result]"r"(result.data()),
-              [other]"r"(other.data())
+            : [result]"r"(result),
+              [other]"r"(other)
             : "rax", "cc", "memory"
         );
         return borrow;
