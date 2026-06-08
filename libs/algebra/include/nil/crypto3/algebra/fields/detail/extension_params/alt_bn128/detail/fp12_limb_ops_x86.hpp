@@ -12,10 +12,10 @@
 #define PTR2(REGNAME, I, J) PTR(REGNAME, BOOST_PP_ADD(I, J))
 
 #define bn254_fp12_multiply_partial_x86(X, Y) \
-    "movq " PTR(x, X) ", %%rax\n"             \
-    "mulq " PTR(y, Y) "\n"                    \
-    "add %%rax, %[acc0]\n"                    \
-    "adc %%rdx, %[acc1]\n"                    \
+    "movq " PTR(x, X) ", %%rdx\n"             \
+    "mulx " PTR(y, Y) ", %[low], %[high] \n"  \
+    "add %[low], %[acc0]\n"                   \
+    "adc %[high], %[acc1]\n"                  \
     "adc $0, %[acc2]\n"
 
 #define bn254_fp12_multiply_emit_x86(I)  \
@@ -30,7 +30,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb acc0 = 0;
         limb acc1 = 0;
         limb acc2 = 0;
-        limb carry = 0;
+        limb low, high;
 
         asm volatile(
             // round 1, x0*y0
@@ -74,11 +74,13 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
             : [acc0]"+r"(acc0),
               [acc1]"+r"(acc1),
-              [acc2]"+r"(acc2)
+              [acc2]"+r"(acc2),
+              [low]"=&r"(low),
+              [high]"=&r"(high)
             : [result]"r"(result.data()),
               [x]"r"(x.data()),
               [y]"r"(y.data())
-            : "rax", "rdx", "cc", "memory"
+            : "rdx", "cc", "memory"
         );
     }
 
@@ -86,6 +88,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb acc0 = 0;
         limb acc1 = 0;
         limb acc2 = 0;
+        limb low, high;
 
         asm volatile(
             // round 1, x0*y0
@@ -137,18 +140,20 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             bn254_fp12_multiply_emit_x86(7)
 
             // round 9, x4*y4, drop high bits (see note in portable version)
-            "movq " PTR(x, 4) ", %%rax\n"
-            "mulq " PTR(y, 4) "\n"
-            "add %%rax, %[acc0]\n"
+            "movq " PTR(x, 4) ", %%rdx\n"
+            "mulx " PTR(y, 4) ", %[low], %[high]\n"
+            "add %[low], %[acc0]\n"
             "movq %[acc0], " PTR(result, 8) "\n"
 
             : [acc0]"+r"(acc0),
               [acc1]"+r"(acc1),
-              [acc2]"+r"(acc2)
+              [acc2]"+r"(acc2),
+              [low]"=&r"(low),
+              [high]"=&r"(high)
             : [result]"r"(result.data()),
               [x]"r"(x.data()),
               [y]"r"(y.data())
-            : "rax", "rdx", "cc", "memory"
+            : "rdx", "cc", "memory"
         );
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
