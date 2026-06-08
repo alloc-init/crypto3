@@ -17,7 +17,7 @@ namespace nil {
                         static limb_array load_limbs(const Backend &backend) {
                             static_assert(Backend::limb_bits == limb_bits,
                                           "alt_bn128 fp12 fast path expects 64-bit field limbs");
-                            static_assert(backend.size() == base_value_limb_count,
+                            static_assert(Backend::internal_limb_count == base_value_limb_count,
                                           "alt_bn128 fp12 fast path expects 4 64-bit limbs");
                             limb_array result = {};
                             for (size_t i = 0; i < base_value_limb_count; i++) {
@@ -64,9 +64,10 @@ namespace nil {
                             add_limbs<N>(result.data(), other.data());
                         }
 
-                        inline bool subtract_limbs_portable(limb_array &result, const limb_array &other) {
+                        template<size_t N>
+                        inline bool subtract_limbs_portable(limb *result, const limb *other) {
                             bool borrow = false;
-                            for (size_t i = 0; i < result.size(); i++) {
+                            for (size_t i = 0; i < N; i++) {
                                 const limb subtrahend = other[i] + (limb)borrow;
                                 const bool subtrahend_carry = subtrahend < other[i];
                                 const limb current = result[i];
@@ -76,28 +77,77 @@ namespace nil {
                             return borrow;
                         }
 
-                        inline bool subtract_limbs(limb_array &result, const limb_array &other) {
+                        template<size_t N>
+                        inline bool subtract_limbs(limb *result, const limb *other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            return subtract_limbs_x86(result, other);
+                            if constexpr (N == 9)
+                                return subtract_9_limbs_x86(result, other);
+                            else
+                                return subtract_limbs_portable<N>(result, other);
 #else
-                            return subtract_limbs_portable(result, other);
+                            return subtract_limbs_portable<N>(result, other);
+#endif
+                        }
+
+                        inline bool ge_modulus(const limb *x, const limb *y) {
+                            if (x[4] != 0u) {
+                                // p has 4 limbs, so if x has a nonzero 5th digit, it is greater
+                                return true;
+                            } else {
+                                for (int i = 4; i >= 0; i--) {
+                                    if (x[i] < y[i]) {
+                                        return false;
+                                    }
+                                    if (x[i] > y[i]) {
+                                        return true;
+                                    }
+                                }
+                                return true;
+                            }
+                        }
+
+                        // do one pass of normalization on lower limbs
+                        template<class Field>
+                        inline void subtract_modulus_lower(limb_array &data) {
+                            static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                            if (ge_modulus(data.data(), p.data())) {
+                                subtract_limbs<5>(data.data(), p.data());
+                            }
+                        }
+
+                        // loop until upper limbs are normalized
+                        template<class Field>
+                        inline void subtract_modulus_upper(limb_array &data) {
+                            static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                            while (ge_modulus(data.data() + 4, p.data())) {
+                                subtract_limbs<5>(data.data() + 4, p.data());
+                            }
+                        }
+
+                        template<class Field>
+                        inline void add_4_limbs_mod(limb_array &data, const limb_array &other) {
+                            add_limbs<4>(data, other);
+                            subtract_modulus_lower<Field>(data);
+                        }
+
+                        template<class Field>
+                        inline void add_8_limbs_mod(limb_array &data, const limb_array &other) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            add_8_limbs_mod_x86<Field>(data, other);
+#else
+                            add_limbs<8>(data, other);
+                            subtract_modulus_upper<Field>(data);
 #endif
                         }
 
                         template<class Field>
-                        inline void negate_limbs_portable(limb_array &data) {
-                            static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                            subtract_limbs_portable(data, p);
-                        }
-
-                        // Note: requires reduced form - 4 limbs max
-                        template<class Field>
-                        inline void negate_limbs(limb_array &data) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            negate_limbs_x86<Field>(data);
-#else
-                            negate_limbs_portable<Field>(data);
-#endif
+                        inline void subtract_limbs_mod(limb_array &data, const limb_array &other) {
+                            bool borrow = subtract_limbs<8>(data.data(), other.data());
+                            if (borrow) {
+                                // if we went negative, add p
+                                static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                                add_limbs<4>(data.data() + base_value_limb_count, p.data());
+                            }
                         }
 
                         inline void left_shift_one(limb_array &result) {
@@ -270,34 +320,6 @@ namespace nil {
 #endif
                         }
 
-                        inline bool ge_modulus(const limb *x, const limb *p) {
-                            if (x[4] != 0u) {
-                                // p has 4 limbs, so if x has a nonzero 5th digit, it is greater
-                                return true;
-                            } else {
-                                for (int i = 4; i >= 0; i--) {
-                                    if (x[i] < p[i]) {
-                                        return false;
-                                    }
-                                    if (x[i] > p[i]) {
-                                        return true;
-                                    }
-                                }
-                                return true;
-                            }
-                        }
-
-                        inline void subtract_modulus(limb *x, const limb *p) {
-                            limb borrow = 0;
-                            for (size_t i = 0; i < 4u; i++) {
-                                const limb subtrahend = p[i] + borrow;
-                                const limb current = x[i];
-                                x[i] = current - subtrahend;
-                                borrow = (subtrahend < p[i] || current < subtrahend) ? 1u : 0u;
-                            }
-                            x[4] -= borrow;
-                        }
-
                         template<class Field>
                         inline void montgomery_reduce_portable(limb_array &data) {
                             // p is the field modulus as 4 limbs
@@ -337,10 +359,7 @@ namespace nil {
 
                             // The REDC output lives in data[4..8]. Bring it back into the
                             // canonical field range before moving the low four limbs.
-                            while (ge_modulus(data.data() + base_value_limb_count, p.data())) {
-                                // Could be as many as 18 reductions for the wide path
-                                subtract_modulus(data.data() + base_value_limb_count, p.data());
-                            }
+                            subtract_modulus_upper<Field>(data);
 
                             // Keep the reduced 4-limb field value and clear the lazy
                             // extension limbs in the shared storage shape.

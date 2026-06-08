@@ -73,21 +73,6 @@ namespace nil {
                             explicit fp_dbl(const lazy_limb_storage_type &in_data) : data(in_data) {
                             }
 
-                            static const base_limb_storage_type &modulus_storage() {
-                                static const base_limb_storage_type p = alt_bn128_fp12_limb_ops::load_limbs(
-                                    base_field_type::modulus_params.get_mod_obj().get_mod());
-                                return p;
-                            }
-
-                            void reduce_mod_pR() {
-                                const base_limb_storage_type &p = modulus_storage();
-                                while (alt_bn128_fp12_limb_ops::ge_modulus(data.data() + base_value_limb_count,
-                                                                           p.data())) {
-                                    alt_bn128_fp12_limb_ops::subtract_modulus(data.data() + base_value_limb_count,
-                                                                              p.data());
-                                }
-                            }
-
                             fp_dbl operator+(const fp_dbl &other) const {
                                 fp_dbl result(*this);
                                 result += other;
@@ -101,27 +86,12 @@ namespace nil {
                             }
 
                             fp_dbl &operator+=(const fp_dbl &other) {
-                                alt_bn128_fp12_limb_ops::add_limbs<9>(data, other.data);
-                                reduce_mod_pR();
+                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(data, other.data);
                                 return *this;
                             }
 
                             fp_dbl &operator-=(const fp_dbl &other) {
-                                bool borrow = false;
-                                for (std::size_t i = 0; i < 2 * base_value_limb_count; ++i) {
-                                    const auto subtrahend =
-                                        other.data[i] + static_cast<alt_bn128_fp12_limb_ops::limb>(borrow);
-                                    const bool subtrahend_carry = subtrahend < other.data[i];
-                                    const auto current = data[i];
-                                    data[i] = current - subtrahend;
-                                    borrow = subtrahend_carry || current < subtrahend;
-                                }
-                                data[2 * base_value_limb_count] = 0u;
-                                if (borrow) {
-                                    const base_limb_storage_type &p = modulus_storage();
-                                    alt_bn128_fp12_limb_ops::add_limbs<4>(data.data() + base_value_limb_count,
-                                                                          p.data());
-                                }
+                                alt_bn128_fp12_limb_ops::subtract_limbs_mod<base_field_type>(data, other.data);
                                 return *this;
                             }
 
@@ -155,7 +125,7 @@ namespace nil {
                                     // The wide path is only for callers that intentionally pass values wider than
                                     // a canonical base-field residue.
                                     alt_bn128_fp12_limb_ops::multiply_5x5(product.data, x, y);
-                                    product.reduce_mod_pR();
+                                    alt_bn128_fp12_limb_ops::subtract_modulus_upper<base_field_type>(product.data);
                                 } else {
                                     // Most tower products multiply normal base values, so limb_ops reads only
                                     // the low four limbs from each nine-limb storage value.
@@ -199,15 +169,9 @@ namespace nil {
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
-                                const base_limb_storage_type &p = fp_dbl::modulus_storage();
-                                alt_bn128_fp12_limb_ops::add_limbs<4>(data[0], other.data[0]);
-                                if (alt_bn128_fp12_limb_ops::ge_modulus(data[0].data(), p.data())) {
-                                    alt_bn128_fp12_limb_ops::subtract_modulus(data[0].data(), p.data());
-                                }
-                                alt_bn128_fp12_limb_ops::add_limbs<4>(data[1], other.data[1]);
-                                if (alt_bn128_fp12_limb_ops::ge_modulus(data[1].data(), p.data())) {
-                                    alt_bn128_fp12_limb_ops::subtract_modulus(data[1].data(), p.data());
-                                }
+                                // no fp_base type, do 4 limb addition manually here
+                                alt_bn128_fp12_limb_ops::add_4_limbs_mod<base_field_type>(data[0], other.data[0]);
+                                alt_bn128_fp12_limb_ops::add_4_limbs_mod<base_field_type>(data[1], other.data[1]);
                                 return *this;
                             }
 
