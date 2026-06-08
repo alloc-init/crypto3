@@ -201,6 +201,30 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "adcq %[pending], %[t" #I "]\n"                                     \
     "setc %b[pending]\n"
 
+#define subtract_high_modulus(OFFSET)        \
+    "modulus_loop_start%=:\n"          \
+    "testq " T(4, OFFSET) ", " T(4, OFFSET) "\n" \
+    "jnz modulus_loop_subtract%=\n"    \
+    "cmpq %[p3], " T(3, OFFSET) "\n"        \
+    "ja modulus_loop_subtract%=\n"     \
+    "jb modulus_loop_end%=\n"          \
+    "cmpq %[p2], " T(2, OFFSET) "\n"        \
+    "ja modulus_loop_subtract%=\n"     \
+    "jb modulus_loop_end%=\n"          \
+    "cmpq %[p1], " T(1, OFFSET) "\n"        \
+    "ja modulus_loop_subtract%=\n"     \
+    "jb modulus_loop_end%=\n"          \
+    "cmpq %[p0], " T(0, OFFSET) "\n"        \
+    "jb modulus_loop_end%=\n"          \
+    "modulus_loop_subtract%=:\n"       \
+    "subq %[p0], " T(0, OFFSET) "\n"        \
+    "sbbq %[p1], " T(1, OFFSET) "\n"        \
+    "sbbq %[p2], " T(2, OFFSET) "\n"        \
+    "sbbq %[p3], " T(3, OFFSET) "\n"        \
+    "sbbq $0, " T(4, OFFSET) "\n"           \
+    "jmp modulus_loop_start%=\n"       \
+    "modulus_loop_end%=:\n"
+
 // clang-format on
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
@@ -229,29 +253,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             bn254_fp12_montgomery_reduce_cancel_low(2)
             bn254_fp12_montgomery_reduce_cancel_low(3)
 
-            // subtract modulus
-            "modulus_loop_start%=:\n"
-            "testq " T(4, 4) ", " T(4, 4) "\n"
-            "jnz modulus_loop_subtract%=\n"
-            "cmpq %[p3], " T(3, 4) "\n"
-            "ja modulus_loop_subtract%=\n"
-            "jb modulus_loop_end%=\n"
-            "cmpq %[p2], " T(2, 4) "\n"
-            "ja modulus_loop_subtract%=\n"
-            "jb modulus_loop_end%=\n"
-            "cmpq %[p1], " T(1, 4) "\n"
-            "ja modulus_loop_subtract%=\n"
-            "jb modulus_loop_end%=\n"
-            "cmpq %[p0], " T(0, 4) "\n"
-            "jb modulus_loop_end%=\n"
-            "modulus_loop_subtract%=:\n"
-            "subq %[p0], " T(0, 4) "\n"
-            "sbbq %[p1], " T(1, 4) "\n"
-            "sbbq %[p2], " T(2, 4) "\n"
-            "sbbq %[p3], " T(3, 4) "\n"
-            "sbbq $0, " T(4, 4) "\n"
-            "jmp modulus_loop_start%=\n"
-            "modulus_loop_end%=:\n"
+            subtract_high_modulus(4)
 
             "movq " T(0, 4) ", " PTR(data, 0) "\n"
             "movq " T(1, 4) ", " PTR(data, 1) "\n"
@@ -367,6 +369,60 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             : "rax", "cc", "memory"
         );
     }
+
+    template<class Field>
+    inline void add_8_limbs_mod_x86(limb_array &data, const limb_array &other) {
+        constexpr auto mod_obj = Field::modulus_params.get_mod_obj();
+        static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);
+        static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);
+        static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);
+        static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);
+        limb t0 = data[4];
+        limb t1 = data[5];
+        limb t2 = data[6];
+        limb t3 = data[7];
+        limb t4 = data[8];
+        asm volatile(
+            "movq " PTR(other, 0) ", %%rax\n"
+            "addq %%rax, " PTR(data, 0) "\n"
+            "movq " PTR(other, 1) ", %%rax\n"
+            "adcq %%rax, " PTR(data, 1) "\n"
+            "movq " PTR(other, 2) ", %%rax\n"
+            "adcq %%rax, " PTR(data, 2) "\n"
+            "movq " PTR(other, 3) ", %%rax\n"
+            "adcq %%rax, " PTR(data, 3) "\n"
+            "movq " PTR(other, 4) ", %%rax\n"
+            "adcq %%rax, %[t0]\n"
+            "movq " PTR(other, 5) ", %%rax\n"
+            "adcq %%rax, %[t1]\n"
+            "movq " PTR(other, 6) ", %%rax\n"
+            "adcq %%rax, %[t2]\n"
+            "movq " PTR(other, 7) ", %%rax\n"
+            "adcq %%rax, %[t3]\n"
+            "movq " PTR(other, 8) ", %%rax\n"
+            "adcq %%rax, %[t4]\n"
+
+            subtract_high_modulus(0)
+
+            : [t0]"+r"(t0),
+              [t1]"+r"(t1),
+              [t2]"+r"(t2),
+              [t3]"+r"(t3),
+              [t4]"+r"(t4)
+            : [data]"r"(data.data()),
+              [other]"r"(other.data()),
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3)
+            : "rax", "cc", "memory"
+        );
+        data[4] = t0;
+        data[5] = t1;
+        data[6] = t2;
+        data[7] = t3;
+        data[8] = t4;
+    }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 #undef STR_IMPL
@@ -378,3 +434,4 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #undef T
 #undef bn254_fp12_montgomery_reduce_mul_mp
 #undef bn254_fp12_montgomery_reduce_cancel_low
+#undef subtract_high_modulus

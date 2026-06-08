@@ -124,14 +124,20 @@ namespace nil {
                             }
                         }
 
-                        template<size_t N, class Field>
-                        inline void add_limbs_mod(limb_array &data, const limb_array &other) {
-                            add_limbs<N>(data, other);
-                            if constexpr (N == 8) {
-                                subtract_modulus_upper<Field>(data);
-                            } else if constexpr (N == 4) {
-                                subtract_modulus_lower<Field>(data);
-                            }
+                        template<class Field>
+                        inline void add_4_limbs_mod(limb_array &data, const limb_array &other) {
+                            add_limbs<4>(data, other);
+                            subtract_modulus_lower<Field>(data);
+                        }
+
+                        template<class Field>
+                        inline void add_8_limbs_mod(limb_array &data, const limb_array &other) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            add_8_limbs_mod_x86<Field>(data, other);
+#else
+                            add_limbs<8>(data, other);
+                            subtract_modulus_upper<Field>(data);
+#endif
                         }
 
                         template<class Field>

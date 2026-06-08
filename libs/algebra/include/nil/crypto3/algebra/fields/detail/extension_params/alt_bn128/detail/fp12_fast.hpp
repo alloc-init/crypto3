@@ -86,7 +86,7 @@ namespace nil {
                             }
 
                             fp_dbl &operator+=(const fp_dbl &other) {
-                                alt_bn128_fp12_limb_ops::add_limbs_mod<8, base_field_type>(data, other.data);
+                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(data, other.data);
                                 return *this;
                             }
 
@@ -170,8 +170,8 @@ namespace nil {
 
                             fp2_base &operator+=(const fp2_base &other) {
                                 // no fp_base type, do 4 limb addition manually here
-                                alt_bn128_fp12_limb_ops::add_limbs_mod<4, base_field_type>(data[0], other.data[0]);
-                                alt_bn128_fp12_limb_ops::add_limbs_mod<4, base_field_type>(data[1], other.data[1]);
+                                alt_bn128_fp12_limb_ops::add_4_limbs_mod<base_field_type>(data[0], other.data[0]);
+                                alt_bn128_fp12_limb_ops::add_4_limbs_mod<base_field_type>(data[1], other.data[1]);
                                 return *this;
                             }
 
