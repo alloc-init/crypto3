@@ -7,6 +7,7 @@
 //---------------------------------------------------------------------------//
 
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -56,40 +57,62 @@ static void do_not_optimize(void const* value) {
 struct bench_result {
     double total_ns = 0.0;
     double ns_per = 0.0;
+    double stddev_ns_per = 0.0;
+    std::size_t samples = 0;
 };
 
 template<typename Body>
-bench_result run_stage(std::size_t iters, std::size_t warmup, Body&& body) {
+bench_result run_stage(std::size_t iters, std::size_t warmup, std::size_t samples, Body&& body) {
     for (std::size_t i = 0; i < warmup; ++i) {
         body(i);
     }
 
-    const std::uint64_t t0 = now_ns();
-    for (std::size_t i = 0; i < iters; ++i) {
-        body(i);
-    }
-    const std::uint64_t t1 = now_ns();
+    const std::size_t sample_count = (iters < samples) ? iters : samples;
+    const std::size_t base_iters = iters / sample_count;
+    const std::size_t extra_iters = iters % sample_count;
+    std::size_t iter = 0;
+    double mean_ns_per = 0.0;
+    double m2_ns_per = 0.0;
 
     bench_result result;
-    result.total_ns = static_cast<double>(t1 - t0);
+    result.samples = sample_count;
+    for (std::size_t sample = 0; sample < sample_count; ++sample) {
+        const std::size_t sample_iters = base_iters + (sample < extra_iters ? 1 : 0);
+        const std::uint64_t t0 = now_ns();
+        for (std::size_t i = 0; i < sample_iters; ++i) {
+            body(iter++);
+        }
+        const std::uint64_t t1 = now_ns();
+
+        const double sample_total_ns = static_cast<double>(t1 - t0);
+        const double sample_ns_per = sample_total_ns / static_cast<double>(sample_iters);
+        result.total_ns += sample_total_ns;
+
+        const double delta = sample_ns_per - mean_ns_per;
+        mean_ns_per += delta / static_cast<double>(sample + 1);
+        const double delta2 = sample_ns_per - mean_ns_per;
+        m2_ns_per += delta * delta2;
+    }
+
     result.ns_per = result.total_ns / static_cast<double>(iters);
+    result.stddev_ns_per = sample_count > 1 ? std::sqrt(m2_ns_per / static_cast<double>(sample_count - 1)) : 0.0;
     return result;
 }
 
 static void print_stage(const std::string& name, const bench_result& result) {
-    std::cout << std::left << std::setw(24) << name << " total=" << std::right << std::setw(10)
-              << result.total_ns * 1e-9 << " s"
-              << " per=" << std::setw(10) << result.ns_per << " ns"
-              << " throughput=" << std::setw(12) << (1e9 / result.ns_per) << "/s\n";
+    std::cout << std::left << std::setw(24) << name
+              << " per=" << std::setw(12) << result.ns_per << " ns"
+              << " stddev=" << std::setw(12) << result.stddev_ns_per << " ns\n";
 }
 
 int main(int argc, char** argv) {
     std::size_t iters = (argc >= 2) ? std::strtoull(argv[1], nullptr, 10) : 100'000ULL;
     std::size_t poolN = (argc >= 3) ? std::strtoull(argv[2], nullptr, 10) : 1024ULL;
     std::size_t warmup = (argc >= 4) ? std::strtoull(argv[3], nullptr, 10) : 10'000ULL;
+    std::size_t samples = (argc >= 5) ? std::strtoull(argv[4], nullptr, 10) : 20ULL;
 
-    if (iters == 0 || poolN == 0) {
-        std::cerr << "usage: " << argv[0] << " [iters>0] [poolN>0] [warmup]\n";
+    if (iters == 0 || poolN == 0 || samples == 0) {
+        std::cerr << "usage: " << argv[0] << " [iters>0] [poolN>0] [warmup] [samples>0]\n";
         return 1;
     }
 
@@ -167,28 +190,28 @@ int main(int argc, char** argv) {
     fp12_value_type fp12_acc;
 
     std::cout << "BN254 tower mul benchmark (crypto3)\n";
-    std::cout << "iters=" << iters << " poolN=" << poolN << " warmup=" << warmup << "\n";
+    std::cout << "iters=" << iters << " poolN=" << poolN << " warmup=" << warmup << " samples=" << samples << "\n";
 
-    print_stage("Fp limb 4x4", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp limb 4x4", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     limb_ops::multiply_4x4(fp_limb_acc, fp_limbs_x[idx], fp_limbs_y[idx]);
                     do_not_optimize(&fp_limb_acc);
                 }));
 
-    print_stage("Fp limb 5x5", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp limb 5x5", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     limb_ops::multiply_5x5(fp_limb_acc, fp_sum_x[idx], fp_sum_y[idx]);
                     do_not_optimize(&fp_limb_acc);
                 }));
 
-    print_stage("Fp limb REDC", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp limb REDC", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp_limb_acc = fp_products[idx];
                     limb_ops::montgomery_reduce<base_field_type>(fp_limb_acc);
                     do_not_optimize(&fp_limb_acc);
                 }));
 
-    print_stage("Fp dbl reduce", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp dbl reduce", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     typename fp12_fast_type::fp_dbl value(fp_products[idx]);
                     value.reduce();
@@ -196,40 +219,40 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp_acc);
                 }));
 
-    print_stage("Fp dbl copy", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp dbl copy", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp_dbl_acc = fp_dbl_x[idx];
                     do_not_optimize(&fp_dbl_acc);
                 }));
 
-    print_stage("Fp dbl add", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp dbl add", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp_dbl_acc = fp_dbl_x[idx];
                     fp_dbl_acc += fp_dbl_y[idx];
                     do_not_optimize(&fp_dbl_acc);
                 }));
 
-    print_stage("Fp dbl sub", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp dbl sub", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp_dbl_acc = fp_dbl_x[idx];
                     fp_dbl_acc -= fp_dbl_y[idx];
                     do_not_optimize(&fp_dbl_acc);
                 }));
 
-    print_stage("Fp dbl mul_by_9", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp dbl mul_by_9", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp_dbl_acc = fp_dbl_x[idx];
                     fp_dbl_acc.mul_by_9();
                     do_not_optimize(&fp_dbl_acc);
                 }));
 
-    print_stage("Fp2 pre mul", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp2 pre mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp2_pre_acc = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_x[idx], fp2_base_y[idx]);
                     do_not_optimize(&fp2_pre_acc);
                 }));
 
-    print_stage("Fp2 reduce", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp2 reduce", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     typename fp12_fast_type::fp2_dbl value(fp2_dbl_x[idx]);
                     value.reduce();
@@ -237,7 +260,7 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp2_acc);
                 }));
 
-    print_stage("Fp2 lazy mul", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp2 lazy mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp2_pre_acc = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_x[idx], fp2_base_y[idx]);
                     fp2_pre_acc.reduce();
@@ -245,27 +268,27 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp2_acc);
                 }));
 
-    print_stage("Fp2 dbl add", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp2 dbl add", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp2_pre_acc = fp2_dbl_x[idx];
                     fp2_pre_acc += fp2_dbl_y[idx];
                     do_not_optimize(&fp2_pre_acc);
                 }));
 
-    print_stage("Fp2 dbl sub", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp2 dbl sub", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp2_pre_acc = fp2_dbl_x[idx];
                     fp2_pre_acc -= fp2_dbl_y[idx];
                     do_not_optimize(&fp2_pre_acc);
                 }));
 
-    print_stage("Fp6 pre mul", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp6 pre mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp6_pre_acc = fp6_dbl_type::mul_pre(fp6_base_x[idx], fp6_base_y[idx]);
                     do_not_optimize(&fp6_pre_acc);
                 }));
 
-    print_stage("Fp6 pre sum", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp6 pre sum", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     const std::size_t next = (idx + 1) % poolN;
                     const fp6_base_type x_sum = fp6_base_x[idx] + fp6_base_y[idx];
@@ -274,7 +297,7 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp6_pre_acc);
                 }));
 
-    print_stage("Fp6 reduce", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp6 reduce", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp6_dbl_type value(fp6_dbl_x[idx]);
                     value.reduce();
@@ -282,7 +305,7 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp6_acc);
                 }));
 
-    print_stage("Fp6 lazy mul", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp6 lazy mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp6_pre_acc = fp6_dbl_type::mul_pre(fp6_base_x[idx], fp6_base_y[idx]);
                     fp6_pre_acc.reduce();
@@ -290,21 +313,21 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp6_acc);
                 }));
 
-    print_stage("Fp6 dbl add", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp6 dbl add", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp6_pre_acc = fp6_dbl_x[idx];
                     fp6_pre_acc += fp6_dbl_y[idx];
                     do_not_optimize(&fp6_pre_acc);
                 }));
 
-    print_stage("Fp6 dbl sub", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp6 dbl sub", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp6_pre_acc = fp6_dbl_x[idx];
                     fp6_pre_acc -= fp6_dbl_y[idx];
                     do_not_optimize(&fp6_pre_acc);
                 }));
 
-    print_stage("Fp12 mul", run_stage(iters, warmup, [&](std::size_t i) {
+    print_stage("Fp12 mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp12_acc = xs[idx] * ys[idx];
                     do_not_optimize(&fp12_acc);
