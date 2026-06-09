@@ -24,59 +24,72 @@
     "movq %[acc2], %[acc1]\n"            \
     "xor %[acc2], %[acc2]\n"
 
+#define schoolbook_round(I)                     \
+    "xor %[zero], %[zero]\n"                    \
+    "mov " PTR(y, I) ", %%rdx\n"                \
+    "mulx " PTR(x, 0) ", %[low], %[high]\n"     \
+    "adox %[low], " D(0, I) "\n"                \
+    "adcx %[high], " D(1, I) "\n"               \
+    "mulx " PTR(x, 1) ", %[low], %[high]\n"     \
+    "adox %[low], " D(1, I) "\n"                \
+    "adcx %[high], " D(2, I) "\n"               \
+    "mulx " PTR(x, 2) ", %[low], %[high]\n"     \
+    "adox %[low], " D(2, I) "\n"                \
+    "adcx %[high], " D(3, I) "\n"               \
+    "mulx " PTR(x, 3) ", %[low], %[high]\n"     \
+    "adox %[low], " D(3, I) "\n"                \
+    "adcx %[high], " D(4, I) "\n"               \
+    "adox %[zero], " D(4, I) "\n"               \
+    "adc  $0, " D(4, I) "\n"                    \
+    "mov " D(0, I) ", " PTR(result, I) "\n"     \
+    "xor " D(0, I) ", " D(0, I) "\n"
+
+// get the i+j%5-th "d" register
+#define D(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
+
 // clang-format on
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline void multiply_4x4_x86(limb_array &result, const limb_array &x, const limb_array &y) {
-        limb acc0 = 0;
-        limb acc1 = 0;
-        limb acc2 = 0;
-        limb low, high;
+        limb low, high, carry, overflow, zero;
+        limb d0 = 0;
+        limb d1 = 0;
+        limb d2 = 0;
+        limb d3 = 0;
+        limb d4 = 0;
 
         asm volatile(
-            // round 1, x0*y0
-            multiply_partial(0, 0)
-            multiply_emit(0)
+            // initial round
+            "mov " PTR(y, 0) ", %%rdx\n"
+            "mulx " PTR(x, 0) ", %[d0], %[d1]\n"
+            "mulx " PTR(x, 1) ", %[low], %[d2]\n"
+            "add %[low], %[d1]\n"
+            "mulx " PTR(x, 2) ", %[low], %[d3]\n"
+            "adc %[low], %[d2]\n"
+            "mulx " PTR(x, 3) ", %[low], %[d4]\n"
+            "adc %[low], %[d3]\n"
+            "adc $0, %[d4]\n"
+            "mov %[d0], " PTR(result, 0) "\n"
+            "xor %[d0], %[d0]\n"
 
-            // round 2, x0 * y1, x1 * y0
-            multiply_partial(0, 1)
-            multiply_partial(1, 0)
-            multiply_emit(1)
+            schoolbook_round(1)
+            schoolbook_round(2)
+            schoolbook_round(3)
 
-            // round 3, x0*y2, x1*y1, x2*y0
-            multiply_partial(0,2)
-            multiply_partial(1,1)
-            multiply_partial(2,0)
-            multiply_emit(2)
+            "mov " D(1, 3) ", " PTR(result, 4) "\n"
+            "mov " D(2, 3) ", " PTR(result, 5) "\n"
+            "mov " D(3, 3) ", " PTR(result, 6) "\n"
+            "mov " D(4, 3) ", " PTR(result, 7) "\n"
 
-            // round 4, x0*y3, x1*y2, x2*y1, x3*y0
-            multiply_partial(0, 3)
-            multiply_partial(1, 2)
-            multiply_partial(2, 1)
-            multiply_partial(3, 0)
-            multiply_emit(3)
-
-            // round 5, x1*y3, x2*y2, x3*y1
-            multiply_partial(1, 3)
-            multiply_partial(2, 2)
-            multiply_partial(3, 1)
-            multiply_emit(4)
-
-            // round 6, x2*y3, x3*y2
-            multiply_partial(2, 3)
-            multiply_partial(3, 2)
-            multiply_emit(5)
-
-            // round 7, x3*y3
-            multiply_partial(3, 3)
-            multiply_emit(6)
-            "movq %[acc0], " PTR(result, 7) "\n"
-            "movq %[acc1], " PTR(result, 8) "\n"
-
-            : [acc0]"+r"(acc0),
-              [acc1]"+r"(acc1),
-              [acc2]"+r"(acc2),
-              [low]"=&r"(low),
-              [high]"=&r"(high)
+            : [low]"=&r"(low),
+              [high]"=&r"(high),
+              [carry]"=&r"(carry),
+              [overflow]"=&r"(overflow),
+              [zero]"=&r"(zero),
+              [d0]"=&r"(d0),
+              [d1]"=&r"(d1),
+              [d2]"=&r"(d2),
+              [d3]"=&r"(d3),
+              [d4]"=&r"(d4)
             : [result]"r"(result.data()),
               [x]"r"(x.data()),
               [y]"r"(y.data())
@@ -424,6 +437,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #undef PTR2
 #undef multiply_partial
 #undef multiply_emit
+#undef D
 #undef T
 #undef montgomery_reduce_mul_mp
 #undef montgomery_reduce_cancel_low
