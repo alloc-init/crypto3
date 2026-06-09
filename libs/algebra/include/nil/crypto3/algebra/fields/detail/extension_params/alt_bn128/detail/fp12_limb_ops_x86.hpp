@@ -26,22 +26,20 @@
 
 #define schoolbook_round(I)                     \
     "mov " PTR(y, I) ", %%rdx\n"                \
-    "mulx %[x0], %%rax, %[high]\n"     \
-    "adox %%rax, " D(0, I) "\n"                \
+    "mulx " PTR(x, 0) ", %%rax, %[high]\n"      \
+    "adox %%rax, " D(0, I) "\n"                 \
     "adcx %[high], " D(1, I) "\n"               \
-    "mulx %[x1], %%rax, %[high]\n"     \
-    "adox %%rax, " D(1, I) "\n"                \
+    "mulx " PTR(x, 1) ", %%rax, %[high]\n"      \
+    "adox %%rax, " D(1, I) "\n"                 \
     "adcx %[high], " D(2, I) "\n"               \
-    "mulx %[x2], %%rax, %[high]\n"     \
-    "adox %%rax, " D(2, I) "\n"                \
+    "mulx " PTR(x, 2) ", %%rax, %[high]\n"      \
+    "adox %%rax, " D(2, I) "\n"                 \
     "adcx %[high], " D(3, I) "\n"               \
-    "mulx %[x3], %%rax, %[high]\n"     \
-    "adox %%rax, " D(3, I) "\n"                \
+    "mulx " PTR(x, 3) ", %%rax, %[high]\n"      \
+    "adox %%rax, " D(3, I) "\n"                 \
     "adcx %[high], " D(4, I) "\n"               \
-    "seto %%al\n" \
-    "movzbq %%al, %%rax\n" \
-    "adc $0, " D(4, I) "\n"               \
-    "add %%rax, " D(4, I) "\n"               \
+    "adox %[zero], " D(4, I) "\n"               \
+    "adc %[zero], " D(4, I) "\n"                \
     "mov " D(0, I) ", " PTR(result, I) "\n"     \
     "xor " D(0, I) ", " D(0, I) "\n"
 
@@ -51,27 +49,23 @@
 // clang-format on
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline void multiply_4x4_x86(limb_array &result, const limb_array &x, const limb_array &y) {
-        limb high, zero;
-        limb d0 = 0;
-        limb d1 = 0;
-        limb d2 = 0;
-        limb d3 = 0;
-        limb d4 = 0;
-        limb x0 = x[0], x1 = x[1], x2 = x[2], x3 = x[3];
+        limb zero, high;
+        limb d0 = 0, d1 = 0, d2 = 0, d3 = 0, d4 = 0;
 
         asm volatile(
             // initial round
             "mov " PTR(y, 0) ", %%rdx\n"
-            "mulx %[x0], %[d0], %[d1]\n"
-            "mulx %[x1], %%rax, %[d2]\n"
+            "mulx " PTR(x, 0) ", %[d0], %[d1]\n"
+            "mulx " PTR(x, 1) ", %%rax, %[d2]\n"
             "add %%rax, %[d1]\n"
-            "mulx %[x2], %%rax, %[d3]\n"
+            "mulx " PTR(x, 2) ", %%rax, %[d3]\n"
             "adc %%rax, %[d2]\n"
-            "mulx %[x3], %%rax, %[d4]\n"
+            "mulx " PTR(x, 3) ", %%rax, %[d4]\n"
             "adc %%rax, %[d3]\n"
             "adc $0, %[d4]\n"
             "mov %[d0], " PTR(result, 0) "\n"
             "xor %[d0], %[d0]\n"
+            "xor %[zero], %[zero]\n"
 
             schoolbook_round(1)
             schoolbook_round(2)
@@ -83,6 +77,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "mov " D(4, 3) ", " PTR(result, 7) "\n"
 
             : [high]"=&r"(high),
+              [zero]"=&r"(zero),
               [d0]"=&r"(d0),
               [d1]"=&r"(d1),
               [d2]"=&r"(d2),
@@ -90,10 +85,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [d4]"=&r"(d4)
             : [result]"r"(result.data()),
               [y]"r"(y.data()),
-              [x0]"r"(x0),
-              [x1]"r"(x1),
-              [x2]"r"(x2),
-              [x3]"r"(x3)
+              [x]"r"(x.data())
             : "rax", "rdx", "cc", "memory"
         );
     }
