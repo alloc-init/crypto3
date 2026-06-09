@@ -88,6 +88,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb acc0 = 0;
         limb acc1 = 0;
         limb acc2 = 0;
+        limb acc3 = 0;
         limb low, high;
 
         asm volatile(
@@ -101,9 +102,9 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             multiply_emit(1)
 
             // round 3, x0*y2, x1*y1, x2*y0
-            multiply_partial(0, 2)
-            multiply_partial(1, 1)
-            multiply_partial(2, 0)
+            multiply_partial(0,2)
+            multiply_partial(1,1)
+            multiply_partial(2,0)
             multiply_emit(2)
 
             // round 4, x0*y3, x1*y2, x2*y1, x3*y0
@@ -113,41 +114,65 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             multiply_partial(3, 0)
             multiply_emit(3)
 
-            // round 5, x0*y4, x1*y3, x2*y2, x3*y1, x4*y0
-            multiply_partial(0, 4)
+            // round 5, x1*y3, x2*y2, x3*y1
             multiply_partial(1, 3)
             multiply_partial(2, 2)
             multiply_partial(3, 1)
-            multiply_partial(4, 0)
             multiply_emit(4)
 
-            // round 6, x1*y4, x2*y3, x3*y2, x4*y1
-            multiply_partial(1, 4)
+            // round 6, x2*y3, x3*y2
             multiply_partial(2, 3)
             multiply_partial(3, 2)
-            multiply_partial(4, 1)
             multiply_emit(5)
 
-            // round 7, x2*y4, x3*y3, x4*y2
-            multiply_partial(2, 4)
+            // round 7, x3*y3
             multiply_partial(3, 3)
-            multiply_partial(4, 2)
             multiply_emit(6)
+            "movq %[acc0], " PTR(result, 7) "\n"
+            "movq %[acc1], " PTR(result, 8) "\n"
 
-            // round 8, x3*y4, x4*y3
-            multiply_partial(3, 4)
-            multiply_partial(4, 3)
-            multiply_emit(7)
+            // round 8, x4 and y4 can only be carries
+            // use low as mask
+            "movq " PTR(x, 4) ", %[low]\n"
+            "neg %[low]\n"
+            "movq " PTR(y, 0) ", %[acc0]\n"
+            "movq " PTR(y, 1) ", %[acc1]\n"
+            "movq " PTR(y, 2) ", %[acc2]\n"
+            "movq " PTR(y, 3) ", %[acc3]\n"
+            "and %[low], %[acc0]\n"
+            "and %[low], %[acc1]\n"
+            "and %[low], %[acc2]\n"
+            "and %[low], %[acc3]\n"
+            "addq %[acc0], " PTR(result, 4) "\n"
+            "adcq %[acc1], " PTR(result, 5) "\n"
+            "adcq %[acc2], " PTR(result, 6) "\n"
+            "adcq %[acc3], " PTR(result, 7) "\n"
+            "adcq $0, " PTR(result, 8) "\n"
 
-            // round 9, x4*y4, drop high bits (see note in portable version)
+            "movq " PTR(y, 4) ", %[low]\n"
+            "neg %[low]\n"
+            "movq " PTR(x, 0) ", %[acc0]\n"
+            "movq " PTR(x, 1) ", %[acc1]\n"
+            "movq " PTR(x, 2) ", %[acc2]\n"
+            "movq " PTR(x, 3) ", %[acc3]\n"
+            "and %[low], %[acc0]\n"
+            "and %[low], %[acc1]\n"
+            "and %[low], %[acc2]\n"
+            "and %[low], %[acc3]\n"
+            "addq %[acc0], " PTR(result, 4) "\n"
+            "adcq %[acc1], " PTR(result, 5) "\n"
+            "adcq %[acc2], " PTR(result, 6) "\n"
+            "adcq %[acc3], " PTR(result, 7) "\n"
+            "adcq $0, " PTR(result, 8) "\n"
+
             "movq " PTR(x, 4) ", %%rdx\n"
-            "mulx " PTR(y, 4) ", %[low], %[high]\n"
-            "add %[low], %[acc0]\n"
-            "movq %[acc0], " PTR(result, 8) "\n"
+            "andq " PTR(y, 4) ", %%rdx\n"
+            "addq %%rdx, " PTR(result, 8) "\n"
 
             : [acc0]"+r"(acc0),
               [acc1]"+r"(acc1),
               [acc2]"+r"(acc2),
+              [acc3]"+r"(acc3),
               [low]"=&r"(low),
               [high]"=&r"(high)
             : [result]"r"(result.data()),
@@ -192,9 +217,9 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "adc $0, %[high]\n"                                                 \
     /* dont have to store low since it t[i] canceled this round */      \
     /* high becomes carry in next round */                              \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 1, carry, high)              \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 2, high, carry)              \
-    bn254_fp12_montgomery_reduce_mul_mp(I, 3, carry, high)              \
+    montgomery_reduce_mul_mp(I, 1, carry, high)                         \
+    montgomery_reduce_mul_mp(I, 2, high, carry)                         \
+    montgomery_reduce_mul_mp(I, 3, carry, high)                         \
     /* load next limb */                                                \
     "movq " PTR2(data, I, 5) ", %[t" #I "]\n"                           \
     "add %[carry], " T(I, 4) "\n"                                       \
