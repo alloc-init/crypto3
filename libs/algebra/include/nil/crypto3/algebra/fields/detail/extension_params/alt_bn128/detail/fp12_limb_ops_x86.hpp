@@ -11,6 +11,9 @@
 #define PTR(REGNAME, I) STR(BOOST_PP_MUL(I, 8)) "(%[" #REGNAME "])"
 #define PTR2(REGNAME, I, J) PTR(REGNAME, BOOST_PP_ADD(I, J))
 
+// get the i+j%5-th "d" register
+#define D(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
+
 #define schoolbook_round(I)                     \
     "mov " PTR(y, I) ", %%rdx\n"                \
     "mulx " PTR(x, 0) ", %%rax, %[high]\n"      \
@@ -29,9 +32,6 @@
     "adc %[zero], " D(4, I) "\n"                \
     "mov " D(0, I) ", " PTR(result, I) "\n"     \
     "xor " D(0, I) ", " D(0, I) "\n"
-
-// get the i+j%5-th "d" register
-#define D(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 
 // clang-format on
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
