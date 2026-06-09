@@ -50,7 +50,7 @@
 // clang-format on
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline void multiply_4x4_x86(limb_array &result, const limb_array &x, const limb_array &y) {
-        limb low, high, carry, overflow, zero;
+        limb low, high, zero;
         limb d0 = 0;
         limb d1 = 0;
         limb d2 = 0;
@@ -82,8 +82,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
             : [low]"=&r"(low),
               [high]"=&r"(high),
-              [carry]"=&r"(carry),
-              [overflow]"=&r"(overflow),
               [zero]"=&r"(zero),
               [d0]"=&r"(d0),
               [d1]"=&r"(d1),
