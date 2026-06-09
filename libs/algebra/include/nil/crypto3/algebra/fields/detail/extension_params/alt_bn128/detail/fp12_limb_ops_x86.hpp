@@ -190,6 +190,31 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             montgomery_reduce_cancel_low(2)
             montgomery_reduce_cancel_low(3)
 
+            "modulus%=:\n"
+            // try t =- p until we get a carry flag
+            "subq %[p0], " T(0, 4) "\n"
+            "sbbq %[p1], " T(1, 4) "\n"
+            "sbbq %[p2], " T(2, 4) "\n"
+            "sbbq %[p3], " T(3, 4) "\n"
+            "sbbq $0, " T(4, 4) "\n"
+            "jnc modulus%=\n"
+
+            // add back 1 p
+            "add %[p0], " T(0, 4) "\n"
+            "adc %[p1], " T(1, 4) "\n"
+            "adc %[p2], " T(2, 4) "\n"
+            "adc %[p3], " T(3, 4) "\n"
+
+            "movq " T(0, 4) ", " PTR(data, 0) "\n"
+            "movq " T(1, 4) ", " PTR(data, 1) "\n"
+            "movq " T(2, 4) ", " PTR(data, 2) "\n"
+            "movq " T(3, 4) ", " PTR(data, 3) "\n"
+            "movq $0, " PTR(data, 4) "\n"
+            "movq $0, " PTR(data, 5) "\n"
+            "movq $0, " PTR(data, 6) "\n"
+            "movq $0, " PTR(data, 7) "\n"
+            "movq $0, " PTR(data, 8) "\n"
+
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
@@ -206,60 +231,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [p3]"m"(p3),
               [p_dash]"r"(p_dash)
             : "rdx", "cc"
-        );
-
-        asm volatile(
-            "modulus_loop_start%=:\n"
-            "testq %[t4], %[t4]\n"
-            "jnz modulus_loop_subtract%=\n"
-            "cmpq %[p3], %[t3]\n"
-            "ja modulus_loop_subtract%=\n"
-            "jb modulus_loop_end%=\n"
-            "cmpq %[p2], %[t2]\n"
-            "ja modulus_loop_subtract%=\n"
-            "jb modulus_loop_end%=\n"
-            "cmpq %[p1], %[t1]\n"
-            "ja modulus_loop_subtract%=\n"
-            "jb modulus_loop_end%=\n"
-            "cmpq %[p0], %[t0]\n"
-            "jb modulus_loop_end%=\n"
-            "modulus_loop_subtract%=:\n"
-            "subq %[p0], %[t0]\n"
-            "sbbq %[p1], %[t1]\n"
-            "sbbq %[p2], %[t2]\n"
-            "sbbq %[p3], %[t3]\n"
-            "sbbq $0, %[t4]\n"
-            "jmp modulus_loop_start%=\n"
-            "modulus_loop_end%=:\n"
-            : [t0]"+r"(t4),
-              [t1]"+r"(t0),
-              [t2]"+r"(t1),
-              [t3]"+r"(t2),
-              [t4]"+r"(t3)
-            : [p0]"r"(p0),
-              [p1]"r"(p1),
-              [p2]"r"(p2),
-              [p3]"r"(p3)
-            : "cc"
-        );
-
-        asm volatile (
-            "movq %[t0], " PTR(data, 0) "\n"
-            "movq %[t1], " PTR(data, 1) "\n"
-            "movq %[t2], " PTR(data, 2) "\n"
-            "movq %[t3], " PTR(data, 3) "\n"
-            "movq $0, " PTR(data, 4) "\n"
-            "movq $0, " PTR(data, 5) "\n"
-            "movq $0, " PTR(data, 6) "\n"
-            "movq $0, " PTR(data, 7) "\n"
-            "movq $0, " PTR(data, 8) "\n"
-            :
-            : [data]"r"(data.data()),
-              [t0]"r"(t4),
-              [t1]"r"(t0),
-              [t2]"r"(t1),
-              [t3]"r"(t2)
-            : "memory"
         );
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
