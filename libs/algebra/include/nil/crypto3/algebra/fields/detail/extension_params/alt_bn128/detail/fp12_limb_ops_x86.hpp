@@ -11,14 +11,14 @@
 #define PTR(REGNAME, I) STR(BOOST_PP_MUL(I, 8)) "(%[" #REGNAME "])"
 #define PTR2(REGNAME, I, J) PTR(REGNAME, BOOST_PP_ADD(I, J))
 
-#define bn254_fp12_multiply_partial_x86(X, Y) \
+#define multiply_partial(X, Y)                \
     "movq " PTR(x, X) ", %%rdx\n"             \
     "mulx " PTR(y, Y) ", %[low], %[high] \n"  \
     "add %[low], %[acc0]\n"                   \
     "adc %[high], %[acc1]\n"                  \
     "adc $0, %[acc2]\n"
 
-#define bn254_fp12_multiply_emit_x86(I)  \
+#define multiply_emit(I)                 \
     "movq %[acc0], " PTR(result, I) "\n" \
     "movq %[acc1], %[acc0]\n"            \
     "movq %[acc2], %[acc1]\n"            \
@@ -34,41 +34,41 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
         asm volatile(
             // round 1, x0*y0
-            bn254_fp12_multiply_partial_x86(0, 0)
-            bn254_fp12_multiply_emit_x86(0)
+            multiply_partial(0, 0)
+            multiply_emit(0)
 
             // round 2, x0 * y1, x1 * y0
-            bn254_fp12_multiply_partial_x86(0, 1)
-            bn254_fp12_multiply_partial_x86(1, 0)
-            bn254_fp12_multiply_emit_x86(1)
+            multiply_partial(0, 1)
+            multiply_partial(1, 0)
+            multiply_emit(1)
 
             // round 3, x0*y2, x1*y1, x2*y0
-            bn254_fp12_multiply_partial_x86(0,2)
-            bn254_fp12_multiply_partial_x86(1,1)
-            bn254_fp12_multiply_partial_x86(2,0)
-            bn254_fp12_multiply_emit_x86(2)
+            multiply_partial(0,2)
+            multiply_partial(1,1)
+            multiply_partial(2,0)
+            multiply_emit(2)
 
             // round 4, x0*y3, x1*y2, x2*y1, x3*y0
-            bn254_fp12_multiply_partial_x86(0, 3)
-            bn254_fp12_multiply_partial_x86(1, 2)
-            bn254_fp12_multiply_partial_x86(2, 1)
-            bn254_fp12_multiply_partial_x86(3, 0)
-            bn254_fp12_multiply_emit_x86(3)
+            multiply_partial(0, 3)
+            multiply_partial(1, 2)
+            multiply_partial(2, 1)
+            multiply_partial(3, 0)
+            multiply_emit(3)
 
             // round 5, x1*y3, x2*y2, x3*y1
-            bn254_fp12_multiply_partial_x86(1, 3)
-            bn254_fp12_multiply_partial_x86(2, 2)
-            bn254_fp12_multiply_partial_x86(3, 1)
-            bn254_fp12_multiply_emit_x86(4)
+            multiply_partial(1, 3)
+            multiply_partial(2, 2)
+            multiply_partial(3, 1)
+            multiply_emit(4)
 
             // round 6, x2*y3, x3*y2
-            bn254_fp12_multiply_partial_x86(2, 3)
-            bn254_fp12_multiply_partial_x86(3, 2)
-            bn254_fp12_multiply_emit_x86(5)
+            multiply_partial(2, 3)
+            multiply_partial(3, 2)
+            multiply_emit(5)
 
             // round 7, x3*y3
-            bn254_fp12_multiply_partial_x86(3, 3)
-            bn254_fp12_multiply_emit_x86(6)
+            multiply_partial(3, 3)
+            multiply_emit(6)
             "movq %[acc0], " PTR(result, 7) "\n"
             "movq %[acc1], " PTR(result, 8) "\n"
 
@@ -92,52 +92,52 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
         asm volatile(
             // round 1, x0*y0
-            bn254_fp12_multiply_partial_x86(0, 0)
-            bn254_fp12_multiply_emit_x86(0)
+            multiply_partial(0, 0)
+            multiply_emit(0)
 
             // round 2, x0 * y1, x1 * y0
-            bn254_fp12_multiply_partial_x86(0, 1)
-            bn254_fp12_multiply_partial_x86(1, 0)
-            bn254_fp12_multiply_emit_x86(1)
+            multiply_partial(0, 1)
+            multiply_partial(1, 0)
+            multiply_emit(1)
 
             // round 3, x0*y2, x1*y1, x2*y0
-            bn254_fp12_multiply_partial_x86(0, 2)
-            bn254_fp12_multiply_partial_x86(1, 1)
-            bn254_fp12_multiply_partial_x86(2, 0)
-            bn254_fp12_multiply_emit_x86(2)
+            multiply_partial(0, 2)
+            multiply_partial(1, 1)
+            multiply_partial(2, 0)
+            multiply_emit(2)
 
             // round 4, x0*y3, x1*y2, x2*y1, x3*y0
-            bn254_fp12_multiply_partial_x86(0, 3)
-            bn254_fp12_multiply_partial_x86(1, 2)
-            bn254_fp12_multiply_partial_x86(2, 1)
-            bn254_fp12_multiply_partial_x86(3, 0)
-            bn254_fp12_multiply_emit_x86(3)
+            multiply_partial(0, 3)
+            multiply_partial(1, 2)
+            multiply_partial(2, 1)
+            multiply_partial(3, 0)
+            multiply_emit(3)
 
             // round 5, x0*y4, x1*y3, x2*y2, x3*y1, x4*y0
-            bn254_fp12_multiply_partial_x86(0, 4)
-            bn254_fp12_multiply_partial_x86(1, 3)
-            bn254_fp12_multiply_partial_x86(2, 2)
-            bn254_fp12_multiply_partial_x86(3, 1)
-            bn254_fp12_multiply_partial_x86(4, 0)
-            bn254_fp12_multiply_emit_x86(4)
+            multiply_partial(0, 4)
+            multiply_partial(1, 3)
+            multiply_partial(2, 2)
+            multiply_partial(3, 1)
+            multiply_partial(4, 0)
+            multiply_emit(4)
 
             // round 6, x1*y4, x2*y3, x3*y2, x4*y1
-            bn254_fp12_multiply_partial_x86(1, 4)
-            bn254_fp12_multiply_partial_x86(2, 3)
-            bn254_fp12_multiply_partial_x86(3, 2)
-            bn254_fp12_multiply_partial_x86(4, 1)
-            bn254_fp12_multiply_emit_x86(5)
+            multiply_partial(1, 4)
+            multiply_partial(2, 3)
+            multiply_partial(3, 2)
+            multiply_partial(4, 1)
+            multiply_emit(5)
 
             // round 7, x2*y4, x3*y3, x4*y2
-            bn254_fp12_multiply_partial_x86(2, 4)
-            bn254_fp12_multiply_partial_x86(3, 3)
-            bn254_fp12_multiply_partial_x86(4, 2)
-            bn254_fp12_multiply_emit_x86(6)
+            multiply_partial(2, 4)
+            multiply_partial(3, 3)
+            multiply_partial(4, 2)
+            multiply_emit(6)
 
             // round 8, x3*y4, x4*y3
-            bn254_fp12_multiply_partial_x86(3, 4)
-            bn254_fp12_multiply_partial_x86(4, 3)
-            bn254_fp12_multiply_emit_x86(7)
+            multiply_partial(3, 4)
+            multiply_partial(4, 3)
+            multiply_emit(7)
 
             // round 9, x4*y4, drop high bits (see note in portable version)
             "movq " PTR(x, 4) ", %%rdx\n"
@@ -165,7 +165,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
 // multiply bottom limb by m*p and propagate carries
 // HIGH and CARRY are parameterized so you can alternate them and avoid a copy
-#define bn254_fp12_montgomery_reduce_mul_mp(I, J, HIGH, CARRY)  \
+#define montgomery_reduce_mul_mp(I, J, HIGH, CARRY)             \
     /* compute m * p[j], m is in rdx */                         \
     "mulxq %[p" #J "], %[low], %[" #HIGH "] \n"                 \
     /* carry += data[i+j] // add data to carry accumulator */   \
@@ -180,7 +180,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "movq %[low], " T(I, J) "\n"
 
 // main body of loop in montgomery reduce
-#define bn254_fp12_montgomery_reduce_cancel_low(I)                      \
+#define montgomery_reduce_cancel_low(I)                                 \
     /* m = data[i] * p_dash */                                          \
     "movq %[t" #I "], %%rdx\n"                                          \
     /* dont modify rdx in mul_mp */                                     \
@@ -225,10 +225,10 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             // initial loop: for each limb, compute m and multiply each limb by m*p
             // make sure window carry is initialized
             "xor %[pending], %[pending]\n"
-            bn254_fp12_montgomery_reduce_cancel_low(0)
-            bn254_fp12_montgomery_reduce_cancel_low(1)
-            bn254_fp12_montgomery_reduce_cancel_low(2)
-            bn254_fp12_montgomery_reduce_cancel_low(3)
+            montgomery_reduce_cancel_low(0)
+            montgomery_reduce_cancel_low(1)
+            montgomery_reduce_cancel_low(2)
+            montgomery_reduce_cancel_low(3)
 
             "modulus_loop_start%=:\n"
             "testq " T(4, 4) ", " T(4, 4) "\n"
@@ -448,8 +448,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #undef STR
 #undef PTR
 #undef PTR2
-#undef bn254_fp12_multiply_partial_x86
-#undef bn254_fp12_multiply_emit_x86
+#undef multiply_partial
+#undef multiply_emit
 #undef T
-#undef bn254_fp12_montgomery_reduce_mul_mp
-#undef bn254_fp12_montgomery_reduce_cancel_low
+#undef montgomery_reduce_mul_mp
+#undef montgomery_reduce_cancel_low
