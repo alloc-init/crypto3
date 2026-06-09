@@ -11,19 +11,6 @@
 #define PTR(REGNAME, I) STR(BOOST_PP_MUL(I, 8)) "(%[" #REGNAME "])"
 #define PTR2(REGNAME, I, J) PTR(REGNAME, BOOST_PP_ADD(I, J))
 
-#define multiply_partial(X, Y)                \
-    "movq " PTR(x, X) ", %%rdx\n"             \
-    "mulx " PTR(y, Y) ", %[low], %[high] \n"  \
-    "add %[low], %[acc0]\n"                   \
-    "adc %[high], %[acc1]\n"                  \
-    "adc $0, %[acc2]\n"
-
-#define multiply_emit(I)                 \
-    "movq %[acc0], " PTR(result, I) "\n" \
-    "movq %[acc1], %[acc0]\n"            \
-    "movq %[acc2], %[acc1]\n"            \
-    "xor %[acc2], %[acc2]\n"
-
 #define schoolbook_round(I)                     \
     "mov " PTR(y, I) ", %%rdx\n"                \
     "mulx " PTR(x, 0) ", %%rax, %[high]\n"      \
@@ -147,38 +134,31 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 // HIGH and CARRY are parameterized so you can alternate them and avoid a copy
 #define montgomery_reduce_mul_mp(I, J, HIGH, CARRY)             \
     /* compute m * p[j], m is in rdx */                         \
-    "mulxq %[p" #J "], %[low], %[" #HIGH "] \n"                 \
-    /* carry += data[i+j] // add data to carry accumulator */   \
-    "add " T(I, J) ", %[" #CARRY "]\n"                          \
-    /* add any overflow to high */                              \
+    "mulx %[p" #J "], %[low], %[" #HIGH "] \n"                  \
+    "add %[" #CARRY "], " T(I, J) "\n"                          \
     "adc $0, %[" #HIGH "]\n"                                    \
-    /* add carry/accumulator to low */                          \
-    "add %[" #CARRY "], %[low]\n"                               \
-    /* add overflow to high */                                  \
-    "adc $0, %[" #HIGH "]\n"                                    \
-    /* data[i,j] = low */                                       \
-    "movq %[low], " T(I, J) "\n"
+    "add %[low], " T(I, J) "\n"                                 \
+    "adc $0, %[" #HIGH "]\n"
 
 // main body of loop in montgomery reduce
 #define montgomery_reduce_cancel_low(I)                                 \
     /* m = data[i] * p_dash */                                          \
     "movq %[t" #I "], %%rdx\n"                                          \
-    /* dont modify rdx in mul_mp */                                     \
     "imulq %[p_dash], %%rdx\n"                                          \
     /* first iteration - avoid generic loop body w carry */             \
-    "mulxq %[p0], %[low], %[carry]\n"                                    \
+    "mulxq %[p0], %[low], %[carry]\n"                                   \
     /* add just to see if carry */                                      \
     "add %[t" #I "], %[low]\n"                                          \
-    /* add overflow to carry */                                          \
-    "adc $0, %[carry]\n"                                                 \
+    /* add overflow to carry */                                         \
+    "adc $0, %[carry]\n"                                                \
     /* dont have to store low since it t[i] canceled this round */      \
     montgomery_reduce_mul_mp(I, 1, high, carry)                         \
     montgomery_reduce_mul_mp(I, 2, carry, high)                         \
     montgomery_reduce_mul_mp(I, 3, high, carry)                         \
     /* load next limb */                                                \
     "movq " PTR2(data, I, 5) ", %[t" #I "]\n"                           \
-    "add %[high], " T(I, 4) "\n"                                       \
-    "adcq %[pending], %[t" #I "]\n"                                     \
+    "add %[high], " T(I, 4) "\n"                                        \
+    "adc %[pending], %[t" #I "]\n"                                      \
     "setc %b[pending]\n"
 
 // clang-format on
