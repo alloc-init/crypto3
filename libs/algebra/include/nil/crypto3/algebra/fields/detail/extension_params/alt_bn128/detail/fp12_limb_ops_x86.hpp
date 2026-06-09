@@ -88,7 +88,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb acc0 = 0;
         limb acc1 = 0;
         limb acc2 = 0;
-        limb acc3 = 0;
         limb low, high;
 
         asm volatile(
@@ -132,38 +131,31 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "movq %[acc1], " PTR(result, 8) "\n"
 
             // round 8, x4 and y4 can only be carries
-            // use low as mask
-            "movq " PTR(x, 4) ", %[low]\n"
-            "neg %[low]\n"
+            "cmpq $0, " PTR(x, 4) "\n"
+            "je done_adding_y%=\n"
             "movq " PTR(y, 0) ", %[acc0]\n"
             "movq " PTR(y, 1) ", %[acc1]\n"
             "movq " PTR(y, 2) ", %[acc2]\n"
-            "movq " PTR(y, 3) ", %[acc3]\n"
-            "and %[low], %[acc0]\n"
-            "and %[low], %[acc1]\n"
-            "and %[low], %[acc2]\n"
-            "and %[low], %[acc3]\n"
+            "movq " PTR(y, 3) ", %%rdx\n"
             "addq %[acc0], " PTR(result, 4) "\n"
             "adcq %[acc1], " PTR(result, 5) "\n"
             "adcq %[acc2], " PTR(result, 6) "\n"
-            "adcq %[acc3], " PTR(result, 7) "\n"
+            "adcq %%rdx, " PTR(result, 7) "\n"
             "adcq $0, " PTR(result, 8) "\n"
+            "done_adding_y%=:\n"
 
-            "movq " PTR(y, 4) ", %[low]\n"
-            "neg %[low]\n"
+            "cmpq $0, " PTR(y, 4) "\n"
+            "je done_adding_x%=\n"
             "movq " PTR(x, 0) ", %[acc0]\n"
             "movq " PTR(x, 1) ", %[acc1]\n"
             "movq " PTR(x, 2) ", %[acc2]\n"
-            "movq " PTR(x, 3) ", %[acc3]\n"
-            "and %[low], %[acc0]\n"
-            "and %[low], %[acc1]\n"
-            "and %[low], %[acc2]\n"
-            "and %[low], %[acc3]\n"
+            "movq " PTR(x, 3) ", %%rdx\n"
             "addq %[acc0], " PTR(result, 4) "\n"
             "adcq %[acc1], " PTR(result, 5) "\n"
             "adcq %[acc2], " PTR(result, 6) "\n"
-            "adcq %[acc3], " PTR(result, 7) "\n"
+            "adcq %%rdx, " PTR(result, 7) "\n"
             "adcq $0, " PTR(result, 8) "\n"
+            "done_adding_x%=:\n"
 
             "movq " PTR(x, 4) ", %%rdx\n"
             "andq " PTR(y, 4) ", %%rdx\n"
@@ -172,7 +164,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             : [acc0]"+r"(acc0),
               [acc1]"+r"(acc1),
               [acc2]"+r"(acc2),
-              [acc3]"+r"(acc3),
               [low]"=&r"(low),
               [high]"=&r"(high)
             : [result]"r"(result.data()),
