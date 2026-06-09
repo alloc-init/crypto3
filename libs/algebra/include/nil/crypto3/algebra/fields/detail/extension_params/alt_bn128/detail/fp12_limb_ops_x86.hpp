@@ -85,91 +85,50 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 
     inline void multiply_5x5_x86(limb_array &result, const limb_array &x, const limb_array &y) {
-        limb acc0 = 0;
-        limb acc1 = 0;
-        limb acc2 = 0;
-        limb low, high;
-
+        multiply_4x4_x86(result, x, y);
+        
+        limb d0, d1, d2, d3;
         asm volatile(
-            // round 1, x0*y0
-            multiply_partial(0, 0)
-            multiply_emit(0)
-
-            // round 2, x0 * y1, x1 * y0
-            multiply_partial(0, 1)
-            multiply_partial(1, 0)
-            multiply_emit(1)
-
-            // round 3, x0*y2, x1*y1, x2*y0
-            multiply_partial(0,2)
-            multiply_partial(1,1)
-            multiply_partial(2,0)
-            multiply_emit(2)
-
-            // round 4, x0*y3, x1*y2, x2*y1, x3*y0
-            multiply_partial(0, 3)
-            multiply_partial(1, 2)
-            multiply_partial(2, 1)
-            multiply_partial(3, 0)
-            multiply_emit(3)
-
-            // round 5, x1*y3, x2*y2, x3*y1
-            multiply_partial(1, 3)
-            multiply_partial(2, 2)
-            multiply_partial(3, 1)
-            multiply_emit(4)
-
-            // round 6, x2*y3, x3*y2
-            multiply_partial(2, 3)
-            multiply_partial(3, 2)
-            multiply_emit(5)
-
-            // round 7, x3*y3
-            multiply_partial(3, 3)
-            multiply_emit(6)
-            "movq %[acc0], " PTR(result, 7) "\n"
-            "movq %[acc1], " PTR(result, 8) "\n"
-
             // round 8, x4 and y4 can only be carries
             "cmpq $0, " PTR(x, 4) "\n"
             "je done_adding_y%=\n"
-            "movq " PTR(y, 0) ", %[acc0]\n"
-            "movq " PTR(y, 1) ", %[acc1]\n"
-            "movq " PTR(y, 2) ", %[acc2]\n"
-            "movq " PTR(y, 3) ", %%rdx\n"
-            "addq %[acc0], " PTR(result, 4) "\n"
-            "adcq %[acc1], " PTR(result, 5) "\n"
-            "adcq %[acc2], " PTR(result, 6) "\n"
-            "adcq %%rdx, " PTR(result, 7) "\n"
+            "movq " PTR(y, 0) ", %[d0]\n"
+            "movq " PTR(y, 1) ", %[d1]\n"
+            "movq " PTR(y, 2) ", %[d2]\n"
+            "movq " PTR(y, 3) ", %[d3]\n"
+            "addq %[d0], " PTR(result, 4) "\n"
+            "adcq %[d1], " PTR(result, 5) "\n"
+            "adcq %[d2], " PTR(result, 6) "\n"
+            "adcq %[d3], " PTR(result, 7) "\n"
             "adcq $0, " PTR(result, 8) "\n"
             "done_adding_y%=:\n"
 
             "cmpq $0, " PTR(y, 4) "\n"
             "je done_adding_x%=\n"
-            "movq " PTR(x, 0) ", %[acc0]\n"
-            "movq " PTR(x, 1) ", %[acc1]\n"
-            "movq " PTR(x, 2) ", %[acc2]\n"
-            "movq " PTR(x, 3) ", %%rdx\n"
-            "addq %[acc0], " PTR(result, 4) "\n"
-            "adcq %[acc1], " PTR(result, 5) "\n"
-            "adcq %[acc2], " PTR(result, 6) "\n"
-            "adcq %%rdx, " PTR(result, 7) "\n"
+            "movq " PTR(x, 0) ", %[d0]\n"
+            "movq " PTR(x, 1) ", %[d1]\n"
+            "movq " PTR(x, 2) ", %[d2]\n"
+            "movq " PTR(x, 3) ", %[d3]\n"
+            "addq %[d0], " PTR(result, 4) "\n"
+            "adcq %[d1], " PTR(result, 5) "\n"
+            "adcq %[d2], " PTR(result, 6) "\n"
+            "adcq %[d3], " PTR(result, 7) "\n"
             "adcq $0, " PTR(result, 8) "\n"
             "done_adding_x%=:\n"
 
-            "movq " PTR(x, 4) ", %%rdx\n"
-            "andq " PTR(y, 4) ", %%rdx\n"
-            "addq %%rdx, " PTR(result, 8) "\n"
+            "movq " PTR(x, 4) ", %[d0]\n"
+            "andq " PTR(y, 4) ", %[d0]\n"
+            "addq %[d0], " PTR(result, 8) "\n"
 
-            : [acc0]"+r"(acc0),
-              [acc1]"+r"(acc1),
-              [acc2]"+r"(acc2),
-              [low]"=&r"(low),
-              [high]"=&r"(high)
+            : 
+              [d0]"=&r"(d0),
+              [d1]"=&r"(d1),
+              [d2]"=&r"(d2),
+              [d3]"=&r"(d3)
             : [result]"r"(result.data()),
               [x]"r"(x.data()),
               [y]"r"(y.data())
-            : "rdx", "cc", "memory"
+            : "cc", "memory"
         );
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
