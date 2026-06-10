@@ -143,22 +143,19 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 // main body of loop in montgomery reduce
 #define montgomery_reduce_cancel_low(I)                                 \
     /* m = data[i] * p_dash */                                          \
-    "movq %[t" #I "], %%rdx\n"                                          \
+    "movq " T(I, 0) ", %%rdx\n"                                         \
     "imulq %[p_dash], %%rdx\n"                                          \
     /* first iteration - avoid generic loop body w carry */             \
-    "mulxq %[p0], %[low], %[carry]\n"                                   \
-    /* add just to see if carry */                                      \
-    "add %[t" #I "], %[low]\n"                                          \
-    /* add overflow to carry */                                         \
-    "adc $0, %[carry]\n"                                                \
-    /* dont have to store low since it t[i] canceled this round */      \
-    montgomery_reduce_mul_mp(I, 1, high, carry)                         \
-    montgomery_reduce_mul_mp(I, 2, carry, high)                         \
-    montgomery_reduce_mul_mp(I, 3, high, carry)                         \
+    "mulxq %[p0], %[low], %[high]\n"                                    \
+    "add %[low], " T(I, 0) "\n"                                         \
+    "adc $0, %[high]\n"                                                 \
+    montgomery_reduce_mul_mp(I, 1, carry, high)                         \
+    montgomery_reduce_mul_mp(I, 2, high, carry)                         \
+    montgomery_reduce_mul_mp(I, 3, carry, high)                         \
     /* load next limb */                                                \
-    "movq " PTR2(data, I, 5) ", %[t" #I "]\n"                           \
-    "add %[high], " T(I, 4) "\n"                                        \
-    "adc %[pending], %[t" #I "]\n"                                      \
+    "movq " PTR2(data, I, 5) ", " T(I, 5) "\n"                          \
+    "add %[carry], " T(I, 4) "\n"                                       \
+    "adc %[pending], " T(I, 5) "\n"                                     \
     "setc %b[pending]\n"
 
 // clang-format on
