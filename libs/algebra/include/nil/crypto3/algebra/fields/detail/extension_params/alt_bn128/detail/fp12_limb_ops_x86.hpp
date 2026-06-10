@@ -125,38 +125,37 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
-// get the i+j%5-th "t" register
-#define T(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
-
 // clang-format off
 
-// multiply bottom limb by m*p and propagate carries
-// HIGH and CARRY are parameterized so you can alternate them and avoid a copy
-#define montgomery_reduce_mul_mp(I, J, HIGH, CARRY)             \
-    /* compute m * p[j], m is in rdx */                         \
-    "mulx %[p" #J "], %[low], %[" #HIGH "] \n"                  \
-    "add %[" #CARRY "], " T(I, J) "\n"                          \
-    "adc $0, %[" #HIGH "]\n"                                    \
-    "add %[low], " T(I, J) "\n"                                 \
-    "adc $0, %[" #HIGH "]\n"
+// get the i+j%5-th "t" register
+#define T(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 
 // main body of loop in montgomery reduce
 #define montgomery_reduce_cancel_low(I)                                 \
     /* m = data[i] * p_dash */                                          \
     "movq " T(I, 0) ", %%rdx\n"                                         \
     "imulq %[p_dash], %%rdx\n"                                          \
-    /* first iteration - avoid generic loop body w carry */             \
+    "xor %[zero], %[zero]\n"                                            \
+    /* multiply m * pi for each i and add it to data */                 \
     "mulxq %[p0], %[low], %[high]\n"                                    \
-    "add %[low], " T(I, 0) "\n"                                         \
-    "adc $0, %[high]\n"                                                 \
-    montgomery_reduce_mul_mp(I, 1, carry, high)                         \
-    montgomery_reduce_mul_mp(I, 2, high, carry)                         \
-    montgomery_reduce_mul_mp(I, 3, carry, high)                         \
+    /* use dual carry chains */                                         \
+    "adcx %[low], " T(I, 0) "\n"                                        \
+    "adox %[high], " T(I, 1) "\n"                                       \
+    "mulxq %[p1], %[low], %[high]\n"                                    \
+    "adcx %[low], " T(I, 1) "\n"                                        \
+    "adox %[high], " T(I, 2) "\n"                                       \
+    "mulxq %[p2], %[low], %[high]\n"                                    \
+    "adcx %[low], " T(I, 2) "\n"                                        \
+    "adox %[high], " T(I, 3) "\n"                                       \
+    "mulxq %[p3], %[low], %[high]\n"                                    \
+    "adcx %[low], " T(I, 3) "\n"                                        \
+    "adox %[high], " T(I, 4) "\n"                                       \
+    "adcx %[zero], " T(I, 4) "\n"                                       \
     /* load next limb */                                                \
     "movq " PTR2(data, I, 5) ", " T(I, 5) "\n"                          \
-    "add %[carry], " T(I, 4) "\n"                                       \
-    "adc %[pending], " T(I, 5) "\n"                                     \
-    "setc %b[pending]\n"
+    /* merge carry chains */                                            \
+    "adcx %[zero], " T(I, 5) "\n"                                       \
+    "adox %[zero], " T(I, 5) "\n"
 
 // clang-format on
 
@@ -170,7 +169,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);
         static constexpr limb p_dash = limb(mod_obj.get_p_dash());
 
-        limb t0, t1, t2, t3, t4, low, high, carry, pending;
+        limb t0, t1, t2, t3, t4;
+        limb low, high, zero;
 
         asm volatile(
             "movq " PTR(data, 0) ", %[t0]\n"
@@ -181,30 +181,29 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
             // initial loop: for each limb, compute m and multiply each limb by m*p
             // make sure window carry is initialized
-            "xor %[pending], %[pending]\n"
             montgomery_reduce_cancel_low(0)
             montgomery_reduce_cancel_low(1)
             montgomery_reduce_cancel_low(2)
             montgomery_reduce_cancel_low(3)
 
-            // Reduce high limbs mod p
+            // Reduce high limbs mod p, reuse some registers for it
             // q = t
             "movq " T(0, 4) ", %[low]\n"
             "movq " T(1, 4) ", %[high]\n"
-            "movq " T(2, 4) ", %[carry]\n"
-            "movq " T(3, 4) ", %[pending]\n"
+            "movq " T(2, 4) ", %[zero]\n"
+            "movq " T(3, 4) ", %%rdx\n"
 
             // try q - p
             "subq %[p0], %[low]\n"
             "sbbq %[p1], %[high]\n"
-            "sbbq %[p2], %[carry]\n"
-            "sbbq %[p3], %[pending]\n"
+            "sbbq %[p2], %[zero]\n"
+            "sbbq %[p3], %%rdx\n"
 
             // if q - p didnt result in a borrrow, set t=q
             "cmovnc %[low], " T(0, 4) "\n"
             "cmovnc %[high], " T(1, 4) "\n"
-            "cmovnc %[carry], " T(2, 4) "\n"
-            "cmovnc %[pending], " T(3, 4) "\n"
+            "cmovnc %[zero], " T(2, 4) "\n"
+            "cmovnc %%rdx, " T(3, 4) "\n"
 
             "movq " T(0, 4) ", " PTR(data, 0) "\n"
             "movq " T(1, 4) ", " PTR(data, 1) "\n"
@@ -223,14 +222,13 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [t4]"=&r"(t4),
               [low]"=&r"(low),
               [high]"=&r"(high),
-              [carry]"=&r"(carry),
-              [pending]"=&r"(pending)
+              [zero]"=&r"(zero)
             : [data]"r"(data.data()),
               [p0]"m"(p0),
               [p1]"m"(p1),
               [p2]"m"(p2),
               [p3]"m"(p3),
-              [p_dash]"r"(p_dash)
+              [p_dash]"m"(p_dash)
             : "rdx", "cc", "memory"
         );
     }
@@ -405,5 +403,4 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #undef multiply_emit
 #undef D
 #undef T
-#undef montgomery_reduce_mul_mp
 #undef montgomery_reduce_cancel_low
