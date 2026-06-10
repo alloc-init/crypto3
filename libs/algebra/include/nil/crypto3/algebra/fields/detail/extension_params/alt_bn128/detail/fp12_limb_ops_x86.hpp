@@ -131,31 +131,29 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #define T(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 
 // main body of loop in montgomery reduce
-#define montgomery_reduce_cancel_low(I)                                 \
-    /* m = data[i] * p_dash */                                          \
-    "movq " T(I, 0) ", %%rdx\n"                                         \
-    "imulq %[p_dash], %%rdx\n"                                          \
-    "xor %[zero], %[zero]\n"                                            \
-    /* multiply m * pi for each i and add it to data */                 \
-    "mulxq %[p0], %[low], %[high]\n"                                    \
-    /* use dual carry chains */                                         \
-    "adcx %[low], " T(I, 0) "\n"                                        \
-    "adox %[high], " T(I, 1) "\n"                                       \
-    "mulxq %[p1], %[low], %[high]\n"                                    \
-    "adcx %[low], " T(I, 1) "\n"                                        \
-    "adox %[high], " T(I, 2) "\n"                                       \
-    "mulxq %[p2], %[low], %[high]\n"                                    \
-    "adcx %[low], " T(I, 2) "\n"                                        \
-    "adox %[high], " T(I, 3) "\n"                                       \
-    "mulxq %[p3], %[low], %[high]\n"                                    \
-    "adcx %[low], " T(I, 3) "\n"                                        \
-    "adox %[high], " T(I, 4) "\n"                                       \
-    "adcx %[zero], " T(I, 4) "\n"                                       \
-    /* load next limb */                                                \
-    "movq " PTR2(data, I, 5) ", " T(I, 5) "\n"                          \
-    /* merge carry chains */                                            \
-    "adcx %[zero], " T(I, 5) "\n"                                       \
-    "adox %[zero], " T(I, 5) "\n"
+#define montgomery_reduce_cancel_low(I)                 \
+    /* m = data[i] * p_dash */                          \
+    "movq " T(I, 0) ", %%rdx\n"                         \
+    "imulq %[p_dash], %%rdx\n"                          \
+    "xor %[zero], %[zero]\n"                            \
+    /* multiply m * pi for each i and add it to data */ \
+    "mulxq %[p0], %[low], %[high]\n"                    \
+    /* use dual carry chains */                         \
+    "adcx %[low], " T(I, 0) "\n"                        \
+    "adox %[high], " T(I, 1) "\n"                       \
+    "mulxq %[p1], %[low], %[high]\n"                    \
+    "adcx %[low], " T(I, 1) "\n"                        \
+    "adox %[high], " T(I, 2) "\n"                       \
+    "mulxq %[p2], %[low], %[high]\n"                    \
+    "adcx %[low], " T(I, 2) "\n"                        \
+    "adox %[high], " T(I, 3) "\n"                       \
+    "mulxq %[p3], %[low], %[high]\n"                    \
+    "adcx %[low], " T(I, 3) "\n"                        \
+    /* merge carry chains */                            \
+    "adox %[pending], %[high]\n"                        \
+    "adcx %[high], " T(I, 4) "\n"                       \
+    "setc %b[pending]\n"                                \
+    "movq " PTR2(data, I, 5) ", " T(I, 5) "\n"
 
 // clang-format on
 
@@ -170,7 +168,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         static constexpr limb p_dash = limb(mod_obj.get_p_dash());
 
         limb t0, t1, t2, t3, t4;
-        limb low, high, zero;
+        limb low, high, pending, zero;
 
         asm volatile(
             "movq " PTR(data, 0) ", %[t0]\n"
@@ -181,6 +179,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
             // initial loop: for each limb, compute m and multiply each limb by m*p
             // make sure window carry is initialized
+            "xor %[pending], %[pending]\n"
             montgomery_reduce_cancel_low(0)
             montgomery_reduce_cancel_low(1)
             montgomery_reduce_cancel_low(2)
@@ -199,7 +198,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "sbbq %[p2], %[zero]\n"
             "sbbq %[p3], %%rdx\n"
 
-            // if q - p didnt result in a borrrow, set t=q
+            // if q - p didnt result in a borrrow, set t=q-p
             "cmovnc %[low], " T(0, 4) "\n"
             "cmovnc %[high], " T(1, 4) "\n"
             "cmovnc %[zero], " T(2, 4) "\n"
@@ -222,6 +221,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [t4]"=&r"(t4),
               [low]"=&r"(low),
               [high]"=&r"(high),
+              [pending]"=&r"(pending),
               [zero]"=&r"(zero)
             : [data]"r"(data.data()),
               [p0]"m"(p0),
