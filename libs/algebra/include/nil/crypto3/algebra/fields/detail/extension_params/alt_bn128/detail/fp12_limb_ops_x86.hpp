@@ -230,7 +230,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [p2]"m"(p2),
               [p3]"m"(p3),
               [p_dash]"r"(p_dash)
-            : "rdx", "cc"
+            : "rdx", "cc", "memory"
         );
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
