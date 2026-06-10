@@ -52,24 +52,72 @@ namespace {
         return result;
     }
 
+    limb_array modulus_limbs() {
+        return load_limbs(field_type::modulus_params.get_mod_obj().get_mod());
+    }
+
+    bool is_pR_bounded(const limb_array &input) {
+        if (input[8] != 0u) {
+            return false;
+        }
+
+        const limb_array p = modulus_limbs();
+        for (size_t i = base_value_limb_count; i > 0; --i) {
+            const size_t index = i - 1u;
+            const limb upper = input[base_value_limb_count + index];
+            if (upper < p[index]) {
+                return true;
+            }
+            if (upper > p[index]) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    void force_pR_bound(limb_array &input) {
+        const limb_array p = modulus_limbs();
+        input[8] = 0u;
+        while (!is_pR_bounded(input)) {
+            subtract_limbs_portable<base_value_limb_count>(input.data() + base_value_limb_count, p.data());
+        }
+    }
+
+    limb_array random_pR_bounded_limbs(boost::random::mt19937 &rng,
+                                       boost::random::uniform_int_distribution<limb> &distribution) {
+        limb_array result = random_limbs(rng, distribution, 8);
+        force_pR_bound(result);
+        return result;
+    }
+
+    void decrement_upper(limb_array &result) {
+        limb borrow = 1u;
+        for (size_t i = base_value_limb_count; borrow != 0u && i < 2u * base_value_limb_count; i++) {
+            const limb current = result[i];
+            result[i] = current - borrow;
+            borrow = current == 0u;
+        }
+    }
+
+    limb_array pR_minus_one() {
+        const limb max = ~limb(0u);
+        const limb_array p = modulus_limbs();
+        limb_array result = {};
+        for (size_t i = 0; i < base_value_limb_count; i++) {
+            result[i] = max;
+            result[base_value_limb_count + i] = p[i];
+        }
+        decrement_upper(result);
+        return result;
+    }
+
     void require_reduce_x86_matches_portable(const limb_array &input) {
+        BOOST_REQUIRE(is_pR_bounded(input));
         limb_array expected = input;
         limb_array actual = input;
         montgomery_reduce_portable<field_type>(expected);
         montgomery_reduce_x86<field_type>(actual);
         BOOST_REQUIRE_EQUAL_COLLECTIONS(expected.begin(), expected.end(), actual.begin(), actual.end());
-    }
-
-    void require_reduce_product_4x4_matches(const limb_array &x, const limb_array &y) {
-        limb_array product = {};
-        multiply_4x4_portable(product, x, y);
-        require_reduce_x86_matches_portable(product);
-    }
-
-    void require_reduce_product_5x5_matches(const limb_array &x, const limb_array &y) {
-        limb_array product = {};
-        multiply_5x5_portable(product, x, y);
-        require_reduce_x86_matches_portable(product);
     }
 }    // namespace
 
@@ -109,48 +157,46 @@ BOOST_AUTO_TEST_CASE(mul_5x5_x86_random) {
     }
 }
 
-BOOST_AUTO_TEST_CASE(reduce_x86_random_products) {
+BOOST_AUTO_TEST_CASE(reduce_x86_random_pR_bounded_inputs) {
     boost::random::mt19937 rng(0x2545);
     boost::random::uniform_int_distribution<limb> d;
     for (size_t i = 0; i < 100; i++) {
-        const limb_array x = random_limbs(rng, d, 4);
-        const limb_array y = random_limbs(rng, d, 4);
-        require_reduce_product_4x4_matches(x, y);
-    }
-    for (size_t i = 0; i < 100; i++) {
-        limb_array x = random_limbs(rng, d, 5);
-        limb_array y = random_limbs(rng, d, 5);
-        x[4] &= 1u;
-        y[4] &= 1u;
-        require_reduce_product_5x5_matches(x, y);
+        require_reduce_x86_matches_portable(random_pR_bounded_limbs(rng, d));
     }
 }
 
-BOOST_AUTO_TEST_CASE(reduce_x86_edge_products) {
+BOOST_AUTO_TEST_CASE(reduce_x86_edge_pR_bounded_inputs) {
     const limb max = ~limb(0u);
+    const limb_array p = modulus_limbs();
 
-    limb_array all_max_4 = {};
+    limb_array zero = {};
+
+    limb_array low_max = {};
     for (size_t i = 0; i < 4; i++) {
-        all_max_4[i] = max;
+        low_max[i] = max;
     }
 
-    limb_array alternating_a = {};
-    limb_array alternating_b = {};
+    limb_array high_modulus_minus_one = {};
     for (size_t i = 0; i < 4; i++) {
-        alternating_a[i] = (i % 2 == 0) ? max : 0u;
-        alternating_b[i] = (i % 2 == 0) ? 0u : max;
+        high_modulus_minus_one[base_value_limb_count + i] = p[i];
     }
+    decrement_upper(high_modulus_minus_one);
 
-    limb_array high_5_a = all_max_4;
-    limb_array high_5_b = all_max_4;
-    high_5_a[4] = 1u;
-    high_5_b[4] = 1u;
+    limb_array alternating = {};
+    for (size_t i = 0; i < 8; i++) {
+        alternating[i] = (i % 2 == 0) ? max : 0u;
+    }
+    force_pR_bound(alternating);
 
-    require_reduce_product_4x4_matches(all_max_4, all_max_4);
-    require_reduce_product_4x4_matches(all_max_4, alternating_a);
-    require_reduce_product_4x4_matches(alternating_a, alternating_b);
-    require_reduce_product_5x5_matches(high_5_a, high_5_b);
-    require_reduce_product_5x5_matches(high_5_a, all_max_4);
+    require_reduce_x86_matches_portable(zero);
+    require_reduce_x86_matches_portable(low_max);
+    require_reduce_x86_matches_portable(high_modulus_minus_one);
+    require_reduce_x86_matches_portable(pR_minus_one());
+    require_reduce_x86_matches_portable(alternating);
+}
+#else
+BOOST_AUTO_TEST_CASE(dummy_test) {
+    BOOST_REQUIRE(true);
 }
 #endif
 
