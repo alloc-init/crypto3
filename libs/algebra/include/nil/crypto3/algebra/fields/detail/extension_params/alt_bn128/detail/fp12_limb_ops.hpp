@@ -119,7 +119,7 @@ namespace nil {
                         template<class Field>
                         inline void subtract_modulus_upper(limb_array &data) {
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                            while (ge_modulus(data.data() + 4, p.data())) {
+                            if (ge_modulus(data.data() + 4, p.data())) {
                                 subtract_limbs<5>(data.data() + 4, p.data());
                             }
                         }

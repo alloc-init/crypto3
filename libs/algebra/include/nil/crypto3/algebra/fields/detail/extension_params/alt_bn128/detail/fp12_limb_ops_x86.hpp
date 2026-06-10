@@ -170,7 +170,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);
         static constexpr limb p_dash = limb(mod_obj.get_p_dash());
 
-        limb t0, t1, t2, t3, t4, low, high, pending, carry;
+        limb t0, t1, t2, t3, t4, low, high, carry, pending;
 
         asm volatile(
             "movq " PTR(data, 0) ", %[t0]\n"
@@ -187,20 +187,24 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             montgomery_reduce_cancel_low(2)
             montgomery_reduce_cancel_low(3)
 
-            "modulus%=:\n"
-            // try t =- p until we get a carry flag
-            "subq %[p0], " T(0, 4) "\n"
-            "sbbq %[p1], " T(1, 4) "\n"
-            "sbbq %[p2], " T(2, 4) "\n"
-            "sbbq %[p3], " T(3, 4) "\n"
-            "sbbq $0, " T(4, 4) "\n"
-            "jnc modulus%=\n"
+            // Reduce high limbs mod p
+            // q = t
+            "movq " T(0, 4) ", %[low]\n"
+            "movq " T(1, 4) ", %[high]\n"
+            "movq " T(2, 4) ", %[carry]\n"
+            "movq " T(3, 4) ", %[pending]\n"
 
-            // add back 1 p
-            "add %[p0], " T(0, 4) "\n"
-            "adc %[p1], " T(1, 4) "\n"
-            "adc %[p2], " T(2, 4) "\n"
-            "adc %[p3], " T(3, 4) "\n"
+            // try q - p
+            "subq %[p0], %[low]\n"
+            "sbbq %[p1], %[high]\n"
+            "sbbq %[p2], %[carry]\n"
+            "sbbq %[p3], %[pending]\n"
+
+            // if q - p didnt result in a borrrow, set t=q
+            "cmovnc %[low], " T(0, 4) "\n"
+            "cmovnc %[high], " T(1, 4) "\n"
+            "cmovnc %[carry], " T(2, 4) "\n"
+            "cmovnc %[pending], " T(3, 4) "\n"
 
             "movq " T(0, 4) ", " PTR(data, 0) "\n"
             "movq " T(1, 4) ", " PTR(data, 1) "\n"
@@ -219,8 +223,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [t4]"=&r"(t4),
               [low]"=&r"(low),
               [high]"=&r"(high),
-              [pending]"=&r"(pending),
-              [carry]"=&r"(carry)
+              [carry]"=&r"(carry),
+              [pending]"=&r"(pending)
             : [data]"r"(data.data()),
               [p0]"m"(p0),
               [p1]"m"(p1),
