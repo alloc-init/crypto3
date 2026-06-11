@@ -164,12 +164,12 @@ int main(int argc, char** argv) {
         const std::size_t next2 = (i + 2) % poolN;
         fp_sum_x[i] = fp_limbs_x[i];
         fp_sum_y[i] = fp_limbs_y[i];
-        limb_ops::add_limbs<9>(fp_sum_x[i], fp_limbs_y[i]);
-        limb_ops::add_limbs<9>(fp_sum_x[i], fp_limbs_x[next]);
-        limb_ops::add_limbs<9>(fp_sum_x[i], fp_limbs_y[next]);
-        limb_ops::add_limbs<9>(fp_sum_y[i], fp_limbs_x[next]);
-        limb_ops::add_limbs<9>(fp_sum_y[i], fp_limbs_y[next]);
-        limb_ops::add_limbs<9>(fp_sum_y[i], fp_limbs_x[next2]);
+        limb_ops::add_8_limbs(fp_sum_x[i], fp_limbs_y[i]);
+        limb_ops::add_8_limbs(fp_sum_x[i], fp_limbs_x[next]);
+        limb_ops::add_8_limbs(fp_sum_x[i], fp_limbs_y[next]);
+        limb_ops::add_8_limbs(fp_sum_y[i], fp_limbs_x[next]);
+        limb_ops::add_8_limbs(fp_sum_y[i], fp_limbs_y[next]);
+        limb_ops::add_8_limbs(fp_sum_y[i], fp_limbs_x[next2]);
         limb_ops::multiply_4x4(fp_products[i], fp_limbs_x[i], fp_limbs_y[i]);
         fp_dbl_x[i] = fp12_fast_type::fp_dbl(fp_products[i]);
         fp_dbl_y[i] = fp12_fast_type::fp_dbl(fp_sum_products[i]);

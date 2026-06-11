@@ -91,7 +91,7 @@ namespace nil {
                             }
 
                             fp_dbl &operator-=(const fp_dbl &other) {
-                                alt_bn128_fp12_limb_ops::subtract_limbs_mod<base_field_type>(data, other.data);
+                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(data, other.data);
                                 return *this;
                             }
 
@@ -219,8 +219,8 @@ namespace nil {
                                 const fp_dbl bd = fp_dbl::mul_pre(b, d);
                                 base_limb_storage_type a_plus_b = a;
                                 base_limb_storage_type c_plus_d = c;
-                                alt_bn128_fp12_limb_ops::add_limbs<8>(a_plus_b, b);
-                                alt_bn128_fp12_limb_ops::add_limbs<8>(c_plus_d, d);
+                                alt_bn128_fp12_limb_ops::add_8_limbs(a_plus_b, b);
+                                alt_bn128_fp12_limb_ops::add_8_limbs(c_plus_d, d);
                                 result.data[0] = ac;
                                 result.data[0] -= bd;
                                 result.data[1] = fp_dbl::mul_pre(a_plus_b, c_plus_d);
