@@ -74,33 +74,32 @@ namespace nil {
 #endif
                         }
 
-                        template<size_t N>
-                        inline bool subtract_limbs(limb *result, const limb *other) {
+                        inline bool subtract_4_limbs(limb *result, const limb *other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            if constexpr (N == 9)
-                                return subtract_9_limbs_x86(result, other);
-                            else
-                                return subtract_limbs_portable<N>(result, other);
+                            return subtract_4_limbs_x86(result, other);
 #else
-                            return subtract_limbs_portable<N>(result, other);
+                            return subtract_limbs_portable<4>(result, other);
+#endif
+                        }
+
+                        inline bool subtract_8_limbs(limb *result, const limb *other) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            return subtract_8_limbs_x86(result, other);
+#else
+                            return subtract_limbs_portable<8>(result, other);
 #endif
                         }
 
                         inline bool ge_modulus(const limb *x, const limb *y) {
-                            if (x[4] != 0u) {
-                                // p has 4 limbs, so if x has a nonzero 5th digit, it is greater
-                                return true;
-                            } else {
-                                for (int i = 4; i >= 0; i--) {
-                                    if (x[i] < y[i]) {
-                                        return false;
-                                    }
-                                    if (x[i] > y[i]) {
-                                        return true;
-                                    }
+                            for (int i = 4; i >= 0; i--) {
+                                if (x[i] < y[i]) {
+                                    return false;
                                 }
-                                return true;
+                                if (x[i] > y[i]) {
+                                    return true;
+                                }
                             }
+                            return true;
                         }
 
                         // do one pass of normalization on lower limbs
@@ -108,7 +107,7 @@ namespace nil {
                         inline void subtract_modulus_lower(limb_array &data) {
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             if (ge_modulus(data.data(), p.data())) {
-                                subtract_limbs<8>(data.data(), p.data());
+                                subtract_4_limbs(data.data(), p.data());
                             }
                         }
 
@@ -117,13 +116,13 @@ namespace nil {
                         inline void subtract_modulus_upper(limb_array &data) {
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             if (ge_modulus(data.data() + 4, p.data())) {
-                                subtract_limbs<4>(data.data() + 4, p.data());
+                                subtract_4_limbs(data.data() + 4, p.data());
                             }
                         }
 
                         template<class Field>
                         inline void add_4_limbs_mod(limb_array &data, const limb_array &other) {
-                            add_limbs_portable<4>(data.data(), other.data());
+                            add_4_limbs(data, other);
                             subtract_modulus_lower<Field>(data);
                         }
 
@@ -139,7 +138,7 @@ namespace nil {
 
                         template<class Field>
                         inline void subtract_8_limbs_mod(limb_array &data, const limb_array &other) {
-                            bool borrow = subtract_limbs<8>(data.data(), other.data());
+                            bool borrow = subtract_8_limbs(data.data(), other.data());
                             if (borrow) {
                                 // if we went negative, add p
                                 static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
@@ -238,7 +237,6 @@ namespace nil {
                             multiply_partial(acc0, acc1, acc2, x[3], y[3]);
                             multiply_emit(result, 6u, acc0, acc1, acc2);
                             result[7] = acc0;
-                            result[8] = acc1;
                         }
 
                         inline void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
@@ -286,7 +284,7 @@ namespace nil {
                                 }
                             }
 
-                            // The REDC output lives in data[4..8]. Bring it back into the
+                            // The REDC output lives in data[4..7]. Bring it back into the
                             // canonical field range before moving the low four limbs.
                             subtract_modulus_upper<Field>(data);
 
