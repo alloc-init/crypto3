@@ -150,6 +150,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "mulxq %[p3], %[low], %[high]\n"                    \
     "adcx %[low], " T(I, 3) "\n"                        \
     /* merge carry chains */                            \
+    "adox %[zero], %[high]\n"                           \
     "adox %[pending], %[high]\n"                        \
     "adcx %[high], " T(I, 4) "\n"                       \
     "setc %b[pending]\n"                                \
