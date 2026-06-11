@@ -219,8 +219,8 @@ namespace nil {
                                 const fp_dbl bd = fp_dbl::mul_pre(b, d);
                                 base_limb_storage_type a_plus_b = a;
                                 base_limb_storage_type c_plus_d = c;
-                                alt_bn128_fp12_limb_ops::add_limbs<9>(a_plus_b, b);
-                                alt_bn128_fp12_limb_ops::add_limbs<9>(c_plus_d, d);
+                                alt_bn128_fp12_limb_ops::add_limbs<8>(a_plus_b, b);
+                                alt_bn128_fp12_limb_ops::add_limbs<8>(c_plus_d, d);
                                 result.data[0] = ac;
                                 result.data[0] -= bd;
                                 result.data[1] = fp_dbl::mul_pre(a_plus_b, c_plus_d);
