@@ -60,17 +60,9 @@ namespace nil {
 
                         inline void add_8_limbs(limb_array &result, const limb_array &other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            add_8_limbs_x86(result, other);
+                            add_8_limbs_x86(result.data(), other.data());
 #else
                             add_limbs_portable<8>(result.data(), other.data());
-#endif
-                        }
-
-                        inline bool subtract_4_limbs(limb *result, const limb *other) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            return subtract_4_limbs_x86(result, other);
-#else
-                            return subtract_limbs_portable<4>(result, other);
 #endif
                         }
 
@@ -115,14 +107,14 @@ namespace nil {
                         inline void subtract_modulus_upper(limb_array &data) {
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             if (ge_modulus_4(data.data() + 4, p.data())) {
-                                subtract_4_limbs(data.data() + 4, p.data());
+                                subtract_limbs_portable<4>(data.data() + 4, p.data());
                             }
                         }
 
                         template<class Field>
                         inline void add_low_4_limbs_mod(limb_array &data, const limb_array &other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            add_low_4_limbs_mod_x86<Field>(result, other);
+                            add_low_4_limbs_mod_x86<Field>(data.data(), other.data());
 #else
                             add_limbs_portable<4>(data.data(), other.data());
                             subtract_modulus_lower<Field>(data);

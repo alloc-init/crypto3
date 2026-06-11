@@ -106,6 +106,9 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "adox %[zero], %[high]\n"                           \
     "adox %[pending], %[high]\n"                        \
     "adcx %[high], " T(I, 4) "\n"                       \
+    BOOST_PP_IF(BOOST_PP_LESS(I, 3), montgomery_reduce_load_next(I), "")
+
+#define montgomery_reduce_load_next(I)                  \
     "setc %b[pending]\n"                                \
     "movq " PTR2(data, I, 5) ", " T(I, 5) "\n"
 
@@ -166,7 +169,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "movq $0, " PTR(data, 5) "\n"
             "movq $0, " PTR(data, 6) "\n"
             "movq $0, " PTR(data, 7) "\n"
-            "movq $0, " PTR(data, 8) "\n"
 
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
@@ -248,6 +250,68 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             : "rax", "cc", "memory"
         );
         return borrow;
+    }
+
+    template<class Field>
+    inline void add_low_4_limbs_mod_x86(limb *data, const limb *other) {
+        constexpr auto mod_obj = Field::modulus_params.get_mod_obj();
+        static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);
+        static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);
+        static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);
+        static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);
+        limb t0 = data[0];
+        limb t1 = data[1];
+        limb t2 = data[2];
+        limb t3 = data[3];
+        limb q0, q1, q2, q3;
+        bool cond;
+        asm volatile(
+            "movq " PTR(other, 4) ", %%rax\n"
+            "adcq %%rax, %[t0]\n"
+            "movq " PTR(other, 5) ", %%rax\n"
+            "adcq %%rax, %[t1]\n"
+            "movq " PTR(other, 6) ", %%rax\n"
+            "adcq %%rax, %[t2]\n"
+            "movq " PTR(other, 7) ", %%rax\n"
+            "adcq %%rax, %[t3]\n"
+
+            // q = t
+            "movq %[t0], %[q0]\n"
+            "movq %[t1], %[q1]\n"
+            "movq %[t2], %[q2]\n"
+            "movq %[t3], %[q3]\n"
+
+            // try q - p
+            "subq %[p0], %[q0]\n"
+            "sbbq %[p1], %[q1]\n"
+            "sbbq %[p2], %[q2]\n"
+            "sbbq %[p3], %[q3]\n"
+
+            // if q - p didnt result in a borrrow, set t=q
+            "cmovnc %[q0], %[t0]\n"
+            "cmovnc %[q1], %[t1]\n"
+            "cmovnc %[q2], %[t2]\n"
+            "cmovnc %[q3], %[t3]\n"
+
+            : [t0]"+r"(t0),
+              [t1]"+r"(t1),
+              [t2]"+r"(t2),
+              [t3]"+r"(t3),
+              [q0]"=&r"(q0),
+              [q1]"=&r"(q1),
+              [q2]"=&r"(q2),
+              [q3]"=&r"(q3)
+            : [other]"r"(other),
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3)
+            : "rax", "cc", "memory"
+        );
+        data[0] = t0;
+        data[1] = t1;
+        data[2] = t2;
+        data[3] = t3;
     }
 
     template<class Field>
