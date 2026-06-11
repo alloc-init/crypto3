@@ -21,35 +21,7 @@ namespace nil {
                         typedef typename extension_policy::non_residue_type non_residue_type;    // fp2
                         typedef typename extension_policy::underlying_type underlying_type;      // fp6
 
-                        // Limb contract with fp12_limb_ops:
-                        // - limb_bits == 64.
-                        // - base_value_limb_count == 4: a normal BN254 Fp residue or modulus value.
-                        // - storage_limb_count == 9: shared storage for base residues and bounded pre-REDC values.
-                        constexpr static const std::size_t limb_bits = alt_bn128_fp12_limb_ops::limb_bits;
-                        constexpr static const std::size_t base_value_limb_count =
-                            alt_bn128_fp12_limb_ops::base_value_limb_count;
-                        constexpr static const std::size_t storage_limb_count =
-                            alt_bn128_fp12_limb_ops::storage_limb_count;
-
-                        constexpr static const std::size_t field_limb_count =
-                            (base_field_type::modulus_bits + limb_bits - 1) / limb_bits;
-                        constexpr static const std::size_t bounded_product_limb_count =
-                            (2 * base_field_type::modulus_bits + 32 + limb_bits - 1) / limb_bits;
-
-                        static_assert(limb_bits == 64u, "alt_bn128 fp12 limb ops assume 64-bit limbs");
-                        static_assert(base_value_limb_count == 4u,
-                                      "alt_bn128 fp12 limb ops assume four base-value limbs");
-                        static_assert(storage_limb_count == 9u, "alt_bn128 fp12 limb ops assume nine storage limbs");
-                        static_assert(field_limb_count == base_value_limb_count,
-                                      "alt_bn128 fp12 fast path expects four 64-bit base-field limbs");
-                        static_assert(bounded_product_limb_count == storage_limb_count,
-                                      "alt_bn128 fp12 fast path expects nine lazy product limbs");
-
-                        // Base Fp values are kept in the nine-limb storage shape so tower additions and lazy products
-                        // use one container type. Only the low four limbs hold the actual base-field value.
-                        typedef alt_bn128_fp12_limb_ops::limb_array base_limb_storage_type;
-                        // Lazy pre-REDC values may use all nine storage limbs before Montgomery reduction.
-                        typedef alt_bn128_fp12_limb_ops::limb_array lazy_limb_storage_type;
+                        using limb_array = alt_bn128_fp12_limb_ops::limb_array;
 
                         // Lazy double-width base-Fp value used inside the tower fast path.
                         //
@@ -66,11 +38,11 @@ namespace nil {
                         struct fp_dbl {
                             // For BN254 this may occupy up to eight storage limbs. The ninth storage limb is
                             // kept available for product/reducer scratch, but normalized fp_dbl values keep it zero.
-                            lazy_limb_storage_type data = {};
+                            limb_array data = {};
 
                             fp_dbl() = default;
 
-                            explicit fp_dbl(const lazy_limb_storage_type &in_data) : data(in_data) {
+                            explicit fp_dbl(const limb_array &in_data) : data(in_data) {
                             }
 
                             fp_dbl operator+(const fp_dbl &other) const {
@@ -118,7 +90,7 @@ namespace nil {
                             // ie. xy = abR^2
                             // We leave it in this form because we have wide enough limb type to support extra
                             // additions and subtractions before reducing.
-                            static fp_dbl mul_pre(const base_limb_storage_type &x, const base_limb_storage_type &y) {
+                            static fp_dbl mul_pre(const limb_array &x, const limb_array &y) {
                                 fp_dbl product;
                                 alt_bn128_fp12_limb_ops::multiply_4x4(product.data, x, y);
                                 return product;
@@ -143,13 +115,14 @@ namespace nil {
                                 return out;
                             }
                         };
-
+ 
+                        // fp2 before multiplying - equivalent to 2 regular Fp's
                         struct fp2_base {
-                            std::array<base_limb_storage_type, 2> data;
+                            std::array<limb_array, 2> data;
 
                             fp2_base() = default;
 
-                            fp2_base(const base_limb_storage_type &c0, const base_limb_storage_type &c1) :
+                            fp2_base(const limb_array &c0, const limb_array &c1) :
                                 data({c0, c1}) {
                             }
 
@@ -211,14 +184,14 @@ namespace nil {
                                 //      = (ac - bd) + (ad + bc)u
                                 // Karatsuba computes the cross term with one product:
                                 //   ad + bc = (a + b)(c + d) - ac - bd.
-                                const base_limb_storage_type &a = x.data[0];
-                                const base_limb_storage_type &b = x.data[1];
-                                const base_limb_storage_type &c = y.data[0];
-                                const base_limb_storage_type &d = y.data[1];
+                                const limb_array &a = x.data[0];
+                                const limb_array &b = x.data[1];
+                                const limb_array &c = y.data[0];
+                                const limb_array &d = y.data[1];
                                 const fp_dbl ac = fp_dbl::mul_pre(a, c);
                                 const fp_dbl bd = fp_dbl::mul_pre(b, d);
-                                base_limb_storage_type a_plus_b = a;
-                                base_limb_storage_type c_plus_d = c;
+                                limb_array a_plus_b = a;
+                                limb_array c_plus_d = c;
                                 alt_bn128_fp12_limb_ops::add_8_limbs(a_plus_b, b);
                                 alt_bn128_fp12_limb_ops::add_8_limbs(c_plus_d, d);
                                 result.data[0] = ac;
