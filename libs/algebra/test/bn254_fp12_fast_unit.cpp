@@ -57,10 +57,6 @@ namespace {
     }
 
     bool is_pR_bounded(const limb_array &input) {
-        if (input[8] != 0u) {
-            return false;
-        }
-
         const limb_array p = modulus_limbs();
         for (size_t i = base_value_limb_count; i > 0; --i) {
             const size_t index = i - 1u;
@@ -77,7 +73,6 @@ namespace {
 
     void force_pR_bound(limb_array &input) {
         const limb_array p = modulus_limbs();
-        input[8] = 0u;
         while (!is_pR_bounded(input)) {
             subtract_limbs_portable<base_value_limb_count>(input.data() + base_value_limb_count, p.data());
         }

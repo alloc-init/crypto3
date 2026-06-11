@@ -91,7 +91,7 @@ namespace nil {
                         }
 
                         inline bool ge_modulus_4(const limb *x, const limb *mod) {
-                            for (int i = 4; i >= 0; i--) {
+                            for (int i = 3; i >= 0; i--) {
                                 if (x[i] < mod[i]) {
                                     return false;
                                 }
