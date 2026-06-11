@@ -58,14 +58,6 @@ namespace nil {
                             return borrow;
                         }
 
-                        inline void add_4_limbs(limb_array &result, const limb_array &other) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            add_4_limbs_x86(result, other);
-#else
-                            add_limbs_portable<4>(result.data(), other.data());
-#endif
-                        }
-
                         inline void add_8_limbs(limb_array &result, const limb_array &other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             add_8_limbs_x86(result, other);
@@ -128,9 +120,13 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void add_4_limbs_mod(limb_array &data, const limb_array &other) {
-                            add_4_limbs(data, other);
+                        inline void add_low_4_limbs_mod(limb_array &data, const limb_array &other) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            add_low_4_limbs_mod_x86<Field>(result, other);
+#else
+                            add_limbs_portable<4>(data.data(), other.data());
                             subtract_modulus_lower<Field>(data);
+#endif
                         }
 
                         template<class Field>

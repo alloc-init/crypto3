@@ -189,22 +189,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
-    inline void add_4_limbs_x86(limb *result, const limb *other) {
-        asm volatile(
-            "movq " PTR(other, 0) ", %%rax\n"
-            "addq %%rax, " PTR(result, 0) "\n"
-            "movq " PTR(other, 1) ", %%rax\n"
-            "adcq %%rax, " PTR(result, 1) "\n"
-            "movq " PTR(other, 2) ", %%rax\n"
-            "adcq %%rax, " PTR(result, 2) "\n"
-            "movq " PTR(other, 3) ", %%rax\n"
-            "adcq %%rax, " PTR(result, 3) "\n"
-            :
-            : [result]"r"(result),
-              [other]"r"(other)
-            : "rax", "cc", "memory"
-        );
-    }
     inline void add_8_limbs_x86(limb *result, const limb *other) {
         asm volatile(
             "movq " PTR(other, 0) ", %%rax\n"
