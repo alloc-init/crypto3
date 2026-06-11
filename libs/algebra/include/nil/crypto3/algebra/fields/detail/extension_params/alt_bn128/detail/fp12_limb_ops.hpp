@@ -26,15 +26,6 @@ namespace nil {
                             return result;
                         }
 
-                        inline bool is_zero(const limb_array &x) {
-                            for (size_t i = 0; i < x.size(); i++) {
-                                if (x[i] != 0u) {
-                                    return false;
-                                }
-                            }
-                            return true;
-                        }
-
                         template<size_t N>
                         inline void add_limbs_portable(limb *result, const limb *other) {
                             limb carry = 0u;
@@ -66,14 +57,6 @@ namespace nil {
 #endif
                         }
 
-                        inline bool subtract_8_limbs(limb *result, const limb *other) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            return subtract_8_limbs_x86(result, other);
-#else
-                            return subtract_limbs_portable<8>(result, other);
-#endif
-                        }
-
                         inline bool ge_modulus_4(const limb *x, const limb *mod) {
                             for (int i = 3; i >= 0; i--) {
                                 if (x[i] < mod[i]) {
@@ -93,16 +76,7 @@ namespace nil {
                             return ge_modulus_4(x, mod);
                         }
 
-                        // do one pass of normalization on lower limbs
-                        template<class Field>
-                        inline void subtract_modulus_lower(limb_array &data) {
-                            static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                            if (ge_modulus(data.data(), p.data())) {
-                                subtract_8_limbs(data.data(), p.data());
-                            }
-                        }
-
-                        // loop until upper limbs are normalized
+                        // make sure upper limbs do not overflow modulus
                         template<class Field>
                         inline void subtract_modulus_upper(limb_array &data) {
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
@@ -117,7 +91,11 @@ namespace nil {
                             add_low_4_limbs_mod_x86<Field>(data.data(), other.data());
 #else
                             add_limbs_portable<4>(data.data(), other.data());
-                            subtract_modulus_lower<Field>(data);
+                            static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                            // do one pass of normalization on lower limbs
+                            if (ge_modulus(data.data(), p.data())) {
+                                subtract_limbs_portable<8>(data.data(), p.data());
+                            }
 #endif
                         }
 
@@ -133,12 +111,16 @@ namespace nil {
 
                         template<class Field>
                         inline void subtract_8_limbs_mod(limb_array &data, const limb_array &other) {
-                            bool borrow = subtract_8_limbs(data.data(), other.data());
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            subtract_8_limbs_mod_x86<Field>(data, other);
+#else
+                            bool borrow = subtract_limbs_portable<8>(data.data(), other.data());
                             if (borrow) {
                                 // if we went negative, add p
                                 static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                                 add_limbs_portable<4>(data.data() + 4, p.data());
                             }
+#endif
                         }
 
                         inline void left_shift_one(limb_array &result) {

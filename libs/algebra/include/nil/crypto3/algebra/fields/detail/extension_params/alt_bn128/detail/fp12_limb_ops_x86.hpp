@@ -80,6 +80,14 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
 // clang-format off
 
+#define set_static_modulus_limbs_from_field()                           \
+        constexpr auto mod_obj = Field::modulus_params.get_mod_obj();   \
+        static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);  \
+        static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);  \
+        static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);  \
+        static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);  \
+        static constexpr limb p_dash = limb(mod_obj.get_p_dash());
+
 // get the i+j%5-th "t" register
 #define T(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 
@@ -117,12 +125,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
     inline void montgomery_reduce_x86(limb_array &data) {
-        constexpr auto mod_obj = Field::modulus_params.get_mod_obj();
-        static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);
-        static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);
-        static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);
-        static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);
-        static constexpr limb p_dash = limb(mod_obj.get_p_dash());
+        set_static_modulus_limbs_from_field();
 
         limb t0, t1, t2, t3, t4;
         limb low, high, pending, zero;
@@ -216,49 +219,9 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         );
     }
 
-    inline bool subtract_8_limbs_x86(limb *result, const limb *other) {
-        bool borrow;
-        asm volatile(
-            "movq " PTR(result, 0) ", %%rax\n"
-            "subq " PTR(other, 0) ", %%rax\n"
-            "movq %%rax, " PTR(result, 0) "\n"
-            "movq " PTR(result, 1) ", %%rax\n"
-            "sbbq " PTR(other, 1) ", %%rax\n"
-            "movq %%rax, " PTR(result, 1) "\n"
-            "movq " PTR(result, 2) ", %%rax\n"
-            "sbbq " PTR(other, 2) ", %%rax\n"
-            "movq %%rax, " PTR(result, 2) "\n"
-            "movq " PTR(result, 3) ", %%rax\n"
-            "sbbq " PTR(other, 3) ", %%rax\n"
-            "movq %%rax, " PTR(result, 3) "\n"
-            "movq " PTR(result, 4) ", %%rax\n"
-            "sbbq " PTR(other, 4) ", %%rax\n"
-            "movq %%rax, " PTR(result, 4) "\n"
-            "movq " PTR(result, 5) ", %%rax\n"
-            "sbbq " PTR(other, 5) ", %%rax\n"
-            "movq %%rax, " PTR(result, 5) "\n"
-            "movq " PTR(result, 6) ", %%rax\n"
-            "sbbq " PTR(other, 6) ", %%rax\n"
-            "movq %%rax, " PTR(result, 6) "\n"
-            "movq " PTR(result, 7) ", %%rax\n"
-            "sbbq " PTR(other, 7) ", %%rax\n"
-            "movq %%rax, " PTR(result, 7) "\n"
-            "setc %[borrow]\n"
-            : [borrow]"=r"(borrow)
-            : [result]"r"(result),
-              [other]"r"(other)
-            : "rax", "cc", "memory"
-        );
-        return borrow;
-    }
-
     template<class Field>
     inline void add_low_4_limbs_mod_x86(limb *data, const limb *other) {
-        constexpr auto mod_obj = Field::modulus_params.get_mod_obj();
-        static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);
-        static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);
-        static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);
-        static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);
+        set_static_modulus_limbs_from_field();
         limb t0 = data[0];
         limb t1 = data[1];
         limb t2 = data[2];
@@ -316,17 +279,12 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
     template<class Field>
     inline void add_8_limbs_mod_x86(limb_array &data, const limb_array &other) {
-        constexpr auto mod_obj = Field::modulus_params.get_mod_obj();
-        static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);
-        static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);
-        static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);
-        static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);
+        set_static_modulus_limbs_from_field();
         limb t0 = data[4];
         limb t1 = data[5];
         limb t2 = data[6];
         limb t3 = data[7];
         limb q0, q1, q2, q3;
-        bool cond;
         asm volatile(
             "movq " PTR(data, 0) ", %%rax\n"
             "addq " PTR(other, 0) ", %%rax\n"
@@ -388,14 +346,83 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         data[6] = t2;
         data[7] = t3;
     }
+
+    template<class Field>
+    inline void subtract_8_limbs_mod_x86(limb_array &result, const limb_array &other) {
+        set_static_modulus_limbs_from_field();
+        limb t0 = result[4];
+        limb t1 = result[5];
+        limb t2 = result[6];
+        limb t3 = result[7];
+        limb q0, q1, q2, q3;
+        asm volatile(
+            "movq " PTR(result, 0) ", %%rax\n"
+            "subq " PTR(other, 0) ", %%rax\n"
+            "movq %%rax, " PTR(result, 0) "\n"
+            "movq " PTR(result, 1) ", %%rax\n"
+            "sbbq " PTR(other, 1) ", %%rax\n"
+            "movq %%rax, " PTR(result, 1) "\n"
+            "movq " PTR(result, 2) ", %%rax\n"
+            "sbbq " PTR(other, 2) ", %%rax\n"
+            "movq %%rax, " PTR(result, 2) "\n"
+            "movq " PTR(result, 3) ", %%rax\n"
+            "sbbq " PTR(other, 3) ", %%rax\n"
+            "movq %%rax, " PTR(result, 3) "\n"
+
+            "sbbq " PTR(other, 4) ", %[t0]\n"
+            "sbbq " PTR(other, 5) ", %[t1]\n"
+            "sbbq " PTR(other, 6) ", %[t2]\n"
+            "sbbq " PTR(other, 7) ", %[t3]\n"
+
+            "setc %%al\n" // save carry flag
+
+            "movq %[t0], %[q0]\n"
+            "movq %[t1], %[q1]\n"
+            "movq %[t2], %[q2]\n"
+            "movq %[t3], %[q3]\n"
+
+            "addq %[p0], %[q0]\n"
+            "adcq %[p1], %[q1]\n"
+            "adcq %[p2], %[q2]\n"
+            "adcq %[p3], %[q3]\n"
+
+            "add $255, %%al\n" // restore carry flag
+
+            "cmovc %[q0], %[t0]\n"
+            "cmovc %[q1], %[t1]\n"
+            "cmovc %[q2], %[t2]\n"
+            "cmovc %[q3], %[t3]\n"
+
+            : [t0]"+r"(t0),
+              [t1]"+r"(t1),
+              [t2]"+r"(t2),
+              [t3]"+r"(t3),
+              [q0]"=&r"(q0),
+              [q1]"=&r"(q1),
+              [q2]"=&r"(q2),
+              [q3]"=&r"(q3)
+            : [result]"r"(result.data()),
+              [other]"r"(other.data()),
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3)
+            : "rax", "cc", "memory"
+        );
+        result[4] = t0;
+        result[5] = t1;
+        result[6] = t2;
+        result[7] = t3;
+    }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 #undef STR_IMPL
 #undef STR
 #undef PTR
 #undef PTR2
-#undef multiply_partial
-#undef multiply_emit
+#undef schoolbook_round
+#undef set_static_modulus_limbs_from_field
 #undef D
 #undef T
+#undef montgomery_reduce_load_next
 #undef montgomery_reduce_cancel_low
