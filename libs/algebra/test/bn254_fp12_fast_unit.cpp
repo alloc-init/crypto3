@@ -138,25 +138,6 @@ BOOST_AUTO_TEST_CASE(mul_4x4_x86_random) {
     }
 }
 
-BOOST_AUTO_TEST_CASE(mul_5x5_x86_random) {
-    boost::random::mt19937 rng(0x2545);
-    boost::random::uniform_int_distribution<limb> d;
-    for (size_t i = 0; i < 100; i++) {
-        limb_array x, y;
-        limb_array z0 = {};
-        limb_array z1 = {};
-        for (size_t i = 0; i < 5; i++) {
-            x[i] = d(rng);
-            y[i] = d(rng);
-        }
-        x[4] &= 1u;
-        y[4] &= 1u;
-        multiply_5x5_portable(z0, x, y);
-        multiply_5x5_x86(z1, x, y);
-        BOOST_REQUIRE_EQUAL_COLLECTIONS(z0.begin(), z0.end(), z1.begin(), z1.end());
-    }
-}
-
 BOOST_AUTO_TEST_CASE(reduce_x86_random_pR_bounded_inputs) {
     boost::random::mt19937 rng(0x2545);
     boost::random::uniform_int_distribution<limb> d;

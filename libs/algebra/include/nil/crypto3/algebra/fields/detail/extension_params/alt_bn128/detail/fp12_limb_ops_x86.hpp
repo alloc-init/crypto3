@@ -76,53 +76,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             : "rax", "rdx", "cc", "memory"
         );
     }
-
-    inline void multiply_5x5_x86(limb_array &result, const limb_array &x, const limb_array &y) {
-        multiply_4x4_x86(result, x, y);
-
-        limb d0, d1, d2, d3;
-        asm volatile(
-            // round 8, x4 and y4 can only be carries
-            "cmpq $0, " PTR(x, 4) "\n"
-            "je done_adding_y%=\n"
-            "movq " PTR(y, 0) ", %[d0]\n"
-            "movq " PTR(y, 1) ", %[d1]\n"
-            "movq " PTR(y, 2) ", %[d2]\n"
-            "movq " PTR(y, 3) ", %[d3]\n"
-            "addq %[d0], " PTR(result, 4) "\n"
-            "adcq %[d1], " PTR(result, 5) "\n"
-            "adcq %[d2], " PTR(result, 6) "\n"
-            "adcq %[d3], " PTR(result, 7) "\n"
-            "adcq $0, " PTR(result, 8) "\n"
-            "done_adding_y%=:\n"
-
-            "cmpq $0, " PTR(y, 4) "\n"
-            "je done_adding_x%=\n"
-            "movq " PTR(x, 0) ", %[d0]\n"
-            "movq " PTR(x, 1) ", %[d1]\n"
-            "movq " PTR(x, 2) ", %[d2]\n"
-            "movq " PTR(x, 3) ", %[d3]\n"
-            "addq %[d0], " PTR(result, 4) "\n"
-            "adcq %[d1], " PTR(result, 5) "\n"
-            "adcq %[d2], " PTR(result, 6) "\n"
-            "adcq %[d3], " PTR(result, 7) "\n"
-            "adcq $0, " PTR(result, 8) "\n"
-            "done_adding_x%=:\n"
-
-            "movq " PTR(x, 4) ", %[d0]\n"
-            "andq " PTR(y, 4) ", %[d0]\n"
-            "addq %[d0], " PTR(result, 8) "\n"
-
-            : [d0]"=&r"(d0),
-              [d1]"=&r"(d1),
-              [d2]"=&r"(d2),
-              [d3]"=&r"(d3)
-            : [result]"r"(result.data()),
-              [x]"r"(x.data()),
-              [y]"r"(y.data())
-            : "cc", "memory"
-        );
-    }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 // clang-format off

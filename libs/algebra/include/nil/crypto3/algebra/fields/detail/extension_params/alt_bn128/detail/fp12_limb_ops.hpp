@@ -244,79 +244,11 @@ namespace nil {
                             result[8] = acc1;
                         }
 
-                        // Multiply two Fp2-sum-width values using their low five limbs.
-                        //
-                        // Fp2 Karatsuba sums such as (a + b) can carry once past the four-limb base field value,
-                        // so the cross-term product needs a 5x5 kernel. These inputs are bounded by the tower
-                        // formulas, and their product fits the nine-limb pre-REDC storage used by this fast path.
-                        //
-                        // Note: This is not a generic 5x5 multiplier: a full 5x5 product has ten limbs. The omitted
-                        // top limb is assumed to be zero for the bounded tower inputs; arbitrary five-limb values
-                        // can overflow this storage shape.
-                        inline void
-                            multiply_5x5_portable(limb_array &result, const limb_array &x, const limb_array &y) {
-                            result = {};
-                            limb acc0 = 0u;
-                            limb acc1 = 0u;
-                            limb acc2 = 0u;
-
-                            multiply_partial(acc0, acc1, acc2, x[0], y[0]);
-                            multiply_emit(result, 0u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[0], y[1]);
-                            multiply_partial(acc0, acc1, acc2, x[1], y[0]);
-                            multiply_emit(result, 1u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[0], y[2]);
-                            multiply_partial(acc0, acc1, acc2, x[1], y[1]);
-                            multiply_partial(acc0, acc1, acc2, x[2], y[0]);
-                            multiply_emit(result, 2u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[0], y[3]);
-                            multiply_partial(acc0, acc1, acc2, x[1], y[2]);
-                            multiply_partial(acc0, acc1, acc2, x[2], y[1]);
-                            multiply_partial(acc0, acc1, acc2, x[3], y[0]);
-                            multiply_emit(result, 3u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[0], y[4]);
-                            multiply_partial(acc0, acc1, acc2, x[1], y[3]);
-                            multiply_partial(acc0, acc1, acc2, x[2], y[2]);
-                            multiply_partial(acc0, acc1, acc2, x[3], y[1]);
-                            multiply_partial(acc0, acc1, acc2, x[4], y[0]);
-                            multiply_emit(result, 4u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[1], y[4]);
-                            multiply_partial(acc0, acc1, acc2, x[2], y[3]);
-                            multiply_partial(acc0, acc1, acc2, x[3], y[2]);
-                            multiply_partial(acc0, acc1, acc2, x[4], y[1]);
-                            multiply_emit(result, 5u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[2], y[4]);
-                            multiply_partial(acc0, acc1, acc2, x[3], y[3]);
-                            multiply_partial(acc0, acc1, acc2, x[4], y[2]);
-                            multiply_emit(result, 6u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[3], y[4]);
-                            multiply_partial(acc0, acc1, acc2, x[4], y[3]);
-                            multiply_emit(result, 7u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[4], y[4]);
-                            multiply_emit(result, 8u, acc0, acc1, acc2);
-                        }
-
                         inline void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             multiply_4x4_x86(result, x, y);
 #else
                             multiply_4x4_portable(result, x, y);
-#endif
-                        }
-
-                        inline void multiply_5x5(limb_array &result, const limb_array &x, const limb_array &y) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            multiply_5x5_x86(result, x, y);
-#else
-                            multiply_5x5_portable(result, x, y);
 #endif
                         }
 

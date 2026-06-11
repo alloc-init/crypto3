@@ -118,19 +118,9 @@ namespace nil {
                             // ie. xy = abR^2
                             // We leave it in this form because we have wide enough limb type to support extra
                             // additions and subtractions before reducing.
-                            template<bool Wide = false>
                             static fp_dbl mul_pre(const base_limb_storage_type &x, const base_limb_storage_type &y) {
                                 fp_dbl product;
-                                if constexpr (Wide) {
-                                    // The wide path is only for callers that intentionally pass values wider than
-                                    // a canonical base-field residue.
-                                    alt_bn128_fp12_limb_ops::multiply_5x5(product.data, x, y);
-                                    alt_bn128_fp12_limb_ops::subtract_modulus_upper<base_field_type>(product.data);
-                                } else {
-                                    // Most tower products multiply normal base values, so limb_ops reads only
-                                    // the low four limbs from each nine-limb storage value.
-                                    alt_bn128_fp12_limb_ops::multiply_4x4(product.data, x, y);
-                                }
+                                alt_bn128_fp12_limb_ops::multiply_4x4(product.data, x, y);
                                 return product;
                             }
 

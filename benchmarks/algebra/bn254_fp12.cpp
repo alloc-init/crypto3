@@ -171,7 +171,6 @@ int main(int argc, char** argv) {
         limb_ops::add_limbs<9>(fp_sum_y[i], fp_limbs_y[next]);
         limb_ops::add_limbs<9>(fp_sum_y[i], fp_limbs_x[next2]);
         limb_ops::multiply_4x4(fp_products[i], fp_limbs_x[i], fp_limbs_y[i]);
-        limb_ops::multiply_5x5(fp_sum_products[i], fp_sum_x[i], fp_sum_y[i]);
         fp_dbl_x[i] = fp12_fast_type::fp_dbl(fp_products[i]);
         fp_dbl_y[i] = fp12_fast_type::fp_dbl(fp_sum_products[i]);
         fp2_dbl_x[i] = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_x[i], fp2_base_y[i]);
@@ -195,19 +194,6 @@ int main(int argc, char** argv) {
     print_stage("Fp limb 4x4", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     limb_ops::multiply_4x4(fp_limb_acc, fp_limbs_x[idx], fp_limbs_y[idx]);
-                    do_not_optimize(&fp_limb_acc);
-                }));
-
-    print_stage("Fp limb 5x5", run_stage(iters, warmup, samples, [&](std::size_t i) {
-                    const std::size_t idx = i % poolN;
-                    limb_ops::multiply_5x5(fp_limb_acc, fp_sum_x[idx], fp_sum_y[idx]);
-                    do_not_optimize(&fp_limb_acc);
-                }));
-
-    print_stage("Fp limb REDC", run_stage(iters, warmup, samples, [&](std::size_t i) {
-                    const std::size_t idx = i % poolN;
-                    fp_limb_acc = fp_products[idx];
-                    limb_ops::montgomery_reduce<base_field_type>(fp_limb_acc);
                     do_not_optimize(&fp_limb_acc);
                 }));
 
