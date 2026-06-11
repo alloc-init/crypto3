@@ -21,7 +21,7 @@ namespace nil {
 
                         const size_t limb_bits = sizeof(limb) * CHAR_BIT;
                         const size_t base_value_limb_count = 4u;
-                        const size_t storage_limb_count = 9u;
+                        const size_t storage_limb_count = 8u;
 
                         using limb_array = std::array<limb, storage_limb_count>;
                     }    // namespace alt_bn128_fp12_limb_ops

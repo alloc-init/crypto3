@@ -70,7 +70,7 @@ namespace nil {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             add_8_limbs_x86(result, other);
 #else
-                            add_limbs_portable<4>(result.data(), other.data());
+                            add_limbs_portable<8>(result.data(), other.data());
 #endif
                         }
 
@@ -90,16 +90,23 @@ namespace nil {
 #endif
                         }
 
-                        inline bool ge_modulus(const limb *x, const limb *y) {
+                        inline bool ge_modulus_4(const limb *x, const limb *mod) {
                             for (int i = 4; i >= 0; i--) {
-                                if (x[i] < y[i]) {
+                                if (x[i] < mod[i]) {
                                     return false;
                                 }
-                                if (x[i] > y[i]) {
+                                if (x[i] > mod[i]) {
                                     return true;
                                 }
                             }
                             return true;
+                        }
+
+                        inline bool ge_modulus(const limb *x, const limb *mod) {
+                            if (x[4] != 0u) {
+                                return true;
+                            }
+                            return ge_modulus_4(x, mod);
                         }
 
                         // do one pass of normalization on lower limbs
@@ -107,7 +114,7 @@ namespace nil {
                         inline void subtract_modulus_lower(limb_array &data) {
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             if (ge_modulus(data.data(), p.data())) {
-                                subtract_4_limbs(data.data(), p.data());
+                                subtract_8_limbs(data.data(), p.data());
                             }
                         }
 
@@ -115,7 +122,7 @@ namespace nil {
                         template<class Field>
                         inline void subtract_modulus_upper(limb_array &data) {
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                            if (ge_modulus(data.data() + 4, p.data())) {
+                            if (ge_modulus_4(data.data() + 4, p.data())) {
                                 subtract_4_limbs(data.data() + 4, p.data());
                             }
                         }
@@ -142,7 +149,7 @@ namespace nil {
                             if (borrow) {
                                 // if we went negative, add p
                                 static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                                add_limbs_portable<4>(data.data() + base_value_limb_count, p.data());
+                                add_limbs_portable<4>(data.data() + 4, p.data());
                             }
                         }
 
