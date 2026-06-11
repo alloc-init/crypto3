@@ -29,7 +29,7 @@
     "adox %%rax, " D(3, I) "\n"                 \
     "adcx %[high], " D(4, I) "\n"               \
     "adox %[zero], " D(4, I) "\n"               \
-    "adc %[zero], " D(4, I) "\n"                \
+    "adcx %[zero], " D(4, I) "\n"                \
     "mov " D(0, I) ", " PTR(result, I) "\n"     \
     "xor " D(0, I) ", " D(0, I) "\n"
 
@@ -83,6 +83,10 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 // get the i+j%5-th "t" register
 #define T(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 
+#define montgomery_reduce_load_next(I)                  \
+    "setc %b[pending]\n"                                \
+    "movq " PTR2(data, I, 5) ", " T(I, 5) "\n"
+
 // main body of loop in montgomery reduce
 #define montgomery_reduce_cancel_low(I)                 \
     /* m = data[i] * p_dash */                          \
@@ -107,10 +111,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "adox %[pending], %[high]\n"                        \
     "adcx %[high], " T(I, 4) "\n"                       \
     BOOST_PP_IF(BOOST_PP_LESS(I, 3), montgomery_reduce_load_next(I), "")
-
-#define montgomery_reduce_load_next(I)                  \
-    "setc %b[pending]\n"                                \
-    "movq " PTR2(data, I, 5) ", " T(I, 5) "\n"
 
 // clang-format on
 
@@ -266,13 +266,13 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb q0, q1, q2, q3;
         bool cond;
         asm volatile(
-            "movq " PTR(other, 4) ", %%rax\n"
-            "adcq %%rax, %[t0]\n"
-            "movq " PTR(other, 5) ", %%rax\n"
+            "movq " PTR(other, 0) ", %%rax\n"
+            "addq %%rax, %[t0]\n"
+            "movq " PTR(other, 1) ", %%rax\n"
             "adcq %%rax, %[t1]\n"
-            "movq " PTR(other, 6) ", %%rax\n"
+            "movq " PTR(other, 2) ", %%rax\n"
             "adcq %%rax, %[t2]\n"
-            "movq " PTR(other, 7) ", %%rax\n"
+            "movq " PTR(other, 3) ", %%rax\n"
             "adcq %%rax, %[t3]\n"
 
             // q = t
