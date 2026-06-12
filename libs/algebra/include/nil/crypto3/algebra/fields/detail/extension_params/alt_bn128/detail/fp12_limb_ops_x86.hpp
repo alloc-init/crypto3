@@ -442,28 +442,26 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
-
-
-#define double()                 \
-    "addq %[t0], %[t0]\n"       \
-    "adcq %[t1], %[t1]\n"       \
-    "adcq %[t2], %[t2]\n"       \
-    "adcq %[t3], %[t3]\n"       \
-    "adcq %[t4], %[t4]\n"       \
-    "adcq %[t5], %[t5]\n"       \
-    "adcq %[t6], %[t6]\n"       \
-    "adcq %[t7], %[t7]\n"       \
-    "movq %[t4], %[q0]\n"       \
-    "movq %[t5], %[q1]\n"       \
-    "movq %[t6], %[q2]\n"       \
-    "movq %[t7], %[q3]\n"       \
-    "subq %[p0], %[q0]\n"       \
-    "sbbq %[p1], %[q1]\n"       \
-    "sbbq %[p2], %[q2]\n"       \
-    "sbbq %[p3], %[q3]\n"       \
-    "cmovnc %[q0], %[t4]\n"     \
-    "cmovnc %[q1], %[t5]\n"     \
-    "cmovnc %[q2], %[t6]\n"     \
+#define double()            \
+    "addq %[t0], %[t0]\n"   \
+    "adcq %[t1], %[t1]\n"   \
+    "adcq %[t2], %[t2]\n"   \
+    "adcq %[t3], %[t3]\n"   \
+    "adcq %[t4], %[t4]\n"   \
+    "adcq %[t5], %[t5]\n"   \
+    "adcq %[t6], %[t6]\n"   \
+    "adcq %[t7], %[t7]\n"   \
+    "movq %[t4], %[q0]\n"   \
+    "movq %[t5], %[q1]\n"   \
+    "movq %[t6], %[q2]\n"   \
+    "movq %[t7], %[q3]\n"   \
+    "subq %[p0], %[q0]\n"   \
+    "sbbq %[p1], %[q1]\n"   \
+    "sbbq %[p2], %[q2]\n"   \
+    "sbbq %[p3], %[q3]\n"   \
+    "cmovnc %[q0], %[t4]\n" \
+    "cmovnc %[q1], %[t5]\n" \
+    "cmovnc %[q2], %[t6]\n" \
     "cmovnc %[q3], %[t7]\n"
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
