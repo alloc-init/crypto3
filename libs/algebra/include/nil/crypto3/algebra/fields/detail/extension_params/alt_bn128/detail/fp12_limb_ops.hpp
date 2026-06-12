@@ -133,11 +133,15 @@ namespace nil {
 
                         template<class Field>
                         inline void mul_8_limbs_by_9(limb_array &t) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            mul_8_limbs_by_9_x86<Field>(t);
+#else
                             limb_array x(t);
                             add_8_limbs_mod<Field>(t, t); // 2x
                             add_8_limbs_mod<Field>(t, t); // 4x
                             add_8_limbs_mod<Field>(t, t); // 8x
                             add_8_limbs_mod<Field>(t, x); // 9x
+#endif
                         }
 
                         inline void left_shift_one(limb_array &result) {

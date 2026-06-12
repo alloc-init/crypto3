@@ -277,76 +277,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         data[3] = t3;
     }
 
-    template<class Field>
-    inline void add_8_limbs_mod_x86(limb_array &data, const limb_array &other) {
-        set_static_modulus_limbs_from_field();
-        limb t0 = data[4];
-        limb t1 = data[5];
-        limb t2 = data[6];
-        limb t3 = data[7];
-        limb q0, q1, q2, q3;
-        asm volatile(
-            "movq " PTR(data, 0) ", %%rax\n"
-            "addq " PTR(other, 0) ", %%rax\n"
-            "movq %%rax, " PTR(data, 0) "\n"
-            "movq " PTR(data, 1) ", %%rax\n"
-            "adcq " PTR(other, 1) ", %%rax\n"
-            "movq %%rax, " PTR(data, 1) "\n"
-            "movq " PTR(data, 2) ", %%rax\n"
-            "adcq " PTR(other, 2) ", %%rax\n"
-            "movq %%rax, " PTR(data, 2) "\n"
-            "movq " PTR(data, 3) ", %%rax\n"
-            "adcq " PTR(other, 3) ", %%rax\n"
-            "movq %%rax, " PTR(data, 3) "\n"
-            "movq " PTR(other, 4) ", %%rax\n"
-            "adcq %%rax, %[t0]\n"
-            "movq " PTR(other, 5) ", %%rax\n"
-            "adcq %%rax, %[t1]\n"
-            "movq " PTR(other, 6) ", %%rax\n"
-            "adcq %%rax, %[t2]\n"
-            "movq " PTR(other, 7) ", %%rax\n"
-            "adcq %%rax, %[t3]\n"
-
-            // q = t
-            "movq %[t0], %[q0]\n"
-            "movq %[t1], %[q1]\n"
-            "movq %[t2], %[q2]\n"
-            "movq %[t3], %[q3]\n"
-
-            // try q - p
-            "subq %[p0], %[q0]\n"
-            "sbbq %[p1], %[q1]\n"
-            "sbbq %[p2], %[q2]\n"
-            "sbbq %[p3], %[q3]\n"
-
-            // if q - p didnt result in a borrrow, set t=q
-            "cmovnc %[q0], %[t0]\n"
-            "cmovnc %[q1], %[t1]\n"
-            "cmovnc %[q2], %[t2]\n"
-            "cmovnc %[q3], %[t3]\n"
-
-            : [t0]"+r"(t0),
-              [t1]"+r"(t1),
-              [t2]"+r"(t2),
-              [t3]"+r"(t3),
-              [q0]"=&r"(q0),
-              [q1]"=&r"(q1),
-              [q2]"=&r"(q2),
-              [q3]"=&r"(q3)
-            : [data]"r"(data.data()),
-              [other]"r"(other.data()),
-              [p0]"m"(p0),
-              [p1]"m"(p1),
-              [p2]"m"(p2),
-              [p3]"m"(p3)
-            : "rax", "cc", "memory"
-        );
-        data[4] = t0;
-        data[5] = t1;
-        data[6] = t2;
-        data[7] = t3;
-    }
-
     inline void subtract_8_limbs_x86(limb_array &result, const limb_array &other) {
         asm volatile(
             "movq " PTR(result, 0) ", %%rax\n"
@@ -447,6 +377,152 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         result[6] = t2;
         result[7] = t3;
     }
+}
+
+#define add_8_limbs_mod_p(DATA, OTHER)  \
+    "movq " PTR(DATA, 0) ", %%rax\n"    \
+    "addq " PTR(OTHER, 0) ", %%rax\n"   \
+    "movq %%rax, " PTR(DATA, 0) "\n"    \
+    "movq " PTR(DATA, 1) ", %%rax\n"    \
+    "adcq " PTR(OTHER, 1) ", %%rax\n"   \
+    "movq %%rax, " PTR(DATA, 1) "\n"    \
+    "movq " PTR(DATA, 2) ", %%rax\n"    \
+    "adcq " PTR(OTHER, 2) ", %%rax\n"   \
+    "movq %%rax, " PTR(DATA, 2) "\n"    \
+    "movq " PTR(DATA, 3) ", %%rax\n"    \
+    "adcq " PTR(OTHER, 3) ", %%rax\n"   \
+    "movq %%rax, " PTR(DATA, 3) "\n"    \
+    "movq " PTR(OTHER, 4) ", %%rax\n"   \
+    "adcq %%rax, %[t0]\n"               \
+    "movq " PTR(OTHER, 5) ", %%rax\n"   \
+    "adcq %%rax, %[t1]\n"               \
+    "movq " PTR(OTHER, 6) ", %%rax\n"   \
+    "adcq %%rax, %[t2]\n"               \
+    "movq " PTR(OTHER, 7) ", %%rax\n"   \
+    "adcq %%rax, %[t3]\n"               \
+    "movq %[t0], %[q0]\n"               \
+    "movq %[t1], %[q1]\n"               \
+    "movq %[t2], %[q2]\n"               \
+    "movq %[t3], %[q3]\n"               \
+    "subq %[p0], %[q0]\n"               \
+    "sbbq %[p1], %[q1]\n"               \
+    "sbbq %[p2], %[q2]\n"               \
+    "sbbq %[p3], %[q3]\n"               \
+    "cmovnc %[q0], %[t0]\n"             \
+    "cmovnc %[q1], %[t1]\n"             \
+    "cmovnc %[q2], %[t2]\n"             \
+    "cmovnc %[q3], %[t3]\n"
+
+namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
+
+    template<class Field>
+    inline void add_8_limbs_mod_x86(limb_array &data, const limb_array &other) {
+        set_static_modulus_limbs_from_field();
+        limb t0 = data[4];
+        limb t1 = data[5];
+        limb t2 = data[6];
+        limb t3 = data[7];
+        limb q0, q1, q2, q3;
+        asm volatile(
+           add_8_limbs_mod_p(data, other)
+            : [t0]"+r"(t0),
+              [t1]"+r"(t1),
+              [t2]"+r"(t2),
+              [t3]"+r"(t3),
+              [q0]"=&r"(q0),
+              [q1]"=&r"(q1),
+              [q2]"=&r"(q2),
+              [q3]"=&r"(q3)
+            : [data]"r"(data.data()),
+              [other]"r"(other.data()),
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3)
+            : "rax", "cc", "memory"
+        );
+        data[4] = t0;
+        data[5] = t1;
+        data[6] = t2;
+        data[7] = t3;
+    }
+
+
+    template<class Field>
+    inline void mul_8_limbs_by_9_x86(limb_array &t) {
+        // set_static_modulus_limbs_from_field();
+        // limb_array x;
+        // limb t0 = t[4];
+        // limb t1 = t[5];
+        // limb t2 = t[6];
+        // limb t3 = t[7];
+        // limb q0, q1, q2, q3;
+        // asm volatile(
+        //     "movq " PTR(t, 0) ", %%rax\n"
+        //     "addq " PTR(x, 0) ", %%rax\n"
+        //     "movq %%rax, " PTR(t, 0) "\n"
+        //     "movq " PTR(t, 1) ", %%rax\n"
+        //     "adcq " PTR(x, 1) ", %%rax\n"
+        //     "movq %%rax, " PTR(t, 1) "\n"
+        //     "movq " PTR(t, 2) ", %%rax\n"
+        //     "adcq " PTR(x, 2) ", %%rax\n"
+        //     "movq %%rax, " PTR(t, 2) "\n"
+        //     "movq " PTR(t, 3) ", %%rax\n"
+        //     "adcq " PTR(x, 3) ", %%rax\n"
+        //     "movq %%rax, " PTR(t, 3) "\n"
+        //     "movq " PTR(x, 4) ", %%rax\n"
+        //     "adcq %%rax, %[t0]\n"
+        //     "movq " PTR(x, 5) ", %%rax\n"
+        //     "adcq %%rax, %[t1]\n"
+        //     "movq " PTR(x, 6) ", %%rax\n"
+        //     "adcq %%rax, %[t2]\n"
+        //     "movq " PTR(x, 7) ", %%rax\n"
+        //     "adcq %%rax, %[t3]\n"
+
+        //     // q = t
+        //     "movq %[t0], %[q0]\n"
+        //     "movq %[t1], %[q1]\n"
+        //     "movq %[t2], %[q2]\n"
+        //     "movq %[t3], %[q3]\n"
+
+        //     // try q - p
+        //     "subq %[p0], %[q0]\n"
+        //     "sbbq %[p1], %[q1]\n"
+        //     "sbbq %[p2], %[q2]\n"
+        //     "sbbq %[p3], %[q3]\n"
+
+        //     // if q - p didnt result in a borrrow, set t=q
+        //     "cmovnc %[q0], %[t0]\n"
+        //     "cmovnc %[q1], %[t1]\n"
+        //     "cmovnc %[q2], %[t2]\n"
+        //     "cmovnc %[q3], %[t3]\n"
+
+        //     : [t0]"+r"(t0),
+        //       [t1]"+r"(t1),
+        //       [t2]"+r"(t2),
+        //       [t3]"+r"(t3),
+        //       [q0]"=&r"(q0),
+        //       [q1]"=&r"(q1),
+        //       [q2]"=&r"(q2),
+        //       [q3]"=&r"(q3)
+        //     : [t]"r"(t.data()),
+        //       [other]"r"(other.data()),
+        //       [p0]"m"(p0),
+        //       [p1]"m"(p1),
+        //       [p2]"m"(p2),
+        //       [p3]"m"(p3)
+        //     : "rax", "cc", "memory"
+        // );
+        // t[4] = t0;
+        // t[5] = t1;
+        // t[6] = t2;
+        // t[7] = t3;
+        limb_array x(t);
+        add_8_limbs_mod_x86<Field>(t, t);    // 2x
+        add_8_limbs_mod_x86<Field>(t, t);    // 4x
+        add_8_limbs_mod_x86<Field>(t, t);    // 8x
+        add_8_limbs_mod_x86<Field>(t, x);    // 9x
+    }
 
     // template<class Field>
     // inline void fp2_mul_pre_x86(limb_array &z0,
@@ -476,3 +552,4 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #undef T
 #undef montgomery_reduce_load_next
 #undef montgomery_reduce_cancel_low
+#undef add_8_limbs_mod_p
