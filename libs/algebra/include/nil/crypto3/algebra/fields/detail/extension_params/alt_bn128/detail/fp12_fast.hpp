@@ -115,15 +115,14 @@ namespace nil {
                                 return out;
                             }
                         };
- 
+
                         // fp2 before multiplying - equivalent to 2 regular Fp's
                         struct fp2_base {
                             std::array<limb_array, 2> data;
 
                             fp2_base() = default;
 
-                            fp2_base(const limb_array &c0, const limb_array &c1) :
-                                data({c0, c1}) {
+                            fp2_base(const limb_array &c0, const limb_array &c1) : data({c0, c1}) {
                             }
 
                             fp2_base(const non_residue_type &x) :
@@ -177,28 +176,9 @@ namespace nil {
                             }
 
                             static void mul_pre(fp2_dbl &result, const fp2_base &x, const fp2_base &y) {
-                                // For x = a + bu and y = c + du:
-                                //   xy = (a + bu) * (c + du)
-                                //      = ac + adu + bcu + bdu^2
-                                //      = ac + (ad + bc)u - bd      # since u^2 = -1
-                                //      = (ac - bd) + (ad + bc)u
-                                // Karatsuba computes the cross term with one product:
-                                //   ad + bc = (a + b)(c + d) - ac - bd.
-                                const limb_array &a = x.data[0];
-                                const limb_array &b = x.data[1];
-                                const limb_array &c = y.data[0];
-                                const limb_array &d = y.data[1];
-                                const fp_dbl ac = fp_dbl::mul_pre(a, c);
-                                const fp_dbl bd = fp_dbl::mul_pre(b, d);
-                                limb_array a_plus_b = a;
-                                limb_array c_plus_d = c;
-                                alt_bn128_fp12_limb_ops::add_8_limbs(a_plus_b, b);
-                                alt_bn128_fp12_limb_ops::add_8_limbs(c_plus_d, d);
-                                result.data[0] = ac;
-                                result.data[0] -= bd;
-                                result.data[1] = fp_dbl::mul_pre(a_plus_b, c_plus_d);
-                                result.data[1] -= ac;
-                                result.data[1] -= bd;
+                                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(
+                                    result.data[0].data, result.data[1].data, x.data[0].data, x.data[1].data,
+                                    y.data[0].data, y.data[1].data);
                             }
 
                             static fp2_dbl mul_pre(const fp2_base &x, const fp2_base &y) {

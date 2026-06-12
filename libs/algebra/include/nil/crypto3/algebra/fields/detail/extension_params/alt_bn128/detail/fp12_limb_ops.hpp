@@ -283,6 +283,34 @@ namespace nil {
                             montgomery_reduce_portable<Field>(data);
 #endif
                         }
+
+                        template<class Field>
+                        inline void fp2_mul_pre(limb_array &z0,
+                                                limb_array &z1,
+                                                const limb_array &a,
+                                                const limb_array &b,
+                                                const limb_array &c,
+                                                const limb_array &d) {
+                            // For x = a + bu and y = c + du:
+                            //   xy = (a + bu) * (c + du)
+                            //      = ac + adu + bcu + bdu^2
+                            //      = ac + (ad + bc)u - bd      # since u^2 = -1
+                            //      = (ac - bd) + (ad + bc)u
+                            // Karatsuba computes the cross term with one product:
+                            //   ad + bc = (a + b)(c + d) - ac - bd.
+                            limb_array ac, bd;
+                            multiply_4x4(ac, a, c);
+                            multiply_4x4(bd, b, d);
+                            limb_array a_plus_b = a;
+                            limb_array c_plus_d = c;
+                            add_8_limbs(a_plus_b, b);
+                            add_8_limbs(c_plus_d, d);
+                            z0 = ac;
+                            subtract_8_limbs_mod<Field>(z0, bd);
+                            multiply_4x4(z1, a_plus_b, c_plus_d);
+                            subtract_8_limbs_mod<Field>(z1, ac);
+                            subtract_8_limbs_mod<Field>(z1, bd);
+                        }
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail
             }    // namespace fields
