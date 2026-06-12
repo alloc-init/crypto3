@@ -67,33 +67,9 @@ namespace nil {
                                 return *this;
                             }
 
-                            fp_dbl doubled() const {
-                                fp_dbl result(*this);
-                                result += *this;
-                                return result;
-                            }
-
                             fp_dbl &mul_by_9() {
-                                const fp_dbl x(*this);
-                                fp_dbl t(*this);
-                                t += x;    // 2x
-                                t += t;    // 4x
-                                t += t;    // 8x
-                                t += x;    // 9x
-                                *this = t;
+                                alt_bn128_fp12_limb_ops::mul_8_limbs_by_9<base_field_type>(data);
                                 return *this;
-                            }
-
-                            // "pre" means before Montgomery reduction
-                            // x = aR and y = bR are Montgomery residues,
-                            // and the result is the raw x*y product still scaled by R^2
-                            // ie. xy = abR^2
-                            // We leave it in this form because we have wide enough limb type to support extra
-                            // additions and subtractions before reducing.
-                            static fp_dbl mul_pre(const limb_array &x, const limb_array &y) {
-                                fp_dbl product;
-                                alt_bn128_fp12_limb_ops::multiply_4x4(product.data, x, y);
-                                return product;
                             }
 
                             void reduce() {
@@ -181,12 +157,6 @@ namespace nil {
                                                                                       x.data[1], y.data[0], y.data[1]);
                             }
 
-                            static fp2_dbl mul_pre(const fp2_base &x, const fp2_base &y) {
-                                fp2_dbl result;
-                                fp2_dbl::mul_pre(result, x, y);
-                                return result;
-                            }
-
                             void mul_by_xi() {
                                 // Lazy multiply by xi = 9 + u:
                                 // (a + b*u) * xi = (9a - b) + (a + 9b) * u.
@@ -249,6 +219,10 @@ namespace nil {
                             fp6_dbl(const fp2_dbl &c0, const fp2_dbl &c1, const fp2_dbl &c2) : data({c0, c1, c2}) {
                             }
 
+                            std::tuple<const fp2_dbl &, const fp2_dbl &, const fp2_dbl &> coeffs() const {
+                                return {data[0], data[1], data[2]};
+                            }
+
                             fp6_dbl operator+(const fp6_dbl &other) const {
                                 return fp6_dbl(data[0] + other.data[0], data[1] + other.data[1],
                                                data[2] + other.data[2]);
@@ -273,7 +247,7 @@ namespace nil {
                                 return *this;
                             }
 
-                            static fp6_dbl mul_pre(const fp6_base &x, const fp6_base &y) {
+                            static void mul_pre(fp6_dbl &result, const fp6_base &x, const fp6_base &y) {
                                 // Multiply two Fp6 values in the tower Fp6 = Fp2[v]/(v^3 - xi):
                                 //   x = a + b*v + c*v^2
                                 //   y = d + e*v + f*v^2
@@ -290,14 +264,17 @@ namespace nil {
                                 //   zc = (a + c)(d + f) - a*d - c*f = a*f + c*d
                                 const auto &[a, b, c] = x.coeffs();    // a, b, c are fp2_base
                                 const auto &[d, e, f] = y.coeffs();
-                                fp2_dbl za, zb, zc;
+                                fp2_dbl &za = result.data[0];
+                                fp2_dbl &zb = result.data[1];
+                                fp2_dbl &zc = result.data[2];
                                 fp2_dbl::mul_pre(za, b + c, e + f);
                                 fp2_dbl::mul_pre(zb, a + b, e + d);
                                 fp2_dbl::mul_pre(zc, a + c, d + f);
                                 // Direct products reused by the three Karatsuba corrections.
-                                fp2_dbl be = fp2_dbl::mul_pre(b, e);
-                                fp2_dbl cf = fp2_dbl::mul_pre(c, f);
-                                fp2_dbl ad = fp2_dbl::mul_pre(a, d);
+                                fp2_dbl be, cf, ad;
+                                fp2_dbl::mul_pre(be, b, e);
+                                fp2_dbl::mul_pre(cf, c, f);
+                                fp2_dbl::mul_pre(ad, a, d);
                                 // Finish the Karatsuba corrections
                                 za -= be;
                                 za -= cf;
@@ -314,7 +291,6 @@ namespace nil {
                                 cf.mul_by_xi();
                                 zb += cf;
                                 zc += be;
-                                return fp6_dbl(za, zb, zc);
                             }
 
                             void reduce() {
@@ -374,14 +350,16 @@ namespace nil {
                             const fp6_base d(y.data[1]);
 
                             // false = ordinary Fp6 multiplication; inner Fp2 sums fit mul_pre().
-                            fp6_dbl ac = fp6_dbl::mul_pre(a, c);
-                            fp6_dbl bd = fp6_dbl::mul_pre(b, d);
+                            fp6_dbl ac, bd;
+                            fp6_dbl::mul_pre(ac, a, c);
+                            fp6_dbl::mul_pre(bd, b, d);
 
                             fp6_dbl z0_dbl = ac + bd.mul_v();
                             z0_dbl.reduce();
                             const underlying_type z0 = z0_dbl.to_underlying();
 
-                            fp6_dbl z1_dbl = fp6_dbl::mul_pre(a + b, c + d);
+                            fp6_dbl z1_dbl;
+                            fp6_dbl::mul_pre(z1_dbl, a + b, c + d);
                             z1_dbl -= ac;    // first correction (see above)
                             z1_dbl -= bd;    // second correction
                             z1_dbl.reduce();

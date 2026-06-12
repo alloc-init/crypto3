@@ -131,6 +131,15 @@ namespace nil {
 #endif
                         }
 
+                        template<class Field>
+                        inline void mul_8_limbs_by_9(limb_array &t) {
+                            limb_array x(t);
+                            add_8_limbs_mod<Field>(t, t); // 2x
+                            add_8_limbs_mod<Field>(t, t); // 4x
+                            add_8_limbs_mod<Field>(t, t); // 8x
+                            add_8_limbs_mod<Field>(t, x); // 9x
+                        }
+
                         inline void left_shift_one(limb_array &result) {
                             limb carry = 0u;
                             for (size_t i = 0; i < result.size(); i++) {
@@ -327,11 +336,11 @@ namespace nil {
                                                 const limb_array &b,
                                                 const limb_array &c,
                                                 const limb_array &d) {
-// #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-//                             fp2_mul_pre_x86(z0, z1, a, b, c, d);
-// #else
+                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            //                             fp2_mul_pre_x86(z0, z1, a, b, c, d);
+                            // #else
                             fp2_mul_pre_portable<Field>(z0, z1, a, b, c, d);
-// #endif
+                            // #endif
                         }
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail

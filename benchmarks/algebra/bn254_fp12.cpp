@@ -100,8 +100,7 @@ bench_result run_stage(std::size_t iters, std::size_t warmup, std::size_t sample
 }
 
 static void print_stage(const std::string& name, const bench_result& result) {
-    std::cout << std::left << std::setw(24) << name
-              << " per=" << std::setw(12) << result.ns_per << " ns"
+    std::cout << std::left << std::setw(24) << name << " per=" << std::setw(12) << result.ns_per << " ns"
               << " stddev=" << std::setw(12) << result.stddev_ns_per << " ns\n";
 }
 
@@ -173,10 +172,10 @@ int main(int argc, char** argv) {
         limb_ops::multiply_4x4(fp_products[i], fp_limbs_x[i], fp_limbs_y[i]);
         fp_dbl_x[i] = fp12_fast_type::fp_dbl(fp_products[i]);
         fp_dbl_y[i] = fp12_fast_type::fp_dbl(fp_sum_products[i]);
-        fp2_dbl_x[i] = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_x[i], fp2_base_y[i]);
-        fp2_dbl_y[i] = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_y[i], fp2_base_x[next]);
-        fp6_dbl_x[i] = fp6_dbl_type::mul_pre(fp6_base_x[i], fp6_base_y[i]);
-        fp6_dbl_y[i] = fp6_dbl_type::mul_pre(fp6_base_y[i], fp6_base_x[next]);
+        fp12_fast_type::fp2_dbl::mul_pre(fp2_dbl_x[i], fp2_base_x[i], fp2_base_y[i]);
+        fp12_fast_type::fp2_dbl::mul_pre(fp2_dbl_y[i], fp2_base_y[i], fp2_base_x[next]);
+        fp6_dbl_type::mul_pre(fp6_dbl_x[i], fp6_base_x[i], fp6_base_y[i]);
+        fp6_dbl_type::mul_pre(fp6_dbl_y[i], fp6_base_y[i], fp6_base_x[next]);
     }
 
     base_value_type fp_acc;
@@ -234,7 +233,8 @@ int main(int argc, char** argv) {
 
     print_stage("Fp2 pre mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    fp2_pre_acc = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_x[idx], fp2_base_y[idx]);
+                    fp12_fast_type::fp2_dbl fp2_pre_acc;
+                    fp12_fast_type::fp2_dbl::mul_pre(fp2_pre_acc, fp2_base_x[idx], fp2_base_y[idx]);
                     do_not_optimize(&fp2_pre_acc);
                 }));
 
@@ -248,7 +248,8 @@ int main(int argc, char** argv) {
 
     print_stage("Fp2 lazy mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    fp2_pre_acc = fp12_fast_type::fp2_dbl::mul_pre(fp2_base_x[idx], fp2_base_y[idx]);
+                    fp12_fast_type::fp2_dbl fp2_pre_acc;
+                    fp12_fast_type::fp2_dbl::mul_pre(fp2_pre_acc, fp2_base_x[idx], fp2_base_y[idx]);
                     fp2_pre_acc.reduce();
                     fp2_acc = fp2_pre_acc.to_non_residue();
                     do_not_optimize(&fp2_acc);
@@ -270,7 +271,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp6 pre mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    fp6_pre_acc = fp6_dbl_type::mul_pre(fp6_base_x[idx], fp6_base_y[idx]);
+                    fp6_dbl_type::mul_pre(fp6_pre_acc, fp6_base_x[idx], fp6_base_y[idx]);
                     do_not_optimize(&fp6_pre_acc);
                 }));
 
@@ -279,7 +280,7 @@ int main(int argc, char** argv) {
                     const std::size_t next = (idx + 1) % poolN;
                     const fp6_base_type x_sum = fp6_base_x[idx] + fp6_base_y[idx];
                     const fp6_base_type y_sum = fp6_base_x[next] + fp6_base_y[next];
-                    fp6_pre_acc = fp6_dbl_type::mul_pre(x_sum, y_sum);
+                    fp6_dbl_type::mul_pre(fp6_pre_acc, x_sum, y_sum);
                     do_not_optimize(&fp6_pre_acc);
                 }));
 
@@ -293,7 +294,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp6 lazy mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    fp6_pre_acc = fp6_dbl_type::mul_pre(fp6_base_x[idx], fp6_base_y[idx]);
+                    fp6_dbl_type::mul_pre(fp6_pre_acc, fp6_base_x[idx], fp6_base_y[idx]);
                     fp6_pre_acc.reduce();
                     fp6_acc = fp6_pre_acc.to_underlying();
                     do_not_optimize(&fp6_acc);
