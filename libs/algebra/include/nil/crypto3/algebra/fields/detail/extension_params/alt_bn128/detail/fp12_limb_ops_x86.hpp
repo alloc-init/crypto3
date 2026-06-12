@@ -442,7 +442,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
-#define double()            \
+#define double_mod_p()            \
     "addq %[t0], %[t0]\n"   \
     "adcq %[t1], %[t1]\n"   \
     "adcq %[t2], %[t2]\n"   \
@@ -480,9 +480,9 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb q0, q1, q2, q3;
 
         asm volatile(
-            double() // 2x
-            double() // 4x
-            double() // 8x
+            double_mod_p() // 2x
+            double_mod_p() // 4x
+            double_mod_p() // 8x
 
             // 9x, final add by original value
             "addq " PTR(x, 0) ", %[t0]\n"
@@ -563,4 +563,4 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #undef T
 #undef montgomery_reduce_load_next
 #undef montgomery_reduce_cancel_low
-#undef add_8_limbs_mod_p
+#undef double_mod_p
