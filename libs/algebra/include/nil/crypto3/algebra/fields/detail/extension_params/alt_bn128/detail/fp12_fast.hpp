@@ -378,17 +378,13 @@ namespace nil {
                             fp6_dbl bd = fp6_dbl::mul_pre(b, d);
 
                             fp6_dbl z0_dbl = ac + bd.mul_v();
+                            z0_dbl.reduce();
+                            const underlying_type z0 = z0_dbl.to_underlying();
 
                             fp6_dbl z1_dbl = fp6_dbl::mul_pre(a + b, c + d);
                             z1_dbl -= ac;    // first correction (see above)
                             z1_dbl -= bd;    // second correction
-
-                            // the whole point; delaying reduction until the very end
-                            z0_dbl.reduce();
                             z1_dbl.reduce();
-
-                            // convert back to generic crypto3 tower type
-                            const underlying_type z0 = z0_dbl.to_underlying();
                             const underlying_type z1 = z1_dbl.to_underlying();
 
                             return Fp12Value(z0, z1);
