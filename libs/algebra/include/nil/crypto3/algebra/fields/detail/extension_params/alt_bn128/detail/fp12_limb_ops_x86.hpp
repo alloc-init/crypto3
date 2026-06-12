@@ -442,7 +442,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
-#define double_mod_p()            \
+#define double_mod_p()      \
     "addq %[t0], %[t0]\n"   \
     "adcq %[t1], %[t1]\n"   \
     "adcq %[t2], %[t2]\n"   \
@@ -535,22 +535,40 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         t[7] = t7;
     }
 
-    // template<class Field>
-    // inline void fp2_mul_pre_x86(limb_array &z0,
-    //                             limb_array &z1,
-    //                             const limb_array &a,
-    //                             const limb_array &b,
-    //                             const limb_array &c,
-    //                             const limb_array &d) {
-    //     limb_array ac, bd;
-    //     limb_array a_plus_b = a;
-    //     limb_array c_plus_d = c;
-    //     asm volatile {
-    //         :
-    //         :
-    //         : "rdx", "cc", "memory"
-    //     };
-    // }
+    template<class Field>
+    inline void fp2_mul_pre_x86(limb *z, const limb *x, const limb *y) {
+
+        // For x = a + bu and y = c + du:
+        //   xy = (a + bu) * (c + du)
+        //      = ac + adu + bcu + bdu^2
+        //      = ac + (ad + bc)u - bd      # since u^2 = -1
+        //      = (ac - bd) + (ad + bc)u
+        // Karatsuba computes the cross term with one product:
+        //   ad + bc = (a + b)(c + d) - ac - bd.
+        // limb_array ac;
+        // limb_array bd;
+        // multiply_4x4_x86(ac, a, c);
+    
+        // multiply_4x4_x86(bd, b, d);
+        // limb_array a_plus_b = a;
+        // limb_array c_plus_d = c;
+
+        // add_8_limbs(a_plus_b, b); // adcx
+        // add_8_limbs(c_plus_d, d); // adox
+
+        // z0 = ac;
+        // subtract_8_limbs_mod_x86<Field>(z0, bd);
+
+        // multiply_4x4(z1, a_plus_b, c_plus_d);
+        // subtract_8_limbs(z1, ac);
+        // subtract_8_limbs(z1, bd);
+
+        // set_static_modulus_limbs_from_field();
+        // limb_array ac, bd;
+        // limb_array a_plus_b = a;
+        // limb_array c_plus_d = c;
+        // asm volatile { : : : "rdx", "cc", "memory"};
+    }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 #undef STR_IMPL

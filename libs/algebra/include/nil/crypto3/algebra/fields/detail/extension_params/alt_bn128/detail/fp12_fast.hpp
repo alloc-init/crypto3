@@ -152,9 +152,10 @@ namespace nil {
                             }
 
                             static void mul_pre(fp2_dbl &result, const fp2_base &x, const fp2_base &y) {
-                                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(result.data[0].data,
-                                                                                      result.data[1].data, x.data[0],
-                                                                                      x.data[1], y.data[0], y.data[1]);
+                                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(
+                                    (limb_array *)result.data.data(),
+                                    (const limb_array *)x.data.data(),
+                                    (const limb_array *)y.data.data());
                             }
 
                             void mul_by_xi() {

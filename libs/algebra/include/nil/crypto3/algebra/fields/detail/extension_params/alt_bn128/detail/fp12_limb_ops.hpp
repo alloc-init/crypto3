@@ -137,10 +137,10 @@ namespace nil {
                             mul_8_limbs_by_9_x86<Field>(t);
 #else
                             limb_array x(t);
-                            add_8_limbs_mod<Field>(t, t); // 2x
-                            add_8_limbs_mod<Field>(t, t); // 4x
-                            add_8_limbs_mod<Field>(t, t); // 8x
-                            add_8_limbs_mod<Field>(t, x); // 9x
+                            add_8_limbs_mod<Field>(t, t);    // 2x
+                            add_8_limbs_mod<Field>(t, t);    // 4x
+                            add_8_limbs_mod<Field>(t, t);    // 8x
+                            add_8_limbs_mod<Field>(t, x);    // 9x
 #endif
                         }
 
@@ -306,12 +306,13 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void fp2_mul_pre_portable(limb_array &z0,
-                                                         limb_array &z1,
-                                                         const limb_array &a,
-                                                         const limb_array &b,
-                                                         const limb_array &c,
-                                                         const limb_array &d) {
+                        inline void fp2_mul_pre_portable(limb_array *z, const limb_array *x, const limb_array *y) {
+                            const limb_array &a = x[0];
+                            const limb_array &b = x[1];
+                            const limb_array &c = y[0];
+                            const limb_array &d = y[1];
+                            limb_array &z0 = z[0];
+                            limb_array &z1 = z[1];
                             // For x = a + bu and y = c + du:
                             //   xy = (a + bu) * (c + du)
                             //      = ac + adu + bcu + bdu^2
@@ -334,16 +335,11 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void fp2_mul_pre(limb_array &z0,
-                                                limb_array &z1,
-                                                const limb_array &a,
-                                                const limb_array &b,
-                                                const limb_array &c,
-                                                const limb_array &d) {
+                        inline void fp2_mul_pre(limb_array *z, const limb_array *x, const limb_array *y) { 
                             // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            //                             fp2_mul_pre_x86(z0, z1, a, b, c, d);
+                            //                             fp2_mul_pre_x86(z, x, y);
                             // #else
-                            fp2_mul_pre_portable<Field>(z0, z1, a, b, c, d);
+                            fp2_mul_pre_portable<Field>(z, x, y);
                             // #endif
                         }
                     }    // namespace alt_bn128_fp12_limb_ops
