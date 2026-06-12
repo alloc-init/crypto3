@@ -57,6 +57,14 @@ namespace nil {
 #endif
                         }
 
+                        inline void subtract_8_limbs(limb_array &result, const limb_array &other) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            subtract_8_limbs_x86(result, other);
+#else
+                            subtract_limbs_portable<8>(result.data(), other.data());
+#endif
+                        }
+
                         inline bool ge_modulus_4(const limb *x, const limb *mod) {
                             for (int i = 3; i >= 0; i--) {
                                 if (x[i] < mod[i]) {
@@ -285,12 +293,12 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void fp2_mul_pre(limb_array &z0,
-                                                limb_array &z1,
-                                                const limb_array &a,
-                                                const limb_array &b,
-                                                const limb_array &c,
-                                                const limb_array &d) {
+                        inline void fp2_mul_pre_portable(limb_array &z0,
+                                                         limb_array &z1,
+                                                         const limb_array &a,
+                                                         const limb_array &b,
+                                                         const limb_array &c,
+                                                         const limb_array &d) {
                             // For x = a + bu and y = c + du:
                             //   xy = (a + bu) * (c + du)
                             //      = ac + adu + bcu + bdu^2
@@ -308,8 +316,22 @@ namespace nil {
                             z0 = ac;
                             subtract_8_limbs_mod<Field>(z0, bd);
                             multiply_4x4(z1, a_plus_b, c_plus_d);
-                            subtract_8_limbs_mod<Field>(z1, ac);
-                            subtract_8_limbs_mod<Field>(z1, bd);
+                            subtract_8_limbs(z1, ac);
+                            subtract_8_limbs(z1, bd);
+                        }
+
+                        template<class Field>
+                        inline void fp2_mul_pre(limb_array &z0,
+                                                limb_array &z1,
+                                                const limb_array &a,
+                                                const limb_array &b,
+                                                const limb_array &c,
+                                                const limb_array &d) {
+// #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+//                             fp2_mul_pre_x86(z0, z1, a, b, c, d);
+// #else
+                            fp2_mul_pre_portable<Field>(z0, z1, a, b, c, d);
+// #endif
                         }
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail

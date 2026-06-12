@@ -347,6 +347,39 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         data[7] = t3;
     }
 
+    inline void subtract_8_limbs_x86(limb_array &result, const limb_array &other) {
+        asm volatile(
+            "movq " PTR(result, 0) ", %%rax\n"
+            "subq " PTR(other, 0) ", %%rax\n"
+            "movq %%rax, " PTR(result, 0) "\n"
+            "movq " PTR(result, 1) ", %%rax\n"
+            "sbbq " PTR(other, 1) ", %%rax\n"
+            "movq %%rax, " PTR(result, 1) "\n"
+            "movq " PTR(result, 2) ", %%rax\n"
+            "sbbq " PTR(other, 2) ", %%rax\n"
+            "movq %%rax, " PTR(result, 2) "\n"
+            "movq " PTR(result, 3) ", %%rax\n"
+            "sbbq " PTR(other, 3) ", %%rax\n"
+            "movq %%rax, " PTR(result, 3) "\n"
+            "movq " PTR(result, 4) ", %%rax\n"
+            "sbbq " PTR(other, 4) ", %%rax\n"
+            "movq %%rax, " PTR(result, 4) "\n"
+            "movq " PTR(result, 5) ", %%rax\n"
+            "sbbq " PTR(other, 5) ", %%rax\n"
+            "movq %%rax, " PTR(result, 5) "\n"
+            "movq " PTR(result, 6) ", %%rax\n"
+            "sbbq " PTR(other, 6) ", %%rax\n"
+            "movq %%rax, " PTR(result, 6) "\n"
+            "movq " PTR(result, 7) ", %%rax\n"
+            "sbbq " PTR(other, 7) ", %%rax\n"
+            "movq %%rax, " PTR(result, 7) "\n"
+            :
+            : [result]"r"(result.data()),
+              [other]"r"(other.data())
+            : "rax", "cc", "memory"
+        );
+    }
+
     template<class Field>
     inline void subtract_8_limbs_mod_x86(limb_array &result, const limb_array &other) {
         set_static_modulus_limbs_from_field();
@@ -414,6 +447,23 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         result[6] = t2;
         result[7] = t3;
     }
+
+    // template<class Field>
+    // inline void fp2_mul_pre_x86(limb_array &z0,
+    //                             limb_array &z1,
+    //                             const limb_array &a,
+    //                             const limb_array &b,
+    //                             const limb_array &c,
+    //                             const limb_array &d) {
+    //     limb_array ac, bd;
+    //     limb_array a_plus_b = a;
+    //     limb_array c_plus_d = c;
+    //     asm volatile {
+    //         :
+    //         :
+    //         : "rdx", "cc", "memory"
+    //     };
+    // }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 #undef STR_IMPL
