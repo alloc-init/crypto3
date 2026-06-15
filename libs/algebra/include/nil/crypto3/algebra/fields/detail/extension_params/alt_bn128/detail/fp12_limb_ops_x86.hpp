@@ -14,7 +14,7 @@
 // get the i+j%5-th "d" register
 #define D(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 
-#define initial_schoolbook_round(X, X_BASE, Y, Y_BASE, Z, Z_BASE)   \
+#define initial_schoolbook_round(Z, Z_BASE, X, X_BASE, Y, Y_BASE)   \
     "mov " PTR2(Y, Y_BASE, 0) ", %%rdx\n"                           \
     "mulx " PTR2(X, X_BASE, 0) ", %[d0], %[d1]\n"                   \
     "mulx " PTR2(X, X_BASE, 1) ", %[low], %[d2]\n"                  \
@@ -28,7 +28,7 @@
     "xor %[d0], %[d0]\n"                                            \
     "xor %[zero], %[zero]\n"
 
-#define schoolbook_round(ROUND, X, X_BASE, Y, Y_BASE, Z, Z_BASE)    \
+#define schoolbook_round(ROUND, Z, Z_BASE, X, X_BASE, Y, Y_BASE)    \
     "mov " PTR2(Y, Y_BASE, ROUND) ", %%rdx\n"                       \
     "mulx " PTR2(X, X_BASE, 0) ", %[low], %[high]\n"                \
     "adox %[low], " D(0, ROUND) "\n"                                \
@@ -53,11 +53,11 @@
     "mov " D(3, 3) ", " PTR2(Z, Z_BASE, 6) "\n"                     \
     "mov " D(4, 3) ", " PTR2(Z, Z_BASE, 7) "\n"
 
-#define schoolbook(X, X_BASE, Y, Y_BASE, Z, Z_BASE)                 \
-    initial_schoolbook_round(X, X_BASE, Y, Y_BASE, Z, Z_BASE)       \
-    schoolbook_round(1, X, X_BASE, Y, Y_BASE, Z, Z_BASE)            \
-    schoolbook_round(2, X, X_BASE, Y, Y_BASE, Z, Z_BASE)            \
-    schoolbook_round(3, X, X_BASE, Y, Y_BASE, Z, Z_BASE)            \
+#define schoolbook(Z, Z_BASE, X, X_BASE, Y, Y_BASE)                 \
+    initial_schoolbook_round(Z, Z_BASE, X, X_BASE, Y, Y_BASE)       \
+    schoolbook_round(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE)            \
+    schoolbook_round(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE)            \
+    schoolbook_round(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE)            \
     final_schoolbook_round(Z, Z_BASE)
 
 // clang-format on
@@ -67,7 +67,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb d0, d1, d2, d3, d4;
 
         asm volatile(
-            schoolbook(x, 0, y, 0, result, 0)
+            schoolbook(result, 0, x, 0, y, 0)
             : [low]"=&r"(low),
               [high]"=&r"(high),
               [zero]"=&r"(zero),
@@ -552,11 +552,12 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         t[6] = t6;
         t[7] = t7;
     }
+}
 
+namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
     inline void fp2_mul_pre_x86(limb_array *z, const limb_array *x, const limb_array *y) {
         set_static_modulus_limbs_from_field();
-
         // For x = a + bu and y = c + du:
         //   xy = (a + bu) * (c + du)
         //      = ac + adu + bcu + bdu^2
@@ -564,18 +565,15 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         //      = (ac - bd) + (ad + bc)u
         // Karatsuba computes the cross term with one product:
         //   ad + bc = (a + b)(c + d) - ac - bd.
-
         limb low, high, zero, d0, d1, d2, d3, d4, tmp;
         limb_array scratch;
         asm volatile(
-            schoolbook(x, 0, y, 0, z, 0)
-            schoolbook(x, 8, y, 8, scratch, 0)
+            schoolbook(z, 0, x, 0, y, 0)
+            schoolbook(scratch, 0, x, 8, y, 8)
             sub_mod_limbs(z, 0, scratch, 0, tmp, low, high, zero, d0, d1, d2, d3, d4)
-
-            schoolbook(x, 0, y, 8, z, 8)
-            schoolbook(x, 8, y, 0, scratch, 0)
+            schoolbook(z, 8, x, 0, y, 8)
+            schoolbook(scratch, 0, x, 8, y, 0)
             add_mod_limbs(z, 8, scratch, 0, low, high, zero, d0, d1, d2, d3, d4)
-
             :   [low]"=&r"(low),
                 [high]"=&r"(high),
                 [zero]"=&r"(zero),
@@ -584,8 +582,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
                 [d2]"=&r"(d2),
                 [d3]"=&r"(d3),
                 [d4]"=&r"(d4)
-            :
-                [tmp]"d"(tmp),
+            :   [tmp]"d"(tmp),
                 [x]"r"(x),
                 [y]"r"(y),
                 [z]"r"(z),
