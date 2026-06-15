@@ -335,12 +335,12 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void fp2_mul_pre(limb_array *z, const limb_array *x, const limb_array *y) { 
-                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            //                             fp2_mul_pre_x86(z, x, y);
-                            // #else
+                        inline void fp2_mul_pre(limb_array *z, const limb_array *x, const limb_array *y) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            fp2_mul_pre_x86<Field>(z, x, y);
+#else
                             fp2_mul_pre_portable<Field>(z, x, y);
-                            // #endif
+#endif
                         }
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail

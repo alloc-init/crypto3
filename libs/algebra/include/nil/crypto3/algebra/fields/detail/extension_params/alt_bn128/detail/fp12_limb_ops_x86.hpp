@@ -14,56 +14,62 @@
 // get the i+j%5-th "d" register
 #define D(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 
-#define schoolbook_round(I)                     \
-    "mov " PTR(y, I) ", %%rdx\n"                \
-    "mulx " PTR(x, 0) ", %%rax, %[high]\n"      \
-    "adox %%rax, " D(0, I) "\n"                 \
-    "adcx %[high], " D(1, I) "\n"               \
-    "mulx " PTR(x, 1) ", %%rax, %[high]\n"      \
-    "adox %%rax, " D(1, I) "\n"                 \
-    "adcx %[high], " D(2, I) "\n"               \
-    "mulx " PTR(x, 2) ", %%rax, %[high]\n"      \
-    "adox %%rax, " D(2, I) "\n"                 \
-    "adcx %[high], " D(3, I) "\n"               \
-    "mulx " PTR(x, 3) ", %%rax, %[high]\n"      \
-    "adox %%rax, " D(3, I) "\n"                 \
-    "adcx %[high], " D(4, I) "\n"               \
-    "adox %[zero], " D(4, I) "\n"               \
-    "adcx %[zero], " D(4, I) "\n"                \
-    "mov " D(0, I) ", " PTR(result, I) "\n"     \
-    "xor " D(0, I) ", " D(0, I) "\n"
+#define initial_schoolbook_round(X, X_BASE, Y, Y_BASE, Z, Z_BASE)   \
+    "mov " PTR2(Y, Y_BASE, 0) ", %%rdx\n"                           \
+    "mulx " PTR2(X, X_BASE, 0) ", %[d0], %[d1]\n"                   \
+    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[d2]\n"                  \
+    "add %[low], %[d1]\n"                                           \
+    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[d3]\n"                  \
+    "adc %[low], %[d2]\n"                                           \
+    "mulx " PTR2(X, X_BASE, 3) ", %[low], %[d4]\n"                  \
+    "adc %[low], %[d3]\n"                                           \
+    "adc $0, %[d4]\n"                                               \
+    "mov %[d0], " PTR2(Z, Z_BASE, 0) "\n"                           \
+    "xor %[d0], %[d0]\n"                                            \
+    "xor %[zero], %[zero]\n"
+
+#define schoolbook_round(ROUND, X, X_BASE, Y, Y_BASE, Z, Z_BASE)    \
+    "mov " PTR2(Y, Y_BASE, ROUND) ", %%rdx\n"                       \
+    "mulx " PTR2(X, X_BASE, 0) ", %[low], %[high]\n"                \
+    "adox %[low], " D(0, ROUND) "\n"                                \
+    "adcx %[high], " D(1, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[high]\n"                \
+    "adox %[low], " D(1, ROUND) "\n"                                \
+    "adcx %[high], " D(2, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[high]\n"                \
+    "adox %[low], " D(2, ROUND) "\n"                                \
+    "adcx %[high], " D(3, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 3) ", %[low], %[high]\n"                \
+    "adox %[low], " D(3, ROUND) "\n"                                \
+    "adcx %[high], " D(4, ROUND) "\n"                               \
+    "adox %[zero], " D(4, ROUND) "\n"                               \
+    "adcx %[zero], " D(4, ROUND) "\n"                               \
+    "mov " D(0, ROUND) ", " PTR2(Z, Z_BASE, ROUND) "\n"             \
+    "xor " D(0, ROUND) ", " D(0, ROUND) "\n"
+
+#define final_schoolbook_round(Z, Z_BASE)                           \
+    "mov " D(1, 3) ", " PTR2(Z, Z_BASE, 4) "\n"                     \
+    "mov " D(2, 3) ", " PTR2(Z, Z_BASE, 5) "\n"                     \
+    "mov " D(3, 3) ", " PTR2(Z, Z_BASE, 6) "\n"                     \
+    "mov " D(4, 3) ", " PTR2(Z, Z_BASE, 7) "\n"
+
+#define schoolbook(X, X_BASE, Y, Y_BASE, Z, Z_BASE)                 \
+    initial_schoolbook_round(X, X_BASE, Y, Y_BASE, Z, Z_BASE)       \
+    schoolbook_round(1, X, X_BASE, Y, Y_BASE, Z, Z_BASE)            \
+    schoolbook_round(2, X, X_BASE, Y, Y_BASE, Z, Z_BASE)            \
+    schoolbook_round(3, X, X_BASE, Y, Y_BASE, Z, Z_BASE)            \
+    final_schoolbook_round(Z, Z_BASE)
 
 // clang-format on
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline void multiply_4x4_x86(limb_array &result, const limb_array &x, const limb_array &y) {
-        limb zero, high;
-        limb d0 = 0, d1 = 0, d2 = 0, d3 = 0, d4 = 0;
+        limb low, zero, high;
+        limb d0, d1, d2, d3, d4;
 
         asm volatile(
-            // initial round
-            "mov " PTR(y, 0) ", %%rdx\n"
-            "mulx " PTR(x, 0) ", %[d0], %[d1]\n"
-            "mulx " PTR(x, 1) ", %%rax, %[d2]\n"
-            "add %%rax, %[d1]\n"
-            "mulx " PTR(x, 2) ", %%rax, %[d3]\n"
-            "adc %%rax, %[d2]\n"
-            "mulx " PTR(x, 3) ", %%rax, %[d4]\n"
-            "adc %%rax, %[d3]\n"
-            "adc $0, %[d4]\n"
-            "mov %[d0], " PTR(result, 0) "\n"
-            "xor %[d0], %[d0]\n"
-            "xor %[zero], %[zero]\n"
-
-            schoolbook_round(1)
-            schoolbook_round(2)
-            schoolbook_round(3)
-
-            "mov " D(1, 3) ", " PTR(result, 4) "\n"
-            "mov " D(2, 3) ", " PTR(result, 5) "\n"
-            "mov " D(3, 3) ", " PTR(result, 6) "\n"
-            "mov " D(4, 3) ", " PTR(result, 7) "\n"
-
-            : [high]"=&r"(high),
+            schoolbook(x, 0, y, 0, result, 0)
+            : [low]"=&r"(low),
+              [high]"=&r"(high),
               [zero]"=&r"(zero),
               [d0]"=&r"(d0),
               [d1]"=&r"(d1),
@@ -73,7 +79,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             : [result]"r"(result.data()),
               [y]"r"(y.data()),
               [x]"r"(x.data())
-            : "rax", "rdx", "cc", "memory"
+            : "rdx", "cc", "memory"
         );
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
@@ -372,57 +378,60 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         data[6] = t2;
         data[7] = t3;
     }
+}
 
+#define subtract_mod(RESULT, RESULT_BASE, OTHER, OTHER_BASE, SCRATCH, T0, T1, T2, T3, Q0, Q1, Q2, Q3) \
+    "movq " PTR2(RESULT, RESULT_BASE, 0) ", %[" #SCRATCH "]\n"                                        \
+    "subq " PTR2(OTHER, OTHER_BASE, 0) ", %[" #SCRATCH "]\n"                                          \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 0) "\n"                                        \
+    "movq " PTR2(RESULT, RESULT_BASE, 1) ", %[" #SCRATCH "]\n"                                        \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 1) ", %[" #SCRATCH "]\n"                                          \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 1) "\n"                                        \
+    "movq " PTR2(RESULT, RESULT_BASE, 2) ", %[" #SCRATCH "]\n"                                        \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 2) ", %[" #SCRATCH "]\n"                                          \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 2) "\n"                                        \
+    "movq " PTR2(RESULT, RESULT_BASE, 3) ", %[" #SCRATCH "]\n"                                        \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 3) ", %[" #SCRATCH "]\n"                                          \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 3) "\n"                                        \
+    "movq " PTR2(RESULT, RESULT_BASE, 4) ", %[" #T0 "]\n"                                             \
+    "movq " PTR2(RESULT, RESULT_BASE, 5) ", %[" #T1 "]\n"                                             \
+    "movq " PTR2(RESULT, RESULT_BASE, 6) ", %[" #T2 "]\n"                                             \
+    "movq " PTR2(RESULT, RESULT_BASE, 7) ", %[" #T3 "]\n"                                             \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 4) ", %[" #T0 "]\n"                                               \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 5) ", %[" #T1 "]\n"                                               \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 6) ", %[" #T2 "]\n"                                               \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 7) ", %[" #T3 "]\n"                                               \
+    "setc %b[" #SCRATCH "]\n" /* save carry flag */                                                   \
+    "movq %[" #T0 "], %[" #Q0 "]\n"                                                                   \
+    "movq %[" #T1 "], %[" #Q1 "]\n"                                                                   \
+    "movq %[" #T2 "], %[" #Q2 "]\n"                                                                   \
+    "movq %[" #T3 "], %[" #Q3 "]\n"                                                                   \
+    "addq %[p0], %[" #Q0 "]\n"                                                                        \
+    "adcq %[p1], %[" #Q1 "]\n"                                                                        \
+    "adcq %[p2], %[" #Q2 "]\n"                                                                        \
+    "adcq %[p3], %[" #Q3 "]\n"                                                                        \
+    "add $255, %b[" #SCRATCH "]\n" /* restore carry flag */                                           \
+    "cmovc %[" #Q0 "], %[" #T0 "]\n"                                                                  \
+    "cmovc %[" #Q1 "], %[" #T1 "]\n"                                                                  \
+    "cmovc %[" #Q2 "], %[" #T2 "]\n"                                                                  \
+    "cmovc %[" #Q3 "], %[" #T3 "]\n"                                                                  \
+    "movq %[" #T0 "], " PTR2(RESULT, RESULT_BASE, 4) "\n"                                             \
+    "movq %[" #T1 "], " PTR2(RESULT, RESULT_BASE, 5) "\n"                                             \
+    "movq %[" #T2 "], " PTR2(RESULT, RESULT_BASE, 6) "\n"                                             \
+    "movq %[" #T3 "], " PTR2(RESULT, RESULT_BASE, 7) "\n"                              
+
+namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
     inline void subtract_8_limbs_mod_x86(limb_array &result, const limb_array &other) {
         set_static_modulus_limbs_from_field();
-        limb t0 = result[4];
-        limb t1 = result[5];
-        limb t2 = result[6];
-        limb t3 = result[7];
-        limb q0, q1, q2, q3;
+        limb scratch, t0, t1, t2, t3, q0, q1, q2, q3;
         asm volatile(
-            "movq " PTR(result, 0) ", %%rax\n"
-            "subq " PTR(other, 0) ", %%rax\n"
-            "movq %%rax, " PTR(result, 0) "\n"
-            "movq " PTR(result, 1) ", %%rax\n"
-            "sbbq " PTR(other, 1) ", %%rax\n"
-            "movq %%rax, " PTR(result, 1) "\n"
-            "movq " PTR(result, 2) ", %%rax\n"
-            "sbbq " PTR(other, 2) ", %%rax\n"
-            "movq %%rax, " PTR(result, 2) "\n"
-            "movq " PTR(result, 3) ", %%rax\n"
-            "sbbq " PTR(other, 3) ", %%rax\n"
-            "movq %%rax, " PTR(result, 3) "\n"
-
-            "sbbq " PTR(other, 4) ", %[t0]\n"
-            "sbbq " PTR(other, 5) ", %[t1]\n"
-            "sbbq " PTR(other, 6) ", %[t2]\n"
-            "sbbq " PTR(other, 7) ", %[t3]\n"
-
-            "setc %%al\n" // save carry flag
-
-            "movq %[t0], %[q0]\n"
-            "movq %[t1], %[q1]\n"
-            "movq %[t2], %[q2]\n"
-            "movq %[t3], %[q3]\n"
-
-            "addq %[p0], %[q0]\n"
-            "adcq %[p1], %[q1]\n"
-            "adcq %[p2], %[q2]\n"
-            "adcq %[p3], %[q3]\n"
-
-            "add $255, %%al\n" // restore carry flag
-
-            "cmovc %[q0], %[t0]\n"
-            "cmovc %[q1], %[t1]\n"
-            "cmovc %[q2], %[t2]\n"
-            "cmovc %[q3], %[t3]\n"
-
-            : [t0]"+r"(t0),
-              [t1]"+r"(t1),
-              [t2]"+r"(t2),
-              [t3]"+r"(t3),
+            subtract_mod(result, 0, other, 0, scratch, t0, t1, t2, t3, q0, q1, q2, q3)
+            : [scratch]"=&r"(scratch),
+              [t0]"=&r"(t0),
+              [t1]"=&r"(t1),
+              [t2]"=&r"(t2),
+              [t3]"=&r"(t3),
               [q0]"=&r"(q0),
               [q1]"=&r"(q1),
               [q2]"=&r"(q2),
@@ -433,12 +442,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [p1]"m"(p1),
               [p2]"m"(p2),
               [p3]"m"(p3)
-            : "rax", "cc", "memory"
+            : "cc", "memory"
         );
-        result[4] = t0;
-        result[5] = t1;
-        result[6] = t2;
-        result[7] = t3;
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
@@ -536,38 +541,60 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 
     template<class Field>
-    inline void fp2_mul_pre_x86(limb *z, const limb *x, const limb *y) {
+    inline void fp2_mul_pre_x86(limb_array *z, const limb_array *x, const limb_array *y) {
+        set_static_modulus_limbs_from_field();
 
         // For x = a + bu and y = c + du:
         //   xy = (a + bu) * (c + du)
         //      = ac + adu + bcu + bdu^2
         //      = ac + (ad + bc)u - bd      # since u^2 = -1
         //      = (ac - bd) + (ad + bc)u
-        // Karatsuba computes the cross term with one product:
-        //   ad + bc = (a + b)(c + d) - ac - bd.
-        // limb_array ac;
+        
+        const limb_array &a = x[0];
+        const limb_array &b = x[1];
+        const limb_array &c = y[0];
+        const limb_array &d = y[1];
+        limb_array &z0 = z[0];
+        limb_array &z1 = z[1];
+
+        limb low, high, zero, d0, d1, d2, d3, d4, tmp;
+        limb_array scratch;
+        asm volatile(
+            schoolbook(x, 0, y, 0, z, 0)
+            schoolbook(x, 8, y, 8, scratch, 0)
+            subtract_mod(z, 0, scratch, 0, tmp, low, high, zero, d0, d1, d2, d3, d4)
+
+            :   [low]"=&r"(low),
+                [high]"=&r"(high),
+                [zero]"=&r"(zero),
+                [d0]"=&r"(d0),
+                [d1]"=&r"(d1),
+                [d2]"=&r"(d2),
+                [d3]"=&r"(d3),
+                [d4]"=&r"(d4),
+                [tmp]"=&r"(tmp)
+            :   
+                [x]"r"(x),
+                [y]"r"(y),
+                [z]"r"(z),
+                [scratch]"r"(scratch.data()),
+                [p0]"m"(p0),
+                [p1]"m"(p1),
+                [p2]"m"(p2),
+                [p3]"m"(p3)
+            : "rdx", "cc", "memory"
+        );
+
         // limb_array bd;
-        // multiply_4x4_x86(ac, a, c);
-    
+        // multiply_4x4_x86(z0, a, c);
         // multiply_4x4_x86(bd, b, d);
-        // limb_array a_plus_b = a;
-        // limb_array c_plus_d = c;
-
-        // add_8_limbs(a_plus_b, b); // adcx
-        // add_8_limbs(c_plus_d, d); // adox
-
-        // z0 = ac;
         // subtract_8_limbs_mod_x86<Field>(z0, bd);
 
-        // multiply_4x4(z1, a_plus_b, c_plus_d);
-        // subtract_8_limbs(z1, ac);
-        // subtract_8_limbs(z1, bd);
+        limb_array bc;
+        multiply_4x4_x86(z1, a, d);
+        multiply_4x4_x86(bc, b, c);
+        add_8_limbs_mod_x86<Field>(z1, bc);
 
-        // set_static_modulus_limbs_from_field();
-        // limb_array ac, bd;
-        // limb_array a_plus_b = a;
-        // limb_array c_plus_d = c;
-        // asm volatile { : : : "rdx", "cc", "memory"};
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
@@ -575,7 +602,11 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #undef STR
 #undef PTR
 #undef PTR2
+#undef initial_schoolbook_round
 #undef schoolbook_round
+#undef final_schoolbook_round
+#undef schoolbook
+#undef subtract_mod
 #undef set_static_modulus_limbs_from_field
 #undef D
 #undef T
