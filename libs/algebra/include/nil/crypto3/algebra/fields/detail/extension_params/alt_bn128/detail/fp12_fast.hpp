@@ -22,7 +22,7 @@ namespace nil {
                         typedef typename extension_policy::underlying_type underlying_type;      // fp6
 
                         using limb_array = alt_bn128_fp12_limb_ops::limb_array;
-                        using limb = typename limb_array::value_type;
+                        using limb = alt_bn128_fp12_limb_ops::limb;
 
                         // Lazy double-width base-Fp value used inside the tower fast path.
                         //
@@ -77,8 +77,8 @@ namespace nil {
                                 // The data limbs must already be reduced Montgomery base-Fp limbs. Construct
                                 // base_value_type directly from those limbs to avoid converting them again.
                                 typename integral_type::backend_type &backend = out.data.backend().base_data();
-                                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(
-                                    (limb*)backend.limbs(), data.data());
+                                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>((limb *)backend.limbs(),
+                                                                                            data.data());
                             }
                         };
 
@@ -106,6 +106,13 @@ namespace nil {
                             fp2_base operator+(const fp2_base &other) const {
                                 fp2_base result(*this);
                                 result += other;
+                                return result;
+                            }
+
+                            fp2_base add_pre(const fp2_base &other) const {
+                                fp2_base result;
+                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(
+                                    (limb *)result.data.data(), (limb *)data.data(), (limb *)other.data.data());
                                 return result;
                             }
                         };
@@ -139,6 +146,12 @@ namespace nil {
                                 data[0] -= other.data[0];
                                 data[1] -= other.data[1];
                                 return *this;
+                            }
+
+                            // Subtraction where the result is known positive - can avoid correction
+                            void sub_pre(const fp2_dbl &other) {
+                                alt_bn128_fp12_limb_ops::fp2_sub_pre<base_field_type>((limb *)data.data(),
+                                                                                      (limb *)other.data.data());
                             }
 
                             static void mul_pre(fp2_dbl &result, const fp2_base &x, const fp2_base &y) {
@@ -254,21 +267,21 @@ namespace nil {
                                 fp2_dbl &za = result.data[0];
                                 fp2_dbl &zb = result.data[1];
                                 fp2_dbl &zc = result.data[2];
-                                fp2_dbl::mul_pre(za, b + c, e + f);
-                                fp2_dbl::mul_pre(zb, a + b, e + d);
-                                fp2_dbl::mul_pre(zc, a + c, d + f);
+                                fp2_dbl::mul_pre(za, b.add_pre(c), e.add_pre(f));
+                                fp2_dbl::mul_pre(zb, a.add_pre(b), e.add_pre(d));
+                                fp2_dbl::mul_pre(zc, a.add_pre(c), d.add_pre(f));
                                 // Direct products reused by the three Karatsuba corrections.
                                 fp2_dbl be, cf, ad;
                                 fp2_dbl::mul_pre(be, b, e);
                                 fp2_dbl::mul_pre(cf, c, f);
                                 fp2_dbl::mul_pre(ad, a, d);
                                 // Finish the Karatsuba corrections
-                                za -= be;
-                                za -= cf;
-                                zb -= ad;
-                                zb -= be;
-                                zc -= ad;
-                                zc -= cf;
+                                za.sub_pre(be);
+                                za.sub_pre(cf);
+                                zb.sub_pre(ad);
+                                zb.sub_pre(be);
+                                zc.sub_pre(ad);
+                                zc.sub_pre(cf);
                                 // Fold the v^3 and v^4 terms back into the tower:
                                 //   z0 = ad + xi*za
                                 //   z1 = zb + xi*cf

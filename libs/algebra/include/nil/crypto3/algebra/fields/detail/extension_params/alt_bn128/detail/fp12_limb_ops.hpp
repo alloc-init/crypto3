@@ -27,11 +27,11 @@ namespace nil {
                         }
 
                         template<size_t N>
-                        inline void add_limbs_portable(limb *result, const limb *other) {
+                        inline void add_limbs_portable(limb *z, const limb *x, const limb *y) {
                             limb carry = 0u;
                             for (size_t i = 0; i < N; i++) {
-                                const auto sum = (wide_limb)result[i] + other[i] + carry;
-                                result[i] = (limb)sum;
+                                const auto sum = (wide_limb)x[i] + y[i] + carry;
+                                z[i] = (limb)sum;
                                 carry = (limb)(sum >> limb_bits);
                             }
                         }
@@ -53,7 +53,7 @@ namespace nil {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             add_8_limbs_x86(result.data(), other.data());
 #else
-                            add_limbs_portable<8>(result.data(), other.data());
+                            add_limbs_portable<8>(result.data(), result.data(), other.data());
 #endif
                         }
 
@@ -112,7 +112,7 @@ namespace nil {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             add_8_limbs_mod_x86<Field>(data, other);
 #else
-                            add_limbs_portable<8>(data.data(), other.data());
+                            add_limbs_portable<8>(data.data(), data.data(), other.data());
                             subtract_modulus_upper<Field>(data);
 #endif
                         }
@@ -126,7 +126,7 @@ namespace nil {
                             if (borrow) {
                                 // if we went negative, add p
                                 static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                                add_limbs_portable<4>(data.data() + 4, p.data());
+                                add_limbs_portable<4>(data.data() + 4, data.data() + 4, p.data());
                             }
 #endif
                         }
@@ -198,8 +198,8 @@ namespace nil {
                         //
                         // The result is the full 8-limb product placed in the 9-limb storage shape. This is the
                         // common path for products of ordinary BN254 Fp Montgomery residues.
-                        inline void
-                            multiply_4x4_portable(limb_array &result, const limb_array &x, const limb_array &y) {
+                        inline void multiply_4x4_portable(limb_array &result, const limb_array &x,
+                                                          const limb_array &y) {
                             result = {};
                             limb acc0 = 0u;
                             limb acc1 = 0u;
@@ -253,7 +253,7 @@ namespace nil {
                             // Multiplying the current low limb by p_dash gives the
                             // one-limb factor m that makes t[i] + m * p[0] == 0 mod B.
                             limb p_dash = Field::modulus_params.get_mod_obj().get_p_dash();
-                            limb_array buf = *((limb_array*)data);
+                            limb_array buf = *((limb_array *)data);
 
                             // REDC over R = 2^(64 * 4). At step i, choose m so adding
                             // m * p shifted by i limbs makes buf[i] zero modulo 2^64.
@@ -303,6 +303,25 @@ namespace nil {
 #else
                             montgomery_reduce_portable<Field>(result, data);
 #endif
+                        }
+
+                        inline void fp2_base_add_pre(limb *z, const limb *x, const limb *y) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            fp2_base_add_pre_x86(z, x, y);
+#else
+                            add_limbs_portable<4>(z, x, y);
+                            add_limbs_portable<4>(z + 8, x + 8, y + 8);
+#endif
+                        }
+
+                        template<class Field>
+                        inline void fp2_sub_pre(limb *data, const limb *other) {
+                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            // fp2_base_sub_pre_x86(z, x, y);
+                            // #else
+                            subtract_8_limbs_mod<Field>(((limb_array*)data)[0], ((limb_array*)other)[0]);
+                            subtract_8_limbs(((limb_array*)data)[1], ((limb_array*)other)[1]);
+                            // #endif
                         }
 
                         template<class Field>
