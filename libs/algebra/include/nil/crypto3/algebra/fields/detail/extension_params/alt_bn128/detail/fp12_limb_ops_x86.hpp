@@ -115,7 +115,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
-    inline void montgomery_reduce_x86(limb *result, limb *data) {
+    inline void montgomery_reduce_x86(limb *result, const limb *data) {
         set_static_modulus_limbs_from_field();
 
         limb t0, t1, t2, t3, t4;

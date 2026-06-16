@@ -246,57 +246,58 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void montgomery_reduce_portable(limb *result, limb *data) {
+                        inline void montgomery_reduce_portable(limb *result, const limb *data) {
                             // p is the field modulus as 4 limbs
                             static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // p_dash is -p^{-1} modulo one limb, B = 2^64.
                             // Multiplying the current low limb by p_dash gives the
                             // one-limb factor m that makes t[i] + m * p[0] == 0 mod B.
                             limb p_dash = Field::modulus_params.get_mod_obj().get_p_dash();
+                            limb_array buf = *((limb_array*)data);
 
                             // REDC over R = 2^(64 * 4). At step i, choose m so adding
-                            // m * p shifted by i limbs makes data[i] zero modulo 2^64.
+                            // m * p shifted by i limbs makes buf[i] zero modulo 2^64.
                             // After four steps the low four limbs have been cancelled,
-                            // so the high four limbs contain data * R^-1 modulo p.
+                            // so the high four limbs contain buf * R^-1 modulo p.
                             for (size_t i = 0; i < base_value_limb_count; i++) {
                                 // Only the low limb of this product is used. Because
-                                // p[0] * p_dash == -1 mod B, this m cancels data[i] when
+                                // p[0] * p_dash == -1 mod B, this m cancels buf[i] when
                                 // m * p is added into the current REDC column.
-                                const limb m = data[i] * p_dash;
+                                const limb m = buf[i] * p_dash;
                                 limb carry = 0;
 
-                                // Add m * p into data starting at limb i. The low limb of
-                                // this sum is constructed to cancel data[i].
+                                // Add m * p into buf starting at limb i. The low limb of
+                                // this sum is constructed to cancel buf[i].
                                 for (size_t j = 0; j < base_value_limb_count; ++j) {
                                     const wide_limb product =
-                                        (wide_limb)m * (wide_limb)p[j] + (wide_limb)data[i + j] + carry;
-                                    data[i + j] = (limb)product;
+                                        (wide_limb)m * (wide_limb)p[j] + (wide_limb)buf[i + j] + carry;
+                                    buf[i + j] = (limb)product;
                                     carry = (limb)(product >> limb_bits);
                                 }
 
                                 // Propagate any carry beyond the four modulus limbs.
                                 for (size_t j = i + base_value_limb_count; carry != 0 && j < storage_limb_count; j++) {
-                                    const wide_limb sum = (wide_limb)data[j] + carry;
-                                    data[j] = (limb)sum;
+                                    const wide_limb sum = (wide_limb)buf[j] + carry;
+                                    buf[j] = (limb)sum;
                                     carry = (limb)(sum >> limb_bits);
                                 }
                             }
 
-                            // The REDC output lives in data[4..7]. Bring it back into the
+                            // The REDC output lives in buf[4..7]. Bring it back into the
                             // canonical field range before moving the low four limbs.
-                            if (ge_modulus_4(data + 4, p.data())) {
-                                subtract_limbs_portable<4>(data + 4, p.data());
+                            if (ge_modulus_4(buf.data() + 4, p.data())) {
+                                subtract_limbs_portable<4>(buf.data() + 4, p.data());
                             }
 
                             // Keep the reduced 4-limb field value and clear the lazy
                             // extension limbs in the shared storage shape.
                             for (size_t i = 0; i < base_value_limb_count; i++) {
-                                result[i] = data[base_value_limb_count + i];
+                                result[i] = buf[base_value_limb_count + i];
                             }
                         }
 
                         template<class Field>
-                        inline void montgomery_reduce(limb *result, limb *data) {
+                        inline void montgomery_reduce(limb *result, const limb *data) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             montgomery_reduce_x86<Field>(result, data);
 #else

@@ -77,9 +77,8 @@ namespace nil {
                                 // The data limbs must already be reduced Montgomery base-Fp limbs. Construct
                                 // base_value_type directly from those limbs to avoid converting them again.
                                 typename integral_type::backend_type &backend = out.data.backend().base_data();
-                                limb_array input = data;
                                 alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(
-                                    (limb*)backend.limbs(), input.data());
+                                    (limb*)backend.limbs(), data.data());
                             }
                         };
 
