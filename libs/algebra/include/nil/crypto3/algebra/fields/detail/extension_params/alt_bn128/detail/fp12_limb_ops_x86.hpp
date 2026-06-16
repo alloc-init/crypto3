@@ -12,26 +12,13 @@
 #define PTR2(REGNAME, I, J) PTR(REGNAME, BOOST_PP_ADD(I, J))
 
 // get the i+j%5-th "d" register
-#define D(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
-
-#define initial_schoolbook_round(Z, Z_BASE, X, X_BASE, Y, Y_BASE)   \
-    "mov " PTR2(Y, Y_BASE, 0) ", %%rdx\n"                           \
-    "mulx " PTR2(X, X_BASE, 0) ", %[d0], %[d1]\n"                   \
-    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[d2]\n"                  \
-    "add %[low], %[d1]\n"                                           \
-    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[d3]\n"                  \
-    "adc %[low], %[d2]\n"                                           \
-    "mulx " PTR2(X, X_BASE, 3) ", %[low], %[d4]\n"                  \
-    "adc %[low], %[d3]\n"                                           \
-    "adc $0, %[d4]\n"                                               \
-    "mov %[d0], " PTR2(Z, Z_BASE, 0) "\n"                           \
-    "xor %[d0], %[d0]\n"                                            \
-    "xor %[zero], %[zero]\n"
+#define D(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 4)) "]"
 
 #define schoolbook_round(ROUND, Z, Z_BASE, X, X_BASE, Y, Y_BASE)    \
     "mov " PTR2(Y, Y_BASE, ROUND) ", %%rdx\n"                       \
     "mulx " PTR2(X, X_BASE, 0) ", %[low], %[high]\n"                \
     "adox %[low], " D(0, ROUND) "\n"                                \
+    "mov " D(0, ROUND) ", " PTR2(Z, Z_BASE, ROUND) "\n"             \
     "adcx %[high], " D(1, ROUND) "\n"                               \
     "mulx " PTR2(X, X_BASE, 1) ", %[low], %[high]\n"                \
     "adox %[low], " D(1, ROUND) "\n"                                \
@@ -39,32 +26,36 @@
     "mulx " PTR2(X, X_BASE, 2) ", %[low], %[high]\n"                \
     "adox %[low], " D(2, ROUND) "\n"                                \
     "adcx %[high], " D(3, ROUND) "\n"                               \
-    "mulx " PTR2(X, X_BASE, 3) ", %[low], %[high]\n"                \
+    "mulx " PTR2(X, X_BASE, 3) ", %[low], " D(4, ROUND) "\n"        \
     "adox %[low], " D(3, ROUND) "\n"                                \
-    "adcx %[high], " D(4, ROUND) "\n"                               \
     "adox %[zero], " D(4, ROUND) "\n"                               \
-    "adcx %[zero], " D(4, ROUND) "\n"                               \
-    "mov " D(0, ROUND) ", " PTR2(Z, Z_BASE, ROUND) "\n"             \
-    "xor " D(0, ROUND) ", " D(0, ROUND) "\n"
-
-#define final_schoolbook_round(Z, Z_BASE)                           \
-    "mov " D(1, 3) ", " PTR2(Z, Z_BASE, 4) "\n"                     \
-    "mov " D(2, 3) ", " PTR2(Z, Z_BASE, 5) "\n"                     \
-    "mov " D(3, 3) ", " PTR2(Z, Z_BASE, 6) "\n"                     \
-    "mov " D(4, 3) ", " PTR2(Z, Z_BASE, 7) "\n"
+    "adcx %[zero], " D(4, ROUND) "\n"
 
 #define schoolbook(Z, Z_BASE, X, X_BASE, Y, Y_BASE)                 \
-    initial_schoolbook_round(Z, Z_BASE, X, X_BASE, Y, Y_BASE)       \
+    "xor %[zero], %[zero]\n"                                        \
+    "mov " PTR2(Y, Y_BASE, 0) ", %%rdx\n"                           \
+    "mulx " PTR2(X, X_BASE, 0) ", %[d0], %[d1]\n"                   \
+    "mov %[d0], " PTR2(Z, Z_BASE, 0) "\n"                           \
+    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[d2]\n"                  \
+    "add %[low], %[d1]\n"                                           \
+    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[d3]\n"                  \
+    "adc %[low], %[d2]\n"                                           \
+    "mulx " PTR2(X, X_BASE, 3) ", %[low], %[d0]\n"                  \
+    "adc %[low], %[d3]\n"                                           \
+    "adc $0, %[d0]\n"                                               \
     schoolbook_round(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE)            \
     schoolbook_round(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE)            \
     schoolbook_round(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE)            \
-    final_schoolbook_round(Z, Z_BASE)
+    "mov " D(0, 4) ", " PTR2(Z, Z_BASE, 4) "\n"                     \
+    "mov " D(1, 4) ", " PTR2(Z, Z_BASE, 5) "\n"                     \
+    "mov " D(2, 4) ", " PTR2(Z, Z_BASE, 6) "\n"                     \
+    "mov " D(3, 4) ", " PTR2(Z, Z_BASE, 7) "\n"
 
 // clang-format on
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline void multiply_4x4_x86(limb_array &result, const limb_array &x, const limb_array &y) {
         limb low, zero, high;
-        limb d0, d1, d2, d3, d4;
+        limb d0, d1, d2, d3;
 
         asm volatile(
             schoolbook(result, 0, x, 0, y, 0)
@@ -74,8 +65,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [d0]"=&r"(d0),
               [d1]"=&r"(d1),
               [d2]"=&r"(d2),
-              [d3]"=&r"(d3),
-              [d4]"=&r"(d4)
+              [d3]"=&r"(d3)
             : [result]"r"(result.data()),
               [y]"r"(y.data()),
               [x]"r"(x.data())
@@ -565,15 +555,15 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         //      = (ac - bd) + (ad + bc)u
         // Karatsuba computes the cross term with one product:
         //   ad + bc = (a + b)(c + d) - ac - bd.
-        limb low, high, zero, d0, d1, d2, d3, d4, tmp;
+        limb low, high, zero, d0, d1, d2, d3, tmp0, tmp1;
         limb_array scratch;
         asm volatile(
             schoolbook(z, 0, x, 0, y, 0)
             schoolbook(scratch, 0, x, 8, y, 8)
-            sub_mod_limbs(z, 0, scratch, 0, tmp, low, high, zero, d0, d1, d2, d3, d4)
+            sub_mod_limbs(z, 0, scratch, 0, tmp0, tmp1, low, high, zero, d0, d1, d2, d3)
             schoolbook(z, 8, x, 0, y, 8)
             schoolbook(scratch, 0, x, 8, y, 0)
-            add_mod_limbs(z, 8, scratch, 0, low, high, zero, d0, d1, d2, d3, d4)
+            add_mod_limbs(z, 8, scratch, 0, tmp0, low, high, zero, d0, d1, d2, d3)
             :   [low]"=&r"(low),
                 [high]"=&r"(high),
                 [zero]"=&r"(zero),
@@ -581,8 +571,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
                 [d1]"=&r"(d1),
                 [d2]"=&r"(d2),
                 [d3]"=&r"(d3),
-                [d4]"=&r"(d4)
-            :   [tmp]"d"(tmp),
+                [tmp0]"=&r"(tmp0)
+            :   [tmp1]"d"(tmp1),
                 [x]"r"(x),
                 [y]"r"(y),
                 [z]"r"(z),
