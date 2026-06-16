@@ -31,7 +31,9 @@
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/random/mersenne_twister.hpp>
 
+#include <nil/crypto3/algebra/curves/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
+#include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_fast.hpp>
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_ops.hpp>
 
 using namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops;
@@ -40,7 +42,13 @@ BOOST_AUTO_TEST_SUITE(bn254_fp12_fast_unit_tests)
 
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
 namespace {
-    using field_type = nil::crypto3::algebra::fields::alt_bn128<254>;
+    using curve_type = nil::crypto3::algebra::curves::alt_bn128<254>;
+    using field_type = typename curve_type::base_field_type;
+    using fp12_policy_type = typename curve_type::gt_type::extension_policy;
+    using fast_type = nil::crypto3::algebra::fields::detail::alt_bn128_fp12_fast_multiply<field_type, fp12_policy_type>;
+    using base_value_type = typename fast_type::base_value_type;
+    using non_residue_type = typename fast_type::non_residue_type;
+    using underlying_type = typename fast_type::underlying_type;
 
     limb_array random_limbs(boost::random::mt19937 &rng,
                             boost::random::uniform_int_distribution<limb> &distribution,
@@ -110,9 +118,58 @@ namespace {
         BOOST_REQUIRE(is_pR_bounded(input));
         limb_array expected = input;
         limb_array actual = input;
-        montgomery_reduce_portable<field_type>(expected);
-        montgomery_reduce_x86<field_type>(actual);
-        BOOST_REQUIRE_EQUAL_COLLECTIONS(expected.begin(), expected.end(), actual.begin(), actual.end());
+        limb_array expected_result = {};
+        limb_array actual_result = {};
+        montgomery_reduce_portable<field_type>(expected_result.data(), expected.data());
+        montgomery_reduce_x86<field_type>(actual_result.data(), actual.data());
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(expected_result.begin(), expected_result.end(),
+                                        actual_result.begin(), actual_result.end());
+    }
+
+    limb_array portable_reduced_limbs(const limb_array &input) {
+        limb_array scratch = input;
+        limb_array result = {};
+        montgomery_reduce_portable<field_type>(result.data(), scratch.data());
+        return result;
+    }
+
+    void require_base_value_matches_limbs(const base_value_type &actual, const limb_array &expected) {
+        const limb_array actual_limbs = load_limbs(actual.data.backend().base_data());
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(expected.begin(), expected.end(), actual_limbs.begin(), actual_limbs.end());
+    }
+
+    void require_to_base_value_matches_portable(const limb_array &input) {
+        BOOST_REQUIRE(is_pR_bounded(input));
+        const limb_array expected = portable_reduced_limbs(input);
+
+        base_value_type actual;
+        fast_type::fp_dbl(input).to_base_value(actual);
+
+        require_base_value_matches_limbs(actual, expected);
+    }
+
+    void require_to_non_residue_matches_portable(const limb_array &c0, const limb_array &c1) {
+        non_residue_type actual;
+        fast_type::fp2_dbl(fast_type::fp_dbl(c0), fast_type::fp_dbl(c1)).to_non_residue(actual);
+
+        require_base_value_matches_limbs(actual.data[0], portable_reduced_limbs(c0));
+        require_base_value_matches_limbs(actual.data[1], portable_reduced_limbs(c1));
+    }
+
+    void require_to_underlying_matches_portable(const std::array<limb_array, 6> &coefficients) {
+        underlying_type actual;
+        fast_type::fp6_dbl(
+            fast_type::fp2_dbl(fast_type::fp_dbl(coefficients[0]), fast_type::fp_dbl(coefficients[1])),
+            fast_type::fp2_dbl(fast_type::fp_dbl(coefficients[2]), fast_type::fp_dbl(coefficients[3])),
+            fast_type::fp2_dbl(fast_type::fp_dbl(coefficients[4]), fast_type::fp_dbl(coefficients[5])))
+            .to_underlying(actual);
+
+        require_base_value_matches_limbs(actual.data[0].data[0], portable_reduced_limbs(coefficients[0]));
+        require_base_value_matches_limbs(actual.data[0].data[1], portable_reduced_limbs(coefficients[1]));
+        require_base_value_matches_limbs(actual.data[1].data[0], portable_reduced_limbs(coefficients[2]));
+        require_base_value_matches_limbs(actual.data[1].data[1], portable_reduced_limbs(coefficients[3]));
+        require_base_value_matches_limbs(actual.data[2].data[0], portable_reduced_limbs(coefficients[4]));
+        require_base_value_matches_limbs(actual.data[2].data[1], portable_reduced_limbs(coefficients[5]));
     }
 }    // namespace
 
@@ -169,6 +226,61 @@ BOOST_AUTO_TEST_CASE(reduce_x86_edge_pR_bounded_inputs) {
     require_reduce_x86_matches_portable(high_modulus_minus_one);
     require_reduce_x86_matches_portable(pR_minus_one());
     require_reduce_x86_matches_portable(alternating);
+}
+
+BOOST_AUTO_TEST_CASE(to_base_value_random_pR_bounded_inputs) {
+    boost::random::mt19937 rng(0x2547);
+    boost::random::uniform_int_distribution<limb> d;
+    for (size_t i = 0; i < 100; i++) {
+        require_to_base_value_matches_portable(random_pR_bounded_limbs(rng, d));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(to_base_value_edge_pR_bounded_inputs) {
+    const limb max = ~limb(0u);
+    const limb_array p = modulus_limbs();
+
+    limb_array zero = {};
+
+    limb_array low_max = {};
+    for (size_t i = 0; i < 4; i++) {
+        low_max[i] = max;
+    }
+
+    limb_array high_modulus_minus_one = {};
+    for (size_t i = 0; i < 4; i++) {
+        high_modulus_minus_one[base_value_limb_count + i] = p[i];
+    }
+    decrement_upper(high_modulus_minus_one);
+
+    require_to_base_value_matches_portable(zero);
+    require_to_base_value_matches_portable(low_max);
+    require_to_base_value_matches_portable(high_modulus_minus_one);
+    require_to_base_value_matches_portable(pR_minus_one());
+}
+
+BOOST_AUTO_TEST_CASE(to_non_residue_random_pR_bounded_inputs) {
+    boost::random::mt19937 rng(0x2548);
+    boost::random::uniform_int_distribution<limb> d;
+    for (size_t i = 0; i < 100; i++) {
+        require_to_non_residue_matches_portable(random_pR_bounded_limbs(rng, d),
+                                                random_pR_bounded_limbs(rng, d));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(to_underlying_random_pR_bounded_inputs) {
+    boost::random::mt19937 rng(0x2549);
+    boost::random::uniform_int_distribution<limb> d;
+    for (size_t i = 0; i < 100; i++) {
+        require_to_underlying_matches_portable({
+            random_pR_bounded_limbs(rng, d),
+            random_pR_bounded_limbs(rng, d),
+            random_pR_bounded_limbs(rng, d),
+            random_pR_bounded_limbs(rng, d),
+            random_pR_bounded_limbs(rng, d),
+            random_pR_bounded_limbs(rng, d),
+        });
+    }
 }
 #else
 BOOST_AUTO_TEST_CASE(dummy_test) {

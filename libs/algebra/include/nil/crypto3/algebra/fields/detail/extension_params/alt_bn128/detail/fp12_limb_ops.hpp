@@ -284,8 +284,8 @@ namespace nil {
 
                             // The REDC output lives in data[4..7]. Bring it back into the
                             // canonical field range before moving the low four limbs.
-                            if (ge_modulus_4(data.data() + 4, p.data())) {
-                                subtract_limbs_portable<4>(data.data() + 4, p.data());
+                            if (ge_modulus_4(data + 4, p.data())) {
+                                subtract_limbs_portable<4>(data + 4, p.data());
                             }
 
                             // Keep the reduced 4-limb field value and clear the lazy

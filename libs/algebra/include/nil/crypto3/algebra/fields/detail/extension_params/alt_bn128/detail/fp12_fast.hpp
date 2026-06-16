@@ -22,6 +22,7 @@ namespace nil {
                         typedef typename extension_policy::underlying_type underlying_type;      // fp6
 
                         using limb_array = alt_bn128_fp12_limb_ops::limb_array;
+                        using limb = typename limb_array::value_type;
 
                         // Lazy double-width base-Fp value used inside the tower fast path.
                         //
@@ -76,7 +77,9 @@ namespace nil {
                                 // The data limbs must already be reduced Montgomery base-Fp limbs. Construct
                                 // base_value_type directly from those limbs to avoid converting them again.
                                 typename integral_type::backend_type &backend = out.data.backend().base_data();
-                                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>((limb*)backend.limbs(), data);
+                                limb_array input = data;
+                                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(
+                                    (limb*)backend.limbs(), input.data());
                             }
                         };
 
