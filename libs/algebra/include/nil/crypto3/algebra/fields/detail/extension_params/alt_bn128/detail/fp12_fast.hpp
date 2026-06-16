@@ -78,17 +78,15 @@ namespace nil {
                                 alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(data);
                             }
 
-                            base_value_type to_base_value() const {
+                            void to_base_value(base_value_type &out) const {
                                 // The data limbs must already be reduced Montgomery base-Fp limbs. Construct
                                 // base_value_type directly from those limbs to avoid converting them again.
-                                base_value_type out;
                                 typename integral_type::backend_type &backend = out.data.backend().base_data();
                                 for (std::size_t i = 0; i < backend.size(); ++i) {
                                     backend.limbs()[i] = data[i];
                                 }
-                                backend.set_carry(false);
-                                backend.normalize();
-                                return out;
+                                // backend.set_carry(false);
+                                // backend.normalize();
                             }
                         };
 
@@ -173,8 +171,9 @@ namespace nil {
                                 data[1].reduce();
                             }
 
-                            non_residue_type to_non_residue() const {
-                                return non_residue_type(data[0].to_base_value(), data[1].to_base_value());
+                            void to_non_residue(non_residue_type &ret) const {
+                                data[0].to_base_value(ret.data[0]);
+                                data[1].to_base_value(ret.data[1]);
                             }
                         };
 
@@ -300,9 +299,10 @@ namespace nil {
                                 data[2].reduce();
                             }
 
-                            underlying_type to_underlying() const {
-                                return underlying_type(data[0].to_non_residue(), data[1].to_non_residue(),
-                                                       data[2].to_non_residue());
+                            void to_underlying(underlying_type &ret) const {
+                                data[0].to_non_residue(ret.data[0]);
+                                data[1].to_non_residue(ret.data[1]);
+                                data[2].to_non_residue(ret.data[2]);
                             }
 
                             // Fp6 multiply-by-v is a coefficient rotation with one xi multiplication because v^3 = xi:
@@ -357,16 +357,17 @@ namespace nil {
 
                             fp6_dbl z0_dbl = ac + bd.mul_v();
                             z0_dbl.reduce();
-                            const underlying_type z0 = z0_dbl.to_underlying();
 
                             fp6_dbl z1_dbl;
                             fp6_dbl::mul_pre(z1_dbl, a + b, c + d);
                             z1_dbl -= ac;    // first correction (see above)
                             z1_dbl -= bd;    // second correction
                             z1_dbl.reduce();
-                            const underlying_type z1 = z1_dbl.to_underlying();
 
-                            return Fp12Value(z0, z1);
+                            Fp12Value ret;
+                            z0_dbl.to_underlying(ret.data[0]);
+                            z1_dbl.to_underlying(ret.data[1]);
+                            return ret;
                         }
                     };
                 }    // namespace detail

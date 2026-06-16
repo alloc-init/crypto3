@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
                     const std::size_t idx = i % poolN;
                     typename fp12_fast_type::fp_dbl value(fp_products[idx]);
                     value.reduce();
-                    fp_acc = value.to_base_value();
+                    value.to_base_value(fp_acc);
                     do_not_optimize(&fp_acc);
                 }));
 
@@ -242,7 +242,7 @@ int main(int argc, char** argv) {
                     const std::size_t idx = i % poolN;
                     typename fp12_fast_type::fp2_dbl value(fp2_dbl_x[idx]);
                     value.reduce();
-                    fp2_acc = value.to_non_residue();
+                    value.to_non_residue(fp2_acc);
                     do_not_optimize(&fp2_acc);
                 }));
 
@@ -251,7 +251,7 @@ int main(int argc, char** argv) {
                     fp12_fast_type::fp2_dbl fp2_pre_acc;
                     fp12_fast_type::fp2_dbl::mul_pre(fp2_pre_acc, fp2_base_x[idx], fp2_base_y[idx]);
                     fp2_pre_acc.reduce();
-                    fp2_acc = fp2_pre_acc.to_non_residue();
+                    fp2_pre_acc.to_non_residue(fp2_acc);
                     do_not_optimize(&fp2_acc);
                 }));
 
@@ -288,7 +288,7 @@ int main(int argc, char** argv) {
                     const std::size_t idx = i % poolN;
                     fp6_dbl_type value(fp6_dbl_x[idx]);
                     value.reduce();
-                    fp6_acc = value.to_underlying();
+                    value.to_underlying(fp6_acc);
                     do_not_optimize(&fp6_acc);
                 }));
 
@@ -296,7 +296,7 @@ int main(int argc, char** argv) {
                     const std::size_t idx = i % poolN;
                     fp6_dbl_type::mul_pre(fp6_pre_acc, fp6_base_x[idx], fp6_base_y[idx]);
                     fp6_pre_acc.reduce();
-                    fp6_acc = fp6_pre_acc.to_underlying();
+                    fp6_pre_acc.to_underlying(fp6_acc);
                     do_not_optimize(&fp6_acc);
                 }));
 
