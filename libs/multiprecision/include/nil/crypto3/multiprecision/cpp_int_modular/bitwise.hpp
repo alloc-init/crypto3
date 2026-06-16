@@ -372,7 +372,12 @@ namespace boost {
                 BOOST_MP_FORCEINLINE BOOST_MP_CXX14_CONSTEXPR typename std::enable_if<boost::multiprecision::backends::is_trivial_cpp_int_modular<
                     cpp_int_modular_backend<Bits>>::value>::type
                     eval_left_shift(cpp_int_modular_backend<Bits>& result, T s) noexcept {
-                    *result.limbs() <<= s;
+                    if (static_cast<double_limb_type>(s) >= Bits) {
+                        *result.limbs() = 0;
+                    } else {
+                        *result.limbs() <<= s;
+                        result.normalize();
+                    }
                 }
 
                 template<unsigned Bits, class T>
@@ -397,6 +402,7 @@ namespace boost {
                         const cpp_int_modular_backend<Bits>&
                             o) noexcept {
                     *result.limbs() = ~*o.limbs();
+                    result.normalize();
                 }
 
                 template<unsigned Bits>
@@ -431,6 +437,7 @@ namespace boost {
                         cpp_int_modular_backend<Bits>& result,
                         const cpp_int_modular_backend<Bits>& o) noexcept {
                     *result.limbs() ^= *o.limbs();
+                    result.normalize();
                 }
 
         }    // namespace backends

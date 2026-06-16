@@ -93,6 +93,7 @@ namespace boost {
                 const cpp_int_modular_backend<Bits2>& o) noexcept
             {
                *result.limbs() *= *o.limbs();
+               result.normalize();
             }
 
             // Multiplication with an unsigned integral type.
@@ -116,6 +117,7 @@ namespace boost {
             eval_multiply(cpp_int_modular_backend<Bits1> &result,
                           const boost::multiprecision::limb_type &b) noexcept {
                 *result.limbs() *= b;
+                result.normalize();
             }
 
 

@@ -8,7 +8,9 @@
 
 #include <climits>
 #include <cstring>
+#include <cstdlib>
 
+#include <boost/assert.hpp>
 #include <boost/predef/os/macos.h>
 #include <boost/multiprecision/traits/std_integer_traits.hpp>
 #include <boost/multiprecision/detail/endian.hpp>
@@ -210,6 +212,11 @@ namespace boost {
                return out;
             }
             std::size_t bitcount = eval_msb_imp(val.backend()) + 1;
+            if (bitcount > Bits)
+            {
+               BOOST_ASSERT_MSG(false, "cpp_int_modular_backend contains bits above fixed precision");
+               std::abort();
+            }
 
             std::ptrdiff_t bit_location = msv_first ? static_cast<std::ptrdiff_t>(bitcount - chunk_size) : 0;
             const std::ptrdiff_t bit_step = msv_first ? static_cast<std::ptrdiff_t>(-static_cast<std::ptrdiff_t>(chunk_size)) : static_cast<std::ptrdiff_t>(chunk_size);
