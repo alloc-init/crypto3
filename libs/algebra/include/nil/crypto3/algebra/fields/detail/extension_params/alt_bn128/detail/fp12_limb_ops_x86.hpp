@@ -51,7 +51,6 @@
     "mov " D(2, 4) ", " PTR2(Z, Z_BASE, 6) "\n"                     \
     "mov " D(3, 4) ", " PTR2(Z, Z_BASE, 7) "\n"
 
-// clang-format on
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline void multiply_4x4_x86(limb_array &result, const limb_array &x, const limb_array &y) {
         limb low, zero, high;
@@ -73,8 +72,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         );
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
-
-// clang-format off
 
 #define set_static_modulus_limbs_from_field()                           \
         constexpr auto mod_obj = Field::modulus_params.get_mod_obj();   \
@@ -115,8 +112,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "adox %[pending], %[high]\n"                        \
     "adcx %[high], " T(I, 4) "\n"                       \
     BOOST_PP_IF(BOOST_PP_LESS(I, 3), montgomery_reduce_load_next(I), "")
-
-// clang-format on
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
@@ -355,7 +350,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "movq %[" #T0 "], " PTR2(RESULT, RESULT_BASE, 4) "\n"                               \
     "movq %[" #T1 "], " PTR2(RESULT, RESULT_BASE, 5) "\n"                               \
     "movq %[" #T2 "], " PTR2(RESULT, RESULT_BASE, 6) "\n"                               \
-    "movq %[" #T3 "], " PTR2(RESULT, RESULT_BASE, 7) "\n"       
+    "movq %[" #T3 "], " PTR2(RESULT, RESULT_BASE, 7) "\n"
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
@@ -421,7 +416,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "movq %[" #T0 "], " PTR2(RESULT, RESULT_BASE, 4) "\n"                                             \
     "movq %[" #T1 "], " PTR2(RESULT, RESULT_BASE, 5) "\n"                                             \
     "movq %[" #T2 "], " PTR2(RESULT, RESULT_BASE, 6) "\n"                                             \
-    "movq %[" #T3 "], " PTR2(RESULT, RESULT_BASE, 7) "\n"                              
+    "movq %[" #T3 "], " PTR2(RESULT, RESULT_BASE, 7) "\n"
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
@@ -604,3 +599,5 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #undef montgomery_reduce_load_next
 #undef montgomery_reduce_cancel_low
 #undef double_mod_p
+
+// clang-format on
