@@ -150,8 +150,8 @@ namespace nil {
 
                             // Subtraction where the result is known positive - can avoid correction
                             void sub_pre(const fp2_dbl &other) {
-                                alt_bn128_fp12_limb_ops::fp2_sub_pre<base_field_type>((limb *)data.data(),
-                                                                                      (limb *)other.data.data());
+                                alt_bn128_fp12_limb_ops::fp2_sub_pre<base_field_type>((limb_array *)data.data(),
+                                                                                      (limb_array *)other.data.data());
                             }
 
                             static void mul_pre(fp2_dbl &result, const fp2_base &x, const fp2_base &y) {

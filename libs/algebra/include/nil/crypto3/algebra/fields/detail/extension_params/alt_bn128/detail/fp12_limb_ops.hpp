@@ -315,12 +315,12 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void fp2_sub_pre(limb *data, const limb *other) {
+                        inline void fp2_sub_pre(limb_array *data, const limb_array *other) {
                             // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             // fp2_base_sub_pre_x86(z, x, y);
                             // #else
-                            subtract_8_limbs_mod<Field>(((limb_array*)data)[0], ((limb_array*)other)[0]);
-                            subtract_8_limbs(((limb_array*)data)[1], ((limb_array*)other)[1]);
+                            subtract_8_limbs_mod<Field>(data[0], other[0]);
+                            subtract_8_limbs(data[1], other[1]);
                             // #endif
                         }
 
