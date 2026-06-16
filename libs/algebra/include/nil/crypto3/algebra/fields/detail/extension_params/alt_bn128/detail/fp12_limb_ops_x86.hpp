@@ -115,7 +115,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
-    inline void montgomery_reduce_x86(limb_array &data) {
+    inline void montgomery_reduce_x86(limb *result, limb *data) {
         set_static_modulus_limbs_from_field();
 
         limb t0, t1, t2, t3, t4;
@@ -155,14 +155,10 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "cmovnc %[zero], " T(2, 4) "\n"
             "cmovnc %%rdx, " T(3, 4) "\n"
 
-            "movq " T(0, 4) ", " PTR(data, 0) "\n"
-            "movq " T(1, 4) ", " PTR(data, 1) "\n"
-            "movq " T(2, 4) ", " PTR(data, 2) "\n"
-            "movq " T(3, 4) ", " PTR(data, 3) "\n"
-            "movq $0, " PTR(data, 4) "\n"
-            "movq $0, " PTR(data, 5) "\n"
-            "movq $0, " PTR(data, 6) "\n"
-            "movq $0, " PTR(data, 7) "\n"
+            "movq " T(0, 4) ", " PTR(result, 0) "\n"
+            "movq " T(1, 4) ", " PTR(result, 1) "\n"
+            "movq " T(2, 4) ", " PTR(result, 2) "\n"
+            "movq " T(3, 4) ", " PTR(result, 3) "\n"
 
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
@@ -173,7 +169,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [high]"=&r"(high),
               [pending]"=&r"(pending),
               [zero]"=&r"(zero)
-            : [data]"r"(data.data()),
+            : [data]"r"(data),
+              [result]"r"(result),
               [p0]"m"(p0),
               [p1]"m"(p1),
               [p2]"m"(p2),

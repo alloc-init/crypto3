@@ -72,21 +72,11 @@ namespace nil {
                                 return *this;
                             }
 
-                            void reduce() {
-                                // Convert a bounded pR-residue pre-REDC expression to reduced four-limb
-                                // Montgomery limbs. REDC removes one Montgomery factor.
-                                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(data);
-                            }
-
                             void to_base_value(base_value_type &out) const {
                                 // The data limbs must already be reduced Montgomery base-Fp limbs. Construct
                                 // base_value_type directly from those limbs to avoid converting them again.
                                 typename integral_type::backend_type &backend = out.data.backend().base_data();
-                                for (std::size_t i = 0; i < backend.size(); ++i) {
-                                    backend.limbs()[i] = data[i];
-                                }
-                                // backend.set_carry(false);
-                                // backend.normalize();
+                                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>((limb*)backend.limbs(), data);
                             }
                         };
 
@@ -164,11 +154,6 @@ namespace nil {
                                 data[0] -= data[1];
                                 data[1].mul_by_9();
                                 data[1] += tmp_a;
-                            }
-
-                            void reduce() {
-                                data[0].reduce();
-                                data[1].reduce();
                             }
 
                             void to_non_residue(non_residue_type &ret) const {
@@ -293,12 +278,6 @@ namespace nil {
                                 zc += be;
                             }
 
-                            void reduce() {
-                                data[0].reduce();
-                                data[1].reduce();
-                                data[2].reduce();
-                            }
-
                             void to_underlying(underlying_type &ret) const {
                                 data[0].to_non_residue(ret.data[0]);
                                 data[1].to_non_residue(ret.data[1]);
@@ -356,13 +335,11 @@ namespace nil {
                             fp6_dbl::mul_pre(bd, b, d);
 
                             fp6_dbl z0_dbl = ac + bd.mul_v();
-                            z0_dbl.reduce();
 
                             fp6_dbl z1_dbl;
                             fp6_dbl::mul_pre(z1_dbl, a + b, c + d);
                             z1_dbl -= ac;    // first correction (see above)
                             z1_dbl -= bd;    // second correction
-                            z1_dbl.reduce();
 
                             Fp12Value ret;
                             z0_dbl.to_underlying(ret.data[0]);

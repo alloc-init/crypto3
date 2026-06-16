@@ -246,7 +246,7 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void montgomery_reduce_portable(limb_array &data) {
+                        inline void montgomery_reduce_portable(limb *result, limb *data) {
                             // p is the field modulus as 4 limbs
                             static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // p_dash is -p^{-1} modulo one limb, B = 2^64.
@@ -275,7 +275,7 @@ namespace nil {
                                 }
 
                                 // Propagate any carry beyond the four modulus limbs.
-                                for (size_t j = i + base_value_limb_count; carry != 0 && j < data.size(); j++) {
+                                for (size_t j = i + base_value_limb_count; carry != 0 && j < storage_limb_count; j++) {
                                     const wide_limb sum = (wide_limb)data[j] + carry;
                                     data[j] = (limb)sum;
                                     carry = (limb)(sum >> limb_bits);
@@ -284,24 +284,23 @@ namespace nil {
 
                             // The REDC output lives in data[4..7]. Bring it back into the
                             // canonical field range before moving the low four limbs.
-                            subtract_modulus_upper<Field>(data);
+                            if (ge_modulus_4(data.data() + 4, p.data())) {
+                                subtract_limbs_portable<4>(data.data() + 4, p.data());
+                            }
 
                             // Keep the reduced 4-limb field value and clear the lazy
                             // extension limbs in the shared storage shape.
                             for (size_t i = 0; i < base_value_limb_count; i++) {
-                                data[i] = data[base_value_limb_count + i];
-                            }
-                            for (size_t i = base_value_limb_count; i < data.size(); i++) {
-                                data[i] = 0;
+                                result[i] = data[base_value_limb_count + i];
                             }
                         }
 
                         template<class Field>
-                        inline void montgomery_reduce(limb_array &data) {
+                        inline void montgomery_reduce(limb *result, limb *data) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            montgomery_reduce_x86<Field>(data);
+                            montgomery_reduce_x86<Field>(result, data);
 #else
-                            montgomery_reduce_portable<Field>(data);
+                            montgomery_reduce_portable<Field>(result, data);
 #endif
                         }
 
