@@ -346,7 +346,7 @@ namespace boost {
                     // to prevent problems with trivial cpp_int
                     //
                     if (eval_is_zero(input)) {
-                        result = static_cast<internal_limb_type>(0u);
+                        result = Backend1();
                         return;
                     }
 
