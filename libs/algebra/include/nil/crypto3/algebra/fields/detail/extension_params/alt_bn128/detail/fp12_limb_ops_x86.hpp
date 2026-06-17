@@ -301,7 +301,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [q1]"=&r"(q1),
               [q2]"=&r"(q2),
               [q3]"=&r"(q3)
-            : [other]"r"(other),
+            : [data]"r"(data),
+              [other]"r"(other),
               [p0]"m"(p0),
               [p1]"m"(p1),
               [p2]"m"(p2),
