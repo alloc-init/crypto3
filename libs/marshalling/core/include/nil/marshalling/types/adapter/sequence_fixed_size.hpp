@@ -76,8 +76,8 @@ namespace nil {
                             return base_impl_type::length() + (remSize * base_impl_type::element_length(dummyElem));
                         }
 
-                        using tag = typename std::conditional<std::is_integral<element_type>::value
-                                                                  && (sizeof(element_type) == sizeof(std::uint8_t)),
+                        using tag = typename std::conditional<std::is_integral<element_type>::value &&
+                                                                  (sizeof(element_type) == sizeof(std::uint8_t)),
                                                               has_raw_data_tag, has_fields_tag>::type;
 
                         return recalc_len(tag());
@@ -145,9 +145,8 @@ namespace nil {
                             return false;
                         }
 
-                        using tag =
-                            typename std::conditional<has_member_function_resize<element_type>::value,
-                                                      has_resize_tag, no_resize_tag>::type;
+                        using tag = typename std::conditional<has_member_function_resize<element_type>::value,
+                                                              has_resize_tag, no_resize_tag>::type;
 
                         return eval_refresh(tag());
                     }
@@ -240,7 +239,7 @@ namespace nil {
                 };
 
             }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_SEQUENCE_FIXED_SIZE_HPP

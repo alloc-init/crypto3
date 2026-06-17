@@ -203,7 +203,8 @@ namespace nil {
                 f[0] = a[0];
 
                 for (std::size_t i = 1; i < n; i++) {
-                    u[i] = u[i - 1] * geometric_sequence[i] * (field_value_type::one() - geometric_sequence[i]).inversed();
+                    u[i] =
+                        u[i - 1] * geometric_sequence[i] * (field_value_type::one() - geometric_sequence[i]).inversed();
                     w[i] = a[i] * (u[i].inversed());
                     z[i] = u[i] * geometric_triangular_sequence[i].inversed();
                     f[i] = w[i] * geometric_triangular_sequence[i];
@@ -249,7 +250,8 @@ namespace nil {
                     if (i % 2 == 1)
                         v[i] = -v[i];
 
-                    u[i] = u[i - 1] * geometric_sequence[i] * (field_value_type::one() - geometric_sequence[i]).inversed();
+                    u[i] =
+                        u[i - 1] * geometric_sequence[i] * (field_value_type::one() - geometric_sequence[i]).inversed();
                     w[i] = v[i] * u[i].inversed();
 
                     z[i] = u[i] * geometric_triangular_sequence[i].inversed();
@@ -264,7 +266,7 @@ namespace nil {
                 }
             }
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // ALGEBRA_FFT_BASIS_CHANGE_HPP

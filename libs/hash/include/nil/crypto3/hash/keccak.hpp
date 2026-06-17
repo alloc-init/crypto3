@@ -69,17 +69,17 @@ namespace nil {
                     };
 
                     typedef sponge_construction<params_type, policy_type, typename policy_type::iv_generator,
-                            detail::keccak_1600_functions<digest_bits>,
-                            nil::crypto3::hashes::detail::keccak_1600_impl<policy_type>,
-                            detail::keccak_1600_padder<policy_type>>
-                            type;
+                                                detail::keccak_1600_functions<digest_bits>,
+                                                nil::crypto3::hashes::detail::keccak_1600_impl<policy_type>,
+                                                detail::keccak_1600_padder<policy_type>>
+                        type;
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::block;
                 using accumulator_tag = accumulators::tag::hash<keccak_1600<DigestBits>>;
             };
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

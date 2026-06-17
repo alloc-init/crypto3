@@ -119,9 +119,9 @@ namespace nil {
                                          2> const
                         fp2_extension_params<alt_bn128_base_field<Version>>::Frobenius_coeffs_c1;
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_ALT_BN128_FP2_EXTENSION_PARAMS_HPP

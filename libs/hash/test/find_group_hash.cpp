@@ -84,7 +84,7 @@ namespace boost {
             };
 
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 // template<typename GroupType>
@@ -137,7 +137,9 @@ BOOST_AUTO_TEST_CASE(jubjub_sha256_default_params_manual_test) {
     BOOST_CHECK(expected == point);
 
     std::uint32_t input_uint32 = 3;
-    point = hash<hash_type>({input_uint32,});
+    point = hash<hash_type>({
+        input_uint32,
+    });
     BOOST_CHECK(expected == point);
 }
 

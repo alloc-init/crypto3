@@ -42,60 +42,55 @@ using fp_value_type = typename fp2_value_type::underlying_type;
 
 namespace {
 
-constexpr std::size_t random_samples = 32;
+    constexpr std::size_t random_samples = 32;
 
-fp2_value_type ref_add(const fp2_value_type &x, const fp2_value_type &y) {
-    return fp2_value_type(x.data[0] + y.data[0], x.data[1] + y.data[1]);
-}
+    fp2_value_type ref_add(const fp2_value_type &x, const fp2_value_type &y) {
+        return fp2_value_type(x.data[0] + y.data[0], x.data[1] + y.data[1]);
+    }
 
-fp2_value_type ref_mul(const fp2_value_type &x, const fp2_value_type &y) {
-    const fp_value_type a0b0 = x.data[0] * y.data[0];
-    const fp_value_type a1b1 = x.data[1] * y.data[1];
-    const fp_value_type non_residue = fp2_value_type::field_type::extension_policy::non_residue;
+    fp2_value_type ref_mul(const fp2_value_type &x, const fp2_value_type &y) {
+        const fp_value_type a0b0 = x.data[0] * y.data[0];
+        const fp_value_type a1b1 = x.data[1] * y.data[1];
+        const fp_value_type non_residue = fp2_value_type::field_type::extension_policy::non_residue;
 
-    return fp2_value_type(a0b0 + non_residue * a1b1,
-                          (x.data[0] + x.data[1]) * (y.data[0] + y.data[1]) -
-                              a0b0 - a1b1);
-}
+        return fp2_value_type(a0b0 + non_residue * a1b1,
+                              (x.data[0] + x.data[1]) * (y.data[0] + y.data[1]) - a0b0 - a1b1);
+    }
 
-std::array<fp2_value_type, 6> to_w_coefficients(const fp12_value_type &x) {
-    return {x.data[0].data[0], x.data[1].data[0],
-            x.data[0].data[1], x.data[1].data[1],
-            x.data[0].data[2], x.data[1].data[2]};
-}
+    std::array<fp2_value_type, 6> to_w_coefficients(const fp12_value_type &x) {
+        return {x.data[0].data[0], x.data[1].data[0], x.data[0].data[1],
+                x.data[1].data[1], x.data[0].data[2], x.data[1].data[2]};
+    }
 
-fp12_value_type from_w_coefficients(const std::array<fp2_value_type, 6> &x) {
-    return fp12_value_type(fp6_value_type(x[0], x[2], x[4]),
-                           fp6_value_type(x[1], x[3], x[5]));
-}
+    fp12_value_type from_w_coefficients(const std::array<fp2_value_type, 6> &x) {
+        return fp12_value_type(fp6_value_type(x[0], x[2], x[4]), fp6_value_type(x[1], x[3], x[5]));
+    }
 
-fp12_value_type ref_mul(const fp12_value_type &x, const fp12_value_type &y) {
-    const auto x_coefficients = to_w_coefficients(x);
-    const auto y_coefficients = to_w_coefficients(y);
+    fp12_value_type ref_mul(const fp12_value_type &x, const fp12_value_type &y) {
+        const auto x_coefficients = to_w_coefficients(x);
+        const auto y_coefficients = to_w_coefficients(y);
 
-    std::array<fp2_value_type, 11> product;
-    product.fill(fp2_value_type::zero());
+        std::array<fp2_value_type, 11> product;
+        product.fill(fp2_value_type::zero());
 
-    for (std::size_t i = 0; i < x_coefficients.size(); ++i) {
-        for (std::size_t j = 0; j < y_coefficients.size(); ++j) {
-            product[i + j] = ref_add(product[i + j],
-                                     ref_mul(x_coefficients[i], y_coefficients[j]));
+        for (std::size_t i = 0; i < x_coefficients.size(); ++i) {
+            for (std::size_t j = 0; j < y_coefficients.size(); ++j) {
+                product[i + j] = ref_add(product[i + j], ref_mul(x_coefficients[i], y_coefficients[j]));
+            }
         }
+
+        const fp2_value_type xi = fp6_value_type::field_type::extension_policy::non_residue;
+        for (std::size_t i = product.size(); i-- > 6;) {
+            product[i - 6] = ref_add(product[i - 6], ref_mul(product[i], xi));
+        }
+
+        return from_w_coefficients({product[0], product[1], product[2], product[3], product[4], product[5]});
     }
 
-    const fp2_value_type xi = fp6_value_type::field_type::extension_policy::non_residue;
-    for (std::size_t i = product.size(); i-- > 6;) {
-        product[i - 6] = ref_add(product[i - 6], ref_mul(product[i], xi));
+    template<typename Rng>
+    fp12_value_type random_fp12(Rng &rng) {
+        return nil::crypto3::algebra::random_element<fp12_field_type>(rng);
     }
-
-    return from_w_coefficients(
-        {product[0], product[1], product[2], product[3], product[4], product[5]});
-}
-
-template<typename Rng>
-fp12_value_type random_fp12(Rng &rng) {
-    return nil::crypto3::algebra::random_element<fp12_field_type>(rng);
-}
 
 }    // namespace
 

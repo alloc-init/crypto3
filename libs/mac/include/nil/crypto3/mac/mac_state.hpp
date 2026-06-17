@@ -39,7 +39,7 @@ namespace nil {
                 typename ProcessingPolicy::result_type,
                 boost::accumulators::features<accumulators::tag::mac<ProcessingPolicy>>>;
         }    // namespace mac
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MAC_STATE_HPP

@@ -26,7 +26,6 @@ namespace nil {
                 template<typename PolicyType>
                 class poseidon_constants_generator {
                 public:
-
                     BOOST_STATIC_ASSERT_MSG(
                         !PolicyType::pasta_version,
                         "Constants generation can only be used with the original version, not Pasta version.");
@@ -50,12 +49,12 @@ namespace nil {
 
                     constexpr static const std::size_t lfsr_state_bits = 80;
                     typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::cpp_int_modular_backend<lfsr_state_bits>
-                    > lfsr_state_type;
+                        boost::multiprecision::backends::cpp_int_modular_backend<lfsr_state_bits>>
+                        lfsr_state_type;
 
                     typedef typename poseidon_constants_type::round_constants_type round_constants_type;
 
-                    /*! 
+                    /*!
                      * @brief Randomly generates all the constants required, using the correct generation rules.
                      * If called multiple times, will return DIFFERENT constants.
                      */
@@ -63,16 +62,17 @@ namespace nil {
 #ifdef CRYPTO3_HASH_POSEIDON_COMPILE_TIME
                     constexpr
 #endif
-                    static std::pair<mds_matrix_type, round_constants_type> generate_constants() {
+                        static std::pair<mds_matrix_type, round_constants_type>
+                        generate_constants() {
                         return {generate_mds_matrix(), generate_round_constants()};
                     }
 
                 private:
-
 #ifdef CRYPTO3_HASH_POSEIDON_COMPILE_TIME
                     constexpr
 #endif
-                    static inline mds_matrix_type generate_mds_matrix() {
+                        static inline mds_matrix_type
+                        generate_mds_matrix() {
                         mds_matrix_type new_mds_matrix;
 
                         state_vector_type x;
@@ -87,9 +87,7 @@ namespace nil {
 
                             for (std::size_t i = 0; i < state_words; i++) {
                                 for (std::size_t j = 0; j < state_words; j++) {
-                                    if ((i != j && x[i] == x[j]) ||
-                                            (i != j && y[i] == y[j]) ||
-                                            (x[i] == y[j])) {
+                                    if ((i != j && x[i] == x[j]) || (i != j && y[i] == y[j]) || (x[i] == y[j])) {
                                         secure_MDS_found = false;
                                         break;
                                     }
@@ -105,18 +103,20 @@ namespace nil {
                             if (det(new_mds_matrix) == 0)
                                 secure_MDS_found = false;
 
-                            // TODO(martun): check that mds has NO eignevalues. 
+                            // TODO(martun): check that mds has NO eignevalues.
                             // if len(new_mds_matrix.characteristic_polynomial().roots()) == 0:
-                                // return new_mds_matrix
-                            // The original matrix security check is here: https://extgit.iaik.tugraz.at/krypto/hadeshash/-/blob/master/code/generate_params_poseidon.sage
+                            // return new_mds_matrix
+                            // The original matrix security check is here:
+                            // https://extgit.iaik.tugraz.at/krypto/hadeshash/-/blob/master/code/generate_params_poseidon.sage
                         }
                         return new_mds_matrix;
                     }
 
 #ifdef CRYPTO3_HASH_POSEIDON_COMPILE_TIME
-                   constexpr
+                    constexpr
 #endif
-                   static const round_constants_type generate_round_constants() {
+                        static const round_constants_type
+                        generate_round_constants() {
                         round_constants_type round_constants;
 
                         integral_type constant = 0;
@@ -193,8 +193,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_POSEIDON_LFSR_HPP

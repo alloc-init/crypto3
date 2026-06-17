@@ -52,7 +52,7 @@ namespace nil {
                                 field_value_type C = A + B;                                // C = A+B
                                 field_value_type D = A - B;                                // D = A-B
                                 field_value_type E = (first.X + first.Y).squared() - C;    // E = (X1+Y1)^2-C
-                                first.X = C * D;                               // X3 = C*D
+                                first.X = C * D;                                           // X3 = C*D
                                 field_value_type dZZ = ElementType::params_type::c * ElementType::params_type::c *
                                                        ElementType::params_type::d * first.Z.squared();
                                 first.Y = E * (C - dZZ - dZZ);                    // Y3 = E*(C-c*c*2*d*Z1^2)
@@ -62,8 +62,8 @@ namespace nil {
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_EDWARDS_G1_ELEMENT_INVERTED_DBL_2007_BL_HPP

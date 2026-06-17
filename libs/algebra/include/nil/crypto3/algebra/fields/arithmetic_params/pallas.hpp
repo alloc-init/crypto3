@@ -32,8 +32,6 @@
 #include <nil/crypto3/algebra/fields/pallas/base_field.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/vesta.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -74,8 +72,8 @@ namespace nil {
                 constexpr typename arithmetic_params<pallas_base_field>::integral_type const
                     arithmetic_params<pallas_base_field>::nqr;
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_PALLAS_ARITHMETIC_PARAMS_HPP

@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -53,7 +51,7 @@ namespace nil {
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
                     constexpr static const std::size_t value_bits = modulus_bits;
                     constexpr static const std::size_t arity = 1;
-                    
+
                     typedef typename policy_type::integral_type integral_type;
                     typedef typename policy_type::extended_integral_type extended_integral_type;
 #ifdef __ZKLLVM__
@@ -65,10 +63,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<curve25519_scalar_field>> value_type;
@@ -86,8 +83,8 @@ namespace nil {
 #endif
                 using curve25519_fr = curve25519_scalar_field;
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_CURVE25519_SCALAR_FIELD_HPP

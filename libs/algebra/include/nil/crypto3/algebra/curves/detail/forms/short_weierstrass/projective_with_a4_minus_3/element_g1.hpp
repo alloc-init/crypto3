@@ -55,17 +55,19 @@ namespace nil {
                      *
                      */
                     template<typename CurveParams>
-                    class curve_element<CurveParams, forms::short_weierstrass, coordinates::projective_with_a4_minus_3> {
+                    class curve_element<CurveParams, forms::short_weierstrass,
+                                        coordinates::projective_with_a4_minus_3> {
                     public:
-
                         using params_type = CurveParams;
                         using field_type = typename params_type::field_type;
 
                     private:
                         using field_value_type = typename field_type::value_type;
 
-                        using common_addition_processor = short_weierstrass_element_g1_projective_with_a4_minus_3_add_1998_cmo_2;
-                        using common_doubling_processor = short_weierstrass_element_g1_projective_with_a4_minus_3_dbl_2007_bl;
+                        using common_addition_processor =
+                            short_weierstrass_element_g1_projective_with_a4_minus_3_add_1998_cmo_2;
+                        using common_doubling_processor =
+                            short_weierstrass_element_g1_projective_with_a4_minus_3_dbl_2007_bl;
 
                     public:
                         using form = forms::short_weierstrass;
@@ -92,9 +94,10 @@ namespace nil {
                          *    @return the selected point (X:Y:Z)
                          *
                          */
-                        constexpr curve_element(field_value_type const& X, field_value_type const& Y, field_value_type const& Z = field_value_type::one())
-                            : X(X), Y(Y), Z(Z)
-                        { }
+                        constexpr curve_element(field_value_type const &X, field_value_type const &Y,
+                                                field_value_type const &Z = field_value_type::one()) :
+                            X(X), Y(Y), Z(Z) {
+                        }
 
                         /** @brief Get the point at infinity
                          *
@@ -194,7 +197,8 @@ namespace nil {
                             return result_type(X * Z.inversed(), Y * Z.inversed());    //  x=X/Z, y=Y/Z
                         }
 
-                        static curve_element from_affine(curve_element<params_type, form, curves::coordinates::affine> const &other) {
+                        static curve_element
+                            from_affine(curve_element<params_type, form, curves::coordinates::affine> const &other) {
                             return curve_element(other.X, other.Y, field_value_type::one());
                         }
 
@@ -229,7 +233,7 @@ namespace nil {
                             return result;
                         }
 
-                        constexpr curve_element& operator+=(const curve_element &other) {
+                        constexpr curve_element &operator+=(const curve_element &other) {
                             // handle special cases having to do with O
                             if (this->is_zero()) {
                                 *this = other;
@@ -251,10 +255,9 @@ namespace nil {
                             return (*this) + (-other);
                         }
 
-                        constexpr curve_element& operator-=(const curve_element &other) {
+                        constexpr curve_element &operator-=(const curve_element &other) {
                             return (*this) += (-other);
                         }
-
 
                         /** @brief
                          *
@@ -301,28 +304,29 @@ namespace nil {
                                 return;
                             }
 
-                            const field_value_type u = Y2Z1 - this->Y;                  // u = Y2*Z1-Y1
-                            const field_value_type uu = u.squared();                    // uu = u2
-                            const field_value_type v = X2Z1 - this->X;                  // v = X2*Z1-X1
-                            const field_value_type vv = v.squared();                    // vv = v2
-                            const field_value_type vvv = v * vv;                        // vvv = v*vv
-                            const field_value_type R = vv * this->X;                    // R = vv*X1
-                            const field_value_type A = uu * this->Z - vvv - R - R;      // A = uu*Z1-vvv-2*R
-                            X = v * A;                          // X3 = v*A
-                            Y = u * (R - A) - vvv * this->Y;    // Y3 = u*(R-A)-vvv*Y1
-                            Z = vvv * this->Z;                  // Z3 = vvv*Z1
+                            const field_value_type u = Y2Z1 - this->Y;                // u = Y2*Z1-Y1
+                            const field_value_type uu = u.squared();                  // uu = u2
+                            const field_value_type v = X2Z1 - this->X;                // v = X2*Z1-X1
+                            const field_value_type vv = v.squared();                  // vv = v2
+                            const field_value_type vvv = v * vv;                      // vvv = v*vv
+                            const field_value_type R = vv * this->X;                  // R = vv*X1
+                            const field_value_type A = uu * this->Z - vvv - R - R;    // A = uu*Z1-vvv-2*R
+                            X = v * A;                                                // X3 = v*A
+                            Y = u * (R - A) - vvv * this->Y;                          // Y3 = u*(R-A)-vvv*Y1
+                            Z = vvv * this->Z;                                        // Z3 = vvv*Z1
                         }
                     };
 
                     template<typename CurveParams>
-                    std::ostream& operator<<(std::ostream& os, curve_element<CurveParams, forms::short_weierstrass, coordinates::projective_with_a4_minus_3> const& e)
-                    {
+                    std::ostream &operator<<(std::ostream &os,
+                                             curve_element<CurveParams, forms::short_weierstrass,
+                                                           coordinates::projective_with_a4_minus_3> const &e) {
                         os << "{\"X\":" << e.X << ",\"Y\":" << e.Y << ",\"Z\":" << e.Z << "}";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_PROJECTIVE_WITH_A4_MINUS_3_HPP

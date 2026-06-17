@@ -61,8 +61,7 @@ void test_curve_element_non_fixed_size_container(std::vector<T> val_container) {
     using unit_type = unsigned char;
 
     nil::marshalling::status_type status;
-    std::vector<unit_type> cv =
-        nil::marshalling::pack<Endianness>(val_container, status);
+    std::vector<unit_type> cv = nil::marshalling::pack<Endianness>(val_container, status);
 
     BOOST_CHECK(status == nil::marshalling::status_type::success);
 
@@ -93,16 +92,14 @@ BOOST_AUTO_TEST_SUITE(curve_element_non_fixed_size_container_test_suite)
 BOOST_AUTO_TEST_CASE(curve_element_non_fixed_size_container_bls12_381_g1) {
     std::cout << "BLS12-381 g1 group non fixed size container test started" << std::endl;
     test_curve_element_non_fixed_size_container<nil::marshalling::option::big_endian,
-                                                nil::crypto3::algebra::curves::bls12<381>::g1_type<>,
-                                                25>();
+                                                nil::crypto3::algebra::curves::bls12<381>::g1_type<>, 25>();
     std::cout << "BLS12-381 g1 group non fixed size container test finished" << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(curve_element_non_fixed_size_container_bls12_381_g2) {
     std::cout << "BLS12-381 g2 group non fixed size container test started" << std::endl;
     test_curve_element_non_fixed_size_container<nil::marshalling::option::big_endian,
-                                                nil::crypto3::algebra::curves::bls12<381>::g2_type<>,
-                                                5>();
+                                                nil::crypto3::algebra::curves::bls12<381>::g2_type<>, 5>();
     std::cout << "BLS12-381 g2 group non fixed size container test finished" << std::endl;
 }
 

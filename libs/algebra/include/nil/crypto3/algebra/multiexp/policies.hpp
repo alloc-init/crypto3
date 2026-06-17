@@ -321,8 +321,8 @@ namespace nil {
                     }
                 };
             }    // namespace policies
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_MULTIEXP_BASIC_POLICIES_HPP

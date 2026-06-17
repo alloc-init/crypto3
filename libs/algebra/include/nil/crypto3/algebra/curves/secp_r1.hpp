@@ -53,8 +53,8 @@ namespace nil {
                 typedef secp_r1<384> secp384r1;
                 typedef secp_r1<521> secp521r1;
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_SECP_R1_HPP

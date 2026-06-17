@@ -172,8 +172,8 @@ void get_random_big_uint(RandomEngineType& rng, UnsignedIntegralIteratorType it_
     }
 }
 
-using big_uint_backend_type = boost::multiprecision::
-    cpp_int_backend<8192UL << 1U, 8192UL << 1U, boost::multiprecision::unsigned_magnitude>;
+using big_uint_backend_type =
+    boost::multiprecision::cpp_int_backend<8192UL << 1U, 8192UL << 1U, boost::multiprecision::unsigned_magnitude>;
 
 using big_uint_type = boost::multiprecision::number<big_uint_backend_type>;
 

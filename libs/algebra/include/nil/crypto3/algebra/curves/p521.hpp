@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/curves/curve_nist.hpp>
 #include <nil/crypto3/algebra/curves/detail/element/p521.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -47,8 +45,8 @@ namespace nil {
                         0x1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_cppui_modular521;
                 };
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_NIST_P521_HPP

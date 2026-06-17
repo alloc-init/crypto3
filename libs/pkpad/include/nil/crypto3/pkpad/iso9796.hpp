@@ -203,7 +203,7 @@ namespace nil {
                     return (bad_input == 0);
                 }
             }    // namespace padding
-        }        // namespace pubkey
+        }    // namespace pubkey
 
         template<typename SchemeType, typename HashType>
         struct iso_9796 : public emsa<SchemeType, HashType> {

@@ -43,7 +43,6 @@ namespace nil {
                 typedef typename std::initializer_list<T>::value_type value_type;
                 typename boost::uint_t<Size>::exact result = 0;
 
-
                 for (const value_type &itr : args) {
                     result = static_cast<typename boost::uint_t<Size>::exact>(
                         (result << std::numeric_limits<value_type>::digits) | itr);
@@ -57,7 +56,7 @@ namespace nil {
                 return make_uint_t<Size, typename std::tuple_element<0, std::tuple<Args...>>::type>({args...});
             }
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MAKE_UINT_T_HPP

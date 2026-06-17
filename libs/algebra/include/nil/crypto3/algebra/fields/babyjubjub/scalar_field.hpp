@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -58,10 +56,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<babyjubjub_scalar_field>> value_type;
@@ -84,8 +81,8 @@ namespace nil {
                 using babyjubjub_fr = babyjubjub_scalar_field;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_BABYJUBJUB_SCALAR_FIELD_HPP

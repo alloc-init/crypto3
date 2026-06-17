@@ -93,9 +93,10 @@ namespace nil {
             /// @see MARSHALLING_VARIANT_MEMBERS_ACCESS()
             /// @see MARSHALLING_VARIANT_MEMBERS_ACCESS_NOTEMPLATE()
             template<typename TFieldBase, typename TMembers, typename... TOptions>
-            class variant : private detail::adapt_basic_field_type<detail::basic_variant<TFieldBase, TMembers>, TOptions...> {
-                using base_impl_type
-                    = detail::adapt_basic_field_type<detail::basic_variant<TFieldBase, TMembers>, TOptions...>;
+            class variant
+                : private detail::adapt_basic_field_type<detail::basic_variant<TFieldBase, TMembers>, TOptions...> {
+                using base_impl_type =
+                    detail::adapt_basic_field_type<detail::basic_variant<TFieldBase, TMembers>, TOptions...>;
 
                 static_assert(nil::detail::is_tuple<TMembers>::value,
                               "TMembers is expected to be a tuple of std::tuple<...>");
@@ -363,12 +364,12 @@ namespace nil {
                 static_assert(!parsed_options_type::has_sequence_elem_length_forcing,
                               "nil::marshalling::option::SequenceElemLengthForcingEnabled option is not applicable to "
                               "variant field");
-                static_assert(
-                    !parsed_options_type::has_sequence_size_forcing,
-                    "nil::marshalling::option::sequence_size_forcing_enabled option is not applicable to variant field");
-                static_assert(
-                    !parsed_options_type::has_sequence_length_forcing,
-                    "nil::marshalling::option::sequence_length_forcing_enabled option is not applicable to variant field");
+                static_assert(!parsed_options_type::has_sequence_size_forcing,
+                              "nil::marshalling::option::sequence_size_forcing_enabled option is not applicable to "
+                              "variant field");
+                static_assert(!parsed_options_type::has_sequence_length_forcing,
+                              "nil::marshalling::option::sequence_length_forcing_enabled option is not applicable to "
+                              "variant field");
                 static_assert(
                     !parsed_options_type::has_sequence_fixed_size,
                     "nil::marshalling::option::sequence_fixed_size option is not applicable to variant field");
@@ -673,6 +674,6 @@ namespace nil {
     MARSHALLING_DO_VARIANT_MEM_ACC_FUNC_NOTEMPLATE(__VA_ARGS__)
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_VARIANT_HPP

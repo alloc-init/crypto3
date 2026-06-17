@@ -240,7 +240,8 @@ namespace nil {
                 }
 
                 /// @brief Force available length for the next read() invocation.
-                /// @details Exists only if @ref nil::marshalling::option::sequence_length_forcing_enabled option has been
+                /// @details Exists only if @ref nil::marshalling::option::sequence_length_forcing_enabled option has
+                /// been
                 ///     used.
                 /// @param[in] count Number of elements to read during following read operation.
                 void force_read_length(std::size_t count) {
@@ -249,7 +250,8 @@ namespace nil {
 
                 /// @brief Clear forcing of the available length in the next read()
                 ///     invocation.
-                /// @details Exists only if @ref nil::marshalling::option::sequence_length_forcing_enabled option has been
+                /// @details Exists only if @ref nil::marshalling::option::sequence_length_forcing_enabled option has
+                /// been
                 ///     used.
                 void clear_read_length_forcing() {
                     return base_impl_type::clear_read_length_forcing();
@@ -377,6 +379,6 @@ namespace nil {
             }
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_STRING_HPP

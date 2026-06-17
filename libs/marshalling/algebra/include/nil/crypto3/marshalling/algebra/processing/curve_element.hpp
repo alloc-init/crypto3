@@ -85,10 +85,12 @@ namespace nil {
 
                 /* Specialization for mnt4_298::g2_type */
                 template<typename Coordinates>
-                struct curve_element_marshalling_params<algebra::curves::mnt4_298::
-                template g2_type<Coordinates, algebra::curves::forms::short_weierstrass> > {
-                    using group_type = algebra::curves::mnt4_298::template
-                    g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                struct curve_element_marshalling_params<
+                    algebra::curves::mnt4_298::template g2_type<Coordinates,
+                                                                algebra::curves::forms::short_weierstrass>> {
+                    using group_type =
+                        algebra::curves::mnt4_298::template g2_type<Coordinates,
+                                                                    algebra::curves::forms::short_weierstrass>;
 
                     static constexpr std::size_t length() {
                         return bit_length() / 8 + ((bit_length() % 8) != 0);
@@ -118,10 +120,12 @@ namespace nil {
 
                 /* Specialization for mnt6_298::g2_type */
                 template<typename Coordinates>
-                struct curve_element_marshalling_params<algebra::curves::mnt6_298::
-                template g2_type<Coordinates, algebra::curves::forms::short_weierstrass> > {
-                    using group_type = algebra::curves::mnt6_298::template
-                    g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                struct curve_element_marshalling_params<
+                    algebra::curves::mnt6_298::template g2_type<Coordinates,
+                                                                algebra::curves::forms::short_weierstrass>> {
+                    using group_type =
+                        algebra::curves::mnt6_298::template g2_type<Coordinates,
+                                                                    algebra::curves::forms::short_weierstrass>;
 
                     static constexpr std::size_t length() {
                         return bit_length() / 8 + ((bit_length() % 8) != 0);
@@ -161,11 +165,11 @@ namespace nil {
 
                 template<typename Endianness, typename Coordinates>
                 struct curve_element_writer<
-                        Endianness,
-                        typename algebra::curves::bls12_381::template g1_type<Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
+                    Endianness,
+                    typename algebra::curves::bls12_381::template g1_type<Coordinates,
+                                                                          algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::bls12_381::
-                    template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                        template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -178,14 +182,14 @@ namespace nil {
 
                         constexpr static const chunk_type I_bit = 0x40;
                         typename group_type::curve_type::template g1_type<typename algebra::curves::coordinates::affine,
-                                form>::value_type point_affine =
-                                point.to_affine();
+                                                                          form>::value_type point_affine =
+                            point.to_affine();
                         chunk_type m_unit = detail::evaluate_m_unit<chunk_type>(point, true);
                         if (!(I_bit & m_unit)) {
                             // We assume here, that write_data doesn't change the iter
                             write_data<params_type::bit_length(), endianness>(
-                                    static_cast<typename group_value_type::field_type::integral_type>(point_affine.X.data),
-                                    iter);
+                                static_cast<typename group_value_type::field_type::integral_type>(point_affine.X.data),
+                                iter);
                         }
                         (*iter) |= m_unit;
 
@@ -193,14 +197,13 @@ namespace nil {
                     }
                 };
 
-
                 template<typename Endianness, typename Coordinates>
                 struct curve_element_writer<
-                        Endianness,
-                        typename algebra::curves::bls12_381::template g2_type<Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
+                    Endianness,
+                    typename algebra::curves::bls12_381::template g2_type<Coordinates,
+                                                                          algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::bls12_381::
-                    template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                        template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -212,30 +215,30 @@ namespace nil {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         constexpr static const std::size_t units_bits = 8;
                         constexpr static const std::size_t chunk_bits = sizeof(typename TIter::value_type) * units_bits;
                         constexpr static const std::size_t sizeof_field_element_chunks_count =
-                                (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
+                            (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
 
                         constexpr static const chunk_type I_bit = 0x40;
                         typename group_type::curve_type::template g2_type<typename algebra::curves::coordinates::affine,
-                                form>::value_type point_affine =
-                                point.to_affine();
+                                                                          form>::value_type point_affine =
+                            point.to_affine();
                         chunk_type m_unit = detail::evaluate_m_unit<chunk_type>(point, true);
                         if (!(I_bit & m_unit)) {
                             TIter write_iter = iter;
                             // We assume here, that write_data doesn't change the iter
                             write_data<sizeof_field_element, endianness>(
-                                    static_cast<typename group_value_type::field_type::integral_type>(
-                                            point_affine.X.data[1].data),
-                                    write_iter);
+                                static_cast<typename group_value_type::field_type::integral_type>(
+                                    point_affine.X.data[1].data),
+                                write_iter);
                             write_iter += sizeof_field_element_chunks_count;
                             // We assume here, that write_data doesn't change the iter
                             write_data<sizeof_field_element, endianness>(
-                                    static_cast<typename group_value_type::field_type::integral_type>(
-                                            point_affine.X.data[0].data),
-                                    write_iter);
+                                static_cast<typename group_value_type::field_type::integral_type>(
+                                    point_affine.X.data[0].data),
+                                write_iter);
                         }
                         (*iter) |= m_unit;
 
@@ -244,13 +247,12 @@ namespace nil {
                 };
 
                 template<typename Coordinates>
-                struct curve_element_writer<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::alt_bn128_254::template g1_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
+                struct curve_element_writer<nil::marshalling::endian::big_endian,
+                                            typename algebra::curves::alt_bn128_254::template g1_type<
+                                                Coordinates,
+                                                algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::alt_bn128_254::
-                    template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                        template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using g1_value_type = group_value_type;
                     using g1_field_type = typename group_value_type::field_type;
@@ -273,8 +275,8 @@ namespace nil {
                         auto point_affine = point.to_affine();
 
                         write_data<params_type::bit_length(), endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(point_affine.X.data),
-                                iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(point_affine.X.data),
+                            iter);
 
                         if (point_affine.is_zero()) {
                             *iter |= I_bit;
@@ -289,13 +291,12 @@ namespace nil {
                 };
 
                 template<typename Coordinates>
-                struct curve_element_writer<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::alt_bn128_254::template g2_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
+                struct curve_element_writer<nil::marshalling::endian::big_endian,
+                                            typename algebra::curves::alt_bn128_254::template g2_type<
+                                                Coordinates,
+                                                algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::alt_bn128_254::
-                    template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                        template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using g2_value_type = group_value_type;
                     using g2_field_type = typename group_value_type::field_type;
@@ -314,30 +315,30 @@ namespace nil {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         constexpr static const std::size_t units_bits = 8;
                         constexpr static const std::size_t chunk_bits = sizeof(typename TIter::value_type) * units_bits;
                         constexpr static const std::size_t sizeof_field_element_chunks_count =
-                                (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
+                            (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
 
                         constexpr static const chunk_type I_bit = 0x80;
                         constexpr static const chunk_type S_bit = 0x40;
-                        typename group_type::curve_type::template g2_type<
-                                typename algebra::curves::coordinates::affine,
-                                form>::value_type point_affine = point.to_affine();
+                        typename group_type::curve_type::template g2_type<typename algebra::curves::coordinates::affine,
+                                                                          form>::value_type point_affine =
+                            point.to_affine();
 
                         TIter write_iter = iter;
                         // We assume here, that write_data doesn't change the iter
                         write_data<sizeof_field_element, endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(
-                                        point_affine.X.data[1].data),
-                                write_iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(
+                                point_affine.X.data[1].data),
+                            write_iter);
                         write_iter += sizeof_field_element_chunks_count;
                         // We assume here, that write_data doesn't change the iter
                         write_data<sizeof_field_element, endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(
-                                        point_affine.X.data[0].data),
-                                write_iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(
+                                point_affine.X.data[0].data),
+                            write_iter);
 
                         if (point.is_zero()) {
                             *iter |= I_bit;
@@ -353,12 +354,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_writer<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::mnt4_298::template g1_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
-                    using group_type = typename algebra::curves::mnt4_298::
-                    template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                    nil::marshalling::endian::big_endian,
+                    typename algebra::curves::mnt4_298::template g1_type<Coordinates,
+                                                                         algebra::curves::forms::short_weierstrass>> {
+                    using group_type =
+                        typename algebra::curves::mnt4_298::template g1_type<Coordinates,
+                                                                             algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using g1_value_type = group_value_type;
                     using g1_field_type = typename group_value_type::field_type;
@@ -381,8 +382,8 @@ namespace nil {
                         auto point_affine = point.to_affine();
 
                         write_data<params_type::bit_length(), endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(point_affine.X.data),
-                                iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(point_affine.X.data),
+                            iter);
 
                         if (point_affine.is_zero()) {
                             *iter |= I_bit;
@@ -398,12 +399,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_writer<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::mnt4_298::template g2_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
-                    using group_type = typename algebra::curves::mnt4_298::
-                    template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                    nil::marshalling::endian::big_endian,
+                    typename algebra::curves::mnt4_298::template g2_type<Coordinates,
+                                                                         algebra::curves::forms::short_weierstrass>> {
+                    using group_type =
+                        typename algebra::curves::mnt4_298::template g2_type<Coordinates,
+                                                                             algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using g2_value_type = group_value_type;
                     using g2_field_type = typename group_value_type::field_type;
@@ -422,11 +423,11 @@ namespace nil {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         constexpr static const std::size_t units_bits = 8;
                         constexpr static const std::size_t chunk_bits = sizeof(typename TIter::value_type) * units_bits;
                         constexpr static const std::size_t sizeof_field_element_chunks_count =
-                                (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
+                            (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
 
                         constexpr static const chunk_type I_bit = 0x80;
                         constexpr static const chunk_type S_bit = 0x40;
@@ -435,15 +436,15 @@ namespace nil {
                         TIter write_iter = iter;
                         // We assume here, that write_data doesn't change the iter
                         write_data<sizeof_field_element, endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(
-                                        point_affine.X.data[1].data),
-                                write_iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(
+                                point_affine.X.data[1].data),
+                            write_iter);
                         write_iter += sizeof_field_element_chunks_count;
                         // We assume here, that write_data doesn't change the iter
                         write_data<sizeof_field_element, endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(
-                                        point_affine.X.data[0].data),
-                                write_iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(
+                                point_affine.X.data[0].data),
+                            write_iter);
                         if (point.is_zero()) {
                             *iter |= I_bit;
                         }
@@ -458,12 +459,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_writer<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::mnt6_298::template g1_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
-                    using group_type = typename algebra::curves::mnt6_298::
-                    template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                    nil::marshalling::endian::big_endian,
+                    typename algebra::curves::mnt6_298::template g1_type<Coordinates,
+                                                                         algebra::curves::forms::short_weierstrass>> {
+                    using group_type =
+                        typename algebra::curves::mnt6_298::template g1_type<Coordinates,
+                                                                             algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using g1_value_type = group_value_type;
                     using g1_field_type = typename group_value_type::field_type;
@@ -486,8 +487,8 @@ namespace nil {
                         auto point_affine = point.to_affine();
 
                         write_data<params_type::bit_length(), endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(point_affine.X.data),
-                                iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(point_affine.X.data),
+                            iter);
 
                         if (point_affine.is_zero()) {
                             *iter |= I_bit;
@@ -503,12 +504,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_writer<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::mnt6_298::template g2_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
-                    using group_type = typename algebra::curves::mnt6_298::
-                    template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                    nil::marshalling::endian::big_endian,
+                    typename algebra::curves::mnt6_298::template g2_type<Coordinates,
+                                                                         algebra::curves::forms::short_weierstrass>> {
+                    using group_type =
+                        typename algebra::curves::mnt6_298::template g2_type<Coordinates,
+                                                                             algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using g2_value_type = group_value_type;
                     using g2_field_type = typename group_value_type::field_type;
@@ -527,11 +528,11 @@ namespace nil {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         constexpr static const std::size_t units_bits = 8;
                         constexpr static const std::size_t chunk_bits = sizeof(typename TIter::value_type) * units_bits;
                         constexpr static const std::size_t sizeof_field_element_chunks_count =
-                                (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
+                            (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
 
                         constexpr static const chunk_type I_bit = 0x80;
                         constexpr static const chunk_type S_bit = 0x40;
@@ -539,21 +540,21 @@ namespace nil {
 
                         TIter write_iter = iter;
                         write_data<sizeof_field_element, endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(
-                                        point_affine.X.data[2].data),
-                                write_iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(
+                                point_affine.X.data[2].data),
+                            write_iter);
                         write_iter += sizeof_field_element_chunks_count;
 
                         write_data<sizeof_field_element, endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(
-                                        point_affine.X.data[1].data),
-                                write_iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(
+                                point_affine.X.data[1].data),
+                            write_iter);
                         write_iter += sizeof_field_element_chunks_count;
 
                         write_data<sizeof_field_element, endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(
-                                        point_affine.X.data[0].data),
-                                write_iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(
+                                point_affine.X.data[0].data),
+                            write_iter);
 
                         if (point.is_zero()) {
                             *iter |= I_bit;
@@ -571,12 +572,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_writer<
-                        nil::marshalling::endian::little_endian,
-                        typename algebra::curves::curve25519::template g1_type<Coordinates,
-                                algebra::curves::forms::twisted_edwards>> {
+                    nil::marshalling::endian::little_endian,
+                    typename algebra::curves::curve25519::template g1_type<Coordinates,
+                                                                           algebra::curves::forms::twisted_edwards>> {
                     using group_type =
-                            typename algebra::curves::curve25519::template g1_type<Coordinates,
-                                    algebra::curves::forms::twisted_edwards>;
+                        typename algebra::curves::curve25519::template g1_type<Coordinates,
+                                                                               algebra::curves::forms::twisted_edwards>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -585,24 +586,24 @@ namespace nil {
 
                     template<typename TIter>
                     static typename std::enable_if<
-                            std::is_same<std::uint8_t, typename std::iterator_traits<TIter>::value_type>::value,
-                            nil::marshalling::status_type>::type
-                    process(const group_value_type &point, TIter &iter) {
+                        std::is_same<std::uint8_t, typename std::iterator_traits<TIter>::value_type>::value,
+                        nil::marshalling::status_type>::type
+                        process(const group_value_type &point, TIter &iter) {
                         using base_field_type = typename group_type::field_type;
                         using base_integral_type = typename base_field_type::integral_type;
                         using group_affine_value_type =
-                                typename algebra::curves::curve25519::g1_type<algebra::curves::coordinates::affine,
-                                        form>::value_type;
+                            typename algebra::curves::curve25519::g1_type<algebra::curves::coordinates::affine,
+                                                                          form>::value_type;
                         // TODO: somehow add size check of container pointed by iter
                         constexpr std::size_t encoded_size = 32;
                         static_assert(encoded_size ==
-                                      (params_type::bit_length() / 8 + (params_type::bit_length() % 8 ? 1 : 0)),
+                                          (params_type::bit_length() / 8 + (params_type::bit_length() % 8 ? 1 : 0)),
                                       "wrong size");
                         using encoded_value_type = std::array<std::uint8_t, encoded_size>;
 
                         group_affine_value_type point_affine = point.to_affine();
                         // TODO: remove crating of temporary array encoded_value
-                        encoded_value_type encoded_value{0};
+                        encoded_value_type encoded_value {0};
                         // TODO: remove lvalue iterator
                         auto tmp_iter = std::begin(encoded_value);
                         write_data<encoded_size, endianness>(static_cast<base_integral_type>(point_affine.Y.data),
@@ -610,8 +611,7 @@ namespace nil {
                         // TODO: throw catchable error, for example return status
                         assert(!(encoded_value[encoded_size - 1] & 0x80));
                         encoded_value[encoded_size - 1] |=
-                                (static_cast<std::uint8_t>(static_cast<base_integral_type>(point_affine.X.data) & 1)
-                                        << 7);
+                            (static_cast<std::uint8_t>(static_cast<base_integral_type>(point_affine.X.data) & 1) << 7);
 
                         std::copy(std::cbegin(encoded_value), std::cend(encoded_value), iter);
 
@@ -621,12 +621,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_writer<
-                        nil::marshalling::endian::little_endian,
-                        typename algebra::curves::jubjub::template g1_type<Coordinates,
-                                algebra::curves::forms::twisted_edwards>> {
+                    nil::marshalling::endian::little_endian,
+                    typename algebra::curves::jubjub::template g1_type<Coordinates,
+                                                                       algebra::curves::forms::twisted_edwards>> {
                     using group_type =
-                            typename algebra::curves::jubjub::template g1_type<Coordinates,
-                                    algebra::curves::forms::twisted_edwards>;
+                        typename algebra::curves::jubjub::template g1_type<Coordinates,
+                                                                           algebra::curves::forms::twisted_edwards>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -636,12 +636,12 @@ namespace nil {
                     /// https://zips.z.cash/protocol/protocol.pdf#concreteextractorjubjub
                     template<typename TIter>
                     static typename std::enable_if<
-                            !std::is_same<bool, typename std::iterator_traits<TIter>::value_type>::value,
-                            nil::marshalling::status_type>::type
-                    process(const group_value_type &point, TIter &iter) {
+                        !std::is_same<bool, typename std::iterator_traits<TIter>::value_type>::value,
+                        nil::marshalling::status_type>::type
+                        process(const group_value_type &point, TIter &iter) {
                         write_data<params_type::bit_length(), endianness>(
-                                static_cast<typename group_value_type::field_type::integral_type>(point.to_affine().X.data),
-                                iter);
+                            static_cast<typename group_value_type::field_type::integral_type>(point.to_affine().X.data),
+                            iter);
 
                         return nil::marshalling::status_type::success;
                     }
@@ -649,11 +649,11 @@ namespace nil {
                     // TODO: refactor
                     template<typename TIter>
                     static typename std::enable_if<
-                            std::is_same<bool, typename std::iterator_traits<TIter>::value_type>::value,
-                            nil::marshalling::status_type>::type
-                    process(const group_value_type &point, TIter &iter) {
-                        auto X_affine = static_cast<typename group_value_type::field_type::integral_type>(
-                                point.to_affine().X.data);
+                        std::is_same<bool, typename std::iterator_traits<TIter>::value_type>::value,
+                        nil::marshalling::status_type>::type
+                        process(const group_value_type &point, TIter &iter) {
+                        auto X_affine =
+                            static_cast<typename group_value_type::field_type::integral_type>(point.to_affine().X.data);
                         for (std::size_t i = 0; i < params_type::bit_length(); ++i) {
                             *iter++ = bit_test(X_affine, 0);
                             X_affine >>= 1;
@@ -665,11 +665,11 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::bls12_381::template g1_type<Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
+                    nil::marshalling::endian::big_endian,
+                    typename algebra::curves::bls12_381::template g1_type<Coordinates,
+                                                                          algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::bls12_381::
-                    template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                        template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -684,11 +684,11 @@ namespace nil {
                         BOOST_ASSERT(m_unit != 0x20 && m_unit != 0x60 && m_unit != 0xE0);
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         constexpr static const std::size_t units_bits = 8;
                         constexpr static const std::size_t chunk_bits = sizeof(chunk_type) * units_bits;
                         constexpr static const std::size_t sizeof_field_element_chunks_count =
-                                (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
+                            (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
                         using g1_value_type = group_value_type;
                         using g1_field_type = typename group_value_type::field_type;
                         using g1_field_value_type = typename g1_field_type::value_type;
@@ -727,11 +727,11 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::bls12_381::template g2_type<Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
+                    nil::marshalling::endian::big_endian,
+                    typename algebra::curves::bls12_381::template g2_type<Coordinates,
+                                                                          algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::bls12_381::
-                    template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                        template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -746,11 +746,11 @@ namespace nil {
                         BOOST_ASSERT(m_unit != 0x20 && m_unit != 0x60 && m_unit != 0xE0);
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         constexpr static const std::size_t units_bits = 8;
                         constexpr static const std::size_t chunk_bits = sizeof(chunk_type) * units_bits;
                         constexpr static const std::size_t sizeof_field_element_chunks_count =
-                                (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
+                            (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
                         using g2_value_type = group_value_type;
                         using g2_field_type = typename g2_value_type::field_type;
                         using g2_field_value_type = typename g2_field_type::value_type;
@@ -793,13 +793,12 @@ namespace nil {
                 };
 
                 template<typename Coordinates>
-                struct curve_element_reader<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::alt_bn128_254::template g1_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
+                struct curve_element_reader<nil::marshalling::endian::big_endian,
+                                            typename algebra::curves::alt_bn128_254::template g1_type<
+                                                Coordinates,
+                                                algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::alt_bn128_254::
-                    template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                        template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -811,7 +810,7 @@ namespace nil {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         using g1_value_type = group_value_type;
                         using g1_field_type = typename group_value_type::field_type;
                         using g1_field_value_type = typename g1_field_type::value_type;
@@ -848,13 +847,12 @@ namespace nil {
                 };
 
                 template<typename Coordinates>
-                struct curve_element_reader<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::alt_bn128_254::template g2_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
+                struct curve_element_reader<nil::marshalling::endian::big_endian,
+                                            typename algebra::curves::alt_bn128_254::template g2_type<
+                                                Coordinates,
+                                                algebra::curves::forms::short_weierstrass>> {
                     using group_type = typename algebra::curves::alt_bn128_254::
-                    template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                        template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -866,11 +864,11 @@ namespace nil {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         constexpr static const std::size_t units_bits = 8;
                         constexpr static const std::size_t chunk_bits = sizeof(chunk_type) * units_bits;
                         constexpr static const std::size_t sizeof_field_element_chunks_count =
-                                (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
+                            (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
                         using g2_value_type = group_value_type;
                         using g2_field_type = typename g2_value_type::field_type;
                         using g2_field_value_type = typename g2_field_type::value_type;
@@ -911,12 +909,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::mnt4_298::template g1_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
-                    using group_type = typename algebra::curves::mnt4_298::
-                    template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                    nil::marshalling::endian::big_endian,
+                    typename algebra::curves::mnt4_298::template g1_type<Coordinates,
+                                                                         algebra::curves::forms::short_weierstrass>> {
+                    using group_type =
+                        typename algebra::curves::mnt4_298::template g1_type<Coordinates,
+                                                                             algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -928,7 +926,7 @@ namespace nil {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         using g1_value_type = group_value_type;
                         using g1_field_type = typename group_value_type::field_type;
                         using g1_field_value_type = typename g1_field_type::value_type;
@@ -946,9 +944,8 @@ namespace nil {
                         }
 
                         g1_field_value_type x_mod(x);
-                        g1_field_value_type y2_mod = x_mod.pow(3)
-                                                     + group_type::params_type::a * x_mod
-                                                     + group_type::params_type::b;
+                        g1_field_value_type y2_mod =
+                            x_mod.pow(3) + group_type::params_type::a * x_mod + group_type::params_type::b;
                         BOOST_ASSERT(y2_mod.is_square());
                         g1_field_value_type y_mod = y2_mod.sqrt();
                         bool Y_bit = detail::sign_gf_p<g1_field_type>(y_mod);
@@ -968,12 +965,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::mnt4_298::template g2_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
-                    using group_type = typename algebra::curves::mnt4_298::
-                    template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                    nil::marshalling::endian::big_endian,
+                    typename algebra::curves::mnt4_298::template g2_type<Coordinates,
+                                                                         algebra::curves::forms::short_weierstrass>> {
+                    using group_type =
+                        typename algebra::curves::mnt4_298::template g2_type<Coordinates,
+                                                                             algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -985,11 +982,11 @@ namespace nil {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         constexpr static const std::size_t units_bits = 8;
                         constexpr static const std::size_t chunk_bits = sizeof(chunk_type) * units_bits;
                         constexpr static const std::size_t sizeof_field_element_chunks_count =
-                                (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
+                            (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
                         using g2_value_type = group_value_type;
                         using g2_field_type = typename g2_value_type::field_type;
                         using g2_field_value_type = typename g2_field_type::value_type;
@@ -1010,9 +1007,8 @@ namespace nil {
                         }
 
                         g2_field_value_type x_mod(x_0, x_1);
-                        g2_field_value_type y2_mod = x_mod.pow(3)
-                                                     + group_type::params_type::a * x_mod
-                                                     + group_type::params_type::b;
+                        g2_field_value_type y2_mod =
+                            x_mod.pow(3) + group_type::params_type::a * x_mod + group_type::params_type::b;
                         BOOST_ASSERT(y2_mod.is_square());
                         g2_field_value_type y_mod = y2_mod.sqrt();
                         bool Y_bit = detail::sign_gf_p<g2_field_type>(y_mod);
@@ -1032,12 +1028,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::mnt6_298::template g1_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
-                    using group_type = typename algebra::curves::mnt6_298::
-                    template g1_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                    nil::marshalling::endian::big_endian,
+                    typename algebra::curves::mnt6_298::template g1_type<Coordinates,
+                                                                         algebra::curves::forms::short_weierstrass>> {
+                    using group_type =
+                        typename algebra::curves::mnt6_298::template g1_type<Coordinates,
+                                                                             algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -1049,7 +1045,7 @@ namespace nil {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         using g1_value_type = group_value_type;
                         using g1_field_type = typename group_value_type::field_type;
                         using g1_field_value_type = typename g1_field_type::value_type;
@@ -1067,9 +1063,8 @@ namespace nil {
                         }
 
                         g1_field_value_type x_mod(x);
-                        g1_field_value_type y2_mod = x_mod.pow(3)
-                                                     + group_type::params_type::a * x_mod
-                                                     + group_type::params_type::b;
+                        g1_field_value_type y2_mod =
+                            x_mod.pow(3) + group_type::params_type::a * x_mod + group_type::params_type::b;
                         BOOST_ASSERT(y2_mod.is_square());
                         g1_field_value_type y_mod = y2_mod.sqrt();
                         bool Y_bit = detail::sign_gf_p<g1_field_type>(y_mod);
@@ -1089,12 +1084,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                        nil::marshalling::endian::big_endian,
-                        typename algebra::curves::mnt6_298::template g2_type<
-                                Coordinates,
-                                algebra::curves::forms::short_weierstrass>> {
-                    using group_type = typename algebra::curves::mnt6_298::
-                    template g2_type<Coordinates, algebra::curves::forms::short_weierstrass>;
+                    nil::marshalling::endian::big_endian,
+                    typename algebra::curves::mnt6_298::template g2_type<Coordinates,
+                                                                         algebra::curves::forms::short_weierstrass>> {
+                    using group_type =
+                        typename algebra::curves::mnt6_298::template g2_type<Coordinates,
+                                                                             algebra::curves::forms::short_weierstrass>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -1106,11 +1101,11 @@ namespace nil {
                         using chunk_type = typename TIter::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
-                                params_type::bit_length() / (group_value_type::field_type::arity);
+                            params_type::bit_length() / (group_value_type::field_type::arity);
                         constexpr static const std::size_t units_bits = 8;
                         constexpr static const std::size_t chunk_bits = sizeof(chunk_type) * units_bits;
                         constexpr static const std::size_t sizeof_field_element_chunks_count =
-                                (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
+                            (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
                         using g2_value_type = group_value_type;
                         using g2_field_type = typename g2_value_type::field_type;
                         using g2_field_value_type = typename g2_field_type::value_type;
@@ -1133,9 +1128,8 @@ namespace nil {
                         }
 
                         g2_field_value_type x_mod(x_0, x_1, x_2);
-                        g2_field_value_type y2_mod = x_mod.pow(3)
-                                                     + group_type::params_type::a * x_mod
-                                                     + group_type::params_type::b;
+                        g2_field_value_type y2_mod =
+                            x_mod.pow(3) + group_type::params_type::a * x_mod + group_type::params_type::b;
                         BOOST_ASSERT(y2_mod.is_square());
                         g2_field_value_type y_mod = y2_mod.sqrt();
                         bool Y_bit = detail::sign_gf_p<g2_field_type>(y_mod);
@@ -1155,12 +1149,12 @@ namespace nil {
 
                 template<typename Coordinates>
                 struct curve_element_reader<
-                        nil::marshalling::endian::little_endian,
-                        typename algebra::curves::curve25519::template g1_type<Coordinates,
-                                algebra::curves::forms::twisted_edwards>> {
+                    nil::marshalling::endian::little_endian,
+                    typename algebra::curves::curve25519::template g1_type<Coordinates,
+                                                                           algebra::curves::forms::twisted_edwards>> {
                     using group_type =
-                            typename algebra::curves::curve25519::template g1_type<Coordinates,
-                                    algebra::curves::forms::twisted_edwards>;
+                        typename algebra::curves::curve25519::template g1_type<Coordinates,
+                                                                               algebra::curves::forms::twisted_edwards>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -1169,27 +1163,26 @@ namespace nil {
 
                     template<typename TIter>
                     static typename std::enable_if<
-                            std::is_same<std::uint8_t, typename std::iterator_traits<TIter>::value_type>::value,
-                            nil::marshalling::status_type>::type
-                    process(group_value_type &point, TIter &iter) {
+                        std::is_same<std::uint8_t, typename std::iterator_traits<TIter>::value_type>::value,
+                        nil::marshalling::status_type>::type
+                        process(group_value_type &point, TIter &iter) {
                         // somehow add size check of container pointed by iter
                         // assert(TSize == std::distance(first, last));
                         using base_field_type = typename group_type::field_type;
                         using base_integral_type = typename base_field_type::integral_type;
                         using group_affine_value_type =
-                                typename algebra::curves::curve25519::g1_type<algebra::curves::coordinates::affine,
-                                        form>::value_type;
+                            typename algebra::curves::curve25519::g1_type<algebra::curves::coordinates::affine,
+                                                                          form>::value_type;
                         constexpr std::size_t encoded_size = 32;
                         static_assert(encoded_size ==
-                                      (params_type::bit_length() / 8 + (params_type::bit_length() % 8 ? 1 : 0)),
+                                          (params_type::bit_length() / 8 + (params_type::bit_length() % 8 ? 1 : 0)),
                                       "wrong size");
 
                         base_integral_type y =
-                                read_data<params_type::bit_length(), base_integral_type, endianness>(iter);
+                            read_data<params_type::bit_length(), base_integral_type, endianness>(iter);
                         bool sign = *(iter + encoded_size - 1) & (1 << 7);
 
-                        auto decoded_point_affine =
-                                detail::recover_x < group_affine_value_type > (y, sign);
+                        auto decoded_point_affine = detail::recover_x<group_affine_value_type>(y, sign);
 
                         if (!decoded_point_affine) {
                             return decoded_point_affine.error();
@@ -1205,12 +1198,12 @@ namespace nil {
 
                 template<>
                 struct curve_element_reader<
-                        nil::marshalling::endian::little_endian,
-                        typename algebra::curves::jubjub::template g1_type<algebra::curves::coordinates::affine,
-                                algebra::curves::forms::twisted_edwards>> {
+                    nil::marshalling::endian::little_endian,
+                    typename algebra::curves::jubjub::template g1_type<algebra::curves::coordinates::affine,
+                                                                       algebra::curves::forms::twisted_edwards>> {
                     using group_type =
-                            typename algebra::curves::jubjub::template g1_type<algebra::curves::coordinates::affine,
-                                    algebra::curves::forms::twisted_edwards>;
+                        typename algebra::curves::jubjub::template g1_type<algebra::curves::coordinates::affine,
+                                                                           algebra::curves::forms::twisted_edwards>;
                     using group_value_type = typename group_type::value_type;
                     using coordinates = typename group_value_type::coordinates;
                     using form = typename group_value_type::form;
@@ -1221,14 +1214,14 @@ namespace nil {
                     /// See https://zips.z.cash/protocol/protocol.pdf#concretegrouphashjubjub
                     template<typename TIter>
                     static typename std::enable_if<
-                            std::is_same<std::uint8_t, typename std::iterator_traits<TIter>::value_type>::value,
-                            nil::marshalling::status_type>::type
-                    process(group_value_type &point, TIter &iter) {
+                        std::is_same<std::uint8_t, typename std::iterator_traits<TIter>::value_type>::value,
+                        nil::marshalling::status_type>::type
+                        process(group_value_type &point, TIter &iter) {
                         using field_type = typename group_value_type::field_type;
                         using integral_type = typename field_type::integral_type;
 
                         const std::size_t chunk_number =
-                                params_type::bit_length() / 8 + (params_type::bit_length() % 8 != 0);
+                            params_type::bit_length() / 8 + (params_type::bit_length() % 8 != 0);
                         assert(chunk_number == 32);
 
                         integral_type int_v = read_data<params_type::bit_length(), integral_type, endianness>(iter);
@@ -1266,7 +1259,7 @@ namespace nil {
                     }
                 };
             }    // namespace processing
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_PROCESSING_CURVE_ELEMENT_HPP

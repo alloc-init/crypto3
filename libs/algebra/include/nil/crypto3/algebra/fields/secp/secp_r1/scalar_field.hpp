@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -64,10 +62,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<secp_r1_scalar_field<160>>> value_type;
@@ -94,10 +91,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<secp_r1_scalar_field<192>>> value_type;
@@ -124,10 +120,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<secp_r1_scalar_field<224>>> value_type;
@@ -154,10 +149,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<secp_r1_scalar_field<256>>> value_type;
@@ -184,10 +178,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<secp_r1_scalar_field<384>>> value_type;
@@ -214,10 +207,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<secp_r1_scalar_field<521>>> value_type;
@@ -271,8 +263,8 @@ namespace nil {
                 constexpr typename secp_r1_fr<521>::integral_type const secp_r1_fr<521>::group_order_minus_one_half;
                 constexpr typename secp_r1_fr<521>::modular_params_type const secp_r1_fr<521>::modulus_params;
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_NIST_SCALAR_FIELD_HPP

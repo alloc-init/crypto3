@@ -78,8 +78,8 @@ namespace nil {
                 constexpr typename std::size_t const fp3<BaseField>::arity;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_FP3_EXTENSION_HPP

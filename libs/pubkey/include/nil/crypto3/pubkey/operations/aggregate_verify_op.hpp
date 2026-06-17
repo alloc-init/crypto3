@@ -32,7 +32,7 @@ namespace nil {
             template<typename SchemeType, typename = void>
             struct aggregate_verify_op;
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_AGGREGATE_VERIFY_OP_HPP

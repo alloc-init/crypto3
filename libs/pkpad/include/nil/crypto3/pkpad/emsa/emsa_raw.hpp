@@ -47,7 +47,7 @@ namespace nil {
 
                     template<typename ValueType>
                     struct emsa_raw_encoding_policy<ValueType,
-                                typename std::enable_if<std::is_integral<ValueType>::value>::type> {
+                                                    typename std::enable_if<std::is_integral<ValueType>::value>::type> {
                         typedef std::vector<ValueType> accumulator_type;
                         typedef accumulator_type result_type;
 
@@ -59,7 +59,7 @@ namespace nil {
                         static inline typename std::enable_if<std::is_same<
                             ValueType,
                             typename std::iterator_traits<typename InputRange::iterator>::value_type>::value>::type
-                        update(accumulator_type &acc, const InputRange &range) {
+                            update(accumulator_type &acc, const InputRange &range) {
                             std::copy(std::cbegin(range), std::cend(range), std::back_inserter(acc));
                         }
 
@@ -67,7 +67,7 @@ namespace nil {
                         template<typename InputIterator>
                         static inline typename std::enable_if<std::is_same<
                             ValueType, typename std::iterator_traits<InputIterator>::value_type>::value>::type
-                        update(accumulator_type &acc, InputIterator first, InputIterator last) {
+                            update(accumulator_type &acc, InputIterator first, InputIterator last) {
                             std::copy(first, last, std::back_inserter(acc));
                         }
 
@@ -78,7 +78,7 @@ namespace nil {
 
                     template<typename ValueType>
                     struct emsa_raw_verification_policy<
-                                ValueType, typename std::enable_if<std::is_integral<ValueType>::value>::type> {
+                        ValueType, typename std::enable_if<std::is_integral<ValueType>::value>::type> {
                     protected:
                         typedef emsa_raw_encoding_policy<ValueType> encoding_policy;
 
@@ -96,8 +96,7 @@ namespace nil {
                         }
 
                         template<typename InputIterator>
-                        static inline void update(accumulator_type &acc, InputIterator first,
-                                                  InputIterator last) {
+                        static inline void update(accumulator_type &acc, InputIterator first, InputIterator last) {
                             encoding_policy::update(first, last, acc);
                         }
 
@@ -105,14 +104,14 @@ namespace nil {
                         template<typename InputRange>
                         static inline typename std::enable_if<
                             std::is_same<ValueType, typename std::iterator_traits<
-                                typename InputRange::iterator>::value_type>::value,
+                                                        typename InputRange::iterator>::value_type>::value,
                             result_type>::type
-                        process(accumulator_type &acc, const InputRange &msg_repr) {
+                            process(accumulator_type &acc, const InputRange &msg_repr) {
                             return std::equal(std::cbegin(acc), std::cend(acc), std::cbegin(msg_repr),
                                               std::cend(msg_repr));
                         }
                     };
-                } // namespace detail
+                }    // namespace detail
 
                 /*!
                  * @brief EMSA raw.
@@ -128,9 +127,9 @@ namespace nil {
                     typedef detail::emsa_raw_encoding_policy<ValueType> encoding_policy;
                     typedef detail::emsa_raw_verification_policy<ValueType> verification_policy;
                 };
-            } // namespace padding
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace padding
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif

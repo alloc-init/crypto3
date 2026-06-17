@@ -46,15 +46,15 @@ namespace nil {
              Output: a factor of n.
              */
             template<typename Backend, expression_template_option ExpressionTemplates>
-            number<Backend, ExpressionTemplates> pollard_rho_factorization(const number<Backend, ExpressionTemplates> &n) {
+            number<Backend, ExpressionTemplates>
+                pollard_rho_factorization(const number<Backend, ExpressionTemplates> &n) {
                 if (!(n % 2)) {
                     return 2;
                 }
 
                 boost::random::independent_bits_engine<std::mt19937, 256, number<Backend, ExpressionTemplates>> rng;
                 number<backends::modular_adaptor<Backend, backends::modular_params_rt<Backend>>, ExpressionTemplates>
-                        divisor,
-                        c(rng(), n), x(rng(), n), nn(n, n), xx = x;
+                    divisor, c(rng(), n), x(rng(), n), nn(n, n), xx = x;
                 do {
                     x = x * x + c;
                     xx = xx * xx + c;
@@ -114,8 +114,8 @@ namespace nil {
                 }
                 return q_new;
             }
-        }
-    }
-}
+        }    // namespace algebra
+    }    // namespace crypto3
+}    // namespace nil
 
-#endif //CRYPTO3_PRIMES_HPP
+#endif    // CRYPTO3_PRIMES_HPP

@@ -56,7 +56,7 @@ namespace nil {
                 BOOST_ASSERT(msb(out) == OutValueBits);
             }
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_PACK_HPP

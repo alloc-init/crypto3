@@ -35,7 +35,7 @@ namespace nil {
                 class ate_precompute_g2;
 
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_ATE_PRECOMPUTE_G2_HPP

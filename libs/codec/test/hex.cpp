@@ -52,13 +52,12 @@ namespace boost {
         namespace tt_detail {
             template<template<typename, typename> class P, typename K, typename V>
             struct print_log_value<P<K, V>> {
-                void operator()(std::ostream&, P<K, V> const&) {
+                void operator()(std::ostream &, P<K, V> const &) {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
-}
-
+    }    // namespace test_tools
+}    // namespace boost
 
 // TEST_DATA_PATH provided by cmake (see CMakeLists.txt)
 #ifndef TEST_DATA_PATH
@@ -92,7 +91,8 @@ BOOST_DATA_TEST_CASE(hex_upper_iterator_range_encode, mode_data("upper_mode"), a
 }
 
 BOOST_DATA_TEST_CASE(hex_upper_iterator_range_decode, mode_data("upper_mode"), array_element) {
-    std::string result = decode<hex<mode::upper>>(array_element.second.data().begin(), array_element.second.data().end());
+    std::string result =
+        decode<hex<mode::upper>>(array_element.second.data().begin(), array_element.second.data().end());
     BOOST_CHECK_EQUAL(result, array_element.first);
 }
 
@@ -116,7 +116,8 @@ BOOST_DATA_TEST_CASE(hex_upper_iterator_iterator_encode, mode_data("upper_mode")
 
 BOOST_DATA_TEST_CASE(hex_upper_iterator_iterator_decode, mode_data("upper_mode"), array_element) {
     std::string result;
-    decode<hex<mode::upper>>(array_element.second.data().begin(), array_element.second.data().end(), std::back_inserter(result));
+    decode<hex<mode::upper>>(array_element.second.data().begin(), array_element.second.data().end(),
+                             std::back_inserter(result));
     BOOST_CHECK_EQUAL(result, array_element.first);
 }
 
@@ -136,7 +137,8 @@ BOOST_DATA_TEST_CASE(hex_lower_iterator_range_encode, mode_data("lower_mode"), a
 }
 
 BOOST_DATA_TEST_CASE(hex_lower_iterator_range_decode, mode_data("lower_mode"), array_element) {
-    std::string result = decode<hex<mode::lower>>(array_element.second.data().begin(), array_element.second.data().end());
+    std::string result =
+        decode<hex<mode::lower>>(array_element.second.data().begin(), array_element.second.data().end());
     BOOST_CHECK_EQUAL(result, array_element.first);
 }
 
@@ -160,12 +162,12 @@ BOOST_DATA_TEST_CASE(hex_lower_iterator_iterator_encode, mode_data("lower_mode")
 
 BOOST_DATA_TEST_CASE(hex_lower_iterator_iterator_decode, mode_data("lower_mode"), array_element) {
     std::string result;
-    decode<hex<mode::lower>>(array_element.second.data().begin(), array_element.second.data().end(), std::back_inserter(result));
+    decode<hex<mode::lower>>(array_element.second.data().begin(), array_element.second.data().end(),
+                             std::back_inserter(result));
     BOOST_CHECK_EQUAL(result, array_element.first);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
 
 template<std::size_t Size, typename Integer>
 static inline typename boost::uint_t<Size>::exact extract_uint_t(Integer v, std::size_t position) {
@@ -209,14 +211,14 @@ BOOST_DATA_TEST_CASE(hex_lower_single_range_random_encode_decode,
 
 BOOST_AUTO_TEST_SUITE_END()
 
-//BOOST_AUTO_TEST_SUITE(hex_codec_adaptor_test_suite)
+// BOOST_AUTO_TEST_SUITE(hex_codec_adaptor_test_suite)
 //
-//    BOOST_DATA_TEST_CASE(hex_upper_range_encode, mode_data("upper_mode"), array_element) {
-//        BOOST_CHECK((array_element.first | adaptors::encoded<codec::hex<>>) == array_element.second);
-//    }
+//     BOOST_DATA_TEST_CASE(hex_upper_range_encode, mode_data("upper_mode"), array_element) {
+//         BOOST_CHECK((array_element.first | adaptors::encoded<codec::hex<>>) == array_element.second);
+//     }
 //
-//    BOOST_DATA_TEST_CASE(hex_upper_range_decode, mode_data("upper_mode"), array_element) {
-//        BOOST_CHECK((array_element.second | adaptors::decoded<codec::hex<>>) == array_element.first);
-//    }
+//     BOOST_DATA_TEST_CASE(hex_upper_range_decode, mode_data("upper_mode"), array_element) {
+//         BOOST_CHECK((array_element.second | adaptors::decoded<codec::hex<>>) == array_element.first);
+//     }
 //
-//BOOST_AUTO_TEST_SUITE_END()
+// BOOST_AUTO_TEST_SUITE_END()

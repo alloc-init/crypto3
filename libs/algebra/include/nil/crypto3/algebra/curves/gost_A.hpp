@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/fields/gost_A/base_field.hpp>
 #include <nil/crypto3/algebra/fields/gost_A/scalar_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -66,8 +64,8 @@ namespace nil {
                         0x8D91E471E0989CDA27DF505A453F2B7635294F2DDF23E3B122ACC99C9E9F1E14_cppui_modular256;
                 };
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_GOST_A_HPP

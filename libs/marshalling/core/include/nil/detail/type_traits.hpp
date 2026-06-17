@@ -240,8 +240,8 @@ namespace nil {
 
         template<typename Container>
         struct is_container {
-            static const bool value
-                = has_const_iterator<Container>::value && has_begin<Container>::value && has_end<Container>::value;
+            static const bool value =
+                has_const_iterator<Container>::value && has_begin<Container>::value && has_end<Container>::value;
         };
 
         /// @brief Check whether provided type is a variant of
@@ -281,8 +281,8 @@ namespace nil {
         template<typename TType, typename TFirst, typename... TRest>
         class is_in_tuple<TType, std::tuple<TFirst, TRest...>> {
         public:
-            static const bool value
-                = std::is_same<TType, TFirst>::value || is_in_tuple<TType, std::tuple<TRest...>>::value;
+            static const bool value =
+                std::is_same<TType, TFirst>::value || is_in_tuple<TType, std::tuple<TRest...>>::value;
         };
 
         template<typename TType>

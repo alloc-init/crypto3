@@ -44,7 +44,7 @@ namespace nil::crypto3::math {
 
         container_type val;
 
-      public:
+    public:
         typedef typename container_type::value_type value_type;
         typedef typename container_type::reference reference;
         typedef typename container_type::const_reference const_reference;
@@ -57,87 +57,152 @@ namespace nil::crypto3::math {
         typedef typename container_type::reverse_iterator reverse_iterator;
         typedef typename container_type::const_reverse_iterator const_reverse_iterator;
 
-        static_simd_vector() : static_simd_vector(FieldValueType::zero()) {}
+        static_simd_vector() : static_simd_vector(FieldValueType::zero()) {
+        }
 
-        static_simd_vector(const value_type& x) { val.fill(x); }
+        static_simd_vector(const value_type& x) {
+            val.fill(x);
+        }
 
-        static_simd_vector(std::initializer_list<value_type> il) : val(il) {}
+        static_simd_vector(std::initializer_list<value_type> il) : val(il) {
+        }
 
-        container_type& get_storage() { return val; }
-        const container_type& get_storage() const { return val; }
+        container_type& get_storage() {
+            return val;
+        }
+        const container_type& get_storage() const {
+            return val;
+        }
 
-        iterator begin() noexcept { return val.begin(); }
-        const_iterator begin() const noexcept { return val.begin(); }
-        iterator end() noexcept { return val.end(); }
-        const_iterator end() const noexcept { return val.end(); }
+        iterator begin() noexcept {
+            return val.begin();
+        }
+        const_iterator begin() const noexcept {
+            return val.begin();
+        }
+        iterator end() noexcept {
+            return val.end();
+        }
+        const_iterator end() const noexcept {
+            return val.end();
+        }
 
-        reverse_iterator rbegin() noexcept { return val.rbegin(); }
+        reverse_iterator rbegin() noexcept {
+            return val.rbegin();
+        }
 
-        const_reverse_iterator rbegin() const noexcept { return val.rbegin(); }
+        const_reverse_iterator rbegin() const noexcept {
+            return val.rbegin();
+        }
 
-        reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+        reverse_iterator rend() noexcept {
+            return reverse_iterator(begin());
+        }
 
         const_reverse_iterator rend() const noexcept {
             return const_reverse_iterator(begin());
         }
 
-        const_iterator cbegin() const noexcept { return begin(); }
+        const_iterator cbegin() const noexcept {
+            return begin();
+        }
 
-        const_iterator cend() const noexcept { return end(); }
+        const_iterator cend() const noexcept {
+            return end();
+        }
 
-        const_reverse_iterator crbegin() const noexcept { return rbegin(); }
+        const_reverse_iterator crbegin() const noexcept {
+            return rbegin();
+        }
 
-        const_reverse_iterator crend() const noexcept { return rend(); }
+        const_reverse_iterator crend() const noexcept {
+            return rend();
+        }
 
-        size_type size() const noexcept { return val.size(); }
+        size_type size() const noexcept {
+            return val.size();
+        }
 
-        size_type capacity() const noexcept { return val.capacity(); }
-        bool empty() const noexcept { return val.empty(); }
-        size_type max_size() const noexcept { return val.max_size(); }
+        size_type capacity() const noexcept {
+            return val.capacity();
+        }
+        bool empty() const noexcept {
+            return val.empty();
+        }
+        size_type max_size() const noexcept {
+            return val.max_size();
+        }
 
-        reference operator[](size_type _n) noexcept { return val[_n]; }
-        const_reference operator[](size_type _n) const noexcept { return val[_n]; }
-        reference at(size_type _n) { return val.at(_n); }
-        const_reference at(size_type _n) const { return val.at(_n); }
+        reference operator[](size_type _n) noexcept {
+            return val[_n];
+        }
+        const_reference operator[](size_type _n) const noexcept {
+            return val[_n];
+        }
+        reference at(size_type _n) {
+            return val.at(_n);
+        }
+        const_reference at(size_type _n) const {
+            return val.at(_n);
+        }
 
-        reference front() noexcept { return val.front(); }
-        const_reference front() const noexcept { return val.front(); }
-        reference back() noexcept { return val.back(); }
-        const_reference back() const noexcept { return val.back(); }
+        reference front() noexcept {
+            return val.front();
+        }
+        const_reference front() const noexcept {
+            return val.front();
+        }
+        reference back() noexcept {
+            return val.back();
+        }
+        const_reference back() const noexcept {
+            return val.back();
+        }
 
-        value_type* data() noexcept { return val.data(); }
+        value_type* data() noexcept {
+            return val.data();
+        }
 
-        const value_type* data() const noexcept { return val.data(); }
+        const value_type* data() const noexcept {
+            return val.data();
+        }
 
-        void clear() noexcept { val.clear(); }
+        void clear() noexcept {
+            val.clear();
+        }
 
-        void swap(static_simd_vector& other) noexcept { val.swap(other.val); }
+        void swap(static_simd_vector& other) noexcept {
+            val.swap(other.val);
+        }
 
         bool is_zero() const {
             for (const auto& v : val) {
-                if (v != FieldValueType::zero()) return false;
+                if (v != FieldValueType::zero())
+                    return false;
             }
             return true;
         }
 
         bool is_one() const {
             for (const auto& v : val) {
-                if (v != FieldValueType::one()) return false;
+                if (v != FieldValueType::one())
+                    return false;
             }
             return true;
         }
 
-        inline static static_simd_vector zero() { return static_simd_vector(); }
+        inline static static_simd_vector zero() {
+            return static_simd_vector();
+        }
 
         inline static static_simd_vector one() {
             return static_simd_vector(value_type::one());
         }
 
-        template<std::size_t VSize,
-                 std::array<FieldValueType, VSize> op(std::array<FieldValueType, VSize>,
-                                                      std::array<FieldValueType, VSize>)>
-        static void vectorize(const static_simd_vector& lhs,
-                              const static_simd_vector& rhs, static_simd_vector& result) {
+        template<std::size_t VSize, std::array<FieldValueType, VSize> op(std::array<FieldValueType, VSize>,
+                                                                         std::array<FieldValueType, VSize>)>
+        static void vectorize(const static_simd_vector& lhs, const static_simd_vector& rhs,
+                              static_simd_vector& result) {
             static_assert(Size % VSize == 0);
             for (std::size_t i = 0; i < Size / VSize; ++i) {
                 std::array<FieldValueType, VSize> lhs_v, rhs_v;
@@ -241,8 +306,7 @@ namespace nil::crypto3::math {
         }
 
         constexpr auto operator<=>(const static_simd_vector& other) const {
-            return std::lexicographical_compare_three_way(this->begin(), this->end(),
-                                                          other.begin(), other.end());
+            return std::lexicographical_compare_three_way(this->begin(), this->end(), other.begin(), other.end());
         }
 
         constexpr bool operator==(const static_simd_vector& rhs) const {
@@ -256,9 +320,8 @@ namespace nil::crypto3::math {
     }
 
     template<std::size_t Size, typename FieldValueType>
-    static_simd_vector<FieldValueType, Size> get_chunk(
-        const polynomial_dfs<FieldValueType>& poly, std::size_t offset,
-        std::size_t number) {
+    static_simd_vector<FieldValueType, Size> get_chunk(const polynomial_dfs<FieldValueType>& poly, std::size_t offset,
+                                                       std::size_t number) {
 
         // If we have a constant value, our polynomial will frequently have size = 1, but we still
         // must return the chunk value.
@@ -276,8 +339,7 @@ namespace nil::crypto3::math {
     }
 
     template<std::size_t Size, typename FieldValueType>
-    void set_chunk(polynomial_dfs<FieldValueType>& poly, std::size_t offset,
-                   std::size_t number,
+    void set_chunk(polynomial_dfs<FieldValueType>& poly, std::size_t offset, std::size_t number,
                    const static_simd_vector<FieldValueType, Size>& chunk) {
         for (std::size_t i = 0; i < Size; ++i) {
             if (offset + number * Size + i >= poly.size()) {
@@ -289,7 +351,7 @@ namespace nil::crypto3::math {
 
     // Used in the unit tests, so we can use BOOST_CHECK_EQUALS and while debugging.
     template<std::size_t Size, typename FieldValueType>
-    std::ostream& operator<<(std::ostream& os,const static_simd_vector<FieldValueType, Size>& chunk) {
+    std::ostream& operator<<(std::ostream& os, const static_simd_vector<FieldValueType, Size>& chunk) {
         os << "[";
         for (std::size_t i = 0; i < Size; ++i) {
             os << std::hex << std::showbase;
@@ -302,7 +364,7 @@ namespace nil::crypto3::math {
         return os;
     }
 
-}  // namespace nil::crypto3::math
+}    // namespace nil::crypto3::math
 
 // As our operator== returns false for vectors with different sizes, the same will happen here,
 // resized vector will have a different hash from the initial one.
@@ -310,8 +372,7 @@ template<typename FieldValueType, std::size_t Size>
 struct std::hash<nil::crypto3::math::static_simd_vector<FieldValueType, Size>> {
     std::hash<FieldValueType> value_hasher;
 
-    std::size_t operator()(
-        const nil::crypto3::math::static_simd_vector<FieldValueType, Size>& v) const {
+    std::size_t operator()(const nil::crypto3::math::static_simd_vector<FieldValueType, Size>& v) const {
         std::size_t result = 0;
         for (const auto& val : v) {
             boost::hash_combine(result, value_hasher(val));

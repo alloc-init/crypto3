@@ -114,7 +114,7 @@ namespace nil {
                 return x & highmask;
             }
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_DETAIL_UNBOUNDED_SHIFT_HPP

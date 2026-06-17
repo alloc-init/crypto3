@@ -93,8 +93,7 @@ namespace nil {
                 };
 
                 template<>
-                class rijndael_power8_impl<128, 128>
-                    : public basic_rijndael_power8_impl<128, 128> {
+                class rijndael_power8_impl<128, 128> : public basic_rijndael_power8_impl<128, 128> {
                 protected:
                     typedef rijndael_policy<128, 128> policy_type;
 
@@ -178,8 +177,7 @@ namespace nil {
                 };
 
                 template<>
-                class rijndael_power8_impl<192, 128>
-                    : public basic_rijndael_power8_impl<192, 128> {
+                class rijndael_power8_impl<192, 128> : public basic_rijndael_power8_impl<192, 128> {
                 protected:
                     typedef rijndael_policy<192, 128> policy_type;
 
@@ -269,8 +267,7 @@ namespace nil {
                 };
 
                 template<>
-                class rijndael_power8_impl<256, 128>
-                    : public basic_rijndael_power8_impl<256, 128> {
+                class rijndael_power8_impl<256, 128> : public basic_rijndael_power8_impl<256, 128> {
                 protected:
                     typedef rijndael_policy<256, 128> policy_type;
 
@@ -370,8 +367,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_RIJNDAEL_POWER8_IMPL_HPP

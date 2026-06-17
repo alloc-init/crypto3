@@ -73,8 +73,8 @@ namespace boost {
                 }
                 return J;
             }
-        }
+        }    // namespace backends
     }    // namespace multiprecision
-} // namespace boost
+}    // namespace boost
 
 #endif    // CRYPTO3_MULTIPRECISION_EVAL_JACOBI_HPP

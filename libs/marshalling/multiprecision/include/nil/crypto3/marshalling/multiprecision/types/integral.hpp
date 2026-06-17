@@ -356,7 +356,8 @@ namespace nil {
                          typename... TOptions>
                 inline integral<TTypeBase, boost::multiprecision::number<Backend, ExpressionTemplates>, TOptions...> &
                     to_field_base(
-                        integral<TTypeBase, boost::multiprecision::number<Backend, ExpressionTemplates>, TOptions...> &field) {
+                        integral<TTypeBase, boost::multiprecision::number<Backend, ExpressionTemplates>, TOptions...>
+                            &field) {
                     return field;
                 }
 
@@ -367,10 +368,12 @@ namespace nil {
                          typename Backend,
                          boost::multiprecision::expression_template_option ExpressionTemplates,
                          typename... TOptions>
-                inline const integral<TTypeBase, boost::multiprecision::number<Backend, ExpressionTemplates>, TOptions...> &
-                    to_field_base(
-                        const integral<TTypeBase, boost::multiprecision::number<Backend, ExpressionTemplates>, TOptions...>
-                            &field) {
+                inline const integral<TTypeBase,
+                                      boost::multiprecision::number<Backend, ExpressionTemplates>,
+                                      TOptions...> &
+                    to_field_base(const integral<TTypeBase,
+                                                 boost::multiprecision::number<Backend, ExpressionTemplates>,
+                                                 TOptions...> &field) {
                     return field;
                 }
 
@@ -421,7 +424,7 @@ namespace nil {
                     return result;
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_INTEGRAL_HPP

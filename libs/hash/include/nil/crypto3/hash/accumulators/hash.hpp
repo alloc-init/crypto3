@@ -68,11 +68,9 @@ namespace nil {
 
                     constexpr static const std::size_t length_bits = params_type::length_bits;
                     // FIXME: do something more intelligent than capping at 64
-                    constexpr static const std::size_t length_type_bits = length_bits < word_bits ?
-                                                                              word_bits :
-                                                                              length_bits > 64 ?
-                                                                                  64 :
-                                                                                  length_bits;
+                    constexpr static const std::size_t length_type_bits = length_bits < word_bits ? word_bits :
+                                                                          length_bits > 64        ? 64 :
+                                                                                                    length_bits;
                     typedef typename boost::uint_t<length_type_bits>::least length_type;
                     constexpr static const std::size_t length_words = length_bits / word_bits;
                     BOOST_STATIC_ASSERT(!length_bits || length_bits % word_bits == 0);
@@ -94,8 +92,8 @@ namespace nil {
                         construction_type res = construction;
                         // Make a copy, so we can append more to existing state afterwards
 
-                        if constexpr (nil::crypto3::hashes::is_sponge_construction<typename
-                            hash_type::construction::type>::value) {
+                        if constexpr (nil::crypto3::hashes::is_sponge_construction<
+                                          typename hash_type::construction::type>::value) {
                             // Sponge hash behavior
                             res.absorb_with_padding(cache_.get_block(), cache_.bits_used());
                             return res.digest();
@@ -133,7 +131,8 @@ namespace nil {
                         total_seen_ += bits_seen;
                         // TODO: remove this, since we have bits_count acc, and could use its result
                         // Example:
-                        // typedef typename boost::accumulators::detail::extractor_result<accumulator_set<>, tag::bits_count>::type bits_count_result_type;
+                        // typedef typename boost::accumulators::detail::extractor_result<accumulator_set<>,
+                        // tag::bits_count>::type bits_count_result_type;
 
                         // template<typename Args>
                         // void operator()(Args const &args) {
@@ -165,8 +164,8 @@ namespace nil {
 
                 private:
                     void flush_cache_to_construction() {
-                        if constexpr (nil::crypto3::hashes::is_sponge_construction<typename
-                            hash_type::construction::type>::value) {
+                        if constexpr (nil::crypto3::hashes::is_sponge_construction<
+                                          typename hash_type::construction::type>::value) {
                             construction.absorb(std::move(cache_.get_block()));
                         } else {
                             construction.process_block(std::move(cache_.get_block()));
@@ -176,7 +175,7 @@ namespace nil {
 
                     std::size_t total_seen_ = 0;
                     nil::crypto3::hashes::block_cache<block_type, word_type, word_bits, block_words, endian_type>
-                    cache_;
+                        cache_;
                     construction_type construction;
                 };
 
@@ -216,7 +215,8 @@ namespace nil {
                     inline result_type result(boost::accumulators::dont_care) const {
                         construction_type res = construction;
                         // Make a copy, so we can append more to existing state afterwards
-                        static_assert(nil::crypto3::hashes::is_sponge_construction<typename hash_type::construction::type>::value);
+                        static_assert(nil::crypto3::hashes::is_sponge_construction<
+                                      typename hash_type::construction::type>::value);
                         res.absorb_with_padding(cache_.get_block(), cache_.words_used());
                         return res.digest();
                     }
@@ -249,8 +249,8 @@ namespace nil {
 
                 private:
                     void flush_cache_to_construction() {
-                        if constexpr (nil::crypto3::hashes::is_sponge_construction<typename
-                            hash_type::construction::type>::value) {
+                        if constexpr (nil::crypto3::hashes::is_sponge_construction<
+                                          typename hash_type::construction::type>::value) {
                             construction.absorb(std::move(cache_.get_block()));
                         } else {
                             BOOST_ASSERT_MSG(false, "Unknown construction");
@@ -299,7 +299,7 @@ namespace nil {
 
                     mutable accumulator_type acc;
                 };
-            } // namespace impl
+            }    // namespace impl
 
             namespace tag {
                 template<typename HashType>
@@ -331,24 +331,24 @@ namespace nil {
 
                     typedef boost::mpl::always<accumulators::impl::forwarding_acc_impl<HashType>> impl;
                 };
-            } // namespace tag
+            }    // namespace tag
 
             namespace extract {
                 template<typename HashType, typename AccumulatorSet>
                 typename boost::mpl::apply<AccumulatorSet, tag::hash<HashType>>::type::result_type
-                hash(const AccumulatorSet &acc) {
+                    hash(const AccumulatorSet &acc) {
                     return boost::accumulators::extract_result<tag::hash<HashType>>(acc);
                 }
 
                 template<typename HashType, typename AccumulatorSet>
                 typename boost::mpl::apply<AccumulatorSet, tag::algebraic_hash<HashType>>::type::result_type
-                hash(const AccumulatorSet &acc) {
+                    hash(const AccumulatorSet &acc) {
                     return boost::accumulators::extract_result<tag::algebraic_hash<HashType>>(acc);
                 }
 
                 template<typename HashType, typename AccumulatorSet>
                 typename boost::mpl::apply<AccumulatorSet, tag::forwarding_hash<HashType>>::type::result_type
-                hash(const AccumulatorSet &acc) {
+                    hash(const AccumulatorSet &acc) {
                     return boost::accumulators::extract_result<tag::forwarding_hash<HashType>>(acc);
                 }
 
@@ -358,9 +358,9 @@ namespace nil {
                 //       hash(const AccumulatorSet &acc) {
                 //       return boost::accumulators::extract_result<Tag>(acc);
                 //   }
-            } // namespace extract
-        } // namespace accumulators
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace extract
+        }    // namespace accumulators
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_HASH_HPP

@@ -72,8 +72,7 @@ namespace nil {
 
                     template<typename TIter>
                     void read_no_status(TIter &iter) {
-                        auto serializedValue
-                            = processing::read_data<serialized_type>(iter, endian_type());
+                        auto serializedValue = processing::read_data<serialized_type>(iter, endian_type());
                         base_impl_type::value() = from_serialized(serializedValue);
                     }
 
@@ -89,8 +88,7 @@ namespace nil {
 
                     template<typename TIter>
                     void write_no_status(TIter &iter) const {
-                        processing::write_data(to_serialized(base_impl_type::value()), iter,
-                                                                 endian_type());
+                        processing::write_data(to_serialized(base_impl_type::value()), iter, endian_type());
                     }
 
                     static constexpr serialized_type to_serialized(value_type val) {
@@ -112,7 +110,7 @@ namespace nil {
                 };
 
             }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_SER_OFFSET_HPP

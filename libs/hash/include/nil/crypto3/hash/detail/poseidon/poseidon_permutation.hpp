@@ -20,8 +20,8 @@ namespace nil {
                 template<typename PolicyType>
                 class poseidon_permutation {
                     typedef PolicyType policy_type;
-                public:
 
+                public:
                     typedef poseidon_round_operator<policy_type> round_operator_type;
 
                     typedef typename policy_type::word_type element_type;
@@ -70,8 +70,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_POSEIDON_FUNCTIONS_HPP

@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -58,14 +56,14 @@ namespace nil {
 
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
 
-                    constexpr static const integral_type modulus = 0x80000000000000000000000000000000000000000_cppui_modular164;
+                    constexpr static const integral_type modulus =
+                        0x80000000000000000000000000000000000000000_cppui_modular164;
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<sect_k1_base_field<164>>> value_type;
@@ -86,8 +84,8 @@ namespace nil {
                 constexpr typename sect_k1_fq<163>::modular_params_type const sect_k1_fq<163>::modulus_params;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_NIST_BASE_FIELD_HPP

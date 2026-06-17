@@ -51,20 +51,19 @@ namespace nil {
             using namespace nil::crypto3::detail;
 
             template<std::size_t k, typename HashType,
-                    /// HashType::digest_type is required to be uint8_t[]
-                    typename = typename std::enable_if<
-                            std::is_same<std::uint8_t, typename HashType::digest_type::value_type>::value>::type>
+                     /// HashType::digest_type is required to be uint8_t[]
+                     typename = typename std::enable_if<
+                         std::is_same<std::uint8_t, typename HashType::digest_type::value_type>::value>::type>
             class expand_message_xmd {
                 // https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.4.1
                 BOOST_STATIC_ASSERT_MSG(HashType::block_bits % 8 == 0, "r_in_bytes is not a multiple of 8");
                 BOOST_STATIC_ASSERT_MSG(HashType::digest_bits % 8 == 0, "b_in_bytes is not a multiple of 8");
-                BOOST_STATIC_ASSERT_MSG(HashType::digest_bits >= 2 * k,
-                                        "K-bit collision resistance is not fulfilled");
+                BOOST_STATIC_ASSERT_MSG(HashType::digest_bits >= 2 * k, "K-bit collision resistance is not fulfilled");
 
                 constexpr static const std::size_t b_in_bytes = HashType::digest_bits / 8;
                 constexpr static const std::size_t r_in_bytes = HashType::block_bits / 8;
 
-                constexpr static const std::array<std::uint8_t, r_in_bytes> Z_pad{0};
+                constexpr static const std::array<std::uint8_t, r_in_bytes> Z_pad {0};
 
                 template<typename RangeType>
                 static inline void append_range(std::vector<std::uint8_t> &out, const RangeType &range) {
@@ -75,10 +74,10 @@ namespace nil {
 
             public:
                 template<typename InputMsgType, typename InputDstType, typename OutputType,
-                        typename = typename std::enable_if<
-                                std::is_same<std::uint8_t, typename InputMsgType::value_type>::value &&
-                                std::is_same<std::uint8_t, typename InputDstType::value_type>::value &&
-                                std::is_same<std::uint8_t, typename OutputType::value_type>::value>::type>
+                         typename = typename std::enable_if<
+                             std::is_same<std::uint8_t, typename InputMsgType::value_type>::value &&
+                             std::is_same<std::uint8_t, typename InputDstType::value_type>::value &&
+                             std::is_same<std::uint8_t, typename OutputType::value_type>::value>::type>
                 static inline void process(const std::size_t len_in_bytes, const InputMsgType &msg,
                                            const InputDstType &dst, OutputType &uniform_bytes) {
                     BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<InputMsgType>));
@@ -90,12 +89,11 @@ namespace nil {
                     BOOST_ASSERT(len_in_bytes < 0x10000);
                     const std::size_t dst_len = static_cast<std::size_t>(std::distance(dst.begin(), dst.end()));
                     BOOST_ASSERT(dst_len >= 16 && dst_len <= 255);
-                    BOOST_ASSERT(
-                            std::size_t(std::distance(uniform_bytes.begin(), uniform_bytes.end())) >= len_in_bytes);
+                    BOOST_ASSERT(std::size_t(std::distance(uniform_bytes.begin(), uniform_bytes.end())) >=
+                                 len_in_bytes);
 
-                    const std::array<std::uint8_t, 2> l_i_b_str = {
-                            static_cast<std::uint8_t>(len_in_bytes >> 8u),
-                            static_cast<std::uint8_t>(len_in_bytes % 0x100)};
+                    const std::array<std::uint8_t, 2> l_i_b_str = {static_cast<std::uint8_t>(len_in_bytes >> 8u),
+                                                                   static_cast<std::uint8_t>(len_in_bytes % 0x100)};
                     const std::size_t ell = static_cast<std::size_t>(len_in_bytes / b_in_bytes) +
                                             static_cast<std::size_t>(len_in_bytes % b_in_bytes != 0);
 
@@ -164,8 +162,8 @@ namespace nil {
                     }
                 }
             };
-        } // namespace haseh
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace hashes
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_HASH_H@C_EXPAND_HPP

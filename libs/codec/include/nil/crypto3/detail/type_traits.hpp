@@ -268,7 +268,6 @@ namespace nil {
                                           has_decoded_block_type<T>::value && has_decoded_block_bits<T>::value &&
                                           has_encode<T>::value && has_decode<T>::value;
                 typedef T type;
-
             };
 
             template<typename T>
@@ -316,7 +315,7 @@ namespace nil {
             };
 
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #undef GENERATE_HAS_MEMBER_TYPE

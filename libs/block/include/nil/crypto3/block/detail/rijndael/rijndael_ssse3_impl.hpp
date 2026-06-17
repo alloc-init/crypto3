@@ -139,7 +139,8 @@ namespace nil {
                     return aes_schedule_transform(K, deskew1, deskew2);
                 }
 
-                BOOST_ATTRIBUTE_TARGET("ssse3") __m128i aes_schedule_round(__m128i *rcon, __m128i input1, __m128i input2) {
+                BOOST_ATTRIBUTE_TARGET("ssse3")
+                __m128i aes_schedule_round(__m128i *rcon, __m128i input1, __m128i input2) {
                     if (rcon) {
                         input2 = _mm_xor_si128(_mm_alignr_epi8(_mm_setzero_si128(), *rcon, 15), input2);
 
@@ -169,7 +170,8 @@ namespace nil {
                     return mm_xor3(_mm_shuffle_epi8(sb1u, t5), _mm_shuffle_epi8(sb1t, t6), smeared);
                 }
 
-                BOOST_ATTRIBUTE_TARGET("ssse3") __m128i aes_ssse3_encrypt(__m128i B, const __m128i *keys, size_t rounds) {
+                BOOST_ATTRIBUTE_TARGET("ssse3")
+                __m128i aes_ssse3_encrypt(__m128i B, const __m128i *keys, size_t rounds) {
                     const __m128i sb2u = _mm_set_epi32(0x5EB7E955, 0xBC982FCD, 0xE27A93C6, 0x0B712400);
                     const __m128i sb2t = _mm_set_epi32(0xC2A163C8, 0xAB82234A, 0x69EB8840, 0x0AE12900);
 
@@ -221,7 +223,8 @@ namespace nil {
                     }
                 }
 
-                BOOST_ATTRIBUTE_TARGET("ssse3") __m128i aes_ssse3_decrypt(__m128i B, const __m128i *keys, size_t rounds) {
+                BOOST_ATTRIBUTE_TARGET("ssse3")
+                __m128i aes_ssse3_decrypt(__m128i B, const __m128i *keys, size_t rounds) {
                     const __m128i k_dipt1 = _mm_set_epi32(0x154A411E, 0x114E451A, 0x0F505B04, 0x0B545F00);
                     const __m128i k_dipt2 = _mm_set_epi32(0x12771772, 0xF491F194, 0x86E383E6, 0x60056500);
 
@@ -319,13 +322,13 @@ namespace nil {
                         const __m128i *keys = reinterpret_cast<const __m128i *>(encryption_key.data());
 
                         using namespace nil::crypto3::detail;
-//                        poison(plaintext.data(), policy_type::block_bytes);
+                        //                        poison(plaintext.data(), policy_type::block_bytes);
 
                         __m128i B = _mm_loadu_si128(in_mm);
                         _mm_storeu_si128(out_mm, detail::aes_ssse3_encrypt(B, keys, policy_type::rounds));
 
-//                        unpoison(plaintext.data(), policy_type::block_bytes);
-//                        unpoison(out.data(), policy_type::block_bytes);
+                        //                        unpoison(plaintext.data(), policy_type::block_bytes);
+                        //                        unpoison(out.data(), policy_type::block_bytes);
 
                         return out;
                     }
@@ -340,13 +343,13 @@ namespace nil {
                         const __m128i *keys = reinterpret_cast<const __m128i *>(decryption_key.data());
 
                         using namespace nil::crypto3::detail;
-//                        poison(plaintext.data(), policy_type::block_bytes);
+                        //                        poison(plaintext.data(), policy_type::block_bytes);
 
                         __m128i B = _mm_loadu_si128(in_mm);
                         _mm_storeu_si128(out_mm, detail::aes_ssse3_decrypt(B, keys, policy_type::rounds));
 
-//                        unpoison(plaintext.data(), policy_type::block_bytes);
-//                        unpoison(out.data(), policy_type::block_bytes);
+                        //                        unpoison(plaintext.data(), policy_type::block_bytes);
+                        //                        unpoison(out.data(), policy_type::block_bytes);
 
                         return out;
                     }
@@ -377,7 +380,6 @@ namespace nil {
                         key = detail::aes_schedule_transform(key, detail::k_ipt1, detail::k_ipt2);
 
                         _mm_storeu_si128(encryption_key_mm, key);
-
 
                         for (size_t i = 1; i != policy_type::rounds; ++i) {
                             key = detail::aes_schedule_round(&rcon, key, key);
@@ -426,7 +428,6 @@ namespace nil {
 
                         // key2 with 8 high bytes masked off
                         __m128i t = _mm_slli_si128(_mm_srli_si128(key2, 8), 8);
-
 
                         for (size_t i = 0; i != 4; ++i) {
                             key2 = detail::aes_schedule_round(&rcon, key2, key1);
@@ -496,7 +497,6 @@ namespace nil {
 
                         _mm_storeu_si128(decryption_key_mm + 13, detail::aes_schedule_mangle_dec(key2, 1));
 
-
                         for (size_t i = 2; i != 14; i += 2) {
                             __m128i k_t = key2;
                             key1 = key2 = detail::aes_schedule_round(&rcon, key2, key1);
@@ -522,8 +522,8 @@ namespace nil {
                  * @endcond
                  */
             }    // namespace detail
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_SSSE3_RIJNDAEL_IMPL_HPP

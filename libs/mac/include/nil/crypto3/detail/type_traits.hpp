@@ -299,7 +299,7 @@ namespace nil {
             };
 
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_TYPE_TRAITS_HPP

@@ -54,13 +54,11 @@ namespace nil {
                             field_element<TTypeBase, typename NonLinearTerm::assignment_type>,
                             // std::vector<VariableType> vars
                             nil::marshalling::types::standard_array_list<
-                                TTypeBase, typename variable<TTypeBase, typename NonLinearTerm::variable_type>::type>
-                            >
-                        >;
+                                TTypeBase, typename variable<TTypeBase, typename NonLinearTerm::variable_type>::type>>>;
                 };
 
                 template<typename Endianness, typename NonLinearTerm>
-                    typename term<nil::marshalling::field_type<Endianness>, NonLinearTerm>::type
+                typename term<nil::marshalling::field_type<Endianness>, NonLinearTerm>::type
                     fill_term(const NonLinearTerm &t) {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
@@ -69,8 +67,8 @@ namespace nil {
                         field_element<TTypeBase, typename NonLinearTerm::assignment_type>;
                     using variable_marshalling_type =
                         typename variable<TTypeBase, typename NonLinearTerm::variable_type>::type;
-                    using variable_vector_marshalling_type = nil::marshalling::types::standard_array_list<
-                        TTypeBase, variable_marshalling_type>;
+                    using variable_vector_marshalling_type =
+                        nil::marshalling::types::standard_array_list<TTypeBase, variable_marshalling_type>;
 
                     variable_vector_marshalling_type filled_vars;
                     for (const auto &var : t.get_vars()) {
@@ -83,8 +81,7 @@ namespace nil {
 
                 template<typename Endianness, typename NonLinearTerm>
                 NonLinearTerm make_term(
-                    const typename term<nil::marshalling::field_type<Endianness>, NonLinearTerm>::type &filled_term)
-                {
+                    const typename term<nil::marshalling::field_type<Endianness>, NonLinearTerm>::type &filled_term) {
                     std::vector<typename NonLinearTerm::variable_type> vars;
                     auto coeff = std::get<0>(filled_term.value()).value();
                     vars.reserve(std::get<1>(filled_term.value()).value().size());
@@ -95,8 +92,8 @@ namespace nil {
                     return NonLinearTerm(vars, coeff);
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MARSHALLING_ZK_MATH_TERM_HPP

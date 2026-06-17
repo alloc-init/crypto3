@@ -41,17 +41,21 @@ namespace nil {
                 using result_type = Integer;
 
                 // Default constructor with range [0, 1]
-                constexpr ct_uniform_int_distribution(Integer min_val = 0, Integer max_val = 1)
-                        : min_(min_val), max_(max_val) {
+                constexpr ct_uniform_int_distribution(Integer min_val = 0, Integer max_val = 1) :
+                    min_(min_val), max_(max_val) {
                     if (min_ > max_) {
                         throw std::invalid_argument("Minimum value cannot be greater than maximum value.");
                     }
                 }
 
                 // Accessors for the range
-                constexpr Integer min() const { return min_; }
+                constexpr Integer min() const {
+                    return min_;
+                }
 
-                constexpr Integer max() const { return max_; }
+                constexpr Integer max() const {
+                    return max_;
+                }
 
                 // Main distribution function to generate a number in the range [min, max]
                 template<typename UniformRandomBitGenerator>
@@ -68,7 +72,8 @@ namespace nil {
             struct ct_lcg {
                 using result_type = Integer;
 
-                constexpr ct_lcg(result_type seed = 0) : state(seed) {}
+                constexpr ct_lcg(result_type seed = 0) : state(seed) {
+                }
 
                 // Returns the minimum value
                 static constexpr result_type min() {
@@ -105,7 +110,7 @@ namespace nil {
                 }
             };
         }    // namespace random
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_RANDOM_ALGEBRAIC_RANDOM_DEVICE_HPP

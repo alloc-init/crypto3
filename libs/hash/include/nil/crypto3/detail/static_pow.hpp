@@ -45,7 +45,7 @@ namespace nil {
                 return result;
             }
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // #ifndef CRYPTO3_DETAIL_STATIC_POW_HPP

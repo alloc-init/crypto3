@@ -42,8 +42,7 @@ namespace nil {
                     struct short_weierstrass_element_g1_projective_with_a4_minus_3_add_1998_cmo_2 {
 
                         template<typename ElementType>
-                        constexpr static inline void process(ElementType &first,
-                                                                    const ElementType &second) {
+                        constexpr static inline void process(ElementType &first, const ElementType &second) {
 
                             using field_value_type = typename ElementType::field_type::value_type;
 
@@ -58,16 +57,15 @@ namespace nil {
                             const field_value_type R = vv * X1Z2;                        // R    = vv*X1Z2
                             const field_value_type A = uu * Z1Z2 - (vvv + R + R);        // A    = uu*Z1Z2 - vvv - 2*R
 
-                            first.X = v * A;                           // X3   = v*A
-                            first.Y = u * (R - A) - vvv * Y1Z2;        // Y3   = u*(R-A) - vvv*Y1Z2
-                            first.Z = vvv * Z1Z2;                      // Z3   = vvv*Z1Z2
-
+                            first.X = v * A;                       // X3   = v*A
+                            first.Y = u * (R - A) - vvv * Y1Z2;    // Y3   = u*(R-A) - vvv*Y1Z2
+                            first.Z = vvv * Z1Z2;                  // Z3   = vvv*Z1Z2
                         }
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_PROJECTIVE_WITH_A4_MINUS_3_ADD_1998_CMO_2_HPP

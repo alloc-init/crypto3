@@ -49,10 +49,10 @@ namespace nil {
             // TODO: replace pack with marshalling
             template<typename HashType, typename ResultType>
             struct hash<HashType,
-                    ResultType,
-                    typename std::enable_if<algebra::is_field<typename ResultType::field_type>::value &&
-                                            !algebra::is_extended_field<typename ResultType::field_type>::value &&
-                                            (ResultType::field_type::value_bits <= HashType::digest_bits)>::type> {
+                        ResultType,
+                        typename std::enable_if<algebra::is_field<typename ResultType::field_type>::value &&
+                                                !algebra::is_extended_field<typename ResultType::field_type>::value &&
+                                                (ResultType::field_type::value_bits <= HashType::digest_bits)>::type> {
                 typedef HashType hash_type;
                 typedef ResultType result_type;
                 typedef std::uint64_t input_type;
@@ -95,14 +95,14 @@ namespace nil {
                     typename result_type::field_type::integral_type result;
                     do {
                         ::nil::crypto3::detail::pack_to<stream_endian::big_byte_big_bit, sizeof(input_type) * 8, 8>(
-                                std::vector<input_type>{
-                                        state,
-                                        iter,
-                                },
-                                seed_bytes.begin());
+                            std::vector<input_type> {
+                                state,
+                                iter,
+                            },
+                            seed_bytes.begin());
                         res = ::nil::crypto3::hash<hash_type>(seed_bytes);
                         ::boost::multiprecision::import_bits(
-                                result, res.begin(), res.begin() + bincode::modulus_chunks, 8, false);
+                            result, res.begin(), res.begin() + bincode::modulus_chunks, 8, false);
 
                         ++iter;
                     } while (result >= result_type::field_type::modulus);
@@ -152,7 +152,7 @@ namespace nil {
                 return is;
             }
         }    // namespace random
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_RANDOM_HASH_BASED_ALGEBRAIC_ENGINE_HPP

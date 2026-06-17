@@ -49,11 +49,11 @@ namespace nil {
             };
 
             template<unsigned DigestBits, BOOST_CRC_PARM_TYPE TruncPoly = 0u, BOOST_CRC_PARM_TYPE InitRem = 0u,
-                    BOOST_CRC_PARM_TYPE FinalXor = 0u, bool ReflectIn = false, bool ReflectRem = false>
+                     BOOST_CRC_PARM_TYPE FinalXor = 0u, bool ReflectIn = false, bool ReflectRem = false>
             class crc_construction {
             public:
                 typedef boost::crc_optimal<DigestBits, TruncPoly, InitRem, FinalXor, ReflectIn, ReflectRem>
-                        crc_computer;
+                    crc_computer;
                 constexpr static const std::size_t digest_bits = DigestBits;
                 typedef static_digest<digest_bits> digest_type;
 
@@ -83,7 +83,7 @@ namespace nil {
                     auto x = crc_.checksum();
                     digest_type d;
                     pack_n<stream_endian::big_octet_big_bit, stream_endian::big_octet_big_bit, digest_bits, octet_bits>(
-                            &x, 1, d.begin());
+                        &x, 1, d.begin());
                     return d;
                 }
 
@@ -109,7 +109,7 @@ namespace nil {
              * @tparam ReflectRem
              */
             template<std::size_t DigestBits, BOOST_CRC_PARM_TYPE TruncPoly = 0u, BOOST_CRC_PARM_TYPE InitRem = 0u,
-                    BOOST_CRC_PARM_TYPE FinalXor = 0u, bool ReflectIn = false, bool ReflectRem = false>
+                     BOOST_CRC_PARM_TYPE FinalXor = 0u, bool ReflectIn = false, bool ReflectRem = false>
             class crc {
             public:
                 using policy_type = crc_policy;
@@ -118,7 +118,7 @@ namespace nil {
                     struct params_type {
                         using digest_endian = typename policy_type::digest_endian;
 
-                        constexpr static const std::size_t length_bits = 64; // unused?
+                        constexpr static const std::size_t length_bits = 64;    // unused?
                         constexpr static const std::size_t digest_bits = DigestBits;
                     };
                     typedef crc_construction<DigestBits, TruncPoly, InitRem, FinalXor, ReflectIn, ReflectRem> type;
@@ -128,14 +128,15 @@ namespace nil {
                 typedef typename construction::type::digest_type digest_type;
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::block;
-                using accumulator_tag = accumulators::tag::hash<crc<DigestBits, TruncPoly, InitRem, FinalXor, ReflectIn, ReflectRem>>;
+                using accumulator_tag =
+                    accumulators::tag::hash<crc<DigestBits, TruncPoly, InitRem, FinalXor, ReflectIn, ReflectRem>>;
             };
 
             // http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html#CRC-algorithm
             typedef crc<32, 0x04C11DB7, 0xFFFFFFFF, 0xFFFFFFFF, true, true> crc32_png;
 
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_CRC_HPP

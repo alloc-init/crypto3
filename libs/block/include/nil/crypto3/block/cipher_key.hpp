@@ -79,7 +79,7 @@ namespace nil {
                 key_type key;
             };
         }    // namespace block
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_CIPHER_KEY_HPP

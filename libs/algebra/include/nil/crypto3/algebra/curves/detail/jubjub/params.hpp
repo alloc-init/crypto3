@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/curves/forms.hpp>
 #include <nil/crypto3/algebra/curves/detail/jubjub/types.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -44,15 +42,17 @@ namespace nil {
                         // Twisted Edwards representation:
                         // a x^2 + y^2 = 1 + d x^2 y^2
                         // Constants a (-1) and d (-10240/10241)
-                        constexpr static const typename jubjub_types::base_field_type::value_type
-                            a = base_field_type::modulus - 1;
-                        constexpr static const typename jubjub_types::base_field_type::value_type
-                            d = - base_field_type::value_type(10240) / base_field_type::value_type(10241);
+                        constexpr static const typename jubjub_types::base_field_type::value_type a =
+                            base_field_type::modulus - 1;
+                        constexpr static const typename jubjub_types::base_field_type::value_type d =
+                            -base_field_type::value_type(10240) / base_field_type::value_type(10241);
                         static constexpr std::size_t cofactor = 8;
                     };
 
-                    constexpr typename jubjub_types::base_field_type::value_type const jubjub_params<forms::twisted_edwards>::a;
-                    constexpr typename jubjub_types::base_field_type::value_type const jubjub_params<forms::twisted_edwards>::d;
+                    constexpr typename jubjub_types::base_field_type::value_type const
+                        jubjub_params<forms::twisted_edwards>::a;
+                    constexpr typename jubjub_types::base_field_type::value_type const
+                        jubjub_params<forms::twisted_edwards>::d;
 
                     template<>
                     struct jubjub_params<forms::montgomery> {
@@ -65,15 +65,17 @@ namespace nil {
                         // constants A and B
                         // A = 2 (a + d) / (a - d)
                         // B = 4 / (a - d)
-                        constexpr static const typename jubjub_types::base_field_type::value_type
-                            A = 0xA002_cppui_modular255;
-                        constexpr static const typename jubjub_types::base_field_type::value_type
-                            B = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfefffffffeffff5ffd_cppui_modular255;
+                        constexpr static const typename jubjub_types::base_field_type::value_type A =
+                            0xA002_cppui_modular255;
+                        constexpr static const typename jubjub_types::base_field_type::value_type B =
+                            0x73eda753299d7d483339d80809a1d80553bda402fffe5bfefffffffeffff5ffd_cppui_modular255;
                         static constexpr std::size_t cofactor = 8;
                     };
 
-                    constexpr typename jubjub_types::base_field_type::value_type const jubjub_params<forms::montgomery>::A;
-                    constexpr typename jubjub_types::base_field_type::value_type const jubjub_params<forms::montgomery>::B;
+                    constexpr
+                        typename jubjub_types::base_field_type::value_type const jubjub_params<forms::montgomery>::A;
+                    constexpr
+                        typename jubjub_types::base_field_type::value_type const jubjub_params<forms::montgomery>::B;
 
                     template<>
                     struct jubjub_g1_params<forms::twisted_edwards> : public jubjub_params<forms::twisted_edwards> {
@@ -126,9 +128,9 @@ namespace nil {
                     constexpr std::array<typename jubjub_g1_params<forms::montgomery>::base_field_type::value_type,
                                          2> const jubjub_g1_params<forms::montgomery>::one_fill;
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_JUBJUB_PARAMS_HPP

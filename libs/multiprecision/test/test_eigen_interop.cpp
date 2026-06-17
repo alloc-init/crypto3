@@ -26,10 +26,10 @@ namespace Eigen {
         typedef double Literal;
         typedef self_type Nested;
         enum {
-            IsComplex = boost::multiprecision::number_category<self_type>::value ==
-                        boost::multiprecision::number_kind_complex,
-            IsInteger = boost::multiprecision::number_category<self_type>::value ==
-                        boost::multiprecision::number_kind_integer,
+            IsComplex =
+                boost::multiprecision::number_category<self_type>::value == boost::multiprecision::number_kind_complex,
+            IsInteger =
+                boost::multiprecision::number_category<self_type>::value == boost::multiprecision::number_kind_integer,
             ReadCost = 1,
             AddCost = 4,
             MulCost = 8,
@@ -64,22 +64,22 @@ namespace Eigen {
         }
     };
 
-#define BOOST_MP_EIGEN_SCALAR_TRAITS_DECL(A)                                                                       \
-    template<class Backend, boost::multiprecision::expression_template_option ExpressionTemplates,          \
-             typename BinaryOp>                                                                                    \
-    struct ScalarBinaryOpTraits<boost::multiprecision::number<Backend, ExpressionTemplates>, A, BinaryOp> { \
-        static_assert(boost::multiprecision::is_compatible_arithmetic_type<                                 \
-                          A, boost::multiprecision::number<Backend, ExpressionTemplates>>::value,           \
-                      "Interoperability with this arithmetic type is not supported.");                             \
-        typedef boost::multiprecision::number<Backend, ExpressionTemplates> ReturnType;                     \
-    };                                                                                                             \
-    template<class Backend, boost::multiprecision::expression_template_option ExpressionTemplates,          \
-             typename BinaryOp>                                                                                    \
-    struct ScalarBinaryOpTraits<A, boost::multiprecision::number<Backend, ExpressionTemplates>, BinaryOp> { \
-        static_assert(boost::multiprecision::is_compatible_arithmetic_type<                                 \
-                          A, boost::multiprecision::number<Backend, ExpressionTemplates>>::value,           \
-                      "Interoperability with this arithmetic type is not supported.");                             \
-        typedef boost::multiprecision::number<Backend, ExpressionTemplates> ReturnType;                     \
+#define BOOST_MP_EIGEN_SCALAR_TRAITS_DECL(A)                                                                          \
+    template<class Backend, boost::multiprecision::expression_template_option ExpressionTemplates, typename BinaryOp> \
+    struct ScalarBinaryOpTraits<boost::multiprecision::number<Backend, ExpressionTemplates>, A, BinaryOp> {           \
+        static_assert(boost::multiprecision::is_compatible_arithmetic_type<                                           \
+                          A,                                                                                          \
+                          boost::multiprecision::number<Backend, ExpressionTemplates>>::value,                        \
+                      "Interoperability with this arithmetic type is not supported.");                                \
+        typedef boost::multiprecision::number<Backend, ExpressionTemplates> ReturnType;                               \
+    };                                                                                                                \
+    template<class Backend, boost::multiprecision::expression_template_option ExpressionTemplates, typename BinaryOp> \
+    struct ScalarBinaryOpTraits<A, boost::multiprecision::number<Backend, ExpressionTemplates>, BinaryOp> {           \
+        static_assert(boost::multiprecision::is_compatible_arithmetic_type<                                           \
+                          A,                                                                                          \
+                          boost::multiprecision::number<Backend, ExpressionTemplates>>::value,                        \
+                      "Interoperability with this arithmetic type is not supported.");                                \
+        typedef boost::multiprecision::number<Backend, ExpressionTemplates> ReturnType;                               \
     };
 
     BOOST_MP_EIGEN_SCALAR_TRAITS_DECL(float)
@@ -123,28 +123,39 @@ namespace Eigen {
       typedef boost::multiprecision::number<Backend, ExpressionTemplates> ReturnType;
    };
 #endif
-    template<class Backend, boost::multiprecision::expression_template_option ExpressionTemplates, class tag,
-             class Arg1, class Arg2, class Arg3, class Arg4, typename BinaryOp>
+    template<class Backend,
+             boost::multiprecision::expression_template_option ExpressionTemplates,
+             class tag,
+             class Arg1,
+             class Arg2,
+             class Arg3,
+             class Arg4,
+             typename BinaryOp>
     struct ScalarBinaryOpTraits<boost::multiprecision::number<Backend, ExpressionTemplates>,
                                 boost::multiprecision::detail::expression<tag, Arg1, Arg2, Arg3, Arg4>,
                                 BinaryOp> {
-        static_assert(
-            boost::is_convertible<
-                typename boost::multiprecision::detail::expression<tag, Arg1, Arg2, Arg3, Arg4>::result_type,
-                boost::multiprecision::number<Backend, ExpressionTemplates>>::value,
-            "Interoperability with this arithmetic type is not supported.");
+        static_assert(boost::is_convertible<
+                          typename boost::multiprecision::detail::expression<tag, Arg1, Arg2, Arg3, Arg4>::result_type,
+                          boost::multiprecision::number<Backend, ExpressionTemplates>>::value,
+                      "Interoperability with this arithmetic type is not supported.");
         typedef boost::multiprecision::number<Backend, ExpressionTemplates> ReturnType;
     };
 
-    template<class tag, class Arg1, class Arg2, class Arg3, class Arg4, class Backend,
-             boost::multiprecision::expression_template_option ExpressionTemplates, typename BinaryOp>
+    template<class tag,
+             class Arg1,
+             class Arg2,
+             class Arg3,
+             class Arg4,
+             class Backend,
+             boost::multiprecision::expression_template_option ExpressionTemplates,
+             typename BinaryOp>
     struct ScalarBinaryOpTraits<boost::multiprecision::detail::expression<tag, Arg1, Arg2, Arg3, Arg4>,
-                                boost::multiprecision::number<Backend, ExpressionTemplates>, BinaryOp> {
-        static_assert(
-            boost::is_convertible<
-                typename boost::multiprecision::detail::expression<tag, Arg1, Arg2, Arg3, Arg4>::result_type,
-                boost::multiprecision::number<Backend, ExpressionTemplates>>::value,
-            "Interoperability with this arithmetic type is not supported.");
+                                boost::multiprecision::number<Backend, ExpressionTemplates>,
+                                BinaryOp> {
+        static_assert(boost::is_convertible<
+                          typename boost::multiprecision::detail::expression<tag, Arg1, Arg2, Arg3, Arg4>::result_type,
+                          boost::multiprecision::number<Backend, ExpressionTemplates>>::value,
+                      "Interoperability with this arithmetic type is not supported.");
         typedef boost::multiprecision::number<Backend, ExpressionTemplates> ReturnType;
     };
 
@@ -218,9 +229,11 @@ void example2() {
     std::cout << "RelatedType^2 * v =\n" << r * r * v << std::endl;
 
     static_assert(
-        boost::is_same<typename Eigen::ScalarBinaryOpTraits<
-                           Num, related_type, Eigen::internal::scalar_product_op<Num, related_type>>::ReturnType,
-                       Num>::value,
+        boost::is_same<
+            typename Eigen::ScalarBinaryOpTraits<Num,
+                                                 related_type,
+                                                 Eigen::internal::scalar_product_op<Num, related_type>>::ReturnType,
+            Num>::value,
         "Incorrect type.");
 }
 

@@ -46,9 +46,9 @@ namespace nil {
                     struct xyz { };
 
                 }    // namespace coordinates
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_ALGEBRA_CURVES_JACOBI_QUATRICS_COORDINATES_REPRESENTATIONS_HPP

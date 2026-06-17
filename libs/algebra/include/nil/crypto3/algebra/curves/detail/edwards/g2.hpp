@@ -58,8 +58,8 @@ namespace nil {
                         using value_type = element_edwards_g2<Version>;
                     };
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_EDWARDS_G2_HPP

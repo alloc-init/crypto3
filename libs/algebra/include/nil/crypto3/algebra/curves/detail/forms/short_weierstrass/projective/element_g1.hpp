@@ -56,7 +56,6 @@ namespace nil {
                     template<typename CurveParams>
                     class curve_element<CurveParams, forms::short_weierstrass, coordinates::projective> {
                     public:
-
                         using params_type = CurveParams;
                         using field_type = typename params_type::field_type;
 
@@ -85,20 +84,22 @@ namespace nil {
                         constexpr curve_element() :
                             curve_element(params_type::zero_fill[0],
                                           params_type::zero_fill[1],
-                                          field_value_type::zero()) {}
+                                          field_value_type::zero()) {
+                        }
 
                         /** @brief
                          *    @return the selected point (X:Y:Z)
                          *
                          */
-                        constexpr curve_element(const field_value_type& X, const field_value_type& Y, const field_value_type& Z = field_value_type::one())
-                            : X(X), Y(Y), Z(Z)
-                        { } 
+                        constexpr curve_element(const field_value_type &X, const field_value_type &Y,
+                                                const field_value_type &Z = field_value_type::one()) :
+                            X(X), Y(Y), Z(Z) {
+                        }
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
                         explicit constexpr curve_element(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                            const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                         }
 
@@ -199,13 +200,14 @@ namespace nil {
                             return result_type(X * Z.inversed(), Y * Z.inversed());    //  x=X/Z, y=Y/Z
                         }
 
-                        static curve_element from_affine(curve_element<params_type, form, curves::coordinates::affine> const &other) {
+                        static curve_element
+                            from_affine(curve_element<params_type, form, curves::coordinates::affine> const &other) {
                             return curve_element(other.X, other.Y, field_value_type::one());
                         }
 
                         /*************************  Arithmetic operations  ***********************************/
 
-                        constexpr curve_element& operator=(const curve_element &other) {
+                        constexpr curve_element &operator=(const curve_element &other) {
                             // handle special cases having to do with O
                             this->X = other.X;
                             this->Y = other.Y;
@@ -216,8 +218,8 @@ namespace nil {
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                        constexpr const curve_element &
+                            operator=(const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                             return *this;
                         }
@@ -242,7 +244,7 @@ namespace nil {
                             return result;
                         }
 
-                        constexpr curve_element& operator+=(const curve_element &other) {
+                        constexpr curve_element &operator+=(const curve_element &other) {
                             // handle special cases having to do with O
                             if (this->is_zero()) {
                                 *this = other;
@@ -264,7 +266,7 @@ namespace nil {
                             return (*this) + (-other);
                         }
 
-                        constexpr curve_element& operator-=(const curve_element &other) {
+                        constexpr curve_element &operator-=(const curve_element &other) {
                             return (*this) += (-other);
                         }
 
@@ -313,29 +315,29 @@ namespace nil {
                                 return;
                             }
 
-                            const field_value_type u = Y2Z1 - this->Y;                  // u = Y2*Z1-Y1
-                            const field_value_type uu = u.squared();                    // uu = u2
-                            const field_value_type v = X2Z1 - this->X;                  // v = X2*Z1-X1
-                            const field_value_type vv = v.squared();                    // vv = v2
-                            const field_value_type vvv = v * vv;                        // vvv = v*vv
-                            const field_value_type R = vv * this->X;                    // R = vv*X1
-                            const field_value_type A = uu * this->Z - vvv - R - R;      // A = uu*Z1-vvv-2*R
-                            X = v * A;                          // X3 = v*A
-                            Y = u * (R - A) - vvv * this->Y;    // Y3 = u*(R-A)-vvv*Y1
-                            Z = vvv * this->Z;                  // Z3 = vvv*Z1
-
+                            const field_value_type u = Y2Z1 - this->Y;                // u = Y2*Z1-Y1
+                            const field_value_type uu = u.squared();                  // uu = u2
+                            const field_value_type v = X2Z1 - this->X;                // v = X2*Z1-X1
+                            const field_value_type vv = v.squared();                  // vv = v2
+                            const field_value_type vvv = v * vv;                      // vvv = v*vv
+                            const field_value_type R = vv * this->X;                  // R = vv*X1
+                            const field_value_type A = uu * this->Z - vvv - R - R;    // A = uu*Z1-vvv-2*R
+                            X = v * A;                                                // X3 = v*A
+                            Y = u * (R - A) - vvv * this->Y;                          // Y3 = u*(R-A)-vvv*Y1
+                            Z = vvv * this->Z;                                        // Z3 = vvv*Z1
                         }
                     };
 
                     template<typename CurveParams>
-                    std::ostream& operator<<(std::ostream& os,
-                            const curve_element<CurveParams, forms::short_weierstrass, coordinates::projective>& e) {
+                    std::ostream &operator<<(
+                        std::ostream &os,
+                        const curve_element<CurveParams, forms::short_weierstrass, coordinates::projective> &e) {
                         os << "{\"X\":" << e.X << ",\"Y\":" << e.Y << ",\"Z\":" << e.Z << "}";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_PROJECTIVE_HPP

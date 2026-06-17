@@ -66,7 +66,8 @@ namespace nil {
                  * @brief Constructs base encoder preprocessor
                  * @param leading_zeros Leading zeros amount to be processed
                  */
-                base_encode_preprocessor(std::size_t leading_zeros = 0) : leading_zeros(leading_zeros) {}
+                base_encode_preprocessor(std::size_t leading_zeros = 0) : leading_zeros(leading_zeros) {
+                }
 
                 template<typename T>
                 void operator()(const T &block) {
@@ -126,10 +127,12 @@ namespace nil {
             struct base_encode_preprocessor<Version, detail::static_range<!(Version % 32)>> {
                 typedef detail::base_policy<Version> policy_type;
 
-                base_encode_preprocessor()  {}
+                base_encode_preprocessor() {
+                }
 
                 template<typename T>
-                void operator()(T &t) {}
+                void operator()(T &t) {
+                }
             };
 
             /*!
@@ -177,7 +180,8 @@ namespace nil {
                  * @brief
                  * @param leading_zeros
                  */
-                base_decode_preprocessor(std::size_t leading_zeros = 0) : leading_zeros(leading_zeros) {}
+                base_decode_preprocessor(std::size_t leading_zeros = 0) : leading_zeros(leading_zeros) {
+                }
 
                 template<typename T>
                 void operator()(const T &block) {
@@ -195,10 +199,12 @@ namespace nil {
             struct base_decode_preprocessor<Version, detail::static_range<!(Version % 32)>> {
                 typedef detail::base_policy<Version> policy_type;
 
-                base_decode_preprocessor() { }
+                base_decode_preprocessor() {
+                }
 
                 template<typename T>
-                void operator()(T &t) { }
+                void operator()(T &t) {
+                }
             };
 
             /*!
@@ -257,7 +263,8 @@ namespace nil {
                 template<typename T>
                 void operator()(T &t) {
                     int new_size = t.size();
-                    for (typename T::iterator out = t.end() - 1; *out == '\0'; --out, --new_size) {}
+                    for (typename T::iterator out = t.end() - 1; *out == '\0'; --out, --new_size) {
+                    }
                     t.resize(new_size);
                 }
 
@@ -419,7 +426,7 @@ namespace nil {
              */
             typedef base<64> base64;
         }    // namespace codec
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

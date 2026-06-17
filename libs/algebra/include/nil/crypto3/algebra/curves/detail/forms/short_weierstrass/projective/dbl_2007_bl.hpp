@@ -48,22 +48,22 @@ namespace nil {
                             if (!first.is_zero()) {
 
                                 // XX  = X1^2
-                                field_value_type XX (first.X);
+                                field_value_type XX(first.X);
                                 XX.square_inplace();
 
                                 // ZZ  = Z1^2
-                                field_value_type ZZ (first.Z);
+                                field_value_type ZZ(first.Z);
                                 ZZ.square_inplace();
 
                                 // w   = a*ZZ + 3*XX
-                                field_value_type w (ZZ);
+                                field_value_type w(ZZ);
                                 w *= field_value_type(ElementType::params_type::a);
                                 w += XX;
                                 w += XX;
                                 w += XX;
 
                                 // s   = 2*Y1*Z1
-                                field_value_type s (first.Y);
+                                field_value_type s(first.Y);
                                 s *= first.Z;
                                 s.double_inplace();
 
@@ -75,7 +75,7 @@ namespace nil {
                                 first.Z *= s;
 
                                 // R   = Y1*s
-                                field_value_type R (first.Y);
+                                field_value_type R(first.Y);
                                 R *= s;
 
                                 // RR  = R^2
@@ -83,14 +83,14 @@ namespace nil {
                                 RR.square_inplace();
 
                                 // B   = (X1+R)^2 - XX - RR
-                                field_value_type B (first.X);
+                                field_value_type B(first.X);
                                 B += R;
                                 B.square_inplace();
                                 B -= XX;
                                 B -= RR;
 
                                 // h   = w^2 - 2*B
-                                field_value_type h (w);
+                                field_value_type h(w);
                                 h.square_inplace();
                                 h -= B;
                                 h -= B;
@@ -111,8 +111,8 @@ namespace nil {
                         }
                     };
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_PROJECTIVE_DBL_2007_BL_HPP

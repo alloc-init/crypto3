@@ -101,13 +101,13 @@ namespace nil {
                 }
 
                 template<typename PublicShares>
-                public_secret_sss(const PublicShares &public_shares, const indexes_type &indexes) : base_type(
-                    public_shares, indexes) {
+                public_secret_sss(const PublicShares &public_shares, const indexes_type &indexes) :
+                    base_type(public_shares, indexes) {
                 }
 
                 template<typename PublicShareIt>
-                public_secret_sss(PublicShareIt first, PublicShareIt last, const indexes_type &indexes) : base_type(
-                    first, last, indexes) {
+                public_secret_sss(PublicShareIt first, PublicShareIt last, const indexes_type &indexes) :
+                    base_type(first, last, indexes) {
                 }
             };
 
@@ -203,7 +203,7 @@ namespace nil {
 
             template<typename GroupType>
             struct reconstruct_public_secret_op<pedersen_dkg<GroupType>>
-                    : public reconstruct_public_secret_op<shamir_sss<GroupType>> {
+                : public reconstruct_public_secret_op<shamir_sss<GroupType>> {
                 typedef reconstruct_public_secret_op<shamir_sss<GroupType>> base_type;
                 typedef pedersen_dkg<GroupType> scheme_type;
                 typedef public_share_sss<scheme_type> public_share_type;
@@ -225,8 +225,8 @@ namespace nil {
             };
 
             template<typename GroupType>
-            struct reconstruct_secret_op<pedersen_dkg<
-                        GroupType>> : public reconstruct_secret_op<shamir_sss<GroupType>> {
+            struct reconstruct_secret_op<pedersen_dkg<GroupType>>
+                : public reconstruct_secret_op<shamir_sss<GroupType>> {
                 typedef reconstruct_secret_op<shamir_sss<GroupType>> base_type;
                 typedef pedersen_dkg<GroupType> scheme_type;
                 typedef share_sss<scheme_type> share_type;
@@ -246,8 +246,8 @@ namespace nil {
                     return base_type::template _process<result_type>(acc);
                 }
             };
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_PEDERSEN_DKG_HPP

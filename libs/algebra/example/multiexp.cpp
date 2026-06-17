@@ -42,8 +42,7 @@
 using namespace nil::crypto3::algebra;
 
 template<typename curve_group_type>
-bool example_multiexp()
-{
+bool example_multiexp() {
 
     using point = typename curve_group_type::value_type;
     using scalar = typename curve_group_type::params_type::scalar_field_type;
@@ -53,25 +52,22 @@ bool example_multiexp()
     std::vector<point> points(N);
     std::vector<typename scalar::value_type> scalars(N);
 
-    for(auto & p: points) {
+    for (auto &p : points) {
         p = random_element<curve_group_type>();
     }
 
-    for(auto & s: scalars) {
+    for (auto &s : scalars) {
         s = random_element<scalar>();
     }
 
-    point naive_result = policies::multiexp_method_naive_plain::process(
-            points.begin(), points.end(),
-            scalars.begin(), scalars.end());
+    point naive_result =
+        policies::multiexp_method_naive_plain::process(points.begin(), points.end(), scalars.begin(), scalars.end());
 
-    point bdlo12_result = policies::multiexp_method_BDLO12::process(
-            points.begin(), points.end(),
-            scalars.begin(), scalars.end());
+    point bdlo12_result =
+        policies::multiexp_method_BDLO12::process(points.begin(), points.end(), scalars.begin(), scalars.end());
 
-    point bos_coster_result = policies::multiexp_method_bos_coster::process(
-            points.begin(), points.end(),
-            scalars.begin(), scalars.end());
+    point bos_coster_result =
+        policies::multiexp_method_bos_coster::process(points.begin(), points.end(), scalars.begin(), scalars.end());
 
     return (naive_result == bdlo12_result) && (naive_result == bos_coster_result);
 }

@@ -46,11 +46,11 @@ namespace nil {
 
             template<typename SchemeType>
             using verification_processing_mode_default =
-                    typename modes::isomorphic<SchemeType>::template bind<verification_policy<SchemeType>>::type;
+                typename modes::isomorphic<SchemeType>::template bind<verification_policy<SchemeType>>::type;
 
             template<typename SchemeType>
             using pop_verification_processing_mode_default =
-                    typename modes::isomorphic<SchemeType>::template bind<pop_verification_policy<SchemeType>>::type;
+                typename modes::isomorphic<SchemeType>::template bind<pop_verification_policy<SchemeType>>::type;
         }    // namespace pubkey
 
         /*!
@@ -72,10 +72,11 @@ namespace nil {
          *
          * @return \p SchemeImpl
          */
-        template<typename SchemeType, typename ProcessingMode = pubkey::pop_verification_processing_mode_default<SchemeType>,
-                typename VerificationAccumulator = pubkey::verification_accumulator_set<ProcessingMode>,
-                typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<VerificationAccumulator>,
-                typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
+        template<typename SchemeType,
+                 typename ProcessingMode = pubkey::pop_verification_processing_mode_default<SchemeType>,
+                 typename VerificationAccumulator = pubkey::verification_accumulator_set<ProcessingMode>,
+                 typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<VerificationAccumulator>,
+                 typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
         SchemeImpl verify(const typename pubkey::public_key<SchemeType>::signature_type &proof,
                           const pubkey::public_key<SchemeType> &key) {
             return SchemeImpl(VerificationAccumulator(key, accumulators::signature = proof));
@@ -104,10 +105,10 @@ namespace nil {
          * @return \p SchemeImpl
          */
         template<typename SchemeType, typename InputIterator,
-                typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>,
-                typename VerificationAccumulator = pubkey::verification_accumulator_set<ProcessingMode>,
-                typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<VerificationAccumulator>,
-                typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
+                 typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>,
+                 typename VerificationAccumulator = pubkey::verification_accumulator_set<ProcessingMode>,
+                 typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<VerificationAccumulator>,
+                 typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
         SchemeImpl verify(InputIterator first, InputIterator last,
                           const typename pubkey::public_key<SchemeType>::signature_type &signature,
                           const pubkey::public_key<SchemeType> &key) {
@@ -136,10 +137,10 @@ namespace nil {
          * @return \p SchemeImpl
          */
         template<typename SchemeType, typename SinglePassRange,
-                typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>,
-                typename VerificationAccumulator = pubkey::verification_accumulator_set<ProcessingMode>,
-                typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<VerificationAccumulator>,
-                typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
+                 typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>,
+                 typename VerificationAccumulator = pubkey::verification_accumulator_set<ProcessingMode>,
+                 typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<VerificationAccumulator>,
+                 typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
         SchemeImpl verify(const SinglePassRange &range,
                           const typename pubkey::public_key<SchemeType>::signature_type &signature,
                           const pubkey::public_key<SchemeType> &key) {
@@ -165,11 +166,11 @@ namespace nil {
          * @return \p OutputAccumulator
          */
         template<typename SchemeType, typename InputIterator,
-                typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>,
-                typename OutputAccumulator = pubkey::verification_accumulator_set<ProcessingMode>>
+                 typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>,
+                 typename OutputAccumulator = pubkey::verification_accumulator_set<ProcessingMode>>
         typename std::enable_if<boost::accumulators::detail::is_accumulator_set<OutputAccumulator>::value,
-                OutputAccumulator>::type &
-        verify(InputIterator first, InputIterator last, OutputAccumulator &acc) {
+                                OutputAccumulator>::type &
+            verify(InputIterator first, InputIterator last, OutputAccumulator &acc) {
             typedef pubkey::detail::ref_pubkey_impl<OutputAccumulator> StreamSchemeImpl;
             typedef pubkey::detail::range_pubkey_impl<StreamSchemeImpl> SchemeImpl;
 
@@ -194,11 +195,11 @@ namespace nil {
          * @return \p OutputAccumulator
          */
         template<typename SchemeType, typename SinglePassRange,
-                typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>,
-                typename OutputAccumulator = pubkey::verification_accumulator_set<ProcessingMode>>
+                 typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>,
+                 typename OutputAccumulator = pubkey::verification_accumulator_set<ProcessingMode>>
         typename std::enable_if<boost::accumulators::detail::is_accumulator_set<OutputAccumulator>::value,
-                OutputAccumulator>::type &
-        verify(const SinglePassRange &range, OutputAccumulator &acc) {
+                                OutputAccumulator>::type &
+            verify(const SinglePassRange &range, OutputAccumulator &acc) {
             typedef pubkey::detail::ref_pubkey_impl<OutputAccumulator> StreamSchemeImpl;
             typedef pubkey::detail::range_pubkey_impl<StreamSchemeImpl> SchemeImpl;
 
@@ -225,7 +226,7 @@ namespace nil {
          * @return \p OutputIterator
          */
         template<typename SchemeType, typename InputIterator, typename OutputIterator,
-                typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>>
+                 typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>>
         OutputIterator verify(InputIterator first, InputIterator last,
                               const typename pubkey::public_key<SchemeType>::signature_type &signature,
                               const pubkey::public_key<SchemeType> &key, OutputIterator out) {
@@ -257,7 +258,7 @@ namespace nil {
          * @return \p OutputIterator
          */
         template<typename SchemeType, typename SinglePassRange, typename OutputIterator,
-                typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>>
+                 typename ProcessingMode = pubkey::verification_processing_mode_default<SchemeType>>
         OutputIterator verify(const SinglePassRange &range,
                               const typename pubkey::public_key<SchemeType>::signature_type &signature,
                               const pubkey::public_key<SchemeType> &key, OutputIterator out) {

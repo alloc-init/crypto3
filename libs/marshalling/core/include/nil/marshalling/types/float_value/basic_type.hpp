@@ -46,8 +46,7 @@ namespace nil {
                 public:
                     using value_type = T;
 
-                    using serialized_type =
-                        typename processing::size_to_type<sizeof(value_type), false>::type;
+                    using serialized_type = typename processing::size_to_type<sizeof(value_type), false>::type;
 
                     using scaling_ratio_type = std::ratio<1, 1>;
 
@@ -110,8 +109,7 @@ namespace nil {
 
                     template<typename TIter>
                     void read_no_status(TIter &iter) {
-                        serialized_type serializedValue = 
-                            base_impl_type::template read_data<serialized_type>(iter);
+                        serialized_type serializedValue = base_impl_type::template read_data<serialized_type>(iter);
                         value_ = from_serialized(serializedValue);
                     }
 
@@ -140,7 +138,7 @@ namespace nil {
                 };
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BASIC_FLOAT_VALUE_HPP

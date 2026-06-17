@@ -48,9 +48,9 @@
 namespace nil {
     namespace crypto3 {
         namespace math {
-            //size_t __global_from_coefficients_counter_test = 0;
-            //size_t __global_coefficients_counter_test = 0;
-            // Optimal val.size must be power of two, if it's not true we have points that we will never use
+            // size_t __global_from_coefficients_counter_test = 0;
+            // size_t __global_coefficients_counter_test = 0;
+            //  Optimal val.size must be power of two, if it's not true we have points that we will never use
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
             class polynomial_dfs {
                 typedef std::vector<FieldValueType, Allocator> container_type;
@@ -79,35 +79,40 @@ namespace nil {
                 }
 
                 explicit polynomial_dfs(size_t d, size_type n) : val(n, FieldValueType::zero()), _d(d) {
-                    BOOST_ASSERT_MSG(n == detail::power_of_two(n), "DFS optimal polynomial size must be a power of two");
+                    BOOST_ASSERT_MSG(n == detail::power_of_two(n),
+                                     "DFS optimal polynomial size must be a power of two");
                 }
 
-                explicit polynomial_dfs(size_t d, size_type n, const allocator_type& a) : val(n, FieldValueType::zero(), a), _d(d) {
-                    BOOST_ASSERT_MSG(n == detail::power_of_two(n), "DFS optimal polynomial size must be a power of two");
+                explicit polynomial_dfs(size_t d, size_type n, const allocator_type& a) :
+                    val(n, FieldValueType::zero(), a), _d(d) {
+                    BOOST_ASSERT_MSG(n == detail::power_of_two(n),
+                                     "DFS optimal polynomial size must be a power of two");
                 }
 
                 polynomial_dfs(size_t d, size_type n, const value_type& x) : val(n, x), _d(d) {
-                    BOOST_ASSERT_MSG(n == detail::power_of_two(n), "DFS optimal polynomial size must be a power of two");
+                    BOOST_ASSERT_MSG(n == detail::power_of_two(n),
+                                     "DFS optimal polynomial size must be a power of two");
                 }
 
                 polynomial_dfs(size_t d, size_type n, const value_type& x, const allocator_type& a) :
                     val(n, x, a), _d(d) {
-                    BOOST_ASSERT_MSG(n == detail::power_of_two(n), "DFS optimal polynomial size must be a power of two");
+                    BOOST_ASSERT_MSG(n == detail::power_of_two(n),
+                                     "DFS optimal polynomial size must be a power of two");
                 }
 
                 template<typename InputIterator>
                 polynomial_dfs(size_t d, InputIterator first, InputIterator last) : val(first, last), _d(d) {
-                    BOOST_ASSERT_MSG(
-                        std::size_t(std::distance(first, last)) == detail::power_of_two(std::distance(first, last)),
-                        "DFS optimal polynomial size must be a power of two");
+                    BOOST_ASSERT_MSG(std::size_t(std::distance(first, last)) ==
+                                         detail::power_of_two(std::distance(first, last)),
+                                     "DFS optimal polynomial size must be a power of two");
                 }
 
                 template<typename InputIterator>
                 polynomial_dfs(size_t d, InputIterator first, InputIterator last, const allocator_type& a) :
                     val(first, last, a), _d(d) {
-                    BOOST_ASSERT_MSG(
-                        std::size_t(std::distance(first, last)) == detail::power_of_two(std::distance(first, last)),
-                        "DFS optimal polynomial size must be a power of two");
+                    BOOST_ASSERT_MSG(std::size_t(std::distance(first, last)) ==
+                                         detail::power_of_two(std::distance(first, last)),
+                                     "DFS optimal polynomial size must be a power of two");
                 }
 
                 polynomial_dfs(const polynomial_dfs& x) : val(x.val), _d(x._d) {
@@ -134,11 +139,10 @@ namespace nil {
                 }
 
                 template<typename SmallFieldValueType, std::size_t dimension>
-                    requires std::constructible_from<
-                        FieldValueType, std::array<SmallFieldValueType, dimension>>
-                static polynomial_dfs extension_from_coefficients(
-                    std::array<polynomial_dfs<SmallFieldValueType>*, dimension>
-                        coefficients) {
+                    requires std::constructible_from<FieldValueType, std::array<SmallFieldValueType, dimension>>
+                static polynomial_dfs
+                    extension_from_coefficients(std::array<polynomial_dfs<SmallFieldValueType>*, dimension>
+                                                    coefficients) {
                     polynomial_dfs result(coefficients[0]->degree(), coefficients[0]->size());
                     for (std::size_t i = 0; i < result.size(); ++i) {
                         std::array<SmallFieldValueType, dimension> element;
@@ -150,9 +154,7 @@ namespace nil {
                     return result;
                 }
 
-                static polynomial_dfs extension_from_coefficients(
-                    std::array<polynomial_dfs*, 1>
-                        coefficients) {
+                static polynomial_dfs extension_from_coefficients(std::array<polynomial_dfs*, 1> coefficients) {
                     polynomial_dfs result(std::move(*coefficients[0]));
                     return result;
                 }
@@ -160,14 +162,11 @@ namespace nil {
                 // TODO: add constructor with omega
 
                 polynomial_dfs(polynomial_dfs&& x)
-                    BOOST_NOEXCEPT(std::is_nothrow_move_constructible<allocator_type>::value)
-                    : val(std::move(x.val))
-                    , _d(x._d) {
+                    BOOST_NOEXCEPT(std::is_nothrow_move_constructible<allocator_type>::value) :
+                    val(std::move(x.val)), _d(x._d) {
                 }
 
-                polynomial_dfs(polynomial_dfs&& x, const allocator_type& a)
-                    : val(std::move(x.val), a)
-                    , _d(x._d) {
+                polynomial_dfs(polynomial_dfs&& x, const allocator_type& a) : val(std::move(x.val), a), _d(x._d) {
                 }
 
                 polynomial_dfs(size_t d, const container_type& c) : val(c), _d(d) {
@@ -369,19 +368,17 @@ namespace nil {
                     val.clear();
                 }
 
-                void resize(
-                    size_type _sz,
-                    // Default constructor creates a zero polynomial of degree 0 and
-                    // size 1.
-                    std::shared_ptr<evaluation_domain<typename value_type::field_type>>
-                        old_domain = nullptr,
-                    std::shared_ptr<evaluation_domain<typename value_type::field_type>>
-                        new_domain = nullptr) {
-                    if (this->size() == _sz)
-                    {
+                void resize(size_type _sz,
+                            // Default constructor creates a zero polynomial of degree 0 and
+                            // size 1.
+                            std::shared_ptr<evaluation_domain<typename value_type::field_type>> old_domain = nullptr,
+                            std::shared_ptr<evaluation_domain<typename value_type::field_type>> new_domain = nullptr) {
+                    if (this->size() == _sz) {
                         return;
                     }
-                    BOOST_ASSERT_MSG(_sz >= _d, "Resizing DFS polynomial to a size less than degree is prohibited: can't restore the polynomial in the future.");
+                    BOOST_ASSERT_MSG(_sz >= _d,
+                                     "Resizing DFS polynomial to a size less than degree is prohibited: can't restore "
+                                     "the polynomial in the future.");
 
                     if (this->degree() == 0) {
                         // Here we cannot write this->val.resize(_sz, this->val[0]), it will segfault.
@@ -392,14 +389,16 @@ namespace nil {
                         if (old_domain == nullptr) {
                             old_domain = make_evaluation_domain<FieldType>(this->size());
                         } else {
-                            BOOST_ASSERT_MSG(old_domain->size() == this->size(), "Old domain size is not equal to the polynomial size");
+                            BOOST_ASSERT_MSG(old_domain->size() == this->size(),
+                                             "Old domain size is not equal to the polynomial size");
                         }
                         old_domain->inverse_fft(this->val);
                         this->val.resize(_sz, FieldValueType::zero());
                         if (new_domain == nullptr) {
                             new_domain = make_evaluation_domain<FieldType>(_sz);
                         } else {
-                            BOOST_ASSERT_MSG(new_domain->size() == _sz, "New domain size is not equal to the polynomial size");
+                            BOOST_ASSERT_MSG(new_domain->size() == _sz,
+                                             "New domain size is not equal to the polynomial size");
                         }
                         new_domain->fft(this->val);
                     }
@@ -411,8 +410,7 @@ namespace nil {
                 }
 
                 template<typename EvaluationFieldValueType>
-                EvaluationFieldValueType evaluate(
-                    const EvaluationFieldValueType& value) const {
+                EvaluationFieldValueType evaluate(const EvaluationFieldValueType& value) const {
                     std::vector<FieldValueType> tmp = this->coefficients();
                     auto result = EvaluationFieldValueType::zero();
                     auto end = tmp.end();
@@ -427,7 +425,7 @@ namespace nil {
                  * Returns true if polynomial is a zero polynomial.
                  */
                 bool is_zero() const {
-                    for (const auto& v: val) {
+                    for (const auto& v : val) {
                         if (v != FieldValueType::zero())
                             return false;
                     }
@@ -438,7 +436,7 @@ namespace nil {
                  * Returns true if polynomial is a one polynomial.
                  */
                 bool is_one() const {
-                    for (const auto& v: val) {
+                    for (const auto& v : val) {
                         if (v != FieldValueType::one())
                             return false;
                     }
@@ -494,12 +492,12 @@ namespace nil {
                         tmp.resize(this->size());
 
                         in_place_parallel_transform(this->begin(), this->end(), tmp.begin(),
-                            [](FieldValueType& v1, const FieldValueType& v2){v1+=v2;});
+                                                    [](FieldValueType& v1, const FieldValueType& v2) { v1 += v2; });
                         return *this;
                     }
 
                     in_place_parallel_transform(this->begin(), this->end(), other.begin(),
-                            [](FieldValueType& v1, const FieldValueType& v2){v1+=v2;});
+                                                [](FieldValueType& v1, const FieldValueType& v2) { v1 += v2; });
 
                     return *this;
                 }
@@ -509,9 +507,7 @@ namespace nil {
                  * and stores result in polynomial A.
                  */
                 polynomial_dfs& operator+=(const FieldValueType& c) {
-                    parallel_for(0, this->size(), [this, &c](std::size_t i) {
-                        this->val[i] += c;
-                    });
+                    parallel_for(0, this->size(), [this, &c](std::size_t i) { this->val[i] += c; });
 
                     return *this;
                 }
@@ -557,13 +553,13 @@ namespace nil {
                         tmp.resize(this->size());
 
                         in_place_parallel_transform(this->begin(), this->end(), tmp.begin(),
-                            [](FieldValueType& v1, const FieldValueType& v2){v1-=v2;});
+                                                    [](FieldValueType& v1, const FieldValueType& v2) { v1 -= v2; });
 
                         return *this;
                     }
 
                     in_place_parallel_transform(this->begin(), this->end(), other.begin(),
-                            [](FieldValueType& v1, const FieldValueType& v2){v1-=v2;});
+                                                [](FieldValueType& v1, const FieldValueType& v2) { v1 -= v2; });
                     return *this;
                 }
 
@@ -572,9 +568,7 @@ namespace nil {
                  * and stores result in polynomial A.
                  */
                 polynomial_dfs& operator-=(const FieldValueType& c) {
-                    parallel_for(0, this->size(), [this, &c](std::size_t i) {
-                        this->val[i] -= c;
-                    });
+                    parallel_for(0, this->size(), [this, &c](std::size_t i) { this->val[i] -= c; });
 
                     return *this;
                 }
@@ -606,13 +600,13 @@ namespace nil {
                  * Performs multiplication of two polynomials, but with domain caches
                  */
                 polynomial_dfs& cached_multiplication(
-                        const polynomial_dfs& other,
-                        std::shared_ptr<evaluation_domain<typename value_type::field_type>> domain = nullptr,
-                        std::shared_ptr<evaluation_domain<typename value_type::field_type>> other_domain = nullptr,
-                        std::shared_ptr<evaluation_domain<typename value_type::field_type>> new_domain = nullptr) {
+                    const polynomial_dfs& other,
+                    std::shared_ptr<evaluation_domain<typename value_type::field_type>> domain = nullptr,
+                    std::shared_ptr<evaluation_domain<typename value_type::field_type>> other_domain = nullptr,
+                    std::shared_ptr<evaluation_domain<typename value_type::field_type>> new_domain = nullptr) {
 
-                    const size_t polynomial_s =
-                        detail::power_of_two(std::max({this->size(), other.size(), this->degree() + other.degree() + 1}));
+                    const size_t polynomial_s = detail::power_of_two(
+                        std::max({this->size(), other.size(), this->degree() + other.degree() + 1}));
 
                     if (this->size() < polynomial_s) {
                         this->resize(polynomial_s, domain, new_domain);
@@ -627,12 +621,12 @@ namespace nil {
                         tmp.resize(polynomial_s, other_domain, new_domain);
 
                         in_place_parallel_transform(this->begin(), this->end(), tmp.begin(),
-                            [](FieldValueType& v1, const FieldValueType& v2){v1*=v2;});
+                                                    [](FieldValueType& v1, const FieldValueType& v2) { v1 *= v2; });
                         return *this;
                     }
 
                     in_place_parallel_transform(this->begin(), this->end(), other.begin(),
-                            [](FieldValueType& v1, const FieldValueType& v2){v1*=v2;});
+                                                [](FieldValueType& v1, const FieldValueType& v2) { v1 *= v2; });
 
                     return *this;
                 }
@@ -642,9 +636,7 @@ namespace nil {
                  * and stores result in polynomial A.
                  */
                 polynomial_dfs& operator*=(const FieldValueType& c) {
-                    parallel_for(0, this->size(), [this, &c](std::size_t i) {
-                        this->val[i] *= c;
-                    });
+                    parallel_for(0, this->size(), [this, &c](std::size_t i) { this->val[i] *= c; });
                     return *this;
                 }
 
@@ -689,7 +681,8 @@ namespace nil {
                 }
 
                 /* Inverses the values in polynomial using Montgomery trick.
-                 * Calls inverse on a group element just once, so it's much faster than inverting each element separately.
+                 * Calls inverse on a group element just once, so it's much faster than inverting each element
+                 * separately.
                  */
                 void element_wise_inverse() {
                     // Divide the vector of size "this->val.size()" into chunks and inverse each chunk.
@@ -702,7 +695,8 @@ namespace nil {
                                 result[i] = result[i - 1] * this->val[i - 1];
                             }
                             FieldValueType inv = (result[range_end - 1] * this->val[range_end - 1]).inversed();
-                            // Suddenly we need to convert range_begin to int, otherwise it's being compared incorrectly.
+                            // Suddenly we need to convert range_begin to int, otherwise it's being compared
+                            // incorrectly.
                             for (int i = range_end - 1; i >= (int)range_begin; --i) {
                                 result[i] *= inv;
                                 inv *= this->val[i];
@@ -710,12 +704,14 @@ namespace nil {
                             for (size_t i = range_begin; i < range_end; i++) {
                                 this->val[i] = result[i];
                             }
-                        }, thread_pool::pool_level::LOW));
+                        },
+                        thread_pool::pool_level::LOW));
                 }
 
                 template<typename ContainerType>
-                void from_coefficients(const ContainerType &tmp,
-                        std::shared_ptr<evaluation_domain<typename value_type::field_type>> domain = nullptr) {
+                void from_coefficients(
+                    const ContainerType& tmp,
+                    std::shared_ptr<evaluation_domain<typename value_type::field_type>> domain = nullptr) {
                     typedef typename value_type::field_type FieldType;
                     size_t n = detail::power_of_two(tmp.size());
                     _d = tmp.size() - 1;
@@ -731,7 +727,7 @@ namespace nil {
                 }
 
                 std::vector<FieldValueType> coefficients(
-                        std::shared_ptr<evaluation_domain<typename value_type::field_type>> domain = nullptr) const {
+                    std::shared_ptr<evaluation_domain<typename value_type::field_type>> domain = nullptr) const {
                     typedef typename value_type::field_type FieldType;
                     value_type omega = unity_root<FieldType>(this->size());
                     std::vector<FieldValueType> tmp(this->begin(), this->end());
@@ -740,8 +736,7 @@ namespace nil {
                         detail::basic_radix2_fft<FieldType>(tmp, omega.inversed());
                         const value_type sconst = value_type(this->size()).inversed();
                         parallel_transform(tmp.begin(), tmp.end(), tmp.begin(),
-                                           std::bind(std::multiplies<value_type>(),
-                                                     sconst, std::placeholders::_1));
+                                           std::bind(std::multiplies<value_type>(), sconst, std::placeholders::_1));
                     } else {
                         domain->inverse_fft(tmp);
                     }
@@ -761,8 +756,7 @@ namespace nil {
                         return result;
                     }
 
-                    size_t expected_size = detail::power_of_two(
-                        std::max({this->size(), this->degree() * power + 1}));
+                    size_t expected_size = detail::power_of_two(std::max({this->size(), this->degree() * power + 1}));
                     result.resize(expected_size);
                     result._d = _d * power;
 
@@ -772,15 +766,14 @@ namespace nil {
 
                     return result;
                 }
-
             };
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
                      typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
             polynomial_dfs<FieldValueType, Allocator> operator+(const polynomial_dfs<FieldValueType, Allocator>& A,
-                                                            const FieldValueType& B) {
+                                                                const FieldValueType& B) {
                 polynomial_dfs<FieldValueType> result(A);
-                for( auto it = result.begin(); it != result.end(); it++ ){
+                for (auto it = result.begin(); it != result.end(); it++) {
                     *it += B;
                 }
                 return result;
@@ -789,22 +782,21 @@ namespace nil {
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
                      typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
             polynomial_dfs<FieldValueType, Allocator> operator+(const FieldValueType& A,
-                                                            const polynomial_dfs<FieldValueType, Allocator>& B) {
+                                                                const polynomial_dfs<FieldValueType, Allocator>& B) {
                 polynomial_dfs<FieldValueType> result(B);
-                for( auto it = result.begin(); it != result.end(); it++ ){
+                for (auto it = result.begin(); it != result.end(); it++) {
                     *it += A;
                 }
                 return result;
             }
 
-
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
                      typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
             polynomial_dfs<FieldValueType, Allocator> operator-(const polynomial_dfs<FieldValueType, Allocator>& A,
-                                                            const FieldValueType& B) {
+                                                                const FieldValueType& B) {
                 polynomial_dfs<FieldValueType> result(A);
-                for( auto it = result.begin(); it != result.end(); it++ ){
-                    *it -=  B;
+                for (auto it = result.begin(); it != result.end(); it++) {
+                    *it -= B;
                 }
                 return result;
             }
@@ -812,9 +804,9 @@ namespace nil {
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
                      typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
             polynomial_dfs<FieldValueType, Allocator> operator-(const FieldValueType& A,
-                                                            const polynomial_dfs<FieldValueType, Allocator>& B) {
+                                                                const polynomial_dfs<FieldValueType, Allocator>& B) {
                 polynomial_dfs<FieldValueType> result(B);
-                for( auto it = result.begin(); it != result.end(); it++ ){
+                for (auto it = result.begin(); it != result.end(); it++) {
                     *it = A - *it;
                 }
                 return result;
@@ -823,20 +815,18 @@ namespace nil {
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
                      typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
             polynomial_dfs<FieldValueType, Allocator> operator*(const polynomial_dfs<FieldValueType, Allocator>& A,
-                                                            const FieldValueType& B) {
+                                                                const FieldValueType& B) {
 
                 polynomial_dfs<FieldValueType> result(A);
-                parallel_foreach(result.begin(), result.end(),
-                    [&B](FieldValueType& v) {
-                        v *= B;
-                    }, thread_pool::pool_level::LOW);
+                parallel_foreach(
+                    result.begin(), result.end(), [&B](FieldValueType& v) { v *= B; }, thread_pool::pool_level::LOW);
                 return result;
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
                      typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
             polynomial_dfs<FieldValueType, Allocator> operator*(const FieldValueType& A,
-                                                            const polynomial_dfs<FieldValueType, Allocator>& B) {
+                                                                const polynomial_dfs<FieldValueType, Allocator>& B) {
                 // Call the upper function.
                 return B * A;
             }
@@ -844,13 +834,12 @@ namespace nil {
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
                      typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
             polynomial_dfs<FieldValueType, Allocator> operator/(const polynomial_dfs<FieldValueType, Allocator>& A,
-                                                            const FieldValueType& B) {
+                                                                const FieldValueType& B) {
                 polynomial_dfs<FieldValueType> result(A);
                 FieldValueType B_inversed = B.inversed();
-                parallel_foreach(result.begin(), result.end(),
-                    [&B_inversed](FieldValueType& v) {
-                        v *= B_inversed;
-                    }, thread_pool::pool_level::LOW);
+                parallel_foreach(
+                    result.begin(), result.end(), [&B_inversed](FieldValueType& v) { v *= B_inversed; },
+                    thread_pool::pool_level::LOW);
 
                 return result;
             }
@@ -858,7 +847,7 @@ namespace nil {
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
                      typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
             polynomial_dfs<FieldValueType, Allocator> operator/(const FieldValueType& A,
-                                                            const polynomial_dfs<FieldValueType, Allocator>& B) {
+                                                                const polynomial_dfs<FieldValueType, Allocator>& B) {
 
                 return polynomial_dfs<FieldValueType>(0, B.size(), A) / B;
             }
@@ -867,14 +856,12 @@ namespace nil {
             // the values of polynomials, when the check fails.
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
                      typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
-            std::ostream& operator<<(std::ostream& os,
-                                     const polynomial_dfs<FieldValueType, Allocator>& poly) {
+            std::ostream& operator<<(std::ostream& os, const polynomial_dfs<FieldValueType, Allocator>& poly) {
                 if (poly.degree() == 0) {
                     // If all it contains is a constant, print the constant, so it's more readable.
                     os << std::hex << std::showbase << *poly.begin() << std::dec;
                 } else {
-                    os << "[Polynomial DFS, size " << poly.size()
-                       << " degree " << poly.degree() << " values "
+                    os << "[Polynomial DFS, size " << poly.size() << " degree " << poly.degree() << " values "
                        << std::hex << std::showbase;
                     for (auto it = poly.begin(); it != poly.end(); ++it) {
                         if (it != poly.begin())
@@ -887,8 +874,8 @@ namespace nil {
             }
 
             template<typename FieldType>
-            polynomial_dfs<typename FieldType::value_type> polynomial_sum(
-                    std::vector<math::polynomial_dfs<typename FieldType::value_type>> addends) {
+            polynomial_dfs<typename FieldType::value_type>
+                polynomial_sum(std::vector<math::polynomial_dfs<typename FieldType::value_type>> addends) {
                 TAGGED_PROFILE_SCOPE("{low level} batch sum", "Polynomial batch sum");
 
                 using FieldValueType = typename FieldType::value_type;
@@ -941,9 +928,12 @@ namespace nil {
 
                 std::vector<polynomial<FieldValueType>> grouped_addends_coefs(grouped_addends.size());
 
-                nil::crypto3::parallel_for(0, grouped_addends.size(), [&grouped_addends_coefs, &grouped_addends] (std::size_t i) {
-                    grouped_addends_coefs[i] = grouped_addends[i].coefficients();
-                }, thread_pool::pool_level::HIGH);
+                nil::crypto3::parallel_for(
+                    0, grouped_addends.size(),
+                    [&grouped_addends_coefs, &grouped_addends](std::size_t i) {
+                        grouped_addends_coefs[i] = grouped_addends[i].coefficients();
+                    },
+                    thread_pool::pool_level::HIGH);
 
                 // We can parallelize this by adding pairwise, like it's done in multiplication, but it's pretty fast
                 // so skipping it for now.
@@ -959,8 +949,8 @@ namespace nil {
             }
 
             template<typename FieldType>
-            polynomial_dfs<typename FieldType::value_type> polynomial_product(
-                    std::vector<math::polynomial_dfs<typename FieldType::value_type>> multipliers) {
+            polynomial_dfs<typename FieldType::value_type>
+                polynomial_product(std::vector<math::polynomial_dfs<typename FieldType::value_type>> multipliers) {
                 PROFILE_SCOPE("Polynomial batch product");
 
                 // Pre-create all the domains. We could do this on-the-go, but we want this function to be more
@@ -986,10 +976,12 @@ namespace nil {
                 }
 
                 // We cannot use LOW level thread pool here, make_evaluation_domain uses it.
-                parallel_foreach(needed_domain_sizes.begin(), needed_domain_sizes.end(),
+                parallel_foreach(
+                    needed_domain_sizes.begin(), needed_domain_sizes.end(),
                     [&domain_cache](std::size_t domain_size) {
                         domain_cache[domain_size] = make_evaluation_domain<FieldType>(domain_size);
-                    }, thread_pool::pool_level::HIGH);
+                    },
+                    thread_pool::pool_level::HIGH);
 
                 for (std::size_t stride = 1; stride < multipliers.size(); stride <<= 1) {
                     const std::size_t double_stride = stride << 1;
@@ -999,42 +991,42 @@ namespace nil {
                         max_i++;
 
                     // We can't use LOW level thread pool here, it's used in cached_multiplication.
-                    parallel_for(0, max_i,
+                    parallel_for(
+                        0, max_i,
                         [&multipliers, &domain_cache, stride, double_stride](std::size_t i) {
                             std::size_t index1 = i * double_stride;
                             std::size_t index2 = index1 + stride;
 
                             const std::size_t current_domain_size = multipliers[index1].size();
                             const std::size_t next_domain_size = multipliers[index2].size();
-                            const std::size_t new_domain_size =
-                                detail::power_of_two(std::max(
-                                    {current_domain_size,
-                                     next_domain_size,
-                                     multipliers[index1].degree() + multipliers[index2].degree() + 1}));
+                            const std::size_t new_domain_size = detail::power_of_two(
+                                std::max({current_domain_size, next_domain_size,
+                                          multipliers[index1].degree() + multipliers[index2].degree() + 1}));
 
-                            multipliers[index1].cached_multiplication(
-                                multipliers[index2],
-                                domain_cache[current_domain_size],
-                                domain_cache[next_domain_size],
-                                domain_cache[new_domain_size]);
+                            multipliers[index1].cached_multiplication(multipliers[index2],
+                                                                      domain_cache[current_domain_size],
+                                                                      domain_cache[next_domain_size],
+                                                                      domain_cache[new_domain_size]);
 
                             // Free the memory we are not going to use anymore.
                             multipliers[index2] = polynomial_dfs<typename FieldType::value_type>();
-                    }, thread_pool::pool_level::HIGH);
+                        },
+                        thread_pool::pool_level::HIGH);
                 }
                 return multipliers[0];
             }
 
             template<typename FieldType>
-            std::vector<math::polynomial<typename FieldType::value_type>> polynomial_batch_to_coefficients(
-                    std::vector<math::polynomial_dfs<typename FieldType::value_type>> polys_dfs,
-                    std::shared_ptr<evaluation_domain<FieldType>> domain) {
-                TAGGED_PROFILE_SCOPE("{low level} FFT",
-                                     "Polynomial batch conversion to coefficients form");
+            std::vector<math::polynomial<typename FieldType::value_type>>
+                polynomial_batch_to_coefficients(std::vector<math::polynomial_dfs<typename FieldType::value_type>>
+                                                     polys_dfs,
+                                                 std::shared_ptr<evaluation_domain<FieldType>>
+                                                     domain) {
+                TAGGED_PROFILE_SCOPE("{low level} FFT", "Polynomial batch conversion to coefficients form");
 
                 std::vector<std::vector<typename FieldType::value_type>> data;
                 data.reserve(polys_dfs.size());
-                for (auto& poly: polys_dfs) {
+                for (auto& poly : polys_dfs) {
                     data.emplace_back(std::move(poly.get_storage()));
                 }
 
@@ -1042,7 +1034,7 @@ namespace nil {
 
                 std::vector<math::polynomial<typename FieldType::value_type>> result;
                 result.reserve(data.size());
-                for (auto& coeffs: data) {
+                for (auto& coeffs : data) {
                     result.emplace_back(std::move(coeffs));
                 }
                 return result;
@@ -1050,9 +1042,10 @@ namespace nil {
 
             /// Converts batch of polynomials to DFS format in the given domain.
             template<typename FieldType>
-            std::vector<math::polynomial_dfs<typename FieldType::value_type>> polynomial_batch_from_coefficients(
-                    std::vector<math::polynomial<typename FieldType::value_type>> polys,
-                    std::shared_ptr<evaluation_domain<FieldType>> domain) {
+            std::vector<math::polynomial_dfs<typename FieldType::value_type>>
+                polynomial_batch_from_coefficients(std::vector<math::polynomial<typename FieldType::value_type>> polys,
+                                                   std::shared_ptr<evaluation_domain<FieldType>>
+                                                       domain) {
                 if (polys.size() == 0)
                     return {};
 
@@ -1062,9 +1055,10 @@ namespace nil {
 
                 std::vector<std::vector<typename FieldType::value_type>> data;
                 data.reserve(polys.size());
-                for (auto& poly: polys) {
+                for (auto& poly : polys) {
                     if (poly.size() != input_size)
-                        throw std::logic_error("Polynomials of different size are not permitted in a batch conversion to DFS format");
+                        throw std::logic_error(
+                            "Polynomials of different size are not permitted in a batch conversion to DFS format");
                     data.emplace_back(std::move(poly.get_storage()));
                 }
 
@@ -1078,20 +1072,18 @@ namespace nil {
                 return result;
             }
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 // As our operator== returns false for polynomials with different sizes, the same will happen here,
 // resized polynomial will have a different hash from the initial one.
 template<typename FieldValueType, typename Allocator>
-struct std::hash<nil::crypto3::math::polynomial_dfs<FieldValueType, Allocator>>
-{
+struct std::hash<nil::crypto3::math::polynomial_dfs<FieldValueType, Allocator>> {
     std::hash<FieldValueType> value_hasher;
 
-    std::size_t operator()(const nil::crypto3::math::polynomial_dfs<FieldValueType, Allocator>& poly) const
-    {
+    std::size_t operator()(const nil::crypto3::math::polynomial_dfs<FieldValueType, Allocator>& poly) const {
         std::size_t result = poly.degree();
-        for (const auto& val: poly) {
+        for (const auto& val : poly) {
             boost::hash_combine(result, value_hasher(val));
         }
         return result;

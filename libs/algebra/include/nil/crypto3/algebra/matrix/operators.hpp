@@ -71,7 +71,8 @@ namespace nil {
                 /** @brief computes the sum of a matrix and a scalar
                  *  @param m an \f$ N \times M \f$ matrix of type T
                  *  @param a a scalar of type T
-                 *  @return \f$ \textbf{m} + a \f$ such that \f$ \left(\textbf{m} + a\right)_{ij} = \textbf{m}_{ij} + a \f$
+                 *  @return \f$ \textbf{m} + a \f$ such that \f$ \left(\textbf{m} + a\right)_{ij} = \textbf{m}_{ij} + a
+                 * \f$
                  *
                  *  Computes the sum of a matrix and a scalar.
                  */
@@ -83,7 +84,8 @@ namespace nil {
                 /** @brief computes the sum of a matrix and a scalar
                  *  @param a a scalar of type T
                  *  @param m an \f$ N \times M \f$ matrix of type T
-                 *  @return \f$ a + \textbf{m} \f$ such that \f$ \left(a + \textbf{m}\right)_{ij} = a + \textbf{m}_{ij} \f$
+                 *  @return \f$ a + \textbf{m} \f$ such that \f$ \left(a + \textbf{m}\right)_{ij} = a + \textbf{m}_{ij}
+                 * \f$
                  *
                  *  Computes the sum of a matrix and a scalar.
                  */
@@ -132,8 +134,8 @@ namespace nil {
                 /** @brief computes the Hadamard product
                  *  @param a an \f$ N \times M \f$ matrix of type T
                  *  @param b an \f$ N \times M \f$ matrix of type T
-                 *  @return \f$ \textbf{a} \circ \textbf{b} \f$ such that \f$ \left(\textbf{a} \circ \textbf{b}\right)_{ij}
-                 * = \textbf{a}_{ij} \textbf{b}_{ij} \f$
+                 *  @return \f$ \textbf{a} \circ \textbf{b} \f$ such that \f$ \left(\textbf{a} \circ
+                 * \textbf{b}\right)_{ij} = \textbf{a}_{ij} \textbf{b}_{ij} \f$
                  *
                  *  Computes the Hadamard, or elementwise, product of two vectors.
                  */
@@ -145,8 +147,8 @@ namespace nil {
                 /** @brief computes the quotient between a matrix and a scalar
                  *  @param m an \f$ N \times M \f$ matrix of type T
                  *  @param a a scalar of type T
-                 *  @return \f$ \textbf{m}/a \f$ such that \f$ \left(\textbf{m}/a\right)_{ij} = \frac{\textbf{m}_{ij}}{a}
-                 * \f$
+                 *  @return \f$ \textbf{m}/a \f$ such that \f$ \left(\textbf{m}/a\right)_{ij} =
+                 * \frac{\textbf{m}_{ij}}{a} \f$
                  *
                  *  Computes division between a matrix and a scalar.
                  */
@@ -171,9 +173,9 @@ namespace nil {
                 }
 
                 /** }@*/
-            }
+            }    // namespace detail
         }    // namespace algebra
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_MATRIX_OPERATORS_HPP

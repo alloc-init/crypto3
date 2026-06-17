@@ -88,7 +88,7 @@ namespace nil {
             CRYPTO3_HASH_DEFINE_LARGEST_PRIME_BY_OFFSET(32, 4);
 
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_DETAIL_PRIMES_HPP

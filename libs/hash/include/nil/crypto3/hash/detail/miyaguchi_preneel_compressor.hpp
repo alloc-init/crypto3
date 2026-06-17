@@ -70,7 +70,7 @@ namespace nil {
                 }
             };
         }    // namespace hash
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MIYAGUCHI_PRENEEL_COMPRESSOR_HPP

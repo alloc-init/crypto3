@@ -1046,7 +1046,7 @@ namespace nil {
             }
 
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_DETAIL_PACK_HPP

@@ -41,8 +41,8 @@ namespace nil {
                     constexpr static const std::size_t value_bits = digest_bits;
                 };
             }    // namespace detail
-        }        // namespace containers
-    }        // namespace crypto3
+        }    // namespace containers
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_NODE_HPP

@@ -23,8 +23,8 @@ namespace boost {
             typedef modular_params<cpp_int_modular_backend<256>> umod_params256_t;
             typedef modular_params<cpp_int_modular_backend<512>> umod_params512_t;
             typedef modular_params<cpp_int_modular_backend<1024>> umod_params1024_t;
-        }
-    }   // namespace multiprecision
-}   // namespace boost
-                    
+        }    // namespace backends
+    }    // namespace multiprecision
+}    // namespace boost
+
 #endif

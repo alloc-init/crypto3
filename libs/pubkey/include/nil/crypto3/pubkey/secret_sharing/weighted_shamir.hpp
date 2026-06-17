@@ -60,9 +60,8 @@ namespace nil {
                 }
 
                 template<typename PartPublicShares>
-                public_share_sss(std::size_t i, std::size_t threshold_number,
-                                 const PartPublicShares &i_public_shares) : public_share_sss(
-                    i, threshold_number, std::cbegin(i_public_shares), std::cend(i_public_shares)) {
+                public_share_sss(std::size_t i, std::size_t threshold_number, const PartPublicShares &i_public_shares) :
+                    public_share_sss(i, threshold_number, std::cbegin(i_public_shares), std::cend(i_public_shares)) {
                 }
 
                 template<typename PartPublicShareIt>
@@ -109,14 +108,14 @@ namespace nil {
                 }
 
                 inline part_public_share_type
-                to_shamir(const typename scheme_type::weights_type &confirmed_weights) const {
+                    to_shamir(const typename scheme_type::weights_type &confirmed_weights) const {
                     auto confirmed_indexes = scheme_type::get_indexes(confirmed_weights, t);
 
                     typename scheme_type::public_element_type part_share = scheme_type::public_element_type::zero();
-                    for (const auto &public_share_j: public_share.second) {
+                    for (const auto &public_share_j : public_share.second) {
                         part_share = part_share +
                                      public_share_j.get_value() *
-                                     scheme_type::eval_basis_poly(confirmed_indexes, public_share_j.get_index());
+                                         scheme_type::eval_basis_poly(confirmed_indexes, public_share_j.get_index());
                     }
 
                     return part_public_share_type(public_share.first, part_share);
@@ -192,7 +191,7 @@ namespace nil {
                 //  0 <= K < t
                 //
                 inline void update(const typename scheme_type::coeff_type &coeff, std::size_t exp) {
-                    for (auto &share_j: share.second) {
+                    for (auto &share_j : share.second) {
                         share_j.update(coeff, exp);
                     }
                 }
@@ -201,9 +200,9 @@ namespace nil {
                     auto confirmed_indexes = scheme_type::get_indexes(confirmed_weights, t);
 
                     typename scheme_type::private_element_type part_share = scheme_type::private_element_type::zero();
-                    for (const auto &share_j: share.second) {
+                    for (const auto &share_j : share.second) {
                         part_share = part_share + share_j.get_value() * scheme_type::eval_basis_poly(
-                                         confirmed_indexes, share_j.get_index());
+                                                                            confirmed_indexes, share_j.get_index());
                     }
 
                     return part_share_type(share.first, part_share);
@@ -231,13 +230,13 @@ namespace nil {
                 }
 
                 template<typename Shares>
-                secret_sss(const Shares &shares, const indexes_type &indexes) : secret_sss(
-                    std::cbegin(shares), std::cend(shares), indexes) {
+                secret_sss(const Shares &shares, const indexes_type &indexes) :
+                    secret_sss(std::cbegin(shares), std::cend(shares), indexes) {
                 }
 
                 template<typename ShareIt>
-                secret_sss(ShareIt first, ShareIt last, const indexes_type &indexes) : secret(
-                    reconstruct_secret(first, last, indexes)) {
+                secret_sss(ShareIt first, ShareIt last, const indexes_type &indexes) :
+                    secret(reconstruct_secret(first, last, indexes)) {
                 }
 
                 inline const value_type &get_value() const {
@@ -252,8 +251,8 @@ namespace nil {
                 template<typename ShareIt,
                          typename std::enable_if<
                              std::is_same<typename std::remove_cv<typename std::remove_reference<
-                                     typename std::iterator_traits<ShareIt>::value_type>::type>::type,
-                                 share_sss<scheme_type>>::value,
+                                              typename std::iterator_traits<ShareIt>::value_type>::type>::type,
+                                          share_sss<scheme_type>>::value,
                              bool>::type = true>
                 static inline secret_type reconstruct_secret(ShareIt first, ShareIt last) {
                     BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<ShareIt>));
@@ -271,8 +270,8 @@ namespace nil {
                 template<typename ShareIt,
                          typename std::enable_if<
                              std::is_same<typename std::remove_cv<typename std::remove_reference<
-                                     typename std::iterator_traits<ShareIt>::value_type>::type>::type,
-                                 typename share_sss<scheme_type>::part_share_type>::value,
+                                              typename std::iterator_traits<ShareIt>::value_type>::type>::type,
+                                          typename share_sss<scheme_type>::part_share_type>::value,
                              bool>::type = true>
                 static inline secret_type reconstruct_secret(ShareIt first, ShareIt last, const indexes_type &indexes) {
                     BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<ShareIt>));
@@ -301,7 +300,7 @@ namespace nil {
                     assert(n == std::distance(std::cbegin(weights), std::cend(weights)));
                     assert(scheme_type::check_threshold_value(t, n));
 
-                    for (const auto &w_i: weights) {
+                    for (const auto &w_i : weights) {
                         acc.emplace_back(w_i.first, w_i.second, t);
                     }
                 }
@@ -338,8 +337,8 @@ namespace nil {
                     return acc;
                 }
             };
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_WEIGHTED_SHAMIR_SSS_HPP

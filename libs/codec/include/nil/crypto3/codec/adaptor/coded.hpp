@@ -57,23 +57,23 @@ namespace nil {
                     return CodecImpl(r, CodecAccumulator());
                 }
             }    // namespace detail
-        }        // namespace codec
+        }    // namespace codec
 
         namespace adaptors {
             namespace {
                 template<typename Codec,
                          typename CodecAccumulator = codec::accumulator_set<typename Codec::stream_encoder_type>>
-                const codec::detail::value_codec_impl<CodecAccumulator>
-                    encoded = codec::detail::value_codec_impl<CodecAccumulator>(CodecAccumulator());
+                const codec::detail::value_codec_impl<CodecAccumulator> encoded =
+                    codec::detail::value_codec_impl<CodecAccumulator>(CodecAccumulator());
             }
             namespace {
                 template<typename Codec,
                          typename CodecAccumulator = codec::accumulator_set<typename Codec::stream_decoder_type>>
-                const codec::detail::value_codec_impl<CodecAccumulator>
-                    decoded = codec::detail::value_codec_impl<CodecAccumulator>(CodecAccumulator());
+                const codec::detail::value_codec_impl<CodecAccumulator> decoded =
+                    codec::detail::value_codec_impl<CodecAccumulator>(CodecAccumulator());
             }
         }    // namespace adaptors
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CODED_HPP

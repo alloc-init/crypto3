@@ -105,7 +105,7 @@ namespace nil {
                 }
             };
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_SSS_BASIC_TYPES_HPP

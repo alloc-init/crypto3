@@ -38,11 +38,11 @@ namespace nil {
         namespace pubkey {
             template<typename SchemeType>
             using single_msg_aggregate_verification_policy =
-                    typename pubkey::modes::isomorphic<SchemeType>::single_msg_aggregate_verification_policy;
+                typename pubkey::modes::isomorphic<SchemeType>::single_msg_aggregate_verification_policy;
 
             template<typename SchemeType>
             using single_msg_aggregate_verification_processing_mode_default = typename modes::isomorphic<
-                    SchemeType>::template bind<single_msg_aggregate_verification_policy<SchemeType>>::type;
+                SchemeType>::template bind<single_msg_aggregate_verification_policy<SchemeType>>::type;
         }    // namespace pubkey
 
         /*!
@@ -71,15 +71,17 @@ namespace nil {
          *
          * @return \p SchemeImpl
          */
-        template<typename SchemeType, typename InputIterator1, typename InputIterator2,
-                typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>,
-                typename AggregateVerificationAccumulator =
+        template<
+            typename SchemeType, typename InputIterator1, typename InputIterator2,
+            typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>,
+            typename AggregateVerificationAccumulator =
                 pubkey::single_msg_aggregate_verification_accumulator_set<ProcessingMode>,
-                typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<AggregateVerificationAccumulator>,
-                typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
-        SchemeImpl aggregate_verify_single_msg(InputIterator1 msg_first, InputIterator1 msg_last,
-                                               InputIterator2 key_first, InputIterator2 key_last,
-                                               const typename pubkey::public_key<SchemeType>::signature_type &signature) {
+            typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<AggregateVerificationAccumulator>,
+            typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
+        SchemeImpl
+            aggregate_verify_single_msg(InputIterator1 msg_first, InputIterator1 msg_last, InputIterator2 key_first,
+                                        InputIterator2 key_last,
+                                        const typename pubkey::public_key<SchemeType>::signature_type &signature) {
             return SchemeImpl(msg_first, msg_last, key_first, key_last, AggregateVerificationAccumulator(signature));
         }
 
@@ -107,15 +109,17 @@ namespace nil {
          *
          * @return \p SchemeImpl
          */
-        template<typename SchemeType, typename SinglePassRange1, typename SinglePassRange2,
-                typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>,
-                typename AggregateVerificationAccumulator =
+        template<
+            typename SchemeType, typename SinglePassRange1, typename SinglePassRange2,
+            typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>,
+            typename AggregateVerificationAccumulator =
                 pubkey::single_msg_aggregate_verification_accumulator_set<ProcessingMode>,
-                typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<AggregateVerificationAccumulator>,
-                typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
-        SchemeImpl aggregate_verify_single_msg(const SinglePassRange1 &msg_rng,
-                                               const SinglePassRange2 &keys_rng,
-                                               const typename pubkey::public_key<SchemeType>::signature_type &signature) {
+            typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<AggregateVerificationAccumulator>,
+            typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
+        SchemeImpl
+            aggregate_verify_single_msg(const SinglePassRange1 &msg_rng,
+                                        const SinglePassRange2 &keys_rng,
+                                        const typename pubkey::public_key<SchemeType>::signature_type &signature) {
             return SchemeImpl(std::cbegin(msg_rng), std::cend(msg_rng), std::cbegin(keys_rng), std::cend(keys_rng),
                               AggregateVerificationAccumulator(signature));
         }
@@ -139,12 +143,13 @@ namespace nil {
          *
          * @return \p OutputAccumulator
          */
-        template<typename SchemeType, typename InputIterator,
-                typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>,
-                typename OutputAccumulator = pubkey::single_msg_aggregate_verification_accumulator_set<ProcessingMode>>
+        template<
+            typename SchemeType, typename InputIterator,
+            typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>,
+            typename OutputAccumulator = pubkey::single_msg_aggregate_verification_accumulator_set<ProcessingMode>>
         typename std::enable_if<boost::accumulators::detail::is_accumulator_set<OutputAccumulator>::value,
-                OutputAccumulator>::type &
-        aggregate_verify_single_msg(InputIterator first, InputIterator last, OutputAccumulator &acc) {
+                                OutputAccumulator>::type &
+            aggregate_verify_single_msg(InputIterator first, InputIterator last, OutputAccumulator &acc) {
             typedef pubkey::detail::ref_pubkey_impl<OutputAccumulator> StreamSchemeImpl;
             typedef pubkey::detail::range_pubkey_impl<StreamSchemeImpl> SchemeImpl;
 
@@ -169,12 +174,13 @@ namespace nil {
          *
          * @return \p OutputAccumulator
          */
-        template<typename SchemeType, typename SinglePassRange,
-                typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>,
-                typename OutputAccumulator = pubkey::single_msg_aggregate_verification_accumulator_set<ProcessingMode>>
+        template<
+            typename SchemeType, typename SinglePassRange,
+            typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>,
+            typename OutputAccumulator = pubkey::single_msg_aggregate_verification_accumulator_set<ProcessingMode>>
         typename std::enable_if<boost::accumulators::detail::is_accumulator_set<OutputAccumulator>::value,
-                OutputAccumulator>::type &
-        aggregate_verify_single_msg(const SinglePassRange &range, OutputAccumulator &acc) {
+                                OutputAccumulator>::type &
+            aggregate_verify_single_msg(const SinglePassRange &range, OutputAccumulator &acc) {
             typedef pubkey::detail::ref_pubkey_impl<OutputAccumulator> StreamSchemeImpl;
             typedef pubkey::detail::range_pubkey_impl<StreamSchemeImpl> SchemeImpl;
 
@@ -204,14 +210,14 @@ namespace nil {
          *
          * @return \p OutputIterator
          */
-        template<typename SchemeType, typename InputIterator1, typename InputIterator2, typename OutputIterator,
-                typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>>
-        OutputIterator aggregate_verify_single_msg(InputIterator1 msg_first, InputIterator1 msg_last,
-                                                   InputIterator2 key_first, InputIterator2 key_last,
-                                                   const typename pubkey::public_key<SchemeType>::signature_type &signature,
-                                                   OutputIterator out) {
+        template<
+            typename SchemeType, typename InputIterator1, typename InputIterator2, typename OutputIterator,
+            typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>>
+        OutputIterator aggregate_verify_single_msg(
+            InputIterator1 msg_first, InputIterator1 msg_last, InputIterator2 key_first, InputIterator2 key_last,
+            const typename pubkey::public_key<SchemeType>::signature_type &signature, OutputIterator out) {
             typedef pubkey::single_msg_aggregate_verification_accumulator_set<ProcessingMode>
-                    AggregateVerificationAccumulator;
+                AggregateVerificationAccumulator;
 
             typedef pubkey::detail::value_pubkey_impl<AggregateVerificationAccumulator> StreamSchemeImpl;
             typedef pubkey::detail::itr_pubkey_impl<StreamSchemeImpl, OutputIterator> SchemeImpl;
@@ -241,13 +247,15 @@ namespace nil {
          *
          * @return \p OutputIterator
          */
-        template<typename SchemeType, typename SinglePassRange1, typename SinglePassRange2, typename OutputIterator,
-                typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>>
-        OutputIterator aggregate_verify_single_msg(const SinglePassRange1 &msg_rng, const SinglePassRange2 &keys_rng,
-                                                   const typename pubkey::public_key<SchemeType>::signature_type &signature,
-                                                   OutputIterator out) {
+        template<
+            typename SchemeType, typename SinglePassRange1, typename SinglePassRange2, typename OutputIterator,
+            typename ProcessingMode = pubkey::single_msg_aggregate_verification_processing_mode_default<SchemeType>>
+        OutputIterator
+            aggregate_verify_single_msg(const SinglePassRange1 &msg_rng, const SinglePassRange2 &keys_rng,
+                                        const typename pubkey::public_key<SchemeType>::signature_type &signature,
+                                        OutputIterator out) {
             typedef pubkey::single_msg_aggregate_verification_accumulator_set<ProcessingMode>
-                    AggregateVerificationAccumulator;
+                AggregateVerificationAccumulator;
 
             typedef pubkey::detail::value_pubkey_impl<AggregateVerificationAccumulator> StreamSchemeImpl;
             typedef pubkey::detail::itr_pubkey_impl<StreamSchemeImpl, OutputIterator> SchemeImpl;

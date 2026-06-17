@@ -29,14 +29,11 @@
 #include <nil/crypto3/algebra/curves/forms.hpp>
 #include <nil/crypto3/algebra/curves/detail/pallas/types.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
             namespace curves {
                 namespace detail {
-                 
 
                     /**
                      * @brief https://zips.z.cash/protocol/protocol.pdf#pallasandvesta
@@ -47,23 +44,24 @@ namespace nil {
                         using scalar_field_type = typename pallas_types::scalar_field_type;
 #ifdef __ZKLLVM__
 #else
-                        constexpr static typename pallas_types::integral_type a = typename pallas_types::integral_type(0)  ; ///< coefficient
-                                                                                                             ///< Short
-                                                                                                             ///< Weierstrass
-                                                                                                             ///< curves
-                                                                                                             ///< y^2=x^3+a*x+b
-                        constexpr static typename pallas_types::integral_type b = typename pallas_types::integral_type(5) ;  ///< coefficient
-                                                                                                             ///<  of
-                                                                                                             ///< Short
-                                                                                                             ///< Weierstrass
-                                                                                                             ///< curves
-                                                                                                             ///< y^2=x^^3+a*x+b
+                        constexpr static typename pallas_types::integral_type a =
+                            typename pallas_types::integral_type(0);    ///< coefficient
+                                                                        ///< Short
+                                                                        ///< Weierstrass
+                                                                        ///< curves
+                                                                        ///< y^2=x^3+a*x+b
+                        constexpr static typename pallas_types::integral_type b =
+                            typename pallas_types::integral_type(5);    ///< coefficient
+                                                                        ///<  of
+                                                                        ///< Short
+                                                                        ///< Weierstrass
+                                                                        ///< curves
+                                                                        ///< y^2=x^^3+a*x+b
 #endif
                     };
 
                     template<>
-                    struct pallas_g1_params<forms::short_weierstrass>
-                        : public pallas_params<forms::short_weierstrass> {
+                    struct pallas_g1_params<forms::short_weierstrass> : public pallas_params<forms::short_weierstrass> {
                         using field_type = typename pallas_types::g1_field_type;
 
                         template<typename Coordinates>
@@ -73,19 +71,20 @@ namespace nil {
 #else
 
 #ifdef STANDARD_EC_INF_POINTS_ENABLED
-                        constexpr static std::array<typename field_type::value_type,2> zero_fill = {
+                        constexpr static std::array<typename field_type::value_type, 2> zero_fill = {
                             field_type::value_type::zero(), field_type::value_type::one()};
 #else
-                        constexpr static std::array<typename field_type::value_type,2> zero_fill = {
+                        constexpr static std::array<typename field_type::value_type, 2> zero_fill = {
                             field_type::value_type::zero(), field_type::value_type::zero()};
 #endif
 
                         constexpr static std::array<typename field_type::value_type, 2> one_fill = {
-                            // TODO(martun): This is "modulus - 1". Figure out what are the other commented constants below.
+                            // TODO(martun): This is "modulus - 1". Figure out what are the other commented constants
+                            // below.
                             0x40000000000000000000000000000000224698fc094cf91b992d30ed00000000_cppui_modular255,
-                                //0x7706c37b5a84128a3884a5d71811f1b55da3230ffb17a8ab0b32e48d31a6685c_cppui_modular255),
+                            // 0x7706c37b5a84128a3884a5d71811f1b55da3230ffb17a8ab0b32e48d31a6685c_cppui_modular255),
                             typename field_type::value_type(2u)};
-                                //0x0f60480c7a5c0e1140340adc79d6a2bf0cb57ad049d025dc38d80c77985f0329_cppui_modular255)};
+                        // 0x0f60480c7a5c0e1140340adc79d6a2bf0cb57ad049d025dc38d80c77985f0329_cppui_modular255)};
 #endif
                     };
 
@@ -101,9 +100,9 @@ namespace nil {
 #endif
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_PALLAS_PARAMS_HPP

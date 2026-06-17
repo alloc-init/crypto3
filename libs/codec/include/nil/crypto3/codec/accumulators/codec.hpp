@@ -256,7 +256,7 @@ namespace nil {
                     std::size_t leading_zeros;
                     input_block_type input;
                 };    // namespace impl
-            }         // namespace impl
+            }    // namespace impl
 
             namespace tag {
                 template<typename ProcessingMode>
@@ -293,8 +293,8 @@ namespace nil {
                     return boost::accumulators::extract_result<tag::codec<typename Codec::stream_decoder_type>>(acc);
                 }
             }    // namespace extract
-        }        // namespace accumulators
-    }            // namespace crypto3
+        }    // namespace accumulators
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_CODEC_HPP

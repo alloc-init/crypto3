@@ -13,7 +13,7 @@
 
 #include <nil/crypto3/multiprecision/modular/modular_functions_fixed.hpp>
 
-namespace boost {   
+namespace boost {
     namespace multiprecision {
         namespace backends {
 
@@ -82,7 +82,8 @@ namespace boost {
                 }
 
                 template<unsigned Bits2>
-                BOOST_MP_CXX14_CONSTEXPR void adjust_modular(Backend &result, const cpp_int_modular_backend<Bits2>& input) const {
+                BOOST_MP_CXX14_CONSTEXPR void adjust_modular(Backend &result,
+                                                             const cpp_int_modular_backend<Bits2> &input) const {
                     Backend_doubled_limbs tmp;
                     m_mod_obj.barrett_reduce(tmp, input);
                     if (is_odd_mod) {
@@ -97,11 +98,12 @@ namespace boost {
                     result = tmp;
                 }
 
-                template<unsigned Bits1, unsigned Bits2,
-                    /// input number should fit in result
-                    typename = typename boost::enable_if_c<Bits1 >= Bits2>::type>
-                BOOST_MP_CXX14_CONSTEXPR void adjust_regular(cpp_int_modular_backend<Bits1>& result,
-                                              const cpp_int_modular_backend<Bits2>& input) const {
+                template<unsigned Bits1,
+                         unsigned Bits2,
+                         /// input number should fit in result
+                         typename = typename boost::enable_if_c<Bits1 >= Bits2>::type>
+                BOOST_MP_CXX14_CONSTEXPR void adjust_regular(cpp_int_modular_backend<Bits1> &result,
+                                                             const cpp_int_modular_backend<Bits2> &input) const {
                     result = input;
                     if (is_odd_mod) {
                         m_mod_obj.montgomery_reduce(result);
@@ -125,8 +127,8 @@ namespace boost {
                 template<typename Backend1>
                 BOOST_MP_CXX14_CONSTEXPR void mod_mul(Backend1 &result, const Backend1 &y) const {
                     if (is_odd_mod) {
-                        m_mod_obj.montgomery_mul(result, y,
-                            std::integral_constant<bool, is_trivial_cpp_int_modular<Backend1>::value>());
+                        m_mod_obj.montgomery_mul(
+                            result, y, std::integral_constant<bool, is_trivial_cpp_int_modular<Backend1>::value>());
                     } else {
                         m_mod_obj.regular_mul(result, y);
                     }
@@ -176,8 +178,8 @@ namespace boost {
                 modular_logic m_mod_obj;
                 bool is_odd_mod = false;
             };
-        }  // namespace backends
-    }   // namespace multiprecision
-}   // namespace boost
+        }    // namespace backends
+    }    // namespace multiprecision
+}    // namespace boost
 
 #endif    // CRYPTO3_MULTIPRECISION_MODULAR_PARAMS_FIXED_PRECISION_HPP

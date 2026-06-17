@@ -98,7 +98,7 @@ namespace nil {
                 }
             };
         }    // namespace container
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATION_VECTOR_HPP

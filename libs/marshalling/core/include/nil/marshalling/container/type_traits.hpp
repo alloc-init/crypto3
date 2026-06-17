@@ -61,7 +61,7 @@ namespace nil {
             template<typename T>
             static constexpr bool is_static_string() {
                 return detail::is_static_string<T>::value;
-            }            
+            }
 
             /// @brief Compile time check whether the provided type is a variant of
             ///     @ref nil::marshalling::container::static_vector
@@ -70,8 +70,8 @@ namespace nil {
             static constexpr bool is_static_vector() {
                 return detail::is_static_vector<T>::value;
             }
-        }        // namespace container
-    }        // namespace marshalling
+        }    // namespace container
+    }    // namespace marshalling
 }    // namespace nil
 
 #endif    // MARSHALLING_CONTAINER_TYPE_TRAITS_HPP

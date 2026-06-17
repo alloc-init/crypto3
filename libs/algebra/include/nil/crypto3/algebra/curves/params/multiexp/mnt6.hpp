@@ -148,8 +148,8 @@ namespace nil {
                     multiexp_params<typename mnt6<298>::g2_type<>>::fixed_base_exp_window_table;
 
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_MNT6_MULTIEXP_PARAMS_HPP

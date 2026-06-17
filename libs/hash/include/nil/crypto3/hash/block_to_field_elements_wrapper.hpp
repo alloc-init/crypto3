@@ -114,7 +114,8 @@ namespace nil {
                             field_element_ += uint64_t(*tmp_iter++);
                         }
                         if (tmp_iter == input_container_r_ && Padding) {
-                            std::size_t element_size = sizeof(typename std::iterator_traits<decltype(input_container_l_)>::value_type);
+                            std::size_t element_size =
+                                sizeof(typename std::iterator_traits<decltype(input_container_l_)>::value_type);
                             std::size_t bits_filled = 8 * element_size * std::distance(input_container_l_, tmp_iter);
                             /* This always adds 1 to higher bits without overflow as field element
                              * is filled with one byte less than a modulus width. */
@@ -124,7 +125,9 @@ namespace nil {
                     }
 
                     void advance_container_iter() {
-                        for (std::size_t i = 0; i < container_elements_per_field_element_ && input_container_l_ != input_container_r_; ++i) {
+                        for (std::size_t i = 0;
+                             i < container_elements_per_field_element_ && input_container_l_ != input_container_r_;
+                             ++i) {
                             ++input_container_l_;
                         }
                         element_filled_ = false;
@@ -154,20 +157,31 @@ namespace nil {
                 typename Container::const_iterator input_container_end_;
             };
 
-            template<typename Output, typename Container, bool OverflowOnPurpose, bool Padding = true, bool = algebra::is_field_element<Output>::value>
+            template<typename Output,
+                     typename Container,
+                     bool OverflowOnPurpose,
+                     bool Padding = true,
+                     bool = algebra::is_field_element<Output>::value>
             struct conditional_block_to_field_elements_wrapper_helper {
                 using type = Container;
             };
 
             template<typename Output, typename Container, bool OverflowOnPurpose, bool Padding>
-            struct conditional_block_to_field_elements_wrapper_helper<Output, Container, OverflowOnPurpose, Padding, true> {
-                using type = block_to_field_elements_wrapper<typename Output::field_type, Container, OverflowOnPurpose, Padding>;
+            struct conditional_block_to_field_elements_wrapper_helper<Output,
+                                                                      Container,
+                                                                      OverflowOnPurpose,
+                                                                      Padding,
+                                                                      true> {
+                using type =
+                    block_to_field_elements_wrapper<typename Output::field_type, Container, OverflowOnPurpose, Padding>;
             };
 
             template<typename Output, typename Container, bool OverflowOnPurpose = false, bool Padding = true>
             using conditional_block_to_field_elements_wrapper =
-                typename conditional_block_to_field_elements_wrapper_helper<Output, Container, OverflowOnPurpose, Padding>::type;
-
+                typename conditional_block_to_field_elements_wrapper_helper<Output,
+                                                                            Container,
+                                                                            OverflowOnPurpose,
+                                                                            Padding>::type;
 
         }    // namespace hashes
     }    // namespace crypto3

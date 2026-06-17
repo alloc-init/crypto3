@@ -39,8 +39,7 @@ namespace nil {
              */
             memory_pool(uint8_t *pool, size_t pool_size, size_t page_size, size_t min_alloc, size_t max_alloc,
                         uint8_t align_bit) :
-                m_page_size(page_size),
-                m_min_alloc(min_alloc), m_max_alloc(max_alloc), m_align_bit(align_bit) {
+                m_page_size(page_size), m_min_alloc(min_alloc), m_max_alloc(max_alloc), m_align_bit(align_bit) {
                 if (pool == nullptr) {
                     throw std::invalid_argument("memory_pool pool was null");
                 }

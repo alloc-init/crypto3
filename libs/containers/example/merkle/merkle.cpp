@@ -36,7 +36,7 @@ using namespace nil::crypto3::containers;
 int main() {
 
     /* Input data array - 9 elements */
-    std::vector<std::array<char, 1> > data_on_leafs = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
+    std::vector<std::array<char, 1>> data_on_leafs = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
     /* Element that is not present in input data */
     std::array<char, 1> element_not_in_tree = {'9'};
 
@@ -49,11 +49,7 @@ int main() {
     merkle_proof<hashes::keccak_1600<256>, 3> proof_leaf_3(tree, 3);
 
     /* Check presence of these elements on positions 0 and 3 */
-    std::vector<std::array<char, 1>> data_to_check = {
-        data_on_leafs[0],
-        data_on_leafs[2],
-        element_not_in_tree
-    };
+    std::vector<std::array<char, 1>> data_to_check = {data_on_leafs[0], data_on_leafs[2], element_not_in_tree};
 
     for (size_t i = 0; i < data_to_check.size(); ++i) {
         std::cout << "Check whether leaf " << data_to_check[i][0] << " was in tree in position 0: ";

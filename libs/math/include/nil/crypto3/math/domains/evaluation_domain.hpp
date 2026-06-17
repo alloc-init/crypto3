@@ -69,7 +69,7 @@ namespace nil {
                 /**
                  * Get the unity root.
                  */
-                virtual const field_value_type& get_unity_root() = 0;
+                virtual const field_value_type &get_unity_root() = 0;
 
                 /**
                  * Get the idx-th element in S.
@@ -145,7 +145,7 @@ namespace nil {
                 }
             };
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // ALGEBRA_FFT_EVALUATION_DOMAIN_HPP

@@ -108,12 +108,12 @@ namespace nil {
                     typename string_custom_string_storage_type<TOpt::has_custom_storage_type>::template type<TOpt>;
 
                 template<typename TFieldBase, typename... TOptions>
-                using string_base_type = adapt_basic_field_type<
-                    basic_string<TFieldBase, string_storage_type<options_parser<TOptions...>>>,
-                    TOptions...>;
+                using string_base_type =
+                    adapt_basic_field_type<basic_string<TFieldBase, string_storage_type<options_parser<TOptions...>>>,
+                                           TOptions...>;
 
             }    // namespace detail
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_STRING_BEHAVIOUR_HPP

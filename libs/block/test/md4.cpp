@@ -54,7 +54,7 @@ BOOST_TEST_DONT_PRINT_LOG_VALUE(md4::block_type)
 
 BOOST_AUTO_TEST_SUITE(md4_test_suite)
 
-    BOOST_AUTO_TEST_CASE(md4_single_block_encrypt1) {
-    }
+BOOST_AUTO_TEST_CASE(md4_single_block_encrypt1) {
+}
 
 BOOST_AUTO_TEST_SUITE_END()

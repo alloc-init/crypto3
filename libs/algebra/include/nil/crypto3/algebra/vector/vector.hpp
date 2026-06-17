@@ -48,7 +48,7 @@ namespace nil {
 
                 using value_type = T;
                 using size_type = std::size_t;
-                static constexpr size_type size = N; ///< @brief size of the vector
+                static constexpr size_type size = N;    ///< @brief size of the vector
 
                 /** @name Element access */
                 ///@{
@@ -101,7 +101,7 @@ namespace nil {
 
                 ///@}
 
-                T array[N]; ///< @private
+                T array[N];    ///< @private
             };
 
             /** \addtogroup vector
@@ -118,7 +118,7 @@ namespace nil {
              */
             template<typename... Args>
             constexpr decltype(auto) make_vector(Args... args) {
-                return vector{args...};
+                return vector {args...};
             }
 
             /** @name vector deduction guides */
@@ -133,8 +133,8 @@ namespace nil {
              *    \endcode
              */
             template<typename T, typename... U>
-            vector(T, U...) -> vector<typename std::enable_if<(std::is_same<T, U>::value && ...), T>::type,
-                    1 + sizeof...(U)>;
+            vector(T, U...)
+                -> vector<typename std::enable_if<(std::is_same<T, U>::value && ...), T>::type, 1 + sizeof...(U)>;
 
             /** @brief deduction guide for aggregate initialization
              *    @relatesalso vector
@@ -150,7 +150,7 @@ namespace nil {
             ///@}
 
             /** @}*/
-        } // namespace algebra
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace algebra
+    }    // namespace crypto3
+}    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_VECTOR_CLASS_HPP

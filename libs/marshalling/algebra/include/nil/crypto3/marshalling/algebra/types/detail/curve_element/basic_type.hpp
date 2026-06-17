@@ -134,8 +134,8 @@ namespace nil {
                         value_type value_;
                     };
                 }    // namespace detail
-            }        // namespace types
-        }            // namespace marshalling
-    }                // namespace crypto3
+            }    // namespace types
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_BASIC_CURVE_ELEMENT_HPP

@@ -67,17 +67,16 @@ namespace nil {
                     using precompute_g2 = pairing::short_weierstrass_jacobian_with_a4_0_ate_precompute_g2<curve_type>;
                     using miller_loop = pairing::short_weierstrass_jacobian_with_a4_0_ate_miller_loop<curve_type>;
                     using double_miller_loop =
-                            pairing::short_weierstrass_jacobian_with_a4_0_ate_double_miller_loop<curve_type>;
+                        pairing::short_weierstrass_jacobian_with_a4_0_ate_double_miller_loop<curve_type>;
                     using final_exponentiation =
-                            pairing::short_weierstrass_jacobian_with_a4_0_final_exponentiation<curve_type>;
+                        pairing::short_weierstrass_jacobian_with_a4_0_final_exponentiation<curve_type>;
 
                     using g1_precomputed_type = typename precompute_g1::g1_precomputed_type;
                     using g2_precomputed_type = typename precompute_g2::g2_precomputed_type;
                 };
 
-
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_BLS12_POLICY_HPP

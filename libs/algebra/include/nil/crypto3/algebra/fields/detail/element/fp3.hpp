@@ -57,29 +57,34 @@ namespace nil {
 
                         constexpr element_fp3() = default;
 
-                        template<typename Number1, typename Number2, typename Number3,
-                            typename std::enable_if<std::is_integral<Number1>::value && std::is_integral<Number2>::value && std::is_integral<Number3>::value, bool>::type* = true>
+                        template<typename Number1,
+                                 typename Number2,
+                                 typename Number3,
+                                 typename std::enable_if<std::is_integral<Number1>::value &&
+                                                             std::is_integral<Number2>::value &&
+                                                             std::is_integral<Number3>::value,
+                                                         bool>::type * = true>
                         constexpr element_fp3(const Number1 &in_data0,
                                               const Number2 &in_data1,
-                                              const Number3 &in_data2)
-                            : data({underlying_type(in_data0), underlying_type(in_data1), underlying_type(in_data2)})
-                        {}
+                                              const Number3 &in_data2) :
+                            data({underlying_type(in_data0), underlying_type(in_data1), underlying_type(in_data2)}) {
+                        }
 
-                        constexpr element_fp3(const data_type &in_data)
-                            : data({in_data[0], in_data[1], in_data[2]}) {}
+                        constexpr element_fp3(const data_type &in_data) : data({in_data[0], in_data[1], in_data[2]}) {
+                        }
 
                         constexpr element_fp3(const underlying_type &in_data0,
                                               const underlying_type &in_data1,
-                                              const underlying_type &in_data2)
-                            : data({in_data0, in_data1, in_data2}) {}
+                                              const underlying_type &in_data2) : data({in_data0, in_data1, in_data2}) {
+                        }
 
                         constexpr element_fp3(const element_fp3 &B) : data(B.data) {};
                         constexpr element_fp3(const element_fp3 &&B) BOOST_NOEXCEPT : data(std::move(B.data)) {};
 
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.
-                        constexpr static const element_fp3& zero();
-                        constexpr static const element_fp3& one();
+                        constexpr static const element_fp3 &zero();
+                        constexpr static const element_fp3 &one();
 
                         constexpr bool is_zero() const {
                             return *this == zero();
@@ -153,13 +158,16 @@ namespace nil {
                                 (data[0] + data[2]) * (B.data[0] + B.data[2]) - A0B0 + A1B1 - A2B2);
                         }
 
-                        constexpr element_fp3& operator*=(const element_fp3 &B) {
+                        constexpr element_fp3 &operator*=(const element_fp3 &B) {
                             const underlying_type A0B0 = data[0] * B.data[0], A1B1 = data[1] * B.data[1],
                                                   A2B2 = data[2] * B.data[2];
-                            const underlying_type
-                                r0 = A0B0 + non_residue * ((data[1] + data[2]) * (B.data[1] + B.data[2]) - A1B1 - A2B2),
-                                r1 = (data[0] + data[1]) * (B.data[0] + B.data[1]) - A0B0 - A1B1 + non_residue * A2B2,
-                                r2 = (data[0] + data[2]) * (B.data[0] + B.data[2]) - A0B0 + A1B1 - A2B2;
+                            const underlying_type r0 = A0B0 +
+                                                       non_residue * ((data[1] + data[2]) * (B.data[1] + B.data[2]) -
+                                                                      A1B1 - A2B2),
+                                                  r1 = (data[0] + data[1]) * (B.data[0] + B.data[1]) - A0B0 - A1B1 +
+                                                       non_residue * A2B2,
+                                                  r2 = (data[0] + data[2]) * (B.data[0] + B.data[2]) - A0B0 + A1B1 -
+                                                       A2B2;
 
                             data[0] = r0;
                             data[1] = r1;
@@ -274,40 +282,38 @@ namespace nil {
                         element_fp3<FieldParams>::non_residue;
 
                     namespace element_fp3_details {
-                        // These constexpr static variables can not be members of element_fp2, because 
+                        // These constexpr static variables can not be members of element_fp2, because
                         // element_fp2 is incomplete type until the end of its declaration.
                         template<typename FieldParams>
-                        constexpr static element_fp3<FieldParams> zero_instance(
-                            FieldParams::underlying_type::zero(),
-                            FieldParams::underlying_type::zero(),
-                            FieldParams::underlying_type::zero());
+                        constexpr static element_fp3<FieldParams> zero_instance(FieldParams::underlying_type::zero(),
+                                                                                FieldParams::underlying_type::zero(),
+                                                                                FieldParams::underlying_type::zero());
 
                         template<typename FieldParams>
-                        constexpr static element_fp3<FieldParams> one_instance(
-                            FieldParams::underlying_type::one(),
-                            FieldParams::underlying_type::zero(),
-                            FieldParams::underlying_type::zero());
-                    }
+                        constexpr static element_fp3<FieldParams> one_instance(FieldParams::underlying_type::one(),
+                                                                               FieldParams::underlying_type::zero(),
+                                                                               FieldParams::underlying_type::zero());
+                    }    // namespace element_fp3_details
 
                     template<typename FieldParams>
-                    constexpr const element_fp3<FieldParams>& element_fp3<FieldParams>::zero() {
+                    constexpr const element_fp3<FieldParams> &element_fp3<FieldParams>::zero() {
                         return element_fp3_details::zero_instance<FieldParams>;
                     }
 
                     template<typename FieldParams>
-                    constexpr const element_fp3<FieldParams>& element_fp3<FieldParams>::one() {
+                    constexpr const element_fp3<FieldParams> &element_fp3<FieldParams>::one() {
                         return element_fp3_details::one_instance<FieldParams>;
                     }
 
                     template<typename FieldParams>
-                    std::ostream& operator<<(std::ostream& os, const element_fp3<FieldParams>& elem) {
+                    std::ostream &operator<<(std::ostream &os, const element_fp3<FieldParams> &elem) {
                         os << "[" << elem.data[0] << "," << elem.data[1] << "," << elem.data[2] << "]";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP3_HPP

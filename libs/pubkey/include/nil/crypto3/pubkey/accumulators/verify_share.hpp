@@ -65,8 +65,8 @@ namespace nil {
                         // boost::accumulators::sample -- verified public (or private) share
                         //
                         template<typename Args>
-                        verify_share_impl(const Args &args) : verified_public_share(args[boost::accumulators::sample]),
-                                                              seen_coeffs(0) {
+                        verify_share_impl(const Args &args) :
+                            verified_public_share(args[boost::accumulators::sample]), seen_coeffs(0) {
                             // TODO: replace with rvalue
                             // TODO: init accumulator without default constructor
                             auto i = verified_public_share.get_index();
@@ -96,7 +96,7 @@ namespace nil {
 
                         template<typename InputRange>
                         inline void resolve_type(const InputRange &range, std::nullptr_t) {
-                            for (const auto &pc: range) {
+                            for (const auto &pc : range) {
                                 resolve_type(pc);
                             }
                         }
@@ -112,7 +112,7 @@ namespace nil {
                         public_share_sss<scheme_type> verified_public_share;
                         mutable accumulator_type acc;
                     };
-                } // namespace impl
+                }    // namespace impl
 
                 namespace tag {
                     template<typename ProcessingMode>
@@ -124,18 +124,18 @@ namespace nil {
 
                         typedef boost::mpl::always<impl::verify_share_impl<mode_type>> impl;
                     };
-                } // namespace tag
+                }    // namespace tag
 
                 namespace extract {
                     template<typename ProcessingMode, typename AccumulatorSet>
                     typename boost::mpl::apply<AccumulatorSet, tag::verify_share<ProcessingMode>>::type::result_type
-                    verify_share(const AccumulatorSet &acc) {
+                        verify_share(const AccumulatorSet &acc) {
                         return boost::accumulators::extract_result<tag::verify_share<ProcessingMode>>(acc);
                     }
-                } // namespace extract
-            } // namespace accumulators
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+                }    // namespace extract
+            }    // namespace accumulators
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_PUBKEY_SSS_VERIFY_SHARE_HPP

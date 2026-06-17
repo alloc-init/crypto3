@@ -49,13 +49,11 @@ namespace nil {
             struct bls;
 
             template<typename T>
-            struct is_bls : std::bool_constant<false> {
-            };
+            struct is_bls : std::bool_constant<false> { };
 
             template<typename PublicParams, template<typename, typename> class VersionType,
                      template<typename> class SchemeType, typename CurveType>
-            struct is_bls<bls<PublicParams, VersionType, SchemeType, CurveType>> : std::bool_constant<true> {
-            };
+            struct is_bls<bls<PublicParams, VersionType, SchemeType, CurveType>> : std::bool_constant<true> { };
 
             template<typename GroupType>
             struct shamir_sss;
@@ -70,38 +68,30 @@ namespace nil {
             struct weighted_shamir_sss;
 
             template<typename T>
-            struct is_shamir_sss : std::bool_constant<false> {
-            };
+            struct is_shamir_sss : std::bool_constant<false> { };
 
             template<typename GroupType>
-            struct is_shamir_sss<shamir_sss<GroupType>> : std::bool_constant<true> {
-            };
+            struct is_shamir_sss<shamir_sss<GroupType>> : std::bool_constant<true> { };
 
             template<typename T>
-            struct is_feldman_sss : std::bool_constant<false> {
-            };
+            struct is_feldman_sss : std::bool_constant<false> { };
 
             template<typename GroupType>
-            struct is_feldman_sss<feldman_sss<GroupType>> : std::bool_constant<true> {
-            };
+            struct is_feldman_sss<feldman_sss<GroupType>> : std::bool_constant<true> { };
 
             template<typename T>
-            struct is_pedersen_dkg : std::bool_constant<false> {
-            };
+            struct is_pedersen_dkg : std::bool_constant<false> { };
 
             template<typename GroupType>
-            struct is_pedersen_dkg<pedersen_dkg<GroupType>> : std::bool_constant<true> {
-            };
+            struct is_pedersen_dkg<pedersen_dkg<GroupType>> : std::bool_constant<true> { };
 
             template<typename T>
-            struct is_weighted_shamir_sss : std::bool_constant<false> {
-            };
+            struct is_weighted_shamir_sss : std::bool_constant<false> { };
 
             template<typename GroupType>
-            struct is_weighted_shamir_sss<weighted_shamir_sss<GroupType>> : std::bool_constant<true> {
-            };
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+            struct is_weighted_shamir_sss<weighted_shamir_sss<GroupType>> : std::bool_constant<true> { };
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_TYPE_TRAITS_HPP
