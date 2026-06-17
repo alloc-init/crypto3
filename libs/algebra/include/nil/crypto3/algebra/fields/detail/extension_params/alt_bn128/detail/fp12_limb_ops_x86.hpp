@@ -475,34 +475,34 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
-    inline void mul_8_limbs_by_9_x86(limb_array &t) {
+    inline void mul_8_limbs_by_9_x86(limb_array &dst, const limb_array &src) {
         SET_STATIC_MODULUS_FROM_FIELD();
-
-        limb_array x(t);
-        limb t0 = t[0];
-        limb t1 = t[1];
-        limb t2 = t[2];
-        limb t3 = t[3];
-        limb t4 = t[4];
-        limb t5 = t[5];
-        limb t6 = t[6];
-        limb t7 = t[7];
+        limb t0, t1, t2, t3, t4, t5, t6, t7;
         limb q0, q1, q2, q3;
 
         asm volatile(
+            "movq " PTR(src, 0) ", %[t0]\n"
+            "movq " PTR(src, 1) ", %[t1]\n"
+            "movq " PTR(src, 2) ", %[t2]\n"
+            "movq " PTR(src, 3) ", %[t3]\n"
+            "movq " PTR(src, 4) ", %[t4]\n"
+            "movq " PTR(src, 5) ", %[t5]\n"
+            "movq " PTR(src, 6) ", %[t6]\n"
+            "movq " PTR(src, 7) ", %[t7]\n"
+
             DOUBLE_MOD_P() // 2x
             DOUBLE_MOD_P() // 4x
             DOUBLE_MOD_P() // 8x
 
             // 9x, final add by original value
-            "addq " PTR(x, 0) ", %[t0]\n"
-            "adcq " PTR(x, 1) ", %[t1]\n"
-            "adcq " PTR(x, 2) ", %[t2]\n"
-            "adcq " PTR(x, 3) ", %[t3]\n"
-            "adcq " PTR(x, 4) ", %[t4]\n"
-            "adcq " PTR(x, 5) ", %[t5]\n"
-            "adcq " PTR(x, 6) ", %[t6]\n"
-            "adcq " PTR(x, 7) ", %[t7]\n"
+            "addq " PTR(src, 0) ", %[t0]\n"
+            "adcq " PTR(src, 1) ", %[t1]\n"
+            "adcq " PTR(src, 2) ", %[t2]\n"
+            "adcq " PTR(src, 3) ", %[t3]\n"
+            "adcq " PTR(src, 4) ", %[t4]\n"
+            "adcq " PTR(src, 5) ", %[t5]\n"
+            "adcq " PTR(src, 6) ", %[t6]\n"
+            "adcq " PTR(src, 7) ", %[t7]\n"
             "movq %[t4], %[q0]\n"
             "movq %[t5], %[q1]\n"
             "movq %[t6], %[q2]\n"
@@ -516,33 +516,35 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "cmovnc %[q2], %[t6]\n"
             "cmovnc %[q3], %[t7]\n"
 
-            : [t0]"+r"(t0),
-              [t1]"+r"(t1),
-              [t2]"+r"(t2),
-              [t3]"+r"(t3),
-              [t4]"+r"(t4),
-              [t5]"+r"(t5),
-              [t6]"+r"(t6),
-              [t7]"+r"(t7),
+            "movq %[t0], " PTR(dst, 0) "\n"
+            "movq %[t1], " PTR(dst, 1) "\n"
+            "movq %[t2], " PTR(dst, 2) "\n"
+            "movq %[t3], " PTR(dst, 3) "\n"
+            "movq %[t4], " PTR(dst, 4) "\n"
+            "movq %[t5], " PTR(dst, 5) "\n"
+            "movq %[t6], " PTR(dst, 6) "\n"
+            "movq %[t7], " PTR(dst, 7) "\n"
+
+            : [t0]"=&r"(t0),
+              [t1]"=&r"(t1),
+              [t2]"=&r"(t2),
+              [t3]"=&r"(t3),
+              [t4]"=&r"(t4),
+              [t5]"=&r"(t5),
+              [t6]"=&r"(t6),
+              [t7]"=&r"(t7),
               [q0]"=&r"(q0),
               [q1]"=&r"(q1),
               [q2]"=&r"(q2),
               [q3]"=&r"(q3)
-            : [x]"r"(x.data()),
+            : [src]"r"(src.data()),
+              [dst]"r"(dst.data()),
               [p0]"m"(p0),
               [p1]"m"(p1),
               [p2]"m"(p2),
               [p3]"m"(p3)
             : "cc"
         );
-        t[0] = t0;
-        t[1] = t1;
-        t[2] = t2;
-        t[3] = t3;
-        t[4] = t4;
-        t[5] = t5;
-        t[6] = t6;
-        t[7] = t7;
     }
 
     template <class Field>

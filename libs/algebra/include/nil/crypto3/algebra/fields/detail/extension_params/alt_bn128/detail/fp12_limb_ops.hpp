@@ -132,15 +132,16 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void mul_8_limbs_by_9(limb_array &t) {
+                        inline void mul_8_limbs_by_9(limb_array &dst, const limb_array &src) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            mul_8_limbs_by_9_x86<Field>(t);
+                            mul_8_limbs_by_9_x86<Field>(dst, src);
 #else
-                            limb_array x(t);
-                            add_8_limbs_mod<Field>(t, t);    // 2x
-                            add_8_limbs_mod<Field>(t, t);    // 4x
-                            add_8_limbs_mod<Field>(t, t);    // 8x
-                            add_8_limbs_mod<Field>(t, x);    // 9x
+                            limb_array cpy(src);
+                            dst = src;
+                            add_8_limbs_mod<Field>(dst, dst);    // 2x
+                            add_8_limbs_mod<Field>(dst, dst);    // 4x
+                            add_8_limbs_mod<Field>(dst, dst);    // 8x
+                            add_8_limbs_mod<Field>(dst, cpy);    // 9x
 #endif
                         }
 

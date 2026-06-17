@@ -69,8 +69,12 @@ namespace nil {
                             }
 
                             fp_dbl &mul_by_9() {
-                                alt_bn128_fp12_limb_ops::mul_8_limbs_by_9<base_field_type>(data);
+                                alt_bn128_fp12_limb_ops::mul_8_limbs_by_9<base_field_type>(data, data);
                                 return *this;
+                            }
+
+                            static fp_dbl mul_by_9(fp_dbl &dst, const fp_dbl &src) {
+                                alt_bn128_fp12_limb_ops::mul_8_limbs_by_9<base_field_type>(dst.data, src.data);
                             }
 
                             void to_base_value(base_value_type &out) const {
@@ -168,6 +172,14 @@ namespace nil {
                                 data[0] -= data[1];
                                 data[1].mul_by_9();
                                 data[1] += tmp_a;
+                            }
+
+                            static void mul_by_xi_add(fp2_dbl &dst, fp2_dbl &src, const fp2_dbl &addend) {
+                                fp_dbl::mul_by_9(dst[0], src.data[0]);
+                                dst[0] -= src.data[1];
+                                fp_dbl::mul_by_9(dst[1], src.data[1]);
+                                dst[1] += src.data[0];
+                                dst += addend;
                             }
 
                             void to_non_residue(non_residue_type &ret) const {
