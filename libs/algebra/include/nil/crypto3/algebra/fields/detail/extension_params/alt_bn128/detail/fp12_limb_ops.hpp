@@ -308,7 +308,7 @@ namespace nil {
                         template<class Field>
                         inline void fp2_base_add_mod(limb_array *data, const limb_array *other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            fp2_base_add_mod_x86<Field>((limb*)data, (limb*)other);
+                            fp2_base_add_mod_x86<Field>((limb *)data, (limb *)other);
 #else
                             // no fp_base type, do 4 limb addition manually here
                             add_low_4_limbs_mod<Field>(data[0], other[0]);
@@ -370,6 +370,17 @@ namespace nil {
                             fp2_mul_pre_x86<Field>(z, x, y);
 #else
                             fp2_mul_pre_portable<Field>(z, x, y);
+#endif
+                        }
+
+                        template<class Field>
+                        inline void fp6_base_add_mod(limb_array *data, const limb_array *other) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            fp6_base_add_mod_x86<Field>((limb *)data, (const limb *)other);
+#else
+                            fp2_base_add_mod<Field>(data, other);
+                            fp2_base_add_mod<Field>(data + 2, other + 2);
+                            fp2_base_add_mod<Field>(data + 4, other + 4);
 #endif
                         }
                     }    // namespace alt_bn128_fp12_limb_ops

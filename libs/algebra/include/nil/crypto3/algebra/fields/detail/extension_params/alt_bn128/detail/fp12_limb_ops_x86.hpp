@@ -700,6 +700,40 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             : "cc", "memory"
         );
     }
+
+    template <class Field>
+    inline void fp6_base_add_mod_x86(limb *data, const limb *other) {
+        SET_STATIC_MODULUS_FROM_FIELD();
+        limb t0, t1, t2, t3;
+        limb q0, q1, q2, q3;
+        asm volatile(
+
+            ADD_LOW_4_LIMBS_MOD(data, 0, other, 0)
+            ADD_LOW_4_LIMBS_MOD(data, 8, other, 8)
+
+            ADD_LOW_4_LIMBS_MOD(data, 16, other, 16)
+            ADD_LOW_4_LIMBS_MOD(data, 24, other, 24)
+            
+            ADD_LOW_4_LIMBS_MOD(data, 32, other, 32)
+            ADD_LOW_4_LIMBS_MOD(data, 40, other, 40)
+
+            : [t0]"=&r"(t0),
+              [t1]"=&r"(t1),
+              [t2]"=&r"(t2),
+              [t3]"=&r"(t3),
+              [q0]"=&r"(q0),
+              [q1]"=&r"(q1),
+              [q2]"=&r"(q2),
+              [q3]"=&r"(q3)
+            : [data]"r"(data),
+              [other]"r"(other),
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3)
+            : "cc", "memory"
+        );
+    }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 #undef STR_IMPL

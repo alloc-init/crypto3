@@ -197,9 +197,8 @@ namespace nil {
                             }
 
                             fp6_base &operator+=(const fp6_base &other) {
-                                data[0] += other.data[0];
-                                data[1] += other.data[1];
-                                data[2] += other.data[2];
+                                alt_bn128_fp12_limb_ops::fp6_base_add_mod<base_field_type>(data[0].data.data(),
+                                                                                           other.data[0].data.data());
                                 return *this;
                             }
 
