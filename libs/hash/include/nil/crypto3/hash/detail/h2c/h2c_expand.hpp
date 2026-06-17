@@ -43,6 +43,7 @@
 #include <array>
 #include <type_traits>
 #include <iterator>
+#include <vector>
 
 namespace nil {
     namespace crypto3 {
@@ -65,6 +66,13 @@ namespace nil {
 
                 constexpr static const std::array<std::uint8_t, r_in_bytes> Z_pad{0};
 
+                template<typename RangeType>
+                static inline void append_range(std::vector<std::uint8_t> &out, const RangeType &range) {
+                    for (std::uint8_t value : range) {
+                        out.push_back(value);
+                    }
+                }
+
             public:
                 template<typename InputMsgType, typename InputDstType, typename OutputType,
                         typename = typename std::enable_if<
@@ -80,8 +88,8 @@ namespace nil {
 
                     // https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.4.1
                     BOOST_ASSERT(len_in_bytes < 0x10000);
-                    BOOST_ASSERT(std::distance(dst.begin(), dst.end()) >= 16 &&
-                                 std::distance(dst.begin(), dst.end()) <= 255);
+                    const std::size_t dst_len = static_cast<std::size_t>(std::distance(dst.begin(), dst.end()));
+                    BOOST_ASSERT(dst_len >= 16 && dst_len <= 255);
                     BOOST_ASSERT(
                             std::size_t(std::distance(uniform_bytes.begin(), uniform_bytes.end())) >= len_in_bytes);
 
@@ -105,13 +113,13 @@ namespace nil {
                     // b0_acc); typename HashType::digest_type b0 =
                     // accumulators::extract::hash<HashType>(b0_acc);
                     std::vector<std::uint8_t> msg_prime;
-                    msg_prime.insert(msg_prime.end(), Z_pad.begin(), Z_pad.end());
-                    msg_prime.insert(msg_prime.end(), msg.begin(), msg.end());
-                    msg_prime.insert(msg_prime.end(), l_i_b_str.begin(), l_i_b_str.end());
-                    msg_prime.insert(msg_prime.end(), static_cast<std::uint8_t>(0));
-                    msg_prime.insert(msg_prime.end(), dst.begin(), dst.end());
-                    msg_prime.insert(msg_prime.end(),
-                                     static_cast<std::uint8_t>(std::distance(dst.begin(), dst.end())));
+                    msg_prime.reserve(Z_pad.size() + l_i_b_str.size() + 1 + dst_len + 1);
+                    append_range(msg_prime, Z_pad);
+                    append_range(msg_prime, msg);
+                    append_range(msg_prime, l_i_b_str);
+                    msg_prime.push_back(static_cast<std::uint8_t>(0));
+                    append_range(msg_prime, dst);
+                    msg_prime.push_back(static_cast<std::uint8_t>(dst_len));
                     typename HashType::digest_type b0 = hash<HashType>(msg_prime);
 
                     // TODO: use accumulators when they will be fixed
@@ -124,11 +132,11 @@ namespace nil {
                     // accumulators::extract::hash<HashType>(bi_acc); std::copy(bi.begin(), bi.end(),
                     // uniform_bytes.begin());
                     std::vector<std::uint8_t> b_i_str;
-                    b_i_str.insert(b_i_str.end(), b0.begin(), b0.end());
-                    b_i_str.insert(b_i_str.end(), static_cast<std::uint8_t>(1));
-                    b_i_str.insert(b_i_str.end(), dst.begin(), dst.end());
-                    b_i_str.insert(b_i_str.end(),
-                                   static_cast<std::uint8_t>(std::distance(dst.begin(), dst.end())));
+                    b_i_str.reserve(b0.size() + 1 + dst_len + 1);
+                    append_range(b_i_str, b0);
+                    b_i_str.push_back(static_cast<std::uint8_t>(1));
+                    append_range(b_i_str, dst);
+                    b_i_str.push_back(static_cast<std::uint8_t>(dst_len));
                     typename HashType::digest_type bi = hash<HashType>(b_i_str);
                     std::copy(bi.begin(), bi.end(), uniform_bytes.begin());
 
@@ -146,11 +154,11 @@ namespace nil {
                         // std::copy(bi.begin(), bi.end(), uniform_bytes.begin() + (i - 1) * b_in_bytes);
                         nil::crypto3::algebra::strxor(b0, bi, xored_b);
                         std::vector<std::uint8_t> b_i_str;
-                        b_i_str.insert(b_i_str.end(), xored_b.begin(), xored_b.end());
-                        b_i_str.insert(b_i_str.end(), static_cast<std::uint8_t>(i));
-                        b_i_str.insert(b_i_str.end(), dst.begin(), dst.end());
-                        b_i_str.insert(b_i_str.end(),
-                                       static_cast<std::uint8_t>(std::distance(dst.begin(), dst.end())));
+                        b_i_str.reserve(xored_b.size() + 1 + dst_len + 1);
+                        append_range(b_i_str, xored_b);
+                        b_i_str.push_back(static_cast<std::uint8_t>(i));
+                        append_range(b_i_str, dst);
+                        b_i_str.push_back(static_cast<std::uint8_t>(dst_len));
                         bi = hash<HashType>(b_i_str);
                         std::copy(bi.begin(), bi.end(), uniform_bytes.begin() + (i - 1) * b_in_bytes);
                     }
