@@ -98,7 +98,7 @@ namespace nil {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             add_low_4_limbs_mod_x86<Field>(data.data(), other.data());
 #else
-                            add_limbs_portable<4>(data.data(), other.data());
+                            add_limbs_portable<4>(data.data(), data.data(), other.data());
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // do one pass of normalization on lower limbs
                             if (ge_modulus(data.data(), p.data())) {
