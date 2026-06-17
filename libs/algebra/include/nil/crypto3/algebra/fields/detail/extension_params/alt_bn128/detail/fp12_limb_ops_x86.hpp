@@ -599,6 +599,34 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 
     template<class Field>
+    inline void fp2_sub_pre_x86(limb *data, const limb *other) {
+        set_static_modulus_limbs_from_field();
+        limb t0, t1, t2, t3;
+        limb q0, q1, q2, q3;
+        limb scratch;
+        asm volatile(
+            sub_mod_limbs(data, 0, other, 0, scratch, t0, t1, t2, t3, q0, q1, q2, q3)
+            sub_limbs(data, 8, other, 8, scratch)
+            : [t0]"=&r"(t0),
+              [t1]"=&r"(t1),
+              [t2]"=&r"(t2),
+              [t3]"=&r"(t3),
+              [q0]"=&r"(q0),
+              [q1]"=&r"(q1),
+              [q2]"=&r"(q2),
+              [q3]"=&r"(q3),
+              [scratch]"=&r"(scratch)
+            : [data]"r"(data),
+              [other]"r"(other),
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3)
+            : "cc", "memory"
+        );
+    }
+
+    template<class Field>
     inline void fp2_mul_pre_x86(limb_array *z, const limb_array *x, const limb_array *y) {
         set_static_modulus_limbs_from_field();
         // For x = a + bu and y = c + du:
