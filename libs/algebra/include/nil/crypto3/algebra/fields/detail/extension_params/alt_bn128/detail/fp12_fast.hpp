@@ -344,21 +344,19 @@ namespace nil {
                             const fp6_base c(y.data[0]);
                             const fp6_base d(y.data[1]);
 
-                            // false = ordinary Fp6 multiplication; inner Fp2 sums fit mul_pre().
+                            Fp12Value ret;
+
                             fp6_dbl ac, bd;
                             fp6_dbl::mul_pre(ac, a, c);
                             fp6_dbl::mul_pre(bd, b, d);
+                            fp6_dbl z = ac + bd.mul_v();
+                            z.to_underlying(ret.data[0]);
 
-                            fp6_dbl z0_dbl = ac + bd.mul_v();
+                            fp6_dbl::mul_pre(z, a + b, c + d);
+                            z -= ac;    // first correction (see above)
+                            z -= bd;    // second correction
 
-                            fp6_dbl z1_dbl;
-                            fp6_dbl::mul_pre(z1_dbl, a + b, c + d);
-                            z1_dbl -= ac;    // first correction (see above)
-                            z1_dbl -= bd;    // second correction
-
-                            Fp12Value ret;
-                            z0_dbl.to_underlying(ret.data[0]);
-                            z1_dbl.to_underlying(ret.data[1]);
+                            z.to_underlying(ret.data[1]);
                             return ret;
                         }
                     };
