@@ -215,7 +215,9 @@ namespace nil {
                  */
                 template<typename InputIterator, typename OutputIterator>
                 inline static void pack_n(InputIterator in, std::size_t in_n, OutputIterator out) {
-                    std::copy(in, in + in_n, out);
+                    for (; in_n != 0; --in_n, ++in, ++out) {
+                        *out = *in;
+                    }
                 }
 
                 /*!

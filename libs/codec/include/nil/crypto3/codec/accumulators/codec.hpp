@@ -109,7 +109,7 @@ namespace nil {
 
                         if (!cache.empty()) {
                             input_block_type ib = {0};
-                            std::move(cache.begin(), cache.end(), ib.begin());
+                            copy_range(cache.begin(), cache.end(), ib.begin());
                             output_block_type ob = codec_mode_type::process_block(ib);
                             std::move(ob.begin(), ob.end(), std::inserter(res, res.end()));
                         }
@@ -143,7 +143,7 @@ namespace nil {
                     inline void process(const input_value_type &value, std::size_t) {
                         if (cache.size() == cache.max_size()) {
                             input_block_type ib = {0};
-                            std::move(cache.begin(), cache.end(), ib.begin());
+                            copy_range(cache.begin(), cache.end(), ib.begin());
                             output_block_type ob = codec_mode_type::process_block(ib);
                             std::move(ob.begin(), ob.end(), std::inserter(dgst, dgst.end()));
 
@@ -160,20 +160,32 @@ namespace nil {
                             ob = codec_mode_type::process_block(block);
                         } else {
                             input_block_type b = {0};
-                            typename input_block_type::iterator out = std::move(cache.begin(), cache.end(), b.begin());
-                            typename input_block_type::const_iterator itr =
-                                block.begin() + (cache.max_size() - cache.size());
+                            typename input_block_type::iterator out = copy_range(cache.begin(), cache.end(), b.begin());
+                            typename input_block_type::const_iterator itr = block.begin();
+                            const std::size_t values_to_copy = cache.max_size() - cache.size();
 
-                            std::move(block.begin(), itr, out);
+                            for (std::size_t i = 0; i < values_to_copy && itr != block.end(); ++i, ++itr, ++out) {
+                                *out = *itr;
+                            }
 
                             ob = codec_mode_type::process_block(b);
 
                             cache.clear();
-                            cache.insert(cache.end(), itr, block.end());
+                            for (; itr != block.end(); ++itr) {
+                                cache.push_back(*itr);
+                            }
                         }
 
                         std::move(ob.begin(), ob.end(), std::inserter(dgst, dgst.end()));
                         seen += input_block_bits;
+                    }
+
+                    template<typename InputIterator, typename OutputIterator>
+                    static OutputIterator copy_range(InputIterator first, InputIterator last, OutputIterator out) {
+                        for (; first != last; ++first, ++out) {
+                            *out = *first;
+                        }
+                        return out;
                     }
 
                     std::size_t seen;
