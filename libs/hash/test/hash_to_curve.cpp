@@ -56,6 +56,22 @@ using namespace nil::crypto3::algebra::curves::detail;
 using namespace nil::crypto3::algebra::curves;
 using namespace nil::crypto3::hashes;
 
+template<typename SuiteIdType>
+std::vector<std::uint8_t> make_dst(const std::string &default_tag, const SuiteIdType &suite_id) {
+    std::vector<std::uint8_t> dst(default_tag.size() + suite_id.size());
+
+    std::size_t index = 0;
+    for (char value : default_tag) {
+        dst[index++] = static_cast<std::uint8_t>(value);
+    }
+
+    for (std::uint8_t value : suite_id) {
+        dst[index++] = value;
+    }
+
+    return dst;
+}
+
 template<typename Expander,
          typename DstType,
          typename MsgType,
@@ -267,8 +283,7 @@ BOOST_AUTO_TEST_CASE(hash_to_field_bls12_381_g1_h2c_sha256_test) {
     typedef typename group_type::field_type::integral_type integral_type;
 
     std::string default_tag_str = "QUUX-V01-CS02-with-";
-    std::vector<std::uint8_t> dst(default_tag_str.begin(), default_tag_str.end());
-    dst.insert(dst.end(), h2c_type::suite_type::suite_id.begin(), h2c_type::suite_type::suite_id.end());
+    std::vector<std::uint8_t> dst = make_dst(default_tag_str, h2c_type::suite_type::suite_id);
 
     using samples_type = std::vector<std::tuple<std::string, std::array<field_value_type, 2>>>;
     samples_type samples = {
@@ -321,8 +336,7 @@ BOOST_AUTO_TEST_CASE(hash_to_field_bls12_381_g2_h2c_sha256_test) {
     typedef typename group_type::field_type::integral_type integral_type;
 
     std::string default_tag_str = "QUUX-V01-CS02-with-";
-    std::vector<std::uint8_t> dst(default_tag_str.begin(), default_tag_str.end());
-    dst.insert(dst.end(), h2c_type::suite_type::suite_id.begin(), h2c_type::suite_type::suite_id.end());
+    std::vector<std::uint8_t> dst = make_dst(default_tag_str, h2c_type::suite_type::suite_id);
 
     using samples_type = std::vector<std::tuple<std::string, std::array<field_value_type, 2>>>;
     samples_type samples = {
@@ -399,8 +413,7 @@ BOOST_AUTO_TEST_CASE(hash_to_curve_bls12_381_g1_h2c_sha256_test) {
     typedef typename group_type::field_type::integral_type integral_type;
 
     std::string default_tag_str = "QUUX-V01-CS02-with-";
-    std::vector<std::uint8_t> dst(default_tag_str.begin(), default_tag_str.end());
-    dst.insert(dst.end(), h2c_type::suite_type::suite_id.begin(), h2c_type::suite_type::suite_id.end());
+    std::vector<std::uint8_t> dst = make_dst(default_tag_str, h2c_type::suite_type::suite_id);
 
     using samples_type = std::vector<std::tuple<std::string, group_value_type>>;
     samples_type samples {
@@ -460,8 +473,7 @@ BOOST_AUTO_TEST_CASE(hash_to_curve_bls12_381_g2_h2c_sha256_test) {
     typedef typename group_type::field_type::integral_type integral_type;
 
     std::string default_tag_str = "QUUX-V01-CS02-with-";
-    std::vector<std::uint8_t> dst(default_tag_str.begin(), default_tag_str.end());
-    dst.insert(dst.end(), h2c_type::suite_type::suite_id.begin(), h2c_type::suite_type::suite_id.end());
+    std::vector<std::uint8_t> dst = make_dst(default_tag_str, h2c_type::suite_type::suite_id);
 
     using samples_type = std::vector<std::tuple<std::string, group_value_type>>;
     samples_type samples {
