@@ -160,12 +160,16 @@ namespace nil {
                             ob = codec_mode_type::process_block(block);
                         } else {
                             input_block_type b = {0};
-                            typename input_block_type::iterator out = copy_range(cache.begin(), cache.end(), b.begin());
-                            typename input_block_type::const_iterator itr = block.begin();
-                            const std::size_t values_to_copy = cache.max_size() - cache.size();
+                            std::size_t out_index = 0;
+                            for (typename cache_type::const_iterator itr = cache.begin();
+                                 itr != cache.end() && out_index < b.size(); ++itr, ++out_index) {
+                                b[out_index] = *itr;
+                            }
 
-                            for (std::size_t i = 0; i < values_to_copy && itr != block.end(); ++i, ++itr, ++out) {
-                                *out = *itr;
+                            typename input_block_type::const_iterator itr = block.begin();
+
+                            for (; out_index < b.size() && itr != block.end(); ++out_index, ++itr) {
+                                b[out_index] = *itr;
                             }
 
                             ob = codec_mode_type::process_block(b);
