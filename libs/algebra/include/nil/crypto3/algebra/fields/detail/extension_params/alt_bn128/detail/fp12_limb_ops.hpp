@@ -305,6 +305,17 @@ namespace nil {
 #endif
                         }
 
+                        template<class Field>
+                        inline void fp2_base_add_mod(limb_array *data, const limb_array *other) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            fp2_base_add_mod_x86<Field>((limb*)data, (limb*)other);
+#else
+                            // no fp_base type, do 4 limb addition manually here
+                            add_low_4_limbs_mod<Field>(data[0], other[0]);
+                            add_low_4_limbs_mod<Field>(data[1], other[1]);
+#endif
+                        }
+
                         inline void fp2_base_add_pre(limb *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             fp2_base_add_pre_x86(z, x, y);
@@ -317,7 +328,7 @@ namespace nil {
                         template<class Field>
                         inline void fp2_sub_pre(limb_array *data, const limb_array *other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            fp2_sub_pre_x86<Field>((limb*)data, (limb*)other);
+                            fp2_sub_pre_x86<Field>((limb *)data, (limb *)other);
 #else
                             subtract_8_limbs_mod<Field>(data[0], other[0]);
                             subtract_8_limbs(data[1], other[1]);
