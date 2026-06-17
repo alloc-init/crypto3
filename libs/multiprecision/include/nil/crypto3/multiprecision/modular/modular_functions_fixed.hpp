@@ -345,6 +345,11 @@ namespace boost {
                     //
                     // to prevent problems with trivial cpp_int
                     //
+                    if (eval_is_zero(input)) {
+                        result = static_cast<internal_limb_type>(0u);
+                        return;
+                    }
+
                     Backend2 modulus(m_mod);
 
                     if (eval_msb(input) < 2u * eval_msb(modulus) + 1u) {
