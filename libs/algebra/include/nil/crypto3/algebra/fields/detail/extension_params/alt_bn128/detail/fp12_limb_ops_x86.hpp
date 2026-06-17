@@ -8,7 +8,7 @@
 #define STR_IMPL(X) #X
 #define STR(X) STR_IMPL(X)
 
-#define PTR(REGNAME, I) STR(BOOST_PP_MUL(I, 8)) "(%[" #REGNAME "])"
+#define PTR(REGNAME, I) STR(I) "*8(%[" #REGNAME "])"
 #define PTR2(REGNAME, I, J) PTR(REGNAME, BOOST_PP_ADD(I, J))
 
 // get the i+j%5-th "d" register
@@ -711,10 +711,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
             ADD_LOW_4_LIMBS_MOD(data, 0, other, 0)
             ADD_LOW_4_LIMBS_MOD(data, 8, other, 8)
-
             ADD_LOW_4_LIMBS_MOD(data, 16, other, 16)
             ADD_LOW_4_LIMBS_MOD(data, 24, other, 24)
-            
             ADD_LOW_4_LIMBS_MOD(data, 32, other, 32)
             ADD_LOW_4_LIMBS_MOD(data, 40, other, 40)
 
