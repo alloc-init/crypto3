@@ -27,6 +27,8 @@
 #ifndef CRYPTO3_DETAIL_UNBOUNDED_SHIFT_HPP
 #define CRYPTO3_DETAIL_UNBOUNDED_SHIFT_HPP
 
+#include <climits>
+
 #include <boost/assert.hpp>
 
 namespace nil {
@@ -67,15 +69,17 @@ namespace nil {
 
             template<typename T>
             T unbounded_shl(T x, std::size_t n) {
-                if (sizeof(T) * CHAR_BIT <= n)
-                    n %= sizeof(T) * CHAR_BIT;
+                if (n >= sizeof(T) * CHAR_BIT) {
+                    return T();
+                }
                 return x << n;
             }
 
             template<typename T>
             T unbounded_shr(T x, std::size_t n) {
-                if (sizeof(T) * CHAR_BIT <= n)
-                    return 0;
+                if (n >= sizeof(T) * CHAR_BIT) {
+                    return T();
+                }
                 return x >> n;
             }
             // FIXME: it wouldn't work when Shift == sizeof(T) * CHAR_BIT
