@@ -88,7 +88,7 @@ namespace nil {
                         constexpr curve_element() :
                             curve_element(params_type::zero_fill[0],
                                           params_type::zero_fill[1],
-                                          field_value_type::zero()) {};
+                                          field_value_type::zero()) { };
 
                         /** @brief
                          *    @return the selected point (X:Y:Z)

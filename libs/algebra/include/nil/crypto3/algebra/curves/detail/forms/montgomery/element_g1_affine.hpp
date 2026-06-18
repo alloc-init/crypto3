@@ -78,14 +78,14 @@ namespace nil {
                          *    @return the point at infinity by default
                          *
                          */
-                        constexpr curve_element() : is_inf_point(true) {};
+                        constexpr curve_element() : is_inf_point(true) { };
 
                         /**
                          * @brief
                          *    @return the selected point $(X:Y:Z)$ in the projective coordinates
                          */
                         constexpr curve_element(const field_value_type &in_X, const field_value_type &in_Y) :
-                            is_inf_point(false), X(in_X), Y(in_Y) {};
+                            is_inf_point(false), X(in_X), Y(in_Y) { };
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>

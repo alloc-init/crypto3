@@ -62,8 +62,7 @@ namespace nil {
 #ifdef CRYPTO3_HASH_POSEIDON_COMPILE_TIME
                     constexpr
 #endif
-                        static std::pair<mds_matrix_type, round_constants_type>
-                        generate_constants() {
+                        static std::pair<mds_matrix_type, round_constants_type> generate_constants() {
                         return {generate_mds_matrix(), generate_round_constants()};
                     }
 
@@ -71,8 +70,7 @@ namespace nil {
 #ifdef CRYPTO3_HASH_POSEIDON_COMPILE_TIME
                     constexpr
 #endif
-                        static inline mds_matrix_type
-                        generate_mds_matrix() {
+                        static inline mds_matrix_type generate_mds_matrix() {
                         mds_matrix_type new_mds_matrix;
 
                         state_vector_type x;
@@ -115,8 +113,7 @@ namespace nil {
 #ifdef CRYPTO3_HASH_POSEIDON_COMPILE_TIME
                     constexpr
 #endif
-                        static const round_constants_type
-                        generate_round_constants() {
+                        static const round_constants_type generate_round_constants() {
                         round_constants_type round_constants;
 
                         integral_type constant = 0;

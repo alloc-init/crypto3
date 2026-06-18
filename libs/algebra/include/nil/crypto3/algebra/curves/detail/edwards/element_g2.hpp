@@ -72,7 +72,7 @@ namespace nil {
                          */
                         constexpr element_edwards_g2() :
                             element_edwards_g2(policy_type::g2_zero_fill[0], policy_type::g2_zero_fill[1],
-                                               policy_type::g2_zero_fill[2]) {};
+                                               policy_type::g2_zero_fill[2]) { };
 
                         /** @brief
                          *    @return the selected point $(X:Y:Z)$ in the projective coordinates
@@ -95,7 +95,7 @@ namespace nil {
                          *
                          */
                         constexpr element_edwards_g2(underlying_field_value_type X, underlying_field_value_type Y) :
-                            element_edwards_g2(X, Y, X * Y) {};
+                            element_edwards_g2(X, Y, X * Y) { };
                         /** @brief Get the point at infinity
                          *
                          */

@@ -57,10 +57,10 @@ namespace Eigen {
             return Real::default_precision();
         }
         static int digits10() {
-            return digits10_imp(boost::mpl::bool_ < std::numeric_limits<Real>::digits10 &&
-                                        (std::numeric_limits<Real>::digits10 != INT_MAX) ?
-                                    true :
-                                    false > ());
+            return digits10_imp(
+                boost::mpl::bool_<
+                    std::numeric_limits<Real>::digits10 && (std::numeric_limits<Real>::digits10 != INT_MAX) ? true :
+                                                                                                              false>());
         }
     };
 

@@ -95,10 +95,10 @@ namespace nil {
                     typedef std::array<path_element_type, Arity - 1> layer_type;
                     typedef std::vector<layer_type> path_type;
 
-                    merkle_proof_impl() : _li(0), _root(value_type()) {};
+                    merkle_proof_impl() : _li(0), _root(value_type()) { };
 
                     merkle_proof_impl(std::size_t li, value_type root, path_type path) :
-                        _li(li), _root(root), _path(path) {};
+                        _li(li), _root(root), _path(path) { };
 
                     merkle_proof_impl(const merkle_tree<hash_type, arity> &tree, const std::size_t leaf_idx) {
                         _root = tree.root();

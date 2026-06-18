@@ -70,8 +70,8 @@ void test_convert_imp(std::integral_constant<int, number_kind_integer> const &,
         To t2 = from.template convert_to<To>();
         BOOST_CHECK_EQUAL(from.str(), t1.str());
         BOOST_CHECK_EQUAL(from.str(), t2.str());
-        test_convert_neg_int<From, To>(from, boost::mpl::bool_ < std::numeric_limits<From>::is_signed &&
-                                                 std::numeric_limits<To>::is_signed > ());
+        test_convert_neg_int<From, To>(
+            from, boost::mpl::bool_<std::numeric_limits<From>::is_signed && std::numeric_limits<To>::is_signed>());
     }
 }
 
@@ -98,8 +98,8 @@ void test_convert_imp(std::integral_constant<int, number_kind_integer> const &,
         To t2 = from.template convert_to<To>();
         BOOST_CHECK_EQUAL(from.str(), numerator(t1).str());
         BOOST_CHECK_EQUAL(from.str(), numerator(t2).str());
-        test_convert_neg_rat<From, To>(from, boost::mpl::bool_ < std::numeric_limits<From>::is_signed &&
-                                                 std::numeric_limits<To>::is_signed > ());
+        test_convert_neg_rat<From, To>(
+            from, boost::mpl::bool_<std::numeric_limits<From>::is_signed && std::numeric_limits<To>::is_signed>());
     }
 }
 
@@ -128,8 +128,8 @@ void test_convert_imp(std::integral_constant<int, number_kind_integer> const &,
         To check(from.str() + ".0");
         BOOST_CHECK_EQUAL(t1, check);
         BOOST_CHECK_EQUAL(t2, check);
-        test_convert_neg_float<From, To>(from, boost::mpl::bool_ < std::numeric_limits<From>::is_signed &&
-                                                   std::numeric_limits<To>::is_signed > ());
+        test_convert_neg_float<From, To>(
+            from, boost::mpl::bool_<std::numeric_limits<From>::is_signed && std::numeric_limits<To>::is_signed>());
     }
 }
 

@@ -1695,9 +1695,8 @@ void test_negative_mixed(std::integral_constant<bool, true> const&) {
     //
     // Conversion from min and max values:
     //
-    test_negative_mixed_minmax<Real, Num>(std::integral_constant < bool,
-                                          std::numeric_limits<Real>::is_integer&& std::numeric_limits<Num>::is_integer >
-                                              ());
+    test_negative_mixed_minmax<Real, Num>(
+        std::integral_constant<bool, std::numeric_limits<Real>::is_integer && std::numeric_limits<Num>::is_integer>());
     //
     // RValue ref overloads:
     //

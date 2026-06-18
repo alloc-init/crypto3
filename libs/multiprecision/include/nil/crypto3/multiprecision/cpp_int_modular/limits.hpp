@@ -21,9 +21,9 @@ namespace std {
         template<unsigned Bits, boost::multiprecision::expression_template_option ExpressionTemplates>
         inline BOOST_CXX14_CONSTEXPR_IF_DETECTION
             boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<Bits>,
-                                          ExpressionTemplates>
-            get_min(const std::integral_constant<bool, true> &, const std::integral_constant<bool, true> &,
-                    const std::integral_constant<bool, true> &) {
+                                          ExpressionTemplates> get_min(const std::integral_constant<bool, true> &,
+                                                                       const std::integral_constant<bool, true> &,
+                                                                       const std::integral_constant<bool, true> &) {
             // Bounded, signed, and no allocator.
             using result_type =
                 boost::multiprecision::number<boost::multiprecision::backends::cpp_int_modular_backend<Bits>,

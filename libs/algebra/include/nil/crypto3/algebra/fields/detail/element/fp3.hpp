@@ -78,8 +78,8 @@ namespace nil {
                                               const underlying_type &in_data2) : data({in_data0, in_data1, in_data2}) {
                         }
 
-                        constexpr element_fp3(const element_fp3 &B) : data(B.data) {};
-                        constexpr element_fp3(const element_fp3 &&B) BOOST_NOEXCEPT : data(std::move(B.data)) {};
+                        constexpr element_fp3(const element_fp3 &B) : data(B.data) { };
+                        constexpr element_fp3(const element_fp3 &&B) BOOST_NOEXCEPT : data(std::move(B.data)) { };
 
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.

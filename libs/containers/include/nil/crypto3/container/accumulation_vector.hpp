@@ -55,14 +55,14 @@ namespace nil {
                 accumulation_vector(const accumulation_vector<Type> &other) = default;
                 accumulation_vector(accumulation_vector<Type> &&other) = default;
                 accumulation_vector(const underlying_value_type &first, sparse_vector<Type> &&rest) :
-                    first(first), rest(std::move(rest)) {};
+                    first(first), rest(std::move(rest)) { };
                 accumulation_vector(underlying_value_type &&first, sparse_vector<Type> &&rest) :
-                    first(std::move(first)), rest(std::move(rest)) {};
+                    first(std::move(first)), rest(std::move(rest)) { };
                 accumulation_vector(underlying_value_type &&first, std::vector<underlying_value_type> &&v) :
                     first(std::move(first)), rest(std::move(v)) {
                 }
                 accumulation_vector(std::vector<underlying_value_type> &&v) :
-                    first(underlying_value_type::zero()), rest(std::move(v)) {};
+                    first(underlying_value_type::zero()), rest(std::move(v)) { };
 
                 accumulation_vector<Type> &operator=(const accumulation_vector<Type> &other) = default;
                 accumulation_vector<Type> &operator=(accumulation_vector<Type> &&other) = default;

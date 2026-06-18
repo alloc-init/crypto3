@@ -194,7 +194,7 @@ namespace nil {
                     typedef typename container_type::reverse_iterator reverse_iterator;
                     typedef typename container_type::const_reverse_iterator const_reverse_iterator;
 
-                    merkle_tree_impl() : _size(0), _leaves(0), _rc(0) {};
+                    merkle_tree_impl() : _size(0), _leaves(0), _rc(0) { };
 
                     ~merkle_tree_impl() = default;
 

@@ -61,10 +61,10 @@ namespace nil {
                         constexpr element_fp12_2over3over2(const data_type &in_data) : data({in_data[0], in_data[1]}) {
                         }
 
-                        constexpr element_fp12_2over3over2(const element_fp12_2over3over2 &B) : data {B.data} {};
+                        constexpr element_fp12_2over3over2(const element_fp12_2over3over2 &B) : data {B.data} { };
 
                         constexpr element_fp12_2over3over2(const element_fp12_2over3over2 &&B) BOOST_NOEXCEPT
-                            : data(std::move(B.data)) {};
+                            : data(std::move(B.data)) { };
 
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.
