@@ -73,7 +73,7 @@ namespace nil {
                                 return *this;
                             }
 
-                            static fp_dbl mul_by_9(fp_dbl &dst, const fp_dbl &src) {
+                            static void mul_by_9(fp_dbl &dst, const fp_dbl &src) {
                                 alt_bn128_fp12_limb_ops::mul_8_limbs_by_9<base_field_type>(dst.data, src.data);
                             }
 
@@ -174,12 +174,17 @@ namespace nil {
                                 data[1] += tmp_a;
                             }
 
-                            static void mul_by_xi_add(fp2_dbl &dst, fp2_dbl &src, const fp2_dbl &addend) {
-                                fp_dbl::mul_by_9(dst[0], src.data[0]);
-                                dst[0] -= src.data[1];
-                                fp_dbl::mul_by_9(dst[1], src.data[1]);
-                                dst[1] += src.data[0];
-                                dst += addend;
+                            // dst = src * xi + addend
+                            static void mul_by_xi_add(fp2_dbl &dst, fp2_dbl &src, fp2_dbl &addend) {
+                                // need to handle clases when dst aliases src and also when dst aliases addend
+                                const fp_dbl a = src.data[0];
+                                const fp_dbl b = src.data[1];
+                                const fp2_dbl add = addend;
+                                fp_dbl::mul_by_9(dst.data[0], a);
+                                dst.data[0] -= b;
+                                fp_dbl::mul_by_9(dst.data[1], b);
+                                dst.data[1] += a;
+                                dst += add;
                             }
 
                             void to_non_residue(non_residue_type &ret) const {
@@ -296,10 +301,8 @@ namespace nil {
                                 //   z0 = ad + xi*za
                                 //   z1 = zb + xi*cf
                                 //   z2 = zc + be
-                                za.mul_by_xi();
-                                za += ad;
-                                cf.mul_by_xi();
-                                zb += cf;
+                                fp2_dbl::mul_by_xi_add(za, za, ad);
+                                fp2_dbl::mul_by_xi_add(zb, cf, zb);
                                 zc += be;
                             }
 
