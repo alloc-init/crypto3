@@ -164,18 +164,21 @@ namespace nil {
                                     (const limb_array *)y.data.data());
                             }
 
-                            void mul_by_xi() {
-                                // Lazy multiply by xi = 9 + u:
-                                // (a + b*u) * xi = (9a - b) + (a + 9b) * u.
-                                const fp_dbl tmp_a = data[0];
-                                data[0].mul_by_9();
-                                data[0] -= data[1];
-                                data[1].mul_by_9();
-                                data[1] += tmp_a;
+                            // aliasing not allowed
+                            static void mul_by_xi(fp2_dbl &dst, const fp2_dbl &src) {
+                                alt_bn128_fp12_limb_ops::fp2_mul_by_xi<base_field_type>((limb_array *)dst.data.data(),
+                                                                                        (limb_array *)src.data.data());
                             }
 
-                            // dst = src * xi + addend
-                            static void mul_by_xi_add(fp2_dbl &dst, fp2_dbl &src, fp2_dbl &addend) {
+                            static void mul_by_xi_add_modify_src(fp2_dbl &dst, fp2_dbl &addend) {
+                                fp2_dbl src = dst;
+                                alt_bn128_fp12_limb_ops::fp2_mul_by_xi_add<base_field_type>(
+                                    (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
+                                    (limb_array *)addend.data.data());
+                            }
+
+                            static void mul_by_xi_add_modify_addend(fp2_dbl &dst, fp2_dbl &src) {
+                                fp2_dbl addend = dst;
                                 alt_bn128_fp12_limb_ops::fp2_mul_by_xi_add<base_field_type>(
                                     (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
                                     (limb_array *)addend.data.data());
@@ -295,8 +298,8 @@ namespace nil {
                                 //   z0 = ad + xi*za
                                 //   z1 = zb + xi*cf
                                 //   z2 = zc + be
-                                fp2_dbl::mul_by_xi_add(za, za, ad);
-                                fp2_dbl::mul_by_xi_add(zb, cf, zb);
+                                fp2_dbl::mul_by_xi_add_modify_src(za, ad);
+                                fp2_dbl::mul_by_xi_add_modify_addend(zb, cf);
                                 zc += be;
                             }
 
@@ -312,8 +315,7 @@ namespace nil {
                             //     = xi*c + a*v + b*v^2
                             fp6_dbl mul_v() const {
                                 fp6_dbl result;
-                                result.data[0] = data[2];
-                                result.data[0].mul_by_xi();
+                                fp2_dbl::mul_by_xi(result.data[0], data[2]);
                                 result.data[1] = data[0];
                                 result.data[2] = data[1];
                                 return result;

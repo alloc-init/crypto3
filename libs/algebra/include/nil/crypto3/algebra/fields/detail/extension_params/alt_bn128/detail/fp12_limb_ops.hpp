@@ -337,16 +337,22 @@ namespace nil {
                         }
 
                         template<class Field>
+                        void fp2_mul_by_xi(limb_array *dst, const limb_array *src) {
+                            mul_8_limbs_by_9<Field>(dst[0], src[0]);
+                            subtract_8_limbs_mod<Field>(dst[0], src[1]);
+                            mul_8_limbs_by_9<Field>(dst[1], src[1]);
+                            add_8_limbs_mod<Field>(dst[1], src[0]);
+                        }
+
+                        // caller must handle aliasing
+                        template<class Field>
                         void fp2_mul_by_xi_add(limb_array *dst, const limb_array *src, const limb_array *addend) {
-                            const limb_array a = src[0];
-                            const limb_array b = src[1];
-                            const limb_array add[2] = {addend[0], addend[1]};
-                            mul_8_limbs_by_9<Field>(dst[0], a);
-                            subtract_8_limbs_mod<Field>(dst[0], b);
-                            mul_8_limbs_by_9<Field>(dst[1], b);
-                            add_8_limbs_mod<Field>(dst[1], a);
-                            add_8_limbs_mod<Field>(dst[0], add[0]);
-                            add_8_limbs_mod<Field>(dst[1], add[1]);
+                            mul_8_limbs_by_9<Field>(dst[0], src[0]);
+                            subtract_8_limbs_mod<Field>(dst[0], src[1]);
+                            mul_8_limbs_by_9<Field>(dst[1], src[1]);
+                            add_8_limbs_mod<Field>(dst[1], src[0]);
+                            add_8_limbs_mod<Field>(dst[0], addend[0]);
+                            add_8_limbs_mod<Field>(dst[1], addend[1]);
                         }
 
                         template<class Field>
