@@ -29,6 +29,9 @@ jobs:
             clang-format \
             git
 
+      - name: Show clang-format version
+        run: clang-format --version
+
       - name: Checkout
         uses: actions/checkout@v4
 
