@@ -176,15 +176,9 @@ namespace nil {
 
                             // dst = src * xi + addend
                             static void mul_by_xi_add(fp2_dbl &dst, fp2_dbl &src, fp2_dbl &addend) {
-                                // need to handle clases when dst aliases src and also when dst aliases addend
-                                const fp_dbl a = src.data[0];
-                                const fp_dbl b = src.data[1];
-                                const fp2_dbl add = addend;
-                                fp_dbl::mul_by_9(dst.data[0], a);
-                                dst.data[0] -= b;
-                                fp_dbl::mul_by_9(dst.data[1], b);
-                                dst.data[1] += a;
-                                dst += add;
+                                alt_bn128_fp12_limb_ops::fp6_mul_by_xi_add<base_field_type>(
+                                    (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
+                                    (limb_array *)addend.data.data());
                             }
 
                             void to_non_residue(non_residue_type &ret) const {

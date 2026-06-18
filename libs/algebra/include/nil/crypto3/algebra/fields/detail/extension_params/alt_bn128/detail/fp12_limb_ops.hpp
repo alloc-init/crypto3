@@ -384,6 +384,20 @@ namespace nil {
                             fp2_base_add_mod<Field>(data + 4, other + 4);
 #endif
                         }
+
+                        template<class Field>
+                        void fp6_mul_by_xi_add(limb_array *dst, const limb_array *src, const limb_array *addend) {
+                            // need to handle cases when inputs alias dst
+                            const limb_array a = src[0];
+                            const limb_array b = src[1];
+                            const limb_array add[2] = {addend[0], addend[1]};
+                            mul_8_limbs_by_9<Field>(dst[0], a);
+                            subtract_8_limbs_mod<Field>(dst[0], b);
+                            mul_8_limbs_by_9<Field>(dst[1], b);
+                            add_8_limbs_mod<Field>(dst[1], a);
+                            add_8_limbs_mod<Field>(dst[0], add[0]);
+                            add_8_limbs_mod<Field>(dst[1], add[1]);
+                        }
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail
             }    // namespace fields
