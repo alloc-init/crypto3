@@ -35,9 +35,18 @@ jobs:
       - name: Check C++ formatting
         shell: bash
         run: |
-          git ls-files -z -- \
-            '*.c' '*.cc' '*.cpp' '*.cxx' \
-            '*.h' '*.hh' '*.hpp' '*.hxx' \
-            ':(exclude)cmake/modules/test/**' \
-            ':(exclude)cmake/modules/share/modules/cmake/version.hpp' \
+          find . \
+            \( -path './.git' \
+              -o -path './build' \
+              -o -path './build/*' \
+              -o -path './.ccache' \
+              -o -path './.ccache/*' \
+              -o -path './cmake/modules/test' \
+              -o -path './cmake/modules/test/*' \
+              -o -path './cmake/modules/share/modules/cmake/version.hpp' \
+            \) -prune -o \
+            -type f \( \
+              -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' \
+              -o -name '*.h' -o -name '*.hh' -o -name '*.hpp' -o -name '*.hxx' \
+            \) -print0 \
             | xargs -0 -r clang-format --dry-run --Werror
