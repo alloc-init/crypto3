@@ -59,7 +59,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         asm volatile(
 
             SCHOOLBOOK(result, 0, x, 0, y, 0)
-            
+
             : [low]"=&r"(low),
               [high]"=&r"(high),
               [zero]"=&r"(zero),
@@ -473,6 +473,47 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "cmovnc %[q2], %[t6]\n" \
     "cmovnc %[q3], %[t7]\n"
 
+#define MUL_8_LIMBS_BY_9(DST, DST_BASE, SRC, SRC_BASE) \
+    "movq " PTR2(SRC, SRC_BASE, 0) ", %[t0]\n"         \
+    "movq " PTR2(SRC, SRC_BASE, 1) ", %[t1]\n"         \
+    "movq " PTR2(SRC, SRC_BASE, 2) ", %[t2]\n"         \
+    "movq " PTR2(SRC, SRC_BASE, 3) ", %[t3]\n"         \
+    "movq " PTR2(SRC, SRC_BASE, 4) ", %[t4]\n"         \
+    "movq " PTR2(SRC, SRC_BASE, 5) ", %[t5]\n"         \
+    "movq " PTR2(SRC, SRC_BASE, 6) ", %[t6]\n"         \
+    "movq " PTR2(SRC, SRC_BASE, 7) ", %[t7]\n"         \
+    DOUBLE_MOD_P() /* 2x */                            \
+    DOUBLE_MOD_P() /* 4x */                            \
+    DOUBLE_MOD_P() /* 8x */                            \
+    "addq " PTR2(SRC, SRC_BASE, 0) ", %[t0]\n"         \
+    "adcq " PTR2(SRC, SRC_BASE, 1) ", %[t1]\n"         \
+    "adcq " PTR2(SRC, SRC_BASE, 2) ", %[t2]\n"         \
+    "adcq " PTR2(SRC, SRC_BASE, 3) ", %[t3]\n"         \
+    "adcq " PTR2(SRC, SRC_BASE, 4) ", %[t4]\n"         \
+    "adcq " PTR2(SRC, SRC_BASE, 5) ", %[t5]\n"         \
+    "adcq " PTR2(SRC, SRC_BASE, 6) ", %[t6]\n"         \
+    "adcq " PTR2(SRC, SRC_BASE, 7) ", %[t7]\n"         \
+    "movq %[t4], %[q0]\n"                              \
+    "movq %[t5], %[q1]\n"                              \
+    "movq %[t6], %[q2]\n"                              \
+    "movq %[t7], %[q3]\n"                              \
+    "subq %[p0], %[q0]\n"                              \
+    "sbbq %[p1], %[q1]\n"                              \
+    "sbbq %[p2], %[q2]\n"                              \
+    "sbbq %[p3], %[q3]\n"                              \
+    "cmovnc %[q0], %[t4]\n"                            \
+    "cmovnc %[q1], %[t5]\n"                            \
+    "cmovnc %[q2], %[t6]\n"                            \
+    "cmovnc %[q3], %[t7]\n"                            \
+    "movq %[t0], " PTR2(DST, DST_BASE, 0) "\n"         \
+    "movq %[t1], " PTR2(DST, DST_BASE, 1) "\n"         \
+    "movq %[t2], " PTR2(DST, DST_BASE, 2) "\n"         \
+    "movq %[t3], " PTR2(DST, DST_BASE, 3) "\n"         \
+    "movq %[t4], " PTR2(DST, DST_BASE, 4) "\n"         \
+    "movq %[t5], " PTR2(DST, DST_BASE, 5) "\n"         \
+    "movq %[t6], " PTR2(DST, DST_BASE, 6) "\n"         \
+    "movq %[t7], " PTR2(DST, DST_BASE, 7) "\n"
+
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
     inline void mul_8_limbs_by_9_x86(limb_array &dst, const limb_array &src) {
@@ -481,49 +522,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb q0, q1, q2, q3;
 
         asm volatile(
-            "movq " PTR(src, 0) ", %[t0]\n"
-            "movq " PTR(src, 1) ", %[t1]\n"
-            "movq " PTR(src, 2) ", %[t2]\n"
-            "movq " PTR(src, 3) ", %[t3]\n"
-            "movq " PTR(src, 4) ", %[t4]\n"
-            "movq " PTR(src, 5) ", %[t5]\n"
-            "movq " PTR(src, 6) ", %[t6]\n"
-            "movq " PTR(src, 7) ", %[t7]\n"
 
-            DOUBLE_MOD_P() // 2x
-            DOUBLE_MOD_P() // 4x
-            DOUBLE_MOD_P() // 8x
-
-            // 9x, final add by original value
-            "addq " PTR(src, 0) ", %[t0]\n"
-            "adcq " PTR(src, 1) ", %[t1]\n"
-            "adcq " PTR(src, 2) ", %[t2]\n"
-            "adcq " PTR(src, 3) ", %[t3]\n"
-            "adcq " PTR(src, 4) ", %[t4]\n"
-            "adcq " PTR(src, 5) ", %[t5]\n"
-            "adcq " PTR(src, 6) ", %[t6]\n"
-            "adcq " PTR(src, 7) ", %[t7]\n"
-            "movq %[t4], %[q0]\n"
-            "movq %[t5], %[q1]\n"
-            "movq %[t6], %[q2]\n"
-            "movq %[t7], %[q3]\n"
-            "subq %[p0], %[q0]\n"
-            "sbbq %[p1], %[q1]\n"
-            "sbbq %[p2], %[q2]\n"
-            "sbbq %[p3], %[q3]\n"
-            "cmovnc %[q0], %[t4]\n"
-            "cmovnc %[q1], %[t5]\n"
-            "cmovnc %[q2], %[t6]\n"
-            "cmovnc %[q3], %[t7]\n"
-
-            "movq %[t0], " PTR(dst, 0) "\n"
-            "movq %[t1], " PTR(dst, 1) "\n"
-            "movq %[t2], " PTR(dst, 2) "\n"
-            "movq %[t3], " PTR(dst, 3) "\n"
-            "movq %[t4], " PTR(dst, 4) "\n"
-            "movq %[t5], " PTR(dst, 5) "\n"
-            "movq %[t6], " PTR(dst, 6) "\n"
-            "movq %[t7], " PTR(dst, 7) "\n"
+            MUL_8_LIMBS_BY_9(dst, 0, src, 0)
 
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
@@ -646,7 +646,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 
             SUB_LIMBS_MOD(data, 0, other, 0, scratch, t0, t1, t2, t3, q0, q1, q2, q3)
             SUB_LIMBS(data, 8, other, 8, scratch)
-            
+
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
@@ -686,7 +686,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             SCHOOLBOOK(z, 8, x, 0, y, 8)
             SCHOOLBOOK(scratch, 0, x, 8, y, 0)
             ADD_LIMBS(z, 8, scratch, 0, tmp0)
-            
+
             :   [low]"=&r"(low),
                 [high]"=&r"(high),
                 [zero]"=&r"(zero),
@@ -758,5 +758,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #undef MONTGOMERY_REDUCE_LOAD_NEXT
 #undef MONTGOMERY_REDUCE_CANCEL_LOW
 #undef DOUBLE_MOD_P
+#undef MUL_8_LIMBS_BY_9
 
 // clang-format on

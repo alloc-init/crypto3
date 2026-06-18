@@ -176,7 +176,7 @@ namespace nil {
 
                             // dst = src * xi + addend
                             static void mul_by_xi_add(fp2_dbl &dst, fp2_dbl &src, fp2_dbl &addend) {
-                                alt_bn128_fp12_limb_ops::fp6_mul_by_xi_add<base_field_type>(
+                                alt_bn128_fp12_limb_ops::fp2_mul_by_xi_add<base_field_type>(
                                     (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
                                     (limb_array *)addend.data.data());
                             }
