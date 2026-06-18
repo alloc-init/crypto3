@@ -21,23 +21,23 @@ jobs:
     timeout-minutes: 15
 
     steps:
-    - name: Install dependencies
-      run: |
-        apt-get update
-        apt-get install -y --no-install-recommends \
-          ca-certificates \
-          clang-format \
-          git
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates \
+            clang-format \
+            git
 
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Check C++ formatting
-      shell: bash
-      run: |
-      	   git ls-files -z -- \
-               '*.c' '*.cc' '*.cpp' '*.cxx' \
-               '*.h' '*.hh' '*.hpp' '*.hxx' \
-               ':(exclude)cmake/modules/test/**' \
-               ':(exclude)cmake/modules/share/modules/cmake/version.hpp' \
-               | xargs -0 -r clang-format --dry-run --Werror
+      - name: Check C++ formatting
+        shell: bash
+        run: |
+          git ls-files -z -- \
+            '*.c' '*.cc' '*.cpp' '*.cxx' \
+            '*.h' '*.hh' '*.hpp' '*.hxx' \
+            ':(exclude)cmake/modules/test/**' \
+            ':(exclude)cmake/modules/share/modules/cmake/version.hpp' \
+            | xargs -0 -r clang-format --dry-run --Werror
