@@ -252,8 +252,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp dbl reduce", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    typename fp12_fast_type::fp_dbl value(fp_products[idx]);
-                    value.to_base_value(fp_acc);
+                    fp_dbl_x[idx].to_base_value(fp_acc);
                     do_not_optimize(&fp_acc);
                 }));
 
@@ -292,8 +291,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp2 reduce", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    typename fp12_fast_type::fp2_dbl value(fp2_dbl_x[idx]);
-                    value.to_non_residue(fp2_acc);
+                    fp2_dbl_x[idx].to_non_residue(fp2_acc);
                     do_not_optimize(&fp2_acc);
                 }));
 
@@ -336,8 +334,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp6 reduce", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    fp6_dbl_type value(fp6_dbl_x[idx]);
-                    value.to_underlying(fp6_acc);
+                    fp6_dbl_x[idx].to_underlying(fp6_acc);
                     do_not_optimize(&fp6_acc);
                 }));
 
