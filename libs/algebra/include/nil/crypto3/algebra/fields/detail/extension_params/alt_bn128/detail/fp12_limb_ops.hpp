@@ -93,16 +93,16 @@ namespace nil {
 
                         template<class Field>
                         inline void subtract_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
-                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            //                             subtract_8_limbs_mod_x86<Field>(data, other);
-                            // #else
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            subtract_8_limbs_mod_x86<Field>(z, x, y);
+#else
                             bool borrow = subtract_limbs_portable<8>(z.data(), x.data(), y.data());
                             if (borrow) {
                                 // if we went negative, add p
                                 static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                                 add_limbs_portable<4>(z.data() + 4, z.data() + 4, p.data());
                             }
-                            // #endif
+#endif
                         }
 
                         template<class Field>
@@ -284,7 +284,7 @@ namespace nil {
                         template<class Field>
                         inline void fp2_sub_pre(limb_array *data, const limb_array *other) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            fp2_sub_pre_x86<Field>((limb *)data, (limb *)other);
+                            fp2_sub_pre_x86<Field>(data, other);
 #else
                             subtract_8_limbs_mod<Field>(data[0], data[0], other[0]);
                             subtract_limbs_portable<8>(data[1].data(), data[1].data(), other[1].data());
