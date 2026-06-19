@@ -643,7 +643,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 
     template<class Field>
-    inline void fp2_mul_pre_x86(limb_array *z, const limb_array *x, const limb_array *y) {
+    inline void fp2_mul_pre_x86(limb_array *z, const limb *const *x, const limb *const *y) {
         SET_STATIC_MODULUS_FROM_FIELD();
         // For x = a + bu and y = c + du:
         //   xy = (a + bu) * (c + du)
@@ -656,65 +656,41 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb_array scratch;
         asm volatile(
 
-            SCHOOLBOOK(z, 0, x, 0, y, 0)
-            SCHOOLBOOK(scratch, 0, x, 8, y, 8)
+            "movq 0(%[x]), %[tmp0]\n"
+            "movq 0(%[y]), %[tmp1]\n"
+            SCHOOLBOOK(z, 0, tmp0, 0, tmp1, 0)
+            "movq 8(%[x]), %[tmp0]\n"
+            "movq 8(%[y]), %[tmp1]\n"
+            SCHOOLBOOK(scratch, 0, tmp0, 0, tmp1, 0)
             SUB_LIMBS_MOD(z, 0, z, 0, scratch, 0, tmp0, tmp1, low, high, zero, d0, d1, d2, d3)
-            SCHOOLBOOK(z, 8, x, 0, y, 8)
-            SCHOOLBOOK(scratch, 0, x, 8, y, 0)
+            "movq 0(%[x]), %[tmp0]\n"
+            "movq 8(%[y]), %[tmp1]\n"
+            SCHOOLBOOK(z, 8, tmp0, 0, tmp1, 0)
+            "movq 8(%[x]), %[tmp0]\n"
+            "movq 0(%[y]), %[tmp1]\n"
+            SCHOOLBOOK(scratch, 0, tmp0, 0, tmp1, 0)
             ADD_LIMBS(z, 8, scratch, 0, tmp0)
 
-            :   [low]"=&r"(low),
-                [high]"=&r"(high),
-                [zero]"=&r"(zero),
-                [d0]"=&r"(d0),
-                [d1]"=&r"(d1),
-                [d2]"=&r"(d2),
-                [d3]"=&r"(d3),
-                [tmp0]"=&r"(tmp0)
-            :   [tmp1]"d"(tmp1),
-                [x]"r"(x),
-                [y]"r"(y),
-                [z]"r"(z),
-                [scratch]"r"(scratch.data()),
-                [p0]"m"(p0),
-                [p1]"m"(p1),
-                [p2]"m"(p2),
-                [p3]"m"(p3)
-            : "cc", "memory"
+            : [low]"=&r"(low),
+              [high]"=&r"(high),
+              [zero]"=&r"(zero),
+              [d0]"=&r"(d0),
+              [d1]"=&r"(d1),
+              [d2]"=&r"(d2),
+              [d3]"=&r"(d3),
+              [tmp0]"=&r"(tmp0),
+              [tmp1]"=&r"(tmp1)
+            : [x]"r"(x),
+              [y]"r"(y),
+              [z]"r"(z),
+              [scratch]"r"(scratch.data()),
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3)
+            : "rdx", "cc", "memory"
         );
     }
-
-    // template <class Field>
-    // inline void fp6_base_add_mod_x86(limb *data, const limb *other) {
-    //     SET_STATIC_MODULUS_FROM_FIELD();
-    //     limb t0, t1, t2, t3;
-    //     limb q0, q1, q2, q3;
-    //     asm volatile(
-
-    //         ADD_LOW_4_LIMBS_MOD(data, 0, other, 0)
-    //         ADD_LOW_4_LIMBS_MOD(data, 8, other, 8)
-    //         ADD_LOW_4_LIMBS_MOD(data, 16, other, 16)
-    //         ADD_LOW_4_LIMBS_MOD(data, 24, other, 24)
-    //         ADD_LOW_4_LIMBS_MOD(data, 32, other, 32)
-    //         ADD_LOW_4_LIMBS_MOD(data, 40, other, 40)
-
-    //         : [t0]"=&r"(t0),
-    //           [t1]"=&r"(t1),
-    //           [t2]"=&r"(t2),
-    //           [t3]"=&r"(t3),
-    //           [q0]"=&r"(q0),
-    //           [q1]"=&r"(q1),
-    //           [q2]"=&r"(q2),
-    //           [q3]"=&r"(q3)
-    //         : [data]"r"(data),
-    //           [other]"r"(other),
-    //           [p0]"m"(p0),
-    //           [p1]"m"(p1),
-    //           [p2]"m"(p2),
-    //           [p3]"m"(p3)
-    //         : "cc", "memory"
-    //     );
-    // }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
 #undef STR_IMPL
