@@ -61,6 +61,16 @@ struct bench_result {
     std::size_t samples = 0;
 };
 
+struct stage_result {
+    std::string name;
+    bench_result result;
+};
+
+static std::vector<stage_result>& stage_results() {
+    static std::vector<stage_result> results;
+    return results;
+}
+
 template<typename Body>
 bench_result run_stage(std::size_t iters, std::size_t warmup, std::size_t samples, Body&& body) {
     for (std::size_t i = 0; i < warmup; ++i) {
@@ -100,8 +110,39 @@ bench_result run_stage(std::size_t iters, std::size_t warmup, std::size_t sample
 }
 
 static void print_stage(const std::string& name, const bench_result& result) {
+    stage_results().push_back({name, result});
     std::cout << std::left << std::setw(24) << name << " per=" << std::setw(12) << result.ns_per << " ns"
               << " stddev=" << std::setw(12) << result.stddev_ns_per << " ns\n";
+}
+
+static void print_csv_results() {
+    std::cout << "\nCSV\n";
+    std::cout << "Operation,crypto3 (ns),stddev (ns)\n";
+    for (const stage_result& stage : stage_results()) {
+        std::cout << stage.name << "," << std::setprecision(17) << stage.result.ns_per << ","
+                  << stage.result.stddev_ns_per << "\n";
+    }
+}
+
+struct fp12_base_parts {
+    fp6_base_type a;
+    fp6_base_type b;
+    fp6_base_type c;
+    fp6_base_type d;
+};
+
+static void multiply_prepacked_fp12(fp12_value_type& ret, const fp12_base_parts& parts) {
+    fp6_dbl_type ac, bd, z;
+    fp6_dbl_type::mul_pre(ac, parts.a, parts.c);
+    fp6_dbl_type::mul_pre(bd, parts.b, parts.d);
+
+    fp6_dbl_type::mul_pre(z, parts.a + parts.b, parts.c + parts.d);
+    z -= ac;
+    z -= bd;
+    z.to_underlying(ret.data[1]);
+
+    fp6_dbl_type::mul_v_add(z, bd, ac);
+    z.to_underlying(ret.data[0]);
 }
 
 int main(int argc, char** argv) {
@@ -141,6 +182,7 @@ int main(int argc, char** argv) {
     std::vector<typename fp12_fast_type::fp2_dbl> fp2_dbl_y(poolN);
     std::vector<fp6_dbl_type> fp6_dbl_x(poolN);
     std::vector<fp6_dbl_type> fp6_dbl_y(poolN);
+    std::vector<fp12_base_parts> fp12_base_parts_x(poolN);
 
     for (std::size_t i = 0; i < poolN; ++i) {
         fpxs[i] = nil::crypto3::algebra::random_element<base_field_type>(rng);
@@ -157,6 +199,10 @@ int main(int argc, char** argv) {
         fp2_base_y[i] = fp2_base_type(fp2ys[i]);
         fp6_base_x[i] = fp6_base_type(fp6xs[i]);
         fp6_base_y[i] = fp6_base_type(fp6ys[i]);
+        fp12_base_parts_x[i].a = fp6_base_type(xs[i].data[0]);
+        fp12_base_parts_x[i].b = fp6_base_type(xs[i].data[1]);
+        fp12_base_parts_x[i].c = fp6_base_type(ys[i].data[0]);
+        fp12_base_parts_x[i].d = fp6_base_type(ys[i].data[1]);
     }
     for (std::size_t i = 0; i < poolN; ++i) {
         const std::size_t next = (i + 1) % poolN;
@@ -170,6 +216,7 @@ int main(int argc, char** argv) {
         limb_ops::add_8_limbs(fp_sum_y[i], fp_limbs_y[next]);
         limb_ops::add_8_limbs(fp_sum_y[i], fp_limbs_x[next2]);
         limb_ops::multiply_4x4(fp_products[i], fp_limbs_x[i], fp_limbs_y[i]);
+        limb_ops::multiply_4x4(fp_sum_products[i], fp_limbs_y[i], fp_limbs_x[next]);
         fp_dbl_x[i] = fp12_fast_type::fp_dbl(fp_products[i]);
         fp_dbl_y[i] = fp12_fast_type::fp_dbl(fp_sum_products[i]);
         fp12_fast_type::fp2_dbl::mul_pre(fp2_dbl_x[i], fp2_base_x[i], fp2_base_y[i]);
@@ -186,6 +233,7 @@ int main(int argc, char** argv) {
     fp6_dbl_type fp6_pre_acc;
     fp6_value_type fp6_acc;
     fp12_value_type fp12_acc;
+    fp12_base_parts fp12_base_acc;
 
     std::cout << "BN254 tower mul benchmark (crypto3)\n";
     std::cout << "iters=" << iters << " poolN=" << poolN << " warmup=" << warmup << " samples=" << samples << "\n";
@@ -193,6 +241,12 @@ int main(int argc, char** argv) {
     print_stage("Fp limb 4x4", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     limb_ops::multiply_4x4(fp_limb_acc, fp_limbs_x[idx], fp_limbs_y[idx]);
+                    do_not_optimize(&fp_limb_acc);
+                }));
+
+    print_stage("Fp limb REDC", run_stage(iters, warmup, samples, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    limb_ops::montgomery_reduce<base_field_type>(fp_limb_acc.data(), fp_products[idx].data());
                     do_not_optimize(&fp_limb_acc);
                 }));
 
@@ -220,6 +274,12 @@ int main(int argc, char** argv) {
                     const std::size_t idx = i % poolN;
                     fp_dbl_acc = fp_dbl_x[idx];
                     fp_dbl_acc -= fp_dbl_y[idx];
+                    do_not_optimize(&fp_dbl_acc);
+                }));
+
+    print_stage("Fp dbl mul_by_9", run_stage(iters, warmup, samples, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    limb_ops::mul_8_limbs_by_9<base_field_type>(fp_dbl_acc.data, fp_dbl_x[idx].data);
                     do_not_optimize(&fp_dbl_acc);
                 }));
 
@@ -302,6 +362,21 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp6_pre_acc);
                 }));
 
+    print_stage("Fp12 pack fp6_base", run_stage(iters, warmup, samples, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    fp12_base_acc.a = fp6_base_type(xs[idx].data[0]);
+                    fp12_base_acc.b = fp6_base_type(xs[idx].data[1]);
+                    fp12_base_acc.c = fp6_base_type(ys[idx].data[0]);
+                    fp12_base_acc.d = fp6_base_type(ys[idx].data[1]);
+                    do_not_optimize(&fp12_base_acc);
+                }));
+
+    print_stage("Fp12 core prepacked", run_stage(iters, warmup, samples, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    multiply_prepacked_fp12(fp12_acc, fp12_base_parts_x[idx]);
+                    do_not_optimize(&fp12_acc);
+                }));
+
     print_stage("Fp12 mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp12_acc = xs[idx] * ys[idx];
@@ -309,6 +384,7 @@ int main(int argc, char** argv) {
                 }));
 
     std::cout << "acc: " << fp12_acc << "\n";
+    print_csv_results();
 
     return 0;
 }
