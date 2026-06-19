@@ -56,7 +56,6 @@ namespace nil {
                     template<typename CurveParams>
                     class curve_element<CurveParams, forms::twisted_edwards, coordinates::extended_with_a_minus_1> {
                     public:
-
                         using params_type = CurveParams;
                         using field_type = typename params_type::field_type;
 
@@ -91,24 +90,27 @@ namespace nil {
                             curve_element(field_value_type::zero(),
                                           field_value_type::one(),
                                           field_value_type::zero(),
-                                          field_value_type::one()) {}
+                                          field_value_type::one()) {
+                        }
 
                         /** @brief
                          *    @return the selected point (X:Y:Z)
                          *
                          */
-                        constexpr curve_element(const field_value_type& X, const field_value_type& Y, const field_value_type& T, const field_value_type& Z) 
-                            : X(X), Y(Y), T(T), Z(Z) 
-                        { }
+                        constexpr curve_element(const field_value_type& X,
+                                                const field_value_type& Y,
+                                                const field_value_type& T,
+                                                const field_value_type& Z) : X(X), Y(Y), T(T), Z(Z) {
+                        }
 
-                        constexpr curve_element(const field_value_type& X, const field_value_type& Y) 
-                            : X(X), Y(Y), T(X * Y), Z(field_value_type::one())
-                        { }
+                        constexpr curve_element(const field_value_type& X, const field_value_type& Y) :
+                            X(X), Y(Y), T(X * Y), Z(field_value_type::one()) {
+                        }
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
                         explicit constexpr curve_element(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                            const boost::multiprecision::number<Backend, ExpressionTemplates>& value) {
                             *this = one() * value;
                         }
 
@@ -131,7 +133,7 @@ namespace nil {
 
                         /*************************  Comparison operations  ***********************************/
 
-                        constexpr bool operator==(const curve_element &other) const {
+                        constexpr bool operator==(const curve_element& other) const {
                             if (this->is_zero()) {
                                 return other.is_zero();
                             }
@@ -160,7 +162,7 @@ namespace nil {
                             return true;
                         }
 
-                        constexpr bool operator!=(const curve_element &other) const {
+                        constexpr bool operator!=(const curve_element& other) const {
                             return !(operator==(other));
                         }
                         /** @brief
@@ -168,7 +170,7 @@ namespace nil {
                          * @return true if element from group G1 is the point at infinity
                          */
                         constexpr bool is_zero() const {
-                            return (this->X.is_zero() && this->T.is_zero() && (this->Y == this->Z) );
+                            return (this->X.is_zero() && this->T.is_zero() && (this->Y == this->Z));
                         }
 
                         /** @brief
@@ -183,7 +185,7 @@ namespace nil {
                                 return true;
                             }
 
-                            if (X*Y != T*Z) {
+                            if (X * Y != T * Z) {
                                 return false;
                             }
 
@@ -217,28 +219,29 @@ namespace nil {
 
                         /*************************  Arithmetic operations  ***********************************/
 
-                        constexpr curve_element& operator=(curve_element<params_type, form, curves::coordinates::affine> const &other) {
+                        constexpr curve_element&
+                            operator=(curve_element<params_type, form, curves::coordinates::affine> const& other) {
                             this->X = other.X;
                             this->Y = other.Y;
-                            this->T = other.X*other.Y;
+                            this->T = other.X * other.Y;
                             this->Z = field_value_type::one();
                             return *this;
                         }
 
-                                                static curve_element from_affine(curve_element<params_type, form, curves::coordinates::affine> const &other) {
-                            return curve_element(other.X, other.Y, other.X*other.Y, field_value_type::one());
+                        static curve_element
+                            from_affine(curve_element<params_type, form, curves::coordinates::affine> const& other) {
+                            return curve_element(other.X, other.Y, other.X * other.Y, field_value_type::one());
                         }
 
-                        
-                          template<typename Backend,
+                        template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                        constexpr const curve_element&
+                            operator=(const boost::multiprecision::number<Backend, ExpressionTemplates>& value) {
                             *this = one() * value;
                             return *this;
                         }
 
-                        constexpr curve_element operator+(const curve_element &other) const {
+                        constexpr curve_element operator+(const curve_element& other) const {
                             if (this->is_zero()) {
                                 return other;
                             }
@@ -258,7 +261,7 @@ namespace nil {
                             return result;
                         }
 
-                        constexpr curve_element& operator+=(const curve_element &other) {
+                        constexpr curve_element& operator+=(const curve_element& other) {
                             // handle special cases having to do with O
                             if (this->is_zero()) {
                                 *this = other;
@@ -276,11 +279,11 @@ namespace nil {
                             return curve_element(-X, Y, -T, Z);
                         }
 
-                        constexpr curve_element operator-(const curve_element &other) const {
+                        constexpr curve_element operator-(const curve_element& other) const {
                             return (*this) + (-other);
                         }
 
-                        constexpr curve_element& operator-=(const curve_element &other) {
+                        constexpr curve_element& operator-=(const curve_element& other) {
                             return (*this) += (-other);
                         }
 
@@ -297,7 +300,7 @@ namespace nil {
                          * “Mixed addition” refers to the case Z2 known to be 1.
                          * @return addition of two elements from group G1
                          */
-                        void mixed_add(const curve_element &other) {
+                        void mixed_add(const curve_element& other) {
 
                             // handle special cases having to do with O
                             if (this->is_zero()) {
@@ -314,15 +317,16 @@ namespace nil {
                     };
 
                     template<typename CurveParams>
-                    std::ostream& operator<<(std::ostream& os, curve_element<CurveParams, forms::twisted_edwards, coordinates::extended_with_a_minus_1> const& e)
-                    {
-                        os << "{\"X\":" << e.X << ",\"Y\":" << e.Y
-                            << ",\"T\":" << e.T << ",\"Z\":" << e.Z << "}";
+                    std::ostream& operator<<(
+                        std::ostream& os,
+                        curve_element<CurveParams, forms::twisted_edwards, coordinates::extended_with_a_minus_1> const&
+                            e) {
+                        os << "{\"X\":" << e.X << ",\"Y\":" << e.Y << ",\"T\":" << e.T << ",\"Z\":" << e.Z << "}";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_TWISTED_EDWARDS_G1_ELEMENT_EXTENDED_WITH_A_MINUS_1_HPP

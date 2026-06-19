@@ -21,7 +21,7 @@
     !defined(TEST_MPFR) && !defined(TEST_MPFR_50) && !defined(TEST_MPFI_50) && !defined(TEST_FLOAT128) &&    \
     !defined(TEST_CPP_BIN_FLOAT)
 #define TEST_MPF_50
-//#  define TEST_MPF
+// #  define TEST_MPF
 #define TEST_BACKEND
 #define TEST_CPP_DEC_FLOAT
 #define TEST_MPFI_50
@@ -62,7 +62,7 @@
 template<class T>
 void test() {
     std::cout << "Testing type " << typeid(T).name() << std::endl;
-    static const boost::array<const char*, 51u> data = {{
+    static const boost::array<const char *, 51u> data = {{
         "1."
         "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         "000000000",
@@ -328,8 +328,7 @@ void test() {
 
 int main() {
 #ifdef TEST_BACKEND
-    test<
-        boost::multiprecision::number<boost::multiprecision::concepts::number_backend_float_architype>>();
+    test<boost::multiprecision::number<boost::multiprecision::concepts::number_backend_float_architype>>();
 #endif
 #ifdef TEST_MPF_50
     test<boost::multiprecision::mpf_float_50>();
@@ -354,10 +353,8 @@ int main() {
     test<boost::multiprecision::number<boost::multiprecision::cpp_dec_float<62>>>();
     test<boost::multiprecision::number<boost::multiprecision::cpp_dec_float<61, long long>>>();
     test<boost::multiprecision::number<boost::multiprecision::cpp_dec_float<60, long long>>>();
-    test<boost::multiprecision::number<
-        boost::multiprecision::cpp_dec_float<59, long long, std::allocator<char>>>>();
-    test<boost::multiprecision::number<
-        boost::multiprecision::cpp_dec_float<58, long long, std::allocator<char>>>>();
+    test<boost::multiprecision::number<boost::multiprecision::cpp_dec_float<59, long long, std::allocator<char>>>>();
+    test<boost::multiprecision::number<boost::multiprecision::cpp_dec_float<58, long long, std::allocator<char>>>>();
     // Check low multiprecision digit counts.
     test<boost::multiprecision::number<boost::multiprecision::cpp_dec_float<9>>>();
     test<boost::multiprecision::number<boost::multiprecision::cpp_dec_float<18>>>();
@@ -368,8 +365,9 @@ int main() {
 #endif
 #ifdef TEST_CPP_BIN_FLOAT
     test<boost::multiprecision::cpp_bin_float_50>();
-    test<boost::multiprecision::number<boost::multiprecision::cpp_bin_float<
-        35, boost::multiprecision::digit_base_10, std::allocator<char>, boost::long_long_type>>>();
+    test<boost::multiprecision::number<
+        boost::multiprecision::
+            cpp_bin_float<35, boost::multiprecision::digit_base_10, std::allocator<char>, boost::long_long_type>>>();
 #endif
     return boost::report_errors();
 }

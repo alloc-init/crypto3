@@ -55,10 +55,12 @@ namespace nil {
          *
          * @return Output iterator to the element in the destination range, one past the last element inserted.
          */
-        template<typename Encoder, typename InputIterator, typename OutputIterator, typename std::enable_if<
-                detail::is_codec<Encoder>::value, bool>::type = true>
+        template<typename Encoder,
+                 typename InputIterator,
+                 typename OutputIterator,
+                 typename std::enable_if<detail::is_codec<Encoder>::value, bool>::type = true>
         typename std::enable_if<detail::is_iterator<OutputIterator>::value, OutputIterator>::type
-        encode(InputIterator first, InputIterator last, OutputIterator out) {
+            encode(InputIterator first, InputIterator last, OutputIterator out) {
 
             typedef typename Encoder::stream_encoder_type EncodingMode;
             typedef typename codec::accumulator_set<EncodingMode> CodecAccumulator;
@@ -90,9 +92,9 @@ namespace nil {
          * concept requirements.
          */
         template<typename Encoder,
-                typename InputIterator,
-                typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>, typename std::enable_if<
-                        detail::is_codec<Encoder>::value, bool>::type = true>
+                 typename InputIterator,
+                 typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>,
+                 typename std::enable_if<detail::is_codec<Encoder>::value, bool>::type = true>
         codec::detail::range_codec_impl<codec::detail::value_codec_impl<CodecAccumulator>> encode(InputIterator first,
                                                                                                   InputIterator last) {
             typedef codec::detail::value_codec_impl<CodecAccumulator> EncoderStateImpl;
@@ -120,12 +122,12 @@ namespace nil {
          * @return CodecAccumulator AccumulatorSet non-const reference equal to acc.
          */
         template<typename Encoder,
-                typename InputIterator,
-                typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>, typename std::enable_if<
-                        detail::is_codec<Encoder>::value, bool>::type = true>
+                 typename InputIterator,
+                 typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>,
+                 typename std::enable_if<detail::is_codec<Encoder>::value, bool>::type = true>
         typename std::enable_if<boost::accumulators::detail::is_accumulator_set<CodecAccumulator>::value,
-                CodecAccumulator>::type &
-        encode(InputIterator first, InputIterator last, CodecAccumulator &acc) {
+                                CodecAccumulator>::type &
+            encode(InputIterator first, InputIterator last, CodecAccumulator &acc) {
 
             typedef codec::detail::ref_codec_impl<CodecAccumulator> EncoderStateImpl;
             typedef codec::detail::range_codec_impl<EncoderStateImpl> EncoderImpl;
@@ -150,10 +152,12 @@ namespace nil {
          *
          * @return Output iterator to the element in the destination range, one past the last element inserted.
          */
-        template<typename Encoder, typename SinglePassRange, typename OutputIterator, typename std::enable_if<
-                detail::is_codec<Encoder>::value, bool>::type = true>
+        template<typename Encoder,
+                 typename SinglePassRange,
+                 typename OutputIterator,
+                 typename std::enable_if<detail::is_codec<Encoder>::value, bool>::type = true>
         typename std::enable_if<detail::is_iterator<OutputIterator>::value, OutputIterator>::type
-        encode(const SinglePassRange &rng, OutputIterator out) {
+            encode(const SinglePassRange &rng, OutputIterator out) {
 
             typedef typename Encoder::stream_encoder_type EncodingMode;
             typedef typename codec::accumulator_set<EncodingMode> CodecAccumulator;
@@ -181,12 +185,12 @@ namespace nil {
          * @return CodecAccumulator AccumulatorSet non-const reference equal to acc.
          */
         template<typename Encoder,
-                typename SinglePassRange,
-                typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>, typename std::enable_if<
-                        detail::is_codec<Encoder>::value, bool>::type = true>
+                 typename SinglePassRange,
+                 typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>,
+                 typename std::enable_if<detail::is_codec<Encoder>::value, bool>::type = true>
         typename std::enable_if<boost::accumulators::detail::is_accumulator_set<CodecAccumulator>::value,
-                CodecAccumulator>::type &
-        encode(const SinglePassRange &rng, CodecAccumulator &acc) {
+                                CodecAccumulator>::type &
+            encode(const SinglePassRange &rng, CodecAccumulator &acc) {
 
             typedef codec::detail::ref_codec_impl<CodecAccumulator> EncoderStateImpl;
             typedef codec::detail::range_codec_impl<EncoderStateImpl> EncoderImpl;
@@ -213,11 +217,11 @@ namespace nil {
          * concept requirements.
          */
         template<typename Encoder,
-                typename SinglePassRange,
-                typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>, typename std::enable_if<
-                        detail::is_codec<Encoder>::value, bool>::type = true>
+                 typename SinglePassRange,
+                 typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>,
+                 typename std::enable_if<detail::is_codec<Encoder>::value, bool>::type = true>
         codec::detail::range_codec_impl<codec::detail::value_codec_impl<CodecAccumulator>>
-        encode(const SinglePassRange &r) {
+            encode(const SinglePassRange &r) {
 
             typedef codec::detail::value_codec_impl<CodecAccumulator> EncoderStateImpl;
             typedef codec::detail::range_codec_impl<EncoderStateImpl> EncoderImpl;
@@ -242,10 +246,12 @@ namespace nil {
          *
          * @return Output iterator to the element in the destination range, one past the last element inserted.
          */
-        template<typename Encoder, typename T, typename OutputIterator, typename std::enable_if<
-                detail::is_codec<Encoder>::value, bool>::type = true>
+        template<typename Encoder,
+                 typename T,
+                 typename OutputIterator,
+                 typename std::enable_if<detail::is_codec<Encoder>::value, bool>::type = true>
         typename std::enable_if<detail::is_iterator<OutputIterator>::value, OutputIterator>::type
-        encode(std::initializer_list<T> rng, OutputIterator out) {
+            encode(std::initializer_list<T> rng, OutputIterator out) {
 
             typedef typename Encoder::stream_encoder_type EncodingMode;
             typedef typename codec::accumulator_set<EncodingMode> CodecAccumulator;
@@ -273,12 +279,12 @@ namespace nil {
          * @return CodecAccumulator AccumulatorSet non-const reference equal to acc.
          */
         template<typename Encoder,
-                typename T,
-                typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>, typename std::enable_if<
-                        detail::is_codec<Encoder>::value, bool>::type = true>
+                 typename T,
+                 typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>,
+                 typename std::enable_if<detail::is_codec<Encoder>::value, bool>::type = true>
         typename std::enable_if<boost::accumulators::detail::is_accumulator_set<CodecAccumulator>::value,
-                CodecAccumulator>::type &
-        encode(std::initializer_list<T> rng, CodecAccumulator &acc) {
+                                CodecAccumulator>::type &
+            encode(std::initializer_list<T> rng, CodecAccumulator &acc) {
 
             typedef codec::detail::ref_codec_impl<CodecAccumulator> EncoderStateImpl;
             typedef codec::detail::range_codec_impl<EncoderStateImpl> EncoderImpl;
@@ -305,11 +311,11 @@ namespace nil {
          * concept requirements.
          */
         template<typename Encoder,
-                typename T,
-                typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>, typename std::enable_if<
-                        detail::is_codec<Encoder>::value, bool>::type = true>
+                 typename T,
+                 typename CodecAccumulator = typename codec::accumulator_set<typename Encoder::stream_encoder_type>,
+                 typename std::enable_if<detail::is_codec<Encoder>::value, bool>::type = true>
         codec::detail::range_codec_impl<codec::detail::value_codec_impl<CodecAccumulator>>
-        encode(std::initializer_list<T> r) {
+            encode(std::initializer_list<T> r) {
 
             typedef codec::detail::value_codec_impl<CodecAccumulator> EncoderStateImpl;
             typedef codec::detail::range_codec_impl<EncoderStateImpl> EncoderImpl;

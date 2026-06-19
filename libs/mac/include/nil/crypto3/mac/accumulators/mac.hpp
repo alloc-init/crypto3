@@ -100,8 +100,8 @@ namespace nil {
                     return boost::accumulators::extract_result<tag::mac<ProcessingPolicy>>(acc);
                 }
             }    // namespace extract
-        }        // namespace accumulators
-    }            // namespace crypto3
+        }    // namespace accumulators
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_MAC_HPP

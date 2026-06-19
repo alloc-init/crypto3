@@ -37,7 +37,7 @@ namespace nil::crypto3::algebra::fields {
      * @brief A struct representing a Koala Bear field
      */
     class koalabear : public field<31> {
-      public:
+    public:
         using policy_type = field<31>;
 
         using small_subfield = koalabear;
@@ -57,6 +57,6 @@ namespace nil::crypto3::algebra::fields {
             modular_type;
         using value_type = detail::element_fp<params<koalabear>>;
     };
-}  // namespace nil::crypto3::algebra::fields
+}    // namespace nil::crypto3::algebra::fields
 
-#endif  // CRYPTO3_ALGEBRA_FIELDS_KOALABEAR_HPP
+#endif    // CRYPTO3_ALGEBRA_FIELDS_KOALABEAR_HPP

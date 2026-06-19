@@ -54,7 +54,6 @@
 
 using namespace nil::crypto3::algebra;
 
-
 namespace boost {
     namespace test_tools {
         namespace tt_detail {
@@ -65,7 +64,7 @@ namespace boost {
             };
 
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 BOOST_AUTO_TEST_SUITE(curves_manual_static_tests)

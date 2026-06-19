@@ -13,7 +13,7 @@
 
 #include <nil/crypto3/multiprecision/modular/modular_policy_fixed.hpp>
 
-namespace boost {   
+namespace boost {
     namespace multiprecision {
         namespace backends {
             template<typename Backend>
@@ -42,7 +42,7 @@ namespace boost {
             };
 
         }    // namespace backends
-    }   // namespace multiprecision
-}   // namespace boost
+    }    // namespace multiprecision
+}    // namespace boost
 
 #endif    // BOOST_MULTIPRECISION_BASE_PARAMS_HPP

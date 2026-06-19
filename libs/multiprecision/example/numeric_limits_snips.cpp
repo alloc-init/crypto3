@@ -54,7 +54,7 @@ int max_digits10() {
 }    // template <typename T> int max_digits10()
 
 // Used to test max_digits10<>() function below.
-//#define BOOST_NO_CXX11_NUMERIC_LIMITS
+// #define BOOST_NO_CXX11_NUMERIC_LIMITS
 
 BOOST_AUTO_TEST_CASE(test_numeric_limits_snips) {
 #if !(defined(CI_SUPPRESS_KNOWN_ISSUES) && defined(BOOST_MSVC) && (BOOST_MSVC == 1600))
@@ -277,7 +277,6 @@ BOOST_AUTO_TEST_CASE(test_numeric_limits_snips) {
         (void)b;    // warning suppression
     }
 
-
     {
         //[round_error_1
         double round_err = std::numeric_limits<double>::epsilon()           // 2.2204460492503131e-016
@@ -450,4 +449,3 @@ BOOST_AUTO_TEST_CASE(test_numeric_limits_snips) {
 #endif
 #endif
 }    // BOOST_AUTO_TEST_CASE(test_numeric_limits_snips)
-

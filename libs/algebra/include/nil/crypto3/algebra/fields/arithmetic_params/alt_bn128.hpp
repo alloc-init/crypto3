@@ -32,8 +32,6 @@
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/algebra/fields/alt_bn128/scalar_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -208,8 +206,8 @@ namespace nil {
                     arithmetic_params<alt_bn128_scalar_field<254>>::group_order;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_ALT_BN128_ARITHMETIC_PARAMS_HPP

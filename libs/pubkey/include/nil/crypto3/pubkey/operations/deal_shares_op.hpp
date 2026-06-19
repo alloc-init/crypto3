@@ -32,7 +32,7 @@ namespace nil {
             template<typename SchemeType, typename = void>
             struct deal_shares_op;
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_DEAL_SHARES_OP_HPP

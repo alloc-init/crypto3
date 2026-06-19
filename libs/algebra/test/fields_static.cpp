@@ -119,7 +119,7 @@ constexpr bool check_field_operations_static() {
     //
     // This naiive approach with decltype does not work - the result is always false.
     // We can't use direct typenames since _values_ are template arguments
-    if constexpr (has_function_sqrt<const decltype (elements[e1]), decltype (elements[e1])>::value ) {
+    if constexpr (has_function_sqrt<const decltype(elements[e1]), decltype(elements[e1])>::value) {
         static_assert((elements[e2].squared()).sqrt() == elements[e2_pow_2_sqrt], "sqrt error");
     }
     return true;
@@ -143,8 +143,7 @@ BOOST_AUTO_TEST_CASE(field_operation_test_bls12_381_fr) {
         0x49757b377fe2a1de10c484db929a74ae02fdfae3aaab6098ea2ab8accfe613f0_cppui_modular255,
         0x363f979f222c9970dc4291b62bc3e8d77c31c1b2caa88afeb414f3584b952000_cppui_modular255,
         0x661ad4fb4d130b7afaea293348f2107d9f4a62308af88282297733628cfc5ae8_cppui_modular255,
-        0x53530b5d9374f4f45c1b2267998b8cd7d1bf6d19a90564fb898ed8970544ea28_cppui_modular255
-    };
+        0x53530b5d9374f4f45c1b2267998b8cd7d1bf6d19a90564fb898ed8970544ea28_cppui_modular255};
     static constexpr const_set_t constants1 = {811706348};
     check_field_operations_static<elements1, constants1>();
 }
@@ -372,18 +371,11 @@ BOOST_AUTO_TEST_CASE(field_operation_test_bls12_381_fq6) {
         }});
 
     static constexpr test_set_t elements1 = {
-        element1,
-        element2,
-        element_add,
-        element_sub,
-        element_mul,
-        element_dbl,
-        element_inv,
-        element_pow_C,
-        element_pow_2,
-        value_type(), // placeholder for sqrt (e2.squared()) as Fp6 does not support sqrt
-        minus_element };
-    static constexpr const_set_t constants1 = { C1 };
+        element1,     element2,    element_add,   element_sub,   element_mul,
+        element_dbl,  element_inv, element_pow_C, element_pow_2,
+        value_type(),    // placeholder for sqrt (e2.squared()) as Fp6 does not support sqrt
+        minus_element};
+    static constexpr const_set_t constants1 = {C1};
 
     check_field_operations_static<elements1, constants1>();
 }
@@ -564,18 +556,11 @@ BOOST_AUTO_TEST_CASE(field_operation_test_mnt4_fq4) {
         }});
 
     static constexpr test_set_t elements1 = {
-        element1,
-        element2,
-        element_add,
-        element_sub,
-        element_mul,
-        element_dbl,
-        element_inv,
-        element_pow_C,
-        element_pow_2,
-        value_type(), // placeholder for sqrt (e2.squared()) as Fp4 does not support sqrt
-        minus_element };
-    static constexpr const_set_t constants1 = { C1 };
+        element1,     element2,    element_add,   element_sub,   element_mul,
+        element_dbl,  element_inv, element_pow_C, element_pow_2,
+        value_type(),    // placeholder for sqrt (e2.squared()) as Fp4 does not support sqrt
+        minus_element};
+    static constexpr const_set_t constants1 = {C1};
 
     check_field_operations_static<elements1, constants1>();
 }
@@ -788,18 +773,11 @@ BOOST_AUTO_TEST_CASE(field_operation_test_mnt6_fq6) {
         }});
 
     static constexpr test_set_t elements1 = {
-        element1,
-        element2,
-        element_add,
-        element_sub,
-        element_mul,
-        element_dbl,
-        element_inv,
-        element_pow_C,
-        element_pow_2,
-        value_type(), // placeholder for sqrt (e2.squared()) as Fp6 does not support sqrt
-        minus_element };
-    static constexpr const_set_t constants1 = { C1 };
+        element1,     element2,    element_add,   element_sub,   element_mul,
+        element_dbl,  element_inv, element_pow_C, element_pow_2,
+        value_type(),    // placeholder for sqrt (e2.squared()) as Fp6 does not support sqrt
+        minus_element};
+    static constexpr const_set_t constants1 = {C1};
     check_field_operations_static<elements1, constants1>();
 }
 

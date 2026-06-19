@@ -58,9 +58,8 @@ namespace nil {
 
                 template<typename TElemType>
                 struct array_list_field_has_var_length {
-                    static const bool value
-                        = array_list_field_has_var_length_helper<TElemType,
-                                                                 std::is_integral<TElemType>::value>::value;
+                    static const bool value =
+                        array_list_field_has_var_length_helper<TElemType, std::is_integral<TElemType>::value>::value;
                 };
 
                 template<typename TStorage>
@@ -69,8 +68,7 @@ namespace nil {
                 };
 
                 template<typename T, std::size_t TSize>
-                struct array_list_max_length_retrieve_helper<
-                    nil::marshalling::container::static_vector<T, TSize>> {
+                struct array_list_max_length_retrieve_helper<nil::marshalling::container::static_vector<T, TSize>> {
                     static const std::size_t value = TSize;
                 };
 
@@ -102,7 +100,7 @@ namespace nil {
                 };
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BASIC_ARRAY_LIST_TYPE_TRAITS_HPP

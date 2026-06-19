@@ -44,7 +44,7 @@ namespace nil {
                 return multiexp<policies::multiexp_method_naive_plain>(a_begin, a_end, b_begin, b_end, 1);
             }
         }    // namespace algebra
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_INNER_PRODUCT_HPP

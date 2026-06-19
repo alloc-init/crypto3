@@ -32,27 +32,27 @@ namespace nil {
             namespace types {
                 template<typename TTypeBase, typename IntegralContainer, typename... TOptions>
                 class integral;
-            }        // namespace types
-        }        // namespace marshalling
-    }        // namespace crypto3
+            }    // namespace types
+        }    // namespace marshalling
+    }    // namespace crypto3
     namespace marshalling {
 
         template<typename T, typename Enabled>
         class is_compatible;
 
-        template<typename Backend,
-                 boost::multiprecision::expression_template_option ExpressionTemplates>
-        class is_compatible <boost::multiprecision::number<Backend, ExpressionTemplates>, void> {
+        template<typename Backend, boost::multiprecision::expression_template_option ExpressionTemplates>
+        class is_compatible<boost::multiprecision::number<Backend, ExpressionTemplates>, void> {
             using default_endianness = option::big_endian;
+
         public:
-            template <typename TEndian = default_endianness, typename... TOptions>
-            using type = typename nil::crypto3::marshalling::types::integral<field_type<TEndian>, 
-                boost::multiprecision::number<Backend, ExpressionTemplates>, TOptions...>;
+            template<typename TEndian = default_endianness, typename... TOptions>
+            using type = typename nil::crypto3::marshalling::types::integral<
+                field_type<TEndian>, boost::multiprecision::number<Backend, ExpressionTemplates>, TOptions...>;
             static const bool value = true;
             static const bool fixed_size = true;
         };
 
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 
 #endif    // CRYPTO3_MARSHALLING_MULTIPRECISION_INFERENCE_TYPE_TRAITS_HPP

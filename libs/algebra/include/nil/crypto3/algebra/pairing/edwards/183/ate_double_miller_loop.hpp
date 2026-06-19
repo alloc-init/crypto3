@@ -51,10 +51,10 @@ namespace nil {
 
                 public:
                     static typename gt_type::value_type
-                    process(const typename policy_type::ate_g1_precomputed_type &prec_P1,
-                            const typename policy_type::ate_g2_precomputed_type &prec_Q1,
-                            const typename policy_type::ate_g1_precomputed_type &prec_P2,
-                            const typename policy_type::ate_g2_precomputed_type &prec_Q2) {
+                        process(const typename policy_type::ate_g1_precomputed_type &prec_P1,
+                                const typename policy_type::ate_g2_precomputed_type &prec_Q1,
+                                const typename policy_type::ate_g1_precomputed_type &prec_P2,
+                                const typename policy_type::ate_g2_precomputed_type &prec_Q2) {
 
                         typename gt_type::value_type f = gt_type::value_type::one();
 
@@ -79,10 +79,10 @@ namespace nil {
                             ++idx;
 
                             typename gt_type::value_type g_RR_at_P1 = typename gt_type::value_type(
-                                    prec_P1.P_XY * cc1.c_XY + prec_P1.P_XZ * cc1.c_XZ, prec_P1.P_ZZplusYZ * cc1.c_ZZ);
+                                prec_P1.P_XY * cc1.c_XY + prec_P1.P_XZ * cc1.c_XZ, prec_P1.P_ZZplusYZ * cc1.c_ZZ);
 
                             typename gt_type::value_type g_RR_at_P2 = typename gt_type::value_type(
-                                    prec_P2.P_XY * cc2.c_XY + prec_P2.P_XZ * cc2.c_XZ, prec_P2.P_ZZplusYZ * cc2.c_ZZ);
+                                prec_P2.P_XY * cc2.c_XY + prec_P2.P_XZ * cc2.c_XZ, prec_P2.P_ZZplusYZ * cc2.c_ZZ);
                             f = f.squared() * g_RR_at_P1 * g_RR_at_P2;
 
                             if (bit) {
@@ -90,11 +90,9 @@ namespace nil {
                                 cc2 = prec_Q2[idx];
                                 ++idx;
                                 typename gt_type::value_type g_RQ_at_P1 = typename gt_type::value_type(
-                                        prec_P1.P_ZZplusYZ * cc1.c_ZZ,
-                                        prec_P1.P_XY * cc1.c_XY + prec_P1.P_XZ * cc1.c_XZ);
+                                    prec_P1.P_ZZplusYZ * cc1.c_ZZ, prec_P1.P_XY * cc1.c_XY + prec_P1.P_XZ * cc1.c_XZ);
                                 typename gt_type::value_type g_RQ_at_P2 = typename gt_type::value_type(
-                                        prec_P2.P_ZZplusYZ * cc2.c_ZZ,
-                                        prec_P2.P_XY * cc2.c_XY + prec_P2.P_XZ * cc2.c_XZ);
+                                    prec_P2.P_ZZplusYZ * cc2.c_ZZ, prec_P2.P_XY * cc2.c_XY + prec_P2.P_XZ * cc2.c_XZ);
                                 f = f * g_RQ_at_P1 * g_RQ_at_P2;
                             }
                         }
@@ -103,7 +101,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_EDWARDS_183_ATE_DOUBLE_MILLER_LOOP_HPP

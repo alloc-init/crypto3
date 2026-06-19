@@ -70,9 +70,9 @@ namespace nil {
                             g1_field_type_value(0xB35E3665A18365954D018902935D4419423F84321BC3E_cppui_modular180);
                     };
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_EDWARDS_PAIRING_PARAMS_HPP

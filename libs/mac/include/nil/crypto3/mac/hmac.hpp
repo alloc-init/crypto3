@@ -56,14 +56,14 @@ namespace nil {
                 typedef typename hash_type::digest_type digest_type;
 
                 template<typename InputRange,
-                        typename ValueType = typename std::iterator_traits<typename InputRange::iterator>::value_type>
+                         typename ValueType = typename std::iterator_traits<typename InputRange::iterator>::value_type>
                 using is_key_type = typename std::enable_if<std::is_same<std::uint8_t, ValueType>::value, bool>::type;
 
                 /*!
                  * std::pair<i_key_pad, o_key_pad>
                  */
                 typedef std::pair<std::array<std::uint8_t, block_octets>, std::array<std::uint8_t, block_octets>>
-                        schedule_key_type;
+                    schedule_key_type;
             };
 
             template<typename HashType>
@@ -74,7 +74,7 @@ namespace nil {
                 typedef typename policy_type::digest_type digest_type;
                 typedef typename policy_type::schedule_key_type schedule_key_type;
 
-                typedef accumulator_set <hash_type> accumulator_type;
+                typedef accumulator_set<hash_type> accumulator_type;
 
                 constexpr static const std::size_t block_octets = policy_type::block_octets;
 
@@ -118,11 +118,11 @@ namespace nil {
                     if (key.size() > block_octets) {
                         digest_type hashed_key = hash<hash_type>(key);
                         ::nil::crypto3::detail::strxor(
-                                hashed_key.cbegin(), hashed_key.cend(), schedule_key.first.cbegin(),
-                                schedule_key.first.cbegin() + hashed_key.size(), schedule_key.first.begin());
+                            hashed_key.cbegin(), hashed_key.cend(), schedule_key.first.cbegin(),
+                            schedule_key.first.cbegin() + hashed_key.size(), schedule_key.first.begin());
                         ::nil::crypto3::detail::strxor(
-                                hashed_key.cbegin(), hashed_key.cend(), schedule_key.second.cbegin(),
-                                schedule_key.second.cbegin() + hashed_key.size(), schedule_key.second.begin());
+                            hashed_key.cbegin(), hashed_key.cend(), schedule_key.second.cbegin(),
+                            schedule_key.second.cbegin() + hashed_key.size(), schedule_key.second.begin());
                     } else {
                         ::nil::crypto3::detail::strxor(key.cbegin(), key.cend(), schedule_key.first.cbegin(),
                                                        schedule_key.first.cbegin() + key.size(),
@@ -138,7 +138,7 @@ namespace nil {
                 schedule_key_type schedule_key;
             };
         }    // namespace mac
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

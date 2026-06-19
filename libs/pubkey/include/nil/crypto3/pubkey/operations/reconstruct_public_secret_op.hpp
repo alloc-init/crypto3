@@ -32,7 +32,7 @@ namespace nil {
             template<typename SchemeType, typename = void>
             struct reconstruct_public_secret_op;
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_RECONSTRUCT_PUBLIC_SECRET_OP_HPP

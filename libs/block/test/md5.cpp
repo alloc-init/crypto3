@@ -43,7 +43,7 @@ BOOST_TEST_DONT_PRINT_LOG_VALUE(md5::block_type)
 
 BOOST_AUTO_TEST_SUITE(md5_test_suite)
 
-    BOOST_AUTO_TEST_CASE(md5_single_block_encrypt1) {
-    }
+BOOST_AUTO_TEST_CASE(md5_single_block_encrypt1) {
+}
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -77,8 +77,8 @@ namespace nil {
                 constexpr md5_policy::key_indexes_type const md5_policy::key_indexes;
 
             }    // namespace detail
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_CIPHERS_DETAIL_MD5_POLICY_HPP

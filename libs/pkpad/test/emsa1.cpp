@@ -69,7 +69,7 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 boost::property_tree::ptree string_data(std::string test_name) {
@@ -131,7 +131,8 @@ BOOST_AUTO_TEST_CASE(emsa1_secp256r1_fr_manual_conformity_test) {
     BOOST_CHECK_EQUAL(out, etalon_out);
 }
 
-BOOST_DATA_TEST_CASE(emsa1_sha256_secp256r1_fr_conformity_test, string_data("emsa1_sha256_secp256r1_fr"), array_element) {
+BOOST_DATA_TEST_CASE(emsa1_sha256_secp256r1_fr_conformity_test, string_data("emsa1_sha256_secp256r1_fr"),
+                     array_element) {
     using curve_type = algebra::curves::secp256r1;
     using field_type = typename curve_type::scalar_field_type;
     using field_value_type = typename field_type::value_type;
@@ -141,7 +142,8 @@ BOOST_DATA_TEST_CASE(emsa1_sha256_secp256r1_fr_conformity_test, string_data("ems
     test_emsa<field_value_type, padding_type>(array_element);
 }
 
-BOOST_DATA_TEST_CASE(emsa1_sha512_secp256r1_fr_conformity_test, string_data("emsa1_sha512_secp256r1_fr"), array_element) {
+BOOST_DATA_TEST_CASE(emsa1_sha512_secp256r1_fr_conformity_test, string_data("emsa1_sha512_secp256r1_fr"),
+                     array_element) {
     using curve_type = algebra::curves::secp256r1;
     using field_type = typename curve_type::scalar_field_type;
     using field_value_type = typename field_type::value_type;

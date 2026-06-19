@@ -70,8 +70,8 @@ namespace nil {
                 struct array_list_sequence_fixed_size_use_fixed_size_storage_type<false> {
                     template<typename TElement, typename TOpt>
                     using type = typename array_list_orig_data_view_storage_type<
-                        TOpt::has_orig_data_view && std::is_integral<TElement>::value
-                        && (sizeof(TElement) == sizeof(std::uint8_t))>::template type<TElement>;
+                        TOpt::has_orig_data_view && std::is_integral<TElement>::value &&
+                        (sizeof(TElement) == sizeof(std::uint8_t))>::template type<TElement>;
                 };
 
                 template<bool THasFixedSizeStorage>
@@ -112,12 +112,11 @@ namespace nil {
 
                 template<typename TFieldBase, typename TElement, typename... TOptions>
                 using array_list_base_type = adapt_basic_field_type<
-                    basic_array_list<
-                        TFieldBase, array_list_storage_type_type<TElement, options_parser<TOptions...>>>,
+                    basic_array_list<TFieldBase, array_list_storage_type_type<TElement, options_parser<TOptions...>>>,
                     TOptions...>;
 
             }    // namespace detail
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_ARRAY_LIST_BEHAVIOUR_HPP

@@ -34,7 +34,6 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-
 using namespace nil::crypto3;
 using namespace nil::crypto3::detail;
 using namespace nil::crypto3::stream_endian;

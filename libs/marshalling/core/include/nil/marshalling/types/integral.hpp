@@ -61,7 +61,8 @@ namespace nil {
             ///     @li @ref nil::marshalling::option::default_value_initializer or
             ///     nil::marshalling::option::default_num_value.
             ///     @li @ref nil::marshalling::option::contents_validator
-            ///     @li @ref nil::marshalling::option::valid_num_value_range, @ref nil::marshalling::option::valid_num_value,
+            ///     @li @ref nil::marshalling::option::valid_num_value_range, @ref
+            ///     nil::marshalling::option::valid_num_value,
             ///         @ref nil::marshalling::option::valid_big_unsigned_num_value_range, @ref
             ///         nil::marshalling::option::valid_big_unsigned_num_value_range
             ///     @li @ref nil::marshalling::option::valid_ranges_clear
@@ -78,8 +79,10 @@ namespace nil {
             /// @extends nil::marshalling::field_type
             /// @headerfile nil/marshalling/types/integral.hpp
             template<typename TFieldBase, typename T, typename... TOptions>
-            class integral : private detail::adapt_basic_field_type<detail::basic_integral<TFieldBase, T>, TOptions...> {
-                using base_impl_type = detail::adapt_basic_field_type<detail::basic_integral<TFieldBase, T>, TOptions...>;
+            class integral
+                : private detail::adapt_basic_field_type<detail::basic_integral<TFieldBase, T>, TOptions...> {
+                using base_impl_type =
+                    detail::adapt_basic_field_type<detail::basic_integral<TFieldBase, T>, TOptions...>;
 
             public:
                 /// @brief endian_type used for serialization.
@@ -247,9 +250,9 @@ namespace nil {
                 template<typename TRet>
                 TRet scale_as_internal(scale_as_fp_tag) const {
                     static_assert(std::is_floating_point<TRet>::value, "TRet is expected to be floating point type");
-                    return static_cast<TRet>(base_impl_type::value())
-                           * (static_cast<TRet>(parsed_options_type::scaling_ratio_type::num)
-                              / static_cast<TRet>(parsed_options_type::scaling_ratio_type::den));
+                    return static_cast<TRet>(base_impl_type::value()) *
+                           (static_cast<TRet>(parsed_options_type::scaling_ratio_type::num) /
+                            static_cast<TRet>(parsed_options_type::scaling_ratio_type::den));
                 }
 
                 template<typename TRet>
@@ -259,9 +262,9 @@ namespace nil {
                     using CastType =
                         typename std::conditional<std::is_signed<TRet>::value, std::intmax_t, std::uintmax_t>::type;
 
-                    return static_cast<TRet>(
-                        (static_cast<CastType>(base_impl_type::value()) * parsed_options_type::scaling_ratio_type::num)
-                        / parsed_options_type::scaling_ratio_type::den);
+                    return static_cast<TRet>((static_cast<CastType>(base_impl_type::value()) *
+                                              parsed_options_type::scaling_ratio_type::num) /
+                                             parsed_options_type::scaling_ratio_type::den);
                 }
 
                 template<typename TRet>
@@ -284,8 +287,8 @@ namespace nil {
                     using DecayedType = typename std::decay<decltype(val)>::type;
                     auto epsilon = DecayedType(0);
                     if (parsed_options_type::scaling_ratio_type::num < parsed_options_type::scaling_ratio_type::den) {
-                        epsilon = static_cast<DecayedType>(parsed_options_type::scaling_ratio_type::num)
-                                  / static_cast<DecayedType>(parsed_options_type::scaling_ratio_type::den + 1);
+                        epsilon = static_cast<DecayedType>(parsed_options_type::scaling_ratio_type::num) /
+                                  static_cast<DecayedType>(parsed_options_type::scaling_ratio_type::den + 1);
                     }
 
                     if (epsilon < DecayedType(0)) {
@@ -297,8 +300,8 @@ namespace nil {
                     }
 
                     base_impl_type::value() = static_cast<value_type>(
-                        ((val + epsilon) * static_cast<DecayedType>(parsed_options_type::scaling_ratio_type::den))
-                        / static_cast<DecayedType>(parsed_options_type::scaling_ratio_type::num));
+                        ((val + epsilon) * static_cast<DecayedType>(parsed_options_type::scaling_ratio_type::den)) /
+                        static_cast<DecayedType>(parsed_options_type::scaling_ratio_type::num));
                 }
 
                 template<typename TScaled>
@@ -309,8 +312,8 @@ namespace nil {
                                                   std::uintmax_t>::type;
 
                     base_impl_type::value() = static_cast<value_type>(
-                        (static_cast<CastType>(val) * parsed_options_type::scaling_ratio_type::den)
-                        / static_cast<CastType>(parsed_options_type::scaling_ratio_type::num));
+                        (static_cast<CastType>(val) * parsed_options_type::scaling_ratio_type::den) /
+                        static_cast<CastType>(parsed_options_type::scaling_ratio_type::num));
                 }
 
                 template<typename TScaled>
@@ -321,9 +324,9 @@ namespace nil {
                 static_assert(!parsed_options_type::has_sequence_elem_length_forcing,
                               "nil::marshalling::option::SequenceElemLengthForcingEnabled option is not applicable to "
                               "integral field");
-                static_assert(
-                    !parsed_options_type::has_sequence_size_forcing,
-                    "nil::marshalling::option::sequence_size_forcing_enabled option is not applicable to integral field");
+                static_assert(!parsed_options_type::has_sequence_size_forcing,
+                              "nil::marshalling::option::sequence_size_forcing_enabled option is not applicable to "
+                              "integral field");
                 static_assert(!parsed_options_type::has_sequence_length_forcing,
                               "nil::marshalling::option::sequence_length_forcing_enabled option is not applicable to "
                               "integral field");
@@ -416,18 +419,18 @@ namespace nil {
 
             // This is a helper, frequently used to convert size_t. It just shortens our code.
             template<typename TFieldBase>
-            integral<TFieldBase, std::size_t> fill_size_t(const std::size_t& v) {
+            integral<TFieldBase, std::size_t> fill_size_t(const std::size_t &v) {
                 integral<TFieldBase, std::size_t> result;
                 result.value() = v;
                 return result;
             }
 
             template<typename TFieldBase>
-            std::size_t make_size_t(const integral<TFieldBase, std::size_t>& v) {
+            std::size_t make_size_t(const integral<TFieldBase, std::size_t> &v) {
                 return v.value();
             }
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_INT_VALUE_HPP

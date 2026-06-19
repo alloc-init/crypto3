@@ -30,6 +30,6 @@
 namespace nil::crypto3::algebra::fields {
     template<typename F1, typename F2>
     using choose_extension_field_t = std::common_type_t<F1, F2>;
-}  // namespace nil::crypto3::algebra::fields
+}    // namespace nil::crypto3::algebra::fields
 
-#endif  // CRYPTO3_ALGEBRA_FIELDS_UTILS_HPP
+#endif    // CRYPTO3_ALGEBRA_FIELDS_UTILS_HPP

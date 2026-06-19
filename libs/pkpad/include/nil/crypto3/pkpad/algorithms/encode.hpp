@@ -184,7 +184,7 @@ namespace nil {
                 return PaddingImpl(rng, std::move(out), PaddingAccumulator());
             }
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // include guard

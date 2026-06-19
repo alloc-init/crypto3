@@ -55,19 +55,17 @@ namespace nil {
                         base_impl_type(std::move(val)) {
                     }
 
-                    sequence_elem_fixed_ser_length_field_prefix(const sequence_elem_fixed_ser_length_field_prefix &)
-                        = default;
+                    sequence_elem_fixed_ser_length_field_prefix(const sequence_elem_fixed_ser_length_field_prefix &) =
+                        default;
 
-                    sequence_elem_fixed_ser_length_field_prefix(sequence_elem_fixed_ser_length_field_prefix &&)
-                        = default;
-
-                    sequence_elem_fixed_ser_length_field_prefix &
-                        operator=(const sequence_elem_fixed_ser_length_field_prefix &)
-                        = default;
+                    sequence_elem_fixed_ser_length_field_prefix(sequence_elem_fixed_ser_length_field_prefix &&) =
+                        default;
 
                     sequence_elem_fixed_ser_length_field_prefix &
-                        operator=(sequence_elem_fixed_ser_length_field_prefix &&)
-                        = default;
+                        operator=(const sequence_elem_fixed_ser_length_field_prefix &) = default;
+
+                    sequence_elem_fixed_ser_length_field_prefix &
+                        operator=(sequence_elem_fixed_ser_length_field_prefix &&) = default;
 
                     std::size_t length() const {
                         return length_internal(Len_field_length_tag());
@@ -261,7 +259,7 @@ namespace nil {
                 };
 
             }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_SEQUENCE_ELEM_FIXED_SER_LENGTH_FIELD_PREFIX_HPP

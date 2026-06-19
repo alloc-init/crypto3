@@ -70,8 +70,8 @@ namespace nil {
                     typedef std::array<encoded_value_type, encoded_block_values> encoded_block_type;
                 };
             }    // namespace detail
-        }        // namespace codec
-    }            // namespace crypto3
+        }    // namespace codec
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HEX_POLICY_HPP

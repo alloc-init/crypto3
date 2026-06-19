@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/edwards/base_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -137,9 +135,9 @@ namespace nil {
                         fp3_extension_params<edwards_base_field<Version>>::Frobenius_coeffs_c2;
 
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_EDWARDS_FP3_EXTENSION_PARAMS_HPP

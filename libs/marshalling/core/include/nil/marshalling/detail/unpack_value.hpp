@@ -123,14 +123,14 @@ namespace nil {
                     this->status = &status;
                 }
 
-                template<
-                    typename OutputRange,
-                    typename = typename std::enable_if<
-                        std::is_constructible<OutputRange,
-                                              typename std::vector<typename OutputRange::value_type>::iterator,
-                                              typename std::vector<typename OutputRange::value_type>::iterator>::value
-                        && (std::is_same<typename OutputRange::value_type, bool>::value
-                            || std::is_same<typename OutputRange::value_type, std::uint8_t>::value)>::type>
+                template<typename OutputRange,
+                         typename = typename std::enable_if<
+                             std::is_constructible<
+                                 OutputRange,
+                                 typename std::vector<typename OutputRange::value_type>::iterator,
+                                 typename std::vector<typename OutputRange::value_type>::iterator>::value &&
+                             (std::is_same<typename OutputRange::value_type, bool>::value ||
+                              std::is_same<typename OutputRange::value_type, std::uint8_t>::value)>::type>
                 inline operator OutputRange() {
                     using Toutput = typename OutputRange::value_type;
 
@@ -163,8 +163,8 @@ namespace nil {
                              typename std::vector<typename Array::value_type>::iterator,
                              typename std::vector<typename Array::value_type>::iterator>::value>::type,
                          typename = typename std::enable_if<
-                             (std::is_same<typename Array::value_type, bool>::value
-                              || std::is_same<typename Array::value_type, std::uint8_t>::value)>::type>
+                             (std::is_same<typename Array::value_type, bool>::value ||
+                              std::is_same<typename Array::value_type, std::uint8_t>::value)>::type>
                 inline operator Array() {
                     using marshalling_type = typename is_compatible<std::vector<value_type>>::template type<TEndian>;
                     using marshalling_internal_type = typename marshalling_type::element_type;
@@ -188,7 +188,7 @@ namespace nil {
                 }
             };
         }    // namespace detail
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 
 #endif    // MARSHALLING_MARSHALL_UNPACK_VALUE_HPP

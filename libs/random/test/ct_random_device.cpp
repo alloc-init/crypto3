@@ -117,16 +117,16 @@ namespace boost {
 
             template<>
             struct print_log_value<typename algebra::curves::bls12<381>::g1_type<>::value_type> {
-                void
-                operator()(std::ostream &os, typename algebra::curves::bls12<381>::g1_type<>::value_type const &e) {
+                void operator()(std::ostream &os,
+                                typename algebra::curves::bls12<381>::g1_type<>::value_type const &e) {
                     print_fp_curve_group_element(os, e);
                 }
             };
 
             template<>
             struct print_log_value<typename algebra::curves::bls12<381>::g2_type<>::value_type> {
-                void
-                operator()(std::ostream &os, typename algebra::curves::bls12<381>::g2_type<>::value_type const &e) {
+                void operator()(std::ostream &os,
+                                typename algebra::curves::bls12<381>::g2_type<>::value_type const &e) {
                     print_fp2_curve_group_element(os, e);
                 }
             };
@@ -137,18 +137,16 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 BOOST_AUTO_TEST_SUITE(ct_random_device)
 
-    BOOST_AUTO_TEST_CASE(ct_random_device_test) {
-        constexpr uint32_t random_value = nil::crypto3::random::ct_lcg<std::size_t,
-                1664525,
-                1013904223,
-                4294967296>::value(12345);
+BOOST_AUTO_TEST_CASE(ct_random_device_test) {
+    constexpr uint32_t random_value =
+        nil::crypto3::random::ct_lcg<std::size_t, 1664525, 1013904223, 4294967296>::value(12345);
 
-        BOOST_CHECK(random_value < 4294967296);
-    }
+    BOOST_CHECK(random_value < 4294967296);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

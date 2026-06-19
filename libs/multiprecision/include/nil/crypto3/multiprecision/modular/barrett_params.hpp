@@ -13,7 +13,7 @@
 
 #include <nil/crypto3/multiprecision/modular/base_params.hpp>
 
-namespace boost {   
+namespace boost {
     namespace multiprecision {
         namespace backends {
             /**
@@ -74,8 +74,7 @@ namespace boost {
                         eval_multiply(t1, this->m_mod.backend());
                         eval_subtract(result, result, t1);
 
-                        if (eval_lt(this->m_mod.backend(), result) ||
-                            (result.compare(this->m_mod.backend()) == 0)) {
+                        if (eval_lt(this->m_mod.backend(), result) || (result.compare(this->m_mod.backend()) == 0)) {
                             eval_subtract(result, result, this->m_mod.backend());
                         }
 
@@ -90,8 +89,7 @@ namespace boost {
                 Backend m_mu;
             };
         }    // namespace backends
-    }   // namespace multiprecision
-}   // namespace boost
-
+    }    // namespace multiprecision
+}    // namespace boost
 
 #endif    //_MULTIPRECISION_BARRETT_PARAMS_HPP

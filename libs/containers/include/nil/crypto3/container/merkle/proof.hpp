@@ -44,7 +44,7 @@ namespace nil {
                 template<typename, typename, std::size_t>
                 class merkle_proof;
             }    // namespace components
-        }        // namespace zk
+        }    // namespace zk
         namespace marshalling {
             namespace types {
                 template<typename, typename>
@@ -95,10 +95,10 @@ namespace nil {
                     typedef std::array<path_element_type, Arity - 1> layer_type;
                     typedef std::vector<layer_type> path_type;
 
-                    merkle_proof_impl() : _li(0), _root(value_type()) {};
+                    merkle_proof_impl() : _li(0), _root(value_type()) { };
 
-                    merkle_proof_impl(std::size_t li, value_type root, path_type path) : _li(li), _root(root),
-                                                                                         _path(path){};
+                    merkle_proof_impl(std::size_t li, value_type root, path_type path) :
+                        _li(li), _root(root), _path(path) { };
 
                     merkle_proof_impl(const merkle_tree<hash_type, arity> &tree, const std::size_t leaf_idx) {
                         _root = tree.root();
@@ -148,12 +148,14 @@ namespace nil {
 
                     static std::vector<merkle_proof_impl>
                         generate_compressed_proofs(const containers::merkle_tree<NodeType, Arity> &tree,
-                                                    std::vector<std::size_t> leaf_idxs) {
+                                                   std::vector<std::size_t>
+                                                       leaf_idxs) {
                         assert(leaf_idxs.size() > 0);
                         std::vector<std::size_t> sorted_idx(leaf_idxs.size());
                         std::iota(sorted_idx.begin(), sorted_idx.end(), 0);
                         std::sort(sorted_idx.begin(), sorted_idx.end(), [&leaf_idxs](std::size_t i, std::size_t j) {
-                                                                        return leaf_idxs[i] < leaf_idxs[j]; });
+                            return leaf_idxs[i] < leaf_idxs[j];
+                        });
                         std::vector<merkle_proof_impl> result_proofs(leaf_idxs.size());
                         std::size_t row_len = tree.leaves();
                         std::vector<bool> known(2 * row_len, false);
@@ -211,13 +213,14 @@ namespace nil {
 
                     template<typename Hashable>
                     static bool validate_compressed_proofs(const std::vector<merkle_proof_impl> &proofs,
-                                                            const std::vector<Hashable> &a) {
+                                                           const std::vector<Hashable> &a) {
                         assert(proofs.size() == a.size());
                         assert(proofs.size() > 0);
                         std::vector<std::size_t> sorted_idx(proofs.size());
                         std::iota(sorted_idx.begin(), sorted_idx.end(), 0);
                         std::sort(sorted_idx.begin(), sorted_idx.end(), [&proofs](std::size_t i, std::size_t j) {
-                                                                        return proofs[i].leaf_index() >= proofs[j].leaf_index(); });
+                            return proofs[i].leaf_index() >= proofs[j].leaf_index();
+                        });
                         std::stack<std::pair<value_type, std::size_t>> st;
                         auto root = proofs[sorted_idx.back()].root();
                         auto full_proof_size = proofs[sorted_idx.back()].path().size();
@@ -289,7 +292,6 @@ namespace nil {
                     friend class nil::crypto3::marshalling::types::merkle_proof_marshalling;
                 };
 
-
             }    // namespace detail
 
             template<typename T, std::size_t Arity>
@@ -299,7 +301,7 @@ namespace nil {
                                           detail::merkle_proof_impl<T, Arity>>::type;
 
         }    // namespace containers
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

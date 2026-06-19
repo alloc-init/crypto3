@@ -51,7 +51,7 @@ namespace nil {
             struct matrix {
                 static_assert(N != 0 && M != 0, "matrix must have have positive dimensions");
 
-                constexpr matrix() : arrays{} {
+                constexpr matrix() : arrays {} {
                 }
 
                 constexpr matrix(const T (&array)[N][M]) {
@@ -63,7 +63,7 @@ namespace nil {
                 }
 
                 template<typename... Args>
-                constexpr matrix(Args... args) : arrays{std::forward<Args>(args)...} {
+                constexpr matrix(Args... args) : arrays {std::forward<Args>(args)...} {
                     static_assert(sizeof...(args) == N * M, "Number of arguments must match the matrix size");
                 }
 
@@ -71,8 +71,8 @@ namespace nil {
 
                 using value_type = T;
                 using size_type = std::size_t;
-                constexpr static const size_type column_size = N; ///< Number of rows
-                constexpr static const size_type row_size = M; ///< Number of columns
+                constexpr static const size_type column_size = N;    ///< Number of rows
+                constexpr static const size_type row_size = M;       ///< Number of columns
 
                 /** @name Element access */
                 ///@{
@@ -136,7 +136,7 @@ namespace nil {
 
                 ///@}
 
-                T arrays[N][M]; ///< @private
+                T arrays[N][M];    ///< @private
             };
 
             /** \addtogroup matrix
@@ -148,21 +148,21 @@ namespace nil {
             ///@{
 
             /** @brief deduction guide for aggregate initialization
-                 *    @relatesalso matrix
-                 *
-                 *    This deduction guide allows matrix to be constructed like this:
-                 *    \code{.cpp}
-                 *    matrix m{{{1., 2.}, {3., 4.}}}; // deduces the type of m to be matrix<double, 2, 2>
-                 *    \endcode
-                 */
+             *    @relatesalso matrix
+             *
+             *    This deduction guide allows matrix to be constructed like this:
+             *    \code{.cpp}
+             *    matrix m{{{1., 2.}, {3., 4.}}}; // deduces the type of m to be matrix<double, 2, 2>
+             *    \endcode
+             */
             template<typename T, std::size_t M, std::size_t N>
             matrix(const T (&)[M][N]) -> matrix<T, M, N>;
 
             ///@}
 
             /** @}*/
-        } // namespace algebra
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace algebra
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_MATRIX_CLASS_HPP

@@ -42,10 +42,10 @@
                                              14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
 #if __cplusplus < 201402L
-#define FUNC_AUTO_REF_RETURN(name_, ret_) auto name_()->ret_
-#define FUNC_AUTO_REF_RETURN_CONST(name_, ret_) auto name_() const->ret_
-#define FUNC_ARGS_AUTO_REF_RETURN(name_, args_, ret_) auto name_(args_)->ret_
-#define FUNC_ARGS_AUTO_REF_RETURN_CONST(name_, args_, ret_) auto name_(args_) const->ret_
+#define FUNC_AUTO_REF_RETURN(name_, ret_) auto name_() -> ret_
+#define FUNC_AUTO_REF_RETURN_CONST(name_, ret_) auto name_() const -> ret_
+#define FUNC_ARGS_AUTO_REF_RETURN(name_, args_, ret_) auto name_(args_) -> ret_
+#define FUNC_ARGS_AUTO_REF_RETURN_CONST(name_, args_, ret_) auto name_(args_) const -> ret_
 #else    // #if __cplusplus < 201402L
 #define FUNC_AUTO_REF_RETURN(name_, ret_) decltype(auto) name_()
 #define FUNC_AUTO_REF_RETURN_CONST(name_, ret_) decltype(auto) name_() const

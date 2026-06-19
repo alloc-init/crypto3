@@ -55,7 +55,8 @@ using namespace nil::marshalling;
 int main(int argc, char *argv[]) {
     status_type status;
 
-    std::cout << "Using default (big_endian) for input and output" << std::endl; // Input by default option::big_endian
+    std::cout << "Using default (big_endian) for input and output"
+              << std::endl;    // Input by default option::big_endian
     std::vector<std::uint8_t> in1 = {{0x12, 0x34, 0x56, 0x78}};
     std::uint32_t res1 = 0x12345678;
 
@@ -64,7 +65,7 @@ int main(int argc, char *argv[]) {
     assert(status == status_type::success);
     assert(out1 == res1);
 
-    std::cout << "Change only output endian" << std::endl; // Input by default option::big_endian
+    std::cout << "Change only output endian" << std::endl;    // Input by default option::big_endian
     std::vector<std::uint8_t> in2 = {{0x12, 0x34, 0x56, 0x78}};
     std::uint32_t res2 = 0x78563412;
 
@@ -81,5 +82,4 @@ int main(int argc, char *argv[]) {
 
     assert(status == status_type::success);
     assert(out3 == res3);
-
 }

@@ -99,9 +99,9 @@ namespace nil {
                     };
 
                 }    // namespace detail
-            }        // namespace pairing
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace pairing
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_PAIRING_EDWARDS_183_TYPES_POLICY_HPP

@@ -47,12 +47,12 @@ namespace nil {
 
         [[noreturn]] void unreachable(const char *msg, const char *filename, unsigned line) {
             std::cerr << "UNREACHABLE at " << filename << ":" << line << std::endl;
-            std::cerr <<'\t' << msg << std::endl;
+            std::cerr << '\t' << msg << std::endl;
             abort_process();
         }
 
         [[noreturn]] void unreachable(const std::string &msg, const char *filename, unsigned line) {
-            unreachable(msg.c_str(),filename, line);
+            unreachable(msg.c_str(), filename, line);
         }
 
         void assert_check(bool expr, const char *expr_str, const char *filename, unsigned line, const char *msg = "") {
@@ -80,11 +80,11 @@ namespace nil {
             todo(new_msg.c_str(), filename, line);
         }
 
-        [[noreturn]] void todo_with_link(const std::string &msg, const std::string &link, const char *filename, unsigned line) {
+        [[noreturn]] void todo_with_link(const std::string &msg, const std::string &link, const char *filename,
+                                         unsigned line) {
             todo_with_link(msg.c_str(), link.c_str(), filename, line);
         }
-    }
-}
+    }    // namespace crypto3
+}    // namespace nil
 
-#endif  // CRYPTO3_DETAIL_ASSERTS_HPP
-
+#endif    // CRYPTO3_DETAIL_ASSERTS_HPP

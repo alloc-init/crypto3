@@ -46,9 +46,9 @@ namespace nil {
                         return result_type::modulus - unsigned(-result);
                     }
                 };
-            }
+            }    // namespace detail
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_DETAIL_PEDERSEN_LOOKUP_HPP

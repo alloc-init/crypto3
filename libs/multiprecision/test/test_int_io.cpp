@@ -56,10 +56,9 @@ template<unsigned MinBits, unsigned MaxBits, boost::multiprecision::cpp_integer_
 struct unchecked_type<boost::multiprecision::number<
     boost::multiprecision::cpp_int_modular_backend<MinBits, MaxBits, SignType, Checked, Allocator>,
     ExpressionTemplates>> {
-    typedef boost::multiprecision::number<
-        boost::multiprecision::cpp_int_modular_backend<MinBits, MaxBits, SignType,
-                                                      boost::multiprecision::unchecked, Allocator>,
-        ExpressionTemplates>
+    typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
+                                              MinBits, MaxBits, SignType, boost::multiprecision::unchecked, Allocator>,
+                                          ExpressionTemplates>
         type;
 };
 #endif

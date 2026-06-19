@@ -67,51 +67,36 @@ void benchmark_curve_operations(std::string const& curve_name) {
     using base_field = typename curve_type::base_field_type;
     using scalar_field = typename curve_type::scalar_field_type;
 
-    auto bench_name = [&curve_name](std::string const& op) {
-        return std::format("{} {:24}", curve_name, op);
-    };
+    auto bench_name = [&curve_name](std::string const& op) { return std::format("{} {:24}", curve_name, op); };
 
     std::cout << std::endl;
 
     run_benchmark<base_field, base_field>(
         bench_name("Fp addition"),
-        [](typename base_field::value_type& A, typename base_field::value_type const& B) {
-            return A += B;
-        });
+        [](typename base_field::value_type& A, typename base_field::value_type const& B) { return A += B; });
     run_benchmark<base_field, base_field>(
         bench_name("Fp multiplication"),
-        [](typename base_field::value_type& A, typename base_field::value_type const& B) {
-            return A *= B;
-        });
-    run_benchmark<base_field>(
-        bench_name("Fp inverse"),
-        [](typename base_field::value_type& A) { return A.inversed(); });
+        [](typename base_field::value_type& A, typename base_field::value_type const& B) { return A *= B; });
+    run_benchmark<base_field>(bench_name("Fp inverse"),
+                              [](typename base_field::value_type& A) { return A.inversed(); });
     run_benchmark<scalar_field, scalar_field>(
         bench_name("Fq addition"),
-        [](typename scalar_field::value_type& A,
-           typename scalar_field::value_type const& B) { return A += B; });
+        [](typename scalar_field::value_type& A, typename scalar_field::value_type const& B) { return A += B; });
     run_benchmark<scalar_field, scalar_field>(
         bench_name("Fq multiplication"),
-        [](typename scalar_field::value_type& A,
-           typename scalar_field::value_type const& B) { return A *= B; });
-    run_benchmark<scalar_field>(
-        bench_name("Fq inverse"),
-        [](typename scalar_field::value_type& A) { return A.inversed(); });
+        [](typename scalar_field::value_type& A, typename scalar_field::value_type const& B) { return A *= B; });
+    run_benchmark<scalar_field>(bench_name("Fq inverse"),
+                                [](typename scalar_field::value_type& A) { return A.inversed(); });
     run_benchmark<g1_type, g1_type>(
         bench_name("G1 addition"),
-        [](typename g1_type::value_type& A, typename g1_type::value_type const& B) {
-            return A += B;
-        });
-    run_benchmark<g1_type>(bench_name("G1 doubling"),
-                           [](typename g1_type::value_type& A) {
-                               A.double_inplace();  // += A;
-                               return A;
-                           });
+        [](typename g1_type::value_type& A, typename g1_type::value_type const& B) { return A += B; });
+    run_benchmark<g1_type>(bench_name("G1 doubling"), [](typename g1_type::value_type& A) {
+        A.double_inplace();    // += A;
+        return A;
+    });
     run_benchmark<g1_type, scalar_field>(
         bench_name("G1 scalar multiplication"),
-        [](typename g1_type::value_type& A, typename scalar_field::value_type const& B) {
-            return A *= B;
-        });
+        [](typename g1_type::value_type& A, typename scalar_field::value_type const& B) { return A *= B; });
 
     if constexpr (has_type_g2_type<curve_type>::value) {
         using g2_type = typename curve_type::template g2_type<>;
@@ -120,40 +105,30 @@ void benchmark_curve_operations(std::string const& curve_name) {
 
         run_benchmark<g2_field, g2_field>(
             bench_name("G2 Fp addition"),
-            [](typename g2_field::value_type& A, typename g2_field::value_type const& B) {
-                return A += B;
-            });
+            [](typename g2_field::value_type& A, typename g2_field::value_type const& B) { return A += B; });
 
         run_benchmark<g2_field, g2_field>(
             bench_name("G2 Fp multiplication"),
-            [](typename g2_field::value_type& A, typename g2_field::value_type const& B) {
-                return A *= B;
-            });
+            [](typename g2_field::value_type& A, typename g2_field::value_type const& B) { return A *= B; });
 
-        run_benchmark<g2_field>(
-            bench_name("G2 Fp inverse"),
-            [](typename g2_field::value_type& A) { return A.inversed(); });
+        run_benchmark<g2_field>(bench_name("G2 Fp inverse"),
+                                [](typename g2_field::value_type& A) { return A.inversed(); });
 
         run_benchmark<g2_type, g2_type>(
             bench_name("G2 addition"),
-            [](typename g2_type::value_type& A, typename g2_type::value_type const& B) {
-                return A += B;
-            });
+            [](typename g2_type::value_type& A, typename g2_type::value_type const& B) { return A += B; });
 
-        run_benchmark<g2_type>(bench_name("G2 doubling"),
-                               [](typename g2_type::value_type& A) {
-                                   A.double_inplace();
-                                   return A;
-                                   // return A += A;
-                               });
+        run_benchmark<g2_type>(bench_name("G2 doubling"), [](typename g2_type::value_type& A) {
+            A.double_inplace();
+            return A;
+            // return A += A;
+        });
         run_benchmark<g2_type, scalar_field>(
             bench_name("G2 scalar multiplication"),
-            [](typename g2_type::value_type& A,
-               typename scalar_field::value_type const& B) { return A *= B; });
+            [](typename g2_type::value_type& A, typename scalar_field::value_type const& B) { return A *= B; });
 
     } else {
-        std::cout << "Curve " << curve_name << " does not have G2, skipping benchmarks"
-                  << std::endl;
+        std::cout << "Curve " << curve_name << " does not have G2, skipping benchmarks" << std::endl;
     }
 
     if constexpr (has_type_gt_type<curve_type>::value) {
@@ -161,36 +136,26 @@ void benchmark_curve_operations(std::string const& curve_name) {
 
         run_benchmark<gt_type, gt_type>(
             bench_name("GT addition"),
-            [](typename gt_type::value_type& A, typename gt_type::value_type const& B) {
-                return A += B;
-            });
+            [](typename gt_type::value_type& A, typename gt_type::value_type const& B) { return A += B; });
 
         run_benchmark<gt_type, gt_type>(
             bench_name("GT multiplication"),
-            [](typename gt_type::value_type& A, typename gt_type::value_type const& B) {
-                return A *= B;
-            });
+            [](typename gt_type::value_type& A, typename gt_type::value_type const& B) { return A *= B; });
 
-        run_benchmark<gt_type>(
-            bench_name("GT inverse"),
-            [](typename gt_type::value_type& A) { return A.inversed(); });
+        run_benchmark<gt_type>(bench_name("GT inverse"), [](typename gt_type::value_type& A) { return A.inversed(); });
 
         using g2_type = typename curve_type::template g2_type<>;
 
-        run_benchmark<g1_type, g2_type>(
-            bench_name("pairing"),
-            [](typename g1_type::value_type& A, typename g2_type::value_type const& B) {
-                return pair<curve_type>(A, B);
-            });
+        run_benchmark<g1_type, g2_type>(bench_name("pairing"),
+                                        [](typename g1_type::value_type& A, typename g2_type::value_type const& B) {
+                                            return pair<curve_type>(A, B);
+                                        });
 
         run_benchmark<gt_type>(bench_name("final_exponentiation"),
-                               [](typename gt_type::value_type& A) {
-                                   return final_exponentiation<curve_type>(A);
-                               });
+                               [](typename gt_type::value_type& A) { return final_exponentiation<curve_type>(A); });
 
     } else {
-        std::cout << "Curve " << curve_name << " does not have GT, skipping benchmarks"
-                  << std::endl;
+        std::cout << "Curve " << curve_name << " does not have GT, skipping benchmarks" << std::endl;
     }
 }
 
@@ -221,8 +186,7 @@ BOOST_AUTO_TEST_CASE(mnt6_298) {
 }
 
 BOOST_AUTO_TEST_CASE(alt_bn128) {
-    benchmark_curve_operations<nil::crypto3::algebra::curves::alt_bn128<254>>(
-        "ALT-BN128-254");
+    benchmark_curve_operations<nil::crypto3::algebra::curves::alt_bn128<254>>("ALT-BN128-254");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

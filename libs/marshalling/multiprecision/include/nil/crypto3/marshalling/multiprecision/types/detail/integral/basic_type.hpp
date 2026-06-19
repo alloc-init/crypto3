@@ -38,12 +38,13 @@ namespace nil {
                 namespace detail {
                     template<typename TTypeBase, typename Backend,
                              boost::multiprecision::expression_template_option ExpressionTemplates,
-                             bool IsFixedPrecision = boost::multiprecision::backends::is_fixed_precision<Backend>::value>
+                             bool IsFixedPrecision =
+                                 boost::multiprecision::backends::is_fixed_precision<Backend>::value>
                     class basic_integral { };
 
                 }    // namespace detail
-            }        // namespace types
-        }            // namespace marshalling
-    }                // namespace crypto3
+            }    // namespace types
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_BASIC_INTEGRAL_DEFINITION_HPP

@@ -28,8 +28,8 @@
 
 #include <nil/crypto3/algebra/fields/detail/element/fp6_2over3.hpp>
 #include <nil/crypto3/algebra/fields/detail/extension_params/edwards/fp6_2over3.hpp>
-//#include <nil/crypto3/algebra/fields/detail/extension_params/frp_v1.hpp>
-//#include <nil/crypto3/algebra/fields/detail/extension_params/gost_A.hpp>
+// #include <nil/crypto3/algebra/fields/detail/extension_params/frp_v1.hpp>
+// #include <nil/crypto3/algebra/fields/detail/extension_params/gost_A.hpp>
 #include <nil/crypto3/algebra/fields/detail/extension_params/mnt6/fp6_2over3.hpp>
 /*#include <nil/crypto3/algebra/fields/detail/extension_params/secp.hpp>
 #include <nil/crypto3/algebra/fields/detail/extension_params/sm2p_v1.hpp>
@@ -76,8 +76,8 @@ namespace nil {
                 constexpr typename std::size_t const fp6_2over3<BaseField>::arity;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_FP6_2OVER3_EXTENSION_HPP

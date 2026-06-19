@@ -68,20 +68,20 @@ namespace nil {
             typedef host_unit<CHAR_BIT> host_byte;
 
             using host_endian =
-                #ifdef BOOST_ENDIAN_BIG_BYTE_AVAILABLE
-                    stream_endian::big_octet_big_bit;
-                #elif defined(BOOST_ENDIAN_LITTLE_BYTE_AVAILABLE)
-                    stream_endian::little_octet_big_bit;
-                #elif defined(BOOST_ENDIAN_BIG_WORD_AVAILABLE)
-                    stream_endian::big_unit_big_bit<BOOST_ARCH_CURRENT_WORD_BITS>;
-                #elif defined(BOOST_ENDIAN_LITTLE_WORD_AVAILABLE)
-                    stream_endian::little_unit_big_bit<BOOST_ARCH_CURRENT_WORD_BITS>;
-                #else
-                    #error "Unknown endianness"
-                #endif
+#ifdef BOOST_ENDIAN_BIG_BYTE_AVAILABLE
+                stream_endian::big_octet_big_bit;
+#elif defined(BOOST_ENDIAN_LITTLE_BYTE_AVAILABLE)
+                stream_endian::little_octet_big_bit;
+#elif defined(BOOST_ENDIAN_BIG_WORD_AVAILABLE)
+                stream_endian::big_unit_big_bit<BOOST_ARCH_CURRENT_WORD_BITS>;
+#elif defined(BOOST_ENDIAN_LITTLE_WORD_AVAILABLE)
+                stream_endian::little_unit_big_bit<BOOST_ARCH_CURRENT_WORD_BITS>;
+#else
+#error "Unknown endianness"
+#endif
 
         }    // namespace stream_endian
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_STREAM_ENDIAN_HPP

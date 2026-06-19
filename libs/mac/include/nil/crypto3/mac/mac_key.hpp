@@ -40,7 +40,7 @@ namespace nil {
             template<typename Mac, typename = void>
             struct mac_key;
         }    // namespace mac
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MAC_KEY_HPP

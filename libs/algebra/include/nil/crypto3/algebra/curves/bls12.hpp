@@ -76,8 +76,8 @@ namespace nil {
                 typedef bls12<381> bls12_381;
                 typedef bls12<377> bls12_377;
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_BLS12_381_HPP

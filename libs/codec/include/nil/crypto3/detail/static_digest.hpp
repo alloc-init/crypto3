@@ -90,7 +90,7 @@ namespace nil {
                 return s;
             }
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 namespace std {

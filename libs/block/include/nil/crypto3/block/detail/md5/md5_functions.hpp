@@ -50,8 +50,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MD5_FUNCTIONS_HPP

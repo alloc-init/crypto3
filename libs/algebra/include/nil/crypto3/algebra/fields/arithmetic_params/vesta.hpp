@@ -32,8 +32,6 @@
 #include <nil/crypto3/algebra/fields/vesta/base_field.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -59,7 +57,7 @@ namespace nil {
                 constexpr std::size_t const arithmetic_params<vesta_base_field>::s;
 
                 constexpr typename arithmetic_params<vesta_base_field>::integral_type const
-                arithmetic_params<vesta_base_field>::root_of_unity;
+                    arithmetic_params<vesta_base_field>::root_of_unity;
 
                 constexpr typename arithmetic_params<vesta_base_field>::integral_type const
                     arithmetic_params<vesta_base_field>::arithmetic_generator;
@@ -73,8 +71,8 @@ namespace nil {
                 constexpr typename arithmetic_params<vesta_base_field>::integral_type const
                     arithmetic_params<vesta_base_field>::nqr;
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_VESTA_ARITHMETIC_PARAMS_HPP

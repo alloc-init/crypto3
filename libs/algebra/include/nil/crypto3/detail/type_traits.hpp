@@ -256,10 +256,10 @@ namespace nil {
                 static char test(...);
 
                 template<typename U, typename = typename std::iterator_traits<U>::difference_type,
-                        typename = typename std::iterator_traits<U>::pointer,
-                        typename = typename std::iterator_traits<U>::reference,
-                        typename = typename std::iterator_traits<U>::value_type,
-                        typename = typename std::iterator_traits<U>::iterator_category>
+                         typename = typename std::iterator_traits<U>::pointer,
+                         typename = typename std::iterator_traits<U>::reference,
+                         typename = typename std::iterator_traits<U>::value_type,
+                         typename = typename std::iterator_traits<U>::iterator_category>
                 static long test(U &&);
 
                 constexpr static bool value = std::is_same<decltype(test(std::declval<T>())), long>::value;
@@ -267,14 +267,15 @@ namespace nil {
 
             template<typename Range>
             struct is_range {
-                static const bool value = has_iterator<Range>::value && has_begin<Range>::value && has_end<Range>::value;
+                static const bool value =
+                    has_iterator<Range>::value && has_begin<Range>::value && has_end<Range>::value;
             };
 
             template<typename Container>
             struct is_container {
-                static const bool value =
-                        has_iterator<Container>::value && has_begin<Container>::value && has_end<Container>::value &&
-                        has_const_iterator<Container>::value && has_begin<Container>::value && has_end<Container>::value;
+                static const bool value = has_iterator<Container>::value && has_begin<Container>::value &&
+                                          has_end<Container>::value && has_const_iterator<Container>::value &&
+                                          has_begin<Container>::value && has_end<Container>::value;
             };
 
             template<typename T>
@@ -289,11 +290,10 @@ namespace nil {
 
             template<typename T>
             struct is_block_cipher {
-                static const bool value =
-                        has_word_type<T>::value && has_word_bits<T>::value &&
-                        has_block_type<T>::value && has_block_bits<T>::value &&
-                        has_key_type<T>::value && has_key_bits<T>::value &&
-                        has_rounds<T>::value && has_encrypt<T>::value && has_decrypt<T>::value;
+                static const bool value = has_word_type<T>::value && has_word_bits<T>::value &&
+                                          has_block_type<T>::value && has_block_bits<T>::value &&
+                                          has_key_type<T>::value && has_key_bits<T>::value && has_rounds<T>::value &&
+                                          has_encrypt<T>::value && has_decrypt<T>::value;
                 typedef T type;
             };
 
@@ -326,15 +326,14 @@ namespace nil {
 
             template<typename T>
             struct is_mac {
-                static const bool value =
-                        has_digest_type<T>::value && has_digest_bits<T>::value &&
-                        has_block_type<T>::value && has_block_bits<T>::value &&
-                        has_key_type<T>::value && has_key_bits<T>::value;
+                static const bool value = has_digest_type<T>::value && has_digest_bits<T>::value &&
+                                          has_block_type<T>::value && has_block_bits<T>::value &&
+                                          has_key_type<T>::value && has_key_bits<T>::value;
                 typedef T type;
             };
 
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #undef GENERATE_HAS_MEMBER_TYPE

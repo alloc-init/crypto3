@@ -47,8 +47,7 @@ namespace nil {
                     constexpr static const integral_type arithmetic_generator = 0x01;
                     constexpr static const integral_type geometric_generator = 0x02;
                     constexpr static const integral_type multiplicative_generator = 0x07;
-                    constexpr static const integral_type root_of_unity =
-                        0x185629DCDA58878C_cppui_modular64;
+                    constexpr static const integral_type root_of_unity = 0x185629DCDA58878C_cppui_modular64;
                 };
 
                 constexpr std::size_t const arithmetic_params<goldilocks64_base_field>::s;
@@ -65,8 +64,8 @@ namespace nil {
                 constexpr typename arithmetic_params<goldilocks64_base_field>::integral_type const
                     arithmetic_params<goldilocks64_base_field>::multiplicative_generator;
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_GOLDILOCKS64_ARITHMETIC_PARAMS_HPP

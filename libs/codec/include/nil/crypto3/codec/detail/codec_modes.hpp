@@ -93,8 +93,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace codec
-    }            // namespace crypto3
+        }    // namespace codec
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PREPROCESSING_MODES_HPP

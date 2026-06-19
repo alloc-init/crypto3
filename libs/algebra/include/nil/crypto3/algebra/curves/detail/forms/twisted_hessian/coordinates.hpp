@@ -41,9 +41,9 @@ namespace nil {
                     struct projective;
 
                 }    // namespace coordinates
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_ALGEBRA_CURVES_TWISTED_HESSIAN_COORDINATES_REPRESENTATIONS_HPP

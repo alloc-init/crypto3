@@ -43,11 +43,11 @@ namespace nil {
             // TODO: review ECDSA implementation and add auxiliary functional provided by the standard
             // TODO: review generator passing
             template<typename CurveType,
-                    typename Padding,
-                    typename GeneratorType,
-                    typename DistributionType = void,
-                    typename = typename std::enable_if<std::is_same<typename CurveType::scalar_field_type::value_type,
-                            typename GeneratorType::result_type>::value>::type>
+                     typename Padding,
+                     typename GeneratorType,
+                     typename DistributionType = void,
+                     typename = typename std::enable_if<std::is_same<typename CurveType::scalar_field_type::value_type,
+                                                                     typename GeneratorType::result_type>::value>::type>
             struct schnorr {
                 typedef schnorr<CurveType, Padding, GeneratorType, DistributionType> self_type;
                 typedef CurveType curve_type;
@@ -61,17 +61,17 @@ namespace nil {
             };
 
             template<typename CurveType,
-                    typename Padding,
-                    typename GeneratorResultType,
-                    typename GeneratorHash,
-                    typename DistributionType>
+                     typename Padding,
+                     typename GeneratorResultType,
+                     typename GeneratorHash,
+                     typename DistributionType>
             struct schnorr<CurveType,
-                    Padding,
-                    random::rfc6979<GeneratorResultType, GeneratorHash>,
-                    DistributionType,
-                    typename std::enable_if<std::is_same<typename Padding::hash_type, GeneratorHash>::value &&
-                                            std::is_same<typename CurveType::scalar_field_type::value_type,
-                                                    GeneratorResultType>::value>::type> {
+                           Padding,
+                           random::rfc6979<GeneratorResultType, GeneratorHash>,
+                           DistributionType,
+                           typename std::enable_if<std::is_same<typename Padding::hash_type, GeneratorHash>::value &&
+                                                   std::is_same<typename CurveType::scalar_field_type::value_type,
+                                                                GeneratorResultType>::value>::type> {
                 typedef random::rfc6979<GeneratorResultType, GeneratorHash> generator_type;
                 typedef schnorr<CurveType, Padding, generator_type, DistributionType> self_type;
                 typedef CurveType curve_type;
@@ -120,7 +120,7 @@ namespace nil {
 
                 inline bool verify(accumulator_type &acc, const signature_type &signature) const {
                     scalar_field_value_type encoded_m =
-                            padding::accumulators::extract::encode<padding::encoding_policy<padding_policy>>(acc);
+                        padding::accumulators::extract::encode<padding::encoding_policy<padding_policy>>(acc);
 
                     scalar_field_value_type w = signature.second.inversed();
                     g1_value_type X = (encoded_m * w) * g1_value_type::one() + (signature.first * w) * pubkey;
@@ -129,8 +129,8 @@ namespace nil {
                     }
                     return signature.first ==
                            scalar_field_value_type(scalar_modular_type(typename scalar_modular_type::backend_type(
-                                   static_cast<base_integral_type>(X.to_affine().X.data),
-                                   scalar_field_value_type::modulus)));
+                               static_cast<base_integral_type>(X.to_affine().X.data),
+                               scalar_field_value_type::modulus)));
                 }
 
                 inline schedule_type pubkey_data() const {
@@ -142,12 +142,14 @@ namespace nil {
             };
 
             template<typename CurveType, typename Padding, typename GeneratorType, typename DistributionType>
-            struct private_key<schnorr<CurveType, Padding, GeneratorType, DistributionType>,
-                    typename std::enable_if<!std::is_same<GeneratorType,
-                            random::rfc6979<typename CurveType::scalar_field_type::value_type,
+            struct private_key<
+                schnorr<CurveType, Padding, GeneratorType, DistributionType>,
+                typename std::enable_if<!std::is_same<
+                    GeneratorType,
+                    random::rfc6979<typename CurveType::scalar_field_type::value_type,
                                     typename schnorr<CurveType, Padding, GeneratorType, DistributionType>::hash_type>>::
-                    value>::type>
-                    : public public_key<schnorr<CurveType, Padding, GeneratorType, DistributionType>> {
+                                            value>::type>
+                : public public_key<schnorr<CurveType, Padding, GeneratorType, DistributionType>> {
                 typedef schnorr<CurveType, Padding, GeneratorType, DistributionType> policy_type;
                 typedef public_key<policy_type> base_type;
 
@@ -194,7 +196,7 @@ namespace nil {
                 inline signature_type sign(accumulator_type &acc) const {
                     generator_type gen;
                     scalar_field_value_type encoded_m =
-                            padding::accumulators::extract::encode<padding::encoding_policy<padding_policy>>(acc);
+                        padding::accumulators::extract::encode<padding::encoding_policy<padding_policy>>(acc);
 
                     // TODO: review behaviour if K, r or s generation produced zero, maybe return status instead cycled
                     //  generation
@@ -207,8 +209,8 @@ namespace nil {
                         // TODO: review converting of kG x-coordinate to r - in case of 2^n order (binary) fields
                         //  procedure seems not to be trivial
                         r = scalar_field_value_type(scalar_modular_type(typename scalar_modular_type::backend_type(
-                                static_cast<base_integral_type>((k * g1_value_type::one()).to_affine().X.data),
-                                scalar_field_value_type::modulus)));
+                            static_cast<base_integral_type>((k * g1_value_type::one()).to_affine().X.data),
+                            scalar_field_value_type::modulus)));
                         s = k.inversed() * (privkey * r + encoded_m);
                     } while (r.is_zero() || s.is_zero());
 
@@ -221,13 +223,13 @@ namespace nil {
 
             template<typename CurveType, typename Padding, typename GeneratorType, typename DistributionType>
             struct private_key<
-                    schnorr<CurveType, Padding, GeneratorType, DistributionType>,
-                    typename std::enable_if<std::is_same<
-                            GeneratorType,
-                            random::rfc6979<typename CurveType::scalar_field_type::value_type,
+                schnorr<CurveType, Padding, GeneratorType, DistributionType>,
+                typename std::enable_if<std::is_same<
+                    GeneratorType,
+                    random::rfc6979<typename CurveType::scalar_field_type::value_type,
                                     typename schnorr<CurveType, Padding, GeneratorType, DistributionType>::hash_type>>::
-                    value>::type>
-                    : public public_key<schnorr<CurveType, Padding, GeneratorType, DistributionType>> {
+                                            value>::type>
+                : public public_key<schnorr<CurveType, Padding, GeneratorType, DistributionType>> {
                 typedef schnorr<CurveType, Padding, GeneratorType, DistributionType> policy_type;
                 typedef public_key<policy_type> base_type;
 
@@ -238,7 +240,7 @@ namespace nil {
                 typedef typename policy_type::hash_type hash_type;
 
                 typedef std::pair<accumulator_set<hash_type>, padding::encoding_accumulator_set<padding_policy>>
-                        accumulator_type;
+                    accumulator_type;
 
                 typedef typename base_type::scalar_field_value_type scalar_field_value_type;
                 typedef typename base_type::g1_value_type g1_value_type;
@@ -273,8 +275,7 @@ namespace nil {
 
                 inline signature_type sign(accumulator_type &acc) const {
                     scalar_field_value_type encoded_m =
-                            padding::accumulators::extract::encode<padding::encoding_policy<padding_policy>>(
-                                    acc.second);
+                        padding::accumulators::extract::encode<padding::encoding_policy<padding_policy>>(acc.second);
 
                     auto h = ::nil::crypto3::accumulators::extract::hash<hash_type>(acc.first);
                     generator_type gen(privkey, h);
@@ -290,8 +291,8 @@ namespace nil {
                         // TODO: review converting of kG x-coordinate to r - in case of 2^n order (binary) fields
                         //  procedure seems not to be trivial
                         r = scalar_field_value_type(scalar_modular_type(typename scalar_modular_type::backend_type(
-                                static_cast<base_integral_type>((k * g1_value_type::one()).to_affine().X.data),
-                                scalar_field_value_type::modulus)));
+                            static_cast<base_integral_type>((k * g1_value_type::one()).to_affine().X.data),
+                            scalar_field_value_type::modulus)));
                         s = (privkey * r + encoded_m) * k.inversed();
                     } while (r.is_zero() || s.is_zero());
 
@@ -301,8 +302,8 @@ namespace nil {
             protected:
                 private_key_type privkey;
             };
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_ECDSA_HPP

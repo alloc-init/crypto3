@@ -78,9 +78,9 @@ namespace nil {
                     constexpr bool const pairing_params<curves::bls12<381>>::final_exponent_is_z_neg;
 
                 }    // namespace detail
-            }        // namespace pairing
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace pairing
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_PAIRING_BLS12_381_BASIC_PARAMS_HPP

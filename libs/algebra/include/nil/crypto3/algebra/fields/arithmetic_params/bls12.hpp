@@ -32,8 +32,6 @@
 #include <nil/crypto3/algebra/fields/bls12/base_field.hpp>
 #include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -384,8 +382,8 @@ namespace nil {
                     arithmetic_params<bls12_scalar_field<377>>::group_order_minus_one_half;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_BLS12_ARITHMETIC_PARAMS_HPP

@@ -37,7 +37,7 @@ namespace nil::crypto3::algebra::fields {
      * @brief A struct representing a Mersenne31 field
      */
     class mersenne31 : public field<31> {
-      public:
+    public:
         using policy_type = field<31>;
 
         using small_subfield = mersenne31;
@@ -57,6 +57,6 @@ namespace nil::crypto3::algebra::fields {
             modular_type;
         using value_type = detail::element_fp<params<mersenne31>>;
     };
-}  // namespace nil::crypto3::algebra::fields
+}    // namespace nil::crypto3::algebra::fields
 
-#endif  // CRYPTO3_ALGEBRA_FIELDS_MERSENNE31_HPP
+#endif    // CRYPTO3_ALGEBRA_FIELDS_MERSENNE31_HPP

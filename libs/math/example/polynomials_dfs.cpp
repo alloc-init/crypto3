@@ -40,7 +40,7 @@ int main() {
     using polynomial_dfs = nil::crypto3::math::polynomial_dfs<field_type>;
 
     /* 3x^2 + 2x + 1 */
-    polynomial a({1,2,3});
+    polynomial a({1, 2, 3});
     std::cout << "a = " << a << std::endl;
 
     polynomial_dfs a_dfs;
@@ -52,19 +52,18 @@ int main() {
     std::cout << "a_dfs(" << x << ") = " << a_dfs.evaluate(x) << std::endl;
 
     /* 7x^5 */
-    polynomial b({0,0,0,0,0,7});
+    polynomial b({0, 0, 0, 0, 0, 7});
     std::cout << "b = " << b << std::endl;
 
     polynomial_dfs b_dfs;
     b_dfs.from_coefficients(b);
     std::cout << "b_dfs = " << b_dfs << std::endl;
 
-
     polynomial_dfs c_dfs = a_dfs + b_dfs;
     std::cout << "(a+b)_dfs = " << c_dfs << std::endl;
 
     polynomial c(c_dfs.coefficients());
     std::cout << "(a+b) = " << c << std::endl;
- 
+
     return 0;
 }

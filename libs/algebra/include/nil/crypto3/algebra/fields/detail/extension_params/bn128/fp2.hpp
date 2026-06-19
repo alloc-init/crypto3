@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/bn128/base_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -119,9 +117,9 @@ namespace nil {
                                          2> const fp2_extension_params<bn128_base_field<Version>>::Frobenius_coeffs_c1;
 
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_BN128_FP2_EXTENSION_PARAMS_HPP

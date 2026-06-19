@@ -46,32 +46,31 @@ namespace nil {
 
                             if (!first.is_zero()) {
 
-                                field_value_type XX = (first.X).squared();              // XX = X1^2
-                                field_value_type YY = (first.Y).squared();              // YY = Y1^2
-                                field_value_type YYYY = YY.squared();                   // YYYY = B^2
-                                field_value_type ZZ = (first.Z).squared();              // ZZ = Z1^2
-                                field_value_type S = (first.X + YY).squared()
-                                    - XX - YYYY;
+                                field_value_type XX = (first.X).squared();    // XX = X1^2
+                                field_value_type YY = (first.Y).squared();    // YY = Y1^2
+                                field_value_type YYYY = YY.squared();         // YYYY = B^2
+                                field_value_type ZZ = (first.Z).squared();    // ZZ = Z1^2
+                                field_value_type S = (first.X + YY).squared() - XX - YYYY;
 
-                                S = S + S;                                              // S = 2 * ((X1 + YY)^2 - XX - YYYY)
+                                S = S + S;    // S = 2 * ((X1 + YY)^2 - XX - YYYY)
 
-                                field_value_type M = XX + XX + XX +
-                                    ElementType::params_type::a*(ZZ.squared());         // M = 3XX + a*ZZ^2
+                                field_value_type M =
+                                    XX + XX + XX + ElementType::params_type::a * (ZZ.squared());    // M = 3XX + a*ZZ^2
 
-                                field_value_type T = M.squared() - S - S;               // T = M^2 - 2S
+                                field_value_type T = M.squared() - S - S;    // T = M^2 - 2S
 
-                                first.X = T;                                // X3 = T
-                                first.Z = (first.Y + first.Z).squared()     // Z3 = (Y1 + Z1)^2
-                                    - YY - ZZ;                                          // - YY - ZZ
-                                first.Y = M * (S - T)
-                                    -YYYY.doubled().doubled().doubled();                // Y3 = M * (S - T) - 8 * YYYY
+                                first.X = T;                               // X3 = T
+                                first.Z = (first.Y + first.Z).squared()    // Z3 = (Y1 + Z1)^2
+                                          - YY - ZZ;                       // - YY - ZZ
+                                first.Y =
+                                    M * (S - T) - YYYY.doubled().doubled().doubled();    // Y3 = M * (S - T) - 8 * YYYY
                             }
                         }
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_JACOBIAN_DBL_2007_BL_HPP

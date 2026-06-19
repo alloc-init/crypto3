@@ -26,8 +26,11 @@ int main() {
         typedef boost::multiprecision::checked_int1024_t big_type;
         typedef boost::multiprecision::checked_int512_t small_type;
         typedef boost::multiprecision::number<
-            boost::multiprecision::cpp_int_modular_backend<32, 32, boost::multiprecision::signed_magnitude,
-                                                          boost::multiprecision::checked, void>,
+            boost::multiprecision::cpp_int_modular_backend<32,
+                                                           32,
+                                                           boost::multiprecision::signed_magnitude,
+                                                           boost::multiprecision::checked,
+                                                           void>,
             boost::multiprecision::et_off>
             little_type;
 

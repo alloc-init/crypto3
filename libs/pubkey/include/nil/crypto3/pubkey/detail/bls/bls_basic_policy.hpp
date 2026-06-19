@@ -130,9 +130,9 @@ namespace nil {
                         return bls_serializer::point_to_octets_compress(sig);
                     }
                 };
-            } // namespace detail
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace detail
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_BLS_BASIC_POLICY_HPP

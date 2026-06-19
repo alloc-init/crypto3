@@ -58,7 +58,7 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 // TEST_DATA_PATH provided by cmake (see CMakeLists.txt)
@@ -77,13 +77,13 @@ boost::property_tree::ptree base_data(const char *child_name) {
 
 BOOST_AUTO_TEST_SUITE(base32_codec_data_driven_test_suite)
 
-    BOOST_DATA_TEST_CASE(base32_single_range_adaptor_encode, base_data("base_32"), array_element) {
-        std::string enc = array_element.first | adaptors::encoded<base<32>>;
-        std::string dec = array_element.second.data() | adaptors::decoded<base<32>>;
+BOOST_DATA_TEST_CASE(base32_single_range_adaptor_encode, base_data("base_32"), array_element) {
+    std::string enc = array_element.first | adaptors::encoded<base<32>>;
+    std::string dec = array_element.second.data() | adaptors::decoded<base<32>>;
 
-        BOOST_CHECK_EQUAL(enc, array_element.second.data());
-        BOOST_CHECK_EQUAL(dec, array_element.first.data());
-    }
+    BOOST_CHECK_EQUAL(enc, array_element.second.data());
+    BOOST_CHECK_EQUAL(dec, array_element.first.data());
+}
 
 BOOST_DATA_TEST_CASE(base32_single_range_encode, base_data("base_32"), array_element) {
     std::string out = encode<base<32>>(array_element.first);
@@ -191,13 +191,13 @@ BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(base58_codec_data_driven_test_suite)
 
-    BOOST_DATA_TEST_CASE(base58_single_range_adaptor_encode, base_data("base_58"), array_element) {
-        std::string enc = array_element.first | adaptors::encoded<base<58>>;
-        std::string dec = array_element.second.data() | adaptors::decoded<base<58>>;
+BOOST_DATA_TEST_CASE(base58_single_range_adaptor_encode, base_data("base_58"), array_element) {
+    std::string enc = array_element.first | adaptors::encoded<base<58>>;
+    std::string dec = array_element.second.data() | adaptors::decoded<base<58>>;
 
-        BOOST_CHECK_EQUAL(enc, array_element.second.data());
-        BOOST_CHECK_EQUAL(dec, array_element.first.data());
-    }
+    BOOST_CHECK_EQUAL(enc, array_element.second.data());
+    BOOST_CHECK_EQUAL(dec, array_element.first.data());
+}
 
 BOOST_DATA_TEST_CASE(base58_single_range_encode, base_data("base_58"), array_element) {
     std::string out = encode<base<58>>(array_element.first);
@@ -285,13 +285,13 @@ BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(base64_codec_data_driven_test_suite)
 
-    BOOST_DATA_TEST_CASE(base64_single_range_adaptor_encode, base_data("base_64"), array_element) {
-        std::string enc = array_element.first | adaptors::encoded<base<64>>;
-        std::string dec = array_element.second.data() | adaptors::decoded<base<64>>;
+BOOST_DATA_TEST_CASE(base64_single_range_adaptor_encode, base_data("base_64"), array_element) {
+    std::string enc = array_element.first | adaptors::encoded<base<64>>;
+    std::string dec = array_element.second.data() | adaptors::decoded<base<64>>;
 
-        BOOST_CHECK_EQUAL(enc, array_element.second.data());
-        BOOST_CHECK_EQUAL(dec, array_element.first.data());
-    }
+    BOOST_CHECK_EQUAL(enc, array_element.second.data());
+    BOOST_CHECK_EQUAL(dec, array_element.first.data());
+}
 
 BOOST_DATA_TEST_CASE(base64_single_range_encode, base_data("base_64"), array_element) {
     std::string out = encode<base<64>>(array_element.first);

@@ -32,10 +32,9 @@ template<unsigned MinBits, unsigned MaxBits, boost::multiprecision::cpp_integer_
 struct unchecked_type<boost::multiprecision::number<
     boost::multiprecision::cpp_int_modular_backend<MinBits, MaxBits, SignType, Checked, Allocator>,
     ExpressionTemplates>> {
-    typedef boost::multiprecision::number<
-        boost::multiprecision::cpp_int_modular_backend<MinBits, MaxBits, SignType,
-                                                      boost::multiprecision::unchecked, Allocator>,
-        ExpressionTemplates>
+    typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
+                                              MinBits, MaxBits, SignType, boost::multiprecision::unchecked, Allocator>,
+                                          ExpressionTemplates>
         type;
 };
 
@@ -59,7 +58,7 @@ T generate_random() {
 }
 
 template<class T>
-void test_round_trip_neg(T val, const std::integral_constant<bool, true>&) {
+void test_round_trip_neg(T val, const std::integral_constant<bool, true> &) {
     // Try some negative values:
     std::vector<unsigned char> cv;
     T newval;
@@ -70,7 +69,7 @@ void test_round_trip_neg(T val, const std::integral_constant<bool, true>&) {
 }
 
 template<class T>
-void test_round_trip_neg(const T&, const std::integral_constant<bool, false>&) {
+void test_round_trip_neg(const T &, const std::integral_constant<bool, false> &) {
 }
 
 template<class T>

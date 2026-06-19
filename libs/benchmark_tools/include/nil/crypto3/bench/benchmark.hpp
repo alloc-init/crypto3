@@ -54,10 +54,8 @@
 
 namespace nil::crypto3::bench {
     namespace detail {
-        template<std::size_t ABSTRACT_ITERATIONS = 1, std::invocable<std::size_t> P,
-                 typename F>
-        void run_benchmark_impl(std::string const& name, const P& prepare,
-                                const F& func) {
+        template<std::size_t ABSTRACT_ITERATIONS = 1, std::invocable<std::size_t> P, typename F>
+        void run_benchmark_impl(std::string const& name, const P& prepare, const F& func) {
             using duration = std::chrono::duration<double, std::nano>;
 
             constexpr std::size_t WARMUP_BATCH_SIZE = 10;
@@ -66,10 +64,7 @@ namespace nil::crypto3::bench {
 
             auto run_batch = [&func](std::size_t batch_size, auto& args) {
                 NIL_CO3_USE_IF_NOT_VOID(std::apply(
-                    [&func, batch_size](auto&... args) {
-                        return std::invoke(func, batch_size, args...);
-                    },
-                    args));
+                    [&func, batch_size](auto&... args) { return std::invoke(func, batch_size, args...); }, args));
             };
 
             auto run_at_least = [&](duration const& dur) {
@@ -84,8 +79,7 @@ namespace nil::crypto3::bench {
                 return total_runs;
             };
 
-            const std::size_t BATCH_SIZE =
-                1 + run_at_least(WARMUP_DURATION) / MEASUREMENTS / 10;
+            const std::size_t BATCH_SIZE = 1 + run_at_least(WARMUP_DURATION) / MEASUREMENTS / 10;
 
             std::vector<double> durations(MEASUREMENTS);
             for (std::size_t m = 0; m < MEASUREMENTS; ++m) {
@@ -93,8 +87,7 @@ namespace nil::crypto3::bench {
                 auto start = std::chrono::high_resolution_clock::now();
                 run_batch(BATCH_SIZE, args);
                 auto finish = std::chrono::high_resolution_clock::now();
-                durations[m] = static_cast<double>((finish - start).count()) /
-                               static_cast<double>(BATCH_SIZE) /
+                durations[m] = static_cast<double>((finish - start).count()) / static_cast<double>(BATCH_SIZE) /
                                static_cast<double>(ABSTRACT_ITERATIONS);
                 [[maybe_unused]] volatile auto r = args;
             }
@@ -102,8 +95,7 @@ namespace nil::crypto3::bench {
             std::sort(durations.begin(), durations.end());
 
             // discard top 20% outliers
-            durations.resize(
-                static_cast<std::size_t>(static_cast<double>(MEASUREMENTS) * 0.8));
+            durations.resize(static_cast<std::size_t>(static_cast<double>(MEASUREMENTS) * 0.8));
 
             double median = durations[durations.size() / 2];
             double mean = 0, stddiv = 0;
@@ -169,7 +161,7 @@ namespace nil::crypto3::bench {
             }
             return data;
         }
-    }  // namespace detail
+    }    // namespace detail
 
     template<typename T, typename F>
     void run_fold_benchmark(std::string const& name, const F& func) {
@@ -207,8 +199,7 @@ namespace nil::crypto3::bench {
                 }
                 return make_tuple(accums, vals);
             },
-            [&func](std::size_t batch_size, std::array<V, folds_count> accums,
-                    const std::vector<V>& vals) {
+            [&func](std::size_t batch_size, std::array<V, folds_count> accums, const std::vector<V>& vals) {
                 for (std::size_t b = 0; b < batch_size; ++b) {
                     for (std::size_t i = 0; i < folds_count; ++i) {
                         std::invoke(func, accums[i], vals[b]);
@@ -222,16 +213,14 @@ namespace nil::crypto3::bench {
     void run_benchmark(std::string const& name, const F& func) {
         detail::run_benchmark_impl(
             name,
-            [](std::size_t batch_size) {
-                return std::make_tuple(detail::generate_random_data<Args>(batch_size)...);
-            },
+            [](std::size_t batch_size) { return std::make_tuple(detail::generate_random_data<Args>(batch_size)...); },
             [&func](std::size_t batch_size, auto&... vals) {
                 for (std::size_t b = 0; b < batch_size; ++b) {
                     NIL_CO3_USE_IF_NOT_VOID(std::invoke(func, (vals[b])...));
                 }
             });
     }
-}  // namespace nil::crypto3::bench
+}    // namespace nil::crypto3::bench
 
 #undef NIL_CO3_USE_IF_NOT_VOID
 

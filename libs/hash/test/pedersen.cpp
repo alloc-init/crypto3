@@ -77,7 +77,7 @@ namespace boost {
             };
 
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 BOOST_AUTO_TEST_SUITE(hash_pedersen_manual_test_suite)

@@ -32,23 +32,23 @@ namespace nil {
     namespace crypto3 {
         namespace pubkey {
 
-		/*!
-         * @brief 
-         * 
-         * @ingroup pubkey_algorithms
-         * 
-         * Private key - a key known only to its owner. Only the user keeping his private key 
-         * secret guarantees the impossibility of forging a document and digital signature on 
-         * behalf of the certifier by an attacker.
-         *
-         */
+            /*!
+             * @brief
+             *
+             * @ingroup pubkey_algorithms
+             *
+             * Private key - a key known only to its owner. Only the user keeping his private key
+             * secret guarantees the impossibility of forging a document and digital signature on
+             * behalf of the certifier by an attacker.
+             *
+             */
 
             template<typename SchemeType, typename T = void>
             struct private_key {
                 typedef SchemeType scheme_type;
             };
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_PRIVATE_KEY_HPP

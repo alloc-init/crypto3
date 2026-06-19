@@ -42,7 +42,8 @@ namespace nil {
             template<typename InputEndian, typename OutputEndian, std::size_t WordBits, std::size_t BlockWords>
             struct word_injector;
 
-            template<int UnitBits, template<int> class InputEndian, template<int> class OutputEndian, std::size_t WordBits, std::size_t BlockWords>
+            template<int UnitBits, template<int> class InputEndian, template<int> class OutputEndian,
+                     std::size_t WordBits, std::size_t BlockWords>
             struct word_injector<InputEndian<UnitBits>, OutputEndian<UnitBits>, WordBits, BlockWords>
                 : public basic_functions<WordBits> {
 
@@ -64,8 +65,10 @@ namespace nil {
 
                     using operation_endian = stream_endian::big_unit_big_bit<UnitBits>;
 
-                    using block_to_operation_unit_reverser = unit_reverser<OutputEndian<UnitBits>, operation_endian, UnitBits>;
-                    using block_to_operation_bit_reverser = bit_reverser<OutputEndian<UnitBits>, operation_endian, UnitBits>;
+                    using block_to_operation_unit_reverser =
+                        unit_reverser<OutputEndian<UnitBits>, operation_endian, UnitBits>;
+                    using block_to_operation_bit_reverser =
+                        bit_reverser<OutputEndian<UnitBits>, operation_endian, UnitBits>;
 
                     // Convert affected destination words to big endian (no-op if already so)
                     for (std::size_t i = start_word_index; i <= end_word_index; ++i) {
@@ -73,8 +76,10 @@ namespace nil {
                         block_to_operation_unit_reverser::reverse(b_dst[i]);
                     }
 
-                    using word_to_operation_unit_reverser = unit_reverser<InputEndian<UnitBits>, operation_endian, UnitBits>;
-                    using word_to_operation_bit_reverser = bit_reverser<InputEndian<UnitBits>, operation_endian, UnitBits>;
+                    using word_to_operation_unit_reverser =
+                        unit_reverser<InputEndian<UnitBits>, operation_endian, UnitBits>;
+                    using word_to_operation_bit_reverser =
+                        bit_reverser<InputEndian<UnitBits>, operation_endian, UnitBits>;
                     word_to_operation_unit_reverser::reverse(w_src);
                     word_to_operation_bit_reverser::reverse(w_src);
 
@@ -87,7 +92,8 @@ namespace nil {
                         std::size_t bits_this_round = std::min(n_bits, WordBits - cur_word_bits_offset);
 
                         // Extract bits_this_round bits from w_src
-                        // We have to pass `word_type` to bits funcs, so small types (e.g. uint8) are not promoted to int after ~()
+                        // We have to pass `word_type` to bits funcs, so small types (e.g. uint8) are not promoted to
+                        // int after ~()
                         word_type src_mask = high_bits<WordBits, word_type>(~word_type(), bits_this_round);
                         word_type bits_to_inject = w_src & src_mask;
                         // Shift bits_to_inject to align with the destination position
@@ -95,10 +101,11 @@ namespace nil {
 
                         // Which bits in dst word we have to keep
                         word_type dst_mask = high_bits<WordBits, word_type>(~word_type(), cur_word_bits_offset) |
-                                            low_bits<WordBits, word_type>(~word_type(), WordBits - cur_word_bits_offset - bits_this_round);
+                                             low_bits<WordBits, word_type>(
+                                                 ~word_type(), WordBits - cur_word_bits_offset - bits_this_round);
 
-                        b_dst[cur_word_idx] &= dst_mask; // Clear the bits at the destination
-                        b_dst[cur_word_idx] |= bits_to_inject; // Set the new bits
+                        b_dst[cur_word_idx] &= dst_mask;          // Clear the bits at the destination
+                        b_dst[cur_word_idx] |= bits_to_inject;    // Set the new bits
 
                         // Update cursor and remaining bits for next round, shift w_src
                         w_src = unbounded_shl(w_src, bits_this_round);
@@ -134,7 +141,8 @@ namespace nil {
                  * @param n_bits Number of bits in `b_src` that are to be injected.
                  * @param b_dst Destination block where bits from `b_src` will be injected.
                  * @param b_dst_cursor Reference to the running count of bits injected into `b_dst`.
-                 * @param b_src_offset_bits The bit position within `b_src` from where to start reading bits (default is 0).
+                 * @param b_src_offset_bits The bit position within `b_src` from where to start reading bits (default is
+                 * 0).
                  *
                  * @note Checks if the total bits (`n_bits` + `b_dst_cursor`) exceed the size of `b_dst`
                  *       and does nothing in this case.
@@ -177,8 +185,8 @@ namespace nil {
                  * @param b_dst_cursor A reference to the running position in b_dst where the next bit will be injected.
                  * @param src_word_offset The bit position within w_src from where to start reading bits (default is 0).
                  */
-                static void inject(const word_type w_src, const std::size_t n_bits, block_type &b_dst, std::size_t &b_dst_cursor,
-                                   std::size_t src_word_offset = 0) {
+                static void inject(const word_type w_src, const std::size_t n_bits, block_type &b_dst,
+                                   std::size_t &b_dst_cursor, std::size_t src_word_offset = 0) {
 
                     word_type shifted_word = w_src;
 
@@ -187,11 +195,11 @@ namespace nil {
                     }
 
                     word_injector<InputEndian, OutputEndian, WordBits, BlockWords>::inject(shifted_word, n_bits, b_dst,
-                                                                                       b_dst_cursor);
+                                                                                           b_dst_cursor);
                 }
             };
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_INJECT_HASH_HPP

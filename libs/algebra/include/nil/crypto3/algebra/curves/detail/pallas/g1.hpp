@@ -55,20 +55,18 @@ namespace nil {
 #ifdef __ZKLLVM__
                         typedef __zkllvm_curve_pallas value_type;
 
-                        static value_type make_value(
-                            typename field_type::value_type affine_one_X,
-                            typename field_type::value_type affine_one_Y) {
+                        static value_type make_value(typename field_type::value_type affine_one_X,
+                                                     typename field_type::value_type affine_one_Y) {
                             return __builtin_assigner_pallas_curve_init(affine_one_X, affine_one_Y);
                         }
 
-                        static value_type one () {
+                        static value_type one() {
                             return make_value(
                                 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000000_cppui_modular256,
-                                0x2_cppui_modular256
-                                );
+                                0x2_cppui_modular256);
                         }
 
-                        static value_type zero () {
+                        static value_type zero() {
                             return make_value(0, 1);
                         }
 
@@ -78,8 +76,8 @@ namespace nil {
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_PALLAS_G1_HPP

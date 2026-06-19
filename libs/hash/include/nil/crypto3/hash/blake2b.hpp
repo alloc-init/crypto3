@@ -132,8 +132,8 @@ namespace nil {
                     };
 
                     typedef haifa_construction<params_type, typename policy_type::iv_generator,
-                            blake2b_compressor<DigestBits>, detail::blake2b_padding<policy_type>>
-                            type;
+                                               blake2b_compressor<DigestBits>, detail::blake2b_padding<policy_type>>
+                        type;
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::block;
@@ -141,7 +141,7 @@ namespace nil {
             };
 
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

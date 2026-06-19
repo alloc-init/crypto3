@@ -69,7 +69,7 @@ namespace boost {
             // upper bound
             constexpr std::size_t length = Backend::internal_limb_count * std::numeric_limits<ui_type>::digits;
 
-            std::array<long, length + 1> res{0};
+            std::array<long, length + 1> res {0};
 
             Backend c(scalar);
             ui_type j = 0;
@@ -101,7 +101,7 @@ namespace boost {
         constexpr auto find_wnaf_a(const size_t window_size, const number<Backend, ExpressionTemplates> &scalar) {
             return eval_find_wnaf_a(window_size, scalar.backend());
         }
-    }   // namespace multiprecision
-}   // namespace boost
+    }    // namespace multiprecision
+}    // namespace boost
 
 #endif    // BOOST_MULTIPRECISION_WNAF_HPP

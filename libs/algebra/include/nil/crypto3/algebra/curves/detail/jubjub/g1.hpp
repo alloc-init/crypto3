@@ -57,8 +57,8 @@ namespace nil {
                         using value_type = curve_element<params_type, Form, Coordinates>;
                     };
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_JUBJUB_G1_HPP

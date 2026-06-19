@@ -32,8 +32,6 @@
 #include <nil/crypto3/algebra/fields/fp3.hpp>
 #include <nil/crypto3/algebra/fields/fp6_2over3.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -79,9 +77,10 @@ namespace nil {
                         constexpr static const integral_type a =
                             0x01;    ///< coefficient of short Weierstrass curve $y^2=x^3+a*x+b$
                         constexpr static const integral_type d =
-                            0x64536D55979879327CF1306BB5A6277D254EF9776CE70_cppui_modular179;    ///< coefficient of short
-                                                                                         ///< Weierstrass curve
-                                                                                         ///< $y^2=x^3+a*x+b$
+                            0x64536D55979879327CF1306BB5A6277D254EF9776CE70_cppui_modular179;    ///< coefficient of
+                                                                                                 ///< short Weierstrass
+                                                                                                 ///< curve
+                                                                                                 ///< $y^2=x^3+a*x+b$
 #ifdef STANDARD_EC_INF_POINTS_ENABLED
                         constexpr static const std::array<typename g1_field_type::value_type, 3> g1_zero_fill = {
                             g1_field_type::value_type::one(), g1_field_type::value_type::zero(),
@@ -91,7 +90,6 @@ namespace nil {
                             g1_field_type::value_type::zero(), g1_field_type::value_type::zero(),
                             g1_field_type::value_type::zero()};
 #endif
-
 
                         constexpr static const std::array<typename g1_field_type::value_type, 3> g1_one_fill = {
                             typename g1_field_type::value_type(
@@ -147,9 +145,9 @@ namespace nil {
                         edwards_basic_policy<183>::g2_one_fill;
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_EDWARDS_BASIC_POLICY_HPP

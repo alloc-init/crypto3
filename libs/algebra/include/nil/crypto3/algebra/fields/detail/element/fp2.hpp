@@ -59,24 +59,31 @@ namespace nil {
 
                         constexpr element_fp2() = default;
 
-                        template<typename Number1, typename Number2,
-                            typename std::enable_if<std::is_integral<Number1>::value && std::is_integral<Number2>::value, bool>::type* = true>
-                        constexpr element_fp2(const Number1 &in_data0, const Number2 &in_data1)
-                            : data({underlying_type(in_data0), underlying_type(in_data1)}) {}
+                        template<typename Number1,
+                                 typename Number2,
+                                 typename std::enable_if<std::is_integral<Number1>::value &&
+                                                             std::is_integral<Number2>::value,
+                                                         bool>::type * = true>
+                        constexpr element_fp2(const Number1 &in_data0, const Number2 &in_data1) :
+                            data({underlying_type(in_data0), underlying_type(in_data1)}) {
+                        }
 
-                        constexpr element_fp2(const data_type &in_data)
-                            : data({in_data[0], in_data[1]}) {}
+                        constexpr element_fp2(const data_type &in_data) : data({in_data[0], in_data[1]}) {
+                        }
 
-                        constexpr element_fp2(const underlying_type &in_data0, const underlying_type &in_data1)
-                            : data({in_data0, in_data1}) {}
+                        constexpr element_fp2(const underlying_type &in_data0, const underlying_type &in_data1) :
+                            data({in_data0, in_data1}) {
+                        }
 
-                        constexpr element_fp2(const element_fp2 &B) : data(B.data) {}
-                        constexpr element_fp2(const element_fp2 &&B) BOOST_NOEXCEPT : data(std::move(B.data)) {}
+                        constexpr element_fp2(const element_fp2 &B) : data(B.data) {
+                        }
+                        constexpr element_fp2(const element_fp2 &&B) BOOST_NOEXCEPT : data(std::move(B.data)) {
+                        }
 
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.
-                        constexpr static const element_fp2& zero();
-                        constexpr static const element_fp2& one();
+                        constexpr static const element_fp2 &zero();
+                        constexpr static const element_fp2 &one();
 
                         constexpr bool is_zero() const {
                             return *this == zero();
@@ -269,7 +276,6 @@ namespace nil {
                             data[1] = AB + AB;
                         }
 
-
                         constexpr bool is_square() const {
                             element_fp2 tmp = this->pow(field_type::extension_policy::group_order_minus_one_half);
                             return (tmp.is_one() || tmp.is_zero());    // maybe can be done more effective
@@ -334,51 +340,46 @@ namespace nil {
                         element_fp2<FieldParams>::non_residue;
 
                     namespace element_fp2_details {
-                        // These constexpr static variables can not be members of element_fp2, because 
+                        // These constexpr static variables can not be members of element_fp2, because
                         // element_fp2 is incomplete type until the end of its declaration.
                         template<typename FieldParams>
-                        constexpr static element_fp2<FieldParams> zero_instance(
-                            FieldParams::underlying_type::zero(),
-                            FieldParams::underlying_type::zero());
+                        constexpr static element_fp2<FieldParams> zero_instance(FieldParams::underlying_type::zero(),
+                                                                                FieldParams::underlying_type::zero());
 
                         template<typename FieldParams>
-                        constexpr static element_fp2<FieldParams> one_instance(
-                            FieldParams::underlying_type::one(),
-                            FieldParams::underlying_type::zero());
-                    }
+                        constexpr static element_fp2<FieldParams> one_instance(FieldParams::underlying_type::one(),
+                                                                               FieldParams::underlying_type::zero());
+                    }    // namespace element_fp2_details
 
                     template<typename FieldParams>
-                    constexpr const element_fp2<FieldParams>& element_fp2<FieldParams>::zero() {
+                    constexpr const element_fp2<FieldParams> &element_fp2<FieldParams>::zero() {
                         return element_fp2_details::zero_instance<FieldParams>;
                     }
 
                     template<typename FieldParams>
-                    constexpr const element_fp2<FieldParams>& element_fp2<FieldParams>::one() {
+                    constexpr const element_fp2<FieldParams> &element_fp2<FieldParams>::one() {
                         return element_fp2_details::one_instance<FieldParams>;
                     }
 
                     template<typename FieldParams>
-                    std::ostream& operator<<(std::ostream& os, const element_fp2<FieldParams>& elem) {
+                    std::ostream &operator<<(std::ostream &os, const element_fp2<FieldParams> &elem) {
                         os << "[" << elem.data[0] << "," << elem.data[1] << "]";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 template<typename FieldParams>
-struct std::hash<typename nil::crypto3::algebra::fields::detail::element_fp2<FieldParams>>
-{
+struct std::hash<typename nil::crypto3::algebra::fields::detail::element_fp2<FieldParams>> {
     std::hash<typename nil::crypto3::algebra::fields::detail::element_fp2<FieldParams>::modular_type> hasher;
-    size_t operator()(const nil::crypto3::algebra::fields::detail::element_fp2<FieldParams>& elem) const
-    {
+    size_t operator()(const nil::crypto3::algebra::fields::detail::element_fp2<FieldParams> &elem) const {
         std::size_t result = hasher(elem.data[0]);
         boost::hash_combine(result, hasher(elem.data[1]));
         return result;
     }
 };
-
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP2_HPP

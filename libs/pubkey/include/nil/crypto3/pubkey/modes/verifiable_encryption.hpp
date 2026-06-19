@@ -92,12 +92,11 @@ namespace nil {
                         encryption_verification_policy;
                     typedef detail::verifiable_encryption<scheme_type, verify_decryption_op>
                         decryption_verification_policy;
-                    typedef detail::verifiable_encryption<scheme_type, rerandomize_op>
-                        rerandomization_policy;
+                    typedef detail::verifiable_encryption<scheme_type, rerandomize_op> rerandomization_policy;
                 };
             }    // namespace modes
-        }        // namespace pubkey
-    }            // namespace crypto3
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_VERIFIABLE_ENCRYPTION_MODE_HPP

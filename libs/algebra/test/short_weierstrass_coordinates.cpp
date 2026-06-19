@@ -45,7 +45,6 @@
 
 using namespace nil::crypto3::algebra;
 
-
 namespace boost {
     namespace test_tools {
         namespace tt_detail {
@@ -55,7 +54,7 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 boost::property_tree::ptree string_data(std::string test_name) {
@@ -133,20 +132,26 @@ void curve_operation_test(const TestSet &test_set,
 
 BOOST_AUTO_TEST_SUITE(curves_manual_tests)
 
-BOOST_DATA_TEST_CASE(curve_operation_test_jacobian_minus_3, string_data("curve_operation_test_jacobian_minus_3"), data_set) {
-    using policy_type = curves::secp_r1<256>::g1_type< curves::coordinates::jacobian_with_a4_minus_3,  curves::forms::short_weierstrass>;
+BOOST_DATA_TEST_CASE(curve_operation_test_jacobian_minus_3,
+                     string_data("curve_operation_test_jacobian_minus_3"),
+                     data_set) {
+    using policy_type =
+        curves::secp_r1<256>::g1_type<curves::coordinates::jacobian_with_a4_minus_3, curves::forms::short_weierstrass>;
 
     curve_operation_test<policy_type>(data_set, fp_curve_test_init<policy_type>);
 }
 
 BOOST_DATA_TEST_CASE(curve_operation_test_jacobian, string_data("curve_operation_test_jacobian"), data_set) {
-    using policy_type = curves::secp_r1<256>::g1_type< curves::coordinates::jacobian,  curves::forms::short_weierstrass>;
+    using policy_type = curves::secp_r1<256>::g1_type<curves::coordinates::jacobian, curves::forms::short_weierstrass>;
 
     curve_operation_test<policy_type>(data_set, fp_curve_test_init<policy_type>);
 }
 
-BOOST_DATA_TEST_CASE(curve_operation_test_projective_with_a4_minus_3, string_data("curve_operation_test_projective_with_a4_minus_3"), data_set) {
-    using policy_type = curves::secp_r1<256>::g1_type< curves::coordinates::projective_with_a4_minus_3,  curves::forms::short_weierstrass>;
+BOOST_DATA_TEST_CASE(curve_operation_test_projective_with_a4_minus_3,
+                     string_data("curve_operation_test_projective_with_a4_minus_3"),
+                     data_set) {
+    using policy_type = curves::secp_r1<256>::g1_type<curves::coordinates::projective_with_a4_minus_3,
+                                                      curves::forms::short_weierstrass>;
 
     curve_operation_test<policy_type>(data_set, fp_curve_test_init<policy_type>);
 }

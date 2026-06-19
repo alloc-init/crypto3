@@ -48,39 +48,39 @@ namespace nil {
                             if (!first.is_zero()) {
 
                                 // A = X1^2
-                                field_value_type A (first.X);
+                                field_value_type A(first.X);
                                 A.square_inplace();
 
                                 // B = Y1^2
-                                field_value_type B (first.Y);
+                                field_value_type B(first.Y);
                                 B.square_inplace();
 
                                 // C = 2*Z1^2
-                                field_value_type C (first.Z);
+                                field_value_type C(first.Z);
                                 C.square_inplace();
                                 C.double_inplace();
 
                                 // D = a*A
-                                field_value_type D (A);
+                                field_value_type D(A);
                                 D *= field_value_type(ElementType::params_type::a);
 
                                 // E = (X1+Y1)^2-A-B
-                                field_value_type E (first.X);
+                                field_value_type E(first.X);
                                 E += first.Y;
                                 E.square_inplace();
                                 E -= A;
                                 E -= B;
 
                                 // G = D+B
-                                field_value_type G (D);
+                                field_value_type G(D);
                                 G += B;
 
                                 // F = G-C
-                                field_value_type F (G);
+                                field_value_type F(G);
                                 F -= C;
 
                                 // H = D-B
-                                field_value_type H (D);
+                                field_value_type H(D);
                                 H -= B;
 
                                 // X3 = E*F
@@ -102,8 +102,8 @@ namespace nil {
                         }
                     };
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_TWISTED_EDWARDS_G1_ELEMENT_EXTENDED_WITH_A_MINUS_1_DBL_2008_HWCD_HPP

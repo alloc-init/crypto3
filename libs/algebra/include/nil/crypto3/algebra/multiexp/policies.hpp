@@ -48,7 +48,7 @@ namespace nil {
                         number_type r;
                         using r_type = number_type;
 
-                        ordered_exponent(const std::size_t idx, const number_type &r) : idx(idx), r(r) {};
+                        ordered_exponent(const std::size_t idx, const number_type &r) : idx(idx), r(r) { };
 
                         bool operator<(const ordered_exponent &other) const {
                             return (this->r < other.r);
@@ -321,8 +321,8 @@ namespace nil {
                     }
                 };
             }    // namespace policies
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_MULTIEXP_BASIC_POLICIES_HPP

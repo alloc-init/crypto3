@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/curves/forms.hpp>
 #include <nil/crypto3/algebra/curves/detail/secp_r1/types.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -53,11 +51,11 @@ namespace nil {
                         constexpr static const typename secp_r1_types<160>::integral_type b =
                             typename secp_r1_types<160>::integral_type(
                                 0x1c97befc54bd7a8b65acf89f81d4d4adc565fa45_cppui_modular160);    ///< coefficient
-                                                                                         ///< of
-                                                                                         ///< short
-                                                                                         ///< Weierstrass
-                                                                                         ///< curve
-                                                                                         ///< $y^2=x^3+a*x+b$
+                                                                                                 ///< of
+                                                                                                 ///< short
+                                                                                                 ///< Weierstrass
+                                                                                                 ///< curve
+                                                                                                 ///< $y^2=x^3+a*x+b$
                     };
 
                     template<>
@@ -78,8 +76,10 @@ namespace nil {
 #endif
 
                         constexpr static const std::array<typename field_type::value_type, 2> one_fill = {
-                            typename field_type::value_type(0x4a96b5688ef573284664698968c38bb913cbfc82_cppui_modular160),
-                            typename field_type::value_type(0x23a628553168947d59dcc912042351377ac5fb32_cppui_modular160)};
+                            typename field_type::value_type(
+                                0x4a96b5688ef573284664698968c38bb913cbfc82_cppui_modular160),
+                            typename field_type::value_type(
+                                0x23a628553168947d59dcc912042351377ac5fb32_cppui_modular160)};
                     };
 
                     constexpr typename secp_r1_types<160>::integral_type const
@@ -111,11 +111,11 @@ namespace nil {
                         constexpr static const typename secp_r1_types<192>::integral_type b =
                             typename secp_r1_types<192>::integral_type(
                                 0x64210519e59c80e70fa7e9ab72243049feb8deecc146b9b1_cppui_modular192);    ///< coefficient
-                                                                                                 ///< of
-                                                                                                 ///< short
-                                                                                                 ///< Weierstrass
-                                                                                                 ///< curve
-                                                                                                 ///< $y^2=x^3+a*x+b$
+                                                                                                         ///< of
+                                                                                                         ///< short
+                                                                                                         ///< Weierstrass
+                                                                                                         ///< curve
+                                                                                                         ///< $y^2=x^3+a*x+b$
                     };
 
                     template<>
@@ -171,8 +171,8 @@ namespace nil {
                         constexpr static const typename secp_r1_types<224>::integral_type b =
                             typename secp_r1_types<224>::integral_type(
                                 0xb4050a850c04b3abf54132565044b0b7d7bfd8ba270b39432355ffb4_cppui_modular224);    ///< coefficient
-                                                                                                         ///< of
-                                                                                                         ///< short
+                                                                                                                 ///< of
+                                                                                                                 ///< short
                         ///< Weierstrass
                         ///< curve
                         ///< $y^2=x^3+a*x+b$
@@ -223,19 +223,19 @@ namespace nil {
                         constexpr static const typename secp_r1_types<256>::integral_type a =
                             typename secp_r1_types<256>::integral_type(
                                 0xffffffff00000001000000000000000000000000fffffffffffffffffffffffc_cppui_modular256);    ///< coefficient
-                                                                                                                 ///< of
-                                                                                                                 ///< short
-                                                                                                                 ///< Weierstrass
-                                                                                                                 ///< curve
-                                                                                                                 ///< $y^2=x^3+a*x+b$
+                                                                                                                         ///< of
+                                                                                                                         ///< short
+                                                                                                                         ///< Weierstrass
+                                                                                                                         ///< curve
+                                                                                                                         ///< $y^2=x^3+a*x+b$
                         constexpr static const typename secp_r1_types<256>::integral_type b =
                             typename secp_r1_types<256>::integral_type(
                                 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b_cppui_modular256);    ///< coefficient
-                                                                                                                 ///< of
-                                                                                                                 ///< short
-                                                                                                                 ///< Weierstrass
-                                                                                                                 ///< curve
-                                                                                                                 ///< $y^2=x^3+a*x+b$
+                                                                                                                         ///< of
+                                                                                                                         ///< short
+                                                                                                                         ///< Weierstrass
+                                                                                                                         ///< curve
+                                                                                                                         ///< $y^2=x^3+a*x+b$
                     };
 
                     template<>
@@ -250,7 +250,7 @@ namespace nil {
 #ifdef STANDARD_EC_INF_POINTS_ENABLED
                         constexpr static const std::array<typename field_type::value_type, 2> zero_fill = {
                             field_type::value_type::zero(), field_type::value_type::one()};
-#else                       
+#else
                         constexpr static const std::array<typename field_type::value_type, 2> zero_fill = {
                             field_type::value_type::zero(), field_type::value_type::zero()};
 #endif
@@ -393,9 +393,9 @@ namespace nil {
                         typename secp_r1_g1_params<521, forms::short_weierstrass>::field_type::value_type, 2> const
                         secp_r1_g1_params<521, forms::short_weierstrass>::one_fill;
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_SECP_R1_256_SHORT_WEIERSTRASS_PARAMS_HPP

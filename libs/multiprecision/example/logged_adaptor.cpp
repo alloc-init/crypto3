@@ -30,7 +30,7 @@ namespace nil {
             }
 
         }    // namespace multiprecision
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 int main() {

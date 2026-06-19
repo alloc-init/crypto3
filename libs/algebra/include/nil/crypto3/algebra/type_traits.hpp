@@ -54,16 +54,16 @@ namespace nil {
             BOOST_TTI_HAS_TYPE(gt_type)
 
             // BOOST_TTI_HAS_TYPE(g1_type) does not work properly on g1_type since it is a template
-            template <typename, typename = std::void_t<>>
-            struct has_type_g1_type : std::false_type {};
-            template <typename T>
-            struct has_type_g1_type<T, std::void_t<typename T::template g1_type<>>> : std::true_type {};
+            template<typename, typename = std::void_t<>>
+            struct has_type_g1_type : std::false_type { };
+            template<typename T>
+            struct has_type_g1_type<T, std::void_t<typename T::template g1_type<>>> : std::true_type { };
 
             // BOOST_TTI_HAS_TYPE(g2_type) does not work properly on g2_type since it is a template
-            template <typename, typename = std::void_t<>>
-            struct has_type_g2_type : std::false_type {};
-            template <typename T>
-            struct has_type_g2_type<T, std::void_t<typename T::template g2_type<>>> : std::true_type {};
+            template<typename, typename = std::void_t<>>
+            struct has_type_g2_type : std::false_type { };
+            template<typename T>
+            struct has_type_g2_type<T, std::void_t<typename T::template g2_type<>>> : std::true_type { };
 
             BOOST_TTI_HAS_TYPE(group_type)
 
@@ -104,55 +104,43 @@ namespace nil {
 
             template<typename T>
             struct is_curve {
-                static constexpr bool value =
-                    has_type_base_field_type<T>::value &&
-                    has_type_scalar_field_type<T>::value &&
-                    has_type_g1_type<T>::value;
+                static constexpr bool value = has_type_base_field_type<T>::value &&
+                                              has_type_scalar_field_type<T>::value && has_type_g1_type<T>::value;
             };
 
             /** @brief is typename T either g1 or g2 group */
             template<typename T>
             struct is_curve_group {
-                static constexpr bool value =
-                    has_type_params_type<T>::value &&
-                    has_type_curve_type<T, is_curve<_1> >::value &&
-                    has_type_field_type<T>::value &&
-                    has_type_value_type<T>::value;
+                static constexpr bool value = has_type_params_type<T>::value &&
+                                              has_type_curve_type<T, is_curve<_1>>::value &&
+                                              has_type_field_type<T>::value && has_type_value_type<T>::value;
             };
 
             /** @brief is typename T a field */
             template<typename T>
             struct is_field {
                 static const bool value =
-                    has_type_value_type<T>::value &&
-                    has_static_member_data_value_bits<T, const std::size_t>::value &&
+                    has_type_value_type<T>::value && has_static_member_data_value_bits<T, const std::size_t>::value &&
                     has_type_integral_type<T>::value &&
                     has_static_member_data_modulus_bits<T, const std::size_t>::value &&
-                    has_type_modular_type<T>::value &&
-                    has_static_member_data_arity<T, const std::size_t>::value;
+                    has_type_modular_type<T>::value && has_static_member_data_arity<T, const std::size_t>::value;
                 typedef T type;
             };
 
             /** @brief is typename T an extended field (e.g. Fp2) */
             template<typename T>
             struct is_extended_field {
-                static const bool value =
-                    is_field<T>::value &&
-                    has_type_extension_policy<T>::value;
+                static const bool value = is_field<T>::value && has_type_extension_policy<T>::value;
                 typedef T type;
             };
 
             template<typename T>
             struct is_curve_element {
                 static const bool value =
-                    has_type_field_type<T>::value &&
-                    has_type_group_type<T>::value &&
-                    has_static_member_function_zero<T, T>::value &&
-                    has_static_member_function_one<T, T>::value &&
-                    has_function_is_zero<const T, bool>::value &&
-                    has_function_is_well_formed<const T, bool>::value &&
-                    has_function_double_inplace<T, void>::value
-                    ;
+                    has_type_field_type<T>::value && has_type_group_type<T>::value &&
+                    has_static_member_function_zero<T, T>::value && has_static_member_function_one<T, T>::value &&
+                    has_function_is_zero<const T, bool>::value && has_function_is_well_formed<const T, bool>::value &&
+                    has_function_double_inplace<T, void>::value;
             };
 
             template<typename T>
@@ -162,26 +150,20 @@ namespace nil {
 
             template<typename T>
             struct is_field_element {
-                static const bool value =
-                    has_type_field_type<T>::value &&
-                    has_function_is_zero<const T, bool>::value &&
-                    has_function_inversed<const T, T>::value &&
-                    has_static_member_function_zero<T, const T&>::value;
+                static const bool value = has_type_field_type<T>::value && has_function_is_zero<const T, bool>::value &&
+                                          has_function_inversed<const T, T>::value &&
+                                          has_static_member_function_zero<T, const T &>::value;
             };
 
             template<typename T>
             struct is_extended_field_element {
-                static const bool value =
-                    is_field_element<T>::value &&
-                    has_type_underlying_type<T>::value;
+                static const bool value = is_field_element<T>::value && has_type_underlying_type<T>::value;
             };
-        
+
             template<typename T>
-            struct is_complex : std::false_type {
-            };
+            struct is_complex : std::false_type { };
             template<typename T>
-            struct is_complex<std::complex<T>> : std::true_type {
-            };
+            struct is_complex<std::complex<T>> : std::true_type { };
             template<typename T>
             constexpr bool is_complex_v = is_complex<T>::value;
 
@@ -196,7 +178,7 @@ namespace nil {
             template<typename T>
             using remove_complex_t = typename remove_complex<T>::type;
         }    // namespace algebra
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_TYPE_TRAITS_HPP

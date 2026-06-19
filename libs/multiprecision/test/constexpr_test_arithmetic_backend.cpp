@@ -8,19 +8,17 @@
 
 int main() {
     typedef boost::multiprecision::number<boost::multiprecision::backends::arithmetic_backend<long long>,
-                                                 boost::multiprecision::et_off>
+                                          boost::multiprecision::et_off>
         int_backend;
-    typedef boost::multiprecision::number<
-        boost::multiprecision::backends::arithmetic_backend<unsigned long long>,
-        boost::multiprecision::et_off>
+    typedef boost::multiprecision::number<boost::multiprecision::backends::arithmetic_backend<unsigned long long>,
+                                          boost::multiprecision::et_off>
         unsigned_backend;
 
     typedef boost::multiprecision::number<boost::multiprecision::backends::arithmetic_backend<long long>,
-                                                 boost::multiprecision::et_on>
+                                          boost::multiprecision::et_on>
         int_backend_et;
-    typedef boost::multiprecision::number<
-        boost::multiprecision::backends::arithmetic_backend<unsigned long long>,
-        boost::multiprecision::et_on>
+    typedef boost::multiprecision::number<boost::multiprecision::backends::arithmetic_backend<unsigned long long>,
+                                          boost::multiprecision::et_on>
         unsigned_backend_et;
 
     {

@@ -31,7 +31,6 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-
 #include <nil/crypto3/algebra/fields/arithmetic_params/bls12.hpp>
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
@@ -62,9 +61,9 @@ BOOST_AUTO_TEST_CASE(basic_radix2_domain_benchmark, *boost::unit_test::disabled(
         }
     }
     std::cout << "Generation: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::high_resolution_clock::now() - gen_start)
-                 .count()
+              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() -
+                                                                       gen_start)
+                     .count()
               << " ms" << std::endl;
 
     // manually calculate the power, saving all the intermediate powers
@@ -79,35 +78,33 @@ BOOST_AUTO_TEST_CASE(basic_radix2_domain_benchmark, *boost::unit_test::disabled(
         }
     }
     std::cout << "Cache: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::high_resolution_clock::now() - cache_start)
-                 .count()
+              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() -
+                                                                       cache_start)
+                     .count()
               << " ms" << std::endl;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> start_fft(std::chrono::high_resolution_clock::now());
     for (std::size_t i = 0; i < fft_count; ++i) {
         nil::crypto3::math::detail::basic_radix2_fft<FieldType>(
             test_data[i],
-            unity_root<FieldType>(fft_sizes[i])); //omega_powers[i]);
+            unity_root<FieldType>(fft_sizes[i]));    // omega_powers[i]);
     }
 
     std::cout << "Uncached FFT: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::high_resolution_clock::now() - start_fft)
-                 .count()
+              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() -
+                                                                       start_fft)
+                     .count()
               << " ms" << std::endl;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> start_cached(std::chrono::high_resolution_clock::now());
     for (std::size_t i = 0; i < fft_count; ++i) {
         nil::crypto3::math::detail::basic_radix2_fft<FieldType>(
-            test_data[i],
-            unity_root<FieldType>(fft_sizes[i]),
-            omega_powers[i]);
+            test_data[i], unity_root<FieldType>(fft_sizes[i]), omega_powers[i]);
     }
     std::cout << "Cached FFT: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::high_resolution_clock::now() - start_cached
-                 ).count()
+              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() -
+                                                                       start_cached)
+                     .count()
               << " ms" << std::endl;
 }
 
@@ -122,19 +119,17 @@ BOOST_AUTO_TEST_CASE(fft_vs_multiplication_benchmark) {
     std::vector<value_type> duped_data(test_data);
     value_type random_mult = nil::crypto3::algebra::random_element<FieldType>();
     std::cout << "Generation: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::high_resolution_clock::now() - gen_start)
-                 .count()
+              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() -
+                                                                       gen_start)
+                     .count()
               << " ms" << std::endl;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> start_fft(std::chrono::high_resolution_clock::now());
-    nil::crypto3::math::detail::basic_radix2_fft<FieldType>(
-        test_data,
-        unity_root<FieldType>(fft_size));
+    nil::crypto3::math::detail::basic_radix2_fft<FieldType>(test_data, unity_root<FieldType>(fft_size));
     std::cout << "FFT: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::high_resolution_clock::now() - start_fft)
-                 .count()
+              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() -
+                                                                       start_fft)
+                     .count()
               << " ms" << std::endl;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> start_mult(std::chrono::high_resolution_clock::now());
@@ -143,10 +138,10 @@ BOOST_AUTO_TEST_CASE(fft_vs_multiplication_benchmark) {
         duped_data[i] *= random_mult;
     }
     std::cout << "Multiplication: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::high_resolution_clock::now() - start_mult)
-                 .count()
-             << " ms" << std::endl;
+              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() -
+                                                                       start_mult)
+                     .count()
+              << " ms" << std::endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END()

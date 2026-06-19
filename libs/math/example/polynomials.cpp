@@ -38,11 +38,11 @@ int main() {
     using polynomial = nil::crypto3::math::polynomial<field_type>;
 
     /* 3x^2 + 2x + 1 */
-    polynomial a({1,2,3});
+    polynomial a({1, 2, 3});
     std::cout << "a = " << a << std::endl;
-    
+
     /* 7x^5 */
-    polynomial b({0,0,0,0,0,7});
+    polynomial b({0, 0, 0, 0, 0, 7});
     std::cout << "b = " << b << std::endl;
 
     polynomial c = a + b;

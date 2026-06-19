@@ -213,9 +213,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(only_unpack_test, T, test_types_unpack) {
     uint32_t in3 = 0x12345678;
     call_repack<T>(in3, 4);
 
-    using input_type = types::array_list<field_type<option::little_endian>,
-                                         types::integral<field_type<option::big_endian>, std::uint8_t>,
-                                         option::fixed_size_storage<2>>;
+    using input_type =
+        types::array_list<field_type<option::little_endian>,
+                          types::integral<field_type<option::big_endian>, std::uint8_t>, option::fixed_size_storage<2>>;
     using input_seed_type = typename input_type::value_type;
     input_type in4;
     std::array<std::uint16_t, 2> inp_seed_blank = {{0x1234, 0x5678}};

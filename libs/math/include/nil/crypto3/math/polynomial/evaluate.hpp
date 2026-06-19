@@ -108,7 +108,7 @@ namespace nil {
                 return evaluate_lagrange_polynomial(domain.begin(), domain.end(), t, m, idx);
             }
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // ALGEBRA_FFT_NAIVE_EVALUATE_HPP

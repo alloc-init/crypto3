@@ -34,11 +34,11 @@ namespace boost {
         namespace tt_detail {
             template<template<typename, typename> class P, typename K, typename V>
             struct print_log_value<P<K, V>> {
-                void operator()(std::ostream&, P<K, V> const&) {
+                void operator()(std::ostream &, P<K, V> const &) {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 static const std::unordered_map<std::string, std::string> string_data = {

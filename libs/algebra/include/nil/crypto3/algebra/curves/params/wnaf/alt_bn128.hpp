@@ -60,8 +60,8 @@ namespace nil {
                     wnaf_params<typename alt_bn128<254>::g2_type<>>::wnaf_window_table;
 
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_ALT_BN128_WNAF_PARAMS_HPP

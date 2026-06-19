@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/dsa_jce/base_field.hpp>
 #include <nil/crypto3/algebra/fields/dsa_jce/scalar_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -87,7 +85,7 @@ namespace nil {
                     arithmetic_params<dsa_botan_base_field<3072>>::mul_generator;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_FIELDS_DSA_BOTAN_ARITHMETIC_PARAMS_HPP

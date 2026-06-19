@@ -73,15 +73,16 @@ namespace nil {
                     };
 
                     typedef sponge_construction<params_type, policy_type, typename policy_type::iv_generator,
-                            detail::sha3_functions<DigestBits>, detail::sha3_functions<DigestBits>, detail::sha3_padder<policy_type>>
-                            type;
+                                                detail::sha3_functions<DigestBits>, detail::sha3_functions<DigestBits>,
+                                                detail::sha3_padder<policy_type>>
+                        type;
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::block;
                 using accumulator_tag = accumulators::tag::hash<sha3<DigestBits>>;
             };
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

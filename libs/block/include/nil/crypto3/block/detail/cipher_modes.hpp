@@ -140,8 +140,8 @@ namespace nil {
                     };
                 };
             }    // namespace modes
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CIPHER_MODES_HPP

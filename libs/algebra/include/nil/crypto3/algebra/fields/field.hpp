@@ -53,13 +53,13 @@ namespace nil {
                     typedef int extended_integral_type;
 #else
                     typedef boost::multiprecision::number<
-                            boost::multiprecision::backends::cpp_int_modular_backend<modulus_bits>>
-                            integral_type;
+                        boost::multiprecision::backends::cpp_int_modular_backend<modulus_bits>>
+                        integral_type;
 
                     // TODO(martun): check why extended integral type must be 16x wider.
                     typedef boost::multiprecision::number<
-                            boost::multiprecision::backends::cpp_int_modular_backend<16 * modulus_bits>>
-                            extended_integral_type;
+                        boost::multiprecision::backends::cpp_int_modular_backend<16 * modulus_bits>>
+                        extended_integral_type;
 
                     typedef boost::multiprecision::backends::cpp_int_modular_backend<modulus_bits> modular_backend;
 
@@ -68,8 +68,8 @@ namespace nil {
                 };
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_FIELD_HPP

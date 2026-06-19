@@ -76,19 +76,18 @@ namespace nil {
                         // This is required by 'is_hash' concept.
                     };
 
-                    typedef algebraic_sponge_construction<policy_type,
-                        typename policy_type::iv_generator,
-                        detail::poseidon_functions<policy_type>,
-                        detail::poseidon_functions<policy_type>,
-                        detail::poseidon_functions<policy_type>> type;
+                    typedef algebraic_sponge_construction<
+                        policy_type, typename policy_type::iv_generator, detail::poseidon_functions<policy_type>,
+                        detail::poseidon_functions<policy_type>, detail::poseidon_functions<policy_type>>
+                        type;
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::raw;
                 using accumulator_tag = accumulators::tag::algebraic_hash<original_poseidon<PolicyType>>;
             };
 #endif
-        } // namespace hashes
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace hashes
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif

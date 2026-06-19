@@ -379,7 +379,7 @@ namespace nil {
                     return result;
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_CURVE_ELEMENT_HPP

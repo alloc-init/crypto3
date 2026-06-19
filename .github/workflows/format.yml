@@ -21,23 +21,35 @@ jobs:
     timeout-minutes: 15
 
     steps:
-    - name: Install dependencies
-      run: |
-        apt-get update
-        apt-get install -y --no-install-recommends \
-          ca-certificates \
-          clang-format \
-          git
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates \
+            clang-format \
+            git
 
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Show clang-format version
+        run: clang-format --version
 
-    - name: Check C++ formatting
-      shell: bash
-      run: |
-        find . \
-          -type f \( \
-          -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' -o \
-          -name '*.h' -o -name '*.hh' -o -name '*.hpp' -o -name '*.hxx' \
-          \) -print0 \
-          | xargs -0 -r clang-format --dry-run --Werror
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check C++ formatting
+        shell: bash
+        run: |
+          find . \
+            \( -path './.git' \
+              -o -path './build' \
+              -o -path './build/*' \
+              -o -path './.ccache' \
+              -o -path './.ccache/*' \
+              -o -path './cmake/modules/test' \
+              -o -path './cmake/modules/test/*' \
+              -o -path './cmake/modules/share/modules/cmake/version.hpp' \
+            \) -prune -o \
+            -type f \( \
+              -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' \
+              -o -name '*.h' -o -name '*.hh' -o -name '*.hpp' -o -name '*.hxx' \
+            \) -print0 \
+            | xargs -0 -r clang-format --dry-run --Werror

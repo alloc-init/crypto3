@@ -48,12 +48,11 @@ namespace nil {
 
                 /*
                  * Building caches for fft operations
-                */
+                 */
                 template<typename FieldType>
-                void create_fft_cache(
-                        const std::size_t size,
-                        const typename FieldType::value_type &omega,
-                        std::vector<typename FieldType::value_type> &cache) {
+                void create_fft_cache(const std::size_t size,
+                                      const typename FieldType::value_type &omega,
+                                      std::vector<typename FieldType::value_type> &cache) {
                     typedef typename FieldType::value_type value_type;
                     cache.resize(size, FieldType::value_type::zero());
                     wait_for_all(parallel_run_in_chunks<void>(
@@ -63,7 +62,8 @@ namespace nil {
                             for (std::size_t i = begin + 1; i < end; ++i) {
                                 cache[i] = cache[i - 1] * omega;
                             }
-                        }, thread_pool::pool_level::LOW));
+                        },
+                        thread_pool::pool_level::LOW));
                 }
 
                 /*
@@ -76,8 +76,8 @@ namespace nil {
                         value_type;
                     BOOST_STATIC_ASSERT(algebra::is_field<FieldType>::value);
 
-                    // It now supports curve elements too, should probably some other assertion about the field type and value type
-                    // BOOST_STATIC_ASSERT(std::is_same<typename FieldType::value_type, value_type>::value);
+                    // It now supports curve elements too, should probably some other assertion about the field type and
+                    // value type BOOST_STATIC_ASSERT(std::is_same<typename FieldType::value_type, value_type>::value);
 
                     const std::size_t n = a.size(), logn = log2(n);
                     if (n != (1u << logn))
@@ -86,13 +86,11 @@ namespace nil {
 
                     // swapping in place (from Storer's book)
                     // We can parallelize this look, since k and rk are pairs, they will never intersect.
-                    nil::crypto3::parallel_for(0, n,
-                        [logn, &a](std::size_t k) {
-                            const std::size_t rk = crypto3::math::detail::bitreverse(k, logn);
-                            if (k < rk)
-                                std::swap(a[k], a[rk]);
-                        }
-                    );
+                    nil::crypto3::parallel_for(0, n, [logn, &a](std::size_t k) {
+                        const std::size_t rk = crypto3::math::detail::bitreverse(k, logn);
+                        if (k < rk)
+                            std::swap(a[k], a[rk]);
+                    });
 
                     // invariant: m = 2^{s-1}
                     for (std::size_t s = 1, m = 1, inc = n / 2; s <= logn; ++s, m <<= 1, inc >>= 1) {
@@ -110,7 +108,7 @@ namespace nil {
                                 for (std::size_t k_index = start_k; k_index < count_k; ++k_index) {
                                     std::size_t k = k_index * 2 * m;
 
-                                    std::size_t j = (start_k == k_index) ? (begin % m): 0;
+                                    std::size_t j = (start_k == k_index) ? (begin % m) : 0;
                                     std::size_t idx = j * inc;
 
                                     for (; j < m; ++j, idx += inc) {
@@ -125,8 +123,8 @@ namespace nil {
                                             return;
                                     }
                                 }
-                            }, thread_pool::pool_level::LOW
-                        ));
+                            },
+                            thread_pool::pool_level::LOW));
                     }
                 }
 
@@ -207,8 +205,8 @@ namespace nil {
                     return u;
                 }
             }    // namespace detail
-        }        // namespace fft
-    }            // namespace crypto3
+        }    // namespace math
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // ALGEBRA_FFT_BASIC_RADIX2_DOMAIN_AUX_HPP

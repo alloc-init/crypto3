@@ -58,21 +58,21 @@ namespace nil {
                         const g2_field_type_value A = two_inv * (X * Y);                 // A = X1 * Y1 / 2
                         const g2_field_type_value B = Y.squared();                       // B = Y1^2
                         const g2_field_type_value C = Z.squared();                       // C = Z1^2
-                        const g2_field_type_value D = 0x03u * C;                          // D = 3 * C
+                        const g2_field_type_value D = 0x03u * C;                         // D = 3 * C
                         const g2_field_type_value E = params_type::twist_coeff_b * D;    // E = twist_b * D
 
-                        const g2_field_type_value F = 0x03u * E;                       // F = 3 * E
+                        const g2_field_type_value F = 0x03u * E;                      // F = 3 * E
                         const g2_field_type_value G = two_inv * (B + F);              // G = (B+F)/2
                         const g2_field_type_value H = (Y + Z).squared() - (B + C);    // H = (Y1+Z1)^2-(B+C)
                         const g2_field_type_value I = E - B;                          // I = E-B
                         const g2_field_type_value J = X.squared();                    // J = X1^2
                         const g2_field_type_value E_squared = E.squared();            // E_squared = E^2
 
-                        current.X = A * (B - F);                         // X3 = A * (B-F)
+                        current.X = A * (B - F);                          // X3 = A * (B-F)
                         current.Y = G.squared() - (0x03u * E_squared);    // Y3 = G^2 - 3*E^2
-                        current.Z = B * H;                               // Z3 = B * H
-                        c.ell_0 = I;                                     // ell_0 = xi * I
-                        c.ell_VW = -params_type::twist * H;              // ell_VW = - H (later: * yP)
+                        current.Z = B * H;                                // Z3 = B * H
+                        c.ell_0 = I;                                      // ell_0 = xi * I
+                        c.ell_VW = -params_type::twist * H;               // ell_VW = - H (later: * yP)
                         c.ell_VV = 0x03u * J;                             // ell_VV = 3*J (later: * xP)
                     }
 
@@ -144,7 +144,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_SHORT_WEIERSTRASS_JACOBIAN_WITH_A4_0_ATE_PRECOMPUTE_G2_HPP

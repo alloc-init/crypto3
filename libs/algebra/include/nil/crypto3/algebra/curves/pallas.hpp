@@ -50,9 +50,8 @@ namespace nil {
                     using g1_type = typename detail::pallas_g1<Form, Coordinates>;
                 };
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_PALLAS_HPP
- 

@@ -35,7 +35,6 @@
 #include <memory>
 #include <stdexcept>
 
-
 namespace nil {
     namespace crypto3 {
         class thread_pool {
@@ -53,14 +52,12 @@ namespace nil {
                 return std::thread::hardware_concurrency();
             }
 
-            enum class pool_level {
-                LOW,
-                HIGH
-            };
+            enum class pool_level { LOW, HIGH };
 
-            /** Returns a thread pool, based on the pool_id. pool with LOW is normally used for low-level operations, like polynomial
-             *  operations and fft. Any code that uses these operations and needs to be parallel will submit its tasks to pool with HIGH.
-             *  Submission of higher level tasks to low level pool will immediately result in a deadlock.
+            /** Returns a thread pool, based on the pool_id. pool with LOW is normally used for low-level operations,
+             * like polynomial operations and fft. Any code that uses these operations and needs to be parallel will
+             * submit its tasks to pool with HIGH. Submission of higher level tasks to low level pool will immediately
+             * result in a deadlock.
              */
             static thread_pool &get_instance(pool_level pool_id) {
                 static std::size_t pool_size = core_count();
@@ -96,15 +93,13 @@ namespace nil {
             }
 
         private:
-            inline thread_pool(std::size_t pool_size)
-                : pool(pool_size)
-                  , pool_size(pool_size) {
+            inline thread_pool(std::size_t pool_size) : pool(pool_size), pool_size(pool_size) {
             }
 
             boost::asio::thread_pool pool;
             const std::size_t pool_size;
         };
-    } // namespace crypto3
-} // namespace nil
+    }    // namespace crypto3
+}    // namespace nil
 
-#endif // CRYPTO3_THREAD_POOL_HPP
+#endif    // CRYPTO3_THREAD_POOL_HPP

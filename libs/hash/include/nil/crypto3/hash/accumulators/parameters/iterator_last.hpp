@@ -36,7 +36,7 @@ namespace nil {
             BOOST_PARAMETER_KEYWORD(tag, iterator_last)
             BOOST_ACCUMULATORS_IGNORE_GLOBAL(iterator_last)
         }    // namespace accumulators
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_PARAMETERS_ITERATOR_LAST_HPP

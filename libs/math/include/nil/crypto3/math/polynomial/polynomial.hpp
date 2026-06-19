@@ -119,7 +119,7 @@ namespace nil {
                 polynomial(polynomial&& x, const allocator_type& a) : val(std::move(x.val), a) {
                 }
 
-                explicit polynomial(const container_type &c) : val(c) {
+                explicit polynomial(const container_type& c) : val(c) {
                     if (val.empty()) {
                         val.push_back(FieldValueType::zero());
                     }
@@ -131,8 +131,8 @@ namespace nil {
                     }
                 }
 
-                polynomial(const FieldValueType& value, std::size_t power = 0)
-                    : val(power + 1, FieldValueType::zero()) {
+                polynomial(const FieldValueType& value, std::size_t power = 0) :
+                    val(power + 1, FieldValueType::zero()) {
                     this->operator[](power) = value;
                 }
 
@@ -360,17 +360,18 @@ namespace nil {
                     return val.resize(_sz, _x);
                 }
 
-                void swap(polynomial& other) noexcept { val.swap(other.val); }
+                void swap(polynomial& other) noexcept {
+                    val.swap(other.val);
+                }
 
                 template<std::ranges::range Range>
                     requires(std::ranges::sized_range<Range>)
-                algebra::fields::choose_extension_field_t<
-                    FieldValueType, std::ranges::range_value_t<Range>>
-                evaluate_powers(const Range& values) const {
+                algebra::fields::choose_extension_field_t<FieldValueType, std::ranges::range_value_t<Range>>
+                    evaluate_powers(const Range& values) const {
                     BOOST_ASSERT(values.size() >= size());
 
-                    auto result = algebra::fields::choose_extension_field_t<
-                        FieldValueType, std::ranges::range_value_t<Range>>::zero();
+                    auto result = algebra::fields::choose_extension_field_t<FieldValueType,
+                                                                            std::ranges::range_value_t<Range>>::zero();
 
                     auto it = values.begin();
                     for (std::size_t i = 0; i < size(); ++i) {
@@ -382,11 +383,10 @@ namespace nil {
                 }
 
                 template<typename EvaluationFieldValueType>
-                algebra::fields::choose_extension_field_t<FieldValueType,
-                                                          EvaluationFieldValueType>
-                evaluate(const EvaluationFieldValueType& value) const {
-                    auto result = algebra::fields::choose_extension_field_t<
-                        FieldValueType, EvaluationFieldValueType>::zero();
+                algebra::fields::choose_extension_field_t<FieldValueType, EvaluationFieldValueType>
+                    evaluate(const EvaluationFieldValueType& value) const {
+                    auto result =
+                        algebra::fields::choose_extension_field_t<FieldValueType, EvaluationFieldValueType>::zero();
                     auto end = this->end();
                     while (end != this->begin()) {
                         result = result * value + *--end;
@@ -407,8 +407,8 @@ namespace nil {
                  */
                 bool is_one() const {
                     return (*this->begin() == FieldValueType(1)) &&
-                        std::all_of(++this->begin(), this->end(),
-                            [](FieldValueType i) { return i == FieldValueType::zero(); });
+                           std::all_of(++this->begin(), this->end(),
+                                       [](FieldValueType i) { return i == FieldValueType::zero(); });
                 }
 
                 inline static polynomial zero() {
@@ -427,7 +427,7 @@ namespace nil {
                 void condense() {
                     while (std::distance(this->cbegin(), this->cend()) > 1 &&
                            this->back() == typename std::iterator_traits<decltype(std::begin(
-                                   std::declval<container_type>()))>::value_type()) {
+                                               std::declval<container_type>()))>::value_type()) {
                         this->pop_back();
                     }
                 }
@@ -569,10 +569,8 @@ namespace nil {
             polynomial<FieldValueType, Allocator> operator*(const polynomial<FieldValueType, Allocator>& A,
                                                             const FieldValueType& B) {
                 polynomial<FieldValueType> result(A);
-                parallel_foreach(result.begin(), result.end(),
-                    [&B](FieldValueType& v) {
-                        v *= B;
-                    }, thread_pool::pool_level::LOW);
+                parallel_foreach(
+                    result.begin(), result.end(), [&B](FieldValueType& v) { v *= B; }, thread_pool::pool_level::LOW);
                 return result;
             }
 
@@ -590,10 +588,9 @@ namespace nil {
                                                             const FieldValueType& B) {
                 polynomial<FieldValueType> result(A);
                 FieldValueType B_inversed = B.inversed();
-                parallel_foreach(result.begin(), result.end(),
-                    [&B_inversed](FieldValueType& v) {
-                        v *= B_inversed;
-                    }, thread_pool::pool_level::LOW);
+                parallel_foreach(
+                    result.begin(), result.end(), [&B_inversed](FieldValueType& v) { v *= B_inversed; },
+                    thread_pool::pool_level::LOW);
 
                 return result;
             }
@@ -610,8 +607,7 @@ namespace nil {
             // the values of polynomials, when the check fails.
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>,
                      typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
-            std::ostream& operator<<(std::ostream& os,
-                                     const polynomial<FieldValueType, Allocator>& poly) {
+            std::ostream& operator<<(std::ostream& os, const polynomial<FieldValueType, Allocator>& poly) {
                 if (poly.degree() == 0) {
                     // If all it contains is a constant, print the constant, so it's more readable.
                     os << std::hex << std::showbase << *poly.begin() << std::dec;
@@ -637,8 +633,8 @@ namespace nil {
                 }
                 return result;
             }
-        }  // namespace math
-    }        // namespace crypto3
+        }    // namespace math
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MATH_POLYNOMIAL_POLYNOM_HPP

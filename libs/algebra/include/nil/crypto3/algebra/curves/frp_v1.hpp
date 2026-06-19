@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/fields/frp_v1/base_field.hpp>
 #include <nil/crypto3/algebra/fields/frp_v1/scalar_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -63,8 +61,8 @@ namespace nil {
                         0x6142E0F7C8B204911F9271F0F3ECEF8C2701C307E8E4C9E183115A1554062CFB_cppui_modular256;
                 };
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_FRP_V1_HPP

@@ -43,7 +43,7 @@ namespace nil {
                 typedef Padding padding_type;
             };
         }    // namespace block
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif
