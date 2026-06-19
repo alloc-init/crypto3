@@ -155,30 +155,27 @@ namespace nil {
                                     (const limb_array *)y.data.data());
                             }
 
-                            // aliasing not allowed
-                            static void mul_xi(fp2_dbl &dst, const fp2_dbl &src) {
-                                alt_bn128_fp12_limb_ops::fp2_mul_xi<base_field_type>((limb_array *)dst.data.data(),
-                                                                                     (limb_array *)src.data.data());
-                            }
-
+                            // dst = src * xi + addend
                             static void mul_xi_add(fp2_dbl &dst, const fp2_dbl &src, const fp2_dbl &addend) {
                                 alt_bn128_fp12_limb_ops::fp2_mul_xi_add<base_field_type>(
                                     (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
                                     (limb_array *)addend.data.data());
                             }
 
-                            static void mul_xi_add_modify_src(fp2_dbl &dst, const fp2_dbl &addend) {
-                                fp2_dbl src = dst;
+                            // src = src * xi + addend
+                            static void mul_xi_add_modify_src(fp2_dbl &src, const fp2_dbl &addend) {
+                                fp2_dbl old = src;
                                 alt_bn128_fp12_limb_ops::fp2_mul_xi_add<base_field_type>(
-                                    (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
+                                    (limb_array *)src.data.data(), (limb_array *)old.data.data(),
                                     (limb_array *)addend.data.data());
                             }
 
-                            static void mul_xi_add_modify_addend(fp2_dbl &dst, const fp2_dbl &src) {
-                                fp2_dbl addend = dst;
+                            // addend = src * xi + addend
+                            static void mul_xi_add_modify_addend(fp2_dbl &addend, const fp2_dbl &src) {
+                                fp2_dbl old = addend;
                                 alt_bn128_fp12_limb_ops::fp2_mul_xi_add<base_field_type>(
-                                    (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
-                                    (limb_array *)addend.data.data());
+                                    (limb_array *)addend.data.data(), (limb_array *)src.data.data(),
+                                    (limb_array *)old.data.data());
                             }
 
                             void to_non_residue(non_residue_type &ret) const {

@@ -336,14 +336,6 @@ namespace nil {
 #endif
                         }
 
-                        template<class Field>
-                        void fp2_mul_xi(limb_array *dst, const limb_array *src) {
-                            mul_8_limbs_by_9<Field>(dst[0], src[0]);
-                            subtract_8_limbs_mod<Field>(dst[0], src[1]);
-                            mul_8_limbs_by_9<Field>(dst[1], src[1]);
-                            add_8_limbs_mod<Field>(dst[1], src[0]);
-                        }
-
                         // caller must handle aliasing
                         template<class Field>
                         void fp2_mul_xi_add(limb_array *dst, const limb_array *src, const limb_array *addend) {
