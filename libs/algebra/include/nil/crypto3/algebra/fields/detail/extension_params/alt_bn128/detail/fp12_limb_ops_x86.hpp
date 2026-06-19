@@ -508,7 +508,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 
     template <class Field>
-    inline void fp2_base_add_mod_x86(limb **z, const limb *const *x, const limb *const *y) {
+    inline void fp2_base_add_mod_x86(limb *z, const limb *const *x, const limb *const *y) {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb t0, t1, t2, t3;
         limb q0, q1, q2, q3;
@@ -529,12 +529,12 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [q0]"=&r"(q0),
               [q1]"=&r"(q1),
               [q2]"=&r"(q2),
-              [q3]"=&r"(q3)
+              [q3]"=&r"(q3),
+              [x_addr]"=&r"(x_addr),
+              [y_addr]"=&r"(y_addr)
             : [x]"r"(x),
               [y]"r"(y),
               [z]"r"(z),
-              [x_addr]"r"(x_addr),
-              [y_addr]"r"(y_addr),
               [p0]"m"(p0),
               [p1]"m"(p1),
               [p2]"m"(p2),
@@ -543,42 +543,43 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         );
     }
 
-    inline void fp2_base_add_pre_x86(
-        std::array<limb_array, 2> &z, 
-        const std::array<limb_array, 2> &x,
-        const std::array<limb_array, 2> &y
-    ) {
+    inline void fp2_base_add_pre_x86(limb *z, const limb *const *x, const limb *const *y) {
         limb t0, t1, t2, t3;
         limb q0, q1, q2, q3;
         limb a, b;
+        limb *ptr0, *ptr1;
         asm volatile(
             "xor %[t0], %[t0]\n" // clear flags
-            "mov " PTR(x, 0) ", %[t0]\n"
-            "mov " PTR(x, 1) ", %[t1]\n"
-            "mov " PTR(x, 2) ", %[t2]\n"
-            "mov " PTR(x, 3) ", %[t3]\n"
+            "mov 0(%[x]), %[ptr0]\n"
+            "mov " PTR(ptr0, 0) ", %[t0]\n"
+            "mov " PTR(ptr0, 1) ", %[t1]\n"
+            "mov " PTR(ptr0, 2) ", %[t2]\n"
+            "mov " PTR(ptr0, 3) ", %[t3]\n"
 
-            "mov " PTR2(x, 8, 0) ", %[q0]\n"
-            "mov " PTR2(x, 8, 1) ", %[q1]\n"
-            "mov " PTR2(x, 8, 2) ", %[q2]\n"
-            "mov " PTR2(x, 8, 3) ", %[q3]\n"
+            "mov 8(%[x]), %[ptr1]\n"
+            "mov " PTR(ptr1, 0) ", %[q0]\n"
+            "mov " PTR(ptr1, 1) ", %[q1]\n"
+            "mov " PTR(ptr1, 2) ", %[q2]\n"
+            "mov " PTR(ptr1, 3) ", %[q3]\n"
 
-            "movq " PTR(y, 0) ", %[a]\n"
+            "mov 0(%[y]), %[ptr0]\n"
+            "movq " PTR(ptr0, 0) ", %[a]\n"
             "adcx %[a], %[t0]\n"
-            "movq " PTR(y, 1) ", %[a]\n"
+            "movq " PTR(ptr0, 1) ", %[a]\n"
             "adcx %[a], %[t1]\n"
-            "movq " PTR(y, 2) ", %[a]\n"
+            "movq " PTR(ptr0, 2) ", %[a]\n"
             "adcx %[a], %[t2]\n"
-            "movq " PTR(y, 3) ", %[a]\n"
+            "movq " PTR(ptr0, 3) ", %[a]\n"
             "adcx %[a], %[t3]\n"
 
-            "movq " PTR2(y, 8, 0) ", %[b]\n"
+            "mov 8(%[y]), %[ptr1]\n"
+            "movq " PTR(ptr1, 0) ", %[b]\n"
             "adox %[b], %[q0]\n"
-            "movq " PTR2(y, 8, 1) ", %[b]\n"
+            "movq " PTR(ptr1, 1) ", %[b]\n"
             "adox %[b], %[q1]\n"
-            "movq " PTR2(y, 8, 2) ", %[b]\n"
+            "movq " PTR(ptr1, 2) ", %[b]\n"
             "adox %[b], %[q2]\n"
-            "movq " PTR2(y, 8, 3) ", %[b]\n"
+            "movq " PTR(ptr1, 3) ", %[b]\n"
             "adox %[b], %[q3]\n"
 
             "mov %[t0], " PTR(z, 0) "\n"
@@ -600,10 +601,12 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [q2]"=&r"(q2),
               [q3]"=&r"(q3),
               [a]"=&r"(a),
-              [b]"=&r"(b)
-            : [x]"r"(x.data()->data()),
-              [y]"r"(y.data()->data()),
-              [z]"r"(z.data()->data())
+              [b]"=&r"(b),
+              [ptr0]"=&r"(ptr0),
+              [ptr1]"=&r"(ptr1)
+            : [x]"r"(x),
+              [y]"r"(y),
+              [z]"r"(z)
             : "cc", "memory"
         );
     }

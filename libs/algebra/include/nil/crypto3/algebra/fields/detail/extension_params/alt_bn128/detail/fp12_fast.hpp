@@ -68,7 +68,7 @@ namespace nil {
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
-                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(ptrs(), ptrs(),
+                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(data.data()->data(), ptrs(),
                                                                                            other.ptrs());
                                 return *this;
                             }
@@ -81,7 +81,8 @@ namespace nil {
 
                             fp2_base add_pre(const fp2_base &other) const {
                                 fp2_base result;
-                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.ptrs(), ptrs(), other.ptrs());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.data.data()->data(), ptrs(),
+                                                                          other.ptrs());
                                 return result;
                             }
                         };
@@ -100,14 +101,15 @@ namespace nil {
 
                             fp2_base operator+(const fp2_view &other) const {
                                 fp2_base result;
-                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(result.ptrs(), ptrs(),
-                                                                                           other.ptrs());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(result.data.data()->data(),
+                                                                                           ptrs(), other.ptrs());
                                 return result;
                             }
 
                             fp2_base add_pre(const fp2_view &other) const {
                                 fp2_base result;
-                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.ptrs(), ptrs(), other.ptrs());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.data.data()->data(), ptrs(),
+                                                                          other.ptrs());
                                 return result;
                             }
                         };
