@@ -26,18 +26,44 @@ namespace nil {
 
                         // fp2 before multiplying - equivalent to 2 regular Fp's
                         struct fp2_base {
-                            std::array<limb_array, 2> data;
+                            std::array<limb_array, 2> data = {};
+                            std::array<limb *, 2> ptrs_ = {data[0].data(), data[1].data()};
 
-                            fp2_base() : data({}) {
+                            fp2_base() = default;
+
+                            fp2_base(const fp2_base &other) : data(other.data) {
+                                rebind_ptrs();
+                            }
+
+                            fp2_base &operator=(const fp2_base &other) {
+                                if (this != &other) {
+                                    data = other.data;
+                                    rebind_ptrs();
+                                }
+                                return *this;
+                            }
+
+                            fp2_base(fp2_base &&other) noexcept : data(std::move(other.data)) {
+                                rebind_ptrs();
+                            }
+
+                            fp2_base &operator=(fp2_base &&other) noexcept {
+                                if (this != &other) {
+                                    data = std::move(other.data);
+                                    rebind_ptrs();
+                                }
+                                return *this;
+                            }
+
+                            void rebind_ptrs() {
+                                ptrs_ = {data[0].data(), data[1].data()};
                             }
 
                             limb **ptrs() {
-                                static std::array<limb *, 2> ptrs_ = {data[0].data(), data[1].data()};
                                 return ptrs_.data();
                             }
 
                             const limb *const *ptrs() const {
-                                static std::array<const limb *, 2> ptrs_ = {data[0].data(), data[1].data()};
                                 return ptrs_.data();
                             }
 
