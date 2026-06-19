@@ -223,13 +223,6 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp_dbl_acc);
                 }));
 
-    print_stage("Fp dbl mul_by_9", run_stage(iters, warmup, samples, [&](std::size_t i) {
-                    const std::size_t idx = i % poolN;
-                    fp_dbl_acc = fp_dbl_x[idx];
-                    fp_dbl_acc.mul_by_9();
-                    do_not_optimize(&fp_dbl_acc);
-                }));
-
     print_stage("Fp2 pre mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     fp12_fast_type::fp2_dbl fp2_pre_acc;

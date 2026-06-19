@@ -68,15 +68,6 @@ namespace nil {
                                 return *this;
                             }
 
-                            fp_dbl &mul_by_9() {
-                                alt_bn128_fp12_limb_ops::mul_8_limbs_by_9<base_field_type>(data, data);
-                                return *this;
-                            }
-
-                            static void mul_by_9(fp_dbl &dst, const fp_dbl &src) {
-                                alt_bn128_fp12_limb_ops::mul_8_limbs_by_9<base_field_type>(dst.data, src.data);
-                            }
-
                             void to_base_value(base_value_type &out) const {
                                 // The data limbs must already be reduced Montgomery base-Fp limbs. Construct
                                 // base_value_type directly from those limbs to avoid converting them again.
@@ -165,21 +156,27 @@ namespace nil {
                             }
 
                             // aliasing not allowed
-                            static void mul_by_xi(fp2_dbl &dst, const fp2_dbl &src) {
-                                alt_bn128_fp12_limb_ops::fp2_mul_by_xi<base_field_type>((limb_array *)dst.data.data(),
-                                                                                        (limb_array *)src.data.data());
+                            static void mul_xi(fp2_dbl &dst, const fp2_dbl &src) {
+                                alt_bn128_fp12_limb_ops::fp2_mul_xi<base_field_type>((limb_array *)dst.data.data(),
+                                                                                     (limb_array *)src.data.data());
                             }
 
-                            static void mul_by_xi_add_modify_src(fp2_dbl &dst, fp2_dbl &addend) {
-                                fp2_dbl src = dst;
-                                alt_bn128_fp12_limb_ops::fp2_mul_by_xi_add<base_field_type>(
+                            static void mul_xi_add(fp2_dbl &dst, const fp2_dbl &src, const fp2_dbl &addend) {
+                                alt_bn128_fp12_limb_ops::fp2_mul_xi_add<base_field_type>(
                                     (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
                                     (limb_array *)addend.data.data());
                             }
 
-                            static void mul_by_xi_add_modify_addend(fp2_dbl &dst, fp2_dbl &src) {
+                            static void mul_xi_add_modify_src(fp2_dbl &dst, const fp2_dbl &addend) {
+                                fp2_dbl src = dst;
+                                alt_bn128_fp12_limb_ops::fp2_mul_xi_add<base_field_type>(
+                                    (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
+                                    (limb_array *)addend.data.data());
+                            }
+
+                            static void mul_xi_add_modify_addend(fp2_dbl &dst, const fp2_dbl &src) {
                                 fp2_dbl addend = dst;
-                                alt_bn128_fp12_limb_ops::fp2_mul_by_xi_add<base_field_type>(
+                                alt_bn128_fp12_limb_ops::fp2_mul_xi_add<base_field_type>(
                                     (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
                                     (limb_array *)addend.data.data());
                             }
@@ -298,8 +295,8 @@ namespace nil {
                                 //   z0 = ad + xi*za
                                 //   z1 = zb + xi*cf
                                 //   z2 = zc + be
-                                fp2_dbl::mul_by_xi_add_modify_src(za, ad);
-                                fp2_dbl::mul_by_xi_add_modify_addend(zb, cf);
+                                fp2_dbl::mul_xi_add_modify_src(za, ad);
+                                fp2_dbl::mul_xi_add_modify_addend(zb, cf);
                                 zc += be;
                             }
 
@@ -313,12 +310,14 @@ namespace nil {
                             //   (a + b*v + c*v^2) * v
                             //     = a*v + b*v^2 + c*v^3
                             //     = xi*c + a*v + b*v^2
-                            fp6_dbl mul_v() const {
-                                fp6_dbl result;
-                                fp2_dbl::mul_by_xi(result.data[0], data[2]);
-                                result.data[1] = data[0];
-                                result.data[2] = data[1];
-                                return result;
+                            // This is a version that adds a fp6_dbl to the result to avoid temporaries
+                            // ie xi = xi * x + y
+                            static void mul_v_add(fp6_dbl &z, const fp6_dbl &x, const fp6_dbl &y) {
+                                fp2_dbl::mul_xi_add(z.data[0], x.data[2], y.data[0]);
+                                z.data[1] = x.data[0];
+                                z.data[1] += y.data[1];
+                                z.data[2] = x.data[1];
+                                z.data[2] += y.data[2];
                             }
                         };
 
@@ -355,17 +354,18 @@ namespace nil {
 
                             Fp12Value ret;
 
-                            fp6_dbl ac, bd;
+                            fp6_dbl ac, bd, z;
                             fp6_dbl::mul_pre(ac, a, c);
                             fp6_dbl::mul_pre(bd, b, d);
-                            fp6_dbl z = ac + bd.mul_v();
-                            z.to_underlying(ret.data[0]);
 
                             fp6_dbl::mul_pre(z, a + b, c + d);
                             z -= ac;    // first correction (see above)
                             z -= bd;    // second correction
-
                             z.to_underlying(ret.data[1]);
+
+                            fp6_dbl::mul_v_add(z, bd, ac);
+                            z.to_underlying(ret.data[0]);
+
                             return ret;
                         }
                     };
