@@ -290,7 +290,7 @@ namespace nil {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             fp2_sub_pre_x86<Field>((limb *)data, (limb *)other);
 #else
-                            subtract_8_limbs_mod<Field>(data[0].data(), data[0].data(), other[0].data());
+                            subtract_8_limbs_mod<Field>(data[0], data[0], other[0]);
                             subtract_limbs_portable<8>(data[1].data(), data[1].data(), other[1].data());
 #endif
                         }
