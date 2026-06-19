@@ -27,14 +27,23 @@ namespace nil {
                         // fp2 before multiplying - equivalent to 2 regular Fp's
                         struct fp2_base {
                             std::array<limb_array, 2> data;
-                            std::array<limb *, 2> ptrs;
 
-                            fp2_base() : ptrs({data[0].data(), data[1].data()}) {
+                            fp2_base() : data({}) {
+                            }
+
+                            limb **ptrs() {
+                                static std::array<limb *, 2> ptrs_ = {data[0].data(), data[1].data()};
+                                return ptrs_.data();
+                            }
+
+                            const limb *const *ptrs() const {
+                                static std::array<const limb *, 2> ptrs_ = {data[0].data(), data[1].data()};
+                                return ptrs_.data();
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
-                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(ptrs.data(), ptrs.data(),
-                                                                                           other.ptrs.data());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(ptrs(), ptrs(),
+                                                                                           other.ptrs());
                                 return *this;
                             }
 
@@ -46,31 +55,33 @@ namespace nil {
 
                             fp2_base add_pre(const fp2_base &other) const {
                                 fp2_base result;
-                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.ptrs.data(), ptrs.data(),
-                                                                          other.ptrs.data());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.ptrs(), ptrs(), other.ptrs());
                                 return result;
                             }
                         };
 
                         struct fp2_view {
-                            std::array<const limb *, 2> ptrs;
+                            std::array<const limb *, 2> ptrs_;
+
+                            const limb *const *ptrs() const {
+                                return ptrs_.data();
+                            }
 
                             fp2_view(const non_residue_type &x) :
-                                ptrs({(const limb *)x.data[0].data.backend().base_data().limbs(),
-                                      (const limb *)x.data[1].data.backend().base_data().limbs()}) {
+                                ptrs_({(const limb *)x.data[0].data.backend().base_data().limbs(),
+                                       (const limb *)x.data[1].data.backend().base_data().limbs()}) {
                             }
 
                             fp2_base operator+(const fp2_view &other) const {
                                 fp2_base result;
-                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(
-                                    result.ptrs.data(), ptrs.data(), other.ptrs.data());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(result.ptrs(), ptrs(),
+                                                                                           other.ptrs());
                                 return result;
                             }
 
                             fp2_base add_pre(const fp2_view &other) const {
                                 fp2_base result;
-                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.ptrs.data(), ptrs.data(),
-                                                                          other.ptrs.data());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.ptrs(), ptrs(), other.ptrs());
                                 return result;
                             }
                         };
@@ -101,9 +112,9 @@ namespace nil {
 
                             fp2_dbl operator+(const fp2_dbl &other) const {
                                 fp2_dbl ret;
-                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(ret[0], data[0],
+                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(ret.data[0], data[0],
                                                                                           other.data[0]);
-                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(ret[1], data[1],
+                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(ret.data[1], data[1],
                                                                                           other.data[1]);
                                 return ret;
                             }
@@ -124,8 +135,8 @@ namespace nil {
 
                             template<class InputType>
                             static void mul_pre(fp2_dbl &result, const InputType &x, const InputType &y) {
-                                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(result.data.data(), x.ptrs.data(),
-                                                                                      y.ptrs.data());
+                                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(result.data.data(), x.ptrs(),
+                                                                                      y.ptrs());
                             }
 
                             // dst = src * xi + addend
@@ -168,12 +179,6 @@ namespace nil {
 
                             std::tuple<const fp2_base &, const fp2_base &, const fp2_base &> coeffs() const {
                                 return {data[0], data[1], data[2]};
-                            }
-
-                            fp6_base operator+(const fp6_base &other) const {
-                                fp6_base result(*this);
-                                result += other;
-                                return result;
                             }
                         };
 
