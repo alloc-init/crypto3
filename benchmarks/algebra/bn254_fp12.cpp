@@ -380,7 +380,6 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp12_acc);
                 }));
 
-    std::cout << "acc: " << fp12_acc << "\n";
     print_csv_results();
 
     return 0;

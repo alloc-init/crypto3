@@ -164,18 +164,14 @@ namespace nil {
 
                             // src = src * xi + addend
                             static void mul_xi_add_modify_src(fp2_dbl &src, const fp2_dbl &addend) {
-                                fp2_dbl old = src;
-                                alt_bn128_fp12_limb_ops::fp2_mul_xi_add<base_field_type>(
-                                    (limb_array *)src.data.data(), (limb_array *)old.data.data(),
-                                    (limb_array *)addend.data.data());
+                                alt_bn128_fp12_limb_ops::fp2_mul_xi_add_modify_src<base_field_type>(
+                                    (limb_array *)src.data.data(), (limb_array *)addend.data.data());
                             }
 
                             // addend = src * xi + addend
                             static void mul_xi_add_modify_addend(fp2_dbl &addend, const fp2_dbl &src) {
-                                fp2_dbl old = addend;
-                                alt_bn128_fp12_limb_ops::fp2_mul_xi_add<base_field_type>(
-                                    (limb_array *)addend.data.data(), (limb_array *)src.data.data(),
-                                    (limb_array *)old.data.data());
+                                alt_bn128_fp12_limb_ops::fp2_mul_xi_add_modify_addend<base_field_type>(
+                                    (limb_array *)addend.data.data(), (limb_array *)src.data.data());
                             }
 
                             void to_non_residue(non_residue_type &ret) const {

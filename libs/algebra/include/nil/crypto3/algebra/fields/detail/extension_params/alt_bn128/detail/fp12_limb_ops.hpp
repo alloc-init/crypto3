@@ -338,13 +338,35 @@ namespace nil {
 
                         // caller must handle aliasing
                         template<class Field>
-                        void fp2_mul_xi_add(limb_array *dst, const limb_array *src, const limb_array *addend) {
+                        inline void fp2_mul_xi_add(limb_array *dst, const limb_array *src, const limb_array *addend) {
                             mul_8_limbs_by_9<Field>(dst[0], src[0]);
                             subtract_8_limbs_mod<Field>(dst[0], src[1]);
                             mul_8_limbs_by_9<Field>(dst[1], src[1]);
                             add_8_limbs_mod<Field>(dst[1], src[0]);
                             add_8_limbs_mod<Field>(dst[0], addend[0]);
                             add_8_limbs_mod<Field>(dst[1], addend[1]);
+                        }
+
+                        template<class Field>
+                        inline void fp2_mul_xi_add_modify_src(limb_array *src, const limb_array *addend) {
+                            limb_array src0 = src[0];
+                            mul_8_limbs_by_9<Field>(src[0], src0);
+                            subtract_8_limbs_mod<Field>(src[0], src[1]);
+                            mul_8_limbs_by_9<Field>(src[1], src[1]);
+                            add_8_limbs_mod<Field>(src[1], src0);
+                            add_8_limbs_mod<Field>(src[0], addend[0]);
+                            add_8_limbs_mod<Field>(src[1], addend[1]);
+                        }
+
+                        template<class Field>
+                        inline void fp2_mul_xi_add_modify_addend(limb_array *addend, const limb_array *src) {
+                            limb_array tmp;
+                            mul_8_limbs_by_9<Field>(tmp, src[0]);
+                            subtract_8_limbs_mod<Field>(tmp, src[1]);
+                            add_8_limbs_mod<Field>(addend[0], tmp);
+                            mul_8_limbs_by_9<Field>(tmp, src[1]);
+                            add_8_limbs_mod<Field>(tmp, src[0]);
+                            add_8_limbs_mod<Field>(addend[1], tmp);
                         }
 
                         template<class Field>
