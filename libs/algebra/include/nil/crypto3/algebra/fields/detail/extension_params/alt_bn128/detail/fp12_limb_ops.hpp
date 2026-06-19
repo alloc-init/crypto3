@@ -69,17 +69,13 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void add_low_4_limbs_mod(limb *z, const limb *x, const limb *y) {
-                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            //                             add_low_4_limbs_mod_x86<Field>(data.data(), other.data());
-                            // #else
+                        inline void add_low_4_limbs_mod_portable(limb *z, const limb *x, const limb *y) {
                             add_limbs_portable<4>(z, x, y);
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // do one pass of normalization on lower limbs
                             if (ge_modulus(z, p.data())) {
                                 subtract_limbs_portable<5>(z, z, p.data());
                             }
-                            // #endif
                         }
 
                         template<class Field>
@@ -266,13 +262,12 @@ namespace nil {
                         // fp2_base ops must support pointers becuase fp2_view doesnt own its data
                         template<class Field>
                         inline void fp2_base_add_mod(limb **z, const limb *const *x, const limb *const *y) {
-                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            //                             fp2_base_add_mod_x86<Field>((limb *)data, (limb *)other);
-                            // #else
-                            // no fp_base type, do 4 limb addition manually here
-                            add_low_4_limbs_mod<Field>(z[0], x[0], y[0]);
-                            add_low_4_limbs_mod<Field>(z[1], x[1], y[1]);
-                            // #endif
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            fp2_base_add_mod_x86<Field>(z, x, y);
+#else
+                            add_low_4_limbs_mod_portable<Field>(z[0], x[0], y[0]);
+                            add_low_4_limbs_mod_portable<Field>(z[1], x[1], y[1]);
+#endif
                         }
 
                         // fp2_base ops must support pointers becuase fp2_view doesnt own its data
