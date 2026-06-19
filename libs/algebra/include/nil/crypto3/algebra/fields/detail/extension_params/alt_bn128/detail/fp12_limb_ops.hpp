@@ -80,15 +80,15 @@ namespace nil {
 
                         template<class Field>
                         inline void add_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
-                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            //                             add_8_limbs_mod_x86<Field>(data, other);
-                            // #else
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            add_8_limbs_mod_x86<Field>(z, x, y);
+#else
                             add_limbs_portable<8>(z.data(), x.data(), y.data());
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             if (ge_modulus_4(z.data() + 4, p.data())) {
                                 subtract_limbs_portable<4>(z.data() + 4, z.data() + 4, p.data());
                             }
-                            // #endif
+#endif
                         }
 
                         template<class Field>
@@ -107,15 +107,15 @@ namespace nil {
 
                         template<class Field>
                         inline void mul_8_limbs_by_9(limb_array &dst, const limb_array &src) {
-                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            //                             mul_8_limbs_by_9_x86<Field>(dst, src);
-                            // #else
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            mul_8_limbs_by_9_x86<Field>(dst, src);
+#else
                             limb_array cpy = src;
                             add_8_limbs_mod<Field>(dst, src, src);    // 2x
                             add_8_limbs_mod<Field>(dst, dst, dst);    // 4x
                             add_8_limbs_mod<Field>(dst, dst, dst);    // 8x
                             add_8_limbs_mod<Field>(dst, dst, cpy);    // 9x
-                                                                      // #endif
+#endif
                         }
 
                         // Add one limb product into the current Comba column accumulator.
