@@ -37,32 +37,16 @@ namespace nil {
                         }
 
                         template<size_t N>
-                        inline bool subtract_limbs_portable(limb *result, const limb *other) {
+                        inline bool subtract_limbs_portable(limb *z, const limb *x, const limb *y) {
                             bool borrow = false;
                             for (size_t i = 0; i < N; i++) {
-                                const limb subtrahend = other[i] + (limb)borrow;
-                                const bool subtrahend_carry = subtrahend < other[i];
-                                const limb current = result[i];
-                                result[i] = current - subtrahend;
+                                const limb subtrahend = y[i] + (limb)borrow;
+                                const bool subtrahend_carry = subtrahend < y[i];
+                                const limb current = x[i];
+                                z[i] = current - subtrahend;
                                 borrow = subtrahend_carry || current < subtrahend;
                             }
                             return borrow;
-                        }
-
-                        inline void add_8_limbs(limb_array &result, const limb_array &other) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            add_8_limbs_x86(result.data(), other.data());
-#else
-                            add_limbs_portable<8>(result.data(), result.data(), other.data());
-#endif
-                        }
-
-                        inline void subtract_8_limbs(limb_array &result, const limb_array &other) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            subtract_8_limbs_x86(result, other);
-#else
-                            subtract_limbs_portable<8>(result.data(), other.data());
-#endif
                         }
 
                         inline bool ge_modulus_4(const limb *x, const limb *mod) {
@@ -84,83 +68,58 @@ namespace nil {
                             return ge_modulus_4(x, mod);
                         }
 
-                        // make sure upper limbs do not overflow modulus
                         template<class Field>
-                        inline void subtract_modulus_upper(limb_array &data) {
-                            static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                            if (ge_modulus_4(data.data() + 4, p.data())) {
-                                subtract_limbs_portable<4>(data.data() + 4, p.data());
-                            }
-                        }
-
-                        template<class Field>
-                        inline void add_low_4_limbs_mod(limb_array &data, const limb_array &other) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            add_low_4_limbs_mod_x86<Field>(data.data(), other.data());
-#else
-                            add_limbs_portable<4>(data.data(), data.data(), other.data());
+                        inline void add_low_4_limbs_mod(limb *z, const limb *x, const limb *y) {
+                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            //                             add_low_4_limbs_mod_x86<Field>(data.data(), other.data());
+                            // #else
+                            add_limbs_portable<4>(z, x, y);
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // do one pass of normalization on lower limbs
-                            if (ge_modulus(data.data(), p.data())) {
-                                subtract_limbs_portable<8>(data.data(), p.data());
+                            if (ge_modulus(z, p.data())) {
+                                subtract_limbs_portable<5>(z, z, p.data());
                             }
-#endif
+                            // #endif
                         }
 
                         template<class Field>
-                        inline void add_8_limbs_mod(limb_array &data, const limb_array &other) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            add_8_limbs_mod_x86<Field>(data, other);
-#else
-                            add_limbs_portable<8>(data.data(), data.data(), other.data());
-                            subtract_modulus_upper<Field>(data);
-#endif
+                        inline void add_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
+                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            //                             add_8_limbs_mod_x86<Field>(data, other);
+                            // #else
+                            add_limbs_portable<8>(z.data(), x.data(), y.data());
+                            static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                            if (ge_modulus_4(z.data() + 4, p.data())) {
+                                subtract_limbs_portable<4>(z.data() + 4, z.data() + 4, p.data());
+                            }
+                            // #endif
                         }
 
                         template<class Field>
-                        inline void subtract_8_limbs_mod(limb_array &data, const limb_array &other) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            subtract_8_limbs_mod_x86<Field>(data, other);
-#else
-                            bool borrow = subtract_limbs_portable<8>(data.data(), other.data());
+                        inline void subtract_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
+                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            //                             subtract_8_limbs_mod_x86<Field>(data, other);
+                            // #else
+                            bool borrow = subtract_limbs_portable<8>(z.data(), x.data(), y.data());
                             if (borrow) {
                                 // if we went negative, add p
                                 static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                                add_limbs_portable<4>(data.data() + 4, data.data() + 4, p.data());
+                                add_limbs_portable<4>(z.data() + 4, z.data() + 4, p.data());
                             }
-#endif
+                            // #endif
                         }
 
                         template<class Field>
                         inline void mul_8_limbs_by_9(limb_array &dst, const limb_array &src) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            mul_8_limbs_by_9_x86<Field>(dst, src);
-#else
-                            limb_array cpy(src);
-                            dst = src;
-                            add_8_limbs_mod<Field>(dst, dst);    // 2x
-                            add_8_limbs_mod<Field>(dst, dst);    // 4x
-                            add_8_limbs_mod<Field>(dst, dst);    // 8x
-                            add_8_limbs_mod<Field>(dst, cpy);    // 9x
-#endif
-                        }
-
-                        inline void left_shift_one(limb_array &result) {
-                            limb carry = 0u;
-                            for (size_t i = 0; i < result.size(); i++) {
-                                const limb next_carry = result[i] >> (limb_bits - 1u);
-                                result[i] = (result[i] << 1u) | carry;
-                                carry = next_carry;
-                            }
-                        }
-
-                        inline void multiply_by_limb(limb_array &result, limb value) {
-                            limb carry = 0u;
-                            for (size_t i = 0; i < result.size(); i++) {
-                                const wide_limb product = (wide_limb)result[i] * (wide_limb)value + carry;
-                                result[i] = (limb)product;
-                                carry = (limb)(product >> limb_bits);
-                            }
+                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            //                             mul_8_limbs_by_9_x86<Field>(dst, src);
+                            // #else
+                            limb_array cpy = src;
+                            add_8_limbs_mod<Field>(dst, src, src);    // 2x
+                            add_8_limbs_mod<Field>(dst, dst, dst);    // 4x
+                            add_8_limbs_mod<Field>(dst, dst, dst);    // 8x
+                            add_8_limbs_mod<Field>(dst, dst, cpy);    // 9x
+                                                                      // #endif
                         }
 
                         // Add one limb product into the current Comba column accumulator.
@@ -188,7 +147,7 @@ namespace nil {
                         //
                         // After this, acc0/acc1 contain the carry state for the next column and acc2 is clear for
                         // new overflow. This is shared by the fixed 4x4 and 5x5 kernels.
-                        inline void multiply_emit(limb_array &result, size_t idx, limb &acc0, limb &acc1, limb &acc2) {
+                        inline void multiply_emit(limb *result, size_t idx, limb &acc0, limb &acc1, limb &acc2) {
                             result[idx] = acc0;
                             acc0 = acc1;
                             acc1 = acc2;
@@ -199,9 +158,7 @@ namespace nil {
                         //
                         // The result is the full 8-limb product placed in the 9-limb storage shape. This is the
                         // common path for products of ordinary BN254 Fp Montgomery residues.
-                        inline void multiply_4x4_portable(limb_array &result, const limb_array &x,
-                                                          const limb_array &y) {
-                            result = {};
+                        inline void multiply_4x4_portable(limb *result, const limb *x, const limb *y) {
                             limb acc0 = 0u;
                             limb acc1 = 0u;
                             limb acc2 = 0u;
@@ -238,23 +195,23 @@ namespace nil {
                             result[7] = acc0;
                         }
 
-                        inline void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
+                        inline void multiply_4x4(limb *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            multiply_4x4_x86(result, x, y);
+                            multiply_4x4_x86(z, x, y);
 #else
-                            multiply_4x4_portable(result, x, y);
+                            multiply_4x4_portable(z, x, y);
 #endif
                         }
 
                         template<class Field>
-                        inline void montgomery_reduce_portable(limb *result, const limb *data) {
+                        inline void montgomery_reduce_portable(limb *result, const limb_array &data) {
                             // p is the field modulus as 4 limbs
-                            static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                            static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // p_dash is -p^{-1} modulo one limb, B = 2^64.
                             // Multiplying the current low limb by p_dash gives the
                             // one-limb factor m that makes t[i] + m * p[0] == 0 mod B.
                             limb p_dash = Field::modulus_params.get_mod_obj().get_p_dash();
-                            limb_array buf = *((limb_array *)data);
+                            limb_array buf = data;
 
                             // REDC over R = 2^(64 * 4). At step i, choose m so adding
                             // m * p shifted by i limbs makes buf[i] zero modulo 2^64.
@@ -287,7 +244,7 @@ namespace nil {
                             // The REDC output lives in buf[4..7]. Bring it back into the
                             // canonical field range before moving the low four limbs.
                             if (ge_modulus_4(buf.data() + 4, p.data())) {
-                                subtract_limbs_portable<4>(buf.data() + 4, p.data());
+                                subtract_limbs_portable<4>(buf.data() + 4, buf.data() + 4, p.data());
                             }
 
                             // Keep the reduced 4-limb field value and clear the lazy
@@ -298,32 +255,34 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void montgomery_reduce(limb *result, const limb *data) {
+                        inline void montgomery_reduce(limb *result, const limb_array &data) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            montgomery_reduce_x86<Field>(result, data);
+                            montgomery_reduce_x86<Field>(result, data.data());
 #else
                             montgomery_reduce_portable<Field>(result, data);
 #endif
                         }
 
+                        // fp2_base ops must support pointers becuase fp2_view doesnt own its data
                         template<class Field>
-                        inline void fp2_base_add_mod(limb_array *data, const limb_array *other) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            fp2_base_add_mod_x86<Field>((limb *)data, (limb *)other);
-#else
+                        inline void fp2_base_add_mod(limb **z, const limb *const *x, const limb *const *y) {
+                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            //                             fp2_base_add_mod_x86<Field>((limb *)data, (limb *)other);
+                            // #else
                             // no fp_base type, do 4 limb addition manually here
-                            add_low_4_limbs_mod<Field>(data[0], other[0]);
-                            add_low_4_limbs_mod<Field>(data[1], other[1]);
-#endif
+                            add_low_4_limbs_mod<Field>(z[0], x[0], y[0]);
+                            add_low_4_limbs_mod<Field>(z[1], x[1], y[1]);
+                            // #endif
                         }
 
-                        inline void fp2_base_add_pre(limb *z, const limb *x, const limb *y) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            fp2_base_add_pre_x86(z, x, y);
-#else
-                            add_limbs_portable<4>(z, x, y);
-                            add_limbs_portable<4>(z + 8, x + 8, y + 8);
-#endif
+                        // fp2_base ops must support pointers becuase fp2_view doesnt own its data
+                        inline void fp2_base_add_pre(limb **z, const limb *const *x, const limb *const *y) {
+                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            //                             fp2_base_add_pre_x86(z, x, y);
+                            // #else
+                            add_limbs_portable<4>(z[0], x[0], y[0]);
+                            add_limbs_portable<4>(z[1], x[1], y[1]);
+                            // #endif
                         }
 
                         template<class Field>
@@ -331,8 +290,8 @@ namespace nil {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             fp2_sub_pre_x86<Field>((limb *)data, (limb *)other);
 #else
-                            subtract_8_limbs_mod<Field>(data[0], other[0]);
-                            subtract_8_limbs(data[1], other[1]);
+                            subtract_8_limbs_mod<Field>(data[0], data[0], other[0]);
+                            subtract_limbs_portable<8>(data[1], data[1], other[1]);
 #endif
                         }
 
@@ -340,43 +299,41 @@ namespace nil {
                         template<class Field>
                         inline void fp2_mul_xi_add(limb_array *dst, const limb_array *src, const limb_array *addend) {
                             mul_8_limbs_by_9<Field>(dst[0], src[0]);
-                            subtract_8_limbs_mod<Field>(dst[0], src[1]);
+                            subtract_8_limbs_mod<Field>(dst[0], dst[0], src[1]);
                             mul_8_limbs_by_9<Field>(dst[1], src[1]);
-                            add_8_limbs_mod<Field>(dst[1], src[0]);
-                            add_8_limbs_mod<Field>(dst[0], addend[0]);
-                            add_8_limbs_mod<Field>(dst[1], addend[1]);
+                            add_8_limbs_mod<Field>(dst[1], dst[1], src[0]);
+                            add_8_limbs_mod<Field>(dst[0], dst[0], addend[0]);
+                            add_8_limbs_mod<Field>(dst[1], dst[1], addend[1]);
                         }
 
                         template<class Field>
                         inline void fp2_mul_xi_add_modify_src(limb_array *src, const limb_array *addend) {
                             limb_array src0 = src[0];
                             mul_8_limbs_by_9<Field>(src[0], src0);
-                            subtract_8_limbs_mod<Field>(src[0], src[1]);
+                            subtract_8_limbs_mod<Field>(src[0], src[0], src[1]);
                             mul_8_limbs_by_9<Field>(src[1], src[1]);
-                            add_8_limbs_mod<Field>(src[1], src0);
-                            add_8_limbs_mod<Field>(src[0], addend[0]);
-                            add_8_limbs_mod<Field>(src[1], addend[1]);
+                            add_8_limbs_mod<Field>(src[1], src[1], src0);
+                            add_8_limbs_mod<Field>(src[0], src[0], addend[0]);
+                            add_8_limbs_mod<Field>(src[1], src[1], addend[1]);
                         }
 
                         template<class Field>
                         inline void fp2_mul_xi_add_modify_addend(limb_array *addend, const limb_array *src) {
                             limb_array tmp;
                             mul_8_limbs_by_9<Field>(tmp, src[0]);
-                            subtract_8_limbs_mod<Field>(tmp, src[1]);
-                            add_8_limbs_mod<Field>(addend[0], tmp);
+                            subtract_8_limbs_mod<Field>(tmp, tmp, src[1]);
+                            add_8_limbs_mod<Field>(addend[0], addend[0], tmp);
                             mul_8_limbs_by_9<Field>(tmp, src[1]);
-                            add_8_limbs_mod<Field>(tmp, src[0]);
-                            add_8_limbs_mod<Field>(addend[1], tmp);
+                            add_8_limbs_mod<Field>(tmp, tmp, src[0]);
+                            add_8_limbs_mod<Field>(addend[1], addend[1], tmp);
                         }
 
                         template<class Field>
-                        inline void fp2_mul_pre_portable(limb_array *z, const limb_array *x, const limb_array *y) {
-                            const limb_array &a = x[0];
-                            const limb_array &b = x[1];
-                            const limb_array &c = y[0];
-                            const limb_array &d = y[1];
-                            limb_array &z0 = z[0];
-                            limb_array &z1 = z[1];
+                        inline void fp2_mul_pre_portable(limb_array *z, const limb *const *x, const limb *const *y) {
+                            const limb *a = x[0];
+                            const limb *b = x[1];
+                            const limb *c = y[0];
+                            const limb *d = y[1];
                             // For x = a + bu and y = c + du:
                             //   xy = (a + bu) * (c + du)
                             //      = ac + adu + bcu + bdu^2
@@ -384,39 +341,37 @@ namespace nil {
                             //      = (ac - bd) + (ad + bc)u
                             // Karatsuba computes the cross term with one product:
                             //   ad + bc = (a + b)(c + d) - ac - bd.
-                            limb_array ac, bd;
-                            multiply_4x4(ac, a, c);
-                            multiply_4x4(bd, b, d);
-                            limb_array a_plus_b = a;
-                            limb_array c_plus_d = c;
-                            add_8_limbs(a_plus_b, b);
-                            add_8_limbs(c_plus_d, d);
-                            z0 = ac;
-                            subtract_8_limbs_mod<Field>(z0, bd);
-                            multiply_4x4(z1, a_plus_b, c_plus_d);
-                            subtract_8_limbs(z1, ac);
-                            subtract_8_limbs(z1, bd);
+                            limb_array ac, bd, a_plus_b, c_plus_d;
+                            multiply_4x4(ac.data(), a, c);
+                            multiply_4x4(bd.data(), b, d);
+                            add_limbs_portable<8>(a_plus_b.data(), a, b);
+                            add_limbs_portable<8>(c_plus_d.data(), c, d);
+                            subtract_8_limbs_mod<Field>(z[0], ac, bd);
+                            multiply_4x4(z[1].data(), a_plus_b.data(), c_plus_d.data());
+                            subtract_limbs_portable<8>(z[1].data(), z[1].data(), ac.data());
+                            subtract_limbs_portable<8>(z[1].data(), z[1].data(), bd.data());
                         }
 
                         template<class Field>
-                        inline void fp2_mul_pre(limb_array *z, const limb_array *x, const limb_array *y) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            fp2_mul_pre_x86<Field>(z, x, y);
-#else
+                        inline void fp2_mul_pre(limb_array *z, const limb *const *x, const limb *const *y) {
+                            // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            //                             fp2_mul_pre_x86<Field>(z, x, y);
+                            // #else
                             fp2_mul_pre_portable<Field>(z, x, y);
-#endif
+                            // #endif
                         }
 
-                        template<class Field>
-                        inline void fp6_base_add_mod(limb_array *data, const limb_array *other) {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-                            fp6_base_add_mod_x86<Field>((limb *)data, (const limb *)other);
-#else
-                            fp2_base_add_mod<Field>(data, other);
-                            fp2_base_add_mod<Field>(data + 2, other + 2);
-                            fp2_base_add_mod<Field>(data + 4, other + 4);
-#endif
-                        }
+                        //                         template<class Field>
+                        //                         inline void fp6_base_add_mod(limb **data, const limb **other) {
+                        // // #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                        //                             // fp6_base_add_mod_x86<Field>((limb *)data, (const limb
+                        //                             *)other);
+                        // // #else
+                        //                             fp2_base_add_mod<Field>(data, other);
+                        //                             fp2_base_add_mod<Field>(data + 2, other + 2);
+                        //                             fp2_base_add_mod<Field>(data + 4, other + 4);
+                        // // #endif
+                        //                         }
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail
             }    // namespace fields

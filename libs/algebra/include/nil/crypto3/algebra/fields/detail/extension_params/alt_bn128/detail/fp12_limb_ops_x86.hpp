@@ -52,13 +52,13 @@
     "mov " D(3, 4) ", " PTR2(Z, Z_BASE, 7) "\n"
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
-    inline void multiply_4x4_x86(limb_array &result, const limb_array &x, const limb_array &y) {
+    inline void multiply_4x4_x86(limb *z, const limb *x, const limb *y) {
         limb low, zero, high;
         limb d0, d1, d2, d3;
 
         asm volatile(
 
-            SCHOOLBOOK(result, 0, x, 0, y, 0)
+            SCHOOLBOOK(z, 0, x, 0, y, 0)
 
             : [low]"=&r"(low),
               [high]"=&r"(high),
@@ -67,9 +67,9 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [d1]"=&r"(d1),
               [d2]"=&r"(d2),
               [d3]"=&r"(d3)
-            : [result]"r"(result.data()),
-              [y]"r"(y.data()),
-              [x]"r"(x.data())
+            : [z]"r"(z),
+              [y]"r"(y),
+              [x]"r"(x)
             : "rdx", "cc", "memory"
         );
     }
@@ -258,19 +258,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "movq %[t3], " PTR2(RESULT, RESULT_BASE, 3) "\n"
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
-    inline void add_8_limbs_x86(limb *result, const limb *other) {
-        limb scratch;
-        asm volatile(
-
-            ADD_LIMBS(result, 0, other, 0, scratch)
-
-            : [scratch]"=&r"(scratch)
-            : [result]"r"(result),
-              [other]"r"(other)
-            : "cc", "memory"
-        );
-    }
-
     inline void subtract_8_limbs_x86(limb_array &result, const limb_array &other) {
         limb scratch;
         asm volatile(
@@ -575,7 +562,11 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         );
     }
 
-    inline void fp2_base_add_pre_x86(limb *z, const limb *x, const limb *y) {
+    inline void fp2_base_add_pre_x86(
+        std::array<limb_array, 2> &z, 
+        const std::array<limb_array, 2> &x,
+        const std::array<limb_array, 2> &y
+    ) {
         limb t0, t1, t2, t3;
         limb q0, q1, q2, q3;
         limb a, b;
@@ -629,9 +620,9 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [q3]"=&r"(q3),
               [a]"=&r"(a),
               [b]"=&r"(b)
-            : [x]"r"(x),
-              [y]"r"(y),
-              [z]"r"(z)
+            : [x]"r"(x.data()->data()),
+              [y]"r"(y.data()->data()),
+              [z]"r"(z.data()->data())
             : "cc", "memory"
         );
     }

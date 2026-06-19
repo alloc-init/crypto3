@@ -24,76 +24,17 @@ namespace nil {
                         using limb_array = alt_bn128_fp12_limb_ops::limb_array;
                         using limb = alt_bn128_fp12_limb_ops::limb;
 
-                        // Lazy double-width base-Fp value used inside the tower fast path.
-                        //
-                        // A normal base_value_type is a canonical Montgomery residue x*R mod p in the
-                        // low four limbs. Multiplying two such residues first produces
-                        // a double-width integer:
-                        //   (x*R) * (y*R) = x*y*R^2.
-                        // REDC/Montgomery reduction removes one factor of R and returns x*y*R mod p.
-                        //
-                        // The Fp2/Fp6/Fp12 formulas often add or subtract several raw products before
-                        // the coefficient is needed as a normal Fp value, for example ac - bd in Fp2.
-                        // fp_dbl stores those bounded pre-REDC expressions modulo p * R, where
-                        // R = 2^(64 * 4). This keeps subtractions non-negative without a separate sign bit.
-                        struct fp_dbl {
-                            // For BN254 this may occupy up to eight storage limbs. The ninth storage limb is
-                            // kept available for product/reducer scratch, but normalized fp_dbl values keep it zero.
-                            limb_array data = {};
-
-                            fp_dbl() = default;
-
-                            explicit fp_dbl(const limb_array &in_data) : data(in_data) {
-                            }
-
-                            fp_dbl operator+(const fp_dbl &other) const {
-                                fp_dbl result(*this);
-                                result += other;
-                                return result;
-                            }
-
-                            fp_dbl operator-(const fp_dbl &other) const {
-                                fp_dbl result(*this);
-                                result -= other;
-                                return result;
-                            }
-
-                            fp_dbl &operator+=(const fp_dbl &other) {
-                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(data, other.data);
-                                return *this;
-                            }
-
-                            fp_dbl &operator-=(const fp_dbl &other) {
-                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(data, other.data);
-                                return *this;
-                            }
-
-                            void to_base_value(base_value_type &out) const {
-                                // The data limbs must already be reduced Montgomery base-Fp limbs. Construct
-                                // base_value_type directly from those limbs to avoid converting them again.
-                                typename integral_type::backend_type &backend = out.data.backend().base_data();
-                                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>((limb *)backend.limbs(),
-                                                                                            data.data());
-                            }
-                        };
-
                         // fp2 before multiplying - equivalent to 2 regular Fp's
                         struct fp2_base {
                             std::array<limb_array, 2> data;
+                            std::array<limb *, 2> ptrs;
 
-                            fp2_base() = default;
-
-                            fp2_base(const limb_array &c0, const limb_array &c1) : data({c0, c1}) {
-                            }
-
-                            fp2_base(const non_residue_type &x) :
-                                data({alt_bn128_fp12_limb_ops::load_limbs(x.data[0].data.backend().base_data()),
-                                      alt_bn128_fp12_limb_ops::load_limbs(x.data[1].data.backend().base_data())}) {
+                            fp2_base() : ptrs({data[0].data(), data[1].data()}) {
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
-                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(data.data(),
-                                                                                           other.data.data());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(ptrs.data(), ptrs.data(),
+                                                                                           other.ptrs.data());
                                 return *this;
                             }
 
@@ -105,8 +46,31 @@ namespace nil {
 
                             fp2_base add_pre(const fp2_base &other) const {
                                 fp2_base result;
-                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(
-                                    (limb *)result.data.data(), (limb *)data.data(), (limb *)other.data.data());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.ptrs.data(), ptrs.data(),
+                                                                          other.ptrs.data());
+                                return result;
+                            }
+                        };
+
+                        struct fp2_view {
+                            std::array<const limb *, 2> ptrs;
+
+                            fp2_view(const non_residue_type &x) :
+                                ptrs({(const limb *)x.data[0].data.backend().base_data().limbs(),
+                                      (const limb *)x.data[1].data.backend().base_data().limbs()}) {
+                            }
+
+                            fp2_base operator+(const fp2_view &other) const {
+                                fp2_base result;
+                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(
+                                    result.ptrs.data(), ptrs.data(), other.ptrs.data());
+                                return result;
+                            }
+
+                            fp2_base add_pre(const fp2_view &other) const {
+                                fp2_base result;
+                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.ptrs.data(), ptrs.data(),
+                                                                          other.ptrs.data());
                                 return result;
                             }
                         };
@@ -115,68 +79,78 @@ namespace nil {
                             // Lazy Fp2 value in the same coefficient order as generic fp2:
                             //   data[0] + data[1] * u, with u^2 = -1.
                             // Each coefficient is an unreduced double-width Fp value represented modulo p * R.
-                            std::array<fp_dbl, 2> data;
+                            std::array<limb_array, 2> data;
 
                             fp2_dbl() = default;
 
-                            fp2_dbl(const fp_dbl &c0, const fp_dbl &c1) : data({c0, c1}) {
-                            }
-
-                            fp2_dbl operator+(const fp2_dbl &other) const {
-                                return fp2_dbl(data[0] + other.data[0], data[1] + other.data[1]);
-                            }
-
-                            fp2_dbl operator-(const fp2_dbl &other) const {
-                                return fp2_dbl(data[0] - other.data[0], data[1] - other.data[1]);
-                            }
-
                             fp2_dbl &operator+=(const fp2_dbl &other) {
-                                data[0] += other.data[0];
-                                data[1] += other.data[1];
+                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(data[0], data[0],
+                                                                                          other.data[0]);
+                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(data[1], data[1],
+                                                                                          other.data[1]);
                                 return *this;
                             }
 
                             fp2_dbl &operator-=(const fp2_dbl &other) {
-                                data[0] -= other.data[0];
-                                data[1] -= other.data[1];
+                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(data[0], data[0],
+                                                                                               other.data[0]);
+                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(data[1], data[1],
+                                                                                               other.data[1]);
                                 return *this;
+                            }
+
+                            fp2_dbl operator+(const fp2_dbl &other) const {
+                                fp2_dbl ret;
+                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(ret[0], data[0],
+                                                                                          other.data[0]);
+                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(ret[1], data[1],
+                                                                                          other.data[1]);
+                                return ret;
+                            }
+
+                            fp2_dbl operator-(const fp2_dbl &other) const {
+                                fp2_dbl ret;
+                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(ret.data[0], data[0],
+                                                                                               other.data[0]);
+                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(ret.data[1], data[1],
+                                                                                               other.data[1]);
+                                return ret;
                             }
 
                             // Subtraction where the result is known positive - can avoid correction
                             void sub_pre(const fp2_dbl &other) {
-                                alt_bn128_fp12_limb_ops::fp2_sub_pre<base_field_type>((limb_array *)data.data(),
-                                                                                      (limb_array *)other.data.data());
+                                alt_bn128_fp12_limb_ops::fp2_sub_pre<base_field_type>(data.data(), other.data.data());
                             }
 
-                            static void mul_pre(fp2_dbl &result, const fp2_base &x, const fp2_base &y) {
-                                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(
-                                    (limb_array *)result.data.data(),
-                                    (const limb_array *)x.data.data(),
-                                    (const limb_array *)y.data.data());
+                            template<class InputType>
+                            static void mul_pre(fp2_dbl &result, const InputType &x, const InputType &y) {
+                                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(result.data.data(), x.ptrs.data(),
+                                                                                      y.ptrs.data());
                             }
 
                             // dst = src * xi + addend
                             static void mul_xi_add(fp2_dbl &dst, const fp2_dbl &src, const fp2_dbl &addend) {
                                 alt_bn128_fp12_limb_ops::fp2_mul_xi_add<base_field_type>(
-                                    (limb_array *)dst.data.data(), (limb_array *)src.data.data(),
-                                    (limb_array *)addend.data.data());
+                                    dst.data.data(), src.data.data(), addend.data.data());
                             }
 
                             // src = src * xi + addend
                             static void mul_xi_add_modify_src(fp2_dbl &src, const fp2_dbl &addend) {
-                                alt_bn128_fp12_limb_ops::fp2_mul_xi_add_modify_src<base_field_type>(
-                                    (limb_array *)src.data.data(), (limb_array *)addend.data.data());
+                                alt_bn128_fp12_limb_ops::fp2_mul_xi_add_modify_src<base_field_type>(src.data.data(),
+                                                                                                    addend.data.data());
                             }
 
                             // addend = src * xi + addend
                             static void mul_xi_add_modify_addend(fp2_dbl &addend, const fp2_dbl &src) {
                                 alt_bn128_fp12_limb_ops::fp2_mul_xi_add_modify_addend<base_field_type>(
-                                    (limb_array *)addend.data.data(), (limb_array *)src.data.data());
+                                    addend.data.data(), src.data.data());
                             }
 
                             void to_non_residue(non_residue_type &ret) const {
-                                data[0].to_base_value(ret.data[0]);
-                                data[1].to_base_value(ret.data[1]);
+                                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(
+                                    (limb *)ret.data[0].data.backend().base_data().limbs(), data[0]);
+                                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(
+                                    (limb *)ret.data[1].data.backend().base_data().limbs(), data[1]);
                             }
                         };
 
@@ -192,24 +166,34 @@ namespace nil {
                             fp6_base(const fp2_base &c0, const fp2_base &c1, const fp2_base &c2) : data({c0, c1, c2}) {
                             }
 
-                            explicit fp6_base(const underlying_type &x) :
-                                data({fp2_base(x.data[0]), fp2_base(x.data[1]), fp2_base(x.data[2])}) {
-                            }
-
                             std::tuple<const fp2_base &, const fp2_base &, const fp2_base &> coeffs() const {
                                 return {data[0], data[1], data[2]};
-                            }
-
-                            fp6_base &operator+=(const fp6_base &other) {
-                                alt_bn128_fp12_limb_ops::fp6_base_add_mod<base_field_type>(data[0].data.data(),
-                                                                                           other.data[0].data.data());
-                                return *this;
                             }
 
                             fp6_base operator+(const fp6_base &other) const {
                                 fp6_base result(*this);
                                 result += other;
                                 return result;
+                            }
+                        };
+
+                        struct fp6_view {
+                            std::array<fp2_view, 3> data;
+
+                            explicit fp6_view(const underlying_type &x) :
+                                data({fp2_view(x.data[0]), fp2_view(x.data[1]), fp2_view(x.data[2])}) {
+                            }
+
+                            std::tuple<const fp2_view &, const fp2_view &, const fp2_view &> coeffs() const {
+                                return {data[0], data[1], data[2]};
+                            }
+
+                            fp6_base operator+(const fp6_view &other) const {
+                                fp6_base ret;
+                                ret.data[0] = data[0] + other.data[0];
+                                ret.data[1] = data[1] + other.data[1];
+                                ret.data[2] = data[2] + other.data[2];
+                                return ret;
                             }
                         };
 
@@ -249,7 +233,8 @@ namespace nil {
                                 return *this;
                             }
 
-                            static void mul_pre(fp6_dbl &result, const fp6_base &x, const fp6_base &y) {
+                            template<class InputType>
+                            static void mul_pre(fp6_dbl &result, const InputType &x, const InputType &y) {
                                 // Multiply two Fp6 values in the tower Fp6 = Fp2[v]/(v^3 - xi):
                                 //   x = a + b*v + c*v^2
                                 //   y = d + e*v + f*v^2
@@ -264,7 +249,7 @@ namespace nil {
                                 //   za = (b + c)(e + f) - b*e - c*f = b*f + c*e
                                 //   zb = (a + b)(d + e) - a*d - b*e = a*e + b*d
                                 //   zc = (a + c)(d + f) - a*d - c*f = a*f + c*d
-                                const auto &[a, b, c] = x.coeffs();    // a, b, c are fp2_base
+                                const auto &[a, b, c] = x.coeffs();    // a, b, c are fp2_base or fp2_view
                                 const auto &[d, e, f] = y.coeffs();
                                 fp2_dbl &za = result.data[0];
                                 fp2_dbl &zb = result.data[1];
@@ -340,10 +325,10 @@ namespace nil {
                             // ac, bd, and z1 stay in the lazy doubled representation until the
                             // two final Fp6 reductions. The input-side fp6 sums are reduced modulo p,
                             // so z1 can use the ordinary pre-REDC multiply path.
-                            const fp6_base a(x.data[0]);
-                            const fp6_base b(x.data[1]);
-                            const fp6_base c(y.data[0]);
-                            const fp6_base d(y.data[1]);
+                            const fp6_view a(x.data[0]);
+                            const fp6_view b(x.data[1]);
+                            const fp6_view c(y.data[0]);
+                            const fp6_view d(y.data[1]);
 
                             Fp12Value ret;
 
