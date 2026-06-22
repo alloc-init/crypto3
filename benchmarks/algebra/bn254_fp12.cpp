@@ -356,6 +356,15 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp6_pre_acc);
                 }));
 
+    print_stage("Fp12 make views", run_stage(iters, warmup, samples, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    const fp12_view_parts parts(xs[idx], ys[idx]);
+                    do_not_optimize(parts.a.data[0].ptrs()[0]);
+                    do_not_optimize(parts.b.data[0].ptrs()[0]);
+                    do_not_optimize(parts.c.data[0].ptrs()[0]);
+                    do_not_optimize(parts.d.data[0].ptrs()[0]);
+                }));
+
     print_stage("Fp12 core prepacked", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     multiply_prepacked_fp12(fp12_acc, fp12_view_parts_x[idx]);
