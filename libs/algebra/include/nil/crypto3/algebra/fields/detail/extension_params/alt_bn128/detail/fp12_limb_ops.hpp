@@ -259,25 +259,22 @@ namespace nil {
 #endif
                         }
 
-                        // fp2_base ops must support pointers becuase fp2_view doesnt own its data
-                        // output z is assumed continuous
                         template<class Field>
-                        inline void fp2_base_add_mod(limb *z, const limb *const *x, const limb *const *y) {
+                        inline void fp2_base_add_mod(limb *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             fp2_base_add_mod_x86<Field>(z, x, y);
 #else
-                            add_low_4_limbs_mod_portable<Field>(z, x[0], y[0]);
-                            add_low_4_limbs_mod_portable<Field>(z + 8, x[1], y[1]);
+                            add_low_4_limbs_mod_portable<Field>(z, x, y);
+                            add_low_4_limbs_mod_portable<Field>(z + 8, x + 8, y + 8);
 #endif
                         }
 
-                        // fp2_base ops must support pointers becuase fp2_view doesnt own its data
-                        inline void fp2_base_add_pre(limb *z, const limb *const *x, const limb *const *y) {
+                        inline void fp2_base_add_pre(limb *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             fp2_base_add_pre_x86(z, x, y);
 #else
-                            add_limbs_portable<4>(z, x[0], y[0]);
-                            add_limbs_portable<4>(z + 8, x[1], y[1]);
+                            add_limbs_portable<4>(z, x, y);
+                            add_limbs_portable<4>(z + 8, x + 8, y + 8);
 #endif
                         }
 
@@ -325,11 +322,11 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void fp2_mul_pre_portable(limb_array *z, const limb *const *x, const limb *const *y) {
-                            const limb *a = x[0];
-                            const limb *b = x[1];
-                            const limb *c = y[0];
-                            const limb *d = y[1];
+                        inline void fp2_mul_pre_portable(limb_array *z, const limb *x, const limb *y) {
+                            const limb *a = x;
+                            const limb *b = x + 8;
+                            const limb *c = y;
+                            const limb *d = y + 8;
                             // For x = a + bu and y = c + du:
                             //   xy = (a + bu) * (c + du)
                             //      = ac + adu + bcu + bdu^2
@@ -349,7 +346,7 @@ namespace nil {
                         }
 
                         template<class Field>
-                        inline void fp2_mul_pre(limb_array *z, const limb *const *x, const limb *const *y) {
+                        inline void fp2_mul_pre(limb_array *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             fp2_mul_pre_x86<Field>(z, x, y);
 #else

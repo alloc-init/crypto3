@@ -27,49 +27,19 @@ namespace nil {
                         // fp2 before multiplying - equivalent to 2 regular Fp's
                         struct fp2_base {
                             std::array<limb_array, 2> data = {};
-                            std::array<limb *, 2> ptrs_ = {data[0].data(), data[1].data()};
 
                             fp2_base() = default;
 
-                            fp2_base(const fp2_base &other) : data(other.data) {
-                                rebind_ptrs();
+                            limb *ptr() {
+                                return data.data()->data();
                             }
 
-                            fp2_base &operator=(const fp2_base &other) {
-                                if (this != &other) {
-                                    data = other.data;
-                                    rebind_ptrs();
-                                }
-                                return *this;
-                            }
-
-                            fp2_base(fp2_base &&other) noexcept : data(std::move(other.data)) {
-                                rebind_ptrs();
-                            }
-
-                            fp2_base &operator=(fp2_base &&other) noexcept {
-                                if (this != &other) {
-                                    data = std::move(other.data);
-                                    rebind_ptrs();
-                                }
-                                return *this;
-                            }
-
-                            void rebind_ptrs() {
-                                ptrs_ = {data[0].data(), data[1].data()};
-                            }
-
-                            limb **ptrs() {
-                                return ptrs_.data();
-                            }
-
-                            const limb *const *ptrs() const {
-                                return ptrs_.data();
+                            const limb *ptr() const {
+                                return data.data()->data();
                             }
 
                             fp2_base &operator+=(const fp2_base &other) {
-                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(data.data()->data(), ptrs(),
-                                                                                           other.ptrs());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(ptr(), ptr(), other.ptr());
                                 return *this;
                             }
 
@@ -81,35 +51,37 @@ namespace nil {
 
                             fp2_base add_pre(const fp2_base &other) const {
                                 fp2_base result;
-                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.data.data()->data(), ptrs(),
-                                                                          other.ptrs());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.ptr(), ptr(), other.ptr());
                                 return result;
                             }
                         };
 
                         struct fp2_view {
-                            std::array<const limb *, 2> ptrs_;
-
-                            const limb *const *ptrs() const {
-                                return ptrs_.data();
-                            }
+                            // data is assumed continuous
+                            const limb *ptr_;
 
                             fp2_view(const non_residue_type &x) :
-                                ptrs_({(const limb *)x.data[0].data.backend().base_data().limbs(),
-                                       (const limb *)x.data[1].data.backend().base_data().limbs()}) {
+                                ptr_((const limb *)x.data[0].data.backend().base_data().limbs()) {
+                            }
+
+                            limb *ptr() {
+                                return ptr_;
+                            }
+
+                            const limb *ptr() const {
+                                return ptr_;
                             }
 
                             fp2_base operator+(const fp2_view &other) const {
                                 fp2_base result;
-                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(result.data.data()->data(),
-                                                                                           ptrs(), other.ptrs());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(result.ptr(), ptr(),
+                                                                                           other.ptr());
                                 return result;
                             }
 
                             fp2_base add_pre(const fp2_view &other) const {
                                 fp2_base result;
-                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.data.data()->data(), ptrs(),
-                                                                          other.ptrs());
+                                alt_bn128_fp12_limb_ops::fp2_base_add_pre(result.ptr(), ptr(), other.ptr());
                                 return result;
                             }
                         };
@@ -163,8 +135,8 @@ namespace nil {
 
                             template<class InputType>
                             static void mul_pre(fp2_dbl &result, const InputType &x, const InputType &y) {
-                                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(result.data.data(), x.ptrs(),
-                                                                                      y.ptrs());
+                                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(result.data.data(), x.ptr(),
+                                                                                      y.ptr());
                             }
 
                             // dst = src * xi + addend
