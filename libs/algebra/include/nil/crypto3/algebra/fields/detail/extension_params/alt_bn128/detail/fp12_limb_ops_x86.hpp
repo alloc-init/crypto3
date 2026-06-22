@@ -183,23 +183,31 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
-#define ADD_LIMBS(RESULT, RESULT_BASE, OTHER, OTHER_BASE, SCRATCH)  \
-    "movq " PTR2(OTHER, OTHER_BASE, 0) ", %[" #SCRATCH "]\n"        \
-    "addq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 0) "\n"      \
-    "movq " PTR2(OTHER, OTHER_BASE, 1) ", %[" #SCRATCH "]\n"        \
-    "adcq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 1) "\n"      \
-    "movq " PTR2(OTHER, OTHER_BASE, 2) ", %[" #SCRATCH "]\n"        \
-    "adcq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 2) "\n"      \
-    "movq " PTR2(OTHER, OTHER_BASE, 3) ", %[" #SCRATCH "]\n"        \
-    "adcq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 3) "\n"      \
-    "movq " PTR2(OTHER, OTHER_BASE, 4) ", %[" #SCRATCH "]\n"        \
-    "adcq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 4) "\n"      \
-    "movq " PTR2(OTHER, OTHER_BASE, 5) ", %[" #SCRATCH "]\n"        \
-    "adcq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 5) "\n"      \
-    "movq " PTR2(OTHER, OTHER_BASE, 6) ", %[" #SCRATCH "]\n"        \
-    "adcq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 6) "\n"      \
-    "movq " PTR2(OTHER, OTHER_BASE, 7) ", %[" #SCRATCH "]\n"        \
-    "adcq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 7) "\n"
+#define ADD_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"        \
+    "addq " PTR2(Y, Y_BASE, 0) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 0) "\n"        \
+    "movq " PTR2(X, X_BASE, 1) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 1) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 1) "\n"        \
+    "movq " PTR2(X, X_BASE, 2) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 2) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 2) "\n"        \
+    "movq " PTR2(X, X_BASE, 3) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 3) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 3) "\n"        \
+    "movq " PTR2(X, X_BASE, 4) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 4) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 4) "\n"        \
+    "movq " PTR2(X, X_BASE, 5) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 5) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 5) "\n"        \
+    "movq " PTR2(X, X_BASE, 6) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 6) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 6) "\n"        \
+    "movq " PTR2(X, X_BASE, 7) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 7) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 7) "\n"
 
 #define SUB_LIMBS(RESULT, RESULT_BASE, OTHER, OTHER_BASE, SCRATCH) \
     "movq " PTR2(RESULT, RESULT_BASE, 0) ", %[" #SCRATCH "]\n"     \
@@ -684,34 +692,43 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         //      = (ac - bd) + (ad + bc)u
         // Karatsuba computes the cross term with one product:
         //   ad + bc = (a + b)(c + d) - ac - bd.
-        limb low, high, zero, d0, d1, d2, d3;
-        limb_array scratch;
+        limb low, high, zero, d0, d1, d2, d3, tmp;
+        struct {
+            limb_array ac;
+            limb_array bd;
+            limb_array a_plus_b;
+            limb_array c_plus_d;
+        } scratch;
         asm volatile(
 
-            SCHOOLBOOK(z, 0, x0, 0, y0, 0)
-            SCHOOLBOOK(scratch, 0, x1, 0, y1, 0)
-            BRANCHY_SUB_LIMBS_MOD(z, 0, z, 0, scratch, 0, low, d0, d1, d2, d3)
-            SCHOOLBOOK(z, 8, x0, 0, y1, 0)
-            SCHOOLBOOK(scratch, 0, x1, 0, y0, 0)
-            ADD_LIMBS(z, 8, scratch, 0, low)
+            SCHOOLBOOK(scratch, 0, x0, 0, y0, 0)
+            SCHOOLBOOK(scratch, 8, x1, 0, y1, 0)
+            BRANCHY_SUB_LIMBS_MOD(z, 0, scratch, 0, scratch, 8, low, d0, d1, d2, d3)
+            ADD_LIMBS(scratch, 16, x0, 0, x1, 0, low)
+            ADD_LIMBS(scratch, 24, y0, 0, y1, 0, low)
+            SCHOOLBOOK(z, 8, scratch, 16, scratch, 24)
+            SUB_LIMBS(z, 8, scratch, 0, low)
+            SUB_LIMBS(z, 8, scratch, 8, low)
 
-            : [low]"=&r"(low),
-              [high]"=&r"(high),
-              [zero]"=&r"(zero),
-              [d0]"=&r"(d0),
-              [d1]"=&r"(d1),
-              [d2]"=&r"(d2),
-              [d3]"=&r"(d3)
-            : [x0]"r"(x[0]),
-              [x1]"r"(x[1]),
-              [y0]"r"(y[0]),
-              [y1]"r"(y[1]),
-              [z]"r"(z),
-              [scratch]"r"(scratch.data()),
-              [p0]"m"(p0),
-              [p1]"m"(p1),
-              [p2]"m"(p2),
-              [p3]"m"(p3)
+            : 
+                [low]"=&r"(low),
+                [high]"=&r"(high),
+                [zero]"=&r"(zero),
+                [d0]"=&r"(d0),
+                [d1]"=&r"(d1),
+                [d2]"=&r"(d2),
+                [d3]"=&r"(d3)
+            : 
+                [x0]"r"(x[0]),
+                [x1]"r"(x[1]),
+                [y0]"r"(y[0]),
+                [y1]"r"(y[1]),
+                [z]"r"(z),
+                [scratch]"r"(&scratch),
+                [p0]"m"(p0),
+                [p1]"m"(p1),
+                [p2]"m"(p2),
+                [p3]"m"(p3)
             : "rdx", "cc", "memory"
         );
     }
