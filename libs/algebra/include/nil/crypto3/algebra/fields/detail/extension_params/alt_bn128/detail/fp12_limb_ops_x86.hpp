@@ -383,6 +383,38 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     "movq %[" #T2 "], " PTR2(Z, Z_BASE, 6) "\n"                                                 \
     "movq %[" #T3 "], " PTR2(Z, Z_BASE, 7) "\n"
 
+#define BRANCHY_SUB_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE, SCRATCH, T0, T1, T2, T3) \
+    "movq " PTR2(X, X_BASE, 0) ", %[" #SCRATCH "]\n"                                    \
+    "subq " PTR2(Y, Y_BASE, 0) ", %[" #SCRATCH "]\n"                                    \
+    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 0) "\n"                                    \
+    "movq " PTR2(X, X_BASE, 1) ", %[" #SCRATCH "]\n"                                    \
+    "sbbq " PTR2(Y, Y_BASE, 1) ", %[" #SCRATCH "]\n"                                    \
+    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 1) "\n"                                    \
+    "movq " PTR2(X, X_BASE, 2) ", %[" #SCRATCH "]\n"                                    \
+    "sbbq " PTR2(Y, Y_BASE, 2) ", %[" #SCRATCH "]\n"                                    \
+    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 2) "\n"                                    \
+    "movq " PTR2(X, X_BASE, 3) ", %[" #SCRATCH "]\n"                                    \
+    "sbbq " PTR2(Y, Y_BASE, 3) ", %[" #SCRATCH "]\n"                                    \
+    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 3) "\n"                                    \
+    "movq " PTR2(X, X_BASE, 4) ", %[" #T0 "]\n"                                         \
+    "movq " PTR2(X, X_BASE, 5) ", %[" #T1 "]\n"                                         \
+    "movq " PTR2(X, X_BASE, 6) ", %[" #T2 "]\n"                                         \
+    "movq " PTR2(X, X_BASE, 7) ", %[" #T3 "]\n"                                         \
+    "sbbq " PTR2(Y, Y_BASE, 4) ", %[" #T0 "]\n"                                         \
+    "sbbq " PTR2(Y, Y_BASE, 5) ", %[" #T1 "]\n"                                         \
+    "sbbq " PTR2(Y, Y_BASE, 6) ", %[" #T2 "]\n"                                         \
+    "sbbq " PTR2(Y, Y_BASE, 7) ", %[" #T3 "]\n"                                         \
+    "jnc done%=\n"                                                                      \
+    "addq %[p0], %[" #T0 "]\n"                                                          \
+    "adcq %[p1], %[" #T1 "]\n"                                                          \
+    "adcq %[p2], %[" #T2 "]\n"                                                          \
+    "adcq %[p3], %[" #T3 "]\n"                                                          \
+    "done%=:\n"                                                                         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 4) "\n"                                         \
+    "movq %[" #T1 "], " PTR2(Z, Z_BASE, 5) "\n"                                         \
+    "movq %[" #T2 "], " PTR2(Z, Z_BASE, 6) "\n"                                         \
+    "movq %[" #T3 "], " PTR2(Z, Z_BASE, 7) "\n"
+
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
     inline void subtract_8_limbs_mod_x86(limb_array &z, const limb_array &x, const limb_array &y) {
@@ -652,24 +684,16 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         //      = (ac - bd) + (ad + bc)u
         // Karatsuba computes the cross term with one product:
         //   ad + bc = (a + b)(c + d) - ac - bd.
-        limb low, high, zero, d0, d1, d2, d3, tmp0, tmp1;
+        limb low, high, zero, d0, d1, d2, d3;
         limb_array scratch;
         asm volatile(
 
-            "movq 0(%[x]), %[tmp0]\n"
-            "movq 0(%[y]), %[tmp1]\n"
-            SCHOOLBOOK(z, 0, tmp0, 0, tmp1, 0)
-            "movq 8(%[x]), %[tmp0]\n"
-            "movq 8(%[y]), %[tmp1]\n"
-            SCHOOLBOOK(scratch, 0, tmp0, 0, tmp1, 0)
-            SUB_LIMBS_MOD(z, 0, z, 0, scratch, 0, tmp0, tmp1, low, high, zero, d0, d1, d2, d3)
-            "movq 0(%[x]), %[tmp0]\n"
-            "movq 8(%[y]), %[tmp1]\n"
-            SCHOOLBOOK(z, 8, tmp0, 0, tmp1, 0)
-            "movq 8(%[x]), %[tmp0]\n"
-            "movq 0(%[y]), %[tmp1]\n"
-            SCHOOLBOOK(scratch, 0, tmp0, 0, tmp1, 0)
-            ADD_LIMBS(z, 8, scratch, 0, tmp0)
+            SCHOOLBOOK(z, 0, x0, 0, y0, 0)
+            SCHOOLBOOK(scratch, 0, x1, 0, y1, 0)
+            BRANCHY_SUB_LIMBS_MOD(z, 0, z, 0, scratch, 0, low, d0, d1, d2, d3)
+            SCHOOLBOOK(z, 8, x0, 0, y1, 0)
+            SCHOOLBOOK(scratch, 0, x1, 0, y0, 0)
+            ADD_LIMBS(z, 8, scratch, 0, low)
 
             : [low]"=&r"(low),
               [high]"=&r"(high),
@@ -677,11 +701,11 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [d0]"=&r"(d0),
               [d1]"=&r"(d1),
               [d2]"=&r"(d2),
-              [d3]"=&r"(d3),
-              [tmp0]"=&r"(tmp0),
-              [tmp1]"=&r"(tmp1)
-            : [x]"r"(x),
-              [y]"r"(y),
+              [d3]"=&r"(d3)
+            : [x0]"r"(x[0]),
+              [x1]"r"(x[1]),
+              [y0]"r"(y[0]),
+              [y1]"r"(y[1]),
               [z]"r"(z),
               [scratch]"r"(scratch.data()),
               [p0]"m"(p0),
