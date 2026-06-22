@@ -183,6 +183,20 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 }    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
 
+#define ADD_LOW_4_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"        \
+    "addq " PTR2(Y, Y_BASE, 0) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 0) "\n"        \
+    "movq " PTR2(X, X_BASE, 1) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 1) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 1) "\n"        \
+    "movq " PTR2(X, X_BASE, 2) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 2) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 2) "\n"        \
+    "movq " PTR2(X, X_BASE, 3) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 3) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 3) "\n"
+
 #define ADD_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
     "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"        \
     "addq " PTR2(Y, Y_BASE, 0) ", %[" #TMP "]\n"        \
@@ -704,8 +718,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             SCHOOLBOOK(scratch, 0, x0, 0, y0, 0)
             SCHOOLBOOK(scratch, 8, x1, 0, y1, 0)
             BRANCHY_SUB_LIMBS_MOD(z, 0, scratch, 0, scratch, 8, low, d0, d1, d2, d3)
-            ADD_LIMBS(scratch, 16, x0, 0, x1, 0, low)
-            ADD_LIMBS(scratch, 24, y0, 0, y1, 0, low)
+            ADD_LOW_4_LIMBS(scratch, 16, x0, 0, x1, 0, low)
+            ADD_LOW_4_LIMBS(scratch, 24, y0, 0, y1, 0, low)
             SCHOOLBOOK(z, 8, scratch, 16, scratch, 24)
             SUB_LIMBS(z, 8, scratch, 0, low)
             SUB_LIMBS(z, 8, scratch, 8, low)
@@ -744,6 +758,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #undef SUB_LIMBS
 #undef ADD_LIMBS_MOD
 #undef SUB_LIMBS_MOD
+#undef ADD_LOW_4_LIMBS
 #undef ADD_LOW_4_LIMBS_MOD
 #undef SET_STATIC_MODULUS_FROM_FIELD
 #undef D
