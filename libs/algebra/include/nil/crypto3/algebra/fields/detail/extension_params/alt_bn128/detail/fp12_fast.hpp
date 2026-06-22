@@ -187,6 +187,9 @@ namespace nil {
                                 data({fp2_view(x.data[0]), fp2_view(x.data[1]), fp2_view(x.data[2])}) {
                             }
 
+                            fp6_view(const fp6_base &x) : data({x.data[0], x.data[1], x.data[2]}) {
+                            }
+
                             std::tuple<const fp2_view &, const fp2_view &, const fp2_view &> coeffs() const {
                                 return {data[0], data[1], data[2]};
                             }
@@ -236,8 +239,7 @@ namespace nil {
                                 return *this;
                             }
 
-                            template<class InputType>
-                            static void mul_pre(fp6_dbl &result, const InputType &x, const InputType &y) {
+                            static void mul_pre(fp6_dbl &result, const fp6_view &x, const fp6_view &y) {
                                 // Multiply two Fp6 values in the tower Fp6 = Fp2[v]/(v^3 - xi):
                                 //   x = a + b*v + c*v^2
                                 //   y = d + e*v + f*v^2
@@ -332,18 +334,14 @@ namespace nil {
                             const fp6_view b(x.data[1]);
                             const fp6_view c(y.data[0]);
                             const fp6_view d(y.data[1]);
-
-                            Fp12Value ret;
-
                             fp6_dbl ac, bd, z;
                             fp6_dbl::mul_pre(ac, a, c);
                             fp6_dbl::mul_pre(bd, b, d);
-
                             fp6_dbl::mul_pre(z, a + b, c + d);
                             z -= ac;    // first correction (see above)
                             z -= bd;    // second correction
+                            Fp12Value ret;
                             z.to_underlying(ret.data[1]);
-
                             fp6_dbl::mul_v_add(z, bd, ac);
                             z.to_underlying(ret.data[0]);
 
