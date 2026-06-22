@@ -291,77 +291,43 @@
     "sbbq " PTR2(OTHER, OTHER_BASE, 7) ", %[" #SCRATCH "]\n"       \
     "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 7) "\n"
 
-#define SUB_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE, SCRATCH, T0, T1, T2, T3, Q0, Q1, Q2, Q3) \
-    "movq " PTR2(X, X_BASE, 0) ", %[" #SCRATCH "]\n"                                            \
-    "subq " PTR2(Y, Y_BASE, 0) ", %[" #SCRATCH "]\n"                                            \
-    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 0) "\n"                                            \
-    "movq " PTR2(X, X_BASE, 1) ", %[" #SCRATCH "]\n"                                            \
-    "sbbq " PTR2(Y, Y_BASE, 1) ", %[" #SCRATCH "]\n"                                            \
-    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 1) "\n"                                            \
-    "movq " PTR2(X, X_BASE, 2) ", %[" #SCRATCH "]\n"                                            \
-    "sbbq " PTR2(Y, Y_BASE, 2) ", %[" #SCRATCH "]\n"                                            \
-    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 2) "\n"                                            \
-    "movq " PTR2(X, X_BASE, 3) ", %[" #SCRATCH "]\n"                                            \
-    "sbbq " PTR2(Y, Y_BASE, 3) ", %[" #SCRATCH "]\n"                                            \
-    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 3) "\n"                                            \
-    "movq " PTR2(X, X_BASE, 4) ", %[" #T0 "]\n"                                                 \
-    "movq " PTR2(X, X_BASE, 5) ", %[" #T1 "]\n"                                                 \
-    "movq " PTR2(X, X_BASE, 6) ", %[" #T2 "]\n"                                                 \
-    "movq " PTR2(X, X_BASE, 7) ", %[" #T3 "]\n"                                                 \
-    "sbbq " PTR2(Y, Y_BASE, 4) ", %[" #T0 "]\n"                                                 \
-    "sbbq " PTR2(Y, Y_BASE, 5) ", %[" #T1 "]\n"                                                 \
-    "sbbq " PTR2(Y, Y_BASE, 6) ", %[" #T2 "]\n"                                                 \
-    "sbbq " PTR2(Y, Y_BASE, 7) ", %[" #T3 "]\n"                                                 \
-    "setc %b[" #SCRATCH "]\n" /* save carry flag */                                             \
-    "movq %[" #T0 "], %[" #Q0 "]\n"                                                             \
-    "movq %[" #T1 "], %[" #Q1 "]\n"                                                             \
-    "movq %[" #T2 "], %[" #Q2 "]\n"                                                             \
-    "movq %[" #T3 "], %[" #Q3 "]\n"                                                             \
-    "addq %[p0], %[" #Q0 "]\n"                                                                  \
-    "adcq %[p1], %[" #Q1 "]\n"                                                                  \
-    "adcq %[p2], %[" #Q2 "]\n"                                                                  \
-    "adcq %[p3], %[" #Q3 "]\n"                                                                  \
-    "add $255, %b[" #SCRATCH "]\n" /* restore carry flag */                                     \
-    "cmovc %[" #Q0 "], %[" #T0 "]\n"                                                            \
-    "cmovc %[" #Q1 "], %[" #T1 "]\n"                                                            \
-    "cmovc %[" #Q2 "], %[" #T2 "]\n"                                                            \
-    "cmovc %[" #Q3 "], %[" #T3 "]\n"                                                            \
-    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 4) "\n"                                                 \
-    "movq %[" #T1 "], " PTR2(Z, Z_BASE, 5) "\n"                                                 \
-    "movq %[" #T2 "], " PTR2(Z, Z_BASE, 6) "\n"                                                 \
-    "movq %[" #T3 "], " PTR2(Z, Z_BASE, 7) "\n"
-
-#define BRANCHY_SUB_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE, SCRATCH, T0, T1, T2, T3) \
-    "movq " PTR2(X, X_BASE, 0) ", %[" #SCRATCH "]\n"                                    \
-    "subq " PTR2(Y, Y_BASE, 0) ", %[" #SCRATCH "]\n"                                    \
-    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 0) "\n"                                    \
-    "movq " PTR2(X, X_BASE, 1) ", %[" #SCRATCH "]\n"                                    \
-    "sbbq " PTR2(Y, Y_BASE, 1) ", %[" #SCRATCH "]\n"                                    \
-    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 1) "\n"                                    \
-    "movq " PTR2(X, X_BASE, 2) ", %[" #SCRATCH "]\n"                                    \
-    "sbbq " PTR2(Y, Y_BASE, 2) ", %[" #SCRATCH "]\n"                                    \
-    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 2) "\n"                                    \
-    "movq " PTR2(X, X_BASE, 3) ", %[" #SCRATCH "]\n"                                    \
-    "sbbq " PTR2(Y, Y_BASE, 3) ", %[" #SCRATCH "]\n"                                    \
-    "movq %[" #SCRATCH "], " PTR2(Z, Z_BASE, 3) "\n"                                    \
-    "movq " PTR2(X, X_BASE, 4) ", %[" #T0 "]\n"                                         \
-    "movq " PTR2(X, X_BASE, 5) ", %[" #T1 "]\n"                                         \
-    "movq " PTR2(X, X_BASE, 6) ", %[" #T2 "]\n"                                         \
-    "movq " PTR2(X, X_BASE, 7) ", %[" #T3 "]\n"                                         \
-    "sbbq " PTR2(Y, Y_BASE, 4) ", %[" #T0 "]\n"                                         \
-    "sbbq " PTR2(Y, Y_BASE, 5) ", %[" #T1 "]\n"                                         \
-    "sbbq " PTR2(Y, Y_BASE, 6) ", %[" #T2 "]\n"                                         \
-    "sbbq " PTR2(Y, Y_BASE, 7) ", %[" #T3 "]\n"                                         \
-    "jnc done%=\n"                                                                      \
-    "addq %[p0], %[" #T0 "]\n"                                                          \
-    "adcq %[p1], %[" #T1 "]\n"                                                          \
-    "adcq %[p2], %[" #T2 "]\n"                                                          \
-    "adcq %[p3], %[" #T3 "]\n"                                                          \
-    "done%=:\n"                                                                         \
-    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 4) "\n"                                         \
-    "movq %[" #T1 "], " PTR2(Z, Z_BASE, 5) "\n"                                         \
-    "movq %[" #T2 "], " PTR2(Z, Z_BASE, 6) "\n"                                         \
-    "movq %[" #T3 "], " PTR2(Z, Z_BASE, 7) "\n"
+#define SUB_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE, T0, T1, T2, T3) \
+    "movq " PTR2(X, X_BASE, 0) ", %[" #T0 "]\n"                        \
+    "subq " PTR2(Y, Y_BASE, 0) ", %[" #T0 "]\n"                        \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 0)"\n"                         \
+    "movq " PTR2(X, X_BASE, 1) ", %[" #T0 "]\n"                        \
+    "sbbq " PTR2(Y, Y_BASE, 1) ", %[" #T0 "]\n"                        \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 1)"\n"                         \
+    "movq " PTR2(X, X_BASE, 2) ", %[" #T0 "]\n"                        \
+    "sbbq " PTR2(Y, Y_BASE, 2) ", %[" #T0 "]\n"                        \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 2)"\n"                         \
+    "movq " PTR2(X, X_BASE, 3) ", %[" #T0 "]\n"                        \
+    "sbbq " PTR2(Y, Y_BASE, 3) ", %[" #T0 "]\n"                        \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 3) "\n"                        \
+    "movq " PTR2(X, X_BASE, 4) ", %[" #T0 "]\n"                        \
+    "sbbq " PTR2(Y, Y_BASE, 4) ", %[" #T0 "]\n"                        \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 4)"\n"                         \
+    "movq " PTR2(X, X_BASE, 5) ", %[" #T0 "]\n"                        \
+    "sbbq " PTR2(Y, Y_BASE, 5) ", %[" #T0 "]\n"                        \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 5)"\n"                         \
+    "movq " PTR2(X, X_BASE, 6) ", %[" #T0 "]\n"                        \
+    "sbbq " PTR2(Y, Y_BASE, 6) ", %[" #T0 "]\n"                        \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 6) "\n"                        \
+    "movq " PTR2(X, X_BASE, 7) ", %[" #T0 "]\n"                        \
+    "sbbq " PTR2(Y, Y_BASE, 7) ", %[" #T0 "]\n"                        \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 7)"\n"                         \
+    "mov $0, %[" #T0 "]\n"                                             \
+    "mov $0, %[" #T1 "]\n"                                             \
+    "mov $0, %[" #T2 "]\n"                                             \
+    "mov $0, %[" #T3 "]\n"                                             \
+    "cmovc %[p0], %[" #T0 "]\n"                                        \
+    "cmovc %[p1], %[" #T1 "]\n"                                        \
+    "cmovc %[p2], %[" #T2 "]\n"                                        \
+    "cmovc %[p3], %[" #T3 "]\n"                                        \
+    "addq %[" #T0 "], " PTR2(Z, Z_BASE, 4) "\n"                        \
+    "adcq %[" #T1 "], " PTR2(Z, Z_BASE, 5) "\n"                        \
+    "adcq %[" #T2 "], " PTR2(Z, Z_BASE, 6) "\n"                        \
+    "adcq %[" #T3 "], " PTR2(Z, Z_BASE, 7) "\n"
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline void multiply_4x4_x86(limb *z, const limb *x, const limb *y) {
@@ -495,20 +461,15 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
     inline void subtract_8_limbs_mod_x86(limb_array &z, const limb_array &x, const limb_array &y) {
         SET_STATIC_MODULUS_FROM_FIELD();
-        limb scratch, t0, t1, t2, t3, q0, q1, q2, q3;
+        limb t0, t1, t2, t3;
         asm volatile(
 
-            SUB_LIMBS_MOD(z, 0, x, 0, y, 0, scratch, t0, t1, t2, t3, q0, q1, q2, q3)
+            SUB_LIMBS_MOD(z, 0, x, 0, y, 0, t0, t1, t2, t3)
 
-            : [scratch]"=&r"(scratch),
-              [t0]"=&r"(t0),
+            : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
-              [t3]"=&r"(t3),
-              [q0]"=&r"(q0),
-              [q1]"=&r"(q1),
-              [q2]"=&r"(q2),
-              [q3]"=&r"(q3)
+              [t3]"=&r"(t3)
             : [z]"r"(z.data()),
               [x]"r"(x.data()),
               [y]"r"(y.data()),
@@ -659,22 +620,15 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     inline void fp2_sub_pre_x86(limb_array *data, const limb_array *other) {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb t0, t1, t2, t3;
-        limb q0, q1, q2, q3;
-        limb scratch;
         asm volatile(
 
-            SUB_LIMBS_MOD(data, 0, data, 0, other, 0, scratch, t0, t1, t2, t3, q0, q1, q2, q3)
-            SUB_LIMBS(data, 8, other, 8, scratch)
+            SUB_LIMBS_MOD(data, 0, data, 0, other, 0, t0, t1, t2, t3)
+            SUB_LIMBS(data, 8, other, 8, t0)
 
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
-              [t3]"=&r"(t3),
-              [q0]"=&r"(q0),
-              [q1]"=&r"(q1),
-              [q2]"=&r"(q2),
-              [q3]"=&r"(q3),
-              [scratch]"=&r"(scratch)
+              [t3]"=&r"(t3)
             : [data]"r"(data->data()),
               [other]"r"(other->data()),
               [p0]"m"(p0),
@@ -693,62 +647,23 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         //      = ac + adu + bcu + bdu^2
         //      = ac + (ad + bc)u - bd      # since u^2 = -1
         //      = (ac - bd) + (ad + bc)u
-        // Karatsuba computes the cross term with one product:
-        //   ad + bc = (a + b)(c + d) - ac - bd.
-        limb low, high, zero, d0, d1, d2, d3, tmp;
-        // limb_array scratch;
-        // asm volatile(
-        //     SCHOOLBOOK(z, 0, x0, 0, y0, 0)
-        //     SCHOOLBOOK(scratch, 0, x1, 0, y1, 0)
-        //     BRANCHY_SUB_LIMBS_MOD(z, 0, z, 0, scratch, 0, low, d0, d1, d2, d3)
-        //     SCHOOLBOOK(z, 8, x0, 0, y1, 0)
-        //     SCHOOLBOOK(scratch, 0, x1, 0, y0, 0)
-        //     ADD_LIMBS_MOD(z, 8, z, 8, scratch, 0, low, high, zero, tmp, d0, d1, d2, d3)
-        //     :   [low]"=&r"(low),
-        //         [high]"=&r"(high),
-        //         [zero]"=&r"(zero),
-        //         [d0]"=&r"(d0),
-        //         [d1]"=&r"(d1),
-        //         [d2]"=&r"(d2),
-        //         [d3]"=&r"(d3),
-        //         [tmp]"=&d"(tmp)
-        //     :   [x0]"r"(x[0]),
-        //         [x1]"r"(x[1]),
-        //         [y0]"r"(y[0]),
-        //         [y1]"r"(y[1]),
-        //         [z]"r"(z),
-        //         [scratch]"r"(&scratch),
-        //         [p0]"m"(p0),
-        //         [p1]"m"(p1),
-        //         [p2]"m"(p2),
-        //         [p3]"m"(p3)
-        //     : "cc", "memory"
-        // );
-        struct {
-            limb_array ac;
-            limb_array bd;
-            limb_array a_plus_b;
-            limb_array c_plus_d;
-        } scratch;
+        limb low, high, zero, d0, d1, d2, d3;
+        limb_array scratch;
         asm volatile(
-            SCHOOLBOOK(scratch, 0, x0, 0, y0, 0)
-            SCHOOLBOOK(scratch, 8, x1, 0, y1, 0)
-            BRANCHY_SUB_LIMBS_MOD(z, 0, scratch, 0, scratch, 8, low, d0, d1, d2, d3)
-            ADD_LOW_4_LIMBS(scratch, 16, x0, 0, x1, 0, low)
-            ADD_LOW_4_LIMBS(scratch, 24, y0, 0, y1, 0, low)
-            SCHOOLBOOK(z, 8, scratch, 16, scratch, 24)
-            SUB_LIMBS(z, 8, scratch, 0, low)
-            SUB_LIMBS(z, 8, scratch, 8, low)
-            :
-                [low]"=&r"(low),
+            SCHOOLBOOK(z, 0, x0, 0, y0, 0)
+            SCHOOLBOOK(scratch, 0, x1, 0, y1, 0)
+            SUB_LIMBS_MOD(z, 0, z, 0, scratch, 0, d0, d1, d2, d3)
+            SCHOOLBOOK(z, 8, x0, 0, y1, 0)
+            SCHOOLBOOK(scratch, 0, x1, 0, y0, 0)
+            ADD_LIMBS(z, 8, z, 8, scratch, 0, low)
+            :   [low]"=&r"(low),
                 [high]"=&r"(high),
                 [zero]"=&r"(zero),
                 [d0]"=&r"(d0),
                 [d1]"=&r"(d1),
                 [d2]"=&r"(d2),
                 [d3]"=&r"(d3)
-            :
-                [x0]"r"(x[0]),
+            :   [x0]"r"(x[0]),
                 [x1]"r"(x[1]),
                 [y0]"r"(y[0]),
                 [y1]"r"(y[1]),
