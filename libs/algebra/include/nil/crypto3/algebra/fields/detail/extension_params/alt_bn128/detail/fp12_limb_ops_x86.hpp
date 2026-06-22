@@ -3,6 +3,7 @@
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
 #include <boost/preprocessor.hpp>
 
+// clang-format off
 
 #define STR_IMPL(X) #X
 #define STR(X) STR_IMPL(X)
@@ -669,6 +670,59 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
                 [y1]"r"(y[1]),
                 [z]"r"(z),
                 [scratch]"r"(&scratch),
+                [p0]"m"(p0),
+                [p1]"m"(p1),
+                [p2]"m"(p2),
+                [p3]"m"(p3)
+            : "rdx", "cc", "memory"
+        );
+    }
+
+    template<class Field>
+    inline void fp2_add_mul_pre_x86(limb_array *z, const limb *const *a, const limb *const *b,
+                                                   const limb *const *c, const limb *const *d) {
+        SET_STATIC_MODULUS_FROM_FIELD();
+        limb low, high, zero, d0, d1, d2, d3;
+        struct {
+            limb_array x0;
+            limb_array x1;
+            limb_array y0;
+            limb_array y1;
+            limb_array tmp;
+        } data;
+        asm volatile(
+            ADD_LOW_4_LIMBS(data, 0, a0, 0, b0, 0, low)
+            ADD_LOW_4_LIMBS(data, 8, a1, 0, b1, 0, low)
+            ADD_LOW_4_LIMBS(data, 16, c0, 0, d0, 0, low)
+            ADD_LOW_4_LIMBS(data, 24, c1, 0, d1, 0, low)
+            :   [low]"=&r"(low)
+            :   [data]"r"(&data),
+                [a0]"r"(a[0]),
+                [a1]"r"(a[1]),
+                [b0]"r"(b[0]),
+                [b1]"r"(b[1]),
+                [c0]"r"(c[0]),
+                [c1]"r"(c[1]),
+                [d0]"r"(d[0]),
+                [d1]"r"(d[1])
+            : "cc", "memory"
+        );
+        asm volatile(
+            SCHOOLBOOK(z, 0, data, 0, data, 16)
+            SCHOOLBOOK(data, 32, data, 8, data, 24)
+            SUB_LIMBS_MOD(z, 0, z, 0, data, 32, d0, d1, d2, d3)
+            SCHOOLBOOK(z, 8, data, 0, data, 24)
+            SCHOOLBOOK(data, 32, data, 8, data, 16)
+            ADD_LIMBS(z, 8, z, 8, data, 32, low)
+            :   [low]"=&r"(low),
+                [high]"=&r"(high),
+                [zero]"=&r"(zero),
+                [d0]"=&r"(d0),
+                [d1]"=&r"(d1),
+                [d2]"=&r"(d2),
+                [d3]"=&r"(d3)
+            :   [data]"r"(&data),
+                [z]"r"(z),
                 [p0]"m"(p0),
                 [p1]"m"(p1),
                 [p2]"m"(p2),

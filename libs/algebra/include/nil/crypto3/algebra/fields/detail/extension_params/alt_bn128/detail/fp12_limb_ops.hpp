@@ -352,6 +352,33 @@ namespace nil {
                             fp2_mul_pre_portable<Field>(z, x, y);
 #endif
                         }
+
+                        template<class Field>
+                        inline void fp2_add_mul_pre_portable(limb_array *z, const limb *const *a, const limb *const *b,
+                                                             const limb *const *c, const limb *const *d) {
+                            limb x0[4], x1[4], y0[4], y1[4];
+                            add_limbs_portable<4>(x0, a[0], b[0]);
+                            add_limbs_portable<4>(x1, a[1], b[1]);
+                            add_limbs_portable<4>(y0, c[0], d[0]);
+                            add_limbs_portable<4>(y1, c[1], d[1]);
+                            limb *x[2] = {x0, x1};
+                            limb *y[2] = {y0, y1};
+                            fp2_mul_pre_portable<Field>(z, (const limb *const *)x, (const limb *const *)y);
+                        }
+
+                        template<class Field>
+                        inline void fp2_add_mul_pre(limb_array *z,
+                                                    const limb *const *a,
+                                                    const limb *const *b,
+                                                    const limb *const *c,
+                                                    const limb *const *d) {
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+                            fp2_add_mul_pre_x86<Field>(z, a, b, c, d);
+#else
+                            fp2_add_mul_pre_portable<Field>(z, a, b, c, d);
+#endif
+                        }
+
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail
             }    // namespace fields

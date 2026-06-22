@@ -126,6 +126,12 @@ namespace nil {
                                 alt_bn128_fp12_limb_ops::fp2_sub_pre<base_field_type>(data.data(), other.data.data());
                             }
 
+                            static void add_mul_pre(fp2_dbl &result, const fp2_view &a, const fp2_view &b,
+                                                    const fp2_view &c, const fp2_view &d) {
+                                alt_bn128_fp12_limb_ops::fp2_add_mul_pre<base_field_type>(result.data.data(), a.ptrs(),
+                                                                                          b.ptrs(), c.ptrs(), d.ptrs());
+                            }
+
                             static void mul_pre(fp2_dbl &result, const fp2_view &x, const fp2_view &y) {
                                 alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(result.data.data(), x.ptrs(),
                                                                                       y.ptrs());
@@ -251,9 +257,9 @@ namespace nil {
                                 fp2_dbl &za = result.data[0];
                                 fp2_dbl &zb = result.data[1];
                                 fp2_dbl &zc = result.data[2];
-                                fp2_dbl::mul_pre(za, b.add_pre(c), e.add_pre(f));
-                                fp2_dbl::mul_pre(zb, a.add_pre(b), e.add_pre(d));
-                                fp2_dbl::mul_pre(zc, a.add_pre(c), d.add_pre(f));
+                                fp2_dbl::add_mul_pre(za, b, c, e, f);
+                                fp2_dbl::add_mul_pre(zb, a, b, e, d);
+                                fp2_dbl::add_mul_pre(zc, a, c, d, f);
                                 // Direct products reused by the three Karatsuba corrections.
                                 fp2_dbl be, cf, ad;
                                 fp2_dbl::mul_pre(be, b, e);
