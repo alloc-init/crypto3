@@ -326,10 +326,6 @@ namespace nil {
 
                         template<class Field>
                         inline void fp2_mul_pre_portable(limb_array *z, const limb *const *x, const limb *const *y) {
-                            const limb *a = x[0];
-                            const limb *b = x[1];
-                            const limb *c = y[0];
-                            const limb *d = y[1];
                             // For x = a + bu and y = c + du:
                             //   xy = (a + bu) * (c + du)
                             //      = ac + adu + bcu + bdu^2
@@ -338,10 +334,10 @@ namespace nil {
                             // Karatsuba computes the cross term with one product:
                             //   ad + bc = (a + b)(c + d) - ac - bd.
                             limb_array ac, bd, a_plus_b, c_plus_d;
-                            multiply_4x4(ac.data(), a, c);
-                            multiply_4x4(bd.data(), b, d);
-                            add_limbs_portable<8>(a_plus_b.data(), a, b);
-                            add_limbs_portable<8>(c_plus_d.data(), c, d);
+                            multiply_4x4(ac.data(), x[0], y[0]);
+                            multiply_4x4(bd.data(), x[1], y[1]);
+                            add_limbs_portable<4>(a_plus_b.data(), x[0], x[1]);
+                            add_limbs_portable<4>(c_plus_d.data(), y[0], y[1]);
                             subtract_8_limbs_mod<Field>(z[0], ac, bd);
                             multiply_4x4(z[1].data(), a_plus_b.data(), c_plus_d.data());
                             subtract_limbs_portable<8>(z[1].data(), z[1].data(), ac.data());
