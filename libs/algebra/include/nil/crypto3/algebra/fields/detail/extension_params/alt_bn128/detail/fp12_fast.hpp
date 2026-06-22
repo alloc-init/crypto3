@@ -28,7 +28,7 @@ namespace nil {
 
                         // fp2 before multiplying - equivalent to 2 regular Fp's
                         struct fp2_base {
-                            std::array<limb_array, 2> data;
+                            std::array<limb_array, 2> data = {};
 
                             fp2_base() = default;
 
