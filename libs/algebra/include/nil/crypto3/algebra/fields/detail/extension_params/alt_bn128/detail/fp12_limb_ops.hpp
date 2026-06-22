@@ -78,7 +78,6 @@ namespace nil {
                                 carry = (limb)(sum >> limb_bits);
                             }
                             tmp[base_value_limb_count] = carry;
-
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // do one pass of normalization on lower limbs
                             if (ge_modulus(tmp, p.data())) {

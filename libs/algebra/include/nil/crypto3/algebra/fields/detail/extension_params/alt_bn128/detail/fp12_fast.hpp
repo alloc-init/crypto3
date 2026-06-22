@@ -26,7 +26,7 @@ namespace nil {
 
                         // fp2 before multiplying - equivalent to 2 regular Fp's
                         struct fp2_base {
-                            limb_array data = {};    // 2 4-limb coeffs
+                            limb_array data;    // 2 4-limb coeffs
 
                             fp2_base() = default;
 
@@ -39,16 +39,14 @@ namespace nil {
                                 }
                             }
 
-                            fp2_base &operator+=(const fp2_base &other) {
-                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(data.data(), data.data(),
-                                                                                           other.data.data());
-                                return *this;
+                            static void add_mod(fp2_base &z, const fp2_base &x, const fp2_base &y) {
+                                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(z.data.data(), x.data.data(),
+                                                                                           y.data.data());
                             }
 
-                            fp2_base operator+(const fp2_base &other) const {
-                                fp2_base result(*this);
-                                result += other;
-                                return result;
+                            fp2_base &operator+=(const fp2_base &other) {
+                                fp2_base::add_mod(*this, *this, other);
+                                return *this;
                             }
                         };
 
@@ -60,19 +58,27 @@ namespace nil {
 
                             fp2_dbl() = default;
 
+                            static void add_mod(fp2_dbl &z, const fp2_dbl &x, const fp2_dbl &y) {
+                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(z.data[0], x.data[0],
+                                                                                          y.data[0]);
+                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(z.data[1], x.data[1],
+                                                                                          y.data[1]);
+                            }
+
+                            static void sub_mod(fp2_dbl &z, const fp2_dbl &x, const fp2_dbl &y) {
+                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(z.data[0], x.data[0],
+                                                                                               y.data[0]);
+                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(z.data[1], x.data[1],
+                                                                                               y.data[1]);
+                            }
+
                             fp2_dbl &operator+=(const fp2_dbl &other) {
-                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(data[0], data[0],
-                                                                                          other.data[0]);
-                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(data[1], data[1],
-                                                                                          other.data[1]);
+                                fp2_dbl::add_mod(*this, *this, other);
                                 return *this;
                             }
 
                             fp2_dbl &operator-=(const fp2_dbl &other) {
-                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(data[0], data[0],
-                                                                                               other.data[0]);
-                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(data[1], data[1],
-                                                                                               other.data[1]);
+                                fp2_dbl::sub_mod(*this, *this, other);
                                 return *this;
                             }
 
@@ -137,12 +143,16 @@ namespace nil {
                                 return {data[0], data[1], data[2]};
                             }
 
+                            static void add_mod(fp6_base &z, const fp6_base &x, const fp6_base &y) {
+                                fp2_base::add_mod(z.data[0], x.data[0], y.data[0]);
+                                fp2_base::add_mod(z.data[1], x.data[1], y.data[1]);
+                                fp2_base::add_mod(z.data[2], x.data[2], y.data[2]);
+                            }
+
                             fp6_base operator+(const fp6_base &other) const {
-                                fp6_base ret;
-                                ret.data[0] = data[0] + other.data[0];
-                                ret.data[1] = data[1] + other.data[1];
-                                ret.data[2] = data[2] + other.data[2];
-                                return ret;
+                                fp6_base result;
+                                fp6_base::add_mod(result, *this, other);
+                                return result;
                             }
                         };
 
@@ -226,6 +236,14 @@ namespace nil {
                                 zc += be;
                             }
 
+                            static void add_mul_pre(fp6_dbl &result, const fp6_base &a, const fp6_base &b,
+                                                    const fp6_base &c, const fp6_base &d) {
+                                fp6_base x, y;
+                                fp6_base::add_mod(x, a, b);
+                                fp6_base::add_mod(y, c, d);
+                                fp6_dbl::mul_pre(result, x, y);
+                            }
+
                             void to_underlying(underlying_type &ret) const {
                                 data[0].to_non_residue(ret.data[0]);
                                 data[1].to_non_residue(ret.data[1]);
@@ -280,7 +298,7 @@ namespace nil {
                             fp6_dbl ac, bd, z;
                             fp6_dbl::mul_pre(ac, a, c);
                             fp6_dbl::mul_pre(bd, b, d);
-                            fp6_dbl::mul_pre(z, a + b, c + d);
+                            fp6_dbl::add_mul_pre(z, a, b, c, d);
                             z -= ac;    // first correction (see above)
                             z -= bd;    // second correction
                             Fp12Value ret;
