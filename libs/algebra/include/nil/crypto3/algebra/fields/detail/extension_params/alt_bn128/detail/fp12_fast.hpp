@@ -121,24 +121,6 @@ namespace nil {
                                 return *this;
                             }
 
-                            fp2_dbl operator+(const fp2_dbl &other) const {
-                                fp2_dbl ret;
-                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(ret.data[0], data[0],
-                                                                                          other.data[0]);
-                                alt_bn128_fp12_limb_ops::add_8_limbs_mod<base_field_type>(ret.data[1], data[1],
-                                                                                          other.data[1]);
-                                return ret;
-                            }
-
-                            fp2_dbl operator-(const fp2_dbl &other) const {
-                                fp2_dbl ret;
-                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(ret.data[0], data[0],
-                                                                                               other.data[0]);
-                                alt_bn128_fp12_limb_ops::subtract_8_limbs_mod<base_field_type>(ret.data[1], data[1],
-                                                                                               other.data[1]);
-                                return ret;
-                            }
-
                             // Subtraction where the result is known positive - can avoid correction
                             void sub_pre(const fp2_dbl &other) {
                                 alt_bn128_fp12_limb_ops::fp2_sub_pre<base_field_type>(data.data(), other.data.data());
