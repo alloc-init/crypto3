@@ -22,9 +22,9 @@
 #include <boost/math/constants/constants.hpp>
 #include <boost/noncopyable.hpp>
 
-//#define USE_CPP_BIN_FLOAT
+// #define USE_CPP_BIN_FLOAT
 #define USE_CPP_DEC_FLOAT
-//#define USE_MPFR
+// #define USE_MPFR
 
 #if !defined(DIGIT_COUNT)
 #define DIGIT_COUNT 100
@@ -46,8 +46,7 @@ typedef boost::multiprecision::number<boost::multiprecision::cpp_bin_float<DIGIT
 typedef boost::multiprecision::number<boost::multiprecision::cpp_dec_float<DIGIT_COUNT + 10>> mp_type;
 #elif defined(USE_MPFR)
 #include <nil/crypto3/multiprecision/mpfr.hpp>
-typedef boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<DIGIT_COUNT + 10>>
-    mp_type;
+typedef boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<DIGIT_COUNT + 10>> mp_type;
 #else
 #error no multiprecision floating type is defined
 #endif

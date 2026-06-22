@@ -54,7 +54,7 @@ namespace nil {
                 return o_begin;
             }
         }    // namespace block
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_COPY_N_IF_HPP

@@ -45,7 +45,7 @@ namespace nil {
 
                             using field_value_type = typename ElementType::field_type::value_type;
 
-                            if (! first.is_zero()) {
+                            if (!first.is_zero()) {
 
                                 const field_value_type XX = (first.X).squared();    // XX  = X1^2
                                 const field_value_type ZZ = (first.Z).squared();    // ZZ  = Z1^2
@@ -58,8 +58,8 @@ namespace nil {
                                 const field_value_type R = (first.Y) * s;    // R   = Y1*s
                                 const field_value_type RR = R.squared();     // RR  = R^2
                                 const field_value_type B =
-                                    ((first.X) + R).squared() - XX - RR;                   // B   = (X1+R)^2 - XX - RR
-                                const field_value_type h = w.squared() - B.doubled();      // h   = w^2 - 2*B
+                                    ((first.X) + R).squared() - XX - RR;                 // B   = (X1+R)^2 - XX - RR
+                                const field_value_type h = w.squared() - B.doubled();    // h   = w^2 - 2*B
 
                                 first.X = h * s;                         // X3  = h*s
                                 first.Y = w * (B - h) - RR.doubled();    // Y3  = w*(B-h) - 2*RR
@@ -69,8 +69,8 @@ namespace nil {
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_PROJECTIVE_WITH_A4_MINUS_3_DBL_2007_BL_HPP

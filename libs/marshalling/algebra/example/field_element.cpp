@@ -36,16 +36,15 @@
 #include "nil/crypto3/algebra/fields/bls12/base_field.hpp"
 
 template<typename unit>
-void print_buffer(std::vector<unit> const& v)
-{
-    for(size_t i = 0; i < v.size(); ++i) {
+void print_buffer(std::vector<unit> const& v) {
+    for (size_t i = 0; i < v.size(); ++i) {
         std::cout << std::hex << std::setw(2) << std::setfill('0') << (unsigned int)v[i] << " ";
-        if ( i % 16 == 15 ) std::cout << std::endl;
+        if (i % 16 == 15)
+            std::cout << std::endl;
     }
 }
 
-int main()
-{
+int main() {
     using g1_base_field = nil::crypto3::algebra::curves::mnt4<298>::g1_type<>::field_type;
     using g2_base_field = nil::crypto3::algebra::curves::mnt4<298>::g2_type<>::field_type;
 
@@ -54,7 +53,7 @@ int main()
     using unit_type = unsigned char;
 
     nil::marshalling::status_type status;
-    typename g1_base_field::value_type x1 { 0xDEADBEEF };
+    typename g1_base_field::value_type x1 {0xDEADBEEF};
     std::vector<unit_type> cv_le = nil::marshalling::pack<le>(x1, status);
     std::cout << "Marshalling x1: " << x1 << ": " << make_error_code(status) << std::endl;
     std::cout << "Little endian:" << std::endl;
@@ -67,7 +66,7 @@ int main()
     print_buffer(cv_be);
     std::cout << std::endl;
 
-    typename g2_base_field::value_type x2 { 0xC001CAFE, 0x8badf00d };
+    typename g2_base_field::value_type x2 {0xC001CAFE, 0x8badf00d};
 
     std::vector<unit_type> cv2_le = nil::marshalling::pack<le>(x2, status);
     std::cout << "Marshalling x2: " << x2 << ": " << make_error_code(status) << std::endl;
@@ -82,5 +81,4 @@ int main()
     std::cout << std::endl;
 
     return 0;
-
 }

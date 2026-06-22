@@ -83,7 +83,8 @@ namespace nil {
                             seen_shares++;
                         }
 
-                        inline void resolve_type(const public_share_sss<scheme_type> &public_share, std::nullptr_t = nullptr) {
+                        inline void resolve_type(const public_share_sss<scheme_type> &public_share,
+                                                 std::nullptr_t = nullptr) {
                             processing_mode_type::update(acc, public_share);
                             seen_shares++;
                         }
@@ -126,9 +127,9 @@ namespace nil {
                         return boost::accumulators::extract_result<tag::reconstruct<ProcessingMode>>(acc);
                     }
                 }    // namespace extract
-            }        // namespace accumulators
-        }            // namespace pubkey
-    }                // namespace crypto3
+            }    // namespace accumulators
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_PUBKEY_SSS_RECONSTRUCT_HPP

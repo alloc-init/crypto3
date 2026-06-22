@@ -46,7 +46,7 @@ namespace nil {
                     using curve_type = curves::edwards<183>;
 
                     using params_type = detail::pairing_params<curve_type>;
-                    typedef detail::types_policy <curve_type> policy_type;
+                    typedef detail::types_policy<curve_type> policy_type;
 
                     using base_field_type = typename curve_type::base_field_type;
                     using g1_type = typename curve_type::template g1_type<>;
@@ -161,8 +161,7 @@ namespace nil {
 
                         bool found_one = false;
                         for (long i = params_type::scalar_field_bits; i >= 0; --i) {
-                            const bool bit =
-                                    boost::multiprecision::bit_test(params_type::scalar_field_modulus, i);
+                            const bool bit = boost::multiprecision::bit_test(params_type::scalar_field_modulus, i);
                             if (!found_one) {
                                 /* this skips the MSB itself */
                                 found_one |= bit;
@@ -187,7 +186,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_EDWARDS_183_TATE_PRECOMPUTE_G1_HPP

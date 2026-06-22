@@ -174,8 +174,7 @@ namespace nil {
                     template<typename InputIterator>
                     itr_codec_impl(InputIterator first, InputIterator last, OutputIterator out,
                                    accumulator_set_type &&ise) :
-                        CodecStateImpl(std::forward<accumulator_set_type>(ise)),
-                        out(std::move(out)) {
+                        CodecStateImpl(std::forward<accumulator_set_type>(ise)), out(std::move(out)) {
                         BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<InputIterator>));
 
                         typedef typename std::iterator_traits<InputIterator>::value_type value_type;
@@ -200,8 +199,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace codec
-    }            // namespace crypto3
+        }    // namespace codec
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CODEC_VALUE_HPP

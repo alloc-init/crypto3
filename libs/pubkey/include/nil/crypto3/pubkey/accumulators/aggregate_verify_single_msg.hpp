@@ -65,8 +65,8 @@ namespace nil {
                         typedef typename processing_mode_type::result_type result_type;
 
                         template<typename Args>
-                        aggregate_verify_single_msg_impl(const Args &args) : signature(
-                            args[boost::accumulators::sample | signature_type::zero()]) {
+                        aggregate_verify_single_msg_impl(const Args &args) :
+                            signature(args[boost::accumulators::sample | signature_type::zero()]) {
                         }
 
                         template<typename Args>
@@ -106,7 +106,7 @@ namespace nil {
                         signature_type signature;
                         mutable accumulator_type acc;
                     };
-                } // namespace impl
+                }    // namespace impl
 
                 namespace tag {
                     template<typename ProcessingMode>
@@ -116,24 +116,22 @@ namespace nil {
                         /// INTERNAL ONLY
                         ///
 
-                        typedef boost::mpl::always<impl::aggregate_verify_single_msg_impl<
-                            processing_mode_type>>
-                        impl;
+                        typedef boost::mpl::always<impl::aggregate_verify_single_msg_impl<processing_mode_type>> impl;
                     };
-                } // namespace tag
+                }    // namespace tag
 
                 namespace extract {
                     template<typename ProcessingMode, typename AccumulatorSet>
-                    typename boost::mpl::apply<AccumulatorSet, tag::aggregate_verify_single_msg<
-                        ProcessingMode>>::type::result_type
-                    aggregate_verify_single_msg(const AccumulatorSet &acc) {
+                    typename boost::mpl::apply<AccumulatorSet,
+                                               tag::aggregate_verify_single_msg<ProcessingMode>>::type::result_type
+                        aggregate_verify_single_msg(const AccumulatorSet &acc) {
                         return boost::accumulators::extract_result<tag::aggregate_verify_single_msg<ProcessingMode>>(
                             acc);
                     }
-                } // namespace extract
-            } // namespace accumulators
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+                }    // namespace extract
+            }    // namespace accumulators
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_PUBKEY_AGGREGATE_VERIFY_SINGLE_MSG_HPP

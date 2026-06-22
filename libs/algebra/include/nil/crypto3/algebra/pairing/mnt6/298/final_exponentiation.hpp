@@ -86,7 +86,8 @@ namespace nil {
                     }
 
                 public:
-                    static std::optional<typename gt_type::value_type> process(const typename gt_type::value_type &elt) {
+                    static std::optional<typename gt_type::value_type>
+                        process(const typename gt_type::value_type &elt) {
 
                         if (elt.is_zero()) {
                             return std::nullopt;
@@ -101,7 +102,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_MNT6_298_FINAL_EXPONENTIATION_HPP

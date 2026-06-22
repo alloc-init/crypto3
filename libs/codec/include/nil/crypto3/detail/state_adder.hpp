@@ -40,7 +40,7 @@ namespace nil {
             };
 
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_DETAIL_STATE_ADDER_HPP

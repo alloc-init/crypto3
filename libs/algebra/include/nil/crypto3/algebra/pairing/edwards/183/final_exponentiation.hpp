@@ -49,13 +49,13 @@ namespace nil {
                     using gt_type = typename curve_type::gt_type;
 
                     static typename gt_type::value_type
-                    final_exponentiation_last_chunk(const typename gt_type::value_type &elt,
-                                                    const typename gt_type::value_type &elt_inv) {
+                        final_exponentiation_last_chunk(const typename gt_type::value_type &elt,
+                                                        const typename gt_type::value_type &elt_inv) {
 
                         const typename gt_type::value_type elt_q = elt.Frobenius_map(1);
 
                         typename gt_type::value_type w1_part =
-                                elt_q.cyclotomic_exp(params_type::final_exponent_last_chunk_w1);
+                            elt_q.cyclotomic_exp(params_type::final_exponent_last_chunk_w1);
                         typename gt_type::value_type w0_part = gt_type::value_type::zero();
 
                         if (params_type::final_exponent_last_chunk_is_w0_neg) {
@@ -68,8 +68,8 @@ namespace nil {
                     }
 
                     static typename gt_type::value_type
-                    final_exponentiation_first_chunk(const typename gt_type::value_type &elt,
-                                                     const typename gt_type::value_type &elt_inv) {
+                        final_exponentiation_first_chunk(const typename gt_type::value_type &elt,
+                                                         const typename gt_type::value_type &elt_inv) {
 
                         /* (q^3-1)*(q+1) */
 
@@ -90,14 +90,14 @@ namespace nil {
 
                         const typename gt_type::value_type elt_inv = elt.inversed();
                         const typename gt_type::value_type elt_to_first_chunk =
-                                final_exponentiation_first_chunk(elt, elt_inv);
+                            final_exponentiation_first_chunk(elt, elt_inv);
                         const typename gt_type::value_type elt_inv_to_first_chunk =
-                                final_exponentiation_first_chunk(elt_inv, elt);
+                            final_exponentiation_first_chunk(elt_inv, elt);
                         return final_exponentiation_last_chunk(elt_to_first_chunk, elt_inv_to_first_chunk);
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_EDWARDS_183_FINAL_EXPONENTIATION_HPP

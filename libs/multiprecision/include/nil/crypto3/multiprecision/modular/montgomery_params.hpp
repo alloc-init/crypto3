@@ -45,10 +45,9 @@ namespace boost {
 
             protected:
                 size_t m_p_words;
-
             };
         }    // namespace backends
-    }   // namespace multiprecision
-}   // namespace boost
+    }    // namespace multiprecision
+}    // namespace boost
 
 #endif

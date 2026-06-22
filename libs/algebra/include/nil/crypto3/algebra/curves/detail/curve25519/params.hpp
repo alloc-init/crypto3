@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/curves/forms.hpp>
 #include <nil/crypto3/algebra/curves/detail/curve25519/types.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -85,18 +83,18 @@ namespace nil {
 #else
                         constexpr static typename curve25519_types::integral_type a = typename curve25519_types::integral_type(
                             0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffec_cppui_modular255);    ///< coefficient
-                                                                                                             ///< of
-                                                                                                             ///< Twisted
-                                                                                                             ///< Edwards
-                                                                                                             ///< curves
-                                                                                                             ///< $a*x^2+y^2=1+d*x^2*y^2$
+                                                                                                                     ///< of
+                                                                                                                     ///< Twisted
+                                                                                                                     ///< Edwards
+                                                                                                                     ///< curves
+                                                                                                                     ///< $a*x^2+y^2=1+d*x^2*y^2$
                         constexpr static typename curve25519_types::integral_type d = typename curve25519_types::integral_type(
                             0x52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3_cppui_modular255);    ///< coefficient
-                                                                                                             ///< of
-                                                                                                             ///< Twisted
-                                                                                                             ///< Edwards
-                                                                                                             ///< curves
-                                                                                                             ///< $a*x^2+y^2=1+d*x^2*y^2$
+                                                                                                                     ///< of
+                                                                                                                     ///< Twisted
+                                                                                                                     ///< Edwards
+                                                                                                                     ///< curves
+                                                                                                                     ///< $a*x^2+y^2=1+d*x^2*y^2$
 #endif
                     };
 
@@ -147,9 +145,9 @@ namespace nil {
                         curve25519_g1_params<forms::twisted_edwards>::one_fill;
 #endif
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_CURVE25519_PARAMS_HPP

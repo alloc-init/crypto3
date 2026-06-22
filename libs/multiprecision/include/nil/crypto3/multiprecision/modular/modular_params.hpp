@@ -14,7 +14,7 @@
 #include <nil/crypto3/multiprecision/modular/montgomery_params.hpp>
 #include <nil/crypto3/multiprecision/modular/barrett_params.hpp>
 
-namespace boost {   
+namespace boost {
     namespace multiprecision {
         namespace backends {
 
@@ -26,9 +26,8 @@ namespace boost {
                 }
 
                 template<typename Number>
-                explicit modular_params(const Backend& p)
-                    : backends::montgomery_params<Backend>(p),
-                      backends::barrett_params<Backend>(p) {
+                explicit modular_params(const Backend& p) :
+                    backends::montgomery_params<Backend>(p), backends::barrett_params<Backend>(p) {
                 }
 
                 modular_params& operator=(const modular_params<Backend>& v) {
@@ -100,8 +99,8 @@ namespace boost {
                     return o;
                 }
             };
-        }  // namespace backends
-    }   // namespace multiprecision
-}   // namespace boost
+        }    // namespace backends
+    }    // namespace multiprecision
+}    // namespace boost
 
 #endif    //_MULTIPRECISION_MODULAR_PARAMS_HPP

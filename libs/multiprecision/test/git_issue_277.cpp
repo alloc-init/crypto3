@@ -6,35 +6,31 @@
 #include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
 #include "test.hpp"
 
-template <class I>
-void test()
-{
-   I val(1);
-   val <<= 512;
-   I t(val);
-   ++t;
-   BOOST_CHECK_EQUAL(t - val, 1);
-   --t;
-   BOOST_CHECK_EQUAL(t, val);
-   --t;
-   BOOST_CHECK_EQUAL(val - t, 1);
+template<class I>
+void test() {
+    I val(1);
+    val <<= 512;
+    I t(val);
+    ++t;
+    BOOST_CHECK_EQUAL(t - val, 1);
+    --t;
+    BOOST_CHECK_EQUAL(t, val);
+    --t;
+    BOOST_CHECK_EQUAL(val - t, 1);
 
-   val = -val;
-   t   = val;
-   --t;
-   BOOST_CHECK_EQUAL(t - val, -1);
-   ++t;
-   BOOST_CHECK_EQUAL(t, val);
-   ++t;
-   BOOST_CHECK_EQUAL(val - t, -1);
+    val = -val;
+    t = val;
+    --t;
+    BOOST_CHECK_EQUAL(t - val, -1);
+    ++t;
+    BOOST_CHECK_EQUAL(t, val);
+    ++t;
+    BOOST_CHECK_EQUAL(val - t, -1);
 }
 
-int main()
-{
-   test<boost::multiprecision::cpp_int>();
-   test<boost::multiprecision::int1024_t>();
-   test<boost::multiprecision::checked_int1024_t>();
-   return boost::report_errors();
+int main() {
+    test<boost::multiprecision::cpp_int>();
+    test<boost::multiprecision::int1024_t>();
+    test<boost::multiprecision::checked_int1024_t>();
+    return boost::report_errors();
 }
-
-

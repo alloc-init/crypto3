@@ -34,7 +34,7 @@ using namespace nil::crypto3::algebra;
 int main() {
 
     auto G = curves::pallas::g1_type<>::value_type::one();
-    auto A = G+G;
+    auto A = G + G;
     auto B = A;
     B.double_inplace();
     auto C = A + B;
@@ -45,10 +45,10 @@ int main() {
     std::cout << "B = 2*A : " << B << std::endl;
     std::cout << "C = A + B : " << C << std::endl;
     std::cout << "D = C - G : " << D << std::endl;
-    std::cout << "5*G : " << G*5 << std::endl;
-    std::cout << "5*G == D? : " << std::boolalpha << (D == G*5) << std::endl;
+    std::cout << "5*G : " << G * 5 << std::endl;
+    std::cout << "5*G == D? : " << std::boolalpha << (D == G * 5) << std::endl;
 
     std::cout << "D   (affine) : " << D.to_affine() << std::endl;
-    std::cout << "5*G (affine) : " << (G*5).to_affine() << std::endl;
+    std::cout << "5*G (affine) : " << (G * 5).to_affine() << std::endl;
     return 0;
 }

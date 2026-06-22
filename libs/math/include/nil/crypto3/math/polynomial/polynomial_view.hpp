@@ -40,7 +40,7 @@ namespace nil {
             class polynomial_view {
                 typedef std::vector<FieldValueType, Allocator> container_type;
 
-                container_type &it;
+                container_type& it;
 
             public:
                 typedef typename container_type::value_type value_type;
@@ -56,10 +56,10 @@ namespace nil {
                 typedef typename container_type::reverse_iterator reverse_iterator;
                 typedef typename container_type::const_reverse_iterator const_reverse_iterator;
 
-                polynomial_view(container_type &c) : it(c) {}
+                polynomial_view(container_type& c) : it(c) {
+                }
 
-                polynomial_view(const container_type &c) : it(c) {
-
+                polynomial_view(const container_type& c) : it(c) {
                 }
 
                 ~polynomial_view() = default;
@@ -67,12 +67,11 @@ namespace nil {
                 polynomial_view(const polynomial_view& x) : it(x.it) {
                 }
 
-                polynomial_view(polynomial_view&& x) BOOST_NOEXCEPT(std::is_nothrow_move_constructible<allocator_type>::value) :
-                    it(x.it) {
+                polynomial_view(polynomial_view&& x)
+                    BOOST_NOEXCEPT(std::is_nothrow_move_constructible<allocator_type>::value) : it(x.it) {
                 }
 
-                polynomial_view(container_type &&c) : it(&c) {
-
+                polynomial_view(container_type&& c) : it(&c) {
                 }
 
                 polynomial_view& operator=(const polynomial_view& x) {
@@ -351,9 +350,10 @@ namespace nil {
                     return *this;
                 }
 
-//                polynomial_view operator-() const {
+                //                polynomial_view operator-() const {
                 void neg() {
-                    nil::crypto3::parallel_transform(this->begin(), this->end(), this->begin(), std::negate<FieldValueType>());
+                    nil::crypto3::parallel_transform(this->begin(), this->end(), this->begin(),
+                                                     std::negate<FieldValueType>());
                 }
 
                 /**
@@ -385,26 +385,27 @@ namespace nil {
                     std::size_t shift;
 
                     while (r_deg >= d && !r.is_zero()) {
-                      if (r_deg >= d) {
-                          shift = r_deg - d;
-                      } else {
-                          shift = 0;
-                      }
+                        if (r_deg >= d) {
+                            shift = r_deg - d;
+                        } else {
+                            shift = 0;
+                        }
 
-                      FieldValueType lead_coeff = r.back() * c;
+                        FieldValueType lead_coeff = r.back() * c;
 
-                      q[shift] += lead_coeff;
+                        q[shift] += lead_coeff;
 
-                      if (other.size() + shift + 1 > r.size()) {
-                          r.resize(other.size() + shift + 1);
-                      }
-                      auto glambda = [=](const FieldValueType& x, const FieldValueType& y) {
-                          return y - (x * lead_coeff);
-                      };
-                      nil::crypto3::parallel_transform(other.begin(), other.end(), r.begin() + shift, r.begin() + shift, glambda);
-                      r.condense();
+                        if (other.size() + shift + 1 > r.size()) {
+                            r.resize(other.size() + shift + 1);
+                        }
+                        auto glambda = [=](const FieldValueType& x, const FieldValueType& y) {
+                            return y - (x * lead_coeff);
+                        };
+                        nil::crypto3::parallel_transform(other.begin(), other.end(), r.begin() + shift,
+                                                         r.begin() + shift, glambda);
+                        r.condense();
 
-                      r_deg = r.size() - 1;
+                        r_deg = r.size() - 1;
                     }
                     nil::crypto3::math::condense(q);
 
@@ -434,7 +435,8 @@ namespace nil {
                         auto glambda = [=](const FieldValueType& x, const FieldValueType& y) {
                             return y - (x * lead_coeff);
                         };
-                        nil::crypto3::parallel_transform(other.begin(), other.end(), this->begin() + shift, this->begin() + shift, glambda);
+                        nil::crypto3::parallel_transform(other.begin(), other.end(), this->begin() + shift,
+                                                         this->begin() + shift, glambda);
                         this->condense();
 
                         r_deg = this->size() - 1;
@@ -443,7 +445,7 @@ namespace nil {
                 }
             };
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MATH_POLYNOMIAL_POLYNOM_VIEW_HPP

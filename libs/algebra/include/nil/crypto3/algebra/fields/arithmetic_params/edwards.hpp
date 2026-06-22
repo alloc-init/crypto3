@@ -32,8 +32,6 @@
 #include <nil/crypto3/algebra/fields/edwards/base_field.hpp>
 #include <nil/crypto3/algebra/fields/edwards/scalar_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -206,8 +204,8 @@ namespace nil {
                     arithmetic_params<edwards_scalar_field<183>>::group_order;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_EDWARDS_ARITHMETIC_PARAMS_HPP

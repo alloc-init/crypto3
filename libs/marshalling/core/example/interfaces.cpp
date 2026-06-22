@@ -62,7 +62,8 @@ void result_as_output() {
     std::cout << "Using input as parameter: " << equal(result1.begin(), result1.end(), out.begin()) << std::endl;
 
     T result2 = pack(in.begin(), in.end(), status);
-    std::cout << "Using input iterators as parameters: " << equal(result2.begin(), result2.end(), out.begin()) << std::endl;
+    std::cout << "Using input iterators as parameters: " << equal(result2.begin(), result2.end(), out.begin())
+              << std::endl;
 }
 
 void result_as_parameter() {
@@ -74,7 +75,8 @@ void result_as_parameter() {
 
     T result2;
     status = pack(in.begin(), in.end(), result2);
-    std::cout << "Using input iterators as parameters: " << equal(result2.begin(), result2.end(), out.begin()) << std::endl;
+    std::cout << "Using input iterators as parameters: " << equal(result2.begin(), result2.end(), out.begin())
+              << std::endl;
 }
 
 void result_as_iterator_parameter() {
@@ -83,22 +85,26 @@ void result_as_iterator_parameter() {
     T result1(out.size());
     typename T::iterator itr1 = result1.begin();
     itr1 = pack(in, result1.begin(), status);
-    std::cout << "Using input as parameter, output as begin iterator: " << equal(result1.begin(), result1.end(), out.begin()) << std::endl;
+    std::cout << "Using input as parameter, output as begin iterator: "
+              << equal(result1.begin(), result1.end(), out.begin()) << std::endl;
 
     T result2(out.size());
     typename T::iterator itr2 = result2.begin();
     itr2 = pack(in.begin(), in.end(), result2.begin(), status);
-    std::cout << "Using input iterators as parameters, output as begin iterator: " << equal(result2.begin(), result2.end(), out.begin()) << std::endl;
+    std::cout << "Using input iterators as parameters, output as begin iterator: "
+              << equal(result2.begin(), result2.end(), out.begin()) << std::endl;
 
     T result3(out.size());
     typename T::iterator itr3 = result1.begin();
     status = pack(in, result3.begin());
-    std::cout << "Using input as parameter, output as begin iterator: " << equal(result3.begin(), result3.end(), out.begin()) << std::endl;
+    std::cout << "Using input as parameter, output as begin iterator: "
+              << equal(result3.begin(), result3.end(), out.begin()) << std::endl;
 
     T result4(out.size());
     typename T::iterator itr4 = result2.begin();
     status = pack(in.begin(), in.end(), result4.begin());
-    std::cout << "Using input iterators as parameters, output as begin iterator: " << equal(result4.begin(), result4.end(), out.begin()) << std::endl;
+    std::cout << "Using input iterators as parameters, output as begin iterator: "
+              << equal(result4.begin(), result4.end(), out.begin()) << std::endl;
 }
 
 int main(int argc, char *argv[]) {

@@ -78,8 +78,7 @@ bench_result run_stage(std::size_t iters, std::size_t warmup, Body&& body) {
 
 static void print_stage(const std::string& name, const bench_result& result) {
     std::cout << std::left << std::setw(24) << name << " total=" << std::right << std::setw(10)
-              << result.total_ns * 1e-9 << " s"
-              << " per=" << std::setw(10) << result.ns_per << " ns"
+              << result.total_ns * 1e-9 << " s" << " per=" << std::setw(10) << result.ns_per << " ns"
               << " throughput=" << std::setw(12) << (1e9 / result.ns_per) << "/s\n";
 }
 

@@ -30,15 +30,11 @@ namespace nil {
         namespace hashes {
             namespace detail {
 
-                enum class stream_processor_type {
-                    block,
-                    raw,
-                    raw_delegating
-                };
+                enum class stream_processor_type { block, raw, raw_delegating };
 
             }    // namespace detail
         }    // namespace hashes
     }    // namespace crypto3
 }    // namespace nil
 
-#endif // CRYPTO3_HASH_DETAIL_STREAM_PROCESSORS_ENUM
+#endif    // CRYPTO3_HASH_DETAIL_STREAM_PROCESSORS_ENUM

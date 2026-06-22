@@ -54,7 +54,7 @@ namespace nil {
                             g1_field_value_type PX;
                             g1_field_value_type PY;
 
-                            bool operator==(const ate_g1_precomputed_type &other) const {
+                            bool operator==(const ate_g1_precomputed_type& other) const {
                                 return (this->PX == other.PX && this->PY == other.PY);
                             }
                         };
@@ -65,7 +65,7 @@ namespace nil {
                             g2_field_value_type ell_VW;
                             g2_field_value_type ell_VV;
 
-                            bool operator==(const ate_ell_coeffs &other) const {
+                            bool operator==(const ate_ell_coeffs& other) const {
                                 return (this->ell_0 == other.ell_0 && this->ell_VW == other.ell_VW &&
                                         this->ell_VV == other.ell_VV);
                             }
@@ -80,7 +80,7 @@ namespace nil {
                             g2_field_value_type QY;
                             std::vector<coeffs_type> coeffs;
 
-                            bool operator==(const ate_g2_precomputed_type &other) const {
+                            bool operator==(const ate_g2_precomputed_type& other) const {
                                 return (this->QX == other.QX && this->QY == other.QY && this->coeffs == other.coeffs);
                             }
                         };
@@ -88,21 +88,17 @@ namespace nil {
                         typedef ate_g1_precomputed_type g1_precomputed_type;
                         typedef ate_g2_precomputed_type g2_precomputed_type;
 
-                        friend std::ostream& operator<<(std::ostream& os, ate_g1_precomputed_type const& p)
-                        {
-                            os << "{" << std::endl
-                                << "\"PX\":" << p.PX << "," << std::endl
-                                << "\"PY\":" << p.PY << "}";
+                        friend std::ostream& operator<<(std::ostream& os, ate_g1_precomputed_type const& p) {
+                            os << "{" << std::endl << "\"PX\":" << p.PX << "," << std::endl << "\"PY\":" << p.PY << "}";
                             return os;
                         }
 
-                        friend std::ostream& operator<<(std::ostream& os, ate_g2_precomputed_type const& p)
-                        {
+                        friend std::ostream& operator<<(std::ostream& os, ate_g2_precomputed_type const& p) {
                             os << "{" << std::endl
-                                << "\"QX\":" << p.QX << "," << std::endl
-                                << "\"QY\":" << p.QY << "," << std::endl
-                                << "\"coeffs\":[" << std::endl;
-                            for(auto d = p.coeffs.begin(); d != p.coeffs.end(); ++d) {
+                               << "\"QX\":" << p.QX << "," << std::endl
+                               << "\"QY\":" << p.QY << "," << std::endl
+                               << "\"coeffs\":[" << std::endl;
+                            for (auto d = p.coeffs.begin(); d != p.coeffs.end(); ++d) {
                                 os << "[" << d->ell_0 << "," << d->ell_VW << "," << d->ell_VV << "]";
                                 if (d != p.coeffs.end()) {
                                     os << "," << std::endl;
@@ -115,9 +111,9 @@ namespace nil {
                     };
 
                 }    // namespace detail
-            }        // namespace pairing
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace pairing
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_PAIRING_SHORT_WEIERSTRASS_JACOBIAN_WITH_A4_0_TYPES_POLICY_HPP

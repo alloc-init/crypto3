@@ -30,8 +30,6 @@
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/algebra/fields/fp2.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -135,9 +133,9 @@ namespace nil {
 
                         fp6_3over2_extension_params<alt_bn128_base_field<Version>>::Frobenius_coeffs_c2;
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_ALT_BN128_FP6_3OVER2_EXTENSION_PARAMS_HPP

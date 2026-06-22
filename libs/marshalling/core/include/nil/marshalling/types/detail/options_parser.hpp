@@ -175,8 +175,7 @@ namespace nil {
                 public:
                     static const bool has_sequence_ser_length_field_prefix = true;
                     using sequence_ser_length_field_prefix = TField;
-                    static const status_type sequence_ser_length_field_read_error_status
-                        = TReadErrorStatus;
+                    static const status_type sequence_ser_length_field_read_error_status = TReadErrorStatus;
                 };
 
                 template<typename TField, status_type TReadErrorStatus, typename... TOptions>
@@ -186,8 +185,7 @@ namespace nil {
                 public:
                     static const bool has_sequence_elem_ser_length_field_prefix = true;
                     using sequence_elem_ser_length_field_prefix = TField;
-                    static const status_type sequence_elem_ser_length_field_read_error_status
-                        = TReadErrorStatus;
+                    static const status_type sequence_elem_ser_length_field_read_error_status = TReadErrorStatus;
                 };
 
                 template<typename TField, status_type TReadErrorStatus, typename... TOptions>
@@ -197,8 +195,7 @@ namespace nil {
                 public:
                     static const bool has_sequence_elem_fixed_ser_length_field_prefix = true;
                     using sequence_elem_fixed_ser_length_field_prefix = TField;
-                    static const status_type sequence_elem_fixed_ser_length_field_read_error_status
-                        = TReadErrorStatus;
+                    static const status_type sequence_elem_fixed_ser_length_field_read_error_status = TReadErrorStatus;
                 };
 
                 template<typename TTrailField, typename... TOptions>
@@ -355,8 +352,8 @@ namespace nil {
                         "of nil::marshalling::option::valid_num_value_range options. Either use it only once or"
                         "upgrade your compiler.");
 #endif
-                    using multi_range_validation_ranges
-                        = multi_range_assembler_type<base_impl_type, std::intmax_t, TMinValue, TMaxValue>;
+                    using multi_range_validation_ranges =
+                        multi_range_assembler_type<base_impl_type, std::intmax_t, TMinValue, TMaxValue>;
                     static const bool has_multi_range_validation = true;
                 };
 
@@ -383,8 +380,8 @@ namespace nil {
                         "of nil::marshalling::option::valid_num_value_range options. Either use it only once or"
                         "upgrade your compiler.");
 #endif
-                    using multi_range_validation_ranges
-                        = multi_range_assembler_type<base_impl_type, std::uintmax_t, TMinValue, TMaxValue>;
+                    using multi_range_validation_ranges =
+                        multi_range_assembler_type<base_impl_type, std::uintmax_t, TMinValue, TMaxValue>;
                     static const bool has_multi_range_validation = true;
                 };
 
@@ -397,7 +394,7 @@ namespace nil {
                     : public options_parser<TTupleOptions..., TOptions...> { };
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_OPTIONS_PARSER_HPP

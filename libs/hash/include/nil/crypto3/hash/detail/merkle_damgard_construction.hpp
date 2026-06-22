@@ -51,7 +51,7 @@ namespace nil {
              * @note http://www.merkle.com/papers/Thesis1979.pdf
              */
             template<typename ParamsType, typename IV, typename Compressor, typename Padding,
-                    typename Finalizer = detail::nop_finalizer>
+                     typename Finalizer = detail::nop_finalizer>
             class merkle_damgard_construction {
             public:
                 typedef IV iv_generator;
@@ -80,13 +80,13 @@ namespace nil {
             protected:
                 // 'length_bits' is the number of bits required to write the length of the message.
                 // Depending on the hash function, it's either 64 or 128 bits, even though the value is stored in 64-bit
-                // integers, since we never hash messages longer than 2^64 bits. 
+                // integers, since we never hash messages longer than 2^64 bits.
                 constexpr static const std::size_t length_bits = ParamsType::length_bits;
-                // We can consider to stop thresholding the length to 64 bits, but we don't want to. We never use messages
-                // larger than 2^64 bits.
+                // We can consider to stop thresholding the length to 64 bits, but we don't want to. We never use
+                // messages larger than 2^64 bits.
                 constexpr static const std::size_t length_type_bits = length_bits < word_bits ? word_bits :
-                                                                      length_bits > 64 ? 64 :
-                                                                      length_bits;
+                                                                      length_bits > 64        ? 64 :
+                                                                                                length_bits;
                 typedef typename boost::uint_t<length_type_bits>::least length_type;
                 constexpr static const std::size_t length_words = length_bits / word_bits;
                 BOOST_STATIC_ASSERT(!length_bits || length_bits % word_bits == 0);
@@ -161,8 +161,7 @@ namespace nil {
                     // but length_bits = 128, we should keep the other 64 bits as zero.
                     std::array<word_type, length_type_bits / word_bits> length_words_array;
                     pack<endian_type, endian_type, length_type_bits, word_bits>(
-                        length_array.begin(), length_array.end(),
-                        length_words_array.begin());
+                        length_array.begin(), length_array.end(), length_words_array.begin());
 
                     // Append length, but from the end. We were required to write length in 'length_bits' bits,
                     // but actually used just 'length_type_bits' bits.
@@ -180,7 +179,7 @@ namespace nil {
             };
 
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_MERKLE_DAMGARD_BLOCK_HASH_HPP

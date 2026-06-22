@@ -32,8 +32,6 @@
 #include <nil/crypto3/algebra/fields/brainpool_r1/base_field.hpp>
 #include <nil/crypto3/algebra/fields/brainpool_r1/scalar_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -62,10 +60,14 @@ namespace nil {
                     constexpr static const integral_type p = base_field_modulus;
                     constexpr static const integral_type q = scalar_field_modulus;
 
-                    constexpr static const integral_type a = 0x340E7BE2A280EB74E2BE61BADA745D97E8F7C300_cppui_modular160;
-                    constexpr static const integral_type b = 0x1E589A8595423412134FAA2DBDEC95C8D8675E58_cppui_modular160;
-                    constexpr static const integral_type x = 0xBED5AF16EA3F6A4F62938C4631EB5AF7BDBCDBC3_cppui_modular160;
-                    constexpr static const integral_type y = 0x1667CB477A1A8EC338F94741669C976316DA6321_cppui_modular160;
+                    constexpr static const integral_type a =
+                        0x340E7BE2A280EB74E2BE61BADA745D97E8F7C300_cppui_modular160;
+                    constexpr static const integral_type b =
+                        0x1E589A8595423412134FAA2DBDEC95C8D8675E58_cppui_modular160;
+                    constexpr static const integral_type x =
+                        0xBED5AF16EA3F6A4F62938C4631EB5AF7BDBCDBC3_cppui_modular160;
+                    constexpr static const integral_type y =
+                        0x1667CB477A1A8EC338F94741669C976316DA6321_cppui_modular160;
                 };
 
                 template<>
@@ -254,8 +256,8 @@ namespace nil {
                 typedef brainpool_r1<512> brainpool512r1;
 
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_BRAINPOOL_R1_HPP

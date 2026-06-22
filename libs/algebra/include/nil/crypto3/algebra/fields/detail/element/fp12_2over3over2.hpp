@@ -53,23 +53,23 @@ namespace nil {
 
                         constexpr element_fp12_2over3over2() = default;
 
-                        constexpr element_fp12_2over3over2(const underlying_type& in_data0, 
-                                                           const underlying_type& in_data1)
-                            : data({in_data0, in_data1}) {}
+                        constexpr element_fp12_2over3over2(const underlying_type &in_data0,
+                                                           const underlying_type &in_data1) :
+                            data({in_data0, in_data1}) {
+                        }
 
-                        constexpr element_fp12_2over3over2(const data_type &in_data)
-                            : data({in_data[0], in_data[1]}) {}
+                        constexpr element_fp12_2over3over2(const data_type &in_data) : data({in_data[0], in_data[1]}) {
+                        }
 
-                        constexpr element_fp12_2over3over2(const element_fp12_2over3over2 &B)
-                            : data {B.data} {};
+                        constexpr element_fp12_2over3over2(const element_fp12_2over3over2 &B) : data {B.data} { };
 
-                        constexpr element_fp12_2over3over2(const element_fp12_2over3over2 &&B) BOOST_NOEXCEPT 
-                            : data(std::move(B.data)) {};
+                        constexpr element_fp12_2over3over2(const element_fp12_2over3over2 &&B) BOOST_NOEXCEPT
+                            : data(std::move(B.data)) { };
 
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.
-                        constexpr static const element_fp12_2over3over2& zero();
-                        constexpr static const element_fp12_2over3over2& one();
+                        constexpr static const element_fp12_2over3over2 &zero();
+                        constexpr static const element_fp12_2over3over2 &one();
 
                         constexpr bool is_zero() const {
                             return *this == zero();
@@ -136,7 +136,7 @@ namespace nil {
                                                                 A1B1);
                         }
 
-                        element_fp12_2over3over2& operator*=(const element_fp12_2over3over2 &B) {
+                        element_fp12_2over3over2 &operator*=(const element_fp12_2over3over2 &B) {
                             if constexpr (requires { policy_type::multiply(*this, B); }) {
                                 *this = policy_type::multiply(*this, B);
                                 return *this;
@@ -284,21 +284,19 @@ namespace nil {
                         }
 
                         /** @brief multiply by [ [c0, 0, 0], [c3, c4, 0] ] */
-                        element_fp12_2over3over2
-                            mul_by_034(const typename underlying_type::underlying_type &c0,
-                                       const typename underlying_type::underlying_type &c3,
-                                       const typename underlying_type::underlying_type &c4) const
-                        {
+                        element_fp12_2over3over2 mul_by_034(const typename underlying_type::underlying_type &c0,
+                                                            const typename underlying_type::underlying_type &c3,
+                                                            const typename underlying_type::underlying_type &c4) const {
                             auto a0 = this->data[0].data[0] * c0;
                             auto a1 = this->data[0].data[1] * c0;
                             auto a2 = this->data[0].data[2] * c0;
 
-                            auto a = underlying_type(a0,a1,a2);
+                            auto a = underlying_type(a0, a1, a2);
                             auto b = this->data[1].mul_by_01(c3, c4);
 
                             auto _c0 = c0 + c3;
-                            auto e = (this->data[0]+this->data[1]).mul_by_01(_c0, c4);
-                            auto rc1 = e - (a+b);
+                            auto e = (this->data[0] + this->data[1]).mul_by_01(_c0, c4);
+                            auto rc1 = e - (a + b);
                             auto rc0 = mul_by_non_residue(b);
                             rc0 += a;
 
@@ -306,16 +304,14 @@ namespace nil {
                         }
 
                         /** @brief multiply by [ [c0, c1, 0], [0, c4, 0] ] */
-                        element_fp12_2over3over2
-                            mul_by_014(const typename underlying_type::underlying_type &c0,
-                                       const typename underlying_type::underlying_type &c1,
-                                       const typename underlying_type::underlying_type &c4) const
-                        {
+                        element_fp12_2over3over2 mul_by_014(const typename underlying_type::underlying_type &c0,
+                                                            const typename underlying_type::underlying_type &c1,
+                                                            const typename underlying_type::underlying_type &c4) const {
                             auto aa = this->data[0].mul_by_01(c0, c1);
                             auto bb = this->data[1].mul_by_1(c4);
-                            auto o = c1+c4;
+                            auto o = c1 + c4;
 
-                            auto rc1 = this->data[0]+this->data[1];
+                            auto rc1 = this->data[0] + this->data[1];
                             rc1 = rc1.mul_by_01(c0, o);
                             rc1 -= aa;
                             rc1 -= bb;
@@ -324,7 +320,6 @@ namespace nil {
 
                             return element_fp12_2over3over2(rc0, rc1);
                         }
-
 
                         /** @brief multiply by [ [c0, 0, 0], [0, c4, c5] ] */
                         element_fp12_2over3over2
@@ -371,7 +366,6 @@ namespace nil {
 
                             return (*this) * a;
                         }
-
 
                         inline static underlying_type mul_by_non_residue(const underlying_type &A) {
                             return underlying_type(non_residue * A.data[2], A.data[0], A.data[1]);
@@ -429,38 +423,38 @@ namespace nil {
                         element_fp12_2over3over2<FieldParams>::non_residue;
 
                     namespace element_fp12_2over3over2_details {
-                        // These constexpr static variables can not be members of element_fp2, because 
+                        // These constexpr static variables can not be members of element_fp2, because
                         // element_fp2 is incomplete type until the end of its declaration.
                         template<typename FieldParams>
-                        constexpr static element_fp12_2over3over2<FieldParams> zero_instance(
-                            FieldParams::underlying_type::zero(),
-                            FieldParams::underlying_type::zero());
+                        constexpr static element_fp12_2over3over2<FieldParams>
+                            zero_instance(FieldParams::underlying_type::zero(), FieldParams::underlying_type::zero());
 
                         template<typename FieldParams>
-                        constexpr static element_fp12_2over3over2<FieldParams> one_instance(
-                            FieldParams::underlying_type::one(),
-                            FieldParams::underlying_type::zero());
-                    }
+                        constexpr static element_fp12_2over3over2<FieldParams>
+                            one_instance(FieldParams::underlying_type::one(), FieldParams::underlying_type::zero());
+                    }    // namespace element_fp12_2over3over2_details
 
                     template<typename FieldParams>
-                    constexpr const element_fp12_2over3over2<FieldParams>& element_fp12_2over3over2<FieldParams>::zero() {
+                    constexpr const element_fp12_2over3over2<FieldParams> &
+                        element_fp12_2over3over2<FieldParams>::zero() {
                         return element_fp12_2over3over2_details::zero_instance<FieldParams>;
                     }
 
                     template<typename FieldParams>
-                    constexpr const element_fp12_2over3over2<FieldParams>& element_fp12_2over3over2<FieldParams>::one() {
+                    constexpr const element_fp12_2over3over2<FieldParams> &
+                        element_fp12_2over3over2<FieldParams>::one() {
                         return element_fp12_2over3over2_details::one_instance<FieldParams>;
                     }
 
                     template<typename FieldParams>
-                    std::ostream& operator<<(std::ostream& os, const element_fp12_2over3over2<FieldParams>& elem) {
+                    std::ostream &operator<<(std::ostream &os, const element_fp12_2over3over2<FieldParams> &elem) {
                         os << "[" << elem.data[0] << "," << elem.data[1] << "]";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP12_2OVER3OVER2_HPP

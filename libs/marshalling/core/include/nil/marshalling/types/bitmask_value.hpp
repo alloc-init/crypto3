@@ -87,6 +87,7 @@ namespace nil {
             template<typename TFieldBase, typename... TOptions>
             class bitmask_value : public TFieldBase {
                 using base_impl_type = TFieldBase;
+
             public:
                 /// @brief endian_type used for serialization.
                 using endian_type = typename base_impl_type::endian_type;
@@ -95,15 +96,11 @@ namespace nil {
                 using parsed_options_type = detail::options_parser<TOptions...>;
 
             private:
-                
-                using bitmask_behaviour_type = 
-                    detail::bitmask_undertlying_type_type<parsed_options_type>;
+                using bitmask_behaviour_type = detail::bitmask_undertlying_type_type<parsed_options_type>;
 
-                using integral_type = 
-                    integral<TFieldBase, bitmask_behaviour_type, TOptions...>;
+                using integral_type = integral<TFieldBase, bitmask_behaviour_type, TOptions...>;
 
             public:
-
                 /// @brief Tag indicating type of the field
                 using tag = tag::bitmask;
 
@@ -626,6 +623,6 @@ namespace nil {
     MARSHALLING_BITMASK_BITS_ACCESS_NOTEMPLATE(__VA_ARGS__)
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BITMASK_VALUE_HPP

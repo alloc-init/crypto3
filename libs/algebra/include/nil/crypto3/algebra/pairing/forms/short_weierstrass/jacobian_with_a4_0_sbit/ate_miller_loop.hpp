@@ -32,7 +32,6 @@
 
 #include <nil/crypto3/algebra/pairing/detail/forms/short_weierstrass/jacobian_with_a4_0/types.hpp>
 
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -59,9 +58,9 @@ namespace nil {
 
                         typename policy_type::ate_ell_coeffs c;
 
-                        for (auto bit = params_type::ate_loop_count_sbit.rbegin()+1; /* skip first bit */
-                                bit != params_type::ate_loop_count_sbit.rend();
-                                ++bit) {
+                        for (auto bit = params_type::ate_loop_count_sbit.rbegin() + 1; /* skip first bit */
+                             bit != params_type::ate_loop_count_sbit.rend();
+                             ++bit) {
 
                             f = f.squared();
 
@@ -109,7 +108,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_SHORT_WEIERSTRASS_JACOBIAN_WITH_A4_0_SBIT_ATE_MILLER_LOOP_HPP

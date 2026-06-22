@@ -56,7 +56,7 @@ namespace nil {
 
                     template<typename TField, typename TIter>
                     static status_type read_sequence_n(TField &field, std::size_t count, TIter &iter,
-                                                                         std::size_t &len) {
+                                                       std::size_t &len) {
                         field.clear();
                         while (0 < count) {
                             auto &elem = field.create_back();
@@ -81,8 +81,7 @@ namespace nil {
                     }
 
                     template<typename TField, typename TIter>
-                    static status_type write_sequence(const TField &field, TIter &iter,
-                                                                        std::size_t len) {
+                    static status_type write_sequence(const TField &field, TIter &iter, std::size_t len) {
                         status_type es = status_type::success;
                         auto remainingLen = len;
                         for (auto &elem : field.value()) {
@@ -103,8 +102,8 @@ namespace nil {
                     }
 
                     template<typename TField, typename TIter>
-                    static status_type write_sequence_n(const TField &field, std::size_t count,
-                                                                          TIter &iter, std::size_t &len) {
+                    static status_type write_sequence_n(const TField &field, std::size_t count, TIter &iter,
+                                                        std::size_t &len) {
                         status_type es = status_type::success;
                         for (auto &elem : field.value()) {
                             if (count == 0) {
@@ -149,11 +148,11 @@ namespace nil {
                         return 0xffff;
                     }
 
-                    private:
+                private:
                 };
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_COMMON_FUNCS_HPP

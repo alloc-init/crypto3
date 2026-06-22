@@ -35,31 +35,28 @@
 #include <iomanip>
 #include <tuple>
 
-
 using namespace nil::crypto3::marshalling;
 
 template<typename unit>
-void print_buffer(std::vector<unit> const& v)
-{
-    for(size_t i = 0; i < v.size(); ++i) {
+void print_buffer(std::vector<unit> const& v) {
+    for (size_t i = 0; i < v.size(); ++i) {
         std::cout << std::hex << std::setw(2) << std::setfill('0') << (unsigned int)v[i] << " ";
-        if ( i % 16 == 15 ) std::cout << std::endl;
+        if (i % 16 == 15)
+            std::cout << std::endl;
     }
 }
-
 
 struct S {
     int x;
     std::vector<int> y;
 };
 
-std::ostream& operator<<(std::ostream& os, S const& s)
-{
+std::ostream& operator<<(std::ostream& os, S const& s) {
     os << std::dec;
     os << "S { " << std::endl;
     os << "    x = " << s.x << ";" << std::endl;
     os << "    y = " << s.y.size() << " [ ";
-    for(auto const& v: s.y) {
+    for (auto const& v : s.y) {
         os << v << " ";
     }
     os << "];" << std::endl;
@@ -68,28 +65,21 @@ std::ostream& operator<<(std::ostream& os, S const& s)
     return os;
 }
 
-int main()
-{
+int main() {
     using be = option::big_endian;
     using marshalling_type = field_type<be>;
 
-    using S_marshalling_type = types::bundle<
-        marshalling_type,
-        std::tuple<
-            types::integral<marshalling_type, int>,
-            types::standard_array_list<
-                marshalling_type,
-                types::integral<marshalling_type, int>
-            >
-        >
-    >;
+    using S_marshalling_type =
+        types::bundle<marshalling_type,
+                      std::tuple<types::integral<marshalling_type, int>,
+                                 types::standard_array_list<marshalling_type, types::integral<marshalling_type, int>>>>;
 
     /* Fill marshalling type from struct S */
     auto fill_S = [](S const& s) {
         S_marshalling_type result;
 
         std::get<0>(result.value()).value() = s.x;
-        for(auto const& v: s.y) {
+        for (auto const& v : s.y) {
             auto i = types::integral<marshalling_type, int>(v);
             std::get<1>(result.value()).value().push_back(i);
         }
@@ -104,7 +94,7 @@ int main()
             .y {},
         };
 
-        for(auto const& v: std::get<1>(m.value()).value()) {
+        for (auto const& v : std::get<1>(m.value()).value()) {
             result.y.push_back(v.value());
         }
         return result;
@@ -112,7 +102,7 @@ int main()
 
     S s {
         .x = 10,
-        .y {11,12,13,14,15,16,17,18},
+        .y {11, 12, 13, 14, 15, 16, 17, 18},
     };
 
     std::cout << "Marshalling structure " << s;
@@ -133,5 +123,4 @@ int main()
     std::cout << "Recovered from byte array: " << s2;
 
     return 0;
-
 }

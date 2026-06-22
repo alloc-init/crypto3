@@ -54,8 +54,7 @@ namespace nil {
             };
 
             template<std::size_t DigestBits>
-            struct ripemd_compressor : public basic_ripemd_compressor<DigestBits> {
-            };
+            struct ripemd_compressor : public basic_ripemd_compressor<DigestBits> { };
 
             template<>
             struct ripemd_compressor<128> : public basic_ripemd_compressor<128> {
@@ -207,7 +206,6 @@ namespace nil {
                     }
                     std::swap(Y[3], Y[7]);
 
-
                     for (std::size_t i = 0; i < policy_type::state_words; ++i) {
                         state[i] += Y[i];
                     }
@@ -266,7 +264,6 @@ namespace nil {
                     }
                     std::swap(Y[4], Y[9]);
 
-
                     for (std::size_t i = 0; i < policy_type::state_words; ++i) {
                         state[i] += Y[i];
                     }
@@ -311,9 +308,9 @@ namespace nil {
                     };
 
                     typedef merkle_damgard_construction<params_type, typename policy_type::iv_generator,
-                            ripemd_compressor<DigestBits>,
-                            detail::merkle_damgard_padding<policy_type>>
-                            type;
+                                                        ripemd_compressor<DigestBits>,
+                                                        detail::merkle_damgard_padding<policy_type>>
+                        type;
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::block;
@@ -325,7 +322,7 @@ namespace nil {
             typedef ripemd<256> ripemd256;
             typedef ripemd<320> ripemd320;
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

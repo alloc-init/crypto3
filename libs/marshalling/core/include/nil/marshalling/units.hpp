@@ -104,8 +104,8 @@ namespace nil {
                     static TRet get_value_internal(const TField &field, convert_to_fp_tag) {
                         static_assert(std::is_floating_point<TRet>::value,
                                       "TRet is expected to be floating point type");
-                        return static_cast<TRet>(field.value())
-                               * (static_cast<TRet>(TRatio::num) / static_cast<TRet>(TRatio::den));
+                        return static_cast<TRet>(field.value()) *
+                               (static_cast<TRet>(TRatio::num) / static_cast<TRet>(TRatio::den));
                     }
 
                     template<typename TRet, typename TRatio, typename TField>
@@ -115,8 +115,8 @@ namespace nil {
                         using field_type = typename std::decay<decltype(field)>::type;
                         using value_type = typename field_type::value_type;
 
-                        static_assert(std::is_integral<value_type>::value || std::is_floating_point<value_type>::value
-                                          || std::is_enum<value_type>::value,
+                        static_assert(std::is_integral<value_type>::value ||
+                                          std::is_floating_point<value_type>::value || std::is_enum<value_type>::value,
                                       "Unexpected field in units conversion");
 
                         using cast_type = typename std::conditional<
@@ -150,8 +150,8 @@ namespace nil {
                         using field_type = typename std::decay<decltype(field)>::type;
                         using value_type = typename field_type::value_type;
 
-                        static_assert(std::is_integral<value_type>::value || std::is_floating_point<value_type>::value
-                                          || std::is_enum<value_type>::value,
+                        static_assert(std::is_integral<value_type>::value ||
+                                          std::is_floating_point<value_type>::value || std::is_enum<value_type>::value,
                                       "Unexpected field in units conversion");
 
                         using cast_type = typename std::conditional<
@@ -161,8 +161,8 @@ namespace nil {
                                                       std::intmax_t,
                                                       std::uintmax_t>::type>::type;
 
-                        field.value() = static_cast<value_type>((static_cast<cast_type>(value) * TRatio::den)
-                                                                / static_cast<cast_type>(TRatio::num));
+                        field.value() = static_cast<value_type>((static_cast<cast_type>(value) * TRatio::den) /
+                                                                static_cast<cast_type>(TRatio::num));
                     }
 
                     template<typename TRatio, typename TField, typename TVal>
@@ -184,9 +184,9 @@ namespace nil {
                             epsilon = -epsilon;
                         }
 
-                        field.value()
-                            = static_cast<value_type>(((value + epsilon) * static_cast<DecayedType>(TRatio::den))
-                                                      / static_cast<DecayedType>(TRatio::num));
+                        field.value() =
+                            static_cast<value_type>(((value + epsilon) * static_cast<DecayedType>(TRatio::den)) /
+                                                    static_cast<DecayedType>(TRatio::num));
                     }
                 };
 
@@ -197,8 +197,8 @@ namespace nil {
 
                 template<typename TField, typename TType>
                 struct units_checker<TField, TType, true> {
-                    static const bool value
-                        = std::is_same<typename TField::parsed_options_type::units_type, TType>::value;
+                    static const bool value =
+                        std::is_same<typename TField::parsed_options_type::units_type, TType>::value;
                 };
 
                 template<typename TField, typename TType>
@@ -1541,6 +1541,6 @@ namespace nil {
                 detail::set_voltage<nil::marshalling::traits::units::kilovolts_ratio>(field, std::forward<TVal>(val));
             }
         }    // namespace units
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_UNITS_HPP

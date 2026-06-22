@@ -76,8 +76,7 @@ void print_byteblob(TIter iter_begin, TIter iter_end) {
 }
 
 template<class T, std::size_t TSize, typename OutputType>
-void test_round_trip_fixed_size_container_fixed_precision_big_endian(
-    std::array<T, TSize> val_container) {
+void test_round_trip_fixed_size_container_fixed_precision_big_endian(std::array<T, TSize> val_container) {
     using namespace nil::crypto3::marshalling;
     std::size_t units_bits = std::is_same_v<OutputType, bool> ? 1 : sizeof(OutputType) * 8;
     using unit_type = OutputType;
@@ -85,7 +84,8 @@ void test_round_trip_fixed_size_container_fixed_precision_big_endian(
 
     using container_type =
         nil::marshalling::types::array_list<nil::marshalling::field_type<nil::marshalling::option::little_endian>,
-                                            integral_type, nil::marshalling::option::fixed_size_storage<TSize>>;
+                                            integral_type,
+                                            nil::marshalling::option::fixed_size_storage<TSize>>;
 
     std::size_t unitblob_size =
         integral_type::bit_length() / units_bits + ((integral_type::bit_length() % units_bits) ? 1 : 0);
@@ -104,13 +104,12 @@ void test_round_trip_fixed_size_container_fixed_precision_big_endian(
     }
 
     nil::marshalling::status_type status;
-    std::array<T, TSize> test_val = 
-        nil::marshalling::pack<nil::marshalling::option::big_endian>(cv, status);
+    std::array<T, TSize> test_val = nil::marshalling::pack<nil::marshalling::option::big_endian>(cv, status);
 
     BOOST_CHECK(std::equal(val_container.begin(), val_container.end(), test_val.begin()));
     BOOST_CHECK(status == nil::marshalling::status_type::success);
 
-    std::vector<unit_type> test_cv = 
+    std::vector<unit_type> test_cv =
         nil::marshalling::pack<nil::marshalling::option::big_endian>(val_container, status);
 
     BOOST_CHECK(std::equal(test_cv.begin(), test_cv.end(), cv.begin()));
@@ -118,8 +117,7 @@ void test_round_trip_fixed_size_container_fixed_precision_big_endian(
 }
 
 template<class T, std::size_t TSize, typename OutputType>
-void test_round_trip_fixed_size_container_fixed_precision_little_endian(
-    std::array<T, TSize> val_container) {
+void test_round_trip_fixed_size_container_fixed_precision_little_endian(std::array<T, TSize> val_container) {
     using namespace nil::crypto3::marshalling;
     std::size_t units_bits = std::is_same_v<OutputType, bool> ? 1 : sizeof(OutputType) * 8;
     using unit_type = OutputType;
@@ -127,7 +125,8 @@ void test_round_trip_fixed_size_container_fixed_precision_little_endian(
 
     using container_type =
         nil::marshalling::types::array_list<nil::marshalling::field_type<nil::marshalling::option::little_endian>,
-                                            integral_type, nil::marshalling::option::fixed_size_storage<TSize>>;
+                                            integral_type,
+                                            nil::marshalling::option::fixed_size_storage<TSize>>;
 
     std::size_t unitblob_size =
         integral_type::bit_length() / units_bits + ((integral_type::bit_length() % units_bits) ? 1 : 0);
@@ -142,13 +141,12 @@ void test_round_trip_fixed_size_container_fixed_precision_little_endian(
     }
 
     nil::marshalling::status_type status;
-    std::array<T, TSize> test_val = 
-        nil::marshalling::pack<nil::marshalling::option::little_endian>(cv, status);
+    std::array<T, TSize> test_val = nil::marshalling::pack<nil::marshalling::option::little_endian>(cv, status);
 
     BOOST_CHECK(std::equal(val_container.begin(), val_container.end(), test_val.begin()));
     BOOST_CHECK(status == nil::marshalling::status_type::success);
 
-    std::vector<unit_type> test_cv = 
+    std::vector<unit_type> test_cv =
         nil::marshalling::pack<nil::marshalling::option::little_endian>(val_container, status);
 
     BOOST_CHECK(std::equal(test_cv.begin(), test_cv.end(), cv.begin()));
@@ -169,29 +167,35 @@ void test_round_trip_fixed_size_container_fixed_precision() {
     }
 }
 
-
 BOOST_AUTO_TEST_SUITE(integral_fixed_test_suite)
 
 BOOST_AUTO_TEST_CASE(integral_fixed_uint1024) {
-    test_round_trip_fixed_size_container_fixed_precision<boost::multiprecision::uint1024_modular_t, 128, unsigned char>();
+    test_round_trip_fixed_size_container_fixed_precision<boost::multiprecision::uint1024_modular_t,
+                                                         128,
+                                                         unsigned char>();
 }
 
 BOOST_AUTO_TEST_CASE(integral_fixed_cpp_uint512) {
-    test_round_trip_fixed_size_container_fixed_precision<boost::multiprecision::uint512_modular_t, 128, unsigned char>();
+    test_round_trip_fixed_size_container_fixed_precision<boost::multiprecision::uint512_modular_t,
+                                                         128,
+                                                         unsigned char>();
 }
 
 BOOST_AUTO_TEST_CASE(integral_fixed_cpp_int_backend_64) {
     test_round_trip_fixed_size_container_fixed_precision<
-        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>, 128, unsigned char>();
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>,
+        128,
+        unsigned char>();
 }
 
 BOOST_AUTO_TEST_CASE(integral_fixed_cpp_int_backend_23) {
     test_round_trip_fixed_size_container_fixed_precision<
-        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>, 128, unsigned char>();
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>,
+        128,
+        unsigned char>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
 
 BOOST_AUTO_TEST_SUITE(integral_fixed_test_suite_bits)
 
@@ -205,12 +209,16 @@ BOOST_AUTO_TEST_CASE(integral_fixed_cpp_uint512_bits) {
 
 BOOST_AUTO_TEST_CASE(integral_fixed_cpp_int_backend_23_bits) {
     test_round_trip_fixed_size_container_fixed_precision<
-        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>, 128, bool>();
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>,
+        128,
+        bool>();
 }
 
 BOOST_AUTO_TEST_CASE(integral_fixed_cpp_int_backend_64_bits) {
     test_round_trip_fixed_size_container_fixed_precision<
-        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>, 128, bool>();
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>,
+        128,
+        bool>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

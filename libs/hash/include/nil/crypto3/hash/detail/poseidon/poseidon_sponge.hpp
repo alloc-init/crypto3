@@ -20,12 +20,13 @@ namespace nil {
                 class poseidon_sponge_construction_custom {
                     typedef PolicyType policy_type;
                     // This is a quite strange sponge. It has rate = 3 on first absorb, then rate = 2.
-                    // E.g., we have ABCDEFG values as input. Rate is 3, Capacity is 1: (full state: 0|0|0|0). Values are consumed as:
-                    // 0|0|0|0 -absorb-> A|B|C|0 -permute-> S1|S2|S3|S4 -> S4|0|0|0 -absorb-> S4|D|E|0 -permute->
+                    // E.g., we have ABCDEFG values as input. Rate is 3, Capacity is 1: (full state: 0|0|0|0). Values
+                    // are consumed as: 0|0|0|0 -absorb-> A|B|C|0 -permute-> S1|S2|S3|S4 -> S4|0|0|0 -absorb-> S4|D|E|0
+                    // -permute->
                     //   S1'|S2'|S3'|S4' -> S4'|0|0|0 -> ...
-                    // As we could see, it does not fit into standard sponge construction, where permutation is called each Rate
-                    // elements (each Rate - 1 instead). State is zeroed after the permutation. Only the first element is returned
-                    // from squeeze(), not Rate elements...
+                    // As we could see, it does not fit into standard sponge construction, where permutation is called
+                    // each Rate elements (each Rate - 1 instead). State is zeroed after the permutation. Only the first
+                    // element is returned from squeeze(), not Rate elements...
                 public:
                     using permutation_type = poseidon_permutation<policy_type>;
 
@@ -53,7 +54,7 @@ namespace nil {
                     }
 
                     void absorb(const block_type &block) {
-                        for (auto &word: block) {
+                        for (auto &word : block) {
                             absorb(word);
                         }
                     }
@@ -104,9 +105,9 @@ namespace nil {
                     state_type state_;
                     std::size_t state_count_;
                 };
-            } // namespace detail
-        } // namespace hashes
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace detail
+        }    // namespace hashes
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_HASH_NIL_POSEIDON_SPONGE_HPP

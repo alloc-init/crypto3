@@ -54,7 +54,6 @@ namespace nil {
                     template<typename CurveParams>
                     class curve_element<CurveParams, forms::twisted_edwards, coordinates::affine> {
                     public:
-
                         using field_type = typename CurveParams::field_type;
                         using params_type = CurveParams;
 
@@ -76,20 +75,20 @@ namespace nil {
                          *
                          */
                         constexpr curve_element() :
-                            curve_element(params_type::zero_fill[0], params_type::zero_fill[1]) {}
+                            curve_element(params_type::zero_fill[0], params_type::zero_fill[1]) {
+                        }
 
                         /** @brief
                          *    @return the selected point $(X:Y:Z)$ in the projective coordinates
                          *
                          */
-                        constexpr curve_element(const field_value_type& X, const field_value_type& Y) 
-                            : X(X), Y(Y) 
-                        { }
+                        constexpr curve_element(const field_value_type &X, const field_value_type &Y) : X(X), Y(Y) {
+                        }
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
                         explicit constexpr curve_element(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                            const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                         }
 
@@ -141,8 +140,8 @@ namespace nil {
                             /* Special case for blueprint compatibility:
                              * (0,1) is infinity
                              * (0,0) is infinity too */
-                            return (X == params_type::zero_fill[0] && Y == params_type::zero_fill[1])
-                                || (X.is_zero() && Y.is_one() );
+                            return (X == params_type::zero_fill[0] && Y == params_type::zero_fill[1]) ||
+                                   (X.is_zero() && Y.is_one());
                         }
 
                         /** @brief
@@ -236,8 +235,8 @@ namespace nil {
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                        constexpr const curve_element &
+                            operator=(const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                             return *this;
                         }
@@ -262,7 +261,7 @@ namespace nil {
                             return result;
                         }
 
-                        constexpr curve_element& operator+=(const curve_element &other) {
+                        constexpr curve_element &operator+=(const curve_element &other) {
                             // handle special cases having to do with O
                             if (this->is_zero()) {
                                 *this = other;
@@ -284,7 +283,7 @@ namespace nil {
                             return (*this) + (-B);
                         }
 
-                        constexpr curve_element& operator-=(const curve_element &other) {
+                        constexpr curve_element &operator-=(const curve_element &other) {
                             return (*this) += (-other);
                         }
 
@@ -295,7 +294,7 @@ namespace nil {
 
                         // For interface uniformity, no optimizations for affine coordinates
                         constexpr void double_inplace() {
-                            if(!this->is_zero()) {
+                            if (!this->is_zero()) {
                                 this->add(*this);
                             }
                         }
@@ -372,12 +371,14 @@ namespace nil {
                                        (static_cast<field_value_type>(params_type::a) +
                                         static_cast<field_value_type>(params_type::d)) *
                                        (static_cast<field_value_type>(params_type::a) -
-                                        static_cast<field_value_type>(params_type::d)).inversed());
+                                        static_cast<field_value_type>(params_type::d))
+                                           .inversed());
 
                             field_value_type s_inv = field_value_type::one();
                             field_value_type B_ =
                                 static_cast<field_value_type>(4u) * (static_cast<field_value_type>(params_type::a) -
-                                                                    static_cast<field_value_type>(params_type::d)).inversed();
+                                                                     static_cast<field_value_type>(params_type::d))
+                                                                        .inversed();
                             if (static_cast<field_value_type>(result_params::B) != B_) {
                                 s_inv = (B_ * static_cast<field_value_type>(result_params::B).inversed()).sqrt();
                             }
@@ -385,19 +386,20 @@ namespace nil {
                             return result_type((field_value_type::one() + this->Y) *
                                                    (field_value_type::one() - this->Y).inversed(),
                                                s_inv * ((field_value_type::one() + this->Y) *
-                                                        (this->X * (field_value_type::one() - this->Y)).inversed() ) );
+                                                        (this->X * (field_value_type::one() - this->Y)).inversed()));
                         }
                     };
 
                     template<typename CurveParams>
-                    std::ostream& operator<<(std::ostream& os, curve_element<CurveParams, forms::twisted_edwards, coordinates::affine> const& e)
-                    {
+                    std::ostream &
+                        operator<<(std::ostream &os,
+                                   curve_element<CurveParams, forms::twisted_edwards, coordinates::affine> const &e) {
                         os << "{\"X\":" << e.X << ",\"Y\":" << e.Y << "}";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_TWISTED_EDWARDS_G1_ELEMENT_AFFINE_HPP

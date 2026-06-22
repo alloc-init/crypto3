@@ -111,8 +111,8 @@ namespace nil {
                 using kilovolts_ratio = std::kilo;
 
             }    // namespace units
-        }        // namespace traits
-    }            // namespace marshalling
+        }    // namespace traits
+    }    // namespace marshalling
 }    // namespace nil
 
 #endif    // MARSHALLING_TRAITS_HPP

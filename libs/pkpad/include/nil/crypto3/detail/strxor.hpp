@@ -67,7 +67,7 @@ namespace nil {
                 return strxor(in1.cbegin(), in1.cend(), in2.cbegin(), in2.cend(), out);
             }
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_DETAIL_STRXOR_HPP

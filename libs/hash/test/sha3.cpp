@@ -51,7 +51,7 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 BOOST_TEST_DONT_PRINT_LOG_VALUE(hashes::sha3<224>::construction::type::digest_type)
@@ -193,8 +193,10 @@ BOOST_AUTO_TEST_CASE(sha3_384_shortmsg_bit1) {
     // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-384_Msg5.pdf
     std::array<bool, 5> a = {1, 1, 0, 0, 1};
     hashes::sha3<384>::digest_type d = hash<hashes::sha3<384>>(a);
-    BOOST_CHECK_EQUAL("737c9b491885e9bf7428e792741a7bf8dca9653471c3e148473f2c236b6a0a64"
-                      "55eb1dce9f779b4b6b237fef171b1c64", std::to_string(d).data());
+    BOOST_CHECK_EQUAL(
+        "737c9b491885e9bf7428e792741a7bf8dca9653471c3e148473f2c236b6a0a64"
+        "55eb1dce9f779b4b6b237fef171b1c64",
+        std::to_string(d).data());
 }
 
 BOOST_AUTO_TEST_CASE(sha3_384_shortmsg_bit2) {
@@ -202,8 +204,10 @@ BOOST_AUTO_TEST_CASE(sha3_384_shortmsg_bit2) {
     std::array<bool, 30> a = {1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0};
     hashes::sha3<384>::digest_type d = hash<hashes::sha3<384>>(a);
 
-    BOOST_CHECK_EQUAL("955b4dd1be03261bd76f807a7efd432435c417362811b8a50c564e7ee9585e1a"
-                      "c7626dde2fdc030f876196ea267f08c3", std::to_string(d).data());
+    BOOST_CHECK_EQUAL(
+        "955b4dd1be03261bd76f807a7efd432435c417362811b8a50c564e7ee9585e1a"
+        "c7626dde2fdc030f876196ea267f08c3",
+        std::to_string(d).data());
 }
 
 BOOST_AUTO_TEST_CASE(sha3_384_shortmsg_byte1) {
@@ -245,8 +249,10 @@ BOOST_AUTO_TEST_CASE(sha3_512_shortmsg_bit1) {
     std::array<bool, 5> a = {1, 1, 0, 0, 1};
     hashes::sha3<512>::digest_type d = hash<hashes::sha3<512>>(a);
 
-    BOOST_CHECK_EQUAL("a13e01494114c09800622a70288c432121ce70039d753cadd2e006e4d961cb27"
-                      "544c1481e5814bdceb53be6733d5e099795e5e81918addb058e22a9f24883f37", std::to_string(d).data());
+    BOOST_CHECK_EQUAL(
+        "a13e01494114c09800622a70288c432121ce70039d753cadd2e006e4d961cb27"
+        "544c1481e5814bdceb53be6733d5e099795e5e81918addb058e22a9f24883f37",
+        std::to_string(d).data());
 }
 
 BOOST_AUTO_TEST_CASE(sha3_512_shortmsg_bit2) {
@@ -254,8 +260,10 @@ BOOST_AUTO_TEST_CASE(sha3_512_shortmsg_bit2) {
     std::array<bool, 30> a = {1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0};
     hashes::sha3<512>::digest_type d = hash<hashes::sha3<512>>(a);
 
-    BOOST_CHECK_EQUAL("9834c05a11e1c5d3da9c740e1c106d9e590a0e530b6f6aaa7830525d075ca5db"
-                      "1bd8a6aa981a28613ac334934a01823cd45f45e49b6d7e6917f2f16778067bab", std::to_string(d).data());
+    BOOST_CHECK_EQUAL(
+        "9834c05a11e1c5d3da9c740e1c106d9e590a0e530b6f6aaa7830525d075ca5db"
+        "1bd8a6aa981a28613ac334934a01823cd45f45e49b6d7e6917f2f16778067bab",
+        std::to_string(d).data());
 }
 
 BOOST_AUTO_TEST_CASE(sha3_512_shortmsg_byte1) {
@@ -340,7 +348,8 @@ BOOST_FIXTURE_TEST_CASE(sha3_224_accumulator4, fixture<224>) {
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3),
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3000102094000b8), UINT64_C(0x67283609c1251003)}};
     hash_type::construction::type::block_type m1_state_endian;
-    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(m1.begin(), m1.end(), m1_state_endian.begin());
+    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(
+        m1.begin(), m1.end(), m1_state_endian.begin());
 
     acc(m1_state_endian, accumulators::bits = 16 * 64 + 8);
 
@@ -356,7 +365,8 @@ BOOST_FIXTURE_TEST_CASE(sha3_224_accumulator4, fixture<224>) {
          UINT64_C(0x6d6e6f7071727374), UINT64_C(0x6e6f707172737475), UINT64_C(0x0000000000000000),
          UINT64_C(0x0000000000000000), UINT64_C(0xc5000102094000b8), UINT64_C(0x67283609c1251003)}};
     hash_type::construction::type::block_type m2_state_endian;
-    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(m2.begin(), m2.end(), m2_state_endian.begin());
+    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(
+        m2.begin(), m2.end(), m2_state_endian.begin());
 
     acc(m2_state_endian, accumulators::bits = 9 * 64 - 8);
 
@@ -398,7 +408,8 @@ BOOST_FIXTURE_TEST_CASE(sha3_256_accumulator3, fixture<256>) {
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3),
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3000102094000b8)}};
     hash_type::construction::type::block_type m1_state_endian;
-    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(m1.begin(), m1.end(), m1_state_endian.begin());
+    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(
+        m1.begin(), m1.end(), m1_state_endian.begin());
 
     acc(m1_state_endian, accumulators::bits = 16 * 64 + 8);
 
@@ -414,7 +425,8 @@ BOOST_FIXTURE_TEST_CASE(sha3_256_accumulator3, fixture<256>) {
          UINT64_C(0x6d6e6f7071727374), UINT64_C(0x6e6f707172737475), UINT64_C(0x0000000000000000),
          UINT64_C(0x0000000000000000), UINT64_C(0xc5000102094000b8)}};
     hash_type::construction::type::block_type m2_state_endian;
-    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(m2.begin(), m2.end(), m2_state_endian.begin());
+    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(
+        m2.begin(), m2.end(), m2_state_endian.begin());
 
     acc(m2_state_endian, accumulators::bits = 9 * 64 - 8);
 
@@ -461,7 +473,8 @@ BOOST_FIXTURE_TEST_CASE(sha3_384_accumulator3, fixture<384>) {
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3),
          UINT64_C(0xa3a3000102030405)}};
     hash_type::construction::type::block_type m1_state_endian;
-    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(m1.begin(), m1.end(), m1_state_endian.begin());
+    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(
+        m1.begin(), m1.end(), m1_state_endian.begin());
 
     acc(m1_state_endian, accumulators::bits = 12 * 64 + 16);
 
@@ -479,7 +492,8 @@ BOOST_FIXTURE_TEST_CASE(sha3_384_accumulator3, fixture<384>) {
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3),
          UINT64_C(0xa3a3a3a3a3a37374)}};
     hash_type::construction::type::block_type m2_state_endian;
-    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(m2.begin(), m2.end(), m2_state_endian.begin());
+    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(
+        m2.begin(), m2.end(), m2_state_endian.begin());
 
     acc(m2_state_endian, accumulators::bits = 12 * 64 + 48);
 
@@ -527,7 +541,8 @@ BOOST_FIXTURE_TEST_CASE(sha3_512_accumulator3, fixture<512>) {
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3),
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3)}};
     hash_type::construction::type::block_type m1_state_endian;
-    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(m1.begin(), m1.end(), m1_state_endian.begin());
+    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(
+        m1.begin(), m1.end(), m1_state_endian.begin());
 
     acc(m1_state_endian, accumulators::bits = 9 * 64);
     // full block here
@@ -544,7 +559,8 @@ BOOST_FIXTURE_TEST_CASE(sha3_512_accumulator3, fixture<512>) {
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3),
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3ff)}};
     hash_type::construction::type::block_type m2_state_endian;
-    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(m2.begin(), m2.end(), m2_state_endian.begin());
+    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(
+        m2.begin(), m2.end(), m2_state_endian.begin());
 
     acc(m2_state_endian, accumulators::bits = 8 * 64 + 56);
 
@@ -560,7 +576,8 @@ BOOST_FIXTURE_TEST_CASE(sha3_512_accumulator3, fixture<512>) {
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3),
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa300901278231349), UINT64_C(0x5867344857584354)}};
     hash_type::construction::type::block_type m3_state_endian;
-    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(m3.begin(), m3.end(), m3_state_endian.begin());
+    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(
+        m3.begin(), m3.end(), m3_state_endian.begin());
 
     acc(m3_state_endian, accumulators::bits = 7 * 64 + 8);
 
@@ -578,9 +595,10 @@ BOOST_FIXTURE_TEST_CASE(sha3_512_accumulator4, fixture<512>) {
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3),
          UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a3a3), UINT64_C(0xa3a3a3a3a3a3a323)}};
     hash_type::construction::type::block_type m1_state_endian;
-    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(m1.begin(), m1.end(), m1_state_endian.begin());
+    nil::crypto3::detail::pack<stream_endian::big_octet_big_bit, stream_endian::little_octet_big_bit, 64, 64>(
+        m1.begin(), m1.end(), m1_state_endian.begin());
 
-    acc(m1_state_endian, accumulators::bits = 9 * 64 - 1); // Not enough space left for padding
+    acc(m1_state_endian, accumulators::bits = 9 * 64 - 1);    // Not enough space left for padding
 
     hash_type::digest_type s = extract::hash<hash_type>(acc);
 
@@ -733,7 +751,7 @@ BOOST_AUTO_TEST_CASE(sha3_512_preprocessor3) {
 }
 
 // Uncomment when https://github.com/NilFoundation/crypto3-hash/issues/135 is done
-//BOOST_AUTO_TEST_CASE(sha3_224_preprocessor4) {
+// BOOST_AUTO_TEST_CASE(sha3_224_preprocessor4) {
 //    // 0x636261 (aka 0110 0011 0110 0010 0110 0001)
 //    accumulator_set<hashes::sha3<224>> acc;
 //    acc(UINT64_C(0x0000000000000001), accumulators::bits = 1); // 1
@@ -751,7 +769,7 @@ BOOST_AUTO_TEST_CASE(sha3_512_preprocessor3) {
 //        std::to_string(s).data());
 //}
 //
-//BOOST_AUTO_TEST_CASE(sha3_224_preprocessor5) {
+// BOOST_AUTO_TEST_CASE(sha3_224_preprocessor5) {
 //    // SHA3-224 uses r = 1600 - c = 1600 − 2*224 = 1152 = 18 * 64 bitrate
 //    accumulator_set<hashes::sha3<224>> acc;
 //
@@ -768,7 +786,7 @@ BOOST_AUTO_TEST_CASE(sha3_512_preprocessor3) {
 //        std::to_string(s).data());
 //}
 //
-//BOOST_AUTO_TEST_CASE(sha3_224_preprocessor6) {
+// BOOST_AUTO_TEST_CASE(sha3_224_preprocessor6) {
 //    accumulator_set<hashes::sha3<224>> acc;
 //
 //    for (std::size_t i = 0; i < 1152; ++i) {

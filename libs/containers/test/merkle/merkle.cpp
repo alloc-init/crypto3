@@ -99,10 +99,10 @@ void testing_validate_template(std::vector<Element> data) {
     std::array<uint8_t, 7> data_not_in_tree = {'\x6d', '\x65', '\x73', '\x73', '\x61', '\x67', '\x65'};
     merkle_tree<Hash, Arity> tree = make_merkle_tree<Hash, Arity>(data.begin(), data.end());
     merkle_tree<Hash, Arity> tree2(tree.begin(), tree.end());
-//    for (auto i = 0; i < tree.size(); ++i) {
-//        std::cout << tree[i] << std::endl;
-//    }
-//    tree.emplace_back(nil::crypto3::hash<typename Hash::hash_type>(data_not_in_tree[0]));
+    //    for (auto i = 0; i < tree.size(); ++i) {
+    //        std::cout << tree[i] << std::endl;
+    //    }
+    //    tree.emplace_back(nil::crypto3::hash<typename Hash::hash_type>(data_not_in_tree[0]));
     merkle_proof<Hash, Arity> proof(tree, 0);
     bool good_validate = proof.validate(data[0]);
     bool wrong_leaf_validate = proof.validate(data[1]);
@@ -136,26 +136,38 @@ void testing_validate_template_random_data_compressed_proofs(std::size_t leaf_nu
 
     // standard case
     auto start = std::chrono::high_resolution_clock::now();
-    std::vector<merkle_proof<Hash, Arity>> compressed_proofs = merkle_proof_type::generate_compressed_proofs(tree, proof_idxs);
+    std::vector<merkle_proof<Hash, Arity>> compressed_proofs =
+        merkle_proof_type::generate_compressed_proofs(tree, proof_idxs);
     bool validate_compressed = merkle_proof_type::validate_compressed_proofs(compressed_proofs, data_for_validation);
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
     // case for arity == 4
     if (leaf_number == 16) {
-        std::vector<merkle_proof<Hash, Arity>> compressed_proofs_one_idx = merkle_proof_type::generate_compressed_proofs(tree, {3, 2, 1, 5, 11, 11, 0});
-        bool validate_compressed_one_idx = merkle_proof_type::validate_compressed_proofs(compressed_proofs_one_idx, std::vector<Element>({data[3], data[2], data[1], data[5], data[11], data[11], data[0]}));
+        std::vector<merkle_proof<Hash, Arity>> compressed_proofs_one_idx =
+            merkle_proof_type::generate_compressed_proofs(tree, {3, 2, 1, 5, 11, 11, 0});
+        bool validate_compressed_one_idx = merkle_proof_type::validate_compressed_proofs(
+            compressed_proofs_one_idx,
+            std::vector<Element>({data[3], data[2], data[1], data[5], data[11], data[11], data[0]}));
         BOOST_CHECK(validate_compressed_one_idx);
     }
     // one index
     std::size_t one_idx = std::rand() % leaf_number;
-    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_one_idx = merkle_proof_type::generate_compressed_proofs(tree, {one_idx});
-    bool validate_compressed_one_idx = merkle_proof_type::validate_compressed_proofs(compressed_proofs_one_idx, std::vector<Element>({data[one_idx]}));
+    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_one_idx =
+        merkle_proof_type::generate_compressed_proofs(tree, {one_idx});
+    bool validate_compressed_one_idx =
+        merkle_proof_type::validate_compressed_proofs(compressed_proofs_one_idx, std::vector<Element>({data[one_idx]}));
     // edge indexes
-    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_edge_idxs = merkle_proof_type::generate_compressed_proofs(tree, {0, leaf_number - 1});
-    bool validate_compressed_edge_idxs = merkle_proof_type::validate_compressed_proofs(compressed_proofs_edge_idxs, std::vector<Element>({data[0], data[leaf_number - 1]}));
+    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_edge_idxs =
+        merkle_proof_type::generate_compressed_proofs(tree, {0, leaf_number - 1});
+    bool validate_compressed_edge_idxs = merkle_proof_type::validate_compressed_proofs(
+        compressed_proofs_edge_idxs, std::vector<Element>({data[0], data[leaf_number - 1]}));
     // repeated indexes
     std::size_t repeated_idx = std::rand() % leaf_number;
-    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_repeated_idxs = merkle_proof_type::generate_compressed_proofs(tree, {repeated_idx, leaf_number / 2, repeated_idx});
-    bool validate_compressed_repeated_idxs = merkle_proof_type::validate_compressed_proofs(compressed_proofs_repeated_idxs, std::vector<Element>({data[repeated_idx], data[leaf_number / 2], data[repeated_idx]}));
+    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_repeated_idxs =
+        merkle_proof_type::generate_compressed_proofs(tree, {repeated_idx, leaf_number / 2, repeated_idx});
+    bool validate_compressed_repeated_idxs = merkle_proof_type::validate_compressed_proofs(
+        compressed_proofs_repeated_idxs,
+        std::vector<Element>({data[repeated_idx], data[leaf_number / 2], data[repeated_idx]}));
     // wrong leaf
     auto sorted_idxs = proof_idxs;
     std::sort(sorted_idxs.begin(), sorted_idxs.end());
@@ -170,12 +182,14 @@ void testing_validate_template_random_data_compressed_proofs(std::size_t leaf_nu
     auto data_wrong_leaf = data_for_validation;
     data_wrong_leaf[std::rand() % num_idxs] = data[wrong_leaf_idx];
     assert(data_wrong_leaf != data_for_validation);
-    bool wrong_leaf_validate_compressed = merkle_proof_type::validate_compressed_proofs(compressed_proofs, data_wrong_leaf);
+    bool wrong_leaf_validate_compressed =
+        merkle_proof_type::validate_compressed_proofs(compressed_proofs, data_wrong_leaf);
     // wrong data
     auto data_wrong_data = data_for_validation;
     data_wrong_data[std::rand() % num_idxs] = data_not_in_tree;
     assert(data_wrong_data != data_for_validation);
-    bool wrong_data_validate_compressed = merkle_proof_type::validate_compressed_proofs(compressed_proofs, data_wrong_data);
+    bool wrong_data_validate_compressed =
+        merkle_proof_type::validate_compressed_proofs(compressed_proofs, data_wrong_data);
 
     BOOST_CHECK(validate_compressed);
     BOOST_CHECK(validate_compressed_one_idx);
@@ -205,19 +219,27 @@ void testing_validate_template_compressed_proofs(std::vector<Element> data) {
     }
 
     // standart case
-    std::vector<merkle_proof<Hash, Arity>> compressed_proofs = merkle_proof_type::generate_compressed_proofs(tree, proof_idxs);
+    std::vector<merkle_proof<Hash, Arity>> compressed_proofs =
+        merkle_proof_type::generate_compressed_proofs(tree, proof_idxs);
     bool validate_compressed = merkle_proof_type::validate_compressed_proofs(compressed_proofs, data_for_validation);
     // one index
     std::size_t one_idx = std::rand() % leaf_number;
-    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_one_idx = merkle_proof_type::generate_compressed_proofs(tree, {one_idx});
-    bool validate_compressed_one_idx = merkle_proof_type::validate_compressed_proofs(compressed_proofs_one_idx, std::vector<Element>({data[one_idx]}));
+    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_one_idx =
+        merkle_proof_type::generate_compressed_proofs(tree, {one_idx});
+    bool validate_compressed_one_idx =
+        merkle_proof_type::validate_compressed_proofs(compressed_proofs_one_idx, std::vector<Element>({data[one_idx]}));
     // edge indexes
-    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_edge_idxs = merkle_proof_type::generate_compressed_proofs(tree, {0, leaf_number - 1});
-    bool validate_compressed_edge_idxs = merkle_proof_type::validate_compressed_proofs(compressed_proofs_edge_idxs, std::vector<Element>({data[0], data[leaf_number - 1]}));
+    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_edge_idxs =
+        merkle_proof_type::generate_compressed_proofs(tree, {0, leaf_number - 1});
+    bool validate_compressed_edge_idxs = merkle_proof_type::validate_compressed_proofs(
+        compressed_proofs_edge_idxs, std::vector<Element>({data[0], data[leaf_number - 1]}));
     // repeated indexes
     std::size_t repeated_idx = std::rand() % leaf_number;
-    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_repeated_idxs = merkle_proof_type::generate_compressed_proofs(tree, {repeated_idx, leaf_number - 1, repeated_idx});
-    bool validate_compressed_repeated_idxs = merkle_proof_type::validate_compressed_proofs(compressed_proofs_repeated_idxs, std::vector<Element>({data[repeated_idx], data[leaf_number - 1], data[repeated_idx]}));
+    std::vector<merkle_proof<Hash, Arity>> compressed_proofs_repeated_idxs =
+        merkle_proof_type::generate_compressed_proofs(tree, {repeated_idx, leaf_number - 1, repeated_idx});
+    bool validate_compressed_repeated_idxs = merkle_proof_type::validate_compressed_proofs(
+        compressed_proofs_repeated_idxs,
+        std::vector<Element>({data[repeated_idx], data[leaf_number - 1], data[repeated_idx]}));
     // wrong leaf
     auto sorted_idxs = proof_idxs;
     std::sort(sorted_idxs.begin(), sorted_idxs.end());
@@ -232,12 +254,14 @@ void testing_validate_template_compressed_proofs(std::vector<Element> data) {
     auto data_wrong_leaf = data_for_validation;
     data_wrong_leaf[std::rand() % num_idxs] = data[wrong_leaf_idx];
     assert(data_wrong_leaf != data_for_validation);
-    bool wrong_leaf_validate_compressed = merkle_proof_type::validate_compressed_proofs(compressed_proofs, data_wrong_leaf);
+    bool wrong_leaf_validate_compressed =
+        merkle_proof_type::validate_compressed_proofs(compressed_proofs, data_wrong_leaf);
     // wrong data
     auto data_wrong_data = data_for_validation;
     data_wrong_data[std::rand() % num_idxs] = {'9'};
     assert(data_wrong_data != data_for_validation);
-    bool wrong_data_validate_compressed = merkle_proof_type::validate_compressed_proofs(compressed_proofs, data_wrong_data);
+    bool wrong_data_validate_compressed =
+        merkle_proof_type::validate_compressed_proofs(compressed_proofs, data_wrong_data);
 
     BOOST_CHECK(validate_compressed);
     BOOST_CHECK(validate_compressed_one_idx);
@@ -258,7 +282,8 @@ BOOST_AUTO_TEST_SUITE(containers_merkltree_test)
 using curve_type = algebra::curves::pallas;
 using field_type = typename curve_type::base_field_type;
 using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
-using original_poseidon_type = hashes::original_poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
+using original_poseidon_type =
+    hashes::original_poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
 
 BOOST_AUTO_TEST_CASE(merkletree_construct_test_1) {
     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
@@ -278,31 +303,21 @@ BOOST_AUTO_TEST_CASE(merkletree_construct_test_2) {
     BOOST_CHECK_EQUAL(tree.row_count(), 3);
 }
 
-
 BOOST_AUTO_TEST_CASE(merkletree_validate_test_1) {
     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
     testing_validate_template<hashes::sha2<256>, 2>(v);
 
-    BOOST_STATIC_ASSERT_MSG(algebra::is_field_element<original_poseidon_type::word_type>::value, "Expecting Poseidon to consume field elements");
+    BOOST_STATIC_ASSERT_MSG(algebra::is_field_element<original_poseidon_type::word_type>::value,
+                            "Expecting Poseidon to consume field elements");
     std::vector<std::array<original_poseidon_type::word_type, 1>> v_field = {
-        {0x0_cppui_modular255},
-        {0x1_cppui_modular255},
-        {0x2_cppui_modular255},
-        {0x3_cppui_modular255},
-        {0x4_cppui_modular255},
-        {0x5_cppui_modular255},
-        {0x6_cppui_modular255},
-        {0x7_cppui_modular255}
-    };
+        {0x0_cppui_modular255}, {0x1_cppui_modular255}, {0x2_cppui_modular255}, {0x3_cppui_modular255},
+        {0x4_cppui_modular255}, {0x5_cppui_modular255}, {0x6_cppui_modular255}, {0x7_cppui_modular255}};
     testing_validate_template<original_poseidon_type, 2>(v_field);
     testing_validate_template<poseidon_type, 2>(v_field);
     // When you have bytes input, use wrapper to lazy convert it to field elements:
-    std::vector<
-        nil::crypto3::hashes::block_to_field_elements_wrapper<
-            typename poseidon_type::word_type::field_type,
-            std::array<char, 1>
-        >
-    > wrappers;
+    std::vector<nil::crypto3::hashes::block_to_field_elements_wrapper<typename poseidon_type::word_type::field_type,
+                                                                      std::array<char, 1>>>
+        wrappers;
     for (const auto& inner_containers : v) {
         wrappers.emplace_back(inner_containers);
     }
@@ -323,7 +338,6 @@ BOOST_AUTO_TEST_CASE(merkletree_validate_test_2) {
     testing_validate_template_random_data<hashes::sha2<256>, 3, std::uint8_t, 1>(leaf_number);
 }
 
-
 BOOST_AUTO_TEST_CASE(merkletree_validate_test_5) {
     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}, {'8'}};
     testing_validate_template_compressed_proofs<hashes::sha2<256>, 3>(v);
@@ -335,22 +349,21 @@ BOOST_AUTO_TEST_CASE(merkletree_validate_test_5) {
 BOOST_AUTO_TEST_CASE(merkletree_hash_test_1) {
     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
     testing_hash_template<hashes::sha2<256>, 2>(v, "3b828c4f4b48c5d4cb5562a474ec9e2fd8d5546fae40e90732ef635892e42720");
-    testing_hash_template<hashes::keccak_1600<256>, 2>(v, "568ff5eb286f51b8a3e8de4e53aa8daed44594a246deebbde119ea2eb27acd6b");
-    testing_hash_template<hashes::keccak_1600<512>, 2>(v, "1a0ca31dd9e0b27afdf77021dc50023cdd814eb53ede16e8c5c322a0bcb6bd7d26a0404e5af53971e1566c1649bb9686905cdedfa9a358023065e423522d4372");
+    testing_hash_template<hashes::keccak_1600<256>, 2>(
+        v, "568ff5eb286f51b8a3e8de4e53aa8daed44594a246deebbde119ea2eb27acd6b");
+    testing_hash_template<hashes::keccak_1600<512>, 2>(
+        v,
+        "1a0ca31dd9e0b27afdf77021dc50023cdd814eb53ede16e8c5c322a0bcb6bd7d26a0404e5af53971e1566c1649bb9686905cdedfa9a358"
+        "023065e423522d4372");
 
-    std::vector<std::string> v_64 = {
-        "0123456789012345678901234567890123456789012345678901234567890123",
-        "0123456789012345678901234567890123456789012345678901234567890123",
-        "0123456789012345678901234567890123456789012345678901234567890123",
-        "0123456789012345678901234567890123456789012345678901234567890123"
-    };
-    std::vector<
-        nil::crypto3::hashes::block_to_field_elements_wrapper<
-            typename poseidon_type::word_type::field_type,
-            std::string,
-            /*OverflowOnPurpose=*/ true
-        >
-    > wrappers;
+    std::vector<std::string> v_64 = {"0123456789012345678901234567890123456789012345678901234567890123",
+                                     "0123456789012345678901234567890123456789012345678901234567890123",
+                                     "0123456789012345678901234567890123456789012345678901234567890123",
+                                     "0123456789012345678901234567890123456789012345678901234567890123"};
+    std::vector<nil::crypto3::hashes::block_to_field_elements_wrapper<typename poseidon_type::word_type::field_type,
+                                                                      std::string,
+                                                                      /*OverflowOnPurpose=*/true>>
+        wrappers;
     for (const auto& inner_containers : v_64) {
         wrappers.emplace_back(inner_containers);
     }

@@ -41,9 +41,9 @@ namespace nil {
                     struct xz;
 
                 }    // namespace coordinates
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_ALGEBRA_CURVES_MONTGOMERY_COORDINATES_REPRESENTATIONS_HPP

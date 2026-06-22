@@ -45,7 +45,7 @@ namespace nil {
 
                 IntegerType primeProd(1);
                 IntegerType numerator(1);
-                for (auto &r: factors) {
+                for (auto &r : factors) {
                     numerator = numerator * (r - 1);
                     primeProd = primeProd * r;
                 }
@@ -72,7 +72,7 @@ namespace nil {
 
                 return result;
             }
-        } // namespace algebra
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace math
+    }    // namespace crypto3
+}    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_RANDOM_ELEMENT_HPP

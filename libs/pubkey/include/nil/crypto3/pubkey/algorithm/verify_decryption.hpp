@@ -39,16 +39,17 @@ namespace nil {
     namespace crypto3 {
         namespace pubkey {
             template<typename SchemeType>
-            using decryption_verification_init_params_type = typename verify_decryption_op<SchemeType>::init_params_type;
+            using decryption_verification_init_params_type =
+                typename verify_decryption_op<SchemeType>::init_params_type;
         }
 
         template<typename SchemeType, typename Mode = pubkey::modes::verifiable_encryption<SchemeType>,
                  typename ProcessingMode = typename Mode::decryption_verification_policy, typename InputIterator1,
                  typename InputIterator2, typename OutputIterator>
-        OutputIterator verify_decryption(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2,
-                                         InputIterator2 last2,
-                                         const pubkey::decryption_verification_init_params_type<SchemeType> &init_params,
-                                         OutputIterator out) {
+        OutputIterator
+            verify_decryption(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, InputIterator2 last2,
+                              const pubkey::decryption_verification_init_params_type<SchemeType> &init_params,
+                              OutputIterator out) {
 
             typedef typename pubkey::pubkey_accumulator_set<ProcessingMode> PubkeyAccumulator;
 
@@ -61,9 +62,10 @@ namespace nil {
         template<typename SchemeType, typename Mode = pubkey::modes::verifiable_encryption<SchemeType>,
                  typename ProcessingMode = typename Mode::decryption_verification_policy, typename SinglePassRange1,
                  typename SinglePassRange2, typename OutputIterator>
-        OutputIterator verify_decryption(const SinglePassRange1 &range1, const SinglePassRange2 &range2,
-                                         const pubkey::decryption_verification_init_params_type<SchemeType> &init_params,
-                                         OutputIterator out) {
+        OutputIterator
+            verify_decryption(const SinglePassRange1 &range1, const SinglePassRange2 &range2,
+                              const pubkey::decryption_verification_init_params_type<SchemeType> &init_params,
+                              OutputIterator out) {
 
             typedef typename pubkey::pubkey_accumulator_set<ProcessingMode> PubkeyAccumulator;
 

@@ -146,7 +146,7 @@ namespace nil {
             }
 
         }    // namespace algebra
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_SCALAR_MATH_HPP

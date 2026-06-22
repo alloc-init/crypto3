@@ -342,8 +342,8 @@ namespace nil {
                 template<typename GroupValue>
                 static inline GroupValue clear_cofactor(const GroupValue &R) {
                     GroupValue result = R;
-                    algebra::curves::detail::scalar_mul_inplace(
-                        result, h2c_suite<typename GroupValue::group_type>::h_eff);
+                    algebra::curves::detail::scalar_mul_inplace(result,
+                                                                h2c_suite<typename GroupValue::group_type>::h_eff);
                     return result;
                 }
 

@@ -67,7 +67,8 @@ namespace nil {
                 typedef std::tuple<schedule_type, private_key_type, verification_key_type> keypair_type;
 
                 typedef zk::snark::r1cs_gg_ppzksnark<
-                    CurveType, zk::snark::r1cs_gg_ppzksnark_generator<CurveType, zk::snark::proving_mode::encrypted_input>,
+                    CurveType,
+                    zk::snark::r1cs_gg_ppzksnark_generator<CurveType, zk::snark::proving_mode::encrypted_input>,
                     zk::snark::r1cs_gg_ppzksnark_prover<CurveType, zk::snark::proving_mode::encrypted_input>,
                     zk::snark::r1cs_gg_ppzksnark_verifier_strong_input_consistency<
                         CurveType, zk::snark::proving_mode::encrypted_input>,
@@ -94,14 +95,12 @@ namespace nil {
                 verification_key(const typename g2_type::value_type &rho_g2,
                                  const std::vector<typename g2_type::value_type> &rho_sv_g2,
                                  const std::vector<typename g2_type::value_type> &rho_rhov_g2) :
-                    rho_g2(rho_g2),
-                    rho_sv_g2(rho_sv_g2), rho_rhov_g2(rho_rhov_g2) {
+                    rho_g2(rho_g2), rho_sv_g2(rho_sv_g2), rho_rhov_g2(rho_rhov_g2) {
                 }
                 verification_key(typename g2_type::value_type &&rho_g2,
                                  std::vector<typename g2_type::value_type> &&rho_sv_g2,
                                  std::vector<typename g2_type::value_type> &&rho_rhov_g2) :
-                    rho_g2(std::move(rho_g2)),
-                    rho_sv_g2(std::move(rho_sv_g2)), rho_rhov_g2(std::move(rho_rhov_g2)) {
+                    rho_g2(std::move(rho_g2)), rho_sv_g2(std::move(rho_sv_g2)), rho_rhov_g2(std::move(rho_rhov_g2)) {
                 }
 
                 // private:
@@ -127,8 +126,7 @@ namespace nil {
                            const std::vector<typename g2_type::value_type> &t_g2,
                            const typename g1_type::value_type &delta_sum_s_g1,
                            const typename g1_type::value_type &gamma_inverse_sum_s_g1) :
-                    delta_g1(delta_g1),
-                    delta_s_g1(delta_s_g1), t_g1(t_g1), t_g2(t_g2), delta_sum_s_g1(delta_sum_s_g1),
+                    delta_g1(delta_g1), delta_s_g1(delta_s_g1), t_g1(t_g1), t_g2(t_g2), delta_sum_s_g1(delta_sum_s_g1),
                     gamma_inverse_sum_s_g1(gamma_inverse_sum_s_g1) {
                 }
                 public_key(typename g1_type::value_type &&delta_g1,
@@ -137,9 +135,8 @@ namespace nil {
                            std::vector<typename g2_type::value_type> &&t_g2,
                            typename g1_type::value_type &&delta_sum_s_g1,
                            typename g1_type::value_type &&gamma_inverse_sum_s_g1) :
-                    delta_g1(std::move(delta_g1)),
-                    delta_s_g1(std::move(delta_s_g1)), t_g1(std::move(t_g1)), t_g2(std::move(t_g2)),
-                    delta_sum_s_g1(std::move(delta_sum_s_g1)),
+                    delta_g1(std::move(delta_g1)), delta_s_g1(std::move(delta_s_g1)), t_g1(std::move(t_g1)),
+                    t_g2(std::move(t_g2)), delta_sum_s_g1(std::move(delta_sum_s_g1)),
                     gamma_inverse_sum_s_g1(std::move(gamma_inverse_sum_s_g1)) {
                 }
 
@@ -263,7 +260,7 @@ namespace nil {
                     gamma_inverse_sum_s_g1 = -gamma_inverse_sum_s_g1;
 
                     schedule_type pk(acc.gg_keypair.second.delta_g1, delta_s_g1, t_g1, t_g2, delta_sum_s_g1,
-                                       gamma_inverse_sum_s_g1);
+                                     gamma_inverse_sum_s_g1);
                     private_key_type sk(rho);
                     verification_key_type vk(rho_g2, rho_sv_g2, rho_rhov_g2);
 
@@ -383,7 +380,7 @@ namespace nil {
 
                 static inline accumulator_type init_accumulator(const init_params_type &init_params) {
                     return accumulator_type {std::vector<typename g1_type::value_type> {}, init_params.privkey,
-                                                      init_params.vk, init_params.gg_keypair};
+                                             init_params.vk, init_params.gg_keypair};
                 }
 
                 // TODO: process input data in place
@@ -467,8 +464,8 @@ namespace nil {
 
                 static inline accumulator_type init_accumulator(const init_params_type &init_params) {
                     return accumulator_type {init_params.pubkey, init_params.gg_vk, init_params.proof,
-                                                      init_params.unencrypted_primary_input,
-                                                      std::vector<typename g1_type::value_type> {}};
+                                             init_params.unencrypted_primary_input,
+                                             std::vector<typename g1_type::value_type> {}};
                 }
 
                 // TODO: process input data in place
@@ -518,8 +515,8 @@ namespace nil {
 
                 static inline accumulator_type init_accumulator(const init_params_type &init_params) {
                     return accumulator_type {init_params.vk, init_params.gg_keypair, init_params.proof,
-                                                      std::vector<typename scalar_field_type::value_type> {},
-                                                      std::vector<typename g1_type::value_type> {}};
+                                             std::vector<typename scalar_field_type::value_type> {},
+                                             std::vector<typename g1_type::value_type> {}};
                 }
 
                 // TODO: process input data in place
@@ -565,7 +562,7 @@ namespace nil {
                         typename gt_type::value_type verify_tmp = ci_v_nj_gt * v_vj_gt.inversed();
                         typename gt_type::value_type verify_msg =
                             algebra::pair_reduced<CurveType>(acc.gg_keypair.second.gamma_ABC_g1.rest[i - 1],
-                                                         acc.vk.rho_rhov_g2[i - 1])
+                                                             acc.vk.rho_rhov_g2[i - 1])
                                 .pow(acc.plain_text[i - 1].data);
                         bool ans_m = (verify_tmp == verify_msg);
                         ans &= ans_m;
@@ -602,8 +599,8 @@ namespace nil {
 
                 static inline accumulator_type init_accumulator(const init_params_type &init_params) {
                     return accumulator_type {init_params.pubkey, init_params.gg_keypair, init_params.proof,
-                                                      std::vector<typename scalar_field_type::value_type> {},
-                                                      std::vector<typename g1_type::value_type> {}};
+                                             std::vector<typename scalar_field_type::value_type> {},
+                                             std::vector<typename g1_type::value_type> {}};
                 }
 
                 // TODO: process input data in place
@@ -667,7 +664,7 @@ namespace nil {
                 }
             };
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

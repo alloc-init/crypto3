@@ -40,7 +40,7 @@ namespace nil {
              * @brief Algorithms are meant to provide interface to asymmetric operations similar to STL algorithms' one.
              */
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // include guard

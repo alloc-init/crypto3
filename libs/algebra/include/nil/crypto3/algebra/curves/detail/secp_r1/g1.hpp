@@ -51,8 +51,7 @@ namespace nil {
                      */
                     template<std::size_t Version, typename Form, typename Coordinates>
                     class secp_r1_g1 {
-                        public:
-
+                    public:
                         using params_type = secp_r1_g1_params<Version, Form>;
 
                         using curve_type = secp_r1<Version>;
@@ -66,8 +65,8 @@ namespace nil {
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SECP_R1_G1_HPP

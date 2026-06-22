@@ -58,8 +58,8 @@ namespace nil {
                     return prev_c;
                 }
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_DETAIL_PEDERSEN_BASIC_FUNCTIONS_HPP

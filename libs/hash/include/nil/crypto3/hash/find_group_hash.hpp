@@ -64,8 +64,7 @@ namespace nil {
              * @tparam Params
              */
             // TODO: use blake2s by default
-            template<typename ParamsType = find_group_hash_default_params,
-                     typename HashType = sha2<256>,
+            template<typename ParamsType = find_group_hash_default_params, typename HashType = sha2<256>,
                      typename GroupType = algebra::curves::jubjub::template g1_type<
                          nil::crypto3::algebra::curves::coordinates::affine,
                          nil::crypto3::algebra::curves::forms::twisted_edwards>>
@@ -91,16 +90,15 @@ namespace nil {
                 };
 
                 constexpr static detail::stream_processor_type stream_processor =
-                        detail::stream_processor_type::raw_delegating;
-                using accumulator_tag = accumulators::tag::forwarding_hash<find_group_hash<ParamsType, hash_type,
-                    GroupType>>;
+                    detail::stream_processor_type::raw_delegating;
+                using accumulator_tag =
+                    accumulators::tag::forwarding_hash<find_group_hash<ParamsType, hash_type, GroupType>>;
 
                 static inline std::vector<std::uint8_t> urs = {
                     0x30, 0x39, 0x36, 0x62, 0x33, 0x36, 0x61, 0x35, 0x38, 0x30, 0x34, 0x62, 0x66, 0x61, 0x63, 0x65,
                     0x66, 0x31, 0x36, 0x39, 0x31, 0x65, 0x31, 0x37, 0x33, 0x63, 0x33, 0x36, 0x36, 0x61, 0x34, 0x37,
                     0x66, 0x66, 0x35, 0x62, 0x61, 0x38, 0x34, 0x61, 0x34, 0x34, 0x66, 0x32, 0x36, 0x64, 0x64, 0x64,
-                    0x37, 0x65, 0x38, 0x64, 0x39, 0x66, 0x37, 0x39, 0x64, 0x35, 0x62, 0x34, 0x32, 0x64, 0x66, 0x30
-                };
+                    0x37, 0x65, 0x38, 0x64, 0x39, 0x66, 0x37, 0x39, 0x64, 0x35, 0x62, 0x34, 0x32, 0x64, 0x66, 0x30};
 
                 static inline void init_accumulator(accumulator_type &acc) {
                     hash<hash_type>(params_type::dst, acc);
@@ -126,7 +124,7 @@ namespace nil {
                         auto acc_copy = acc;
                         hash<hash_type>({i++}, acc_copy);
                         typename hash_type::digest_type H =
-                                nil::crypto3::accumulators::extract::hash<hash_type>(acc_copy);
+                            nil::crypto3::accumulators::extract::hash<hash_type>(acc_copy);
                         // TODO: generalize pack interface to accept arbitrary containers
                         std::vector<std::uint8_t> H_vec(std::cbegin(H), std::cend(H));
                         point = nil::marshalling::pack<nil::marshalling::option::little_endian>(H_vec, status);
@@ -136,8 +134,8 @@ namespace nil {
                         // TODO: return status
                         assert(i < 256);
                     }
-                    point = typename curve_type::scalar_field_type::value_type(group_type::params_type::cofactor) *
-                            point;
+                    point =
+                        typename curve_type::scalar_field_type::value_type(group_type::params_type::cofactor) * point;
                     // TODO: return status
                     assert(!point.is_zero());
                     assert(point.is_well_formed());
@@ -145,8 +143,8 @@ namespace nil {
                     return point;
                 }
             };
-        } // namespace hashes
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace hashes
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_HASH_FIND_GROUP_HASH_HPP

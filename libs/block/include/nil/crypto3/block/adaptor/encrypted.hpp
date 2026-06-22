@@ -116,7 +116,7 @@ namespace nil {
                 return encoded_range<UnaryFunction, const SinglePassRange>(fn, rng);
             }
         }    // namespace adaptors
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ENCRYPTED_HPP

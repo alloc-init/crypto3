@@ -51,8 +51,8 @@
 template<class T>
 T generate_random() {
     static const unsigned limbs = std::numeric_limits<T>::is_specialized && std::numeric_limits<T>::is_bounded ?
-                                  std::numeric_limits<T>::digits / std::numeric_limits<unsigned>::digits + 3 :
-                                  20;
+                                      std::numeric_limits<T>::digits / std::numeric_limits<unsigned>::digits + 3 :
+                                      20;
 
     static boost::random::uniform_int_distribution<unsigned> ui(0, limbs);
     static boost::random::mt19937 gen;
@@ -84,8 +84,7 @@ void test_round_trip_non_fixed_size_container_fixed_precision(const Container &v
 
     nil::marshalling::status_type status;
 
-    std::vector<unit_type> cv =
-            nil::marshalling::pack<Endianness>(val_container, status);
+    std::vector<unit_type> cv = nil::marshalling::pack<Endianness>(val_container, status);
 
     BOOST_CHECK(status == nil::marshalling::status_type::success);
 
@@ -93,7 +92,6 @@ void test_round_trip_non_fixed_size_container_fixed_precision(const Container &v
 
     BOOST_CHECK(std::equal(val_container.begin(), val_container.end(), test_val.begin()));
     BOOST_CHECK(status == nil::marshalling::status_type::success);
-
 }
 
 template<typename Endianness, class T, std::size_t TSize, typename OutputType>
@@ -116,121 +114,96 @@ void test_round_trip_non_fixed_size_container_fixed_precision() {
 
 BOOST_AUTO_TEST_SUITE(integral_non_fixed_test_suite)
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_checked_int1024_be) {
-        test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::big_endian,
-                boost::multiprecision::uint1024_modular_t,
-                128, unsigned char>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_checked_int1024_be) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::big_endian, boost::multiprecision::uint1024_modular_t, 128, unsigned char>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_checked_int1024_le) {
-        test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::little_endian,
-                boost::multiprecision::uint1024_modular_t,
-                128, unsigned char>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_checked_int1024_le) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::little_endian, boost::multiprecision::uint1024_modular_t, 128, unsigned char>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_uint512_be) {
-        test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::big_endian,
-                boost::multiprecision::uint512_modular_t,
-                128, unsigned char>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_uint512_be) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::big_endian, boost::multiprecision::uint512_modular_t, 128, unsigned char>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_uint512_le) {
-        test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::little_endian,
-                boost::multiprecision::uint512_modular_t,
-                128, unsigned char>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_uint512_le) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::little_endian, boost::multiprecision::uint512_modular_t, 128, unsigned char>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_64_be) {
-        test_round_trip_non_fixed_size_container_fixed_precision<
-                nil::marshalling::option::big_endian,
-                boost::multiprecision::number<
-                        boost::multiprecision::cpp_int_modular_backend<64>>,
-                128, unsigned char>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_64_be) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::big_endian,
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>, 128, unsigned char>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_64_le) {
-        test_round_trip_non_fixed_size_container_fixed_precision<
-                nil::marshalling::option::little_endian,
-                boost::multiprecision::number<
-                        boost::multiprecision::cpp_int_modular_backend<64>>,
-                128, unsigned char>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_64_le) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::little_endian,
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>, 128, unsigned char>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_23_be) {
-        test_round_trip_non_fixed_size_container_fixed_precision<
-                nil::marshalling::option::big_endian,
-                boost::multiprecision::number<
-                        boost::multiprecision::cpp_int_modular_backend<23>>,
-                128, unsigned char>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_23_be) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::big_endian,
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>, 128, unsigned char>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_23_le) {
-        test_round_trip_non_fixed_size_container_fixed_precision<
-                nil::marshalling::option::little_endian,
-                boost::multiprecision::number<
-                        boost::multiprecision::cpp_int_modular_backend<23>>,
-                128, unsigned char>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_23_le) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::little_endian,
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>, 128, unsigned char>();
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 
-
 BOOST_AUTO_TEST_SUITE(integral_non_fixed_test_suite_bits)
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_checked_int1024_be_bits) {
-        test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::big_endian,
-                boost::multiprecision::uint1024_modular_t,
-                128, bool>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_checked_int1024_be_bits) {
+    test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::big_endian,
+                                                             boost::multiprecision::uint1024_modular_t, 128, bool>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_checked_int1024_le_bits) {
-        test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::little_endian,
-                boost::multiprecision::uint1024_modular_t,
-                128, bool>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_checked_int1024_le_bits) {
+    test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::little_endian,
+                                                             boost::multiprecision::uint1024_modular_t, 128, bool>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_uint512_be_bits) {
-        test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::big_endian,
-                boost::multiprecision::uint512_modular_t,
-                128, bool>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_uint512_be_bits) {
+    test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::big_endian,
+                                                             boost::multiprecision::uint512_modular_t, 128, bool>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_uint512_le_bits) {
-        test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::little_endian,
-                boost::multiprecision::uint512_modular_t,
-                128, bool>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_uint512_le_bits) {
+    test_round_trip_non_fixed_size_container_fixed_precision<nil::marshalling::option::little_endian,
+                                                             boost::multiprecision::uint512_modular_t, 128, bool>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_64_be_bits) {
-        test_round_trip_non_fixed_size_container_fixed_precision<
-                nil::marshalling::option::big_endian,
-                boost::multiprecision::number<
-                        boost::multiprecision::cpp_int_modular_backend<64>>,
-                128, bool>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_64_be_bits) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::big_endian,
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>, 128, bool>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_64_le_bits) {
-        test_round_trip_non_fixed_size_container_fixed_precision<
-                nil::marshalling::option::little_endian,
-                boost::multiprecision::number<
-                        boost::multiprecision::cpp_int_modular_backend<64>>,
-                128, bool>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_64_le_bits) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::little_endian,
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>, 128, bool>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_23_be_bits) {
-        test_round_trip_non_fixed_size_container_fixed_precision<
-                nil::marshalling::option::big_endian,
-                boost::multiprecision::number<
-                        boost::multiprecision::cpp_int_modular_backend<23>>,
-                128, bool>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_23_be_bits) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::big_endian,
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>, 128, bool>();
+}
 
-    BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_23_le_bits) {
-        test_round_trip_non_fixed_size_container_fixed_precision<
-                nil::marshalling::option::little_endian,
-                boost::multiprecision::number<
-                        boost::multiprecision::cpp_int_modular_backend<23>>,
-                128, bool>();
-    }
+BOOST_AUTO_TEST_CASE(integral_non_fixed_cpp_int_backend_23_le_bits) {
+    test_round_trip_non_fixed_size_container_fixed_precision<
+        nil::marshalling::option::little_endian,
+        boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>, 128, bool>();
+}
 
 BOOST_AUTO_TEST_SUITE_END()

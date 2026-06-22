@@ -81,8 +81,8 @@ namespace nil {
             /// @cond SKIP_DOC
             template<typename TFirst, typename... TRest>
             struct tuple_is_unique<std::tuple<TFirst, TRest...>> {
-                static const bool value = (!nil::detail::is_in_tuple<TFirst, std::tuple<TRest...>>::value)
-                                          && tuple_is_unique<std::tuple<TRest...>>::value;
+                static const bool value = (!nil::detail::is_in_tuple<TFirst, std::tuple<TRest...>>::value) &&
+                                          tuple_is_unique<std::tuple<TRest...>>::value;
             };
 
             template<>
@@ -678,8 +678,8 @@ namespace nil {
                 template<typename TTail, typename TTuple, std::size_t TStripRem>
                 struct tuple_tail_check_helpler {
                     static_assert(0U < TStripRem, "Invalid instantiation");
-                    static const bool value
-                        = tuple_tail_check_helpler<TTail, tuple_strip_first_type<TTuple>, TStripRem - 1>::value;
+                    static const bool value =
+                        tuple_tail_check_helpler<TTail, tuple_strip_first_type<TTuple>, TStripRem - 1>::value;
                 };
 
                 template<typename TTail, typename TTuple>
@@ -696,8 +696,8 @@ namespace nil {
             constexpr bool tuple_is_tail_of() {
                 static_assert(nil::detail::is_tuple<TTail>::value, "TTail param must be tuple");
                 static_assert(nil::detail::is_tuple<TTuple>::value, "TTuple param must be tuple");
-                return std::tuple_size<TTail>::value <= std::tuple_size<TTuple>::value
-                       && detail::tuple_tail_check_helpler<
+                return std::tuple_size<TTail>::value <= std::tuple_size<TTuple>::value &&
+                       detail::tuple_tail_check_helpler<
                            TTail, TTuple, std::tuple_size<TTuple>::value - std::tuple_size<TTail>::value>::value;
                 //    return true;
             }

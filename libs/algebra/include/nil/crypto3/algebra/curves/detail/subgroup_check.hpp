@@ -42,8 +42,8 @@ namespace nil {
                         return (p * GroupValueType::group_type::curve_type::q).is_zero();
                     }
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SUBGROUP_CHECK_HPP

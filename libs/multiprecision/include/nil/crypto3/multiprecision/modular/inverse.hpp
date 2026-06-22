@@ -15,19 +15,19 @@
 
 #include <boost/multiprecision/detail/default_ops.hpp>
 
-namespace boost {   
+namespace boost {
     namespace multiprecision {
         namespace backends {
-            using boost::multiprecision::default_ops::eval_is_zero;
-            using boost::multiprecision::default_ops::eval_bit_test;
-            using boost::multiprecision::default_ops::eval_modulus;
-            using boost::multiprecision::default_ops::eval_subtract;
             using boost::multiprecision::default_ops::eval_add;
             using boost::multiprecision::default_ops::eval_bit_set;
+            using boost::multiprecision::default_ops::eval_bit_test;
+            using boost::multiprecision::default_ops::eval_is_zero;
+            using boost::multiprecision::default_ops::eval_modulus;
+            using boost::multiprecision::default_ops::eval_subtract;
 
             template<typename Backend>
-            BOOST_MP_CXX14_CONSTEXPR Backend eval_extended_euclidean_algorithm(
-                    const Backend &num1, const Backend& num2, Backend &bezout_x, Backend &bezout_y) {
+            BOOST_MP_CXX14_CONSTEXPR Backend eval_extended_euclidean_algorithm(const Backend& num1, const Backend& num2,
+                                                                               Backend& bezout_x, Backend& bezout_y) {
                 Backend x, y, tmp_num1 = num1, tmp_num2 = num2;
                 using ui_type = typename std::tuple_element<0, typename Backend::unsigned_types>::type;
                 y = ui_type(1u);
@@ -62,16 +62,17 @@ namespace boost {
                 return tmp_num1;
             }
 
-
             // a^(-1) mod p
             // http://www-math.ucdenver.edu/~wcherowi/courses/m5410/exeucalg.html
             template<typename Backend>
-            BOOST_MP_CXX14_CONSTEXPR void eval_inverse_extended_euclidean_algorithm(Backend &result, const Backend& a, const Backend& m) {
-                using Backend_doubled = typename boost::multiprecision::default_ops::double_precision_type<Backend>::type;
+            BOOST_MP_CXX14_CONSTEXPR void eval_inverse_extended_euclidean_algorithm(Backend& result, const Backend& a,
+                                                                                    const Backend& m) {
+                using Backend_doubled =
+                    typename boost::multiprecision::default_ops::double_precision_type<Backend>::type;
                 using ui_type = typename std::tuple_element<0, typename Backend::unsigned_types>::type;
 
                 Backend aa = a, mm = m, x, y, g;
-                Backend zero= ui_type(0u);
+                Backend zero = ui_type(0u);
                 g = eval_extended_euclidean_algorithm(aa, mm, x, y);
                 if (!eval_eq(g, ui_type(1u))) {
                     result = zero;
@@ -87,16 +88,17 @@ namespace boost {
             // Overload the upper code for modular backends. We do not have negative numbers,
             // so we will convert to cpp_int_backend to perform the operation and back.
             template<unsigned Bits>
-            BOOST_MP_CXX14_CONSTEXPR void eval_inverse_extended_euclidean_algorithm(
-                    cpp_int_modular_backend<Bits> &result, const cpp_int_modular_backend<Bits>& a,
-                    const cpp_int_modular_backend<Bits>& m) {
+            BOOST_MP_CXX14_CONSTEXPR void
+                eval_inverse_extended_euclidean_algorithm(cpp_int_modular_backend<Bits>& result,
+                                                          const cpp_int_modular_backend<Bits>& a,
+                                                          const cpp_int_modular_backend<Bits>& m) {
 
                 // Careful here, we NEED signed magnitude numbers here.
                 using signed_cpp_int_type = boost::multiprecision::backends::cpp_int_backend<
                     Bits, Bits, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked>;
                 using unsigned_cpp_int_type = boost::multiprecision::backends::cpp_int_backend<
                     Bits, Bits, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked>;
- 
+
                 signed_cpp_int_type a_cpp_int = a.to_cpp_int();
                 signed_cpp_int_type m_cpp_int = m.to_cpp_int();
                 signed_cpp_int_type result_cpp_int;
@@ -111,7 +113,7 @@ namespace boost {
             }
 
             template<typename Backend>
-            BOOST_MP_CXX14_CONSTEXPR void eval_inverse_mod_pow2(Backend &result, const Backend &a, const size_t &k) {
+            BOOST_MP_CXX14_CONSTEXPR void eval_inverse_mod_pow2(Backend& result, const Backend& a, const size_t& k) {
                 using ui_type = typename std::tuple_element<0, typename Backend::unsigned_types>::type;
                 Backend tmp, zero, one, two;
                 zero = ui_type(0u);
@@ -147,17 +149,16 @@ namespace boost {
             }
 
             template<typename Backend>
-            BOOST_MP_CXX14_CONSTEXPR Backend eval_inverse_mod_odd(const Backend& n, const Backend& mod)
-            {
+            BOOST_MP_CXX14_CONSTEXPR Backend eval_inverse_mod_odd(const Backend& n, const Backend& mod) {
                 using ui_type = typename std::tuple_element<0, typename Backend::unsigned_types>::type;
                 Backend zero, one;
                 zero = ui_type(0u);
                 one = ui_type(1u);
                 // Caller should assure these preconditions:
-//                BOOST_ASSERT(eval_gt(n, 0) >= 0);
-//                BOOST_ASSERT(mod >= 0);
-//                BOOST_ASSERT(n < mod);
-//                BOOST_ASSERT(mod >= 3 && mod % 2 != 0);
+                //                BOOST_ASSERT(eval_gt(n, 0) >= 0);
+                //                BOOST_ASSERT(mod >= 0);
+                //                BOOST_ASSERT(n < mod);
+                //                BOOST_ASSERT(mod >= 3 && mod % 2 != 0);
 
                 /*
                 This uses a modular inversion algorithm designed by Niels Möller
@@ -181,7 +182,8 @@ namespace boost {
                 for (size_t i = 0; i < 2 * ell; ++i) {
 
                     size_t odd = eval_bit_test(a, 0);
-                    size_t gteq = boost::multiprecision::default_ops::eval_gt(a, b) || boost::multiprecision::default_ops::eval_eq(a, b);
+                    size_t gteq = boost::multiprecision::default_ops::eval_gt(a, b) ||
+                                  boost::multiprecision::default_ops::eval_eq(a, b);
                     if (odd && gteq) {
                         eval_subtract(a, b);
                     } else if (odd && !gteq) {
@@ -193,7 +195,8 @@ namespace boost {
                         b = tmp;
                     }
                     eval_right_shift(a, 1);
-                    size_t gteq2 = boost::multiprecision::default_ops::eval_gt(u, v) || boost::multiprecision::default_ops::eval_eq(u, v);
+                    size_t gteq2 = boost::multiprecision::default_ops::eval_gt(u, v) ||
+                                   boost::multiprecision::default_ops::eval_eq(u, v);
                     if (odd && gteq2) {
                         eval_subtract(u, v);
                     } else if (odd && !gteq2) {
@@ -206,15 +209,15 @@ namespace boost {
                     }
                     eval_right_shift(u, 1);
                 }
-                if (!boost::multiprecision::default_ops::eval_eq(b, one)) { // if b != 1 then gcd(n,mod) > 1 and inverse does not exist
+                if (!boost::multiprecision::default_ops::eval_eq(
+                        b, one)) {    // if b != 1 then gcd(n,mod) > 1 and inverse does not exist
                     return zero;
                 }
                 return v;
             }
 
             template<typename Backend>
-            BOOST_MP_CXX14_CONSTEXPR void eval_inverse_mod(Backend& result, const Backend& n, const Backend& mod)
-            {
+            BOOST_MP_CXX14_CONSTEXPR void eval_inverse_mod(Backend& result, const Backend& n, const Backend& mod) {
                 using ui_type = typename std::tuple_element<0, typename Backend::unsigned_types>::type;
                 Backend zero = ui_type(0u), one = ui_type(1u), tmp;
 
@@ -225,7 +228,7 @@ namespace boost {
                     return;
                 }
 
-                if(eval_bit_test(mod, 0)) {
+                if (eval_bit_test(mod, 0)) {
                     /*
                     Fastpath for common case. This leaks if n is greater than mod or
                     not, but we don't guarantee const time behavior in that case.
@@ -246,7 +249,7 @@ namespace boost {
                     return;
                 }
 
-                if(mod_lz == 1) {
+                if (mod_lz == 1) {
                     /*
                     Inversion modulo 2*o is an easier special case of CRT
 
@@ -283,11 +286,11 @@ namespace boost {
                 }
 
                 /*
-                * In this case we are performing an inversion modulo 2^K*o for
-                * some K >= 2 and some odd (not necessarily prime) integer.
-                * Compute the inversions modulo 2^K and modulo o, then combine them
-                * using CRT, which is possible because 2^K and o are relatively prime.
-                */
+                 * In this case we are performing an inversion modulo 2^K*o for
+                 * some K >= 2 and some odd (not necessarily prime) integer.
+                 * Compute the inversions modulo 2^K and modulo o, then combine them
+                 * using CRT, which is possible because 2^K and o are relatively prime.
+                 */
 
                 Backend o = mod;
                 eval_right_shift(o, mod_lz);
@@ -298,7 +301,7 @@ namespace boost {
                 eval_inverse_mod_pow2(inv_2k, n, mod_lz);
 
                 // No modular inverse in this case:
-                if(eval_is_zero(inv_o) || eval_is_zero(inv_2k)) {
+                if (eval_is_zero(inv_o) || eval_is_zero(inv_2k)) {
                     result = zero;
                     return;
                 }
@@ -328,16 +331,16 @@ namespace boost {
             // Overload the upper code for modular backends. We do not have negative numbers,
             // so we will convert to cpp_int_backend to perform the operation and back.
             template<unsigned Bits>
-            BOOST_MP_CXX14_CONSTEXPR void eval_inverse_mod(
-                cpp_int_modular_backend<Bits>& result, const cpp_int_modular_backend<Bits>& n,
-                const cpp_int_modular_backend<Bits>& mod) {
+            BOOST_MP_CXX14_CONSTEXPR void eval_inverse_mod(cpp_int_modular_backend<Bits>& result,
+                                                           const cpp_int_modular_backend<Bits>& n,
+                                                           const cpp_int_modular_backend<Bits>& mod) {
 
                 // Careful here, we NEED signed magnitude numbers here.
                 using signed_cpp_int_type = boost::multiprecision::backends::cpp_int_backend<
                     Bits, Bits, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked>;
                 using unsigned_cpp_int_type = boost::multiprecision::backends::cpp_int_backend<
                     Bits, Bits, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked>;
- 
+
                 signed_cpp_int_type n_cpp_int = n.to_cpp_int();
                 signed_cpp_int_type mod_cpp_int = mod.to_cpp_int();
                 signed_cpp_int_type result_cpp_int;
@@ -352,23 +355,24 @@ namespace boost {
             }
 
             /*
-            * Compute the inversion number mod p^K.
-            * From "A New Algorithm for Inversion mod p^K" by Çetin Kaya Koç.
-            * @see https://eprint.iacr.org/2017/411.pdf sections 5 and 7.
-            *
-            * @param a is a non-negative integer
-            * @param p is a prime number, where gcd(a,p) = 1
-            * @param K is a non-negative integer, where a < p^K
-            * @return x = a^(−1) mod p^K
-            */
+             * Compute the inversion number mod p^K.
+             * From "A New Algorithm for Inversion mod p^K" by Çetin Kaya Koç.
+             * @see https://eprint.iacr.org/2017/411.pdf sections 5 and 7.
+             *
+             * @param a is a non-negative integer
+             * @param p is a prime number, where gcd(a,p) = 1
+             * @param K is a non-negative integer, where a < p^K
+             * @return x = a^(−1) mod p^K
+             */
             template<typename Backend>
-            BOOST_MP_CXX14_CONSTEXPR void eval_monty_inverse(Backend& res, const Backend& a, const Backend& p, const Backend& k) {
+            BOOST_MP_CXX14_CONSTEXPR void eval_monty_inverse(Backend& res, const Backend& a, const Backend& p,
+                                                             const Backend& k) {
 
                 using boost::multiprecision::default_ops::eval_abs;
+                using boost::multiprecision::default_ops::eval_eq;
                 using boost::multiprecision::default_ops::eval_gt;
                 using boost::multiprecision::default_ops::eval_modulus;
                 using boost::multiprecision::default_ops::eval_subtract;
-                using boost::multiprecision::default_ops::eval_eq;
 
                 using ui_type = typename std::tuple_element<0, typename Backend::unsigned_types>::type;
                 Backend zero, one, two;
@@ -420,16 +424,16 @@ namespace boost {
             // Overload the upper code for modular backends. We do not have negative numbers,
             // so we will convert to cpp_int_backend to perform the operation and back.
             template<unsigned Bits>
-            BOOST_MP_CXX14_CONSTEXPR void eval_monty_inverse(
-                    cpp_int_modular_backend<Bits>& res, const cpp_int_modular_backend<Bits>& a,
-                    const cpp_int_modular_backend<Bits>& p, const cpp_int_modular_backend<Bits>& k) {
+            BOOST_MP_CXX14_CONSTEXPR void
+                eval_monty_inverse(cpp_int_modular_backend<Bits>& res, const cpp_int_modular_backend<Bits>& a,
+                                   const cpp_int_modular_backend<Bits>& p, const cpp_int_modular_backend<Bits>& k) {
 
                 // Careful here, we NEED signed magnitude numbers here.
                 using signed_cpp_int_type = boost::multiprecision::backends::cpp_int_backend<
                     Bits, Bits, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked>;
                 using unsigned_cpp_int_type = boost::multiprecision::backends::cpp_int_backend<
                     Bits, Bits, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked>;
- 
+
                 signed_cpp_int_type a_cpp_int = a.to_cpp_int();
                 signed_cpp_int_type p_cpp_int = p.to_cpp_int();
                 signed_cpp_int_type k_cpp_int = k.to_cpp_int();
@@ -445,7 +449,7 @@ namespace boost {
             }
 
         }    // namespace backends
-    }   // namespace multiprecision
-}   // namespace boost
+    }    // namespace multiprecision
+}    // namespace boost
 
 #endif

@@ -784,8 +784,8 @@ namespace nil {
 
                 template<typename T, std::size_t TSize>
                 using ChooseStaticVectorBase =
-                    typename static_vector_base_signed_integral<std::is_integral<T>::value
-                                                                && std::is_signed<T>::value>::template type<T, TSize>;
+                    typename static_vector_base_signed_integral<std::is_integral<T>::value &&
+                                                                std::is_signed<T>::value>::template type<T, TSize>;
 
             }    // namespace detail
 

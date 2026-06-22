@@ -32,8 +32,6 @@
 #include <nil/crypto3/algebra/fields/x962_p/base_field.hpp>
 #include <nil/crypto3/algebra/fields/x962_p/scalar_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -174,8 +172,8 @@ namespace nil {
                 typedef x962_p_v2<239> x962_p239v2;
                 typedef x962_p_v3<239> x962_p239v3;
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_X962_P_HPP

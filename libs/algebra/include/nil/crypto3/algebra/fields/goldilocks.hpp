@@ -54,8 +54,7 @@ namespace nil {
 
                     typedef typename policy_type::integral_type integral_type;
                     // 2^64 - 2^32 + 1
-                    constexpr static const integral_type modulus =
-                        0xFFFFFFFF00000001_cppui_modular64;
+                    constexpr static const integral_type modulus = 0xFFFFFFFF00000001_cppui_modular64;
                     constexpr static const integral_type group_order_minus_one_half = (modulus - 1u) / 2;
 
                     constexpr static const modular_params_type modulus_params = modulus.backend();
@@ -75,16 +74,15 @@ namespace nil {
                         constexpr static base_field_type::value_type non_residue = 7;
                         constexpr static base_field_type::value_type dim_unity_root = 18446744069414584320ull;
                     };
-                }  // namespace detail
+                }    // namespace detail
 
-                struct goldilocks_fp2
-                    : public fpn<detail::goldilocks_fp2_binomial_extension_params<goldilocks_fp2>> {
+                struct goldilocks_fp2 : public fpn<detail::goldilocks_fp2_binomial_extension_params<goldilocks_fp2>> {
                     using small_subfield = goldilocks;
                 };
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
-#endif  // CRYPTO3_ALGEBRA_FIELDS_GOLDILOCKS_HPP
+#endif    // CRYPTO3_ALGEBRA_FIELDS_GOLDILOCKS_HPP

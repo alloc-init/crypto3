@@ -54,16 +54,16 @@ namespace nil {
                 constexpr std::size_t const arithmetic_params<babybear_base_field>::s;
 
                 constexpr typename arithmetic_params<babybear_base_field>::integral_type const
-                        arithmetic_params<babybear_base_field>::root_of_unity;
+                    arithmetic_params<babybear_base_field>::root_of_unity;
 
                 constexpr typename arithmetic_params<babybear_base_field>::integral_type const
-                        arithmetic_params<babybear_base_field>::arithmetic_generator;
+                    arithmetic_params<babybear_base_field>::arithmetic_generator;
 
                 constexpr typename arithmetic_params<babybear_base_field>::integral_type const
-                        arithmetic_params<babybear_base_field>::geometric_generator;
+                    arithmetic_params<babybear_base_field>::geometric_generator;
 
                 constexpr typename arithmetic_params<babybear_base_field>::integral_type const
-                        arithmetic_params<babybear_base_field>::multiplicative_generator;
+                    arithmetic_params<babybear_base_field>::multiplicative_generator;
 
                 template<>
                 struct arithmetic_params<babybear_fp4> : public params<babybear> {
@@ -79,8 +79,8 @@ namespace nil {
                     constexpr static integral_type geometric_generator = 0u;
                 };
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_BABYBEAR_ARITHMETIC_PARAMS_HPP

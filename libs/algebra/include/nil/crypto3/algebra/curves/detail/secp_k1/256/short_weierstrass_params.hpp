@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/curves/forms.hpp>
 #include <nil/crypto3/algebra/curves/detail/secp_k1/types.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -68,8 +66,10 @@ namespace nil {
 #endif
 
                         constexpr static const std::array<typename field_type::value_type, 2> one_fill = {
-                            typename field_type::value_type(0x3b4c382ce37aa192a4019e763036f4f5dd4d7ebb_cppui_modular160),
-                            typename field_type::value_type(0x938cf935318fdced6bc28286531733c3f03c4fee_cppui_modular160)};
+                            typename field_type::value_type(
+                                0x3b4c382ce37aa192a4019e763036f4f5dd4d7ebb_cppui_modular160),
+                            typename field_type::value_type(
+                                0x938cf935318fdced6bc28286531733c3f03c4fee_cppui_modular160)};
                     };
 
                     constexpr typename secp_k1_types<160>::integral_type const
@@ -114,8 +114,6 @@ namespace nil {
                         constexpr static const std::array<typename field_type::value_type, 2> zero_fill = {
                             field_type::value_type::zero(), field_type::value_type::zero()};
 #endif
-
-
 
                         constexpr static const std::array<typename field_type::value_type, 2> one_fill = {
                             typename field_type::value_type(
@@ -236,9 +234,9 @@ namespace nil {
                         typename secp_k1_g1_params<256, forms::short_weierstrass>::field_type::value_type, 2> const
                         secp_k1_g1_params<256, forms::short_weierstrass>::one_fill;
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_SECP_K1_256_SHORT_WEIERSTRASS_PARAMS_HPP

@@ -348,8 +348,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_RIJNDAEL_ARMV8_IMPL_HPP

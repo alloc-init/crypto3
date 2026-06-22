@@ -125,8 +125,8 @@ namespace nil {
                         CRYPTO3_BLOCK_MD4_ENCRYPT_STEP(c, d, a, b, gg, t + 8, 9, 0x5a827999)
                         CRYPTO3_BLOCK_MD4_ENCRYPT_STEP(b, c, d, a, gg, t + 12, 13, 0x5a827999)
                     }
-                    std::array<unsigned, 4> t_step3{{0, 2, 1, 3}};
-                    for (unsigned int &t: t_step3) {
+                    std::array<unsigned, 4> t_step3 {{0, 2, 1, 3}};
+                    for (unsigned int &t : t_step3) {
                         CRYPTO3_BLOCK_MD4_ENCRYPT_STEP(a, b, c, d, hh, t + 0, 3, 0x6ed9eba1)
                         CRYPTO3_BLOCK_MD4_ENCRYPT_STEP(d, a, b, c, hh, t + 8, 9, 0x6ed9eba1)
                         CRYPTO3_BLOCK_MD4_ENCRYPT_STEP(c, d, a, b, hh, t + 4, 11, 0x6ed9eba1)
@@ -169,7 +169,7 @@ namespace nil {
                 }
             };
         }    // namespace block
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_CIPHERS_MD4_HPP

@@ -31,7 +31,6 @@
 
 #include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
 
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -61,9 +60,9 @@ namespace nil {
                         return result;
                     }
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_POWER_HPP

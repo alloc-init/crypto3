@@ -55,7 +55,7 @@ namespace nil {
                  *
                  * (See the function get_evaluation_domain below.)
                  */
-                evaluation_domain(const std::size_t m) : m(m), log2_size(boost::multiprecision::msb(m)) {};
+                evaluation_domain(const std::size_t m) : m(m), log2_size(boost::multiprecision::msb(m)) { };
 
                 inline std::size_t size() const {
                     return m;
@@ -64,12 +64,12 @@ namespace nil {
                 /*
                  * Virtual destructor.
                  */
-                virtual ~evaluation_domain() {};
+                virtual ~evaluation_domain() { };
 
                 /**
                  * Get the unity root.
                  */
-                virtual const field_value_type& get_unity_root() = 0;
+                virtual const field_value_type &get_unity_root() = 0;
 
                 /**
                  * Get the idx-th element in S.
@@ -145,7 +145,7 @@ namespace nil {
                 }
             };
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // ALGEBRA_FFT_EVALUATION_DOMAIN_HPP

@@ -73,8 +73,8 @@ namespace nil {
                     };
                 };
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_KECCAK_POLICY_HPP

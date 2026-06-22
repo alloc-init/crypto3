@@ -64,8 +64,7 @@ namespace nil {
              *  Computes the elementwise real of a matrix
              */
             template<typename T, std::size_t M, std::size_t N>
-            constexpr matrix<typename remove_complex<T>::type, M, N> real(
-                const matrix<T, M, N> &m) {
+            constexpr matrix<typename remove_complex<T>::type, M, N> real(const matrix<T, M, N> &m) {
                 return elementwise([](auto i) { return std::real(i); }, m);
             }
 
@@ -126,9 +125,7 @@ namespace nil {
              */
             template<typename T, std::size_t M, std::size_t N>
             constexpr vector<T, N> vectmatmul(const vector<T, M> &v, const matrix<T, M, N> &m) {
-                return generate<N>([&v, &m](auto i) {
-                    return sum(v * m.column(i));
-                });
+                return generate<N>([&v, &m](auto i) { return sum(v * m.column(i)); });
             }
 
             /*!
@@ -139,9 +136,7 @@ namespace nil {
              */
             template<typename T, std::size_t M, std::size_t N>
             constexpr vector<T, M> matvectmul(const matrix<T, M, N> &m, const vector<T, N> &v) {
-                return generate<M>([&v, &m](auto i) {
-                    return sum(m.row(i) * v);
-                });
+                return generate<M>([&v, &m](auto i) { return sum(m.row(i) * v); });
             }
 
             /** @brief Computes the kronecker tensor product
@@ -326,8 +321,8 @@ namespace nil {
             }
 
             /** }@*/
-        } // namespace algebra
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace algebra
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_MATRIX_MATH_HPP

@@ -57,7 +57,7 @@ namespace nil {
 
                 key_schedule_type agrkey;
             };
-        } // namespace pubkey
+        }    // namespace pubkey
     }    // namespace crypto3
 }    // namespace nil
 

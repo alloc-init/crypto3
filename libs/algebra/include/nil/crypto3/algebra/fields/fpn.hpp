@@ -32,7 +32,7 @@
 namespace nil::crypto3::algebra::fields {
     template<detail::BinomialFieldExtensionParams Params>
     class fpn {
-      public:
+    public:
         using base_field_type = Params::base_field_type;
 
         constexpr static const std::size_t modulus_bits = base_field_type::modulus_bits;
@@ -48,6 +48,6 @@ namespace nil::crypto3::algebra::fields {
         constexpr static const std::size_t arity = Params::dimension;
         constexpr static const std::size_t value_bits = arity * modulus_bits;
     };
-}  // namespace nil::crypto3::algebra::fields
+}    // namespace nil::crypto3::algebra::fields
 
-#endif  // CRYPTO3_ALGEBRA_FIELDS_FPN_EXTENSION_HPP
+#endif    // CRYPTO3_ALGEBRA_FIELDS_FPN_EXTENSION_HPP

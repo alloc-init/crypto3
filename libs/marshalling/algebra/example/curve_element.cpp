@@ -39,16 +39,15 @@
 #include <nil/marshalling/algorithms/pack.hpp>
 
 template<typename unit>
-void print_buffer(std::vector<unit> const& v)
-{
-    for(size_t i = 0; i < v.size(); ++i) {
+void print_buffer(std::vector<unit> const& v) {
+    for (size_t i = 0; i < v.size(); ++i) {
         std::cout << std::hex << std::setw(2) << std::setfill('0') << (unsigned int)v[i] << " ";
-        if ( i % 16 == 15 ) std::cout << std::endl;
+        if (i % 16 == 15)
+            std::cout << std::endl;
     }
 }
 
-int main()
-{
+int main() {
     using g1 = nil::crypto3::algebra::curves::mnt4<298>::g1_type<>;
     using g2 = nil::crypto3::algebra::curves::mnt4<298>::g2_type<>;
 
@@ -63,7 +62,7 @@ int main()
     std::cout << "Big endian:" << std::endl;
     print_buffer(cv_be);
     std::cout << std::endl;
-    
+
     auto G2 = g2::value_type::one();
 
     std::vector<unit_type> cv2_be = nil::marshalling::pack<be>(G2, status);
@@ -71,7 +70,6 @@ int main()
     std::cout << "Big endian:" << std::endl;
     print_buffer(cv2_be);
     std::cout << std::endl;
-    
-    return 0;
 
+    return 0;
 }

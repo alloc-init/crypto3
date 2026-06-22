@@ -54,11 +54,11 @@ namespace boost {
                 if (eval_eq(p, 2ul)) {
                     return a;
                 }
-                //else if (!eval_gt(p, 1ul)) {
-                //    BOOST_THROW_EXCEPTION(std::invalid_argument("ressol: prime must be > 1 a"));
-                //} else if (eval_integer_modulus(p, 2) == 0) {
-                //    BOOST_THROW_EXCEPTION(std::invalid_argument("ressol: invalid prime"));
-                //}
+                // else if (!eval_gt(p, 1ul)) {
+                //     BOOST_THROW_EXCEPTION(std::invalid_argument("ressol: prime must be > 1 a"));
+                // } else if (eval_integer_modulus(p, 2) == 0) {
+                //     BOOST_THROW_EXCEPTION(std::invalid_argument("ressol: invalid prime"));
+                // }
 
                 if (eval_jacobi(a, p) != 1) {    // not a quadratic residue
                     // Martun: We used to return negative one here as an indication of a value now having a square root.
@@ -136,9 +136,9 @@ namespace boost {
                         ++i;
 
                         if (i >= s) {
-                            // Martun: We used to return negative one here as an indication of a value now having a square root.
-                            // Now we can't do that any more, no negative numbers, so we will return zero, and the caller
-                            // Must check if the initial value was not zero, then there is no sqare root.
+                            // Martun: We used to return negative one here as an indication of a value now having a
+                            // square root. Now we can't do that any more, no negative numbers, so we will return zero,
+                            // and the caller Must check if the initial value was not zero, then there is no sqare root.
                             // This is temporary solution before we introduce proper error handling.
                             return zero;
                         }
@@ -163,8 +163,8 @@ namespace boost {
             }
 
             template<unsigned Bits>
-            BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend<Bits>
-            eval_ressol(const cpp_int_modular_backend<Bits> &a, const cpp_int_modular_backend<Bits> &p) {
+            BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend<Bits> eval_ressol(const cpp_int_modular_backend<Bits> &a,
+                                                                               const cpp_int_modular_backend<Bits> &p) {
 
                 using Backend = cpp_int_modular_backend<Bits>;
                 using Backend_padded = cpp_int_modular_backend<Bits + 1>;
@@ -276,9 +276,9 @@ namespace boost {
                         ++i;
 
                         if (i >= s) {
-                            // Martun: We used to return negative one here as an indication of a value now having a square root.
-                            // Now we can't do that any more, no negative numbers, so we will return zero, and the caller
-                            // Must check if the initial value was not zero, then there is no sqare root.
+                            // Martun: We used to return negative one here as an indication of a value now having a
+                            // square root. Now we can't do that any more, no negative numbers, so we will return zero,
+                            // and the caller Must check if the initial value was not zero, then there is no sqare root.
                             // This is temporary solution before we introduce proper error handling.
                             return zero;
                         }
@@ -312,8 +312,7 @@ namespace boost {
          */
         template<typename Backend, expression_template_option ExpressionTemplates>
         BOOST_MP_CXX14_CONSTEXPR number<Backend, ExpressionTemplates>
-        ressol(const number<Backend, ExpressionTemplates> &a,
-               const number<Backend, ExpressionTemplates> &p) {
+            ressol(const number<Backend, ExpressionTemplates> &a, const number<Backend, ExpressionTemplates> &p) {
             return number<Backend, ExpressionTemplates>(backends::eval_ressol(a.backend(), p.backend()));
         }
 
@@ -327,10 +326,10 @@ namespace boost {
 
         template<typename Backend, typename StorageType, expression_template_option ExpressionTemplates>
         BOOST_MP_CXX14_CONSTEXPR number<backends::modular_adaptor<Backend, StorageType>, ExpressionTemplates>
-        ressol(const number<backends::modular_adaptor<Backend, StorageType>, ExpressionTemplates> &modular) {
+            ressol(const number<backends::modular_adaptor<Backend, StorageType>, ExpressionTemplates> &modular) {
 
             return number<backends::modular_adaptor<Backend, StorageType>, ExpressionTemplates>(
-                    backends::eval_ressol(modular.backend()));
+                backends::eval_ressol(modular.backend()));
         }
 
         /*
@@ -342,6 +341,6 @@ namespace boost {
          */
 
     }    // namespace multiprecision
-} // namespace boost
+}    // namespace boost
 
 #endif    // CRYPTO3_MULTIPRECISION_RESSOL_HPP

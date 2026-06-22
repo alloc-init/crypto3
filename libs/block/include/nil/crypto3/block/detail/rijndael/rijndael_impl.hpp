@@ -91,8 +91,7 @@ namespace nil {
                             }
 
                             for (std::size_t i = 0; i < off; ++i) {
-                                state[(policy_type::block_words - off + i) * policy_type::word_bytes + row] =
-                                    tmp[i];
+                                state[(policy_type::block_words - off + i) * policy_type::word_bytes + row] = tmp[i];
                             }
                         }
                     }
@@ -224,7 +223,7 @@ namespace nil {
              * @endcond
              */
         }    // namespace block
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_RIJNDAEL_IMPL_HPP

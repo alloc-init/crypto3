@@ -90,7 +90,7 @@ namespace nil {
 
                         template<typename InputRange>
                         inline void resolve_type(const InputRange &range, std::nullptr_t) {
-                            for (const auto &s: range) {
+                            for (const auto &s : range) {
                                 resolve_type(s);
                             }
                         }
@@ -104,7 +104,7 @@ namespace nil {
 
                         mutable accumulator_type acc;
                     };
-                } // namespace impl
+                }    // namespace impl
 
                 namespace tag {
                     template<typename ProcessingMode>
@@ -116,18 +116,18 @@ namespace nil {
 
                         typedef boost::mpl::always<impl::deal_share_impl<mode_type>> impl;
                     };
-                } // namespace tag
+                }    // namespace tag
 
                 namespace extract {
                     template<typename ProcessingMode, typename AccumulatorSet>
                     typename boost::mpl::apply<AccumulatorSet, tag::deal_share<ProcessingMode>>::type::result_type
-                    deal_share(const AccumulatorSet &acc) {
+                        deal_share(const AccumulatorSet &acc) {
                         return boost::accumulators::extract_result<tag::deal_share<ProcessingMode>>(acc);
                     }
-                } // namespace extract
-            } // namespace accumulators
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+                }    // namespace extract
+            }    // namespace accumulators
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_PUBKEY_SSS_DEAL_SHARE_HPP

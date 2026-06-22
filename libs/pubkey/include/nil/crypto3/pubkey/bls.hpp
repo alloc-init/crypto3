@@ -296,8 +296,8 @@ namespace nil {
             };
 
             template<std::size_t K = 128,
-                    hashes::uniformity_count_t UniformityCount = hashes::uniformity_count_t::uniform_count,
-                    hashes::expand_msg_variant_t ExpandMsgVariant = hashes::expand_msg_variant_t::rfc_xmd>
+                     hashes::uniformity_count_t UniformityCount = hashes::uniformity_count_t::uniform_count,
+                     hashes::expand_msg_variant_t ExpandMsgVariant = hashes::expand_msg_variant_t::rfc_xmd>
             struct bls_default_public_params {
                 constexpr static hashes::uniformity_count_t uniformity_count = UniformityCount;
                 constexpr static hashes::expand_msg_variant_t expand_msg_variant = ExpandMsgVariant;
@@ -305,17 +305,15 @@ namespace nil {
 
                 // "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
                 typedef std::array<std::uint8_t, 43> dst_type;
-                static constexpr dst_type dst = {
-                        0x42, 0x4c, 0x53, 0x5f, 0x53, 0x49, 0x47, 0x5f, 0x42, 0x4c, 0x53,
-                        0x31, 0x32, 0x33, 0x38, 0x31, 0x47, 0x32, 0x5f, 0x58, 0x4d, 0x44,
-                        0x3a, 0x53, 0x48, 0x41, 0x2d, 0x32, 0x35, 0x36, 0x5f, 0x53, 0x53,
-                        0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f, 0x4e, 0x55, 0x4c, 0x5f
-                };
+                static constexpr dst_type dst = {0x42, 0x4c, 0x53, 0x5f, 0x53, 0x49, 0x47, 0x5f, 0x42, 0x4c, 0x53,
+                                                 0x31, 0x32, 0x33, 0x38, 0x31, 0x47, 0x32, 0x5f, 0x58, 0x4d, 0x44,
+                                                 0x3a, 0x53, 0x48, 0x41, 0x2d, 0x32, 0x35, 0x36, 0x5f, 0x53, 0x53,
+                                                 0x57, 0x55, 0x5f, 0x52, 0x4f, 0x5f, 0x4e, 0x55, 0x4c, 0x5f};
             };
 
             template<std::size_t K = 128,
-                    hashes::uniformity_count_t UniformityCount = hashes::uniformity_count_t::uniform_count,
-                    hashes::expand_msg_variant_t ExpandMsgVariant = hashes::expand_msg_variant_t::rfc_xmd>
+                     hashes::uniformity_count_t UniformityCount = hashes::uniformity_count_t::uniform_count,
+                     hashes::expand_msg_variant_t ExpandMsgVariant = hashes::expand_msg_variant_t::rfc_xmd>
             struct bls_pop_prove_default_public_params {
                 constexpr static hashes::uniformity_count_t uniformity_count = UniformityCount;
                 constexpr static hashes::expand_msg_variant_t expand_msg_variant = ExpandMsgVariant;
@@ -330,8 +328,8 @@ namespace nil {
             };
 
             template<std::size_t K = 128,
-                    hashes::uniformity_count_t UniformityCount = hashes::uniformity_count_t::uniform_count,
-                    hashes::expand_msg_variant_t ExpandMsgVariant = hashes::expand_msg_variant_t::rfc_xmd>
+                     hashes::uniformity_count_t UniformityCount = hashes::uniformity_count_t::uniform_count,
+                     hashes::expand_msg_variant_t ExpandMsgVariant = hashes::expand_msg_variant_t::rfc_xmd>
             struct bls_pop_sign_default_public_params {
                 constexpr static const hashes::uniformity_count_t uniformity_count = UniformityCount;
                 constexpr static const hashes::expand_msg_variant_t expand_msg_variant = ExpandMsgVariant;
@@ -346,9 +344,9 @@ namespace nil {
             };
 
             template<typename PublicParams = bls_default_public_params<>,
-                    template<typename, typename> class VersionType = bls_mss_ro_version,
-                    template<typename> class SchemeType = bls_basic_scheme,
-                    typename CurveType = algebra::curves::bls12_381>
+                     template<typename, typename> class VersionType = bls_mss_ro_version,
+                     template<typename> class SchemeType = bls_basic_scheme,
+                     typename CurveType = algebra::curves::bls12_381>
             struct bls {
                 typedef VersionType<PublicParams, CurveType> version_type;
                 typedef SchemeType<version_type> scheme_type;
@@ -361,7 +359,7 @@ namespace nil {
             };
 
             template<typename PublicParams, template<typename, typename> class VersionType,
-                    template<typename> class SchemeType, typename CurveType>
+                     template<typename> class SchemeType, typename CurveType>
             struct public_key<bls<PublicParams, VersionType, SchemeType, CurveType>> {
                 typedef bls<PublicParams, VersionType, SchemeType, CurveType> scheme_type;
                 typedef typename scheme_type::scheme_type bls_scheme_type;
@@ -420,9 +418,9 @@ namespace nil {
             };
 
             template<typename PublicParams, template<typename, typename> class VersionType,
-                    template<typename> class SchemeType, typename CurveType>
+                     template<typename> class SchemeType, typename CurveType>
             struct private_key<bls<PublicParams, VersionType, SchemeType, CurveType>>
-                    : public public_key<bls<PublicParams, VersionType, SchemeType, CurveType>> {
+                : public public_key<bls<PublicParams, VersionType, SchemeType, CurveType>> {
                 typedef bls<PublicParams, VersionType, SchemeType, CurveType> scheme_type;
                 typedef typename scheme_type::scheme_type bls_scheme_type;
                 typedef public_key<scheme_type> base_type;
@@ -435,9 +433,8 @@ namespace nil {
 
                 private_key() = delete;
 
-                private_key(const private_key_type &privkey) : privkey(privkey),
-                                                               base_type(bls_scheme_type::generate_public_key(
-                                                                       privkey)) {
+                private_key(const private_key_type &privkey) :
+                    privkey(privkey), base_type(bls_scheme_type::generate_public_key(privkey)) {
                 }
 
                 inline void init_accumulator(accumulator_type &acc) const {
@@ -475,7 +472,7 @@ namespace nil {
             };
 
             template<typename PublicParams, template<typename, typename> class VersionType,
-                    template<typename> class SchemeType, typename CurveType>
+                     template<typename> class SchemeType, typename CurveType>
             struct aggregate_op<bls<PublicParams, VersionType, SchemeType, CurveType>> {
                 typedef bls<PublicParams, VersionType, SchemeType, CurveType> scheme_type;
 
@@ -508,7 +505,7 @@ namespace nil {
             };
 
             template<typename PublicParams, template<typename, typename> class VersionType,
-                    template<typename> class SchemeType, typename CurveType>
+                     template<typename> class SchemeType, typename CurveType>
             struct aggregate_verify_op<bls<PublicParams, VersionType, SchemeType, CurveType>> {
                 typedef bls<PublicParams, VersionType, SchemeType, CurveType> scheme_type;
 
@@ -555,7 +552,7 @@ namespace nil {
                            std::distance(std::cbegin(acc.second), std::cend(acc.second)));
 
                     auto found_pos_it =
-                            std::find(std::cbegin(acc.first), std::cend(acc.first), scheme_pubkey.public_key_data());
+                        std::find(std::cbegin(acc.first), std::cend(acc.first), scheme_pubkey.public_key_data());
 
                     if (std::cend(acc.first) == found_pos_it) {
                         acc.first.push_back(scheme_pubkey.public_key_data());
@@ -588,23 +585,23 @@ namespace nil {
 
                 template<typename InputIterator>
                 static inline typename std::enable_if<!std::is_convertible<
-                        typename std::iterator_traits<InputIterator>::value_type, scheme_public_key_type>::value>::type
-                update(accumulator_type &acc, InputIterator first, InputIterator last) {
+                    typename std::iterator_traits<InputIterator>::value_type, scheme_public_key_type>::value>::type
+                    update(accumulator_type &acc, InputIterator first, InputIterator last) {
                     bls_scheme_type::update(acc.second, first, last);
                 }
 
                 template<typename InputRange>
                 static inline typename std::enable_if<
-                        !std::is_convertible<typename std::iterator_traits<typename InputRange::iterator>::value_type,
-                                scheme_public_key_type>::value>::type
-                update(accumulator_type &acc, const InputRange &range) {
+                    !std::is_convertible<typename std::iterator_traits<typename InputRange::iterator>::value_type,
+                                         scheme_public_key_type>::value>::type
+                    update(accumulator_type &acc, const InputRange &range) {
                     bls_scheme_type::update(acc.second, range);
                 }
 
                 template<typename InputIterator>
                 static inline typename std::enable_if<std::is_convertible<
-                        typename std::iterator_traits<InputIterator>::value_type, scheme_public_key_type>::value>::type
-                update(accumulator_type &acc, InputIterator first, InputIterator last) {
+                    typename std::iterator_traits<InputIterator>::value_type, scheme_public_key_type>::value>::type
+                    update(accumulator_type &acc, InputIterator first, InputIterator last) {
                     for (auto iter = first; iter != last; ++iter) {
                         update(acc, *iter);
                     }
@@ -612,17 +609,17 @@ namespace nil {
 
                 template<typename InputRange>
                 static inline typename std::enable_if<
-                        std::is_convertible<typename std::iterator_traits<typename InputRange::iterator>::value_type,
-                                scheme_public_key_type>::value>::type
-                update(accumulator_type &acc, const InputRange &range) {
-                    for (const auto &scheme_pubkey: range) {
+                    std::is_convertible<typename std::iterator_traits<typename InputRange::iterator>::value_type,
+                                        scheme_public_key_type>::value>::type
+                    update(accumulator_type &acc, const InputRange &range) {
+                    for (const auto &scheme_pubkey : range) {
                         update(acc, scheme_pubkey);
                     }
                 }
 
                 static inline void update(accumulator_type &acc, const scheme_public_key_type &scheme_pubkey) {
                     auto found_pos_it =
-                            std::find(std::cbegin(acc.first), std::cend(acc.first), scheme_pubkey.public_key_data());
+                        std::find(std::cbegin(acc.first), std::cend(acc.first), scheme_pubkey.public_key_data());
                     if (std::cend(acc.first) == found_pos_it) {
                         acc.first.push_back(scheme_pubkey.public_key_data());
                     }
@@ -632,8 +629,8 @@ namespace nil {
                     return bls_scheme_type::aggregate_verify(acc, sig);
                 }
             };
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_BLS_HPP

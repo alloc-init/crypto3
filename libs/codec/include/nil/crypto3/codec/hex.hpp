@@ -51,20 +51,20 @@ namespace nil {
              * @struct hex_decode_error
              * @brief  Base exception class for all hex decoding errors
              */
-            struct hex_decode_error : virtual boost::exception, virtual std::exception {};
+            struct hex_decode_error : virtual boost::exception, virtual std::exception { };
 
             /*!
              * @struct not_enough_input
              * @brief  Thrown when the input sequence unexpectedly ends
              * */
-            struct not_enough_input : virtual hex_decode_error {};
+            struct not_enough_input : virtual hex_decode_error { };
 
             /*!
              * @struct non_hex_input
              * @brief  Thrown when a non-hex value (0-9, A-F) encountered when decoding.
              * Contains the offending character
              */
-            struct non_hex_input : virtual hex_decode_error {};
+            struct non_hex_input : virtual hex_decode_error { };
             typedef boost::error_info<struct bad_char_, char> bad_char;
 
             namespace detail {
@@ -225,7 +225,7 @@ namespace nil {
                 }
             };
         }    // namespace codec
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

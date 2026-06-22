@@ -131,8 +131,8 @@ namespace nil {
 
                 template<typename OutputRange,
                          typename = typename std::enable_if<
-                             nil::detail::is_range<OutputRange>::value && !is_marshalling_type<OutputRange>::value
-                             && !nil::marshalling::is_container<typename is_compatible<
+                             nil::detail::is_range<OutputRange>::value && !is_marshalling_type<OutputRange>::value &&
+                             !nil::marshalling::is_container<typename is_compatible<
                                  typename OutputRange::value_type>::template type<>>::value>::type>
                 inline operator OutputRange() {
                     using T = typename OutputRange::value_type;
@@ -150,7 +150,7 @@ namespace nil {
                 }
             };
         }    // namespace detail
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 
 #endif    // MARSHALLING_MARSHALL_PACK_VALUE_HPP

@@ -8,11 +8,14 @@
 
 #define BOOST_TEST_MODULE NON_MATCHING_BITLENGTH_NUMBERS_TESTS
 
-// Suddenly, BOOST_MP_ASSERT is NOT constexpr, and it is used in constexpr functions throughout the boost, resulting to compilation errors on all compilers in debug mode. We need to switch assertions off inside cpp_int to make this code compile in debug mode. So we use this workaround to turn off file 'boost/multiprecision/detail/assert.hpp' which contains definition of BOOST_MP_ASSERT and BOOST_MP_ASSERT_MSG. 
+// Suddenly, BOOST_MP_ASSERT is NOT constexpr, and it is used in constexpr functions throughout the boost, resulting to
+// compilation errors on all compilers in debug mode. We need to switch assertions off inside cpp_int to make this code
+// compile in debug mode. So we use this workaround to turn off file 'boost/multiprecision/detail/assert.hpp' which
+// contains definition of BOOST_MP_ASSERT and BOOST_MP_ASSERT_MSG.
 #ifndef BOOST_MP_DETAIL_ASSERT_HPP
-    #define BOOST_MP_DETAIL_ASSERT_HPP
-    #define BOOST_MP_ASSERT(expr) ((void)0)
-    #define BOOST_MP_ASSERT_MSG(expr, msg) ((void)0)
+#define BOOST_MP_DETAIL_ASSERT_HPP
+#define BOOST_MP_ASSERT(expr) ((void)0)
+#define BOOST_MP_ASSERT_MSG(expr, msg) ((void)0)
 #endif
 
 #include <boost/test/unit_test.hpp>
@@ -40,7 +43,7 @@ using boost::multiprecision::backends::cpp_int_modular_backend;
 // This test case uses normal boost::cpp_int for comparison to our cpp_int_modular_backend.
 template<unsigned Bits1, unsigned Bits2>
 void value_comparisons_tests(const number<cpp_int_modular_backend<Bits1>>& a,
-                          const number<cpp_int_modular_backend<Bits2>>& b) {
+                             const number<cpp_int_modular_backend<Bits2>>& b) {
 
     typedef cpp_int_modular_backend<Bits1> Backend1;
     typedef cpp_int_modular_backend<Bits2> Backend2;
@@ -83,7 +86,6 @@ void value_comparisons_tests(const std::size_t N) {
         value_comparisons_tests(a, b);
     }
 }
-
 
 BOOST_AUTO_TEST_SUITE(static_tests)
 

@@ -8,20 +8,17 @@
 #include "test_arithmetic.hpp"
 
 template<unsigned Bits, boost::multiprecision::expression_template_option ExpressionTemplates>
-struct is_twos_complement_integer<boost::multiprecision::number<
-    boost::multiprecision::cpp_int_modular_backend<Bits>,
-    ExpressionTemplates>> : public std::integral_constant<bool, false> { };
+struct is_twos_complement_integer<
+    boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<Bits>, ExpressionTemplates>>
+    : public std::integral_constant<bool, false> { };
 
 template<>
 struct related_type<boost::multiprecision::cpp_int_modular> {
     typedef boost::multiprecision::int256_t type;
 };
 template<unsigned Bits, boost::multiprecision::expression_template_option ET>
-struct related_type<boost::multiprecision::number<
-    boost::multiprecision::cpp_int_modular_backend<Bits>, ET>> {
-    typedef boost::multiprecision::number<
-        boost::multiprecision::cpp_int_modular_backend<Bits / 2>, ET>
-        type;
+struct related_type<boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<Bits>, ET>> {
+    typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<Bits / 2>, ET> type;
 };
 
 int main() {

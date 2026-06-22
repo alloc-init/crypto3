@@ -113,8 +113,8 @@ namespace nil {
 
                 constexpr typename shacal2_policy<512>::constants_type const shacal2_policy<512>::constants;
             }    // namespace detail
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_CIPHERS_DETAIL_SHACAL2_POLICY_HPP

@@ -42,9 +42,8 @@ using namespace nil::crypto3::hashes;
 
 template<typename hash_type, typename enable = void>
 struct hash_usage_example {
-    static void run()
-    {
-        std::string empty = nil::crypto3::hash<hash_type>(std::array<uint8_t,0>{});
+    static void run() {
+        std::string empty = nil::crypto3::hash<hash_type>(std::array<uint8_t, 0> {});
         std::cout << "Hash of empty string: " << empty << std::endl;
 
         std::string input = "A quick brown fox jumps over the lazy dog";
@@ -53,12 +52,9 @@ struct hash_usage_example {
     }
 };
 
-
 template<typename hash_type>
-struct hash_usage_example<hash_type, typename std::enable_if<is_poseidon<hash_type>::value>::type>
-{
-    static void run()
-    {
+struct hash_usage_example<hash_type, typename std::enable_if<is_poseidon<hash_type>::value>::type> {
+    static void run() {
         using policy = typename hash_type::policy_type;
         using field_type = typename policy::field_type;
         std::vector<typename field_type::value_type> field_input = {
@@ -68,15 +64,12 @@ struct hash_usage_example<hash_type, typename std::enable_if<is_poseidon<hash_ty
 
         typename policy::digest_type result = nil::crypto3::hash<hash_type>(field_input);
         std::cout << result << std::endl;
-
     }
 };
 
 template<typename hash_type>
-struct poseidon_bytes_vector_example
-{
-    static void run()
-    {
+struct poseidon_bytes_vector_example {
+    static void run() {
         using policy = typename hash_type::policy_type;
         using field_type = typename policy::field_type;
         std::string input =
@@ -90,38 +83,26 @@ struct poseidon_bytes_vector_example
         std::vector<uint8_t> hash_input(input.begin(), input.end());
 
         typename policy::digest_type result = nil::crypto3::hash<hash_type>(
-            nil::crypto3::hashes::conditional_block_to_field_elements_wrapper<
-                typename hash_type::word_type,
-                decltype(hash_input)>
-            (hash_input)
-        );
+            nil::crypto3::hashes::conditional_block_to_field_elements_wrapper<typename hash_type::word_type,
+                                                                              decltype(hash_input)>(hash_input));
         std::cout << result << std::endl;
     }
 };
 
 template<typename hash_type>
-struct poseidon_int_vector_example
-{
-    static void run()
-    {
+struct poseidon_int_vector_example {
+    static void run() {
         using policy = typename hash_type::policy_type;
         using field_type = typename policy::field_type;
 
-        std::vector<uint32_t> hash_input {
-            0xDEAD, 0xC001CAFE
-        };
+        std::vector<uint32_t> hash_input {0xDEAD, 0xC001CAFE};
 
         typename policy::digest_type result = nil::crypto3::hash<hash_type>(
-            nil::crypto3::hashes::conditional_block_to_field_elements_wrapper<
-                typename hash_type::word_type,
-                decltype(hash_input)>
-            (hash_input)
-        );
+            nil::crypto3::hashes::conditional_block_to_field_elements_wrapper<typename hash_type::word_type,
+                                                                              decltype(hash_input)>(hash_input));
         std::cout << result << std::endl;
     }
 };
-
-
 
 int main() {
     std::cout << "SHA2-256" << std::endl;

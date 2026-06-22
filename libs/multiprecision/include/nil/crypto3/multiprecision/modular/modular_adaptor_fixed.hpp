@@ -36,7 +36,6 @@ namespace boost {
                 typedef typename policy_type::Backend_doubled_limbs Backend_doubled_limbs;
 
             public:
-
                 // This version of conversion
                 BOOST_MP_CXX14_CONSTEXPR typename Backend::cpp_int_type convert_to_cpp_int() const {
                     Backend tmp;
@@ -75,10 +74,9 @@ namespace boost {
                 }
 #endif
 
-                template<typename UI,
-                         typename std::enable_if_t<std::is_integral<UI>::value && std::is_unsigned<UI>::value> const * = nullptr>
-                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(UI b, const Backend &m)
-                        : m_base(limb_type(b)) {
+                template<typename UI, typename std::enable_if_t<std::is_integral<UI>::value &&
+                                                                std::is_unsigned<UI>::value> const * = nullptr>
+                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(UI b, const Backend &m) : m_base(limb_type(b)) {
                     this->set_modular_params(m);
                     this->mod_data().adjust_modular(m_base);
                 }
@@ -86,16 +84,15 @@ namespace boost {
                 // A method for converting a signed integer to a modular adaptor. We are not supposed to have this,
                 // but in the code we already have conversion for an 'int' into modular type.
                 // In the future we must remove.
-                template<typename SI,
-                         typename std::enable_if_t<std::is_integral<SI>::value && std::is_signed<SI>::value> const * = nullptr>
-                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(SI b)
-                        : m_base(limb_type(0u)) {
+                template<typename SI, typename std::enable_if_t<std::is_integral<SI>::value &&
+                                                                std::is_signed<SI>::value> const * = nullptr>
+                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(SI b) : m_base(limb_type(0u)) {
 
                     if (b >= 0) {
                         m_base = static_cast<limb_type>(b);
                     } else {
                         m_base = this->mod_data().get_mod();
-                        eval_subtract(m_base, static_cast<limb_type>(-b) );
+                        eval_subtract(m_base, static_cast<limb_type>(-b));
                     }
 
                     // This method must be called only for compile time modular params.
@@ -103,19 +100,17 @@ namespace boost {
                     this->mod_data().adjust_modular(m_base);
                 }
 
-                template<typename UI,
-                         typename std::enable_if_t<std::is_integral<UI>::value && std::is_unsigned<UI>::value> const * = nullptr>
-                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(UI b)
-                        : m_base(static_cast<limb_type>(b)) {
+                template<typename UI, typename std::enable_if_t<std::is_integral<UI>::value &&
+                                                                std::is_unsigned<UI>::value> const * = nullptr>
+                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(UI b) : m_base(static_cast<limb_type>(b)) {
                     // This method must be called only for compile time modular params.
                     // this->set_modular_params(m);
                     this->mod_data().adjust_modular(m_base);
                 }
 
-                template<typename SI,
-                         typename std::enable_if_t<std::is_integral<SI>::value && std::is_signed<SI>::value> const * = nullptr>
-                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(SI b, const modular_type &m)
-                        : m_base(limb_type(0u)) {
+                template<typename SI, typename std::enable_if_t<std::is_integral<SI>::value &&
+                                                                std::is_signed<SI>::value> const * = nullptr>
+                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(SI b, const modular_type &m) : m_base(limb_type(0u)) {
 
                     if (b >= 0) {
                         m_base = static_cast<limb_type>(b);
@@ -128,20 +123,20 @@ namespace boost {
                     this->mod_data().adjust_modular(m_base);
                 }
 
-                template<typename UI,
-                         typename std::enable_if_t<std::is_integral<UI>::value && std::is_unsigned<UI>::value> const * = nullptr>
-                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(UI b, const modular_type &m)
-                        : m_base(static_cast<limb_type>(b)) {
+                template<typename UI, typename std::enable_if_t<std::is_integral<UI>::value &&
+                                                                std::is_unsigned<UI>::value> const * = nullptr>
+                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(UI b, const modular_type &m) :
+                    m_base(static_cast<limb_type>(b)) {
                     this->set_modular_params(m);
                     this->mod_data().adjust_modular(m_base);
                 }
-                
+
                 // We may consider to remove this constructor later, and set Bits2 to Bits only,
                 // but we need it for use cases from h2f/h2c,
                 // where a larger number of 512 or 256 bits is passed to a field of 255 or 254 bits.
                 template<unsigned Bits2>
-                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(
-                        const number<cpp_int_modular_backend<Bits2>> &b, const number<Backend> &m) {
+                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(const number<cpp_int_modular_backend<Bits2>> &b,
+                                                         const number<Backend> &m) {
                     this->set_modular_params(m.backend());
                     this->mod_data().adjust_modular(m_base, b.backend());
                 }
@@ -150,7 +145,8 @@ namespace boost {
                 // but we need it for use cases from h2f/h2c,
                 // where a larger number of 512 or 256 bits is passed to a field of 255 or 254 bits.
                 template<unsigned Bits2>
-                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(const cpp_int_modular_backend<Bits2> &b, const modular_type &m) {
+                BOOST_MP_CXX14_CONSTEXPR modular_adaptor(const cpp_int_modular_backend<Bits2> &b,
+                                                         const modular_type &m) {
                     this->set_modular_params(m);
                     this->mod_data().adjust_modular(m_base, b);
                 }
@@ -263,14 +259,15 @@ namespace boost {
 
             protected:
                 Backend m_base;
-                static BOOST_MP_CXX14_CONSTEXPR Backend m_zero = static_cast<typename std::tuple_element<0, unsigned_types>::type>(0u);;
+                static BOOST_MP_CXX14_CONSTEXPR Backend m_zero =
+                    static_cast<typename std::tuple_element<0, unsigned_types>::type>(0u);
+                ;
             };
 
-            template<unsigned Bits, typename Backend1,
-                     typename Backend2, typename StorageType>
-            BOOST_MP_CXX14_CONSTEXPR void assign_components(
-                modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
-                const Backend1 &a, const Backend2 &b) {
+            template<unsigned Bits, typename Backend1, typename Backend2, typename StorageType>
+            BOOST_MP_CXX14_CONSTEXPR void
+                assign_components(modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
+                                  const Backend1 &a, const Backend2 &b) {
                 BOOST_ASSERT_MSG(Bits >= eval_msb(b) + 1, "modulus precision should match used backend");
 
                 result.set_modular_params(b);
@@ -278,62 +275,58 @@ namespace boost {
             }
 
             template<unsigned Bits, typename StorageType>
-            BOOST_MP_CXX14_CONSTEXPR void eval_add(
-                modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
-                const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &o) {
+            BOOST_MP_CXX14_CONSTEXPR void
+                eval_add(modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
+                         const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &o) {
                 BOOST_ASSERT(eval_eq(result.mod_data().get_mod(), o.mod_data().get_mod()));
                 result.mod_data().mod_add(result.base_data(), o.base_data());
             }
 
-            template<unsigned Bits, typename Backend,
-                     typename StorageType>
-            BOOST_MP_CXX14_CONSTEXPR void eval_add(
-                modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
-                const modular_adaptor<Backend, StorageType> &o) {
+            template<unsigned Bits, typename Backend, typename StorageType>
+            BOOST_MP_CXX14_CONSTEXPR void eval_add(modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
+                                                   const modular_adaptor<Backend, StorageType> &o) {
                 result.mod_data().mod_add(result.base_data(), o.base_data());
             }
 
             template<typename Backend, unsigned Bits, typename StorageType>
-            BOOST_MP_CXX14_CONSTEXPR void eval_add(
-                modular_adaptor<Backend, StorageType> &result,
-                const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &o) {
+            BOOST_MP_CXX14_CONSTEXPR void
+                eval_add(modular_adaptor<Backend, StorageType> &result,
+                         const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &o) {
                 o.mod_data().mod_add(result.base_data(), o.base_data());
             }
 
             template<unsigned Bits, typename StorageType>
-            BOOST_MP_CXX14_CONSTEXPR void eval_multiply(
-                    modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
-                    const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &o) {
+            BOOST_MP_CXX14_CONSTEXPR void
+                eval_multiply(modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
+                              const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &o) {
                 result.mod_data().mod_mul(result.base_data(), o.base_data());
             }
 
             template<unsigned Bits, typename Backend, typename StorageType>
-            BOOST_MP_CXX14_CONSTEXPR void eval_multiply(
-                    modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
-                    const modular_adaptor<Backend, StorageType> &o) {
+            BOOST_MP_CXX14_CONSTEXPR void
+                eval_multiply(modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
+                              const modular_adaptor<Backend, StorageType> &o) {
                 result.mod_data().mod_mul(result.base_data(), o.base_data());
             }
 
             template<typename Backend, unsigned Bits, typename StorageType>
-            BOOST_MP_CXX14_CONSTEXPR void eval_multiply(
-                    modular_adaptor<Backend, StorageType> &result,
-                    const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &o) {
+            BOOST_MP_CXX14_CONSTEXPR void
+                eval_multiply(modular_adaptor<Backend, StorageType> &result,
+                              const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &o) {
                 o.mod_data().mod_mul(result.base_data(), o.base_data());
             }
 
             template<unsigned Bits, typename Backend, typename T, typename StorageType>
-            BOOST_MP_CXX14_CONSTEXPR void eval_powm(
-                    modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
-                    const modular_adaptor<Backend, StorageType> &b, const T &e) {
+            BOOST_MP_CXX14_CONSTEXPR void eval_powm(modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
+                                                    const modular_adaptor<Backend, StorageType> &b, const T &e) {
                 result.set_modular_params(b.mod_data());
                 result.mod_data().mod_exp(result.base_data(), b.base_data(), e);
             }
 
             template<unsigned Bits, typename Backend1, typename Backend2, typename StorageType>
-            BOOST_MP_CXX14_CONSTEXPR void eval_powm(
-                    modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
-                    const modular_adaptor<Backend1, StorageType> &b,
-                    const modular_adaptor<Backend2, StorageType> &e) {
+            BOOST_MP_CXX14_CONSTEXPR void eval_powm(modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
+                                                    const modular_adaptor<Backend1, StorageType> &b,
+                                                    const modular_adaptor<Backend2, StorageType> &e) {
                 using Backend = cpp_int_modular_backend<Bits>;
 
                 Backend exp;
@@ -342,9 +335,9 @@ namespace boost {
             }
 
             template<unsigned Bits, typename StorageType>
-            BOOST_MP_CXX14_CONSTEXPR void eval_inverse_mod(
-                modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
-                const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &input) {
+            BOOST_MP_CXX14_CONSTEXPR void
+                eval_inverse_mod(modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &result,
+                                 const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &input) {
                 using Backend = cpp_int_modular_backend<Bits>;
                 using Backend_padded_limbs = typename modular_params<Backend>::policy_type::Backend_padded_limbs;
 
@@ -356,9 +349,11 @@ namespace boost {
             }
 
             template<unsigned Bits, typename StorageType>
-            std::ostream& operator<<(std::ostream& os, const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType>& value) {
+            std::ostream &operator<<(std::ostream &os,
+                                     const modular_adaptor<cpp_int_modular_backend<Bits>, StorageType> &value) {
                 // Conver to number and print.
-                os << std::hex << boost::multiprecision::number<cpp_int_modular_backend<Bits>>(value.base_data()) << std::endl;
+                os << std::hex << boost::multiprecision::number<cpp_int_modular_backend<Bits>>(value.base_data())
+                   << std::endl;
                 return os;
             }
 
@@ -370,29 +365,35 @@ namespace boost {
             static const expression_template_option value = boost::multiprecision::et_off;
         };
 
-        // We need to specialize this function, because default boost implementation is "return a.compare(b) == 0;", which is waay slower.    
+        // We need to specialize this function, because default boost implementation is "return a.compare(b) == 0;",
+        // which is waay slower.
         template<unsigned Bits, typename StorageType, expression_template_option ExpressionTemplates>
-            inline BOOST_MP_CXX14_CONSTEXPR bool operator==(
-                const number<backends::modular_adaptor<backends::cpp_int_modular_backend<Bits>, StorageType>, ExpressionTemplates>& a,
-                const number<backends::modular_adaptor<backends::cpp_int_modular_backend<Bits>, StorageType>, ExpressionTemplates>& b) {
+        inline BOOST_MP_CXX14_CONSTEXPR bool
+            operator==(const number<backends::modular_adaptor<backends::cpp_int_modular_backend<Bits>, StorageType>,
+                                    ExpressionTemplates> &a,
+                       const number<backends::modular_adaptor<backends::cpp_int_modular_backend<Bits>, StorageType>,
+                                    ExpressionTemplates> &b) {
             return a.backend().compare_eq(b.backend());
         }
 
-        // We need to specialize this function, because default boost implementation is "return a.compare(b) == 0;", which is waay slower.    
+        // We need to specialize this function, because default boost implementation is "return a.compare(b) == 0;",
+        // which is waay slower.
         template<unsigned Bits, typename StorageType, expression_template_option ExpressionTemplates>
-            inline BOOST_MP_CXX14_CONSTEXPR bool operator!=(
-                const number<backends::modular_adaptor<backends::cpp_int_modular_backend<Bits>, StorageType>, ExpressionTemplates>& a,
-                const number<backends::modular_adaptor<backends::cpp_int_modular_backend<Bits>, StorageType>, ExpressionTemplates>& b) {
+        inline BOOST_MP_CXX14_CONSTEXPR bool
+            operator!=(const number<backends::modular_adaptor<backends::cpp_int_modular_backend<Bits>, StorageType>,
+                                    ExpressionTemplates> &a,
+                       const number<backends::modular_adaptor<backends::cpp_int_modular_backend<Bits>, StorageType>,
+                                    ExpressionTemplates> &b) {
             return !a.backend().compare_eq(b.backend());
         }
 
-    }   // namespace multiprecision
-}   // namespace boost
+    }    // namespace multiprecision
+}    // namespace boost
 
 // We want our integer_ops to be included only AFTER modular_adaptor is fully defined. This way
 // all integer operations over modular numbers will 'see' the overloaded versions of eval_* functions.
 // Moving this include to the start of this file will break the compilation.
 
-#include <nil/crypto3/multiprecision/detail/integer_ops.hpp> // for powm over modular_adaptor
+#include <nil/crypto3/multiprecision/detail/integer_ops.hpp>    // for powm over modular_adaptor
 
 #endif    // CRYPTO3_MULTIPRECISION_MODULAR_ADAPTOR_FIXED_PRECISION_HPP

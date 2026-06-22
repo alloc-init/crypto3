@@ -89,11 +89,10 @@ namespace nil {
                     }
 
                     template<typename GroupAffineElement>
-                    static inline typename 
-                    std::enable_if<
+                    static inline typename std::enable_if<
                         std::is_same<algebra::curves::coordinates::affine,
-                        typename GroupAffineElement::coordinates>::value,
-                        outcome::result<GroupAffineElement, nil::marshalling::status_type> >::type
+                                     typename GroupAffineElement::coordinates>::value,
+                        outcome::result<GroupAffineElement, nil::marshalling::status_type>>::type
                         recover_x(const typename GroupAffineElement::field_type::integral_type &y_int, bool sign) {
                         using base_field_type = typename GroupAffineElement::field_type;
                         using base_field_value_type = typename base_field_type::value_type;
@@ -111,8 +110,7 @@ namespace nil {
                         if (y2dp1.is_zero()) {
                             return nil::marshalling::status_type::invalid_msg_data;
                         }
-                        base_field_value_type x2 =
-                            (y2 - base_integral_type(1)) * y2dp1.inversed();
+                        base_field_value_type x2 = (y2 - base_integral_type(1)) * y2dp1.inversed();
                         if (x2.is_zero()) {
                             return group_affine_value_type(base_field_value_type::zero(), y);
                         }
@@ -127,8 +125,8 @@ namespace nil {
                         return group_affine_value_type(x_int, y);
                     }
                 }    // namespace detail
-            }        // namespace processing
-        }            // namespace marshalling
-    }                // namespace crypto3
+            }    // namespace processing
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_PROCESSING_CURVE_ELEMENT_DETAIL_HPP

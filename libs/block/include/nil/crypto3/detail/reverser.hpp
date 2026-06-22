@@ -512,9 +512,10 @@ namespace nil {
             };
 
             /*!
-             * @brief reverser reverses both the sequence of units in the given value and with within a unit, if InputEndianness
-             * and OutputEndianness endiannesses have different unit orders, and the sequence of bits in each unit of the given value,
-             * if InputEndianness and OutputEndianness endiannesses have different bit orders.
+             * @brief reverser reverses both the sequence of units in the given value and with within a unit, if
+             * InputEndianness and OutputEndianness endiannesses have different unit orders, and the sequence of bits in
+             * each unit of the given value, if InputEndianness and OutputEndianness endiannesses have different bit
+             * orders.
              *
              * @ingroup reverser
              *
@@ -527,6 +528,7 @@ namespace nil {
             private:
                 using unit_reverser_specified = unit_reverser<InputEndianness, OutputEndianness, UnitBits>;
                 using bit_reverser_specified = bit_reverser<InputEndianness, OutputEndianness, UnitBits>;
+
             public:
                 template<typename ValueType, int ValueBits = sizeof(ValueType) * CHAR_BIT>
                 inline static void reverse(ValueType &val) {
@@ -543,7 +545,7 @@ namespace nil {
             };
 
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_DETAIL_REVERSER_HPP

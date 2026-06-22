@@ -45,8 +45,7 @@ namespace nil {
             namespace detail {
 
                 template<typename TFieldBase, typename TStorage>
-                class basic_array_list
-                    : public TFieldBase {
+                class basic_array_list : public TFieldBase {
                     using base_impl_type = TFieldBase;
 
                 public:
@@ -107,8 +106,8 @@ namespace nil {
                     }
 
                     static constexpr std::size_t max_length() {
-                        return detail::array_list_max_length_retrieve_helper<TStorage>::value
-                               * max_length_internal(elem_tag());
+                        return detail::array_list_max_length_retrieve_helper<TStorage>::value *
+                               max_length_internal(elem_tag());
                     }
 
                     constexpr std::size_t bit_length() const {
@@ -154,17 +153,19 @@ namespace nil {
 
                         using IterType = typename std::decay<decltype(iter)>::type;
                         using IterCategory = typename std::iterator_traits<IterType>::iterator_category;
-                        static const bool IsRandomAccessIter
-                            = std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
-                        static const bool IsRawData
-                            = std::is_integral<element_type>::value && (sizeof(element_type) == sizeof(std::uint8_t));
+                        static const bool IsRandomAccessIter =
+                            std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
+                        static const bool IsRawData =
+                            std::is_integral<element_type>::value && (sizeof(element_type) == sizeof(std::uint8_t));
 
                         using tag = typename std::conditional<IsRandomAccessIter && IsRawData, raw_data_tag,
                                                               field_elem_tag>::type;
 
-                        auto length = std::is_same<typename std::iterator_traits<IterType>::value_type, bool>::value ? max_bit_length() : max_length();
+                        auto length = std::is_same<typename std::iterator_traits<IterType>::value_type, bool>::value ?
+                                          max_bit_length() :
+                                          max_length();
 
-                        if (len > length){
+                        if (len > length) {
                             len = length;
                         }
 
@@ -178,10 +179,10 @@ namespace nil {
                     status_type read_n(std::size_t count, TIter &iter, std::size_t &len) {
                         using IterType = typename std::decay<decltype(iter)>::type;
                         using IterCategory = typename std::iterator_traits<IterType>::iterator_category;
-                        static const bool IsRandomAccessIter
-                            = std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
-                        static const bool IsRawData
-                            = std::is_integral<element_type>::value && (sizeof(element_type) == sizeof(std::uint8_t));
+                        static const bool IsRandomAccessIter =
+                            std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
+                        static const bool IsRawData =
+                            std::is_integral<element_type>::value && (sizeof(element_type) == sizeof(std::uint8_t));
 
                         using tag = typename std::conditional<IsRandomAccessIter && IsRawData, raw_data_tag,
                                                               field_elem_tag>::type;
@@ -193,10 +194,10 @@ namespace nil {
                     void read_no_status_n(std::size_t count, TIter &iter) {
                         using IterType = typename std::decay<decltype(iter)>::type;
                         using IterCategory = typename std::iterator_traits<IterType>::iterator_category;
-                        static const bool IsRandomAccessIter
-                            = std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
-                        static const bool IsRawData
-                            = std::is_integral<element_type>::value && (sizeof(element_type) == sizeof(std::uint8_t));
+                        static const bool IsRandomAccessIter =
+                            std::is_base_of<std::random_access_iterator_tag, IterCategory>::value;
+                        static const bool IsRawData =
+                            std::is_integral<element_type>::value && (sizeof(element_type) == sizeof(std::uint8_t));
 
                         using tag = typename std::conditional<IsRandomAccessIter && IsRawData, raw_data_tag,
                                                               field_elem_tag>::type;
@@ -269,7 +270,7 @@ namespace nil {
                                 return sum + e.length();
                             });
                     }
-                    
+
                     constexpr std::size_t bit_length_internal(field_elem_tag) const {
                         return bit_field_length(field_elem_tag());
                     }
@@ -299,9 +300,9 @@ namespace nil {
                         status_type es = elem.read(iter, len);
                         if (es == status_type::success) {
                             std::size_t true_length = 0;
-                            if constexpr(std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value){
+                            if constexpr (std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value) {
                                 true_length = elem.bit_length();
-                            } else{
+                            } else {
                                 true_length = elem.length();
                             }
                             MARSHALLING_ASSERT(true_length <= len);
@@ -358,9 +359,9 @@ namespace nil {
                         status_type es = elem.write(iter, len);
                         if (es == status_type::success) {
                             std::size_t true_length = 0;
-                            if constexpr(std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value){
+                            if constexpr (std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value) {
                                 true_length = elem.bit_length();
-                            } else{
+                            } else {
                                 true_length = elem.length();
                             }
 
@@ -492,7 +493,7 @@ namespace nil {
 
                     template<typename TIter>
                     void eval_assign(TIter &iter, std::size_t len, assign_missing_tag) {
-                        typename value_type::const_pointer data = 
+                        typename value_type::const_pointer data =
                             reinterpret_cast<typename value_type::const_pointer>(&(*iter));
                         value_ = value_type(data, len);
                     }
@@ -539,8 +540,8 @@ namespace nil {
 
                     value_type value_;
                 };
-            }        // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+            }    // namespace detail
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BASIC_ARRAY_LIST_HPP

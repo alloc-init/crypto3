@@ -64,8 +64,8 @@ namespace nil {
                     typedef T type;
                 };
             }    // namespace padding
-        }        // namespace pubkey
-    }            // namespace crypto3
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PK_PAD_TYPE_TRAITS_HPP

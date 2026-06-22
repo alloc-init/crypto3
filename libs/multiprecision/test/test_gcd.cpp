@@ -76,7 +76,7 @@ namespace boost {
             unsigned total_lehmer_gcd_cycles = 0;
 
         }    // namespace backends
-    }        // namespace multiprecision
+    }    // namespace multiprecision
 }    // namespace boost
 
 int main() {

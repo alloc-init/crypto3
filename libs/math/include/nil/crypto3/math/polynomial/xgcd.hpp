@@ -43,8 +43,7 @@ namespace nil {
              * Input: Polynomial A, Polynomial B.
              * Output: Polynomial G, Polynomial U, Polynomial V, such that G = (A * U) + (B * V).
              */
-            template<typename Range1, typename Range2, typename Range3, typename Range4,
-                     typename Range5>
+            template<typename Range1, typename Range2, typename Range3, typename Range4, typename Range5>
             void extended_euclidean(const Range1 &a, const Range2 &b, Range3 &g, Range4 &u, Range5 &v) {
 
                 typedef
@@ -94,7 +93,7 @@ namespace nil {
                 v = V1;
             }
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // ALGEBRA_FFT_XGCD_HPP

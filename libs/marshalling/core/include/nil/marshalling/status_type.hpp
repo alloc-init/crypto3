@@ -65,64 +65,61 @@ namespace nil {
         }
 
         // Define a custom error code category derived from std::error_category
-        class status_type_category : public ::std::error_category
-        {
-            public:
-                // Return a short descriptive name for the category
-                virtual const char *name() const noexcept override final { return "nil::marshalling::status_type"; }
-                // Return what each enum means in text
-                virtual std::string message(int c) const override final
-                {
-                    switch (static_cast<status_type>(c))
-                    {
-                        case status_type::success:
-                            return "conversion successful";
-                        case status_type::update_required:
-                            return "write operation wasn't complete, call to update(...) is required";
-                        case status_type::not_enough_data:
-                            return "stream buffer didn't contain enough data to complete read operation";
-                        case status_type::protocol_error:
-                            return "any of the used protocols encountered an error while processing the data";
-                        case status_type::buffer_overflow:
-                            return "stream buffer was overflowed when attempting to write data";
-                        case status_type::invalid_msg_id:
-                            return "received message has unknown id";
-                        case status_type::invalid_msg_data:
-                            return "received message has invalid data";
-                        case status_type::msg_alloc_failure:
-                            return "message allocation has failed";
-                        case status_type::not_supported:
-                            return "the operation is not supported";
-                        case status_type::error_status_amount:
-                        default:
-                            return "unreachable";
-                    }
+        class status_type_category : public ::std::error_category {
+        public:
+            // Return a short descriptive name for the category
+            virtual const char *name() const noexcept override final {
+                return "nil::marshalling::status_type";
+            }
+            // Return what each enum means in text
+            virtual std::string message(int c) const override final {
+                switch (static_cast<status_type>(c)) {
+                    case status_type::success:
+                        return "conversion successful";
+                    case status_type::update_required:
+                        return "write operation wasn't complete, call to update(...) is required";
+                    case status_type::not_enough_data:
+                        return "stream buffer didn't contain enough data to complete read operation";
+                    case status_type::protocol_error:
+                        return "any of the used protocols encountered an error while processing the data";
+                    case status_type::buffer_overflow:
+                        return "stream buffer was overflowed when attempting to write data";
+                    case status_type::invalid_msg_id:
+                        return "received message has unknown id";
+                    case status_type::invalid_msg_data:
+                        return "received message has invalid data";
+                    case status_type::msg_alloc_failure:
+                        return "message allocation has failed";
+                    case status_type::not_supported:
+                        return "the operation is not supported";
+                    case status_type::error_status_amount:
+                    default:
+                        return "unreachable";
                 }
+            }
         };
     }    // namespace marshalling
 }    // namespace nil
 
-namespace std
-{
-    template <> struct is_error_code_enum<nil::marshalling::status_type> : true_type
-    {
-    };
-}
+namespace std {
+    template<>
+    struct is_error_code_enum<nil::marshalling::status_type> : true_type { };
+}    // namespace std
 
-inline std::error_code make_error_code(nil::marshalling::status_type e)
-{
+inline std::error_code make_error_code(nil::marshalling::status_type e) {
     static nil::marshalling::status_type_category category;
     return {static_cast<int>(e), category};
 }
 
 #if defined(CRYPTO3_MARSHALLING_THROWS)
 
-#define THROW_IF_ERROR_STATUS(status, message) \
-    if (nil::marshalling::status_type::success != status) { \
-        std::stringstream os; os << "While performing operation " << std::string(message) \
-        << " marshalling error status received: " << make_error_code(status) \
-        << " @" << __FILE__ << ":" << __LINE__ << std::endl; \
-        throw std::invalid_argument(os); \
+#define THROW_IF_ERROR_STATUS(status, message)                                                                         \
+    if (nil::marshalling::status_type::success != status) {                                                            \
+        std::stringstream os;                                                                                          \
+        os << "While performing operation " << std::string(message)                                                    \
+           << " marshalling error status received: " << make_error_code(status) << " @" << __FILE__ << ":" << __LINE__ \
+           << std::endl;                                                                                               \
+        throw std::invalid_argument(os);                                                                               \
     }
 
 #else

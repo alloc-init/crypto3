@@ -64,8 +64,8 @@ namespace nil {
                     typename Padding::verification_policy::result_type,
                     boost::accumulators::features<accumulators::tag::verify<typename Padding::verification_policy>>>;
             }    // namespace padding
-        }        // namespace pubkey
-    }            // namespace crypto3
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_SCHEME_STATE_HPP

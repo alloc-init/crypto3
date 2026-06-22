@@ -31,10 +31,10 @@
 namespace nil {
     namespace crypto3 {
         namespace accumulators {
-            BOOST_PARAMETER_NAME((bits, tag) bits)
+            BOOST_PARAMETER_NAME((bits, tag)bits)
             BOOST_ACCUMULATORS_IGNORE_GLOBAL(bits)
         }    // namespace accumulators
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BITS_HPP

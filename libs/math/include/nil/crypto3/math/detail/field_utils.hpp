@@ -73,14 +73,13 @@ namespace nil {
                 template<typename FieldType>
                 typename FieldType::value_type coset_shift() {
                     return
-                            typename FieldType::value_type(
-                                    fields::arithmetic_params<FieldType>::multiplicative_generator)
-                                    .squared();
+                        typename FieldType::value_type(fields::arithmetic_params<FieldType>::multiplicative_generator)
+                            .squared();
                 }
 
             }    // namespace detail
-        }        // namespace fft
-    }            // namespace crypto3
+        }    // namespace math
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MATH_FIELD_UTILS_HPP

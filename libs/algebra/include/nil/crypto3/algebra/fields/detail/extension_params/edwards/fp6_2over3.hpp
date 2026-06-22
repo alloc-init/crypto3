@@ -30,8 +30,6 @@
 #include <nil/crypto3/algebra/fields/edwards/base_field.hpp>
 #include <nil/crypto3/algebra/fields/fp3.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -93,9 +91,9 @@ namespace nil {
                         typename fp6_2over3_extension_params<edwards_base_field<Version>>::integral_type, 6> const
                         fp6_2over3_extension_params<edwards_base_field<Version>>::Frobenius_coeffs_c1;
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_EDWARDS_FP6_2OVER3_EXTENSION_PARAMS_HPP

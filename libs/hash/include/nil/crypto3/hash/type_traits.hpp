@@ -316,43 +316,34 @@ namespace nil {
             struct h2c;
 
             template<typename HashType>
-            struct is_find_group_hash : std::integral_constant<bool, false> {
-            };
+            struct is_find_group_hash : std::integral_constant<bool, false> { };
 
             template<typename ParamsType, typename HashType, typename GroupType>
             struct is_find_group_hash<find_group_hash<ParamsType, HashType, GroupType>>
-                    : std::integral_constant<bool, true> {
-            };
+                : std::integral_constant<bool, true> { };
 
             template<typename HashType>
-            struct is_pedersen : std::integral_constant<bool, false> {
-            };
+            struct is_pedersen : std::integral_constant<bool, false> { };
 
             template<typename ParamsType, typename BasePointGeneratorHash, typename GroupType>
             struct is_pedersen<pedersen_to_point<ParamsType, BasePointGeneratorHash, GroupType>>
-                    : std::integral_constant<bool, true> {
-            };
+                : std::integral_constant<bool, true> { };
 
             template<typename ParamsType, typename BasePointGeneratorHash, typename GroupType>
             struct is_pedersen<pedersen<ParamsType, BasePointGeneratorHash, GroupType>>
-                    : std::integral_constant<bool, true> {
-            };
+                : std::integral_constant<bool, true> { };
 
             template<typename HashType>
-            struct is_h2f : std::integral_constant<bool, false> {
-            };
+            struct is_h2f : std::integral_constant<bool, false> { };
 
             template<typename FieldType, typename HashType, typename ParamsType>
-            struct is_h2f<h2f<FieldType, HashType, ParamsType>> : std::integral_constant<bool, true> {
-            };
+            struct is_h2f<h2f<FieldType, HashType, ParamsType>> : std::integral_constant<bool, true> { };
 
             template<typename HashType>
-            struct is_h2c : std::integral_constant<bool, false> {
-            };
+            struct is_h2c : std::integral_constant<bool, false> { };
 
             template<typename GroupType, typename HashType, typename ParamsType>
-            struct is_h2c<h2c<GroupType, HashType, ParamsType>> : std::integral_constant<bool, true> {
-            };
+            struct is_h2c<h2c<GroupType, HashType, ParamsType>> : std::integral_constant<bool, true> { };
 
             // TODO: change this to more generic type trait to check for all sponge based hashes.
             template<typename HashType, typename Enable = void>
@@ -362,33 +353,32 @@ namespace nil {
             };
 
             template<typename HashType>
-            struct is_poseidon<HashType, typename std::enable_if_t<std::is_same<nil::crypto3::hashes::poseidon<typename
-                        HashType::policy_type>, HashType>::value>> {
+            struct is_poseidon<HashType,
+                               typename std::enable_if_t<std::is_same<
+                                   nil::crypto3::hashes::poseidon<typename HashType::policy_type>, HashType>::value>> {
             public:
                 constexpr static const bool value = true;
                 typedef HashType type;
             };
 
             template<template<typename...> class PrimaryTemplate, typename T>
-            struct is_specialization_of : std::false_type {
-            };
+            struct is_specialization_of : std::false_type { };
 
             template<template<typename...> class PrimaryTemplate, typename... Args>
-            struct is_specialization_of<PrimaryTemplate, PrimaryTemplate<Args...>> : std::true_type {
-            };
+            struct is_specialization_of<PrimaryTemplate, PrimaryTemplate<Args...>> : std::true_type { };
 
             template<typename HashType>
             struct is_sponge_construction {
                 constexpr static const bool value =
-                        has_digest_type<HashType>::value && has_block_type<HashType>::value &&
-                        has_state_type<HashType>::value && has_word_type<HashType>::value &&
-                        has_word_bits<HashType>::value && has_block_bits<HashType>::value &&
-                        has_state_bits<HashType>::value && has_absorb<HashType>::value && has_squeeze<HashType>::value;
+                    has_digest_type<HashType>::value && has_block_type<HashType>::value &&
+                    has_state_type<HashType>::value && has_word_type<HashType>::value &&
+                    has_word_bits<HashType>::value && has_block_bits<HashType>::value &&
+                    has_state_bits<HashType>::value && has_absorb<HashType>::value && has_squeeze<HashType>::value;
                 typedef HashType type;
             };
-        } // namespace hashes
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace hashes
+    }    // namespace crypto3
+}    // namespace nil
 
 #undef GENERATE_HAS_MEMBER_TYPE
 #undef GENERATE_HAS_MEMBER
