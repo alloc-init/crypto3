@@ -70,11 +70,22 @@ namespace nil {
 
                         template<class Field>
                         inline void add_low_4_limbs_mod_portable(limb *z, const limb *x, const limb *y) {
-                            add_limbs_portable<4>(z, x, y);
+                            limb tmp[5] = {};
+                            limb carry = 0u;
+                            for (size_t i = 0; i < base_value_limb_count; i++) {
+                                const auto sum = (wide_limb)x[i] + y[i] + carry;
+                                tmp[i] = (limb)sum;
+                                carry = (limb)(sum >> limb_bits);
+                            }
+                            tmp[base_value_limb_count] = carry;
+
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // do one pass of normalization on lower limbs
-                            if (ge_modulus(z, p.data())) {
-                                subtract_limbs_portable<5>(z, z, p.data());
+                            if (ge_modulus(tmp, p.data())) {
+                                subtract_limbs_portable<5>(tmp, tmp, p.data());
+                            }
+                            for (size_t i = 0; i < base_value_limb_count; i++) {
+                                z[i] = tmp[i];
                             }
                         }
 
@@ -259,8 +270,8 @@ namespace nil {
 #endif
                         }
 
-                        // fp2_base ops must support pointers becuase fp2_view doesnt own its data
-                        // output z is assumed continuous
+                        // fp2_base values are stored as two contiguous 4-limb coefficients.
+                        // Output z is assumed contiguous.
                         template<class Field>
                         inline void fp2_base_add_mod(limb *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
@@ -271,7 +282,7 @@ namespace nil {
 #endif
                         }
 
-                        // fp2_base ops must support pointers becuase fp2_view doesnt own its data
+                        // fp2_base values are stored as two contiguous 4-limb coefficients.
                         inline void fp2_base_add_pre(limb *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             fp2_base_add_pre_x86(z, x, y);
@@ -356,13 +367,11 @@ namespace nil {
                         template<class Field>
                         inline void fp2_add_mul_pre_portable(limb_array *z, const limb *a, const limb *b, const limb *c,
                                                              const limb *d) {
-                            limb x0[4], x1[4], y0[4], y1[4];
-                            add_limbs_portable<4>(x0, a, b);
-                            add_limbs_portable<4>(x1, a + 4, b + 4);
-                            add_limbs_portable<4>(y0, c, d);
-                            add_limbs_portable<4>(y1, c + 4, d + 4);
-                            limb *x[2] = {x0, x1};
-                            limb *y[2] = {y0, y1};
+                            limb x[8], y[8];
+                            add_limbs_portable<4>(x, a, b);
+                            add_limbs_portable<4>(x + 4, a + 4, b + 4);
+                            add_limbs_portable<4>(y, c, d);
+                            add_limbs_portable<4>(y + 4, c + 4, d + 4);
                             fp2_mul_pre_portable<Field>(z, x, y);
                         }
 

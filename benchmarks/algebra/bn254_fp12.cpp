@@ -34,10 +34,9 @@ using fp12_value_type = typename fp12_type::value_type;
 using fp12_policy_type = typename fp12_type::extension_policy;
 using fp12_fast_type =
     nil::crypto3::algebra::fields::detail::alt_bn128_fp12_fast_multiply<base_field_type, fp12_policy_type>;
-using fp2_view_type = typename fp12_fast_type::fp2_view;
+using fp2_base_type = typename fp12_fast_type::fp2_base;
 using fp2_dbl_type = typename fp12_fast_type::fp2_dbl;
 using fp6_base_type = typename fp12_fast_type::fp6_base;
-using fp6_view_type = typename fp12_fast_type::fp6_view;
 using fp6_dbl_type = typename fp12_fast_type::fp6_dbl;
 namespace limb_ops = nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops;
 
@@ -127,18 +126,18 @@ static void print_csv_results() {
     }
 }
 
-struct fp12_view_parts {
-    fp6_view_type a;
-    fp6_view_type b;
-    fp6_view_type c;
-    fp6_view_type d;
+struct fp12_packed_parts {
+    fp6_base_type a;
+    fp6_base_type b;
+    fp6_base_type c;
+    fp6_base_type d;
 
-    fp12_view_parts(const fp12_value_type& x, const fp12_value_type& y) :
+    fp12_packed_parts(const fp12_value_type& x, const fp12_value_type& y) :
         a(x.data[0]), b(x.data[1]), c(y.data[0]), d(y.data[1]) {
     }
 };
 
-static void multiply_prepacked_fp12(fp12_value_type& ret, const fp12_view_parts& parts) {
+static void multiply_prepacked_fp12(fp12_value_type& ret, const fp12_packed_parts& parts) {
     fp6_dbl_type ac, bd, z;
     fp6_dbl_type::mul_pre(ac, parts.a, parts.c);
     fp6_dbl_type::mul_pre(bd, parts.b, parts.d);
@@ -177,12 +176,16 @@ int main(int argc, char** argv) {
     std::vector<typename fp12_fast_type::limb_array> fp_limbs_y(poolN);
     std::vector<typename fp12_fast_type::limb_array> fp_products(poolN);
     std::vector<typename fp12_fast_type::limb_array> fp_sum_products(poolN);
+    std::vector<fp2_base_type> fp2_base_x(poolN);
+    std::vector<fp2_base_type> fp2_base_y(poolN);
     std::vector<fp2_dbl_type> fp2_dbl_x(poolN);
     std::vector<fp2_dbl_type> fp2_dbl_y(poolN);
+    std::vector<fp6_base_type> fp6_base_x(poolN);
+    std::vector<fp6_base_type> fp6_base_y(poolN);
     std::vector<fp6_dbl_type> fp6_dbl_x(poolN);
     std::vector<fp6_dbl_type> fp6_dbl_y(poolN);
-    std::vector<fp12_view_parts> fp12_view_parts_x;
-    fp12_view_parts_x.reserve(poolN);
+    std::vector<fp12_packed_parts> fp12_packed_parts_x;
+    fp12_packed_parts_x.reserve(poolN);
 
     for (std::size_t i = 0; i < poolN; ++i) {
         fpxs[i] = nil::crypto3::algebra::random_element<base_field_type>(rng);
@@ -195,24 +198,22 @@ int main(int argc, char** argv) {
         ys[i] = nil::crypto3::algebra::random_element<fp12_type>(rng);
         fp_limbs_x[i] = limb_ops::load_limbs(fpxs[i].data.backend().base_data());
         fp_limbs_y[i] = limb_ops::load_limbs(fpys[i].data.backend().base_data());
-        fp12_view_parts_x.emplace_back(xs[i], ys[i]);
+        fp2_base_x[i] = fp2_base_type(fp2xs[i]);
+        fp2_base_y[i] = fp2_base_type(fp2ys[i]);
+        fp6_base_x[i] = fp6_base_type(fp6xs[i]);
+        fp6_base_y[i] = fp6_base_type(fp6ys[i]);
+        fp12_packed_parts_x.emplace_back(xs[i], ys[i]);
     }
     for (std::size_t i = 0; i < poolN; ++i) {
         const std::size_t next = (i + 1) % poolN;
         limb_ops::multiply_4x4(fp_products[i].data(), fp_limbs_x[i].data(), fp_limbs_y[i].data());
         limb_ops::multiply_4x4(fp_sum_products[i].data(), fp_limbs_y[i].data(), fp_limbs_x[next].data());
 
-        const fp2_view_type fp2_x(fp2xs[i]);
-        const fp2_view_type fp2_y(fp2ys[i]);
-        const fp2_view_type fp2_x_next(fp2xs[next]);
-        fp2_dbl_type::mul_pre(fp2_dbl_x[i], fp2_x, fp2_y);
-        fp2_dbl_type::mul_pre(fp2_dbl_y[i], fp2_y, fp2_x_next);
+        fp2_dbl_type::mul_pre(fp2_dbl_x[i], fp2_base_x[i], fp2_base_y[i]);
+        fp2_dbl_type::mul_pre(fp2_dbl_y[i], fp2_base_y[i], fp2_base_x[next]);
 
-        const fp6_view_type fp6_x(fp6xs[i]);
-        const fp6_view_type fp6_y(fp6ys[i]);
-        const fp6_view_type fp6_x_next(fp6xs[next]);
-        fp6_dbl_type::mul_pre(fp6_dbl_x[i], fp6_x, fp6_y);
-        fp6_dbl_type::mul_pre(fp6_dbl_y[i], fp6_y, fp6_x_next);
+        fp6_dbl_type::mul_pre(fp6_dbl_x[i], fp6_base_x[i], fp6_base_y[i]);
+        fp6_dbl_type::mul_pre(fp6_dbl_y[i], fp6_base_y[i], fp6_base_x[next]);
     }
 
     base_value_type fp_acc;
@@ -270,11 +271,15 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp_dbl_acc);
                 }));
 
+    print_stage("Fp2 pack", run_stage(iters, warmup, samples, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    const fp2_base_type x(fp2xs[idx]);
+                    do_not_optimize(&x);
+                }));
+
     print_stage("Fp2 pre mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    const fp2_view_type x(fp2xs[idx]);
-                    const fp2_view_type y(fp2ys[idx]);
-                    fp2_dbl_type::mul_pre(fp2_pre_acc, x, y);
+                    fp2_dbl_type::mul_pre(fp2_pre_acc, fp2_base_x[idx], fp2_base_y[idx]);
                     do_not_optimize(&fp2_pre_acc);
                 }));
 
@@ -286,9 +291,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp2 lazy mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    const fp2_view_type x(fp2xs[idx]);
-                    const fp2_view_type y(fp2ys[idx]);
-                    fp2_dbl_type::mul_pre(fp2_pre_acc, x, y);
+                    fp2_dbl_type::mul_pre(fp2_pre_acc, fp2_base_x[idx], fp2_base_y[idx]);
                     fp2_pre_acc.to_non_residue(fp2_acc);
                     do_not_optimize(&fp2_acc);
                 }));
@@ -307,23 +310,23 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp2_pre_acc);
                 }));
 
+    print_stage("Fp6 pack", run_stage(iters, warmup, samples, [&](std::size_t i) {
+                    const std::size_t idx = i % poolN;
+                    const fp6_base_type x(fp6xs[idx]);
+                    do_not_optimize(&x);
+                }));
+
     print_stage("Fp6 pre mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    const fp6_view_type x(fp6xs[idx]);
-                    const fp6_view_type y(fp6ys[idx]);
-                    fp6_dbl_type::mul_pre(fp6_pre_acc, x, y);
+                    fp6_dbl_type::mul_pre(fp6_pre_acc, fp6_base_x[idx], fp6_base_y[idx]);
                     do_not_optimize(&fp6_pre_acc);
                 }));
 
     print_stage("Fp6 pre sum", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
                     const std::size_t next = (idx + 1) % poolN;
-                    const fp6_view_type x(fp6xs[idx]);
-                    const fp6_view_type y(fp6ys[idx]);
-                    const fp6_view_type x_next(fp6xs[next]);
-                    const fp6_view_type y_next(fp6ys[next]);
-                    const fp6_base_type x_sum = x + y;
-                    const fp6_base_type y_sum = x_next + y_next;
+                    const fp6_base_type x_sum = fp6_base_x[idx] + fp6_base_y[idx];
+                    const fp6_base_type y_sum = fp6_base_x[next] + fp6_base_y[next];
                     fp6_dbl_type::mul_pre(fp6_pre_acc, x_sum, y_sum);
                     do_not_optimize(&fp6_pre_acc);
                 }));
@@ -336,9 +339,7 @@ int main(int argc, char** argv) {
 
     print_stage("Fp6 lazy mul", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    const fp6_view_type x(fp6xs[idx]);
-                    const fp6_view_type y(fp6ys[idx]);
-                    fp6_dbl_type::mul_pre(fp6_pre_acc, x, y);
+                    fp6_dbl_type::mul_pre(fp6_pre_acc, fp6_base_x[idx], fp6_base_y[idx]);
                     fp6_pre_acc.to_underlying(fp6_acc);
                     do_not_optimize(&fp6_acc);
                 }));
@@ -357,18 +358,15 @@ int main(int argc, char** argv) {
                     do_not_optimize(&fp6_pre_acc);
                 }));
 
-    print_stage("Fp12 make views", run_stage(iters, warmup, samples, [&](std::size_t i) {
+    print_stage("Fp12 pack inputs", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    const fp12_view_parts parts(xs[idx], ys[idx]);
-                    do_not_optimize(parts.a.data[0].ptrs()[0]);
-                    do_not_optimize(parts.b.data[0].ptrs()[0]);
-                    do_not_optimize(parts.c.data[0].ptrs()[0]);
-                    do_not_optimize(parts.d.data[0].ptrs()[0]);
+                    const fp12_packed_parts parts(xs[idx], ys[idx]);
+                    do_not_optimize(&parts);
                 }));
 
     print_stage("Fp12 core prepacked", run_stage(iters, warmup, samples, [&](std::size_t i) {
                     const std::size_t idx = i % poolN;
-                    multiply_prepacked_fp12(fp12_acc, fp12_view_parts_x[idx]);
+                    multiply_prepacked_fp12(fp12_acc, fp12_packed_parts_x[idx]);
                     do_not_optimize(&fp12_acc);
                 }));
 
