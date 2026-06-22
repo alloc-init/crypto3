@@ -515,20 +515,13 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 
     template <class Field>
-    inline void fp2_base_add_mod_x86(limb *z, const limb *const *x, const limb *const *y) {
+    inline void fp2_base_add_mod_x86(limb *z, const limb *x, const limb *y) {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb t0, t1, t2, t3;
         limb q0, q1, q2, q3;
-        limb* x_addr, *y_addr;
         asm volatile(
-            // z is continuous for sure, not necessarily x or y (they are potentially from views)
-            "movq (%[x]), %[x_addr]\n"
-            "movq (%[y]), %[y_addr]\n"
-            ADD_LOW_4_LIMBS_MOD(z, 0, x_addr, 0, y_addr, 0)
-            "movq 8(%[x]), %[x_addr]\n"
-            "movq 8(%[y]), %[y_addr]\n"
-            ADD_LOW_4_LIMBS_MOD(z, 8, x_addr, 0, y_addr, 0)
-
+            ADD_LOW_4_LIMBS_MOD(z, 0, x, 0, y, 0)
+            ADD_LOW_4_LIMBS_MOD(z, 4, x, 4, y, 4)
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
@@ -536,9 +529,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [q0]"=&r"(q0),
               [q1]"=&r"(q1),
               [q2]"=&r"(q2),
-              [q3]"=&r"(q3),
-              [x_addr]"=&r"(x_addr),
-              [y_addr]"=&r"(y_addr)
+              [q3]"=&r"(q3)
             : [x]"r"(x),
               [y]"r"(y),
               [z]"r"(z),
@@ -550,54 +541,48 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         );
     }
 
-    inline void fp2_base_add_pre_x86(limb *z, const limb *const *x, const limb *const *y) {
+    inline void fp2_base_add_pre_x86(limb *z, const limb *x, const limb *y) {
         limb t0, t1, t2, t3;
         limb q0, q1, q2, q3;
         limb a, b;
-        limb *ptr;
         asm volatile(
             "xor %[t0], %[t0]\n" // clear flags
-            "mov 0(%[x]), %[ptr]\n"
-            "mov " PTR(ptr, 0) ", %[t0]\n"
-            "mov " PTR(ptr, 1) ", %[t1]\n"
-            "mov " PTR(ptr, 2) ", %[t2]\n"
-            "mov " PTR(ptr, 3) ", %[t3]\n"
+            "mov " PTR(x, 0) ", %[t0]\n"
+            "mov " PTR(x, 1) ", %[t1]\n"
+            "mov " PTR(x, 2) ", %[t2]\n"
+            "mov " PTR(x, 3) ", %[t3]\n"
 
-            "mov 8(%[x]), %[ptr]\n"
-            "mov " PTR(ptr, 0) ", %[q0]\n"
-            "mov " PTR(ptr, 1) ", %[q1]\n"
-            "mov " PTR(ptr, 2) ", %[q2]\n"
-            "mov " PTR(ptr, 3) ", %[q3]\n"
+            "mov " PTR2(x, 4, 0) ", %[q0]\n"
+            "mov " PTR2(x, 4, 1) ", %[q1]\n"
+            "mov " PTR2(x, 4, 2) ", %[q2]\n"
+            "mov " PTR2(x, 4, 3) ", %[q3]\n"
 
-            "mov 0(%[y]), %[ptr]\n"
-            "movq " PTR(ptr, 0) ", %[a]\n"
+            "movq " PTR(y, 0) ", %[a]\n"
             "adcx %[a], %[t0]\n"
-            "movq " PTR(ptr, 1) ", %[a]\n"
+            "movq " PTR(y, 1) ", %[a]\n"
             "adcx %[a], %[t1]\n"
-            "movq " PTR(ptr, 2) ", %[a]\n"
+            "movq " PTR(y, 2) ", %[a]\n"
             "adcx %[a], %[t2]\n"
-            "movq " PTR(ptr, 3) ", %[a]\n"
+            "movq " PTR(y, 3) ", %[a]\n"
             "adcx %[a], %[t3]\n"
 
-            "mov 8(%[y]), %[ptr]\n"
-            "movq " PTR(ptr, 0) ", %[b]\n"
+            "movq " PTR2(y, 4, 0) ", %[b]\n"
             "adox %[b], %[q0]\n"
-            "movq " PTR(ptr, 1) ", %[b]\n"
+            "movq " PTR2(y, 4, 1) ", %[b]\n"
             "adox %[b], %[q1]\n"
-            "movq " PTR(ptr, 2) ", %[b]\n"
+            "movq " PTR2(y, 4, 2) ", %[b]\n"
             "adox %[b], %[q2]\n"
-            "movq " PTR(ptr, 3) ", %[b]\n"
+            "movq " PTR2(y, 4, 3) ", %[b]\n"
             "adox %[b], %[q3]\n"
 
             "mov %[t0], " PTR(z, 0) "\n"
             "mov %[t1], " PTR(z, 1) "\n"
             "mov %[t2], " PTR(z, 2) "\n"
             "mov %[t3], " PTR(z, 3) "\n"
-
-            "mov %[q0], " PTR2(z, 8, 0) "\n"
-            "mov %[q1], " PTR2(z, 8, 1) "\n"
-            "mov %[q2], " PTR2(z, 8, 2) "\n"
-            "mov %[q3], " PTR2(z, 8, 3) "\n"
+            "mov %[q0], " PTR(z, 4) "\n"
+            "mov %[q1], " PTR(z, 5) "\n"
+            "mov %[q2], " PTR(z, 6) "\n"
+            "mov %[q3], " PTR(z, 7) "\n"
 
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
@@ -608,8 +593,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [q2]"=&r"(q2),
               [q3]"=&r"(q3),
               [a]"=&r"(a),
-              [b]"=&r"(b),
-              [ptr]"=&r"(ptr)
+              [b]"=&r"(b)
             : [x]"r"(x),
               [y]"r"(y),
               [z]"r"(z)
@@ -641,7 +625,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 
     template<class Field>
-    inline void fp2_mul_pre_x86(limb_array *z, const limb *const *x, const limb *const *y) {
+    inline void fp2_mul_pre_x86(limb_array *z, const limb *x, const limb *y) {
         SET_STATIC_MODULUS_FROM_FIELD();
         // For x = a + bu and y = c + du:
         //   xy = (a + bu) * (c + du)
@@ -651,11 +635,11 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb low, high, zero, d0, d1, d2, d3;
         limb_array scratch;
         asm volatile(
-            SCHOOLBOOK(z, 0, x0, 0, y0, 0)
-            SCHOOLBOOK(scratch, 0, x1, 0, y1, 0)
+            SCHOOLBOOK(z, 0, x, 0, y, 0)
+            SCHOOLBOOK(scratch, 0, x, 4, y, 4)
             SUB_LIMBS_MOD(z, 0, z, 0, scratch, 0, d0, d1, d2, d3)
-            SCHOOLBOOK(z, 8, x0, 0, y1, 0)
-            SCHOOLBOOK(scratch, 0, x1, 0, y0, 0)
+            SCHOOLBOOK(z, 8, x, 0, y, 4)
+            SCHOOLBOOK(scratch, 0, x, 4, y, 0)
             ADD_LIMBS(z, 8, z, 8, scratch, 0, low)
             :   [low]"=&r"(low),
                 [high]"=&r"(high),
@@ -664,10 +648,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
                 [d1]"=&r"(d1),
                 [d2]"=&r"(d2),
                 [d3]"=&r"(d3)
-            :   [x0]"r"(x[0]),
-                [x1]"r"(x[1]),
-                [y0]"r"(y[0]),
-                [y1]"r"(y[1]),
+            :   [x]"r"(x),
+                [y]"r"(y),
                 [z]"r"(z),
                 [scratch]"r"(&scratch),
                 [p0]"m"(p0),
@@ -679,41 +661,34 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     }
 
     template<class Field>
-    inline void fp2_add_mul_pre_x86(limb_array *z, const limb *const *a, const limb *const *b,
-                                                   const limb *const *c, const limb *const *d) {
+    inline void fp2_add_mul_pre_x86(limb_array *z, const limb  *a, const limb  *b, const limb  *c, const limb  *d) {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb low, high, zero, d0, d1, d2, d3;
         struct {
-            limb_array x0;
-            limb_array x1;
-            limb_array y0;
-            limb_array y1;
+            limb_array x;
+            limb_array y;
             limb_array tmp;
         } data;
         asm volatile(
-            ADD_LOW_4_LIMBS(data, 0, a0, 0, b0, 0, low)
-            ADD_LOW_4_LIMBS(data, 8, a1, 0, b1, 0, low)
-            ADD_LOW_4_LIMBS(data, 16, c0, 0, d0, 0, low)
-            ADD_LOW_4_LIMBS(data, 24, c1, 0, d1, 0, low)
+            ADD_LOW_4_LIMBS(data, 0, a, 0, b, 0, low)
+            ADD_LOW_4_LIMBS(data, 4, a, 4, b, 4, low)
+            ADD_LOW_4_LIMBS(data, 8, c, 0, d, 0, low)
+            ADD_LOW_4_LIMBS(data, 12, c, 4, d, 4, low)
             :   [low]"=&r"(low)
             :   [data]"r"(&data),
-                [a0]"r"(a[0]),
-                [a1]"r"(a[1]),
-                [b0]"r"(b[0]),
-                [b1]"r"(b[1]),
-                [c0]"r"(c[0]),
-                [c1]"r"(c[1]),
-                [d0]"r"(d[0]),
-                [d1]"r"(d[1])
+                [a]"r"(a),
+                [b]"r"(b),
+                [c]"r"(c),
+                [d]"r"(d)
             : "cc", "memory"
         );
         asm volatile(
-            SCHOOLBOOK(z, 0, data, 0, data, 16)
-            SCHOOLBOOK(data, 32, data, 8, data, 24)
-            SUB_LIMBS_MOD(z, 0, z, 0, data, 32, d0, d1, d2, d3)
-            SCHOOLBOOK(z, 8, data, 0, data, 24)
-            SCHOOLBOOK(data, 32, data, 8, data, 16)
-            ADD_LIMBS(z, 8, z, 8, data, 32, low)
+            SCHOOLBOOK(z, 0, data, 0, data, 8) // z[0] = x[0] * y[0]
+            SCHOOLBOOK(data, 16, data, 4, data, 12) // tmp = x[1] * y[1]
+            SUB_LIMBS_MOD(z, 0, z, 0, data, 16, d0, d1, d2, d3)
+            SCHOOLBOOK(z, 8, data, 0, data, 12)
+            SCHOOLBOOK(data, 16, data, 4, data, 8)
+            ADD_LIMBS(z, 8, z, 8, data, 16, low)
             :   [low]"=&r"(low),
                 [high]"=&r"(high),
                 [zero]"=&r"(zero),
