@@ -113,7 +113,8 @@ bench_result run_stage(std::size_t iters, std::size_t warmup, std::size_t sample
 
 static void print_stage(const std::string& name, const bench_result& result) {
     stage_results().push_back({name, result});
-    std::cout << std::left << std::setw(24) << name << " per=" << std::setw(12) << result.ns_per << " ns"
+    std::cout << std::left << std::setw(24) << name << " per=" << std::setw(12) << std::fixed << std::setprecision(2)
+              << result.ns_per << " ns"
               << " stddev=" << std::setw(12) << result.stddev_ns_per << " ns\n";
 }
 
@@ -121,7 +122,7 @@ static void print_csv_results() {
     std::cout << "\nCSV\n";
     std::cout << "Operation,crypto3 (ns),stddev (ns)\n";
     for (const stage_result& stage : stage_results()) {
-        std::cout << stage.name << "," << std::setprecision(17) << stage.result.ns_per << ","
+        std::cout << stage.name << "," << std::fixed << std::setprecision(2) << stage.result.ns_per << ","
                   << stage.result.stddev_ns_per << "\n";
     }
 }
