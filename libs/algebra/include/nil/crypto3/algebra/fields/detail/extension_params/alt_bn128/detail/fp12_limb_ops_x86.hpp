@@ -696,6 +696,34 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         // Karatsuba computes the cross term with one product:
         //   ad + bc = (a + b)(c + d) - ac - bd.
         limb low, high, zero, d0, d1, d2, d3, tmp;
+        // limb_array scratch;
+        // asm volatile(
+        //     SCHOOLBOOK(z, 0, x0, 0, y0, 0)
+        //     SCHOOLBOOK(scratch, 0, x1, 0, y1, 0)
+        //     BRANCHY_SUB_LIMBS_MOD(z, 0, z, 0, scratch, 0, low, d0, d1, d2, d3)
+        //     SCHOOLBOOK(z, 8, x0, 0, y1, 0)
+        //     SCHOOLBOOK(scratch, 0, x1, 0, y0, 0)
+        //     ADD_LIMBS_MOD(z, 8, z, 8, scratch, 0, low, high, zero, tmp, d0, d1, d2, d3)
+        //     :   [low]"=&r"(low),
+        //         [high]"=&r"(high),
+        //         [zero]"=&r"(zero),
+        //         [d0]"=&r"(d0),
+        //         [d1]"=&r"(d1),
+        //         [d2]"=&r"(d2),
+        //         [d3]"=&r"(d3),
+        //         [tmp]"=&d"(tmp)
+        //     :   [x0]"r"(x[0]),
+        //         [x1]"r"(x[1]),
+        //         [y0]"r"(y[0]),
+        //         [y1]"r"(y[1]),
+        //         [z]"r"(z),
+        //         [scratch]"r"(&scratch),
+        //         [p0]"m"(p0),
+        //         [p1]"m"(p1),
+        //         [p2]"m"(p2),
+        //         [p3]"m"(p3)
+        //     : "cc", "memory"
+        // );
         struct {
             limb_array ac;
             limb_array bd;
@@ -703,7 +731,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             limb_array c_plus_d;
         } scratch;
         asm volatile(
-
             SCHOOLBOOK(scratch, 0, x0, 0, y0, 0)
             SCHOOLBOOK(scratch, 8, x1, 0, y1, 0)
             BRANCHY_SUB_LIMBS_MOD(z, 0, scratch, 0, scratch, 8, low, d0, d1, d2, d3)
@@ -712,7 +739,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             SCHOOLBOOK(z, 8, scratch, 16, scratch, 24)
             SUB_LIMBS(z, 8, scratch, 0, low)
             SUB_LIMBS(z, 8, scratch, 8, low)
-
             :
                 [low]"=&r"(low),
                 [high]"=&r"(high),
