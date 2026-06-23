@@ -24,9 +24,9 @@ namespace nil {
                         using limb_array = alt_bn128_fp12_limb_ops::limb_array;
                         using limb = alt_bn128_fp12_limb_ops::limb;
 
-                        // fp2 before multiplying - equivalent to 2 regular Fp's
+                        // Packed input-side Fp2 value: two canonical 4-limb Fp coefficients.
                         struct fp2_base {
-                            limb_array data;    // 2 4-limb coeffs
+                            limb_array data;    // c0 in data[0..3], c1 in data[4..7]
 
                             fp2_base() = default;
 
@@ -53,7 +53,7 @@ namespace nil {
                         struct fp2_dbl {
                             // Lazy Fp2 value in the same coefficient order as generic fp2:
                             //   data[0] + data[1] * u, with u^2 = -1.
-                            // Each coefficient is an unreduced double-width Fp value represented modulo p * R.
+                            // Each coefficient is an unreduced double-width Fp value kept in the p * R residue class.
                             std::array<limb_array, 2> data;
 
                             fp2_dbl() = default;
@@ -82,7 +82,8 @@ namespace nil {
                                 return *this;
                             }
 
-                            // Subtraction where the result is known positive - can avoid correction
+                            // Karatsuba correction: the real coefficient uses bounded subtraction,
+                            // while the imaginary coefficient is known nonnegative and can raw-subtract.
                             void sub_pre(const fp2_dbl &other) {
                                 alt_bn128_fp12_limb_ops::fp2_sub_pre<base_field_type>(data.data(), other.data.data());
                             }
@@ -124,7 +125,7 @@ namespace nil {
                             }
                         };
 
-                        // Raw-limb version of an Fp6 value:
+                        // Packed input-side Fp6 value:
                         //   data[0] + data[1] * v + data[2] * v^2.
                         // Each coefficient is an fp2_base, so this is still an input-side
                         // representation, not a lazy/pre-REDC result.
@@ -254,8 +255,7 @@ namespace nil {
                             //   (a + b*v + c*v^2) * v
                             //     = a*v + b*v^2 + c*v^3
                             //     = xi*c + a*v + b*v^2
-                            // This is a version that adds a fp6_dbl to the result to avoid temporaries
-                            // ie xi = xi * x + y
+                            // Computes z = x * v + y and folds x.c * v^3 as xi * x.c.
                             static void mul_v_add(fp6_dbl &z, const fp6_dbl &x, const fp6_dbl &y) {
                                 fp2_dbl::mul_xi_add(z.data[0], x.data[2], y.data[0]);
                                 z.data[1] = x.data[0];
@@ -289,8 +289,8 @@ namespace nil {
                             //   z1 = (a + b)(c + d) - ac - bd
                             //
                             // ac, bd, and z1 stay in the lazy doubled representation until the
-                            // two final Fp6 reductions. The input-side fp6 sums are reduced modulo p,
-                            // so z1 can use the ordinary pre-REDC multiply path.
+                            // two final Fp6 reductions. add_mul_pre forms canonical input-side
+                            // Fp6 sums before the ordinary pre-REDC multiply path.
                             const fp6_base a(x.data[0]);
                             const fp6_base b(x.data[1]);
                             const fp6_base c(y.data[0]);

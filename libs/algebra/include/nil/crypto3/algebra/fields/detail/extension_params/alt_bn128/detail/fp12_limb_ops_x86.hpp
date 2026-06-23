@@ -11,7 +11,7 @@
 #define PTR(REGNAME, I) STR(I) "*8(%[" #REGNAME "])"
 #define PTR2(REGNAME, I, J) PTR(REGNAME, BOOST_PP_ADD(I, J))
 
-// get the i+j%5-th "d" register
+// Get the (i + j) mod 4 d register in the 4-live-limb schoolbook window.
 #define D(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 4)) "]"
 
 #define SCHOOLBOOK_ROUND(ROUND, Z, Z_BASE, X, X_BASE, Y, Y_BASE)    \
@@ -122,7 +122,7 @@
     static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);  \
     static constexpr limb p_dash = limb(mod_obj.get_p_dash());
 
-// get the i+j%5-th "t" register
+// Get the (i + j) mod 5 t register in the REDC rotating window.
 #define T(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
 
 #define MONTGOMERY_REDUCE_LOAD_NEXT(I)                  \
@@ -135,7 +135,7 @@
     "movq " T(I, 0) ", %%rdx\n"                         \
     "imulq %[p_dash], %%rdx\n"                          \
     "xor %[zero], %[zero]\n"                            \
-    /* multiply m * pi for each i and add it to data */ \
+    /* multiply m by each modulus limb and add into the rotating window */ \
     "mulxq %[p0], %[low], %[high]\n"                    \
     /* use dual carry chains */                         \
     "adcx %[low], " T(I, 0) "\n"                        \
@@ -148,7 +148,7 @@
     "adox %[high], " T(I, 3) "\n"                       \
     "mulxq %[p3], %[low], %[high]\n"                    \
     "adcx %[low], " T(I, 3) "\n"                        \
-    /* merge carry chains */                            \
+    /* merge OF, prior pending carry, and CF into the next live limb */ \
     "adox %[zero], %[high]\n"                           \
     "adox %[pending], %[high]\n"                        \
     "adcx %[high], " T(I, 4) "\n"                       \
@@ -367,28 +367,28 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             "movq " PTR(data, 3) ", %[t3]\n"
             "movq " PTR(data, 4) ", %[t4]\n"
 
-            // initial loop: for each limb, compute m and multiply each limb by m*p
-            // make sure window carry is initialized
+            // Unrolled REDC rounds. Each round cancels the current low limb and
+            // rotates in one higher input limb.
             "xor %[pending], %[pending]\n"
             MONTGOMERY_REDUCE_CANCEL_LOW(0)
             MONTGOMERY_REDUCE_CANCEL_LOW(1)
             MONTGOMERY_REDUCE_CANCEL_LOW(2)
             MONTGOMERY_REDUCE_CANCEL_LOW(3)
 
-            // Reduce high limbs mod p, reuse some registers for it
-            // q = t
+            // Conditionally reduce the high limbs modulo p, reusing scratch registers.
+            // q = t - p
             "movq " T(0, 4) ", %[low]\n"
             "movq " T(1, 4) ", %[high]\n"
             "movq " T(2, 4) ", %[zero]\n"
             "movq " T(3, 4) ", %%rdx\n"
 
-            // try q - p
+            // Try q = t - p.
             "subq %[p0], %[low]\n"
             "sbbq %[p1], %[high]\n"
             "sbbq %[p2], %[zero]\n"
             "sbbq %[p3], %%rdx\n"
 
-            // if q - p didnt result in a borrrow, set t=q-p
+            // If t - p did not borrow, keep q as the canonical result.
             "cmovnc %[low], " T(0, 4) "\n"
             "cmovnc %[high], " T(1, 4) "\n"
             "cmovnc %[zero], " T(2, 4) "\n"

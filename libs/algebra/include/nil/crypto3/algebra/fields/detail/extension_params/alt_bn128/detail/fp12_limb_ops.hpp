@@ -12,7 +12,7 @@ namespace nil {
             namespace fields {
                 namespace detail {
                     namespace alt_bn128_fp12_limb_ops {
-                        // Loads limbs from a multiprecision backend value
+                        // Load a canonical 4-limb Fp value into the shared 8-limb scratch shape.
                         template<typename Backend>
                         static limb_array load_limbs(const Backend &backend) {
                             static_assert(Backend::limb_bits == limb_bits,
@@ -79,7 +79,8 @@ namespace nil {
                             }
                             tmp[base_value_limb_count] = carry;
                             static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-                            // do one pass of normalization on lower limbs
+                            // Normalize the 5-limb scratch, then copy only this coefficient back.
+                            // z may point into the middle of a contiguous fp2_base value.
                             if (ge_modulus(tmp, p.data())) {
                                 subtract_limbs_portable<5>(tmp, tmp, p.data());
                             }
@@ -108,7 +109,8 @@ namespace nil {
 #else
                             bool borrow = subtract_limbs_portable<8>(z.data(), x.data(), y.data());
                             if (borrow) {
-                                // if we went negative, add p
+                                // If the full 8-limb subtraction borrowed, add p to the high half
+                                // to keep the double value in the p * R residue class.
                                 static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                                 add_limbs_portable<4>(z.data() + 4, z.data() + 4, p.data());
                             }
@@ -162,7 +164,7 @@ namespace nil {
 
                         // Multiply two base-width values using their low four limbs.
                         //
-                        // The result is the full 8-limb product placed in the 9-limb storage shape. This is the
+                        // The result is the full 8-limb product placed in the shared 8-limb storage shape. This is the
                         // common path for products of ordinary BN254 Fp Montgomery residues.
                         inline void multiply_4x4_portable(limb *result, const limb *x, const limb *y) {
                             limb acc0 = 0u;
@@ -248,13 +250,12 @@ namespace nil {
                             }
 
                             // The REDC output lives in buf[4..7]. Bring it back into the
-                            // canonical field range before moving the low four limbs.
+                            // canonical field range before writing the four output limbs.
                             if (ge_modulus_4(buf.data() + 4, p.data())) {
                                 subtract_limbs_portable<4>(buf.data() + 4, buf.data() + 4, p.data());
                             }
 
-                            // Keep the reduced 4-limb field value and clear the lazy
-                            // extension limbs in the shared storage shape.
+                            // Write the reduced 4-limb field value to the caller-provided Fp storage.
                             for (size_t i = 0; i < base_value_limb_count; i++) {
                                 result[i] = buf[base_value_limb_count + i];
                             }
@@ -269,8 +270,8 @@ namespace nil {
 #endif
                         }
 
-                        // fp2_base values are stored as two contiguous 4-limb coefficients.
-                        // Output z is assumed contiguous.
+                        // fp2_base values are two contiguous 4-limb coefficients; each output
+                        // coefficient is normalized modulo p.
                         template<class Field>
                         inline void fp2_base_add_mod(limb *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
@@ -281,7 +282,8 @@ namespace nil {
 #endif
                         }
 
-                        // fp2_base values are stored as two contiguous 4-limb coefficients.
+                        // Raw fp2_base coefficient-wise add. BN254 inputs are bounded so each
+                        // coefficient sum fits in four limbs.
                         inline void fp2_base_add_pre(limb *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
                             fp2_base_add_pre_x86(z, x, y);
@@ -301,7 +303,8 @@ namespace nil {
 #endif
                         }
 
-                        // caller must handle aliasing
+                        // Out-of-place dst = src * xi + addend. Callers must use one of the
+                        // modify_* variants when dst aliases an input.
                         template<class Field>
                         inline void fp2_mul_xi_add(limb_array *dst, const limb_array *src, const limb_array *addend) {
                             mul_8_limbs_by_9<Field>(dst[0], src[0]);
@@ -366,6 +369,7 @@ namespace nil {
                         template<class Field>
                         inline void fp2_add_mul_pre_portable(limb_array *z, const limb *a, const limb *b, const limb *c,
                                                              const limb *d) {
+                            // Build the raw fp2 sums in the same packed layout expected by fp2_mul_pre.
                             limb x[8], y[8];
                             add_limbs_portable<4>(x, a, b);
                             add_limbs_portable<4>(x + 4, a + 4, b + 4);
