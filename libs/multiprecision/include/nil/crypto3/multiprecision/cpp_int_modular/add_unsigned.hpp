@@ -8,17 +8,16 @@
 #define CRYPTO3_MP_ADD_UNSIGNED_ADDC_32_HPP
 
 #include <boost/multiprecision/detail/constexpr.hpp>
-#include <boost/multiprecision/cpp_int/intel_intrinsics.hpp> // for addcarry_limb
+#include <boost/multiprecision/cpp_int/intel_intrinsics.hpp>    // for addcarry_limb
 
 namespace boost {
     namespace multiprecision {
         namespace backends {
             template<unsigned Bits>
             inline BOOST_MP_CXX14_CONSTEXPR void
-                add_unsigned_constexpr(
-                    cpp_int_modular_backend<Bits>& result, 
-                    const cpp_int_modular_backend<Bits>& a,
-                    const cpp_int_modular_backend<Bits>& b) noexcept {
+                add_unsigned_constexpr(cpp_int_modular_backend<Bits>& result,
+                                       const cpp_int_modular_backend<Bits>& a,
+                                       const cpp_int_modular_backend<Bits>& b) noexcept {
 
                 using ::boost::multiprecision::std_constexpr::swap;
                 //
@@ -29,7 +28,8 @@ namespace boost {
                 double_limb_type carry = 0;
                 std::size_t s = a.size();
                 if (s == 1) {
-                    double_limb_type r = static_cast<double_limb_type>(*a.limbs()) + static_cast<double_limb_type>(*b.limbs());
+                    double_limb_type r =
+                        static_cast<double_limb_type>(*a.limbs()) + static_cast<double_limb_type>(*b.limbs());
                     double_limb_type mask = cpp_int_modular_backend<Bits>::upper_limb_mask;
                     if (r & ~mask) {
                         result = r & mask;
@@ -72,10 +72,10 @@ namespace boost {
             // It is the caller's responsibility to make sure that a >= b.
             //
             template<unsigned Bits>
-            inline BOOST_MP_CXX14_CONSTEXPR void subtract_unsigned_constexpr(
-                    cpp_int_modular_backend<Bits>& result,
-                    const cpp_int_modular_backend<Bits>& a,
-                    const cpp_int_modular_backend<Bits>& b) noexcept {
+            inline BOOST_MP_CXX14_CONSTEXPR void
+                subtract_unsigned_constexpr(cpp_int_modular_backend<Bits>& result,
+                                            const cpp_int_modular_backend<Bits>& a,
+                                            const cpp_int_modular_backend<Bits>& b) noexcept {
                 BOOST_MP_ASSERT(!eval_lt(a, b));
 
                 //
@@ -121,10 +121,9 @@ namespace boost {
             // are required to support these intrinsics.
             //
             template<unsigned Bits>
-            inline BOOST_MP_CXX14_CONSTEXPR void add_unsigned(
-                    cpp_int_modular_backend<Bits>& result,
-                    const cpp_int_modular_backend<Bits>& a,
-                    const cpp_int_modular_backend<Bits>& b) noexcept {
+            inline BOOST_MP_CXX14_CONSTEXPR void add_unsigned(cpp_int_modular_backend<Bits>& result,
+                                                              const cpp_int_modular_backend<Bits>& a,
+                                                              const cpp_int_modular_backend<Bits>& b) noexcept {
 
 #ifndef BOOST_MP_NO_CONSTEXPR_DETECTION
                 if (BOOST_MP_IS_CONST_EVALUATED(a.size())) {
@@ -137,8 +136,8 @@ namespace boost {
                     // Nothing fancy, just let uintmax_t take the strain:
                     unsigned s = a.size();
                     if (s == 1) {
-                        double_limb_type v = static_cast<double_limb_type>(*a.limbs()) + 
-                            static_cast<double_limb_type>(*b.limbs());
+                        double_limb_type v =
+                            static_cast<double_limb_type>(*a.limbs()) + static_cast<double_limb_type>(*b.limbs());
                         double_limb_type mask = cpp_int_modular_backend<Bits>::upper_limb_mask;
                         if (v & ~mask) {
                             v &= mask;
@@ -162,27 +161,23 @@ namespace boost {
                         carry = _addcarry_u64(carry, *(unsigned long long*)(pa + i + 0),
                                               *(unsigned long long*)(pb + i + 0), (unsigned long long*)(pr + i));
                         carry = _addcarry_u64(carry, *(unsigned long long*)(pa + i + 2),
-                                          *(unsigned long long*)(pb + i + 2), (unsigned long long*)(pr + i + 2));
+                                              *(unsigned long long*)(pb + i + 2), (unsigned long long*)(pr + i + 2));
                         carry = _addcarry_u64(carry, *(unsigned long long*)(pa + i + 4),
-                                          *(unsigned long long*)(pb + i + 4), (unsigned long long*)(pr + i + 4));
-                        carry =_addcarry_u64(carry, *(unsigned long long*)(pa + i + 6),
-                                          *(unsigned long long*)(pb + i + 6), (unsigned long long*)(pr + i + 6));
+                                              *(unsigned long long*)(pb + i + 4), (unsigned long long*)(pr + i + 4));
+                        carry = _addcarry_u64(carry, *(unsigned long long*)(pa + i + 6),
+                                              *(unsigned long long*)(pb + i + 6), (unsigned long long*)(pr + i + 6));
                     }
 #else
                     for (; i + 4 <= s; i += 4) {
-                        carry = ::boost::multiprecision::detail::addcarry_limb(carry, pa[i + 0], pb[i + 0],
-                                                                                      pr + i);
-                        carry = ::boost::multiprecision::detail::addcarry_limb(carry, pa[i + 1], pb[i + 1],
-                                                                                      pr + i + 1);
-                        carry = ::boost::multiprecision::detail::addcarry_limb(carry, pa[i + 2], pb[i + 2],
-                                                                                      pr + i + 2);
-                        carry = ::boost::multiprecision::detail::addcarry_limb(carry, pa[i + 3], pb[i + 3],
-                                                                                      pr + i + 3);
+                        carry = ::boost::multiprecision::detail::addcarry_limb(carry, pa[i + 0], pb[i + 0], pr + i);
+                        carry = ::boost::multiprecision::detail::addcarry_limb(carry, pa[i + 1], pb[i + 1], pr + i + 1);
+                        carry = ::boost::multiprecision::detail::addcarry_limb(carry, pa[i + 2], pb[i + 2], pr + i + 2);
+                        carry = ::boost::multiprecision::detail::addcarry_limb(carry, pa[i + 3], pb[i + 3], pr + i + 3);
                     }
 #endif
                     for (; i < s; ++i)
                         carry = ::boost::multiprecision::detail::addcarry_limb(carry, pa[i], pb[i], pr + i);
-                    
+
                     if (Bits % cpp_int_modular_backend<Bits>::limb_bits == 0)
                         result.set_carry(carry);
                     else {
@@ -198,10 +193,9 @@ namespace boost {
 
             // It is the caller's responsibility to make sure that a > b.
             template<unsigned Bits>
-            inline BOOST_MP_CXX14_CONSTEXPR void subtract_unsigned(
-                    cpp_int_modular_backend<Bits>& result,
-                    const cpp_int_modular_backend<Bits>& a,
-                    const cpp_int_modular_backend<Bits>& b) noexcept {
+            inline BOOST_MP_CXX14_CONSTEXPR void subtract_unsigned(cpp_int_modular_backend<Bits>& result,
+                                                                   const cpp_int_modular_backend<Bits>& a,
+                                                                   const cpp_int_modular_backend<Bits>& b) noexcept {
                 BOOST_MP_ASSERT(!eval_lt(a, b));
 
 #ifndef TO3_MP_NO_CONSTEXPR_DETECTION
@@ -252,12 +246,12 @@ namespace boost {
 #else
                     for (; i + 4 <= m; i += 4) {
                         borrow = boost::multiprecision::detail::subborrow_limb(borrow, pa[i], pb[i], pr + i);
-                        borrow = boost::multiprecision::detail::subborrow_limb(borrow, pa[i + 1], pb[i + 1],
-                                                                                      pr + i + 1);
-                        borrow = boost::multiprecision::detail::subborrow_limb(borrow, pa[i + 2], pb[i + 2],
-                                                                                      pr + i + 2);
-                        borrow = boost::multiprecision::detail::subborrow_limb(borrow, pa[i + 3], pb[i + 3],
-                                                                                      pr + i + 3);
+                        borrow =
+                            boost::multiprecision::detail::subborrow_limb(borrow, pa[i + 1], pb[i + 1], pr + i + 1);
+                        borrow =
+                            boost::multiprecision::detail::subborrow_limb(borrow, pa[i + 2], pb[i + 2], pr + i + 2);
+                        borrow =
+                            boost::multiprecision::detail::subborrow_limb(borrow, pa[i + 3], pb[i + 3], pr + i + 3);
                     }
 #endif
                     for (; i < m; ++i)
@@ -271,20 +265,22 @@ namespace boost {
 #else
 
             template<unsigned Bits>
-            inline BOOST_MP_CXX14_CONSTEXPR void
-                add_unsigned(cpp_int_modular_backend<Bits>& result, const cpp_int_modular_backend<Bits>& a, const cpp_int_modular_backend<Bits>& b) noexcept {
+            inline BOOST_MP_CXX14_CONSTEXPR void add_unsigned(cpp_int_modular_backend<Bits>& result,
+                                                              const cpp_int_modular_backend<Bits>& a,
+                                                              const cpp_int_modular_backend<Bits>& b) noexcept {
                 add_unsigned_constexpr(result, a, b);
             }
 
             template<unsigned Bits>
-            inline BOOST_MP_CXX14_CONSTEXPR void
-                subtract_unsigned(cpp_int_modular_backend<Bits>& result, const cpp_int_modular_backend<Bits>& a, const cpp_int_modular_backend<Bits>& b) noexcept {
+            inline BOOST_MP_CXX14_CONSTEXPR void subtract_unsigned(cpp_int_modular_backend<Bits>& result,
+                                                                   const cpp_int_modular_backend<Bits>& a,
+                                                                   const cpp_int_modular_backend<Bits>& b) noexcept {
                 subtract_unsigned_constexpr(result, a, b);
             }
 
 #endif
         }    // namespace backends
-    }   // namespace multiprecision
+    }    // namespace multiprecision
 
-}   // namespace boost
+}    // namespace boost
 #endif

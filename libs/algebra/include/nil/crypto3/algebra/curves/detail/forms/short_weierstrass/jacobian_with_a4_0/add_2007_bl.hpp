@@ -42,34 +42,32 @@ namespace nil {
                     struct short_weierstrass_element_g1_jacobian_with_a4_0_add_2007_bl {
 
                         template<typename ElementType>
-                        constexpr static inline void process(ElementType &first,
-                                const ElementType &second)
-                        {
+                        constexpr static inline void process(ElementType &first, const ElementType &second) {
                             using field_value_type = typename ElementType::field_type::value_type;
 
                             // Z1Z1 = Z1^2
-                            field_value_type Z1Z1 (first.Z);
+                            field_value_type Z1Z1(first.Z);
                             Z1Z1.square_inplace();
 
                             // Z2Z2 = Z2^2
-                            field_value_type Z2Z2 (second.Z);
+                            field_value_type Z2Z2(second.Z);
                             Z2Z2.square_inplace();
 
                             // U1 = X1 * Z2Z2
-                            field_value_type U1 (first.X);
+                            field_value_type U1(first.X);
                             U1 *= Z2Z2;
 
                             // U2 = X2 * Z1Z1
-                            field_value_type U2 (second.X);
+                            field_value_type U2(second.X);
                             U2 *= Z1Z1;
 
                             // S1 = Y1 * Z2 * Z2Z2
-                            field_value_type S1 (first.Y);
+                            field_value_type S1(first.Y);
                             S1 *= second.Z;
                             S1 *= Z2Z2;
 
                             // S2 = Y2 * Z1 * Z1Z1
-                            field_value_type S2 (second.Y);
+                            field_value_type S2(second.Y);
                             S2 *= first.Z;
                             S2 *= Z1Z1;
 
@@ -77,31 +75,31 @@ namespace nil {
                             field_value_type H(U2);
                             H -= U1;
 
-                            field_value_type S2_minus_S1 (S2);
+                            field_value_type S2_minus_S1(S2);
                             S2_minus_S1 -= S1;
 
                             // I = (2 * H)^2
-                            field_value_type I (H);
+                            field_value_type I(H);
                             I += H;
                             I.square_inplace();
 
                             // J = H * I
-                            field_value_type J (H);
+                            field_value_type J(H);
                             J *= I;
 
                             // r = 2 * (S2-S1)
-                            field_value_type r (S2_minus_S1);
+                            field_value_type r(S2_minus_S1);
                             r += S2_minus_S1;
 
                             // V = U1 * I
-                            field_value_type V (U1);
+                            field_value_type V(U1);
                             V *= I;
 
-                            field_value_type S1_J (S1);
+                            field_value_type S1_J(S1);
                             S1_J *= J;
 
                             // X3 = r^2 - J - 2 * V
-                            field_value_type r2 (r);
+                            field_value_type r2(r);
                             r2.square_inplace();
                             first.X = r2;
                             first.X -= J;
@@ -125,8 +123,8 @@ namespace nil {
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_JACOBIAN_WITH_A4_0_ADD_2007_BL_HPP

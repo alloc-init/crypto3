@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/mnt6/base_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -94,7 +92,8 @@ namespace nil {
                             0x8696C330D743F33B572CEF4DF62CE7ECB178EE24E48D1A53736E86448E74CB48DAACBB414_cppui_modular292};
 
                         constexpr static const std::array<integral_type, 3> Frobenius_coeffs_c2 = {
-                            0x01, 0x8696C330D743F33B572CEF4DF62CE7ECB178EE24E48D1A53736E86448E74CB48DAACBB414_cppui_modular292,
+                            0x01,
+                            0x8696C330D743F33B572CEF4DF62CE7ECB178EE24E48D1A53736E86448E74CB48DAACBB414_cppui_modular292,
                             0x3B48E50A1662E26F0E834E15FAF68204A9845655F46B277A6D05B75068AD3F6801655344BEC_cppui_modular298};
 
                         constexpr static const non_residue_type non_residue = non_residue_type(0x05u);
@@ -140,9 +139,9 @@ namespace nil {
                                          3> const fp3_extension_params<mnt6_base_field<Version>>::Frobenius_coeffs_c2;
 
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_MNT6_FP3_EXTENSION_PARAMS_HPP

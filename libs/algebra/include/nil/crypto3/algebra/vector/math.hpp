@@ -40,7 +40,6 @@ namespace nil {
              *  @{
              */
 
-
             /** @brief computes the elementwise square root
              *  @param v an N-vector of type T
              *  @return an N-vector \f$ \begin{bmatrix} \sqrt{v_1} & \ldots &\sqrt{v_N} \end{bmatrix} \f$ of type T
@@ -142,6 +141,6 @@ namespace nil {
             /** @}*/
 
         }    // namespace algebra
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_VECTOR_MATH_HPP

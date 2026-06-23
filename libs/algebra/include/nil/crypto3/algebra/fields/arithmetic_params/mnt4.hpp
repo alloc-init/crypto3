@@ -33,8 +33,6 @@
 #include <nil/crypto3/algebra/fields/mnt4/base_field.hpp>
 #include <nil/crypto3/algebra/fields/mnt4/scalar_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -91,7 +89,8 @@ namespace nil {
                         0x1BF296742159C990D1A6BDD3171639A8A9E3469AFBD18966D8C2288186594BF9DBB90B3D4243819EABB95077B5F54DE5300C87FF0E6DB217C4507F977FBD351D407E801019C2B1C59_cppui_modular577;
                     constexpr static const std::array<integral_type, 2> nqr = {0x08, 0x01};
                     constexpr static const std::array<integral_type, 2> nqr_to_t = {
-                        0x00, 0x3B1F45391287A9CB585B8E5504C24BF1EC2010553885078C85899ACD708205080134A9BE6A_cppui_modular294};
+                        0x00,
+                        0x3B1F45391287A9CB585B8E5504C24BF1EC2010553885078C85899ACD708205080134A9BE6A_cppui_modular294};
 
                     constexpr static const integral_type modulus = policy_type::modulus;
                     constexpr static const extended_integral_type group_order =
@@ -150,8 +149,8 @@ namespace nil {
                     arithmetic_params<fp2<mnt4_base_field<298>>>::group_order;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_MNT4_ARITHMETIC_PARAMS_HPP

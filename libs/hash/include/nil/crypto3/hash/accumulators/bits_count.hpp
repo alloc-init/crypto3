@@ -90,6 +90,6 @@ namespace nil {
             }    // namespace extract
 
         }    // namespace accumulators
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_BITS_COUNT_HPP

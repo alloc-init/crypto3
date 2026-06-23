@@ -53,6 +53,7 @@ namespace nil {
             template<typename PolicyType, typename StateAccumulator, std::size_t ValueBits>
             class block_stream_processor {
                 typedef PolicyType policy_type;
+
             protected:
                 typedef StateAccumulator accumulator_type;
 
@@ -130,7 +131,7 @@ namespace nil {
                 std::size_t cache_seen;
             };
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

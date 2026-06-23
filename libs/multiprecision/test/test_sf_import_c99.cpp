@@ -750,7 +750,7 @@ template<unsigned Digits10,
          boost::multiprecision::expression_template_option ExpressionTemplates>
 bool type_sets_errno(
     const boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>,
-                                               ExpressionTemplates>&) {
+                                        ExpressionTemplates>&) {
     return false;
 }
 #endif
@@ -2193,29 +2193,24 @@ int main() {
 #endif
 #endif
 #ifdef TEST_CPP_DEC_FLOAT_5
-    test<boost::multiprecision::number<
-        boost::multiprecision::cpp_dec_float<59, long long, std::allocator<char>>>>();
+    test<boost::multiprecision::number<boost::multiprecision::cpp_dec_float<59, long long, std::allocator<char>>>>();
 #endif
 #ifdef TEST_CPP_DEC_FLOAT_6
-    test<boost::multiprecision::number<
-        boost::multiprecision::cpp_dec_float<58, long long, std::allocator<char>>>>();
+    test<boost::multiprecision::number<boost::multiprecision::cpp_dec_float<58, long long, std::allocator<char>>>>();
 #endif
 #ifdef TEST_CPP_BIN_FLOAT
     test<boost::multiprecision::cpp_bin_float_50>();
-    test<boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100>,
-                                              boost::multiprecision::et_on>>();
+    test<boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100>, boost::multiprecision::et_on>>();
 #endif
 #ifdef TEST_CPP_BIN_FLOAT_2
     test<boost::multiprecision::number<
-        boost::multiprecision::cpp_bin_float<35,
-                                                    boost::multiprecision::digit_base_10,
-                                                    std::allocator<char>,
-                                                    boost::long_long_type>>>();
+        boost::multiprecision::
+            cpp_bin_float<35, boost::multiprecision::digit_base_10, std::allocator<char>, boost::long_long_type>>>();
 #endif
 #ifdef TEST_CPP_BIN_FLOAT_3
     test_c99_appendix_F<boost::multiprecision::cpp_bin_float_50>();
-    test_c99_appendix_F<boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100>,
-                                                             boost::multiprecision::et_on>>();
+    test_c99_appendix_F<
+        boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100>, boost::multiprecision::et_on>>();
 #endif
 #ifdef TEST_FLOAT128
     test<boost::multiprecision::float128>();

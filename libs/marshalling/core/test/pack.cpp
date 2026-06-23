@@ -65,8 +65,7 @@ BOOST_AUTO_TEST_CASE(be_to_be_1) {
     BOOST_CHECK(status == status_type::success);
     BOOST_CHECK(out.size() == res.size());
 
-    for (auto it = out.begin(), res_it = res.begin(); it != out.end() && res_it != res.end(); 
-            ++it, ++res_it){
+    for (auto it = out.begin(), res_it = res.begin(); it != out.end() && res_it != res.end(); ++it, ++res_it) {
         BOOST_CHECK((*it) == (*res_it));
     }
 }
@@ -82,8 +81,7 @@ BOOST_AUTO_TEST_CASE(be_to_be_2) {
     BOOST_CHECK(status == status_type::success);
     BOOST_CHECK(out.size() == res.size());
 
-    for (auto it = out.begin(), res_it = res.begin(); it != out.end() && res_it != res.end(); 
-            ++it, ++res_it){
+    for (auto it = out.begin(), res_it = res.begin(); it != out.end() && res_it != res.end(); ++it, ++res_it) {
         BOOST_CHECK((*it) == (*res_it));
     }
 }
@@ -92,8 +90,8 @@ BOOST_AUTO_TEST_CASE(be_to_le_1) {
     std::vector<std::uint8_t> in = {{0x12, 0x34, 0x56, 0x78}};
     std::uint32_t res = 0x78563412;
     std::vector<int> x;
-        std::vector<int> a = {0, 1, 2, 3};
-        x = std::vector<int>(a.begin(), a.end());
+    std::vector<int> a = {0, 1, 2, 3};
+    x = std::vector<int>(a.begin(), a.end());
 
     status_type status;
     std::uint32_t out = pack<option::little_endian>(in, status);
@@ -103,18 +101,17 @@ BOOST_AUTO_TEST_CASE(be_to_le_1) {
     BOOST_CHECK(out == res);
 }
 
-
 // BOOST_AUTO_TEST_CASE(bubb_to_bulb_1) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 //     using input_seed_type = typename input_type::value_type;
-//     using output_type =  
+//     using output_type =
 //             types::integral<
-//                 field_type<option::big_octet_little_bit>, 
+//                 field_type<option::big_octet_little_bit>,
 //                 std::uint32_t>;
 
 //     input_type in;
@@ -123,9 +120,9 @@ BOOST_AUTO_TEST_CASE(be_to_le_1) {
 //     std::uint32_t res = 0x482c6a1e;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -136,10 +133,9 @@ BOOST_AUTO_TEST_CASE(be_to_le_1) {
 //     BOOST_CHECK(out.value() == res);
 // }
 
-
 // BOOST_AUTO_TEST_CASE(bubb_to_bulb_2) {
 //     std::array<std::uint16_t, 4> inp_seed_blank = {{0x1234, 0x5678, 0x90ab, 0xcdef}};
-    // output_type out;
+// output_type out;
 //     std::array<std::uint32_t, 2> res = {{0x482c6a1e, 0x09d5b3f7}};
 
 //     pack<big_octet_big_bit, big_octet_little_bit, 16, 32>(in.begin(), in.end(), out.begin());
@@ -171,8 +167,7 @@ BOOST_AUTO_TEST_CASE(be_to_le_3) {
     BOOST_CHECK(status == status_type::success);
     BOOST_CHECK(out.size() == res.size());
 
-    for (auto it = out.begin(), res_it = res.begin(); it != out.end() && res_it != res.end(); 
-            ++it, ++res_it){
+    for (auto it = out.begin(), res_it = res.begin(); it != out.end() && res_it != res.end(); ++it, ++res_it) {
         BOOST_CHECK((*it) == (*res_it));
     }
 }
@@ -192,15 +187,15 @@ BOOST_AUTO_TEST_CASE(bubb_to_lulb_4) {
 
 // BOOST_AUTO_TEST_CASE(bubb_to_lulb_1) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint16_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
-//     using output_type =  
+//     using output_type =
 //             types::integral<
-//                 field_type<option::little_octet_little_bit>, 
+//                 field_type<option::little_octet_little_bit>,
 //                 std::uint32_t>;
 
 //     input_type in;
@@ -209,9 +204,9 @@ BOOST_AUTO_TEST_CASE(bubb_to_lulb_4) {
 //     uint32_t res = 0x1e6a2c48;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -223,7 +218,7 @@ BOOST_AUTO_TEST_CASE(bubb_to_lulb_4) {
 
 // BOOST_AUTO_TEST_CASE(bubb_to_lulb_2) {
 //     std::array<std::uint8_t, 4> inp_seed_blank = {{0x12, 0x34, 0x56, 0x78}};
-    // output_type out;
+// output_type out;
 //     std::array<std::uint16_t, 2> res = {{0x2c48, 0x1e6a}};
 
 //     pack<big_octet_big_bit, little_octet_little_bit, 8, 16>(in.begin(), in.end(), out.begin());
@@ -246,7 +241,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_bubb_1) {
 
 // BOOST_AUTO_TEST_CASE(lubb_to_bulb_1) {
 //     std::array<std::uint32_t, 2> inp_seed_blank = {{0x12345678, 0x90abcdef}};
-    // output_type out;
+// output_type out;
 //     std::uint64_t res = {{0x1e6a2c48f7b3d509}};
 
 //     pack<little_octet_big_bit, big_octet_little_bit, 32, 64>(in.begin(), in.end(), out.begin());
@@ -256,7 +251,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_bubb_1) {
 
 // BOOST_AUTO_TEST_CASE(lubb_to_bulb_2) {
 //     std::array<std::uint8_t, 4> inp_seed_blank = {{0x12, 0x34, 0x56, 0x78}};
-    // output_type out;
+// output_type out;
 //     std::array<std::uint16_t, 2> res = {{0x482c, 0x6a1e}};
 
 //     pack<little_octet_big_bit, big_octet_little_bit, 8, 16>(in.begin(), in.end(), out.begin());
@@ -288,8 +283,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
     BOOST_CHECK(status == status_type::success);
     BOOST_CHECK(out.size() == res.size());
 
-    for (auto it = out.begin(), res_it = res.begin(); it != out.end() && res_it != res.end(); 
-            ++it, ++res_it){
+    for (auto it = out.begin(), res_it = res.begin(); it != out.end() && res_it != res.end(); ++it, ++res_it) {
         BOOST_CHECK((*it) == (*res_it));
     }
 }
@@ -482,17 +476,17 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(bubb_to_bubb_1) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint16_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
-//     using output_type = 
+//     using output_type =
 //         types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -502,9 +496,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     std::array<std::uint8_t, 4> res = {{0x12, 0x34, 0x56, 0x78}};
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -516,7 +510,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = res.begin();
-//     for (; it != out_value.end(), res_it != res.end(); 
+//     for (; it != out_value.end(), res_it != res.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -525,17 +519,17 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(bubb_to_bubb_2) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint32_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
-//     using output_type = 
+//     using output_type =
 //         types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint16_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -545,9 +539,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     std::array<std::uint16_t, 4> res = {{0x1234, 0x5678, 0x90ab, 0xcdef}};
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -559,7 +553,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = res.begin();
-//     for (; it != out_value.end(), res_it != res.end(); 
+//     for (; it != out_value.end(), res_it != res.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -567,20 +561,20 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 // }
 
 // // BOOST_AUTO_TEST_CASE(bubb_to_bulb_1) {
-// //     using input_type = 
+// //     using input_type =
 // //             types::integral<
-// //                 field_type<option::big_endian>, 
+// //                 field_type<option::big_endian>,
 // //                 std::uint32_t>;
 // //     using input_seed_type = typename input_type::value_type;
-// //     using output_type = 
+// //     using output_type =
 // //         types::array_list<
-// //             field_type<option::little_endian>, 
+// //             field_type<option::little_endian>,
 // //             types::integral<
-// //                 field_type<option::big_octet_little_bit>, 
+// //                 field_type<option::big_octet_little_bit>,
 // //                 std::uint8_t>,
 // //             option::fixed_size_storage<4>>;
 
-// //     input_type in;   
+// //     input_type in;
 // //     std::uint32_t in = 0x482c6a1e;
 //     // output_type out;
 // //     std::array<std::uint8_t, 4> res = {{0x12, 0x34, 0x56, 0x78}};
@@ -592,17 +586,17 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // // BOOST_AUTO_TEST_CASE(bubb_to_bulb_2) {
 // //     using input_type = types::array_list<
-// //             field_type<option::little_endian>, 
+// //             field_type<option::little_endian>,
 // //             types::integral<
-// //                 field_type<option::big_endian>, 
+// //                 field_type<option::big_endian>,
 // //                 std::uint32_t>,
 // //             option::fixed_size_storage<2>>;
 // //     using input_seed_type = typename input_type::value_type;
-// //     using output_type = 
+// //     using output_type =
 // //         types::array_list<
-// //             field_type<option::little_endian>, 
+// //             field_type<option::little_endian>,
 // //             types::integral<
-// //                 field_type<option::big_octet_little_bit>, 
+// //                 field_type<option::big_octet_little_bit>,
 // //                 std::uint16_t>,
 // //             option::fixed_size_storage<4>>;
 
@@ -617,23 +611,23 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 // // }
 
 // BOOST_AUTO_TEST_CASE(bubb_to_lubb_1) {
-//     using input_type = 
+//     using input_type =
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint64_t>;
 //     using input_seed_type = typename input_type::value_type;
-//     using output_type = 
+//     using output_type =
 //         types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<8>>;
 
 //     std::uint64_t inp_seed_blank = 0xefcdab9078563412;
 //     output_type out;
 //     std::array<std::uint8_t, 8> res = {{0xef, 0xcd, 0xab, 0x90, 0x78, 0x56, 0x34, 0x12}};
-    
+
 //     input_type in = input_type(input_seed_type(inp_seed_blank));
 
 //     out = pack<input_type, output_type>(in);
@@ -643,7 +637,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = res.begin();
-//     for (; it != out_value.end(), res_it != res.end(); 
+//     for (; it != out_value.end(), res_it != res.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -652,17 +646,17 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(bubb_to_lubb_2) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint32_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
-//     using output_type = 
+//     using output_type =
 //         types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint16_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -672,9 +666,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     std::array<std::uint16_t, 4> res = {{0x5678, 0x1234, 0xcdef, 0x90ab}};
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -686,7 +680,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = res.begin();
-//     for (; it != out_value.end(), res_it != res.end(); 
+//     for (; it != out_value.end(), res_it != res.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -714,16 +708,16 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 // // }
 
 // BOOST_AUTO_TEST_CASE(lubb_to_bubb_1) {
-//     using input_type = 
+//     using input_type =
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint64_t>;
 //     using input_seed_type = typename input_type::value_type;
-//     using output_type = 
+//     using output_type =
 //         types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint16_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -740,7 +734,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = res.begin();
-//     for (; it != out_value.end(), res_it != res.end(); 
+//     for (; it != out_value.end(), res_it != res.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -749,17 +743,17 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(lubb_to_bubb_2) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint16_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
-//     using output_type = 
+//     using output_type =
 //         types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -769,9 +763,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     std::array<std::uint8_t, 4> res = {{0x34, 0x12, 0x78, 0x56}};
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -783,7 +777,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = res.begin();
-//     for (; it != out_value.end(), res_it != res.end(); 
+//     for (; it != out_value.end(), res_it != res.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -811,16 +805,16 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 // // }
 
 // BOOST_AUTO_TEST_CASE(lubb_to_lubb_1) {
-//     using input_type = 
+//     using input_type =
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint16_t>;
 //     using input_seed_type = typename input_type::value_type;
-//     using output_type = 
+//     using output_type =
 //         types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<2>>;
 
@@ -836,7 +830,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = res.begin();
-//     for (; it != out_value.end(), res_it != res.end(); 
+//     for (; it != out_value.end(), res_it != res.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -845,17 +839,17 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint32_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
-//     using output_type = 
+//     using output_type =
 //         types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint16_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -865,9 +859,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     std::array<std::uint16_t, 4> res = {{0x1234, 0x5678, 0x90ab, 0xcdef}};
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -879,7 +873,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = res.begin();
-//     for (; it != out_value.end(), res_it != res.end(); 
+//     for (; it != out_value.end(), res_it != res.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1074,9 +1068,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 // BOOST_AUTO_TEST_CASE(bubb_to_bubb_1) {
 
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint32_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
@@ -1087,9 +1081,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     output_type out;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1101,7 +1095,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = inp_seed_blank.begin();
-//     for (; it != out_value.end(), res_it != inp_seed_blank.end(); 
+//     for (; it != out_value.end(), res_it != inp_seed_blank.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1111,9 +1105,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 // BOOST_AUTO_TEST_CASE(bubb_to_bubb_2) {
 
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
@@ -1124,9 +1118,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     output_type out;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1138,7 +1132,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = inp_seed_blank.begin();
-//     for (; it != out_value.end(), res_it != inp_seed_blank.end(); 
+//     for (; it != out_value.end(), res_it != inp_seed_blank.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1147,9 +1141,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(bubb_to_bubb_3) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
@@ -1160,9 +1154,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     output_type out;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1174,7 +1168,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = inp_seed_blank.begin();
-//     for (; it != out_value.end(), res_it != inp_seed_blank.end(); 
+//     for (; it != out_value.end(), res_it != inp_seed_blank.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1183,9 +1177,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(lubb_to_lubb_1) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint32_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
@@ -1196,9 +1190,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     output_type out;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1210,7 +1204,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = inp_seed_blank.begin();
-//     for (; it != out_value.end(), res_it != inp_seed_blank.end(); 
+//     for (; it != out_value.end(), res_it != inp_seed_blank.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1219,9 +1213,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
@@ -1232,9 +1226,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     output_type out;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1246,7 +1240,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = inp_seed_blank.begin();
-//     for (; it != out_value.end(), res_it != inp_seed_blank.end(); 
+//     for (; it != out_value.end(), res_it != inp_seed_blank.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1255,9 +1249,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(lubb_to_lubb_3) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
@@ -1268,9 +1262,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     output_type out;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1282,7 +1276,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = inp_seed_blank.begin();
-//     for (; it != out_value.end(), res_it != inp_seed_blank.end(); 
+//     for (; it != out_value.end(), res_it != inp_seed_blank.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1351,16 +1345,16 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(bubb_to_lubb_1) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 //     using input_seed_type = typename input_type::value_type;
 //     using output_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -1369,9 +1363,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     output_type out;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1383,7 +1377,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = inp_seed_blank.begin();
-//     for (; it != out_value.end(), res_it != inp_seed_blank.end(); 
+//     for (; it != out_value.end(), res_it != inp_seed_blank.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1392,16 +1386,16 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(bubb_to_lubb_2) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 //     using input_seed_type = typename input_type::value_type;
 //     using output_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -1410,9 +1404,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     output_type out;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1424,7 +1418,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = inp_seed_blank.begin();
-//     for (; it != out_value.end(), res_it != inp_seed_blank.end(); 
+//     for (; it != out_value.end(), res_it != inp_seed_blank.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1433,16 +1427,16 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(bubb_to_lubb_3) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint16_t>,
 //             option::fixed_size_storage<4>>;
 //     using input_seed_type = typename input_type::value_type;
 //     using output_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint16_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -1452,9 +1446,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     std::array<std::uint16_t, 4> res = {{0xad89, 0xef56, 0x4073, 0xcb12}};
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1466,7 +1460,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = res.begin();
-//     for (; it != out_value.end(), res_it != res.end(); 
+//     for (; it != out_value.end(), res_it != res.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1519,16 +1513,16 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(lubb_to_bubb_1) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 //     using input_seed_type = typename input_type::value_type;
 //     using output_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -1537,9 +1531,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     output_type out;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1551,7 +1545,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = inp_seed_blank.begin();
-//     for (; it != out_value.end(), res_it != inp_seed_blank.end(); 
+//     for (; it != out_value.end(), res_it != inp_seed_blank.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1560,16 +1554,16 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(lubb_to_bubb_2) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 //     using input_seed_type = typename input_type::value_type;
 //     using output_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint8_t>,
 //             option::fixed_size_storage<4>>;
 
@@ -1578,9 +1572,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     output_type out;
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1592,7 +1586,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = inp_seed_blank.begin();
-//     for (; it != out_value.end(), res_it != inp_seed_blank.end(); 
+//     for (; it != out_value.end(), res_it != inp_seed_blank.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));
@@ -1601,16 +1595,16 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 // BOOST_AUTO_TEST_CASE(lubb_to_bubb_3) {
 //     using input_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::little_endian>, 
+//                 field_type<option::little_endian>,
 //                 std::uint32_t>,
 //             option::fixed_size_storage<2>>;
 //     using input_seed_type = typename input_type::value_type;
 //     using output_type = types::array_list<
-//             field_type<option::little_endian>, 
+//             field_type<option::little_endian>,
 //             types::integral<
-//                 field_type<option::big_endian>, 
+//                 field_type<option::big_endian>,
 //                 std::uint32_t>,
 //             option::fixed_size_storage<2>>;
 
@@ -1620,9 +1614,9 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 //     std::array<std::uint32_t, 2> res = {{0xef56ad89, 0xcb124073}};
 
 //     input_seed_type &inp_seed = in.value();
-    
-//     for (auto it = inp_seed_blank.begin(); 
-//               it != inp_seed_blank.end(); 
+
+//     for (auto it = inp_seed_blank.begin();
+//               it != inp_seed_blank.end();
 //               ++it){
 //         inp_seed.push_back(typename input_seed_type::value_type(*it));
 //     }
@@ -1634,7 +1628,7 @@ BOOST_AUTO_TEST_CASE(lubb_to_lubb_2) {
 
 //     auto it = out_value.begin();
 //     auto res_it = res.begin();
-//     for (; it != out_value.end(), res_it != res.end(); 
+//     for (; it != out_value.end(), res_it != res.end();
 //             ++it, ++res_it){
 //     //     std::cout << std::hex << int((*it).value()) << std::dec << std::endl;
 //         BOOST_CHECK(int((*it).value()) == (*res_it));

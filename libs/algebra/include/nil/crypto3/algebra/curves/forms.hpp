@@ -76,8 +76,8 @@ namespace nil {
                 };
 
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_ALGEBRA_CURVES_FORMS_HPP

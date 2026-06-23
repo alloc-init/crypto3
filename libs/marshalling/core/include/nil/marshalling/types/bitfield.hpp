@@ -110,8 +110,8 @@ namespace nil {
             template<typename TFieldBase, typename TMembers, typename... TOptions>
             class bitfield
                 : private detail::adapt_basic_field_type<detail::basic_bitfield<TFieldBase, TMembers>, TOptions...> {
-                using base_impl_type
-                    = detail::adapt_basic_field_type<detail::basic_bitfield<TFieldBase, TMembers>, TOptions...>;
+                using base_impl_type =
+                    detail::adapt_basic_field_type<detail::basic_bitfield<TFieldBase, TMembers>, TOptions...>;
 
             public:
                 /// @brief endian_type used for serialization.
@@ -250,9 +250,9 @@ namespace nil {
                 static_assert(!parsed_options_type::has_sequence_elem_length_forcing,
                               "nil::marshalling::option::SequenceElemLengthForcingEnabled option is not applicable to "
                               "bitfield field");
-                static_assert(
-                    !parsed_options_type::has_sequence_size_forcing,
-                    "nil::marshalling::option::sequence_size_forcing_enabled option is not applicable to bitfield field");
+                static_assert(!parsed_options_type::has_sequence_size_forcing,
+                              "nil::marshalling::option::sequence_size_forcing_enabled option is not applicable to "
+                              "bitfield field");
                 static_assert(
                     !parsed_options_type::has_sequence_length_forcing,
                     "nil::marshalling::option::SequenceLengthorcingEnabled option is not applicable to bitfield field");
@@ -355,6 +355,6 @@ namespace nil {
             }
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BITFIELD_HPP

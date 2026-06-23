@@ -40,6 +40,6 @@ namespace nil::crypto3::algebra::fields {
         constexpr static integral_type multiplicative_generator = 7u;
         constexpr static integral_type root_of_unity = 0x7ffffffeu;
     };
-}  // namespace nil::crypto3::algebra::fields
+}    // namespace nil::crypto3::algebra::fields
 
-#endif  // CRYPTO3_ALGEBRA_FIELDS_MERSENNE31_ARITHMETIC_PARAMS_HPP
+#endif    // CRYPTO3_ALGEBRA_FIELDS_MERSENNE31_ARITHMETIC_PARAMS_HPP

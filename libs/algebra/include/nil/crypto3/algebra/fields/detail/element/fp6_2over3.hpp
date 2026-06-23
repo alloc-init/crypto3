@@ -54,21 +54,24 @@ namespace nil {
 
                         constexpr element_fp6_2over3() = default;
 
-                        constexpr element_fp6_2over3(const underlying_type& in_data0, const underlying_type& in_data1)
-                            : data({in_data0, in_data1}) {}
+                        constexpr element_fp6_2over3(const underlying_type &in_data0, const underlying_type &in_data1) :
+                            data({in_data0, in_data1}) {
+                        }
 
-                        constexpr element_fp6_2over3(const data_type &in_data)
-                            : data({in_data[0], in_data[1]}) {}
+                        constexpr element_fp6_2over3(const data_type &in_data) : data({in_data[0], in_data[1]}) {
+                        }
 
-                        constexpr element_fp6_2over3(const element_fp6_2over3 &B) : data {B.data} {}
+                        constexpr element_fp6_2over3(const element_fp6_2over3 &B) : data {B.data} {
+                        }
 
-                        constexpr element_fp6_2over3(const element_fp6_2over3 &&B) BOOST_NOEXCEPT 
-                            : data(std::move(B.data)) {}
+                        constexpr element_fp6_2over3(const element_fp6_2over3 &&B) BOOST_NOEXCEPT
+                            : data(std::move(B.data)) {
+                        }
 
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.
-                        constexpr static const element_fp6_2over3& zero();
-                        constexpr static const element_fp6_2over3& one();
+                        constexpr static const element_fp6_2over3 &zero();
+                        constexpr static const element_fp6_2over3 &one();
 
                         constexpr bool is_zero() const {
                             return *this == zero();
@@ -130,7 +133,7 @@ namespace nil {
                                                       (data[0] + data[1]) * (B.data[0] + B.data[1]) - A0B0 - A1B1);
                         }
 
-                        constexpr element_fp6_2over3& operator*=(const element_fp6_2over3 &B) {
+                        constexpr element_fp6_2over3 &operator*=(const element_fp6_2over3 &B) {
                             const underlying_type A0B0 = data[0] * B.data[0], A1B1 = data[1] * B.data[1];
 
                             data[1] = (data[0] + data[1]) * (B.data[0] + B.data[1]) - A0B0 - A1B1;
@@ -315,38 +318,36 @@ namespace nil {
                         element_fp6_2over3<FieldParams>::non_residue;
 
                     namespace element_fp6_2over3_details {
-                        // These constexpr static variables can not be members of element_fp2, because 
+                        // These constexpr static variables can not be members of element_fp2, because
                         // element_fp2 is incomplete type until the end of its declaration.
                         template<typename FieldParams>
-                        constexpr static element_fp6_2over3<FieldParams> zero_instance(
-                            FieldParams::underlying_type::zero(),
-                            FieldParams::underlying_type::zero());
+                        constexpr static element_fp6_2over3<FieldParams>
+                            zero_instance(FieldParams::underlying_type::zero(), FieldParams::underlying_type::zero());
 
                         template<typename FieldParams>
-                        constexpr static element_fp6_2over3<FieldParams> one_instance(
-                            FieldParams::underlying_type::one(),
-                            FieldParams::underlying_type::zero());
-                    }
+                        constexpr static element_fp6_2over3<FieldParams>
+                            one_instance(FieldParams::underlying_type::one(), FieldParams::underlying_type::zero());
+                    }    // namespace element_fp6_2over3_details
 
                     template<typename FieldParams>
-                    constexpr const element_fp6_2over3<FieldParams>& element_fp6_2over3<FieldParams>::zero() {
+                    constexpr const element_fp6_2over3<FieldParams> &element_fp6_2over3<FieldParams>::zero() {
                         return element_fp6_2over3_details::zero_instance<FieldParams>;
                     }
 
                     template<typename FieldParams>
-                    constexpr const element_fp6_2over3<FieldParams>& element_fp6_2over3<FieldParams>::one() {
+                    constexpr const element_fp6_2over3<FieldParams> &element_fp6_2over3<FieldParams>::one() {
                         return element_fp6_2over3_details::one_instance<FieldParams>;
                     }
 
                     template<typename FieldParams>
-                    std::ostream& operator<<(std::ostream& os, const element_fp6_2over3<FieldParams>& elem) {
+                    std::ostream &operator<<(std::ostream &os, const element_fp6_2over3<FieldParams> &elem) {
                         os << "[" << elem.data[0] << "," << elem.data[1] << "]";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP6_2OVER3_HPP

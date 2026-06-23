@@ -48,19 +48,19 @@ namespace nil {
                             if (!first.is_zero()) {
 
                                 // A = X1^2
-                                field_value_type A (first.X);
+                                field_value_type A(first.X);
                                 A.square_inplace();
 
                                 // B = Y1^2
-                                field_value_type B (first.Y);
+                                field_value_type B(first.Y);
                                 B.square_inplace();
 
                                 // C = B^2
-                                field_value_type C (B);
+                                field_value_type C(B);
                                 C.square_inplace();
 
                                 // D = 2 * ((X1 + B)^2 - A - C)
-                                field_value_type D (first.X);
+                                field_value_type D(first.X);
                                 D += B;
                                 D.square_inplace();
                                 D -= A;
@@ -76,7 +76,7 @@ namespace nil {
                                 field_value_type F(E);
                                 F.square_inplace();
 
-                                field_value_type Y1Z1 (first.Y);
+                                field_value_type Y1Z1(first.Y);
                                 Y1Z1 *= first.Z;
 
                                 // X3 = F - 2 D
@@ -101,8 +101,8 @@ namespace nil {
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_JACOBIAN_WITH_A4_0_DBL_2009_L_HPP

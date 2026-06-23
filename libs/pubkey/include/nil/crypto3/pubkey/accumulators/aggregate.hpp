@@ -107,9 +107,9 @@ namespace nil {
                         return boost::accumulators::extract_result<tag::aggregate<ProcessingMode>>(acc);
                     }
                 }    // namespace extract
-            }        // namespace accumulators
-        }            // namespace pubkey
-    }                // namespace crypto3
+            }    // namespace accumulators
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_PUBKEY_AGGREGATE_HPP

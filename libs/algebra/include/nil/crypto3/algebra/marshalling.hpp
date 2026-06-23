@@ -138,7 +138,6 @@ namespace nil {
             template<>
             class curve<algebra::curves::bls12<381>> {
             public:
-
                 typedef algebra::curves::bls12<381> curve_type;
                 typedef typename curve_type::base_field_type fp_type;
                 typedef typename curve_type::scalar_field_type fr_type;
@@ -149,10 +148,8 @@ namespace nil {
                 typedef uint8_t chunk_type;
                 constexpr static const size_t chunk_size = 8;
 
-                constexpr static size_t fp_octets_num =
-                    curve_type::base_field_type::modulus_bits / chunk_size + 1;
-                constexpr static size_t fr_octets_num =
-                    curve_type::scalar_field_type::modulus_bits / chunk_size + 1;
+                constexpr static size_t fp_octets_num = curve_type::base_field_type::modulus_bits / chunk_size + 1;
+                constexpr static size_t fr_octets_num = curve_type::scalar_field_type::modulus_bits / chunk_size + 1;
                 static_assert(curve_element_serializer<curve_type>::sizeof_field_element == fp_octets_num);
 
                 constexpr static size_t g1_octets_num = fp_octets_num;

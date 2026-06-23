@@ -35,8 +35,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_NOP_FINALIZER_HPP

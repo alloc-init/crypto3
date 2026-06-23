@@ -22,7 +22,7 @@ namespace nil {
 
                 // TODO(martun): Poseidon paper describes an optimized round, which can work faster when
                 // the Rate is high. Consider implementing it later.
-                template<typename poseidon_policy_type, typename Enable=void>
+                template<typename poseidon_policy_type, typename Enable = void>
                 class poseidon_round_operator;
 
                 /// Round for the original version, ARC-SBOX-MDS order.
@@ -133,8 +133,8 @@ namespace nil {
                 };
 
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_POSEIDON_ROUND_OPERATOR_HPP

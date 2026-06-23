@@ -47,7 +47,7 @@ namespace nil {
                 return domain_set;
             }
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MATH_CALCULATE_DOMAIN_SET_HPP

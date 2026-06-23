@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -43,7 +41,7 @@ namespace nil {
                 class vesta_base_field : public field<255> {
                 public:
                     typedef field<255> policy_type;
-                    
+
                     using small_subfield = vesta_base_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
@@ -63,10 +61,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<vesta_base_field>> value_type;
@@ -83,8 +80,8 @@ namespace nil {
 #endif
                 using vesta_fq = vesta_base_field;
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_VESTA_BASE_FIELD_HPP

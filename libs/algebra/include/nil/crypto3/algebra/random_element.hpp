@@ -50,12 +50,13 @@
 namespace nil {
     namespace crypto3 {
         namespace algebra {
-            template<typename FieldType,
-                    typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
-                    typename UniformRandomBitGenerator = boost::random::random_device>
-             typename std::enable_if<is_field<FieldType>::value && !(is_extended_field<FieldType>::value),
-                    typename FieldType::value_type>::type
-            random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
+            template<
+                typename FieldType,
+                typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
+                typename UniformRandomBitGenerator = boost::random::random_device>
+            typename std::enable_if<is_field<FieldType>::value && !(is_extended_field<FieldType>::value),
+                                    typename FieldType::value_type>::type
+                random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
 
                 using field_type = FieldType;
                 using distribution_type = DistributionType;
@@ -70,12 +71,13 @@ namespace nil {
                 return value;
             }
 
-            template<typename FieldType,
-                    typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
-                    typename UniformRandomBitGenerator = boost::random::random_device>
+            template<
+                typename FieldType,
+                typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
+                typename UniformRandomBitGenerator = boost::random::random_device>
             typename std::enable_if<is_field<FieldType>::value && is_extended_field<FieldType>::value,
-                    typename FieldType::value_type>::type
-             random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
+                                    typename FieldType::value_type>::type
+                random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
 
                 using field_type = FieldType;
                 using distribution_type = DistributionType;
@@ -84,19 +86,18 @@ namespace nil {
                 const std::size_t data_dimension = field_type::arity / field_type::underlying_field_type::arity;
 
                 for (std::size_t n = 0; n < data_dimension; ++n) {
-                    data[n] =
-                            random_element<typename FieldType::underlying_field_type, distribution_type>(
-                                    rng);
+                    data[n] = random_element<typename FieldType::underlying_field_type, distribution_type>(rng);
                 }
 
                 return typename field_type::value_type(data);
             }
 
             template<typename CurveGroupType,
-                    typename DistributionType = boost::random::uniform_int_distribution<typename CurveGroupType::field_type::integral_type>,
-                    typename UniformRandomBitGenerator = boost::random::random_device>
-            typename std::enable_if<is_curve_group<CurveGroupType>::value, typename CurveGroupType::value_type>::type
-            constexpr random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
+                     typename DistributionType =
+                         boost::random::uniform_int_distribution<typename CurveGroupType::field_type::integral_type>,
+                     typename UniformRandomBitGenerator = boost::random::random_device>
+            typename std::enable_if<is_curve_group<CurveGroupType>::value, typename CurveGroupType::value_type>::
+                type constexpr random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
 
                 using curve_type = typename CurveGroupType::curve_type;
                 using field_type = typename curve_type::scalar_field_type;
@@ -106,6 +107,6 @@ namespace nil {
                        CurveGroupType::value_type::one();
             }
         }    // namespace algebra
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_RANDOM_ELEMENT_HPP

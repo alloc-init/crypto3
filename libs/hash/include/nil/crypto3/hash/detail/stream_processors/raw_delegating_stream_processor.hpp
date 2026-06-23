@@ -69,7 +69,7 @@ namespace nil {
                 accumulator_type &acc;
             };
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_PEDERSEN_STREAM_PROCESSOR_HPP

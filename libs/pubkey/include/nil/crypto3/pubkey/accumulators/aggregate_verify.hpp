@@ -120,8 +120,7 @@ namespace nil {
                         /// INTERNAL ONLY
                         ///
 
-                        typedef boost::mpl::always<impl::aggregate_verify_impl<processing_mode_type>>
-                            impl;
+                        typedef boost::mpl::always<impl::aggregate_verify_impl<processing_mode_type>> impl;
                     };
                 }    // namespace tag
 
@@ -132,9 +131,9 @@ namespace nil {
                         return boost::accumulators::extract_result<tag::aggregate_verify<ProcessingMode>>(acc);
                     }
                 }    // namespace extract
-            }        // namespace accumulators
-        }            // namespace pubkey
-    }                // namespace crypto3
+            }    // namespace accumulators
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_PUBKEY_AGGREGATE_VERIFY_HPP

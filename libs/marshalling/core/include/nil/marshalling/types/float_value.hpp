@@ -57,7 +57,8 @@ namespace nil {
             ///     @li @ref nil::marshalling::option::default_value_initializer or @ref
             ///     nil::marshalling::option::default_num_value.
             ///     @li @ref nil::marshalling::option::contents_validator
-            ///     @li @ref nil::marshalling::option::valid_num_value_range, @ref nil::marshalling::option::valid_num_value,
+            ///     @li @ref nil::marshalling::option::valid_num_value_range, @ref
+            ///     nil::marshalling::option::valid_num_value,
             ///         @ref nil::marshalling::option::valid_big_unsigned_num_value_range, @ref
             ///         nil::marshalling::option::valid_big_unsigned_num_value_range
             ///     @li @ref nil::marshalling::option::valid_ranges_clear
@@ -73,8 +74,10 @@ namespace nil {
             /// @extends nil::marshalling::field_type
             /// @headerfile nil/marshalling/types/float_value.hpp
             template<typename TFieldBase, typename T, typename... TOptions>
-            class float_value : private detail::adapt_basic_field_type<detail::basic_float_value<TFieldBase, T>, TOptions...> {
-                using base_impl_type = detail::adapt_basic_field_type<detail::basic_float_value<TFieldBase, T>, TOptions...>;
+            class float_value
+                : private detail::adapt_basic_field_type<detail::basic_float_value<TFieldBase, T>, TOptions...> {
+                using base_impl_type =
+                    detail::adapt_basic_field_type<detail::basic_float_value<TFieldBase, T>, TOptions...>;
 
             public:
                 /// @brief endian_type used for serialization.
@@ -282,6 +285,6 @@ namespace nil {
             }
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_FLOAT_VALUE_HPP

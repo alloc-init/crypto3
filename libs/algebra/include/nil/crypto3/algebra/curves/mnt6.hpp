@@ -70,8 +70,8 @@ namespace nil {
 
                 typedef mnt6<298> mnt6_298;
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_MNT6_HPP

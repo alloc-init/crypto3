@@ -51,7 +51,7 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 BOOST_TEST_DONT_PRINT_LOG_VALUE(hashes::sha2<224>::digest_type)
@@ -312,9 +312,10 @@ BOOST_FIXTURE_TEST_CASE(sha2_256_accumulator2, fixture<256>) {
 
 BOOST_FIXTURE_TEST_CASE(sha2_256_accumulator3, fixture<256>) {
     // Example from Appendix B.2, shortened, then extended
-    hash_type::construction::type::block_type m1 = {
-        {0x61626364, 0x62636465, 0x63646566, 0x64656667, 0x65666768, 0x66676869, 0x6768696a, 0x68696a6b, 0x696a6b6c,
-         0x6a6b6c6d, 0x6b6c6d6e, 0x6c6d6e6f, 0x61'010101, 0x01010101, 0x80000000, 0x00000000}}; // After ' symbol values are unused
+    hash_type::construction::type::block_type m1 = {{0x61626364, 0x62636465, 0x63646566, 0x64656667, 0x65666768,
+                                                     0x66676869, 0x6768696a, 0x68696a6b, 0x696a6b6c, 0x6a6b6c6d,
+                                                     0x6b6c6d6e, 0x6c6d6e6f, 0x61'010101, 0x01010101, 0x80000000,
+                                                     0x00000000}};    // After ' symbol values are unused
     acc(m1, accumulators::bits = (512 - 64 - 64 + 8));
 
     hash_type::digest_type s = extract::hash<hash_type>(acc);
@@ -323,10 +324,11 @@ BOOST_FIXTURE_TEST_CASE(sha2_256_accumulator3, fixture<256>) {
     BOOST_CHECK_EQUAL("1afbf54773a9a85be9ba0b691b6b21560772969e1bec2dd3cd77a56f39ba61bf", std::to_string(s).data());
 
     // We want to append the next data to state. Output should be the same as if we appended it after ' symbol in m1
-    hash_type::construction::type::block_type m2 = {
-        {0x6d6e6f70, 0x6e6f7071, 0x6d6e6f70, 0x6e6f7071, 0x6d6e6f70, 0x6e6f7071,
-         // More unused data
-         0x0168696a, 0x68696a6b, 0x696a6b6c, 0x6a6b6c6d, 0x6b6c6d6e, 0x6c6d6e6f, 0x6d010170, 0x6e6f7071, 0x80080000, 0x00000000}};
+    hash_type::construction::type::block_type m2 = {{0x6d6e6f70, 0x6e6f7071, 0x6d6e6f70, 0x6e6f7071, 0x6d6e6f70,
+                                                     0x6e6f7071,
+                                                     // More unused data
+                                                     0x0168696a, 0x68696a6b, 0x696a6b6c, 0x6a6b6c6d, 0x6b6c6d6e,
+                                                     0x6c6d6e6f, 0x6d010170, 0x6e6f7071, 0x80080000, 0x00000000}};
 
     acc(m2, accumulators::bits = 64 + 64 + 64);
 
@@ -347,7 +349,7 @@ BOOST_FIXTURE_TEST_CASE(sha2_256_accumulator4, fixture<256>) {
          0x6a6b6c6d, 0x6b6c6d6e, 0x6c6d6e6f, 0x616d6e6f, 0x706e6f70, 0x716d6e6f, 0x706e6f70}};
     acc(m1, accumulators::bits = 512);
 
-    m1 = {{ 0x716d6e6f, 0x706e6f70, 0x71'000000 }};
+    m1 = {{0x716d6e6f, 0x706e6f70, 0x71'000000}};
     acc(m1, accumulators::bits = 72);
 
     hash_type::digest_type s = extract::hash<hash_type>(acc);
@@ -358,9 +360,9 @@ BOOST_FIXTURE_TEST_CASE(sha2_256_accumulator4, fixture<256>) {
 BOOST_FIXTURE_TEST_CASE(sha2_256_accumulator5, fixture<256>) {
     // Example from appendix B.2:
     // echo -n "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" | sha256sum
-    hash_type::construction::type::block_type m1 = {
-        {0x61626364, 0x62636465, 0x63646566, 0x64656667, 0x65666768, 0x66676869, 0x6768696A, 0x68696A6B, 0x696A6B6C,
-         0x6A6B6C6D, 0x6B6C6D6E, 0x6C6D6E6F, 0x6D6E6F70, 0x6E6F7071}};
+    hash_type::construction::type::block_type m1 = {{0x61626364, 0x62636465, 0x63646566, 0x64656667, 0x65666768,
+                                                     0x66676869, 0x6768696A, 0x68696A6B, 0x696A6B6C, 0x6A6B6C6D,
+                                                     0x6B6C6D6E, 0x6C6D6E6F, 0x6D6E6F70, 0x6E6F7071}};
     acc(m1, accumulators::bits = (448));
 
     hash_type::digest_type s = extract::hash<hash_type>(acc);

@@ -36,7 +36,6 @@
 #include <nil/crypto3/random/algebraic_random_device.hpp>
 #include <nil/crypto3/random/algebraic_engine.hpp>
 
-
 namespace nil {
     namespace crypto3 {
         namespace test_tools {
@@ -50,8 +49,8 @@ namespace nil {
                 std::size_t seed;
                 std::tuple<nil::crypto3::random::algebraic_engine<FieldTypes>...> alg_rnd_engines;
 
-                explicit random_engine_container(std::size_t init_seed = 0)
-                    : alg_rnd_engines(nil::crypto3::random::algebraic_engine<FieldTypes>(init_seed)...) {
+                explicit random_engine_container(std::size_t init_seed = 0) :
+                    alg_rnd_engines(nil::crypto3::random::algebraic_engine<FieldTypes>(init_seed)...) {
                 }
 
                 // Template method to access a specific engine by type
@@ -64,7 +63,8 @@ namespace nil {
             template<typename... FieldType>
             struct random_test_initializer {
                 random_test_initializer() {
-                    for (std::size_t i = 0; i < std::size_t(boost::unit_test::framework::master_test_suite().argc - 1); i++) {
+                    for (std::size_t i = 0; i < std::size_t(boost::unit_test::framework::master_test_suite().argc - 1);
+                         i++) {
                         if (std::string(boost::unit_test::framework::master_test_suite().argv[i]) == "--seed") {
                             if (std::string(boost::unit_test::framework::master_test_suite().argv[i + 1]) == "random") {
                                 std::random_device rd;
@@ -72,7 +72,7 @@ namespace nil {
                                 break;
                             }
                             if (std::regex_match(boost::unit_test::framework::master_test_suite().argv[i + 1],
-                                                std::regex(("((\\+|-)?[[:digit:]]+)(\\.(([[:digit:]]+)?))?")))) {
+                                                 std::regex(("((\\+|-)?[[:digit:]]+)(\\.(([[:digit:]]+)?))?")))) {
                                 seed = atoi(boost::unit_test::framework::master_test_suite().argv[i + 1]);
                                 break;
                             }

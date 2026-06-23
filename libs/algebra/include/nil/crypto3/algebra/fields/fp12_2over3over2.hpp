@@ -53,8 +53,7 @@ namespace nil {
                 class fp12_2over3over2 {
                 public:
 #ifdef __ZKLLVM__
-                    typedef __attribute__((ext_vector_type(12)))
-                        __zkllvm_field_bls12381_base value_type;
+                    typedef __attribute__((ext_vector_type(12))) __zkllvm_field_bls12381_base value_type;
 #else
                     typedef BaseField base_field_type;
                     typedef base_field_type policy_type;
@@ -89,8 +88,8 @@ namespace nil {
 #endif
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_FP12_2OVER3OVER2_EXTENSION_HPP

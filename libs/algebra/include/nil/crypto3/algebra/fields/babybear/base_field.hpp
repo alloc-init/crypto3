@@ -52,17 +52,15 @@ namespace nil {
                     typedef __zkllvm_field_babybear_base value_type;
 #else
                     // 15 * (1 << 27) + 1
-                    constexpr static const integral_type modulus =
-                            0x78000001_cppui_modular32;
+                    constexpr static const integral_type modulus = 0x78000001_cppui_modular32;
                     constexpr static const integral_type group_order_minus_one_half = (modulus - 1u) / 2;
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                            boost::multiprecision::backends::modular_adaptor<
-                                    modular_backend,
-                                    boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
-                            modular_type;
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                        modular_type;
 
                     typedef typename detail::element_fp<params<babybear_base_field>> value_type;
 #endif
@@ -75,9 +73,9 @@ namespace nil {
 #ifdef __ZKLLVM__
 #else
                 constexpr typename babybear_base_field::integral_type const babybear_base_field::modulus;
-                constexpr typename babybear_base_field::integral_type const babybear_base_field::group_order_minus_one_half;
                 constexpr
-                typename babybear_base_field::modular_params_type const babybear_base_field::modulus_params;
+                    typename babybear_base_field::integral_type const babybear_base_field::group_order_minus_one_half;
+                constexpr typename babybear_base_field::modular_params_type const babybear_base_field::modulus_params;
 #endif
                 using babybear_fq = babybear_base_field;
 
@@ -94,14 +92,13 @@ namespace nil {
                     };
                 }    // namespace detail
 
-                struct babybear_fp4
-                : public fpn<detail::babybear_fp4_binomial_extension_params<babybear_fp4>> {
+                struct babybear_fp4 : public fpn<detail::babybear_fp4_binomial_extension_params<babybear_fp4>> {
                     using small_subfield = babybear;
                 };
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_BABYBEAR_BASE_FIELD_HPP

@@ -39,8 +39,8 @@ namespace nil {
                     u *= g;
                 }
             }
-        }    // namespace fft
-    }        // namespace crypto3
+        }    // namespace math
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_COSET_HPP

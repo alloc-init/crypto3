@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/curves/forms.hpp>
 #include <nil/crypto3/algebra/curves/detail/alt_bn128/types.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -123,9 +121,9 @@ namespace nil {
                         2> const alt_bn128_g2_params<254, forms::short_weierstrass>::one_fill;
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_ALT_BN128_254_SHORT_WEIERSTRASS_PARAMS_HPP

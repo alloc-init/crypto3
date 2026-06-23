@@ -42,51 +42,50 @@ namespace nil {
                     struct short_weierstrass_element_g1_projective_add_1998_cmo_2 {
 
                         template<typename ElementType>
-                        constexpr static inline void process(ElementType &first,
-                                                                    const ElementType &second) {
+                        constexpr static inline void process(ElementType &first, const ElementType &second) {
 
                             using field_value_type = typename ElementType::field_type::value_type;
 
                             // Y1Z2 = Y1*Z2
-                            field_value_type Y1Z2 (first.Y);
+                            field_value_type Y1Z2(first.Y);
                             Y1Z2 *= second.Z;
 
                             // X1Z2 = X1*Z2
-                            field_value_type X1Z2 (first.X);
+                            field_value_type X1Z2(first.X);
                             X1Z2 *= second.Z;
 
                             // Z1Z2 = Z1*Z2
-                            field_value_type Z1Z2 (first.Z);
+                            field_value_type Z1Z2(first.Z);
                             Z1Z2 *= second.Z;
 
                             // u    = Y2*Z1-Y1Z2
-                            field_value_type u (second.Y);
+                            field_value_type u(second.Y);
                             u *= first.Z;
                             u -= Y1Z2;
 
                             // uu   = u^2
-                            field_value_type uu (u);
+                            field_value_type uu(u);
                             uu.square_inplace();
 
                             // v    = X2*Z1-X1Z2
-                            field_value_type v (second.X);
+                            field_value_type v(second.X);
                             v *= first.Z;
                             v -= X1Z2;
 
                             // vv   = v^2
-                            field_value_type vv (v);
+                            field_value_type vv(v);
                             vv.square_inplace();
 
                             // vvv  = v*vv
-                            field_value_type vvv (vv);
+                            field_value_type vvv(vv);
                             vvv *= v;
 
                             // R    = vv*X1Z2
-                            field_value_type R (vv);
+                            field_value_type R(vv);
                             R *= X1Z2;
 
                             // A    = uu*Z1Z2 - vvv - 2*R
-                            field_value_type A (uu);
+                            field_value_type A(uu);
                             A *= Z1Z2;
                             A -= vvv;
                             A -= R;
@@ -109,8 +108,8 @@ namespace nil {
                         }
                     };
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_PROJECTIVE_ADD_1998_CMO_2_HPP

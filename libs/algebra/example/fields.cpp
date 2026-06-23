@@ -29,7 +29,6 @@
 
 #include <nil/crypto3/multiprecision/literals.hpp>
 
-
 #include <nil/crypto3/algebra/fields/fp2.hpp>
 #include <nil/crypto3/algebra/fields/fp3.hpp>
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>

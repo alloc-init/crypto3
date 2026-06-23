@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------//
-//  Copyright 2012 John Maddock. 
+//  Copyright 2012 John Maddock.
 //  Copyright 2024 Martun Karapetyan <martun@nil.foundation>
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying file
@@ -9,35 +9,38 @@
 #ifndef CRYPTO3_CPP_INT_MODULAR_HPP
 #define CRYPTO3_CPP_INT_MODULAR_HPP
 
-// Suddenly, BOOST_MP_ASSERT is NOT BOOST_MP_CXX14_CONSTEXPR, and it is used in BOOST_MP_CXX14_CONSTEXPR functions throughout the boost, resulting to compilation errors on all compilers in debug mode. We need to switch assertions off inside cpp_int to make this code compile in debug mode. So we use this workaround to turn off file 'boost/multiprecision/detail/assert.hpp' which contains definition of BOOST_MP_ASSERT and BOOST_MP_ASSERT_MSG. 
+// Suddenly, BOOST_MP_ASSERT is NOT BOOST_MP_CXX14_CONSTEXPR, and it is used in BOOST_MP_CXX14_CONSTEXPR functions
+// throughout the boost, resulting to compilation errors on all compilers in debug mode. We need to switch assertions
+// off inside cpp_int to make this code compile in debug mode. So we use this workaround to turn off file
+// 'boost/multiprecision/detail/assert.hpp' which contains definition of BOOST_MP_ASSERT and BOOST_MP_ASSERT_MSG.
 
-#include <boost/multiprecision/detail/number_base.hpp> // for BOOST_MP_IS_CONST_EVALUATED
+#include <boost/multiprecision/detail/number_base.hpp>    // for BOOST_MP_IS_CONST_EVALUATED
 
 #ifndef BOOST_MP_DETAIL_ASSERT_HPP
 #define BOOST_MP_DETAIL_ASSERT_HPP
-    // Using BOOST_STATIC_ASSERT_MSG on the next line results to compilation issues on older compilers like clang-12,
-    // so commenting it for now. In case we decide to use only fresher compilers, it can be uncommented.
-    #ifndef BOOST_MP_NO_CONSTEXPR_DETECTION
-        #define BOOST_MP_ASSERT_MSG(expr, msg)      \
-            if (BOOST_MP_IS_CONST_EVALUATED()) {    \
-                /* BOOST_STATIC_ASSERT_MSG(expr, msg); */ \
-            } else {                                \
-                BOOST_ASSERT_MSG(expr, msg);        \
-            }
-    #else
-        #define BOOST_MP_ASSERT_MSG(expr, msg)
-    #endif
+// Using BOOST_STATIC_ASSERT_MSG on the next line results to compilation issues on older compilers like clang-12,
+// so commenting it for now. In case we decide to use only fresher compilers, it can be uncommented.
+#ifndef BOOST_MP_NO_CONSTEXPR_DETECTION
+#define BOOST_MP_ASSERT_MSG(expr, msg)            \
+    if (BOOST_MP_IS_CONST_EVALUATED()) {          \
+        /* BOOST_STATIC_ASSERT_MSG(expr, msg); */ \
+    } else {                                      \
+        BOOST_ASSERT_MSG(expr, msg);              \
+    }
+#else
+#define BOOST_MP_ASSERT_MSG(expr, msg)
+#endif
 
-    #ifndef BOOST_MP_NO_CONSTEXPR_DETECTION
-        #define BOOST_MP_ASSERT(expr)               \
-            if (BOOST_MP_IS_CONST_EVALUATED()) {    \
-                /* BOOST_STATIC_ASSERT(expr);*/     \
-            } else {                                \
-                BOOST_ASSERT(expr);                 \
-            }
-    #else
-        #define BOOST_MP_ASSERT(expr)
-    #endif
+#ifndef BOOST_MP_NO_CONSTEXPR_DETECTION
+#define BOOST_MP_ASSERT(expr)            \
+    if (BOOST_MP_IS_CONST_EVALUATED()) { \
+        /* BOOST_STATIC_ASSERT(expr);*/  \
+    } else {                             \
+        BOOST_ASSERT(expr);              \
+    }
+#else
+#define BOOST_MP_ASSERT(expr)
+#endif
 
 #endif
 
@@ -66,20 +69,19 @@ namespace boost {
     namespace multiprecision {
         namespace backends {
 
-             template<unsigned Bits>
-             class cpp_int_modular_backend;
+            template<unsigned Bits>
+            class cpp_int_modular_backend;
 
-             template<unsigned Bits, bool trivial = false>
-             class cpp_int_modular_base;
+            template<unsigned Bits, bool trivial = false>
+            class cpp_int_modular_base;
 
         }    // namespace backends
         namespace detail {
 
             template<unsigned Bits>
-            struct is_byte_container<backends::cpp_int_modular_backend<Bits>>
-                : public std::false_type { };
+            struct is_byte_container<backends::cpp_int_modular_backend<Bits>> : public std::false_type { };
 
-        } // namespace detail
+        }    // namespace detail
 
         namespace backends {
             template<class T>
@@ -97,7 +99,6 @@ namespace boost {
             struct min_precision<boost::multiprecision::backends::cpp_int_modular_backend<Bits>> {
                 static BOOST_MP_CXX14_CONSTEXPR const unsigned value = Bits;
             };
-
 
         }    // namespace backends
 
@@ -119,7 +120,8 @@ namespace boost {
             struct is_fixed_precision<boost::multiprecision::backends::cpp_int_modular_backend<Bits>>
                 : public std::integral_constant<
                       bool,
-                      max_precision<boost::multiprecision::backends::cpp_int_modular_backend<Bits>>::value != UINT_MAX> { };
+                      max_precision<boost::multiprecision::backends::cpp_int_modular_backend<Bits>>::value !=
+                          UINT_MAX> { };
             //
             // Traits class determines whether the number of bits precision requested could fit in a native type,
             // we call this a "trivial" cpp_int:
@@ -168,8 +170,7 @@ namespace boost {
                     Bits / limb_bits + ((Bits % limb_bits) ? 1 : 0);
                 static BOOST_MP_CXX14_CONSTEXPR limb_type upper_limb_mask =
                     (Bits % limb_bits) ? (limb_type(1) << (Bits % limb_bits)) - 1 : (~limb_type(0));
-                static_assert(internal_limb_count >= 2,
-                              "A fixed precision integer type must have at least 2 limbs");
+                static_assert(internal_limb_count >= 2, "A fixed precision integer type must have at least 2 limbs");
 
             private:
                 union data_type {
@@ -179,10 +180,10 @@ namespace boost {
                     double_limb_type m_double_first_limb;
 
                     // We are requred to set this to 0 to make it BOOST_MP_CXX14_CONSTEXPR.
-                    BOOST_MP_CXX14_CONSTEXPR data_type() : m_data{0} { }
+                    BOOST_MP_CXX14_CONSTEXPR data_type() : m_data {0} {
+                    }
 
-                    BOOST_MP_CXX14_CONSTEXPR data_type(const data_type& o) 
-                        : m_data{0} {
+                    BOOST_MP_CXX14_CONSTEXPR data_type(const data_type& o) : m_data {0} {
 #ifndef BOOST_MP_NO_CONSTEXPR_DETECTION
                         if (BOOST_MP_IS_CONST_EVALUATED(internal_limb_count)) {
                             for (unsigned i = 0; i < internal_limb_count; ++i)
@@ -213,10 +214,11 @@ namespace boost {
                         }
 #endif
                     }
-#endif // TVM
+#endif    // TVM
 
                     template<limb_type... VALUES>
-                    BOOST_MP_CXX14_CONSTEXPR data_type(boost::multiprecision::literals::detail::value_pack<VALUES...>) : m_data {VALUES...} {
+                    BOOST_MP_CXX14_CONSTEXPR data_type(boost::multiprecision::literals::detail::value_pack<VALUES...>) :
+                        m_data {VALUES...} {
                     }
                 } m_wrapper;
 
@@ -239,13 +241,16 @@ namespace boost {
                 }
 #endif
                 template<limb_type... VALUES>
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(boost::multiprecision::literals::detail::value_pack<VALUES...> i) :
+                inline BOOST_MP_CXX14_CONSTEXPR
+                    cpp_int_modular_base(boost::multiprecision::literals::detail::value_pack<VALUES...> i) :
                     m_wrapper(i) {
                 }
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(boost::multiprecision::literals::detail::value_pack<>) {
+                inline BOOST_MP_CXX14_CONSTEXPR
+                    cpp_int_modular_base(boost::multiprecision::literals::detail::value_pack<>) {
                     zero_after(0);
                 }
-                inline explicit BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(scoped_shared_storage&, unsigned) noexcept {
+                inline explicit BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(scoped_shared_storage&,
+                                                                              unsigned) noexcept {
                     zero_after(0);
                 }
                 //
@@ -283,14 +288,13 @@ namespace boost {
                 inline BOOST_MP_CXX14_CONSTEXPR void normalize() noexcept {
                     limb_pointer p = limbs();
                     p[internal_limb_count - 1] &= upper_limb_mask;
-                }   
-
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base() noexcept
-                    : m_wrapper() {
                 }
 
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(const cpp_int_modular_base& o) noexcept
-                    : m_wrapper(o.m_wrapper) {
+                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base() noexcept : m_wrapper() {
+                }
+
+                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(const cpp_int_modular_base& o) noexcept :
+                    m_wrapper(o.m_wrapper) {
                 }
 
                 inline BOOST_MP_CXX14_CONSTEXPR void assign(const cpp_int_modular_base& o) noexcept {
@@ -314,7 +318,6 @@ namespace boost {
                     for (unsigned i = 0; i < internal_limb_count; ++i)
                         boost::multiprecision::std_constexpr::swap(m_wrapper.m_data[i], o.m_wrapper.m_data[i]);
                 }
-
             };
 
             //
@@ -329,7 +332,6 @@ namespace boost {
                 using const_limb_pointer = const local_limb_type*;
                 static BOOST_MP_CXX14_CONSTEXPR unsigned limb_bits = sizeof(local_limb_type) * CHAR_BIT;
                 static BOOST_MP_CXX14_CONSTEXPR limb_type max_limb_value = ~static_cast<limb_type>(0u);
- 
 
                 struct scoped_shared_storage {
                     BOOST_MP_CXX14_CONSTEXPR scoped_shared_storage(const cpp_int_modular_base&, unsigned) {
@@ -338,9 +340,10 @@ namespace boost {
                     }
                 };
 
-                // Even though we have just 1 limb here, we still name this variable upper_limb_mask to be similar to non-trivial.
-                static BOOST_MP_CXX14_CONSTEXPR local_limb_type upper_limb_mask = limb_bits != Bits ?
-                    (~local_limb_type(0) >> (limb_bits - Bits)) : ~local_limb_type(0);
+                // Even though we have just 1 limb here, we still name this variable upper_limb_mask to be similar to
+                // non-trivial.
+                static BOOST_MP_CXX14_CONSTEXPR local_limb_type upper_limb_mask =
+                    limb_bits != Bits ? (~local_limb_type(0) >> (limb_bits - Bits)) : ~local_limb_type(0);
 
             private:
                 local_limb_type m_data;
@@ -360,22 +363,25 @@ namespace boost {
                 template<class UI>
                 inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(
                     UI i,
-                    typename std::enable_if<boost::multiprecision::detail::is_unsigned<UI>::value
-                                            >::type const* = 0) noexcept :
-                    m_data(static_cast<local_limb_type>(i) & upper_limb_mask) {
+                    typename std::enable_if<boost::multiprecision::detail::is_unsigned<UI>::value>::type const* =
+                        0) noexcept : m_data(static_cast<local_limb_type>(i) & upper_limb_mask) {
                 }
-                BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(boost::multiprecision::literals::detail::value_pack<>) noexcept :
+                BOOST_MP_CXX14_CONSTEXPR
+                cpp_int_modular_base(boost::multiprecision::literals::detail::value_pack<>) noexcept :
                     m_data(static_cast<local_limb_type>(0u)) {
                 }
                 template<limb_type a>
-                BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(boost::multiprecision::literals::detail::value_pack<a>) noexcept :
+                BOOST_MP_CXX14_CONSTEXPR
+                    cpp_int_modular_base(boost::multiprecision::literals::detail::value_pack<a>) noexcept :
                     m_data(static_cast<local_limb_type>(a)) {
                 }
                 template<limb_type a, limb_type b>
-                BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(boost::multiprecision::literals::detail::value_pack<a, b>) noexcept :
+                BOOST_MP_CXX14_CONSTEXPR
+                    cpp_int_modular_base(boost::multiprecision::literals::detail::value_pack<a, b>) noexcept :
                     m_data(static_cast<local_limb_type>(a) | (static_cast<local_limb_type>(b) << bits_per_limb)) {
                 }
-                explicit BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(scoped_shared_storage&, unsigned) noexcept : m_data(0) {
+                explicit BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(scoped_shared_storage&, unsigned) noexcept :
+                    m_data(0) {
                 }
                 //
                 // Helper functions for getting at our internal data, and manipulating storage:
@@ -391,11 +397,11 @@ namespace boost {
                 }
                 inline BOOST_MP_CXX14_CONSTEXPR void normalize() noexcept {
                     m_data &= upper_limb_mask;
-                }   
+                }
                 inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base() noexcept : m_data(0) {
                 }
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(const cpp_int_modular_base& o) noexcept
-                    : m_data(o.m_data) {
+                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_base(const cpp_int_modular_base& o) noexcept :
+                    m_data(o.m_data) {
                 }
                 inline BOOST_MP_CXX14_CONSTEXPR void assign(const cpp_int_modular_base& o) noexcept {
                     m_data = o.m_data;
@@ -451,24 +457,26 @@ namespace boost {
                                                                             boost::ulong_long_type,
                                                                             double_limb_type>,
                                                                  std::tuple<limb_type, double_limb_type>>::type;
-                using cpp_int_type = boost::multiprecision::cpp_int_backend<
-                    Bits, Bits,  boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked>; 
+                using cpp_int_type = boost::multiprecision::cpp_int_backend<Bits,
+                                                                            Bits,
+                                                                            boost::multiprecision::unsigned_magnitude,
+                                                                            boost::multiprecision::unchecked>;
 #endif
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend() noexcept
-                { }
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(const cpp_int_modular_backend& o) noexcept
-                    : base_type(o)
-                { }
-
-                // rvalue copy:
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(cpp_int_modular_backend&& o) noexcept
-                    : base_type(static_cast<base_type&&>(o)) {
+                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend() noexcept {
+                }
+                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(const cpp_int_modular_backend& o) noexcept :
+                    base_type(o) {
                 }
 
-                // Sometimes we need to convert from one bit length to another. For example from 'Backend_doubled_limbs' to 'Backend'.
+                // rvalue copy:
+                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(cpp_int_modular_backend&& o) noexcept :
+                    base_type(static_cast<base_type&&>(o)) {
+                }
+
+                // Sometimes we need to convert from one bit length to another. For example from 'Backend_doubled_limbs'
+                // to 'Backend'.
                 template<unsigned Bits2>
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(
-                        cpp_int_modular_backend<Bits2>&& o) noexcept {
+                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(cpp_int_modular_backend<Bits2>&& o) noexcept {
                     // Call operator=, which will call do_assign.
                     *this = o;
                 }
@@ -479,43 +487,42 @@ namespace boost {
                 template<class Arg>
                 inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(
                     Arg i,
-                    typename std::enable_if<is_allowed_cpp_int_modular_base_conversion<Arg, base_type>::value>::type const* = 0) noexcept
-                        : base_type(i) {
+                    typename std::enable_if<
+                        is_allowed_cpp_int_modular_base_conversion<Arg, base_type>::value>::type const* = 0) noexcept :
+                    base_type(i) {
                 }
 
                 //
                 // Aliasing constructor: the result will alias the memory referenced, unless
                 // we have fixed precision and storage, in which case we copy the memory:
                 //
-                inline explicit BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(limb_type* data, unsigned offset, unsigned len) noexcept
-                    : base_type(data, offset, len) {
+                inline explicit BOOST_MP_CXX14_CONSTEXPR
+                    cpp_int_modular_backend(limb_type* data, unsigned offset, unsigned len) noexcept :
+                    base_type(data, offset, len) {
                 }
-                inline explicit cpp_int_modular_backend(const limb_type* data, unsigned offset, unsigned len) noexcept
-                    : base_type(data, offset, len) {
+                inline explicit cpp_int_modular_backend(const limb_type* data, unsigned offset, unsigned len) noexcept :
+                    base_type(data, offset, len) {
                     this->normalize();
                 }
-                inline explicit BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(
-                        typename base_type::scoped_shared_storage& data,
-                        unsigned len) noexcept
-                    : base_type(data, len) {
+                inline explicit BOOST_MP_CXX14_CONSTEXPR
+                    cpp_int_modular_backend(typename base_type::scoped_shared_storage& data, unsigned len) noexcept :
+                    base_type(data, len) {
                 }
 
             private:
                 template<unsigned Bits2>
-                inline BOOST_MP_CXX14_CONSTEXPR void
-                    do_assign(const cpp_int_modular_backend<Bits2>& other,
-                              std::integral_constant<bool, true> const&,
-                              std::integral_constant<bool, true> const&) noexcept {
+                inline BOOST_MP_CXX14_CONSTEXPR void do_assign(const cpp_int_modular_backend<Bits2>& other,
+                                                               std::integral_constant<bool, true> const&,
+                                                               std::integral_constant<bool, true> const&) noexcept {
                     // Assigning trivial type to trivial type:
                     *this->limbs() = static_cast<typename self_type::local_limb_type>(*other.limbs());
                     this->normalize();
                 }
 
                 template<unsigned Bits2>
-                inline BOOST_MP_CXX14_CONSTEXPR void
-                    do_assign(const cpp_int_modular_backend<Bits2>& other,
-                              std::integral_constant<bool, true> const&,
-                              std::integral_constant<bool, false> const&) noexcept {
+                inline BOOST_MP_CXX14_CONSTEXPR void do_assign(const cpp_int_modular_backend<Bits2>& other,
+                                                               std::integral_constant<bool, true> const&,
+                                                               std::integral_constant<bool, false> const&) noexcept {
                     // non-trivial to trivial narrowing conversion:
                     double_limb_type v = *other.limbs();
                     if (other.size() > 1) {
@@ -526,8 +533,8 @@ namespace boost {
                 }
                 template<unsigned Bits2>
                 inline BOOST_MP_CXX14_CONSTEXPR void do_assign(const cpp_int_modular_backend<Bits2>& other,
-                                         std::integral_constant<bool, false> const&,
-                                         std::integral_constant<bool, true> const&) noexcept {
+                                                               std::integral_constant<bool, false> const&,
+                                                               std::integral_constant<bool, true> const&) noexcept {
                     // trivial to non-trivial.
                     *this = static_cast<typename boost::multiprecision::detail::canonical<
                         typename cpp_int_modular_backend<Bits2>::local_limb_type,
@@ -536,10 +543,9 @@ namespace boost {
                 }
 
                 template<unsigned Bits2>
-                inline BOOST_MP_CXX14_CONSTEXPR void do_assign(
-                        const cpp_int_modular_backend<Bits2>& other,
-                        std::integral_constant<bool, false> const&,
-                        std::integral_constant<bool, false> const&) noexcept {
+                inline BOOST_MP_CXX14_CONSTEXPR void do_assign(const cpp_int_modular_backend<Bits2>& other,
+                                                               std::integral_constant<bool, false> const&,
+                                                               std::integral_constant<bool, false> const&) noexcept {
 #if !defined(BOOST_MP_HAS_IS_CONSTANT_EVALUATED) && !defined(BOOST_MP_HAS_BUILTIN_IS_CONSTANT_EVALUATED) && \
     !defined(BOOST_NO_CXX14_CONSTEXPR)
                     unsigned count = (std::min)(other.size(), this->size());
@@ -554,8 +560,8 @@ namespace boost {
                     } else
 #endif
                         std::memcpy(this->limbs(),
-                                other.limbs(),
-                                (std::min)(other.size(), this->size()) * sizeof(this->limbs()[0]));
+                                    other.limbs(),
+                                    (std::min)(other.size(), this->size()) * sizeof(this->limbs()[0]));
 #endif
                     // Zero out everything after (std::min)(other.size(), this->size()), so if size of other was less,
                     // we have 0s at the end.
@@ -565,15 +571,13 @@ namespace boost {
 
             public:
                 template<unsigned Bits2>
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(
-                    const cpp_int_modular_backend<Bits2>& other) noexcept
-                        : base_type()  {
+                inline BOOST_MP_CXX14_CONSTEXPR
+                    cpp_int_modular_backend(const cpp_int_modular_backend<Bits2>& other) noexcept : base_type() {
                     do_assign(
                         other,
                         std::integral_constant<bool, is_trivial_cpp_int_modular<self_type>::value>(),
-                        std::integral_constant<
-                            bool,
-                            is_trivial_cpp_int_modular<cpp_int_modular_backend<Bits2>>::value>());
+                        std::integral_constant<bool,
+                                               is_trivial_cpp_int_modular<cpp_int_modular_backend<Bits2>>::value>());
                 }
 
                 // Constructor from cpp_int of boost.
@@ -582,7 +586,7 @@ namespace boost {
                 }
 
                 inline BOOST_MP_CXX14_CONSTEXPR void from_cpp_int(const cpp_int_type& other) {
-                    // Here we need other.size(), not this->size(), because cpp_int may not use all the 
+                    // Here we need other.size(), not this->size(), because cpp_int may not use all the
                     // limbs it has, but we will.
                     for (unsigned i = 0; i < other.size(); ++i)
                         this->limbs()[i] = other.limbs()[i];
@@ -604,56 +608,60 @@ namespace boost {
                 }
 
                 template<unsigned Bits2>
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend& operator=(const cpp_int_modular_backend<Bits2>& other) noexcept {
+                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend&
+                    operator=(const cpp_int_modular_backend<Bits2>& other) noexcept {
                     do_assign(
                         other,
                         std::integral_constant<bool, is_trivial_cpp_int_modular<self_type>::value>(),
-                        std::integral_constant<
-                            bool,
-                            is_trivial_cpp_int_modular<cpp_int_modular_backend<Bits2>>::value>());
+                        std::integral_constant<bool,
+                                               is_trivial_cpp_int_modular<cpp_int_modular_backend<Bits2>>::value>());
                     return *this;
                 }
 
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend& operator=(const cpp_int_modular_backend& o) noexcept {
+                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend&
+                    operator=(const cpp_int_modular_backend& o) noexcept {
                     this->assign(o);
                     return *this;
                 }
 
                 // rvalue copy:
-                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend& operator=(cpp_int_modular_backend&& o) noexcept {
+                inline BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend&
+                    operator=(cpp_int_modular_backend&& o) noexcept {
                     *static_cast<base_type*>(this) = static_cast<base_type&&>(o);
                     return *this;
                 }
                 template<unsigned Bits2>
-                inline BOOST_MP_CXX14_CONSTEXPR
-                    typename std::enable_if<(Bits2 <= Bits), cpp_int_modular_backend&>::type
+                inline BOOST_MP_CXX14_CONSTEXPR typename std::enable_if<(Bits2 <= Bits), cpp_int_modular_backend&>::type
                     operator=(cpp_int_modular_backend<Bits2>&& o) noexcept {
-                    *static_cast<base_type*>(this) = static_cast<typename cpp_int_modular_backend<Bits2>::base_type&&>(o);
+                    *static_cast<base_type*>(this) =
+                        static_cast<typename cpp_int_modular_backend<Bits2>::base_type&&>(o);
                     return *this;
                 }
-               
+
             private:
-                // Second argument "std::integral_constant<bool, true>" is set to true to indicate A being a "trivial cpp_int type".
+                // Second argument "std::integral_constant<bool, true>" is set to true to indicate A being a "trivial
+                // cpp_int type".
                 template<class A>
-                inline BOOST_MP_CXX14_CONSTEXPR typename std::enable_if<boost::multiprecision::detail::is_unsigned<A>::value>::type
+                inline BOOST_MP_CXX14_CONSTEXPR
+                    typename std::enable_if<boost::multiprecision::detail::is_unsigned<A>::value>::type
                     do_assign_arithmetic(A val, const std::integral_constant<bool, true>&) noexcept {
                     *this->limbs() = static_cast<typename self_type::local_limb_type>(val);
                     this->normalize();
                 }
 
-                inline BOOST_MP_CXX14_CONSTEXPR void do_assign_arithmetic(
-                    limb_type i, const std::integral_constant<bool, false>&) noexcept {
+                inline BOOST_MP_CXX14_CONSTEXPR void
+                    do_assign_arithmetic(limb_type i, const std::integral_constant<bool, false>&) noexcept {
 
                     *this->limbs() = i;
                     this->zero_after(1);
                     this->normalize();
                 }
 
-                inline BOOST_MP_CXX14_CONSTEXPR void do_assign_arithmetic(
-                    double_limb_type i, const std::integral_constant<bool, false>&) noexcept {
-#ifndef  TVM
+                inline BOOST_MP_CXX14_CONSTEXPR void
+                    do_assign_arithmetic(double_limb_type i, const std::integral_constant<bool, false>&) noexcept {
+#ifndef TVM
                     static_assert(sizeof(i) == 2 * sizeof(limb_type), "Failed integer size check");
-#endif // TVM
+#endif    // TVM
                     static_assert(base_type::internal_limb_count >= 2, "Failed internal limb count");
                     typename base_type::limb_pointer p = this->limbs();
 #ifdef __MSVC_RUNTIME_CHECKS
@@ -674,9 +682,9 @@ namespace boost {
 
             public:
                 template<class Arithmetic>
-                inline BOOST_MP_CXX14_CONSTEXPR typename std::enable_if<
-                    !boost::multiprecision::detail::is_byte_container<Arithmetic>::value,
-                    cpp_int_modular_backend&>::type
+                inline BOOST_MP_CXX14_CONSTEXPR
+                    typename std::enable_if<!boost::multiprecision::detail::is_byte_container<Arithmetic>::value,
+                                            cpp_int_modular_backend&>::type
                     operator=(Arithmetic val) noexcept {
                     do_assign_arithmetic(val, trivial_tag());
                     return *this;
@@ -699,44 +707,42 @@ namespace boost {
                     cpp_int_type value = to_cpp_int();
                     return value.str(digits, f);
                 }
-#endif // TVM
+#endif    // TVM
             public:
                 template<class Container>
                 BOOST_MP_CXX14_CONSTEXPR cpp_int_modular_backend(
                     const Container& c,
                     typename std::enable_if<
-                        boost::multiprecision::detail::is_byte_container<Container>::value>::type const* =
-                        0) {
+                        boost::multiprecision::detail::is_byte_container<Container>::value>::type const* = 0) {
                     cpp_int_type value(c);
                     this->from_cpp_int(value);
                 }
 
                 BOOST_MP_CXX14_CONSTEXPR int compare_imp(const cpp_int_modular_backend<Bits>& o,
-                                         const std::integral_constant<bool, false>&,
-                                         const std::integral_constant<bool, false>&) const noexcept {
+                                                         const std::integral_constant<bool, false>&,
+                                                         const std::integral_constant<bool, false>&) const noexcept {
                     return compare_unsigned(o);
                 }
                 BOOST_MP_CXX14_CONSTEXPR int compare_imp(const cpp_int_modular_backend<Bits>& o,
-                                          const std::integral_constant<bool, true>&,
-                                          const std::integral_constant<bool, false>&) const {
+                                                         const std::integral_constant<bool, true>&,
+                                                         const std::integral_constant<bool, false>&) const {
                     cpp_int_modular_backend<Bits> t(*this);
                     return t.compare(o);
                 }
                 BOOST_MP_CXX14_CONSTEXPR int compare_imp(const cpp_int_modular_backend<Bits>& o,
-                                          const std::integral_constant<bool, false>&,
-                                          const std::integral_constant<bool, true>&) const {
+                                                         const std::integral_constant<bool, false>&,
+                                                         const std::integral_constant<bool, true>&) const {
                     cpp_int_modular_backend<Bits> t(o);
                     return compare(t);
                 }
                 BOOST_MP_CXX14_CONSTEXPR int compare_imp(const cpp_int_modular_backend<Bits>& o,
-                                          const std::integral_constant<bool, true>&,
-                                          const std::integral_constant<bool, true>&) const noexcept {
+                                                         const std::integral_constant<bool, true>&,
+                                                         const std::integral_constant<bool, true>&) const noexcept {
                     return *this->limbs() < *o.limbs() ? -1 : (*this->limbs() > *o.limbs() ? 1 : 0);
                 }
                 BOOST_MP_CXX14_CONSTEXPR int compare(const cpp_int_modular_backend<Bits>& o) const noexcept {
-                    using t = std::integral_constant<
-                        bool,
-                        is_trivial_cpp_int_modular<cpp_int_modular_backend<Bits>>::value>;
+                    using t =
+                        std::integral_constant<bool, is_trivial_cpp_int_modular<cpp_int_modular_backend<Bits>>::value>;
                     return compare_imp(o, t(), t());
                 }
                 BOOST_MP_CXX14_CONSTEXPR int compare_unsigned(const cpp_int_modular_backend<Bits>& o) const noexcept {
@@ -750,8 +756,7 @@ namespace boost {
                 }
                 template<class Arithmetic>
                 inline BOOST_MP_CXX14_CONSTEXPR
-                    typename std::enable_if<boost::multiprecision::detail::is_arithmetic<Arithmetic>::value,
-                                            int>::type
+                    typename std::enable_if<boost::multiprecision::detail::is_arithmetic<Arithmetic>::value, int>::type
                     compare(Arithmetic i) const {
                     // braindead version:
                     cpp_int_modular_backend t;
@@ -784,14 +789,12 @@ namespace boost {
         using uint512_modular_t = number<cpp_int_modular_backend<512>>;
         using uint1024_modular_t = number<cpp_int_modular_backend<1024>>;
 
-    } // namespace multiprecision
-} // namespace boost
-
+    }    // namespace multiprecision
+}    // namespace boost
 
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-
 
 //
 // Last of all we include the implementations of all the eval_* non member functions:

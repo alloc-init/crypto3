@@ -116,8 +116,8 @@ namespace nil {
                     empty_hash_type empty_hash;
                 };
             }    // namespace padding
-        }        // namespace pubkey
-    }            // namespace crypto3
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

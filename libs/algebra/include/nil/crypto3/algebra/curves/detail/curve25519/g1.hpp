@@ -52,8 +52,8 @@ namespace nil {
                     public:
                         using params_type = curve25519_g1_params<Form>;
 
-                        using curve_type = typename std::conditional<std::is_same<Form, forms::twisted_edwards>::value,
-                                                                     ed25519, curve25519>::type;
+                        using curve_type = typename std::
+                            conditional<std::is_same<Form, forms::twisted_edwards>::value, ed25519, curve25519>::type;
 
                         using field_type = typename params_type::field_type;
 
@@ -63,20 +63,18 @@ namespace nil {
 #ifdef __ZKLLVM__
                         using value_type = __zkllvm_curve_curve25519;
 
-                        static value_type make_value(
-                            typename field_type::value_type affine_one_X,
-                            typename field_type::value_type affine_one_Y) {
+                        static value_type make_value(typename field_type::value_type affine_one_X,
+                                                     typename field_type::value_type affine_one_Y) {
                             return __builtin_assigner_curve25519_curve_init(affine_one_X, affine_one_Y);
                         }
 
-                        static value_type one () {
+                        static value_type one() {
                             return make_value(
                                 0x216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a_cppui_modular256,
-                                0x6666666666666666666666666666666666666666666666666666666666666658_cppui_modular256
-                                );
+                                0x6666666666666666666666666666666666666666666666666666666666666658_cppui_modular256);
                         }
 
-                        static value_type zero () {
+                        static value_type zero() {
                             return make_value(0, 1);
                         }
 
@@ -86,8 +84,8 @@ namespace nil {
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_CURVE25519_G1_HPP

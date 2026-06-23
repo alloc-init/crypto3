@@ -51,7 +51,7 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 BOOST_TEST_DONT_PRINT_LOG_VALUE(hashes::sha1::construction::type::digest_type)

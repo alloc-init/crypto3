@@ -72,8 +72,10 @@ namespace nil {
             private:
                 constexpr static const std::size_t length_bits = params_type::length_bits;
                 // FIXME: do something more intelligent than capping at 64
-                constexpr static const std::size_t length_type_bits =
-                    length_bits < input_block_bits ? input_block_bits : length_bits > 64 ? 64 : length_bits;
+                constexpr static const std::size_t length_type_bits = length_bits < input_block_bits ?
+                                                                          input_block_bits :
+                                                                      length_bits > 64 ? 64 :
+                                                                                         length_bits;
                 typedef typename boost::uint_t<length_type_bits>::least length_type;
 
                 BOOST_STATIC_ASSERT(!length_bits || length_bits % input_block_bits == 0);
@@ -90,15 +92,15 @@ namespace nil {
                     input_block_type block =
                         {};    // TODO: fill it with zero value for base32/64, and find true size for base58
                     ::nil::crypto3::detail::pack_to<endian_type, value_bits, input_value_bits>(
-                            first, last, std::inserter(block, block.begin()));
+                        first, last, std::inserter(block, block.begin()));
                     state(block);
                 }
 
                 template<typename InputIterator, typename Category>
                 inline void operator()(InputIterator first, InputIterator last, Category) {
                     input_block_type block = {0};
-                    ::nil::crypto3::detail::pack_to<endian_type, value_bits, input_value_bits>(
-                            first, last, block.begin());
+                    ::nil::crypto3::detail::pack_to<endian_type, value_bits, input_value_bits>(first, last,
+                                                                                               block.begin());
                     state(block);
                 }
 

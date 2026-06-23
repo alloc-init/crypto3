@@ -81,8 +81,8 @@ namespace nil {
                     wnaf_params<typename bls12<377>::g2_type<>>::wnaf_window_table;
 
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_BLS12_WNAF_PARAMS_HPP

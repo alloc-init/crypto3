@@ -325,7 +325,7 @@ namespace nil {
             };
 
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #undef GENERATE_HAS_MEMBER_TYPE

@@ -5,35 +5,34 @@
 
 #include <boost/multiprecision/cpp_int.hpp>
 
-
 using namespace boost::multiprecision::literals;
+using boost::multiprecision::cpp_int_check_type;
+using boost::multiprecision::cpp_integer_type;
 using boost::multiprecision::number;
 using boost::multiprecision::backends::cpp_int_backend;
-using boost::multiprecision::cpp_integer_type;
-using boost::multiprecision::cpp_int_check_type;
 
 using std::cout;
 
 #define BLS12_381_MODULUS_LEN 255
 #define GRAIN_LFSR_STATE_LEN 80
 
-
 BOOST_MP_DEFINE_SIZED_CPP_INT_LITERAL(BLS12_381_MODULUS_LEN);
 BOOST_MP_DEFINE_SIZED_CPP_INT_LITERAL(GRAIN_LFSR_STATE_LEN);
-
 
 template<std::size_t t, std::size_t full_rounds, std::size_t part_rounds>
 struct round_constants_generator {
     constexpr static std::size_t modulus_bits = BLS12_381_MODULUS_LEN;
     constexpr static std::size_t state_bits = GRAIN_LFSR_STATE_LEN;
 
-    typedef number<cpp_int_backend<modulus_bits, modulus_bits, cpp_integer_type::unsigned_magnitude, cpp_int_check_type::unchecked, void>>
+    typedef number<cpp_int_backend<modulus_bits, modulus_bits, cpp_integer_type::unsigned_magnitude,
+                                   cpp_int_check_type::unchecked, void>>
         integral_type;
-    typedef number<cpp_int_backend<state_bits, state_bits, cpp_integer_type::unsigned_magnitude, cpp_int_check_type::unchecked, void>>
+    typedef number<cpp_int_backend<state_bits, state_bits, cpp_integer_type::unsigned_magnitude,
+                                   cpp_int_check_type::unchecked, void>>
         state_type;
 
-    constexpr static integral_type mod = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001_cppui_modular255;
-
+    constexpr static integral_type mod =
+        0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001_cppui_modular255;
 
     constexpr void generate_round_constants() {
         integral_type constant = 0x0_cppui_modular255;
@@ -137,9 +136,9 @@ struct round_constants_generator {
         state_type state = 0x0_cppui_modular80;
         int i = 0;
         for (i = 1; i >= 0; i--)
-            state = set_new_bit(state, (1 >> i) & 1); // field - as in filecoin
+            state = set_new_bit(state, (1 >> i) & 1);    // field - as in filecoin
         for (i = 3; i >= 0; i--)
-            state = set_new_bit(state, (1 >> i) & 1); // s-box - as in filecoin
+            state = set_new_bit(state, (1 >> i) & 1);    // s-box - as in filecoin
         for (i = 11; i >= 0; i--)
             state = set_new_bit(state, (modulus_bits >> i) & 1);
         for (i = 11; i >= 0; i--)
@@ -187,20 +186,17 @@ struct round_constants_generator {
     constexpr round_constants_generator() : constants() {
         // generate_round_constants();
         generate_round_constants_unfolded();
-        
     }
 
     integral_type constants[(full_rounds + part_rounds) * t];
-
 };
-
 
 int main() {
     constexpr std::size_t width = 4;
     constexpr std::size_t full_rounds = 8;
     constexpr std::size_t part_rounds = 56;
     typedef round_constants_generator<width, full_rounds, part_rounds> rcg;
-    
+
     // Add option -fconstexpr-ops-limit=4294967296 to compiler
     constexpr rcg gen;
     for (std::size_t i = 0; i < (8 + 56) * 4; i++)

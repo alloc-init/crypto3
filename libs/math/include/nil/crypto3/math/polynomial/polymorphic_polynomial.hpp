@@ -37,7 +37,7 @@
 namespace nil::crypto3::math {
     template<typename FieldType>
     class polymorphic_polynomial {
-      public:
+    public:
         using value_type = typename FieldType::value_type;
         using small_field_value_type = typename FieldType::small_subfield::value_type;
 
@@ -47,12 +47,13 @@ namespace nil::crypto3::math {
 
         mutable std::variant<small_val, big_val> val;
 
-        polymorphic_polynomial() {}
+        polymorphic_polynomial() {
+        }
 
-        polymorphic_polynomial(std::vector<value_type>&& v)
-            : val(big_val(std::move(v))) {}
-        polymorphic_polynomial(std::vector<small_field_value_type>&& v)
-            : val(small_val(std::move(v))) {}
+        polymorphic_polynomial(std::vector<value_type>&& v) : val(big_val(std::move(v))) {
+        }
+        polymorphic_polynomial(std::vector<small_field_value_type>&& v) : val(small_val(std::move(v))) {
+        }
 
         size_type size() const noexcept {
             return std::visit([](const auto& v) { return v.size(); }, val);
@@ -64,16 +65,14 @@ namespace nil::crypto3::math {
 
         auto& get_big() {
             if (!std::holds_alternative<big_val>(val)) {
-                throw std::logic_error(
-                    "Polymorphic vector holds small field but big field expected");
+                throw std::logic_error("Polymorphic vector holds small field but big field expected");
             }
             return std::get<big_val>(val);
         }
 
         const auto& get_big() const {
             if (!std::holds_alternative<big_val>(val)) {
-                throw std::logic_error(
-                    "Polymorphic vector holds small field but big field expected");
+                throw std::logic_error("Polymorphic vector holds small field but big field expected");
             }
             return std::get<big_val>(val);
         }
@@ -105,27 +104,25 @@ namespace nil::crypto3::math {
             } else {
                 const auto& small = std::get<small_val>(val);
                 big_val p(small.size());
-                parallel_for(0, small.size(),
-                             [&a, &p, &small](std::size_t i) { p[i] = small[i] * a; });
+                parallel_for(0, small.size(), [&a, &p, &small](std::size_t i) { p[i] = small[i] * a; });
                 val = p;
             }
             return *this;
         }
 
-        friend big_val& operator+=(big_val& a, const polymorphic_polynomial &b) {;
+        friend big_val& operator+=(big_val& a, const polymorphic_polynomial& b) {
+            ;
             a += b.ensure_big();
             return a;
         }
 
         template<std::ranges::range Range>
             requires(std::ranges::sized_range<Range>)
-        algebra::fields::choose_extension_field_t<value_type,
-                                                  std::ranges::range_value_t<Range>>
-        evaluate_powers(const Range& r) const {
+        algebra::fields::choose_extension_field_t<value_type, std::ranges::range_value_t<Range>>
+            evaluate_powers(const Range& r) const {
             return std::visit(
                 [&r](const auto& v) {
-                    return algebra::fields::choose_extension_field_t<
-                        value_type, std::ranges::range_value_t<Range>>(
+                    return algebra::fields::choose_extension_field_t<value_type, std::ranges::range_value_t<Range>>(
                         v.evaluate_powers(r));
                 },
                 val);
@@ -133,12 +130,10 @@ namespace nil::crypto3::math {
 
         template<typename PointFieldValueType>
         algebra::fields::choose_extension_field_t<value_type, PointFieldValueType>
-        evaluate(const PointFieldValueType& a) const {
+            evaluate(const PointFieldValueType& a) const {
             return std::visit(
                 [a](const auto& v) {
-                    return algebra::fields::choose_extension_field_t<value_type,
-                                                                     PointFieldValueType>(
-                        v.evaluate(a));
+                    return algebra::fields::choose_extension_field_t<value_type, PointFieldValueType>(v.evaluate(a));
                 },
                 val);
         }
@@ -146,12 +141,10 @@ namespace nil::crypto3::math {
 
     // Used in the unit tests, so we can use BOOST_CHECK_EQUALS, and see
     // the values of polymorphic_polynomials, when the check fails.
-    template<typename value_type, typename = typename std::enable_if<
-                                      detail::is_field_element<value_type>::value>::type>
-    std::ostream& operator<<(std::ostream& os,
-                             const polymorphic_polynomial<value_type>& poly) {
-        return std::visit([&os](const auto &v){ os << v; }, poly.val);
+    template<typename value_type, typename = typename std::enable_if<detail::is_field_element<value_type>::value>::type>
+    std::ostream& operator<<(std::ostream& os, const polymorphic_polynomial<value_type>& poly) {
+        return std::visit([&os](const auto& v) { os << v; }, poly.val);
     }
-}  // namespace nil::crypto3::math
+}    // namespace nil::crypto3::math
 
-#endif  // CRYPTO3_MATH_POLYNOMIAL_POLYMORPHIC_POLYNOMIAL_HPP
+#endif    // CRYPTO3_MATH_POLYNOMIAL_POLYMORPHIC_POLYNOMIAL_HPP

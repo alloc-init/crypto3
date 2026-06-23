@@ -72,7 +72,7 @@ namespace nil {
                 }
             };
         }    // namespace block
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_CIPHERS_SHACAL1_HPP

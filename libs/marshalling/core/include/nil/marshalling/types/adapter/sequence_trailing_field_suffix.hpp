@@ -110,7 +110,7 @@ namespace nil {
                 };
 
             }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_SEQUENCE_TRAILING_FIELD_SUFFIX_HPP

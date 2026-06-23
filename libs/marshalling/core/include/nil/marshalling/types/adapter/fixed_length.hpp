@@ -50,8 +50,7 @@ namespace nil {
 
                     using serialized_type = typename std::conditional<
                         (TLen < sizeof(base_serialized_type)),
-                        typename processing::
-                            size_to_type<TLen, std::is_signed<base_serialized_type>::value>::type,
+                        typename processing::size_to_type<TLen, std::is_signed<base_serialized_type>::value>::type,
                         base_serialized_type>::type;
 
                     using endian_type = typename base_impl_type::endian_type;
@@ -101,8 +100,8 @@ namespace nil {
 
                     template<typename TIter>
                     void read_no_status(TIter &iter) {
-                        serialized_type serializedValue = processing::read_data<serialized_type, byte_length>(
-                            iter, endian_type());
+                        serialized_type serializedValue =
+                            processing::read_data<serialized_type, byte_length>(iter, endian_type());
                         base_impl_type::value() = from_serialized(serializedValue);
                     }
 
@@ -142,7 +141,7 @@ namespace nil {
                     }
 
                     static serialized_type adjust_to_serialized(base_serialized_type val, sign_extend_tag) {
-                        unsigned_serialized_type valueTmp = 
+                        unsigned_serialized_type valueTmp =
                             static_cast<unsigned_serialized_type>(val) & UnsignedValueMask;
 
                         return sign_ext_unsigned_serialized(valueTmp, has_sign_tag());
@@ -153,7 +152,7 @@ namespace nil {
                     }
 
                     static base_serialized_type adjust_from_serialized(serialized_type val, sign_extend_tag) {
-                        unsigned_serialized_type valueTmp = 
+                        unsigned_serialized_type valueTmp =
                             static_cast<unsigned_serialized_type>(val) & UnsignedValueMask;
                         return static_cast<base_serialized_type>(
                             sign_ext_unsigned_serialized(valueTmp, has_sign_tag()));
@@ -165,8 +164,8 @@ namespace nil {
                     }
 
                     static serialized_type sign_ext_unsigned_serialized(unsigned_serialized_type val, signed_tag) {
-                        static const unsigned_serialized_type SignExtMask
-                            = ~((static_cast<unsigned_serialized_type>(1U) << bit_length) - 1);
+                        static const unsigned_serialized_type SignExtMask =
+                            ~((static_cast<unsigned_serialized_type>(1U) << bit_length) - 1);
                         static const unsigned_serialized_type SignMask = static_cast<unsigned_serialized_type>(1U)
                                                                          << (bit_length - 1);
 
@@ -180,14 +179,14 @@ namespace nil {
                     static const std::size_t bits_in_byte = std::numeric_limits<std::uint8_t>::digits;
                     static const std::size_t bit_length = byte_length * bits_in_byte;
 
-                    static const unsigned_serialized_type UnsignedValueMask
-                        = static_cast<unsigned_serialized_type>((static_cast<std::uintmax_t>(1U) << bit_length) - 1);
+                    static const unsigned_serialized_type UnsignedValueMask =
+                        static_cast<unsigned_serialized_type>((static_cast<std::uintmax_t>(1U) << bit_length) - 1);
 
                     static_assert(0 < byte_length, "length is expected to be greater than 0");
                 };
 
             }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_FIXED_LENGTH_HPP

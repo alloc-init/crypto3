@@ -99,9 +99,9 @@ namespace nil {
                         edwards_g2_params<183, forms::twisted_edwards>::one_fill;
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_EDWARDS_183_TWISTED_EDWARDS_PARAMS_HPP

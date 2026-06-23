@@ -115,8 +115,7 @@ namespace nil {
                         for (uint32_t j = 0; j < dividendLength - i - 1; j++) {
                             if (divisorPtr > j) {
                                 runningDividend[dividendLength - 1 - j] =
-                                        mat(divisor[divisorPtr - 1 - j], divConst,
-                                            runningDividend[dividendLength - 2 - j]);
+                                    mat(divisor[divisorPtr - 1 - j], divConst, runningDividend[dividendLength - 2 - j]);
                             } else {
                                 runningDividend[dividendLength - 1 - j] = runningDividend[dividendLength - 2 - j];
                             }
@@ -133,7 +132,7 @@ namespace nil {
 
                 std::vector<int> product(1, 1);
 
-                for (unsigned int divisibleNumber: divisibleNumbers) {
+                for (unsigned int divisibleNumber : divisibleNumbers) {
                     auto P = make_cyclotomic_recursive<FieldValueType>(divisibleNumber);
                     product = PolyMult(product, P);
                 }
@@ -171,8 +170,8 @@ namespace nil {
 
                 return result;
             }
-        }
-    }
-}
+        }    // namespace math
+    }    // namespace crypto3
+}    // namespace nil
 
-#endif //CRYPTO3_CYCLOTOMIC_HPP
+#endif    // CRYPTO3_CYCLOTOMIC_HPP

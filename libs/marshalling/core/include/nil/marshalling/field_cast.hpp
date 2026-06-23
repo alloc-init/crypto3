@@ -106,8 +106,8 @@ namespace nil {
         /// @pre Internal value_type type of both fields is the same.
         template<typename TFieldTo, typename TFieldFrom>
         TFieldTo field_cast(const TFieldFrom &field) {
-            static const bool SameValues
-                = std::is_same<typename TFieldTo::value_type, typename TFieldFrom::value_type>::value;
+            static const bool SameValues =
+                std::is_same<typename TFieldTo::value_type, typename TFieldFrom::value_type>::value;
             return detail::field_cast_helper<TFieldTo, TFieldFrom, SameValues>::cast(field);
         }
     }    // namespace marshalling

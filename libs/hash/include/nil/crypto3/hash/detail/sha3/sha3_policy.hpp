@@ -115,7 +115,7 @@ namespace nil {
 
                 template<std::size_t DigestBits>
                 constexpr
-                typename basic_sha3_policy<DigestBits>::pkcs_id_type const basic_sha3_policy<DigestBits>::pkcs_id;
+                    typename basic_sha3_policy<DigestBits>::pkcs_id_type const basic_sha3_policy<DigestBits>::pkcs_id;
 
                 template<std::size_t DigestBits>
                 struct sha3_policy : public basic_sha3_policy<DigestBits> {
@@ -155,8 +155,8 @@ namespace nil {
                     };
                 };
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_SHA3_POLICY_HPP

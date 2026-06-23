@@ -74,9 +74,9 @@ namespace nil {
                     };
 
                     typedef merkle_damgard_construction<params_type, typename policy_type::iv_generator,
-                            davies_meyer_compressor<block_cipher_type, detail::state_adder>,
-                            detail::merkle_damgard_padding<policy_type>>
-                            type;
+                                                        davies_meyer_compressor<block_cipher_type, detail::state_adder>,
+                                                        detail::merkle_damgard_padding<policy_type>>
+                        type;
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::block;
@@ -84,7 +84,7 @@ namespace nil {
             };
 
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_MD5_HPP

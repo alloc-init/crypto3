@@ -30,8 +30,6 @@
 #include <nil/crypto3/algebra/fields/mnt4/base_field.hpp>
 #include <nil/crypto3/algebra/fields/fp2.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -68,7 +66,8 @@ namespace nil {
                             non_residue_type(0x3AD84453493094F44C0E4B334F83D9B7D7845383998B4CFE8788F285043342F78DC81FC7F3D_cppui_modular298)};*/
 
                         constexpr static const std::array<integral_type, 4> Frobenius_coeffs_c1 = {
-                            0x01, 0xF73779FE09916DFDCC2FD1F968D534BEB17DAF7518CD9FAE5C1F7BDCF94DD5D7DEF6980C4_cppui_modular292,
+                            0x01,
+                            0xF73779FE09916DFDCC2FD1F968D534BEB17DAF7518CD9FAE5C1F7BDCF94DD5D7DEF6980C4_cppui_modular292,
                             0x3BCF7BCD473A266249DA7B0548ECAEEC9635D1330EA41A9E35E51200E12C90CD65A71660000_cppui_modular298,
                             0x3AD84453493094F44C0E4B334F83D9B7D7845383998B4CFE8788F285043342F78DC81FC7F3D_cppui_modular298};
 
@@ -88,9 +87,9 @@ namespace nil {
                                          4> const fp4_extension_params<mnt4_base_field<Version>>::Frobenius_coeffs_c1;
 
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_MNT4_FP4_EXTENSION_PARAMS_HPP

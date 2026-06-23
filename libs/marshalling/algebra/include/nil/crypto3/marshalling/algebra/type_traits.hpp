@@ -43,16 +43,14 @@ namespace nil {
                 template<typename TTypeBase, typename FieldValueType, typename... TOptions>
                 class pure_field_element;
 
-                template<typename TTypeBase,
-                         typename FieldValueType,
-                         typename... TOptions>
+                template<typename TTypeBase, typename FieldValueType, typename... TOptions>
                 using field_element =
                     typename std::conditional<algebra::is_extended_field_element<FieldValueType>::value,
                                               extended_field_element<TTypeBase, FieldValueType, TOptions...>,
                                               pure_field_element<TTypeBase, FieldValueType, TOptions...>>::type;
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
     namespace marshalling {
 
         /// @brief Compile time check function of whether a provided type is any
@@ -67,8 +65,8 @@ namespace nil {
         };
 
         template<typename TTypeBase, typename CurveGroupType, typename... TOptions>
-        struct is_curve_element<nil::crypto3::marshalling::types::curve_element<TTypeBase, 
-            CurveGroupType, TOptions...>> {
+        struct is_curve_element<
+            nil::crypto3::marshalling::types::curve_element<TTypeBase, CurveGroupType, TOptions...>> {
 
             static const bool value = true;
         };
@@ -80,15 +78,15 @@ namespace nil {
         };
 
         template<typename TTypeBase, typename FieldValueType, typename... TOptions>
-        struct is_field_element<nil::crypto3::marshalling::types::extended_field_element<TTypeBase, 
-            FieldValueType, TOptions...>> {
+        struct is_field_element<
+            nil::crypto3::marshalling::types::extended_field_element<TTypeBase, FieldValueType, TOptions...>> {
 
             static const bool value = true;
         };
 
         template<typename TTypeBase, typename FieldValueType, typename... TOptions>
-        struct is_field_element<nil::crypto3::marshalling::types::pure_field_element<TTypeBase, 
-            FieldValueType, TOptions...>> {
+        struct is_field_element<
+            nil::crypto3::marshalling::types::pure_field_element<TTypeBase, FieldValueType, TOptions...>> {
 
             static const bool value = true;
         };
@@ -97,16 +95,16 @@ namespace nil {
         struct is_container;
 
         template<typename T>
-        struct is_container <T, typename std::enable_if<is_curve_element<T>::value>::type> {
+        struct is_container<T, typename std::enable_if<is_curve_element<T>::value>::type> {
             static const bool value = false;
         };
 
         template<typename T>
-        struct is_container <T, typename std::enable_if<is_field_element<T>::value>::type> {
+        struct is_container<T, typename std::enable_if<is_field_element<T>::value>::type> {
             static const bool value = false;
         };
 
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 
 #endif    // CRYPTO3_MARSHALLING_ALGEBRA_TYPE_TRAITS_HPP

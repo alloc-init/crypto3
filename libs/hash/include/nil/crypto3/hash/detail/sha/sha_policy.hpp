@@ -72,8 +72,8 @@ namespace nil {
 
                 typedef sha_policy sha0_policy;
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_DETAIL_SHA_POLICY_HPP

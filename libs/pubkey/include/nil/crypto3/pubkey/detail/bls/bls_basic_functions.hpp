@@ -64,17 +64,15 @@ namespace nil {
                     typedef typename PolicyType::accumulator_type accumulator_type;
 
                     typedef std::pair<std::vector<public_key_type>, std::vector<accumulator_type>>
-                    aggregation_accumulator_type;
+                        aggregation_accumulator_type;
                     typedef std::pair<std::vector<public_key_type>, accumulator_type> fast_aggregation_accumulator_type;
 
                     constexpr static const std::size_t private_key_bits = PolicyType::private_key_bits;
                     constexpr static const std::size_t L = static_cast<std::size_t>((3 * private_key_bits) / 16) +
                                                            static_cast<std::size_t>((3 * private_key_bits) % 16 != 0);
                     static_assert(L < 0x10000, "L is required to fit in 2 octets");
-                    constexpr static const std::array<std::uint8_t, 2> L_os = {
-                        static_cast<std::uint8_t>(L >> 8u),
-                        static_cast<std::uint8_t>(L % 0x100)
-                    };
+                    constexpr static const std::array<std::uint8_t, 2> L_os = {static_cast<std::uint8_t>(L >> 8u),
+                                                                               static_cast<std::uint8_t>(L % 0x100)};
 
                     // TODO: implement key_gen
                     // template<typename IkmType, typename KeyInfoType>
@@ -130,10 +128,10 @@ namespace nil {
                         return C1 == C2;
                     }
 
-                    template<typename SignatureIterator,
-                             typename = typename std::enable_if<std::is_same<
-                                 signature_type, typename std::iterator_traits<
-                                     SignatureIterator>::value_type>::value>::type>
+                    template<
+                        typename SignatureIterator,
+                        typename = typename std::enable_if<std::is_same<
+                            signature_type, typename std::iterator_traits<SignatureIterator>::value_type>::value>::type>
                     static void aggregate(signature_type &acc, SignatureIterator sig_first,
                                           SignatureIterator sig_last) {
                         BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<SignatureIterator>));
@@ -148,19 +146,18 @@ namespace nil {
                     template<typename SignatureRange,
                              typename = typename std::enable_if<std::is_same<
                                  signature_type, typename std::iterator_traits<
-                                     typename SignatureRange::iterator>::value_type>::value>::type>
+                                                     typename SignatureRange::iterator>::value_type>::value>::type>
                     static void aggregate(signature_type &acc, const SignatureRange &sig_n) {
                         BOOST_CONCEPT_ASSERT((boost::SinglePassRangeConcept<SignatureRange>));
 
                         aggregate(acc, std::cbegin(sig_n), std::cend(sig_n));
                     }
 
-                    static bool aggregate_verify(const aggregation_accumulator_type &acc,
-                                                 const signature_type &sig) {
+                    static bool aggregate_verify(const aggregation_accumulator_type &acc, const signature_type &sig) {
                         const typename aggregation_accumulator_type::first_type &pk_n = acc.first;
                         const typename aggregation_accumulator_type::second_type &acc_n = acc.second;
                         assert(std::distance(pk_n.begin(), pk_n.end()) > 0 &&
-                            std::distance(pk_n.begin(), pk_n.end()) == std::distance(acc_n.begin(), acc_n.end()));
+                               std::distance(pk_n.begin(), pk_n.end()) == std::distance(acc_n.begin(), acc_n.end()));
 
                         if (!sig.is_well_formed()) {
                             return false;
@@ -220,9 +217,9 @@ namespace nil {
                         return bls_serializer::point_to_octets_compress(sig);
                     }
                 };
-            } // namespace detail
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace detail
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_BLS_CORE_FUNCTIONS_HPP

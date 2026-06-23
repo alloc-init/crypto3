@@ -27,8 +27,8 @@
 #define CRYPTO3_ALGEBRA_FIELDS_FP4_EXTENSION_HPP
 
 #include <nil/crypto3/algebra/fields/detail/element/fp4.hpp>
-//#include <nil/crypto3/algebra/fields/detail/extension_params/frp_v1.hpp>
-//#include <nil/crypto3/algebra/fields/detail/extension_params/gost_A.hpp>
+// #include <nil/crypto3/algebra/fields/detail/extension_params/frp_v1.hpp>
+// #include <nil/crypto3/algebra/fields/detail/extension_params/gost_A.hpp>
 #include <nil/crypto3/algebra/fields/detail/extension_params/mnt4/fp4.hpp>
 /*#include <nil/crypto3/algebra/fields/detail/extension_params/secp.hpp>
 #include <nil/crypto3/algebra/fields/detail/extension_params/sm2p_v1.hpp>
@@ -77,8 +77,8 @@ namespace nil {
                 constexpr typename std::size_t const fp4<BaseField>::arity;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_FP4_EXTENSION_HPP

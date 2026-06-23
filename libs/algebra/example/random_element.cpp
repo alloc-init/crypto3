@@ -38,7 +38,6 @@
 
 using namespace nil::crypto3::algebra;
 
-
 template<typename Type>
 void random_element_example() {
     typename Type::value_type v = random_element<Type>();

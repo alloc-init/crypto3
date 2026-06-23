@@ -106,10 +106,10 @@ namespace nil {
                             return boost::accumulators::extract_result<tag::verify<ProcessingPolicy>>(acc);
                         }
                     }    // namespace extract
-                }        // namespace accumulators
-            }            // namespace padding
-        }                // namespace pubkey
-    }                    // namespace crypto3
+                }    // namespace accumulators
+            }    // namespace padding
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_PK_PAD_VERIFY_HPP

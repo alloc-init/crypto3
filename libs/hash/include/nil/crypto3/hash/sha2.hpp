@@ -56,8 +56,8 @@ namespace nil {
                 typedef __attribute__((ext_vector_type(2)))
                 typename algebra::curves::pallas::base_field_type::value_type block_type;
 
-                struct process{
-                    block_type operator()(block_type first_input_block, block_type second_input_block){
+                struct process {
+                    block_type operator()(block_type first_input_block, block_type second_input_block) {
                         return __builtin_assigner_sha2_256_pallas_base(first_input_block, second_input_block);
                     }
                 };
@@ -97,9 +97,9 @@ namespace nil {
                     };
 
                     typedef merkle_damgard_construction<params_type, typename policy_type::iv_generator,
-                            davies_meyer_compressor<block_cipher_type, detail::state_adder>,
-                            detail::merkle_damgard_padding<policy_type>>
-                            type;
+                                                        davies_meyer_compressor<block_cipher_type, detail::state_adder>,
+                                                        detail::merkle_damgard_padding<policy_type>>
+                        type;
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::block;
@@ -108,7 +108,7 @@ namespace nil {
 
 #endif
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_SHA2_HPP

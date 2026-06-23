@@ -41,67 +41,69 @@ namespace nil {
         class is_compatible;
 
         template<typename T>
-        class is_compatible <T, typename std::enable_if<std::is_integral<T>::value>::type> {
+        class is_compatible<T, typename std::enable_if<std::is_integral<T>::value>::type> {
             using default_endianness = option::big_endian;
+
         public:
-            template <typename TEndian = default_endianness>
+            template<typename TEndian = default_endianness>
             using type = typename types::integral<field_type<TEndian>, T>;
             static const bool value = true;
             static const bool fixed_size = true;
         };
 
         template<typename T>
-        class is_compatible <T, typename std::enable_if<std::is_floating_point<T>::value>::type> {
+        class is_compatible<T, typename std::enable_if<std::is_floating_point<T>::value>::type> {
             using default_endianness = option::big_endian;
+
         public:
-            template <typename TEndian = default_endianness>
+            template<typename TEndian = default_endianness>
             using type = typename types::float_value<field_type<TEndian>, T>;
             static const bool value = true;
             static const bool fixed_size = true;
         };
 
         template<typename T>
-        class is_compatible <std::vector<T>, typename std::enable_if<is_compatible<T>::value
-                                                                    && is_compatible<T>::fixed_size>::type> {
+        class is_compatible<std::vector<T>,
+                            typename std::enable_if<is_compatible<T>::value && is_compatible<T>::fixed_size>::type> {
             using default_endianness = option::big_endian;
+
         public:
-            template <typename TEndian = default_endianness>
-            using type = typename types::array_list<
-                field_type<TEndian>,
-                typename is_compatible<T>::template type<TEndian>>;
+            template<typename TEndian = default_endianness>
+            using type =
+                typename types::array_list<field_type<TEndian>, typename is_compatible<T>::template type<TEndian>>;
             static const bool value = true;
             static const bool fixed_size = false;
         };
 
         template<typename T, std::size_t TSize>
-        class is_compatible <std::array<T, TSize>, typename std::enable_if<is_compatible<T>::value
-                                                                          && is_compatible<T>::fixed_size>::type> {
+        class is_compatible<std::array<T, TSize>,
+                            typename std::enable_if<is_compatible<T>::value && is_compatible<T>::fixed_size>::type> {
             using default_endianness = option::big_endian;
+
         public:
-            template <typename TEndian = default_endianness>
-            using type = typename types::array_list<
-                field_type<TEndian>,
-                typename is_compatible<T>::template type<TEndian>,
-                option::fixed_size_storage<TSize>>;
+            template<typename TEndian = default_endianness>
+            using type =
+                typename types::array_list<field_type<TEndian>, typename is_compatible<T>::template type<TEndian>,
+                                           option::fixed_size_storage<TSize>>;
             static const bool value = true;
             static const bool fixed_size = true;
         };
 
         template<typename T, std::size_t TSize>
-        class is_compatible <boost::array<T, TSize>, typename std::enable_if<is_compatible<T>::value
-                                                                          && is_compatible<T>::fixed_size>::type> {
+        class is_compatible<boost::array<T, TSize>,
+                            typename std::enable_if<is_compatible<T>::value && is_compatible<T>::fixed_size>::type> {
             using default_endianness = option::big_endian;
+
         public:
-            template <typename TEndian = default_endianness>
-            using type = typename types::array_list<
-                field_type<TEndian>,
-                typename is_compatible<T>::template type<TEndian>,
-                option::fixed_size_storage<TSize>>;
+            template<typename TEndian = default_endianness>
+            using type =
+                typename types::array_list<field_type<TEndian>, typename is_compatible<T>::template type<TEndian>,
+                                           option::fixed_size_storage<TSize>>;
             static const bool value = true;
             static const bool fixed_size = true;
         };
 
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 
 #endif    // MARSHALLING_INFERENCE_TYPE_TRAITS_HPP

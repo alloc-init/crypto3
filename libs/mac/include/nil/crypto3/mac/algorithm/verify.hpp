@@ -77,7 +77,7 @@ namespace nil {
             OutputRange verify(const SinglePassRange &rng) {
             }
         }    // namespace mac
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MAC_VERIFY_HPP

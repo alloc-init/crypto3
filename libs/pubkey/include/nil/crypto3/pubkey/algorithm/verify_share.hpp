@@ -64,8 +64,8 @@ namespace nil {
          */
         template<typename SchemeType, typename InputIterator, typename OutputIterator,
                  typename ProcessingMode = pubkey::share_verification_processing_mode_default<SchemeType>>
-        OutputIterator verify_share(InputIterator first, InputIterator last, const pubkey::public_share_sss<SchemeType> &s,
-                                    OutputIterator out) {
+        OutputIterator verify_share(InputIterator first, InputIterator last,
+                                    const pubkey::public_share_sss<SchemeType> &s, OutputIterator out) {
 
             typedef typename pubkey::share_verification_accumulator_set<ProcessingMode> VerificationAccumulator;
 
@@ -194,7 +194,8 @@ namespace nil {
                  typename VerificationAccumulator = typename pubkey::share_verification_accumulator_set<ProcessingMode>,
                  typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<VerificationAccumulator>,
                  typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
-        SchemeImpl verify_share(InputIterator first, InputIterator last, const pubkey::public_share_sss<SchemeType> &s) {
+        SchemeImpl verify_share(InputIterator first, InputIterator last,
+                                const pubkey::public_share_sss<SchemeType> &s) {
 
             return SchemeImpl(first, last, VerificationAccumulator(s));
         }

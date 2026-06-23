@@ -36,14 +36,14 @@ namespace nil {
         template<class ReturnType>
         std::vector<ReturnType> wait_for_all(std::vector<std::future<ReturnType>> futures) {
             std::vector<ReturnType> results;
-            for (auto& f: futures) {
+            for (auto& f : futures) {
                 results.push_back(f.get());
             }
             return results;
         }
 
         inline void wait_for_all(std::vector<std::future<void>> futures) {
-            for (auto& f: futures) {
+            for (auto& f : futures) {
                 f.get();
             }
         }
@@ -51,9 +51,10 @@ namespace nil {
         // Divides work into chunks and makes calls to 'func' in parallel.
         template<class ReturnType>
         std::vector<std::future<ReturnType>> parallel_run_in_chunks_with_thread_id(
-                std::size_t elements_count,
-                std::function<ReturnType(std::size_t thread_id, std::size_t begin, std::size_t end)> func,
-                thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
+            std::size_t elements_count,
+            std::function<ReturnType(std::size_t thread_id, std::size_t begin, std::size_t end)>
+                func,
+            thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
 
             auto& thread_pool = thread_pool::get_instance(pool_id);
 
@@ -65,38 +66,41 @@ namespace nil {
             static constexpr std::size_t POOL_0_MIN_CHUNK_SIZE = 1 << 12;
 
             // Pool #0 will take care of the lowest level of operations, like polynomial operations.
-            // We want the minimal size of elements_per_worker to be 'POOL_0_MIN_CHUNK_SIZE', otherwise the cores are not loaded.
+            // We want the minimal size of elements_per_worker to be 'POOL_0_MIN_CHUNK_SIZE', otherwise the cores are
+            // not loaded.
             if (pool_id == thread_pool::pool_level::LOW && elements_count / workers_to_use < POOL_0_MIN_CHUNK_SIZE) {
-                workers_to_use = elements_count / POOL_0_MIN_CHUNK_SIZE + ((elements_count % POOL_0_MIN_CHUNK_SIZE) ? 1 : 0);
+                workers_to_use =
+                    elements_count / POOL_0_MIN_CHUNK_SIZE + ((elements_count % POOL_0_MIN_CHUNK_SIZE) ? 1 : 0);
                 workers_to_use = std::max((size_t)1, workers_to_use);
             }
 
             std::size_t begin = 0;
             for (std::size_t i = 0; i < workers_to_use; i++) {
                 auto end = begin + (elements_count - begin) / (workers_to_use - i);
-                fut.emplace_back(thread_pool.post<ReturnType>([i, begin, end, func]() {
-                    return func(i, begin, end);
-                }));
+                fut.emplace_back(thread_pool.post<ReturnType>([i, begin, end, func]() { return func(i, begin, end); }));
                 begin = end;
             }
             return fut;
         }
 
         template<class ReturnType>
-        std::vector<std::future<ReturnType>> parallel_run_in_chunks(
-                std::size_t elements_count,
-                std::function<ReturnType(std::size_t begin, std::size_t end)> func,
-                thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
-            return parallel_run_in_chunks_with_thread_id<ReturnType>(elements_count,
+        std::vector<std::future<ReturnType>>
+            parallel_run_in_chunks(std::size_t elements_count,
+                                   std::function<ReturnType(std::size_t begin, std::size_t end)>
+                                       func,
+                                   thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
+            return parallel_run_in_chunks_with_thread_id<ReturnType>(
+                elements_count,
                 [func](std::size_t thread_id, std::size_t begin, std::size_t end) -> ReturnType {
                     return func(begin, end);
-                }, pool_id);
+                },
+                pool_id);
         }
 
         // Similar to std::transform, but in parallel. We return void here for better usability for our use cases.
         template<class InputIt1, class InputIt2, class OutputIt, class BinaryOperation>
-        void parallel_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
-                                OutputIt d_first, BinaryOperation binary_op,
+        void parallel_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt d_first,
+                                BinaryOperation binary_op,
                                 thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
 
             wait_for_all(parallel_run_in_chunks<void>(
@@ -112,13 +116,13 @@ namespace nil {
                         ++first2;
                         ++d_first;
                     }
-                }, pool_id));
+                },
+                pool_id));
         }
 
         // Similar to std::transform, but in parallel. We return void here for better usability for our use cases.
         template<class InputIt, class OutputIt, class UnaryOperation>
-        void parallel_transform(InputIt first1, InputIt last1,
-                                OutputIt d_first, UnaryOperation unary_op,
+        void parallel_transform(InputIt first1, InputIt last1, OutputIt d_first, UnaryOperation unary_op,
                                 thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
 
             wait_for_all(parallel_run_in_chunks<void>(
@@ -132,14 +136,14 @@ namespace nil {
                         ++first1;
                         ++d_first;
                     }
-                }, pool_id));
+                },
+                pool_id));
         }
 
         // This one is an optimization, since copying field elements is quite slow.
         // BinaryOperation is supposed to modify the object in-place.
         template<class InputIt1, class InputIt2, class BinaryOperation>
-        void in_place_parallel_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
-                                         BinaryOperation binary_op,
+        void in_place_parallel_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, BinaryOperation binary_op,
                                          thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
 
             wait_for_all(parallel_run_in_chunks<void>(
@@ -153,7 +157,8 @@ namespace nil {
                         ++first1;
                         ++first2;
                     }
-                }, pool_id));
+                },
+                pool_id));
         }
 
         // This one is an optimization, since copying field elements is quite slow.
@@ -171,7 +176,8 @@ namespace nil {
                         unary_op(*first1);
                         ++first1;
                     }
-                }, pool_id));
+                },
+                pool_id));
         }
 
         // Calls function func for each value between [start, end).
@@ -183,10 +189,11 @@ namespace nil {
                     for (std::size_t i = start + range_begin; i < start + range_end; i++) {
                         func(i);
                     }
-                }, pool_id));
+                },
+                pool_id));
         }
 
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
-#endif // CRYPTO3_PARALLELIZATION_UTILS_HPP
+#endif    // CRYPTO3_PARALLELIZATION_UTILS_HPP

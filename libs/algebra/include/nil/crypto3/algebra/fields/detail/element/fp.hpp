@@ -50,7 +50,7 @@ namespace nil {
                     class element_fp {
                         typedef FieldParams policy_type;
 
-                      public:
+                    public:
                         typedef typename policy_type::field_type field_type;
 
                         typedef typename policy_type::modular_type modular_type;
@@ -66,23 +66,27 @@ namespace nil {
 
                         constexpr element_fp() = default;
 
-                        constexpr element_fp(const data_type &data) : data(data) {}
+                        constexpr element_fp(const data_type &data) : data(data) {
+                        }
 
                         template<typename Number,
-                                typename std::enable_if<(boost::multiprecision::is_number<Number>::value), bool>::type = true>
-                        constexpr element_fp(const Number &data)
-                                : data(typename modular_type::backend_type(data.backend(), modulus_params)) {}
+                                 typename std::enable_if<(boost::multiprecision::is_number<Number>::value),
+                                                         bool>::type = true>
+                        constexpr element_fp(const Number &data) :
+                            data(typename modular_type::backend_type(data.backend(), modulus_params)) {
+                        }
 
-                        template<typename Number, typename std::enable_if<
-                                std::is_integral<Number>::value, bool>::type = true>
-                        constexpr element_fp(const Number &data)
-                                : data(typename modular_type::backend_type(data, modulus_params)) {}
+                        template<typename Number,
+                                 typename std::enable_if<std::is_integral<Number>::value, bool>::type = true>
+                        constexpr element_fp(const Number &data) :
+                            data(typename modular_type::backend_type(data, modulus_params)) {
+                        }
 
-                        constexpr element_fp(const element_fp &B)
-                                : data(B.data) {}
+                        constexpr element_fp(const element_fp &B) : data(B.data) {
+                        }
 
-                        constexpr element_fp(const element_fp &&B) BOOST_NOEXCEPT
-                                : data(std::move(B.data)) {}
+                        constexpr element_fp(const element_fp &&B) BOOST_NOEXCEPT : data(std::move(B.data)) {
+                        }
 
                         constexpr typename field_type::integral_type to_integral() const {
                             return (typename field_type::integral_type)data;
@@ -116,8 +120,7 @@ namespace nil {
                             return *this;
                         }
 
-                        element_fp binomial_extension_coefficient(
-                            std::size_t index) const {
+                        element_fp binomial_extension_coefficient(std::size_t index) const {
                             if (index != 0) {
                                 throw std::logic_error(
                                     "FP is degree 1 extension of itself, but trying to "
@@ -246,11 +249,10 @@ namespace nil {
                             return element_fp(data * data);    // maybe can be done more effective
                         }
 
-                        constexpr element_fp& square_inplace() {
+                        constexpr element_fp &square_inplace() {
                             data *= data;
                             return *this;
                         }
-
 
                         constexpr bool is_square() const {
                             element_fp tmp = this->pow(policy_type::group_order_minus_one_half);
@@ -258,14 +260,16 @@ namespace nil {
                         }
 
                         template<typename PowerType,
-                                typename = typename std::enable_if<boost::is_integral<PowerType>::value>::type>
+                                 typename = typename std::enable_if<boost::is_integral<PowerType>::value>::type>
                         constexpr element_fp pow(const PowerType pwr) const {
-                            return element_fp(boost::multiprecision::powm(data, boost::multiprecision::uint128_modular_t(pwr)));
+                            return element_fp(
+                                boost::multiprecision::powm(data, boost::multiprecision::uint128_modular_t(pwr)));
                         }
 
-                        template<typename Backend, boost::multiprecision::expression_template_option ExpressionTemplates>
+                        template<typename Backend,
+                                 boost::multiprecision::expression_template_option ExpressionTemplates>
                         constexpr element_fp
-                        pow(const boost::multiprecision::number<Backend, ExpressionTemplates> &pwr) const {
+                            pow(const boost::multiprecision::number<Backend, ExpressionTemplates> &pwr) const {
                             return element_fp(boost::multiprecision::powm(data, pwr));
                         }
                     };
@@ -274,7 +278,8 @@ namespace nil {
                     constexpr typename element_fp<FieldParams>::integral_type const element_fp<FieldParams>::modulus;
 
                     template<typename FieldParams>
-                    constexpr typename element_fp<FieldParams>::modular_params_type const element_fp<FieldParams>::modulus_params;
+                    constexpr typename element_fp<FieldParams>::modular_params_type const
+                        element_fp<FieldParams>::modulus_params;
 
                     namespace element_fp_details {
                         // These constexpr static variables can not be members of element_fp, because
@@ -284,7 +289,7 @@ namespace nil {
 
                         template<typename FieldParams>
                         constexpr static element_fp<FieldParams> one_instance = 1u;
-                    }
+                    }    // namespace element_fp_details
 
                     template<typename FieldParams>
                     constexpr const element_fp<FieldParams> &element_fp<FieldParams>::zero() {
@@ -303,9 +308,9 @@ namespace nil {
                     }
 
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 template<typename FieldParams>

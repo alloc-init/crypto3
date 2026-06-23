@@ -67,8 +67,7 @@ test_instances_t<GroupType> generate_group_elements(std::size_t count, std::size
 
     for (size_t i = 0; i < count; i++) {
 
-        typename GroupType::value_type x =
-            random_element<GroupType>();    // djb requires input to be in special form
+        typename GroupType::value_type x = random_element<GroupType>();    // djb requires input to be in special form
 
         for (size_t j = 0; j < size; j++) {
             result[i].push_back(x);
@@ -99,9 +98,11 @@ long long get_nsec_time() {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(timepoint.time_since_epoch()).count();
 }
 
+// clang-format off
 template<typename GroupType, typename FieldType, typename MultiexpMethod>
-run_result_t<GroupType>
-    profile_multiexp(test_instances_t<GroupType> group_elements, test_instances_t<FieldType> scalars) {
+run_result_t<GroupType> profile_multiexp(test_instances_t<GroupType> group_elements,
+                                         test_instances_t<FieldType> scalars) {
+//clang-format on
     long long start_time = get_nsec_time();
 
     std::vector<typename GroupType::value_type> answers;

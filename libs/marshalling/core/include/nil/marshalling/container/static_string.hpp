@@ -510,8 +510,8 @@ namespace nil {
                         }
 
                         pos = std::min(pos, size() - 1);
-                        auto iter
-                            = std::find_if(cbegin() + pos, cend(), [ch](TChar nextCh) -> bool { return ch != nextCh; });
+                        auto iter =
+                            std::find_if(cbegin() + pos, cend(), [ch](TChar nextCh) -> bool { return ch != nextCh; });
 
                         if (iter == cend()) {
                             return npos;

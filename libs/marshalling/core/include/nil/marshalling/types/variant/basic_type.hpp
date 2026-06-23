@@ -129,8 +129,7 @@ namespace nil {
                         }
 
                         std::size_t len = std::numeric_limits<std::size_t>::max();
-                        processing::tuple_for_selected_type<members_type>(
-                            memIdx_, length_calc_helper(len, &storage_));
+                        processing::tuple_for_selected_type<members_type>(memIdx_, length_calc_helper(len, &storage_));
                         return len;
                     }
 
@@ -139,8 +138,8 @@ namespace nil {
                     }
 
                     static constexpr std::size_t max_length() {
-                        return processing::tuple_type_accumulate<members_type>(
-                            std::size_t(0), max_length_calc_helper());
+                        return processing::tuple_type_accumulate<members_type>(std::size_t(0),
+                                                                               max_length_calc_helper());
                     }
 
                     bool valid() const {
@@ -149,8 +148,7 @@ namespace nil {
                         }
 
                         bool val = false;
-                        processing::tuple_for_selected_type<members_type>(
-                            memIdx_, valid_check_helper(val, &storage_));
+                        processing::tuple_for_selected_type<members_type>(memIdx_, valid_check_helper(val, &storage_));
                         return val;
                     }
 
@@ -160,8 +158,7 @@ namespace nil {
                         }
 
                         bool val = false;
-                        processing::tuple_for_selected_type<members_type>(
-                            memIdx_, refresh_helper(val, &storage_));
+                        processing::tuple_for_selected_type<members_type>(memIdx_, refresh_helper(val, &storage_));
                         return val;
                     }
 
@@ -169,10 +166,8 @@ namespace nil {
                     status_type read(TIter &iter, std::size_t len) {
                         check_destruct();
                         status_type es = status_type::error_status_amount;
-                        processing::tuple_for_each_type<members_type>(
-                            make_read_helper(es, iter, len, &storage_));
-                        MARSHALLING_ASSERT((es == status_type::success)
-                                           || (members_count <= memIdx_));
+                        processing::tuple_for_each_type<members_type>(make_read_helper(es, iter, len, &storage_));
+                        MARSHALLING_ASSERT((es == status_type::success) || (members_count <= memIdx_));
                         MARSHALLING_ASSERT((es != status_type::success) || (memIdx_ < members_count));
 
                         return es;
@@ -188,8 +183,8 @@ namespace nil {
                         }
 
                         status_type es = status_type::error_status_amount;
-                        processing::tuple_for_selected_type<members_type>(
-                            memIdx_, make_write_helper(es, iter, len, &storage_));
+                        processing::tuple_for_selected_type<members_type>(memIdx_,
+                                                                          make_write_helper(es, iter, len, &storage_));
                         return es;
                     }
 
@@ -199,8 +194,8 @@ namespace nil {
                             return;
                         }
 
-                        processing::tuple_for_selected_type<members_type>(
-                            memIdx_, make_write_no_status_helper(iter, &storage_));
+                        processing::tuple_for_selected_type<members_type>(memIdx_,
+                                                                          make_write_no_status_helper(iter, &storage_));
                     }
 
                     std::size_t current_field() const {
@@ -217,8 +212,7 @@ namespace nil {
                             return;
                         }
 
-                        processing::tuple_for_selected_type<members_type>(
-                            idx, construct_helper(&storage_));
+                        processing::tuple_for_selected_type<members_type>(idx, construct_helper(&storage_));
                         memIdx_ = idx;
                     }
 
@@ -229,8 +223,8 @@ namespace nil {
                             return;
                         }
 
-                        processing::tuple_for_selected_type<members_type>(
-                            memIdx_, make_exec_helper(std::forward<TFunc>(func)));
+                        processing::tuple_for_selected_type<members_type>(memIdx_,
+                                                                          make_exec_helper(std::forward<TFunc>(func)));
                     }
 
                     template<typename TFunc>
@@ -460,10 +454,8 @@ namespace nil {
                     template<typename TIter>
                     class read_helper {
                     public:
-                        read_helper(std::size_t &idx, status_type &es, TIter &iter, std::size_t len,
-                                    void *storage) :
-                            idx_(idx),
-                            es_(es), iter_(iter), len_(len), storage_(storage) {
+                        read_helper(std::size_t &idx, status_type &es, TIter &iter, std::size_t len, void *storage) :
+                            idx_(idx), es_(es), iter_(iter), len_(len), storage_(storage) {
                             using IterType = typename std::decay<decltype(iter)>::type;
                             using IterCategory = typename std::iterator_traits<IterType>::iterator_category;
                             static_assert(std::is_base_of<std::random_access_iterator_tag, IterCategory>::value,
@@ -491,8 +483,7 @@ namespace nil {
 
                             field->~TField();
 
-                            if ((es_ == status_type::error_status_amount)
-                                || (es == status_type::not_enough_data)) {
+                            if ((es_ == status_type::error_status_amount) || (es == status_type::not_enough_data)) {
                                 es_ = es;
                             }
 
@@ -509,8 +500,7 @@ namespace nil {
                     };
 
                     template<typename TIter>
-                    read_helper<TIter> make_read_helper(status_type &es, TIter &iter, std::size_t len,
-                                                        void *storage) {
+                    read_helper<TIter> make_read_helper(status_type &es, TIter &iter, std::size_t len, void *storage) {
                         memIdx_ = 0;
                         return read_helper<TIter>(memIdx_, es, iter, len, storage);
                     }
@@ -535,8 +525,8 @@ namespace nil {
                     };
 
                     template<typename TIter>
-                    static write_helper<TIter> make_write_helper(status_type &es, TIter &iter,
-                                                                 std::size_t len, const void *storage) {
+                    static write_helper<TIter> make_write_helper(status_type &es, TIter &iter, std::size_t len,
+                                                                 const void *storage) {
                         return write_helper<TIter>(es, iter, len, storage);
                     }
 
@@ -563,8 +553,7 @@ namespace nil {
 
                     void check_destruct() {
                         if (current_field_valid()) {
-                            processing::tuple_for_selected_type<members_type>(
-                                memIdx_, destruct_helper(&storage_));
+                            processing::tuple_for_selected_type<members_type>(memIdx_, destruct_helper(&storage_));
                             memIdx_ = members_count;
                         }
                     }
@@ -577,13 +566,12 @@ namespace nil {
                     std::size_t memIdx_ = members_count;
 
                     static const std::size_t members_count = std::tuple_size<members_type>::value;
-                    static_assert(nil::detail::is_tuple<members_type>::value,
-                                  "value_type must be tuple");
+                    static_assert(nil::detail::is_tuple<members_type>::value, "value_type must be tuple");
                     static_assert(0U < members_count, "value_type must be non-empty tuple");
                 };
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BASIC_VARIANT_HPP

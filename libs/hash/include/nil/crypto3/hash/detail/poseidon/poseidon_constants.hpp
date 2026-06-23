@@ -46,10 +46,9 @@ namespace nil {
 
                     // Choose which constants we want, original or Pasta. We may later add
                     // other sets of constants here.
-                    using constants_data_type = std::conditional_t<
-                        PolicyType::pasta_version,
-                        poseidon_pasta_constants_data<policy_type>,
-                        poseidon_original_constants_data<policy_type>>;
+                    using constants_data_type =
+                        std::conditional_t<PolicyType::pasta_version, poseidon_pasta_constants_data<policy_type>,
+                                           poseidon_original_constants_data<policy_type>>;
 
                     poseidon_constants() {
                         // Transpose the matrix.
@@ -60,8 +59,7 @@ namespace nil {
                         }
                     }
 
-                    inline const element_type &get_round_constant(
-                            std::size_t round, std::size_t i) const {
+                    inline const element_type &get_round_constant(std::size_t round, std::size_t i) const {
                         return constants_data_type::round_constants[round][i];
                     }
 
@@ -72,8 +70,8 @@ namespace nil {
                     mds_matrix_type mds_matrix;
                 };
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_POSEIDON_CONSTANTS_HPP

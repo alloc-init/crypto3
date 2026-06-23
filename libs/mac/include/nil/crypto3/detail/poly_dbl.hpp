@@ -73,7 +73,7 @@ namespace nil {
 
                 copy_out_le(out, LIMBS * 8, W);
             }
-        } // namespace detail
+        }    // namespace detail
 
         /**
          * Polynomial doubling in GF(2^n)
@@ -132,7 +132,7 @@ namespace nil {
                     throw std::invalid_argument("Unsupported size for poly_double_n_le");
             }
         }
-    } // namespace crypto3
-} // namespace nil
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif

@@ -89,7 +89,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_SHORT_WEIERSTRASS_JACOBIAN_WITH_A4_0_ATE_MILLER_LOOP_HPP

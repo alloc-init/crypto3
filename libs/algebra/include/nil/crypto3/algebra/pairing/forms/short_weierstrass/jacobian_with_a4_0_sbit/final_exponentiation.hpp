@@ -58,7 +58,7 @@ namespace nil {
                     /* https://link.springer.com/chapter/10.1007/978-3-642-28496-0_25#preview
                      * */
                     static std::optional<typename gt_type::value_type>
-                    process(const typename gt_type::value_type &elt) {
+                        process(const typename gt_type::value_type &elt) {
 
                         if (elt.is_zero()) {
                             return std::nullopt;
@@ -97,7 +97,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_SHORT_WEIERSTRASS_JACOBIAN_WITH_A4_0_SBIT_FINAL_EXPONENTIATION_HPP

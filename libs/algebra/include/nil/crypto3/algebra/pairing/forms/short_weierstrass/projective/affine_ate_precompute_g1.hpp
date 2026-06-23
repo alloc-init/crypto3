@@ -63,7 +63,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_SHORT_WEIERSTRASS_PROJECTIVE_AFFINE_ATE_PRECOMPUTE_G1_HPP

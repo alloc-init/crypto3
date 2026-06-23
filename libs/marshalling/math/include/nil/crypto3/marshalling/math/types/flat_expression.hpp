@@ -148,7 +148,8 @@ namespace nil {
                 }
 
                 void operator()(const binary_arithmetic_operation_type& op) {
-                    flat_binary_arithmetic_operation<typename binary_arithmetic_operation_type::arithmetic_operator_type>
+                    flat_binary_arithmetic_operation<
+                        typename binary_arithmetic_operation_type::arithmetic_operator_type>
                         flat_op;
                     flat_op.op = op.get_op();
 

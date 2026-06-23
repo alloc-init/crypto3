@@ -90,87 +90,80 @@ BOOST_STATIC_ASSERT(boost::has_nothrow_assign<boost::multiprecision::checked_uin
 //
 // Construct from int:
 //
+BOOST_STATIC_ASSERT(noexcept(boost::multiprecision::cpp_int(std::declval<boost::multiprecision::signed_limb_type>())));
+BOOST_STATIC_ASSERT(noexcept(boost::multiprecision::int128_t(std::declval<boost::multiprecision::signed_limb_type>())));
 BOOST_STATIC_ASSERT(
-    noexcept(boost::multiprecision::cpp_int(std::declval<boost::multiprecision::signed_limb_type>())));
-BOOST_STATIC_ASSERT(
-    noexcept(boost::multiprecision::int128_t(std::declval<boost::multiprecision::signed_limb_type>())));
-BOOST_STATIC_ASSERT(noexcept(
-    boost::multiprecision::checked_int128_t(std::declval<boost::multiprecision::signed_limb_type>())));
+    noexcept(boost::multiprecision::checked_int128_t(std::declval<boost::multiprecision::signed_limb_type>())));
 BOOST_STATIC_ASSERT(
     noexcept(boost::multiprecision::uint128_modular_t(std::declval<boost::multiprecision::signed_limb_type>())));
 BOOST_STATIC_ASSERT(!noexcept(
     boost::multiprecision::checked_uint128_modular_t(std::declval<boost::multiprecision::signed_limb_type>())));
+BOOST_STATIC_ASSERT(noexcept(boost::multiprecision::int512_t(std::declval<boost::multiprecision::signed_limb_type>())));
 BOOST_STATIC_ASSERT(
-    noexcept(boost::multiprecision::int512_t(std::declval<boost::multiprecision::signed_limb_type>())));
-BOOST_STATIC_ASSERT(noexcept(
-    boost::multiprecision::checked_int512_t(std::declval<boost::multiprecision::signed_limb_type>())));
+    noexcept(boost::multiprecision::checked_int512_t(std::declval<boost::multiprecision::signed_limb_type>())));
 BOOST_STATIC_ASSERT(
     noexcept(boost::multiprecision::uint512_t(std::declval<boost::multiprecision::signed_limb_type>())));
-BOOST_STATIC_ASSERT(!noexcept(
-    boost::multiprecision::checked_uint512_t(std::declval<boost::multiprecision::signed_limb_type>())));
+BOOST_STATIC_ASSERT(
+    !noexcept(boost::multiprecision::checked_uint512_t(std::declval<boost::multiprecision::signed_limb_type>())));
 //
 // Construct from unsigned int:
 //
-BOOST_STATIC_ASSERT(
-    noexcept(boost::multiprecision::cpp_int(std::declval<boost::multiprecision::limb_type>())));
-BOOST_STATIC_ASSERT(
-    noexcept(boost::multiprecision::int128_t(std::declval<boost::multiprecision::limb_type>())));
+BOOST_STATIC_ASSERT(noexcept(boost::multiprecision::cpp_int(std::declval<boost::multiprecision::limb_type>())));
+BOOST_STATIC_ASSERT(noexcept(boost::multiprecision::int128_t(std::declval<boost::multiprecision::limb_type>())));
 BOOST_STATIC_ASSERT(
     noexcept(boost::multiprecision::checked_int128_t(std::declval<boost::multiprecision::limb_type>())));
 BOOST_STATIC_ASSERT(
     noexcept(boost::multiprecision::uint128_modular_t(std::declval<boost::multiprecision::limb_type>())));
 BOOST_STATIC_ASSERT(
     noexcept(boost::multiprecision::checked_uint128_modular_t(std::declval<boost::multiprecision::limb_type>())));
-BOOST_STATIC_ASSERT(
-    noexcept(boost::multiprecision::int512_t(std::declval<boost::multiprecision::limb_type>())));
+BOOST_STATIC_ASSERT(noexcept(boost::multiprecision::int512_t(std::declval<boost::multiprecision::limb_type>())));
 BOOST_STATIC_ASSERT(
     noexcept(boost::multiprecision::checked_int512_t(std::declval<boost::multiprecision::limb_type>())));
-BOOST_STATIC_ASSERT(
-    noexcept(boost::multiprecision::uint512_t(std::declval<boost::multiprecision::limb_type>())));
+BOOST_STATIC_ASSERT(noexcept(boost::multiprecision::uint512_t(std::declval<boost::multiprecision::limb_type>())));
 BOOST_STATIC_ASSERT(
     noexcept(boost::multiprecision::checked_uint512_t(std::declval<boost::multiprecision::limb_type>())));
 //
 // Assign from int:
 //
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::cpp_int>() =
-                                 std::declval<boost::multiprecision::signed_limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::int128_t>() =
-                                 std::declval<boost::multiprecision::signed_limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::checked_int128_t>() =
-                                 std::declval<boost::multiprecision::signed_limb_type>()));
+BOOST_STATIC_ASSERT(
+    noexcept(std::declval<boost::multiprecision::cpp_int>() = std::declval<boost::multiprecision::signed_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::int128_t>() = std::declval<boost::multiprecision::signed_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::checked_int128_t>() = std::declval<boost::multiprecision::signed_limb_type>()));
 BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::uint128_modular_t>() =
                                  std::declval<boost::multiprecision::signed_limb_type>()));
 BOOST_STATIC_ASSERT(!noexcept(std::declval<boost::multiprecision::checked_uint128_modular_t>() =
                                   std::declval<boost::multiprecision::signed_limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::int512_t>() =
-                                 std::declval<boost::multiprecision::signed_limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::checked_int512_t>() =
-                                 std::declval<boost::multiprecision::signed_limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::uint512_t>() =
-                                 std::declval<boost::multiprecision::signed_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::int512_t>() = std::declval<boost::multiprecision::signed_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::checked_int512_t>() = std::declval<boost::multiprecision::signed_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::uint512_t>() = std::declval<boost::multiprecision::signed_limb_type>()));
 BOOST_STATIC_ASSERT(!noexcept(std::declval<boost::multiprecision::checked_uint512_t>() =
                                   std::declval<boost::multiprecision::signed_limb_type>()));
 //
 // Assign from unsigned int:
 //
+BOOST_STATIC_ASSERT(
+    noexcept(std::declval<boost::multiprecision::cpp_int>() = std::declval<boost::multiprecision::limb_type>()));
+BOOST_STATIC_ASSERT(
+    noexcept(std::declval<boost::multiprecision::int128_t>() = std::declval<boost::multiprecision::limb_type>()));
 BOOST_STATIC_ASSERT(noexcept(
-    std::declval<boost::multiprecision::cpp_int>() = std::declval<boost::multiprecision::limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(
-    std::declval<boost::multiprecision::int128_t>() = std::declval<boost::multiprecision::limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::checked_int128_t>() =
-                                 std::declval<boost::multiprecision::limb_type>()));
+    std::declval<boost::multiprecision::checked_int128_t>() = std::declval<boost::multiprecision::limb_type>()));
 BOOST_STATIC_ASSERT(noexcept(
     std::declval<boost::multiprecision::uint128_modular_t>() = std::declval<boost::multiprecision::limb_type>()));
 BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::checked_uint128_modular_t>() =
                                  std::declval<boost::multiprecision::limb_type>()));
+BOOST_STATIC_ASSERT(
+    noexcept(std::declval<boost::multiprecision::int512_t>() = std::declval<boost::multiprecision::limb_type>()));
 BOOST_STATIC_ASSERT(noexcept(
-    std::declval<boost::multiprecision::int512_t>() = std::declval<boost::multiprecision::limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::checked_int512_t>() =
-                                 std::declval<boost::multiprecision::limb_type>()));
+    std::declval<boost::multiprecision::checked_int512_t>() = std::declval<boost::multiprecision::limb_type>()));
+BOOST_STATIC_ASSERT(
+    noexcept(std::declval<boost::multiprecision::uint512_t>() = std::declval<boost::multiprecision::limb_type>()));
 BOOST_STATIC_ASSERT(noexcept(
-    std::declval<boost::multiprecision::uint512_t>() = std::declval<boost::multiprecision::limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::checked_uint512_t>() =
-                                 std::declval<boost::multiprecision::limb_type>()));
+    std::declval<boost::multiprecision::checked_uint512_t>() = std::declval<boost::multiprecision::limb_type>()));
 
 #if defined(BOOST_LITTLE_ENDIAN) && !defined(BOOST_MP_TEST_NO_LE)
 //
@@ -179,69 +172,80 @@ BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::checked_uint512
 //
 // Construct from int:
 //
-BOOST_STATIC_ASSERT(noexcept(
-    boost::multiprecision::cpp_int(std::declval<boost::multiprecision::signed_double_limb_type>())));
-BOOST_STATIC_ASSERT(noexcept(
-    boost::multiprecision::int512_t(std::declval<boost::multiprecision::signed_double_limb_type>())));
-BOOST_STATIC_ASSERT(noexcept(boost::multiprecision::checked_int512_t(
-    std::declval<boost::multiprecision::signed_double_limb_type>())));
-BOOST_STATIC_ASSERT(noexcept(
-    boost::multiprecision::uint512_t(std::declval<boost::multiprecision::signed_double_limb_type>())));
-BOOST_STATIC_ASSERT(!noexcept(boost::multiprecision::checked_uint512_t(
-    std::declval<boost::multiprecision::signed_double_limb_type>())));
+BOOST_STATIC_ASSERT(
+    noexcept(boost::multiprecision::cpp_int(std::declval<boost::multiprecision::signed_double_limb_type>())));
+BOOST_STATIC_ASSERT(
+    noexcept(boost::multiprecision::int512_t(std::declval<boost::multiprecision::signed_double_limb_type>())));
+BOOST_STATIC_ASSERT(
+    noexcept(boost::multiprecision::checked_int512_t(std::declval<boost::multiprecision::signed_double_limb_type>())));
+BOOST_STATIC_ASSERT(
+    noexcept(boost::multiprecision::uint512_t(std::declval<boost::multiprecision::signed_double_limb_type>())));
+BOOST_STATIC_ASSERT(!noexcept(
+    boost::multiprecision::checked_uint512_t(std::declval<boost::multiprecision::signed_double_limb_type>())));
 //
 // Construct from unsigned int:
 //
+BOOST_STATIC_ASSERT(noexcept(boost::multiprecision::cpp_int(std::declval<boost::multiprecision::double_limb_type>())));
+BOOST_STATIC_ASSERT(noexcept(boost::multiprecision::int512_t(std::declval<boost::multiprecision::double_limb_type>())));
 BOOST_STATIC_ASSERT(
-    noexcept(boost::multiprecision::cpp_int(std::declval<boost::multiprecision::double_limb_type>())));
-BOOST_STATIC_ASSERT(
-    noexcept(boost::multiprecision::int512_t(std::declval<boost::multiprecision::double_limb_type>())));
-BOOST_STATIC_ASSERT(noexcept(
-    boost::multiprecision::checked_int512_t(std::declval<boost::multiprecision::double_limb_type>())));
+    noexcept(boost::multiprecision::checked_int512_t(std::declval<boost::multiprecision::double_limb_type>())));
 BOOST_STATIC_ASSERT(
     noexcept(boost::multiprecision::uint512_t(std::declval<boost::multiprecision::double_limb_type>())));
-BOOST_STATIC_ASSERT(noexcept(
-    boost::multiprecision::checked_uint512_t(std::declval<boost::multiprecision::double_limb_type>())));
+BOOST_STATIC_ASSERT(
+    noexcept(boost::multiprecision::checked_uint512_t(std::declval<boost::multiprecision::double_limb_type>())));
 //
 // Assign from int:
 //
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::cpp_int>() =
-                                 std::declval<boost::multiprecision::signed_double_limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::int512_t>() =
-                                 std::declval<boost::multiprecision::signed_double_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::cpp_int>() = std::declval<boost::multiprecision::signed_double_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::int512_t>() = std::declval<boost::multiprecision::signed_double_limb_type>()));
 BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::checked_int512_t>() =
                                  std::declval<boost::multiprecision::signed_double_limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::uint512_t>() =
-                                 std::declval<boost::multiprecision::signed_double_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::uint512_t>() = std::declval<boost::multiprecision::signed_double_limb_type>()));
 BOOST_STATIC_ASSERT(!noexcept(std::declval<boost::multiprecision::checked_uint512_t>() =
                                   std::declval<boost::multiprecision::signed_double_limb_type>()));
 //
 // Assign from unsigned int:
 //
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::cpp_int>() =
-                                 std::declval<boost::multiprecision::double_limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::int512_t>() =
-                                 std::declval<boost::multiprecision::double_limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::checked_int512_t>() =
-                                 std::declval<boost::multiprecision::double_limb_type>()));
-BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::uint512_t>() =
-                                 std::declval<boost::multiprecision::double_limb_type>()));
+BOOST_STATIC_ASSERT(
+    noexcept(std::declval<boost::multiprecision::cpp_int>() = std::declval<boost::multiprecision::double_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::int512_t>() = std::declval<boost::multiprecision::double_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::checked_int512_t>() = std::declval<boost::multiprecision::double_limb_type>()));
+BOOST_STATIC_ASSERT(noexcept(
+    std::declval<boost::multiprecision::uint512_t>() = std::declval<boost::multiprecision::double_limb_type>()));
 BOOST_STATIC_ASSERT(noexcept(std::declval<boost::multiprecision::checked_uint512_t>() =
                                  std::declval<boost::multiprecision::double_limb_type>()));
 
 #endif    // little endian
 
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
-    32, 32, boost::multiprecision::signed_magnitude, boost::multiprecision::checked, void>>
+typedef boost::multiprecision::number<
+    boost::multiprecision::
+        cpp_int_modular_backend<32, 32, boost::multiprecision::signed_magnitude, boost::multiprecision::checked, void>>
     checked_int32_t;
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
-    32, 32, boost::multiprecision::unsigned_magnitude, boost::multiprecision::checked, void>>
+typedef boost::multiprecision::number<
+    boost::multiprecision::cpp_int_modular_backend<32,
+                                                   32,
+                                                   boost::multiprecision::unsigned_magnitude,
+                                                   boost::multiprecision::checked,
+                                                   void>>
     checked_uint32_t;
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
-    32, 32, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked, void>>
+typedef boost::multiprecision::number<
+    boost::multiprecision::cpp_int_modular_backend<32,
+                                                   32,
+                                                   boost::multiprecision::signed_magnitude,
+                                                   boost::multiprecision::unchecked,
+                                                   void>>
     unchecked_int32_t;
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
-    32, 32, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>>
+typedef boost::multiprecision::number<
+    boost::multiprecision::cpp_int_modular_backend<32,
+                                                   32,
+                                                   boost::multiprecision::unsigned_magnitude,
+                                                   boost::multiprecision::unchecked,
+                                                   void>>
     unchecked_uint32_t;
 
 //
@@ -276,17 +280,30 @@ BOOST_STATIC_ASSERT(noexcept(std::declval<checked_uint32_t>() = std::declval<boo
 //
 // And finally some things which should *not* be noexcept:
 //
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
-    30, 30, boost::multiprecision::signed_magnitude, boost::multiprecision::checked, void>>
+typedef boost::multiprecision::number<
+    boost::multiprecision::
+        cpp_int_modular_backend<30, 30, boost::multiprecision::signed_magnitude, boost::multiprecision::checked, void>>
     checked_int30_t;
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
-    30, 30, boost::multiprecision::unsigned_magnitude, boost::multiprecision::checked, void>>
+typedef boost::multiprecision::number<
+    boost::multiprecision::cpp_int_modular_backend<30,
+                                                   30,
+                                                   boost::multiprecision::unsigned_magnitude,
+                                                   boost::multiprecision::checked,
+                                                   void>>
     checked_uint30_t;
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
-    30, 30, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked, void>>
+typedef boost::multiprecision::number<
+    boost::multiprecision::cpp_int_modular_backend<30,
+                                                   30,
+                                                   boost::multiprecision::signed_magnitude,
+                                                   boost::multiprecision::unchecked,
+                                                   void>>
     unchecked_int30_t;
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
-    30, 30, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>>
+typedef boost::multiprecision::number<
+    boost::multiprecision::cpp_int_modular_backend<30,
+                                                   30,
+                                                   boost::multiprecision::unsigned_magnitude,
+                                                   boost::multiprecision::unchecked,
+                                                   void>>
     unchecked_uint30_t;
 
 //

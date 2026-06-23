@@ -60,17 +60,17 @@ namespace nil {
                     typedef typename key_type::signature_type result_type;
 
                     template<typename... Args>
-                    static inline void init_accumulator(const key_type &key, Args &... args) {
+                    static inline void init_accumulator(const key_type &key, Args &...args) {
                         key.init_accumulator(args...);
                     }
 
                     template<typename... Args>
-                    inline static void update(const key_type &key, Args &... args) {
+                    inline static void update(const key_type &key, Args &...args) {
                         key.update(args...);
                     }
 
                     template<typename... Args>
-                    static inline result_type process(const key_type &key, Args &... args) {
+                    static inline result_type process(const key_type &key, Args &...args) {
                         return key.sign(args...);
                     }
                 };
@@ -85,17 +85,17 @@ namespace nil {
                     typedef bool result_type;
 
                     template<typename... Args>
-                    static inline void init_accumulator(const key_type &key, Args &... args) {
+                    static inline void init_accumulator(const key_type &key, Args &...args) {
                         key.init_accumulator(args...);
                     }
 
                     template<typename... Args>
-                    inline static void update(const key_type &key, Args &... args) {
+                    inline static void update(const key_type &key, Args &...args) {
                         key.update(args...);
                     }
 
                     template<typename... Args>
-                    static inline result_type process(const key_type &key, Args &... args) {
+                    static inline result_type process(const key_type &key, Args &...args) {
                         return key.verify(args...);
                     }
                 };
@@ -110,17 +110,17 @@ namespace nil {
                     typedef typename op_type::result_type result_type;
 
                     template<typename... Args>
-                    static inline void init_accumulator(Args &... args) {
+                    static inline void init_accumulator(Args &...args) {
                         op_type::init_accumulator(args...);
                     }
 
                     template<typename... Args>
-                    inline static void update(Args &... args) {
+                    inline static void update(Args &...args) {
                         op_type::update(args...);
                     }
 
                     template<typename... Args>
-                    static inline result_type process(Args &... args) {
+                    static inline result_type process(Args &...args) {
                         return op_type::process(args...);
                     }
                 };
@@ -136,15 +136,15 @@ namespace nil {
                     typedef typename key_type::signature_type result_type;
 
                     template<typename... Args>
-                    static inline void init_accumulator(const key_type &key, Args &... args) {
+                    static inline void init_accumulator(const key_type &key, Args &...args) {
                     }
 
                     template<typename... Args>
-                    inline static void update(const key_type &key, Args &... args) {
+                    inline static void update(const key_type &key, Args &...args) {
                     }
 
                     template<typename... Args>
-                    static inline result_type process(const key_type &key, Args &... args) {
+                    static inline result_type process(const key_type &key, Args &...args) {
                         return key.pop_prove();
                     }
                 };
@@ -160,15 +160,15 @@ namespace nil {
                     typedef bool result_type;
 
                     template<typename... Args>
-                    static inline void init_accumulator(const key_type &key, Args &... args) {
+                    static inline void init_accumulator(const key_type &key, Args &...args) {
                     }
 
                     template<typename... Args>
-                    inline static void update(const key_type &key, Args &... args) {
+                    inline static void update(const key_type &key, Args &...args) {
                     }
 
                     template<typename... Args>
-                    static inline result_type process(const key_type &key, Args &... args) {
+                    static inline result_type process(const key_type &key, Args &...args) {
                         return key.pop_verify(args...);
                     }
                 };
@@ -185,21 +185,21 @@ namespace nil {
                     typedef typename policy_type::result_type result_type;
 
                     template<typename... Args>
-                    static inline void init_accumulator(Args &... args) {
+                    static inline void init_accumulator(Args &...args) {
                         policy_type::init_accumulator(args...);
                     }
 
                     template<typename... Args>
-                    inline static void update(Args &... args) {
+                    inline static void update(Args &...args) {
                         policy_type::update(args...);
                     }
 
                     template<typename... Args>
-                    inline static result_type process(Args &... args) {
+                    inline static result_type process(Args &...args) {
                         return policy_type::process(args...);
                     }
                 };
-            } // namespace detail
+            }    // namespace detail
 
             namespace modes {
                 /*!
@@ -223,17 +223,17 @@ namespace nil {
                     typedef detail::isomorphic_verification_policy<scheme_type> verification_policy;
                     typedef detail::isomorphic_operation_policy<aggregate_op<scheme_type>> aggregation_policy;
                     typedef detail::isomorphic_operation_policy<aggregate_verify_op<scheme_type>>
-                            aggregate_verification_policy;
+                        aggregate_verification_policy;
                     typedef detail::isomorphic_operation_policy<aggregate_verify_single_msg_op<scheme_type>>
-                            single_msg_aggregate_verification_policy;
+                        single_msg_aggregate_verification_policy;
                     typedef detail::isomorphic_pop_proving_policy<scheme_type> pop_proving_policy;
                     typedef detail::isomorphic_pop_verification_policy<scheme_type> pop_verification_policy;
                     typedef detail::isomorphic_operation_policy<deal_shares_op<scheme_type>> shares_dealing_policy;
                     typedef detail::isomorphic_operation_policy<verify_share_op<scheme_type>> share_verification_policy;
                     typedef detail::isomorphic_operation_policy<reconstruct_secret_op<scheme_type>>
-                            secret_reconstructing_policy;
+                        secret_reconstructing_policy;
                     typedef detail::isomorphic_operation_policy<reconstruct_public_secret_op<scheme_type>>
-                            public_secret_reconstructing_policy;
+                        public_secret_reconstructing_policy;
                     typedef detail::isomorphic_operation_policy<deal_share_op<scheme_type>> share_dealing_policy;
 
                     template<typename PolicyType>
@@ -241,9 +241,9 @@ namespace nil {
                         typedef detail::isomorphic<PolicyType> type;
                     };
                 };
-            } // namespace modes
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace modes
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_SCHEME_MODES_HPP

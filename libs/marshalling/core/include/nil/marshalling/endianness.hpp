@@ -77,7 +77,7 @@ namespace nil {
             using little_endian = little_octet_big_bit;
 
         }    // namespace endian
-    }            // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 
 #endif    // MARSHALLING_ENDIANNESS_HPP

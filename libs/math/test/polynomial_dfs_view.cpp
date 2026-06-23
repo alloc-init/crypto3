@@ -172,8 +172,8 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_view_addition_less_b) {
     polynomial_dfs_view<typename FieldType::value_type> a = {7, a_v};
 
     std::vector<typename FieldType::value_type> b_v = {
-        0x17_cppui_modular253, 0x1a7f5666b62090e72c4090007620900000002fffffffffffe_cppui_modular253, 0x11_cppui_modular253,
-        0x73eda753299d7d468b44719ca798c9928fb4a3fb9df55bfefffcfffeffffffff_cppui_modular253};
+        0x17_cppui_modular253, 0x1a7f5666b62090e72c4090007620900000002fffffffffffe_cppui_modular253,
+        0x11_cppui_modular253, 0x73eda753299d7d468b44719ca798c9928fb4a3fb9df55bfefffcfffeffffffff_cppui_modular253};
     polynomial_dfs_view<typename FieldType::value_type> b = {2, b_v};
 
     a += b;
@@ -197,8 +197,8 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_view_addition_less_b) {
 
 BOOST_AUTO_TEST_CASE(polynomial_dfs_view_addition_less_a) {
     std::vector<typename FieldType::value_type> a_v = {
-        0x17_cppui_modular253, 0x1a7f5666b62090e72c4090007620900000002fffffffffffe_cppui_modular253, 0x11_cppui_modular253,
-        0x73eda753299d7d468b44719ca798c9928fb4a3fb9df55bfefffcfffeffffffff_cppui_modular253};
+        0x17_cppui_modular253, 0x1a7f5666b62090e72c4090007620900000002fffffffffffe_cppui_modular253,
+        0x11_cppui_modular253, 0x73eda753299d7d468b44719ca798c9928fb4a3fb9df55bfefffcfffeffffffff_cppui_modular253};
     polynomial_dfs_view<typename FieldType::value_type> a = {2, a_v};
 
     std::vector<typename FieldType::value_type> b_v = {
@@ -546,8 +546,8 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_view_multiplication_resize_both) {
     polynomial_dfs_view<typename FieldType::value_type> a = {7, a_v};
 
     std::vector<typename FieldType::value_type> b_v = {
-        0x17_cppui_modular253, 0x1a7f5666b62090e72c4090007620900000002fffffffffffe_cppui_modular253, 0x11_cppui_modular253,
-        0x73eda753299d7d468b44719ca798c9928fb4a3fb9df55bfefffcfffeffffffff_cppui_modular253};
+        0x17_cppui_modular253, 0x1a7f5666b62090e72c4090007620900000002fffffffffffe_cppui_modular253,
+        0x11_cppui_modular253, 0x73eda753299d7d468b44719ca798c9928fb4a3fb9df55bfefffcfffeffffffff_cppui_modular253};
     polynomial_dfs_view<typename FieldType::value_type> b = {2, b_v};
 
     a *= b;
@@ -645,8 +645,9 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_view_modulus) {
 
     a %= b;
 
-    std::vector<typename FieldType::value_type> r_v = {0x5_cppui_modular253, 0x5_cppui_modular253, 0x5_cppui_modular253, 0x5_cppui_modular253,
-                                                       0x5_cppui_modular253, 0x5_cppui_modular253, 0x5_cppui_modular253, 0x5_cppui_modular253};
+    std::vector<typename FieldType::value_type> r_v = {0x5_cppui_modular253, 0x5_cppui_modular253, 0x5_cppui_modular253,
+                                                       0x5_cppui_modular253, 0x5_cppui_modular253, 0x5_cppui_modular253,
+                                                       0x5_cppui_modular253, 0x5_cppui_modular253};
     polynomial_dfs_view<typename FieldType::value_type> r_ans = {0, r_v};    //{5};
 
     BOOST_CHECK_EQUAL(r_ans.size(), a.size());

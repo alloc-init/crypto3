@@ -32,8 +32,6 @@
 #include <nil/crypto3/algebra/fields/field.hpp>
 #include <nil/crypto3/algebra/fields/pallas/base_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -42,18 +40,18 @@ namespace nil {
                  * @brief A struct representing a vesta curve.
                  */
 #ifdef __ZKLLVM__
-                    class vesta_scalar_field {
-                    public:
-                        typedef __zkllvm_field_vesta_scalar value_type;
-                    };
+                class vesta_scalar_field {
+                public:
+                    typedef __zkllvm_field_vesta_scalar value_type;
+                };
 #else
                 using vesta_scalar_field = pallas_base_field;
 
                 using vesta_fr = vesta_scalar_field;
 #endif
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_VESTA_SCALAR_FIELD_HPP

@@ -57,7 +57,6 @@ namespace nil {
                     template<typename CurveParams>
                     class curve_element<CurveParams, forms::short_weierstrass, coordinates::jacobian> {
                     public:
-
                         using params_type = CurveParams;
                         using field_type = typename params_type::field_type;
 
@@ -87,15 +86,17 @@ namespace nil {
                         constexpr curve_element() :
                             curve_element(params_type::zero_fill[0],
                                           params_type::zero_fill[1],
-                                          field_value_type::zero()) {}
+                                          field_value_type::zero()) {
+                        }
 
                         /** @brief
                          *    @return the selected point (X:Y:Z)
                          *
                          */
-                        constexpr curve_element(const field_value_type& X, const field_value_type& Y, const field_value_type& Z = field_value_type::one())
-                            : X(X), Y(Y), Z(Z)
-                        { }
+                        constexpr curve_element(const field_value_type& X, const field_value_type& Y,
+                                                const field_value_type& Z = field_value_type::one()) :
+                            X(X), Y(Y), Z(Z) {
+                        }
 
                         /** @brief Get the point at infinity
                          *
@@ -114,7 +115,7 @@ namespace nil {
 
                         /*************************  Comparison operations  ***********************************/
 
-                        constexpr bool operator==(const curve_element &other) const {
+                        constexpr bool operator==(const curve_element& other) const {
                             if (this->is_zero()) {
                                 return other.is_zero();
                             }
@@ -149,7 +150,7 @@ namespace nil {
                             return true;
                         }
 
-                        constexpr bool operator!=(const curve_element &other) const {
+                        constexpr bool operator!=(const curve_element& other) const {
                             return !(operator==(other));
                         }
                         /** @brief
@@ -233,7 +234,7 @@ namespace nil {
 
                         /*************************  Arithmetic operations  ***********************************/
 
-                        constexpr curve_element& operator=(const curve_element &other) {
+                        constexpr curve_element& operator=(const curve_element& other) {
                             // handle special cases having to do with O
                             this->X = other.X;
                             this->Y = other.Y;
@@ -244,13 +245,13 @@ namespace nil {
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                        constexpr const curve_element&
+                            operator=(const boost::multiprecision::number<Backend, ExpressionTemplates>& value) {
                             *this = one() * value;
                             return *this;
                         }
 
-                        constexpr curve_element operator+(const curve_element &other) const {
+                        constexpr curve_element operator+(const curve_element& other) const {
                             if (this->is_zero()) {
                                 return other;
                             }
@@ -270,7 +271,7 @@ namespace nil {
                             return result;
                         }
 
-                        constexpr curve_element& operator+=(const curve_element &other) {
+                        constexpr curve_element& operator+=(const curve_element& other) {
                             // handle special cases having to do with O
                             if (this->is_zero()) {
                                 *this = other;
@@ -288,11 +289,11 @@ namespace nil {
                             return curve_element(this->X, -(this->Y), this->Z);
                         }
 
-                        constexpr curve_element operator-(const curve_element &other) const {
+                        constexpr curve_element operator-(const curve_element& other) const {
                             return (*this) + (-other);
                         }
 
-                        constexpr curve_element& operator-=(const curve_element &other) {
+                        constexpr curve_element& operator-=(const curve_element& other) {
                             return (*this) += (-other);
                         }
 
@@ -309,7 +310,7 @@ namespace nil {
                          * “Mixed addition” refers to the case Z2 known to be 1.
                          * @return addition of two elements from group G1
                          */
-                        constexpr void mixed_add(const curve_element &other) {
+                        constexpr void mixed_add(const curve_element& other) {
 
                             // handle special cases having to do with O
                             if (this->is_zero()) {
@@ -326,14 +327,15 @@ namespace nil {
                     };
 
                     template<typename CurveParams>
-                    std::ostream& operator<<(std::ostream& os, curve_element<CurveParams, forms::short_weierstrass, coordinates::jacobian> const& e)
-                    {
+                    std::ostream& operator<<(
+                        std::ostream& os,
+                        curve_element<CurveParams, forms::short_weierstrass, coordinates::jacobian> const& e) {
                         os << "{\"X\":" << e.X << ",\"Y\":" << e.Y << ",\"Z\":" << e.Z << "}";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_JACOBIAN_HPP

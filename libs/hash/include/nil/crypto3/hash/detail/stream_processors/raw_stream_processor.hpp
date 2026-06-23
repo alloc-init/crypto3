@@ -59,8 +59,8 @@ namespace nil {
                 // Process elements from a container
                 template<typename ContainerT>
                 inline void operator()(const ContainerT &container) {
-                    for (const auto &value: container) {
-                        update_one(value); // Use the single-value operator for consistency
+                    for (const auto &value : container) {
+                        update_one(value);    // Use the single-value operator for consistency
                     }
                 }
 
@@ -72,7 +72,7 @@ namespace nil {
                 StateAccumulator &acc_;
             };
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_RAW_STREAM_PROCESSOR_HPP

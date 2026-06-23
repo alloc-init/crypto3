@@ -75,7 +75,8 @@ namespace nil {
             ///     @li @ref nil::marshalling::option::default_value_initializer or
             ///     nil::marshalling::option::default_num_value.
             ///     @li @ref nil::marshalling::option::contents_validator
-            ///     @li @ref nil::marshalling::option::valid_num_value_range, @ref nil::marshalling::option::valid_num_value,
+            ///     @li @ref nil::marshalling::option::valid_num_value_range, @ref
+            ///     nil::marshalling::option::valid_num_value,
             ///         @ref nil::marshalling::option::valid_big_unsigned_num_value_range, @ref
             ///         nil::marshalling::option::valid_big_unsigned_num_value_range
             ///     @li @ref nil::marshalling::option::valid_ranges_clear
@@ -91,8 +92,8 @@ namespace nil {
             template<typename TFieldBase, typename TEnum, typename... TOptions>
             class enumeration
                 : private detail::adapt_basic_field_type<detail::basic_enumeration<TFieldBase, TEnum>, TOptions...> {
-                using base_impl_type
-                    = detail::adapt_basic_field_type<detail::basic_enumeration<TFieldBase, TEnum>, TOptions...>;
+                using base_impl_type =
+                    detail::adapt_basic_field_type<detail::basic_enumeration<TFieldBase, TEnum>, TOptions...>;
                 static_assert(std::is_enum<TEnum>::value, "TEnum must be enum type");
 
             public:
@@ -314,6 +315,6 @@ namespace nil {
             }
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_ENUM_VALUE_HPP

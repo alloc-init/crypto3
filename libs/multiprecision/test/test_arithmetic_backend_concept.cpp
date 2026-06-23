@@ -17,8 +17,7 @@ int main() {
     //
 #if !(defined(CI_SUPPRESS_KNOWN_ISSUES) && defined(__MINGW32__) && !defined(_WIN64) && \
       BOOST_WORKAROUND(BOOST_GCC, <= 50300))
-    test<
-        boost::multiprecision::number<boost::multiprecision::concepts::number_backend_float_architype>>();
+    test<boost::multiprecision::number<boost::multiprecision::concepts::number_backend_float_architype>>();
 #endif
     return boost::report_errors();
 }

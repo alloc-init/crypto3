@@ -50,27 +50,24 @@ namespace nil {
             namespace types {
                 template<typename TTypeBase, typename MerkleTree>
                 using merkle_tree = nil::marshalling::types::standard_array_list<
-                    TTypeBase,
-                    typename merkle_node_value<TTypeBase, MerkleTree>::type>;
+                    TTypeBase, typename merkle_node_value<TTypeBase, MerkleTree>::type>;
 
                 template<typename MerkleTree, typename Endianness>
                 merkle_tree<nil::marshalling::field_type<Endianness>, MerkleTree>
-                    fill_merkle_tree(const MerkleTree& tree) {
+                    fill_merkle_tree(const MerkleTree &tree) {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
                     merkle_tree<TTypeBase, MerkleTree> filled_tree;
                     for (const auto &hash_value : tree) {
-                        filled_tree.value().push_back(
-                            fill_merkle_node_value<MerkleTree, Endianness>(hash_value));
+                        filled_tree.value().push_back(fill_merkle_node_value<MerkleTree, Endianness>(hash_value));
                     }
                     return filled_tree;
                 }
 
                 template<typename MerkleTree, typename Endianness>
                 MerkleTree make_merkle_tree(
-                    const merkle_tree<nil::marshalling::field_type<Endianness>, MerkleTree> &filled_merkle_tree)
-                {
+                    const merkle_tree<nil::marshalling::field_type<Endianness>, MerkleTree> &filled_merkle_tree) {
                     typename MerkleTree::container_type hashes;
                     for (std::size_t i = 0; i < filled_merkle_tree.value().size(); ++i) {
                         hashes.push_back(
@@ -79,8 +76,8 @@ namespace nil {
                     return MerkleTree(hashes.begin(), hashes.end());
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MARSHALLING_MERKLE_TREE_HPP

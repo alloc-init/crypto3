@@ -30,8 +30,6 @@
 #include <nil/crypto3/algebra/curves/detail/edwards/basic_policy.hpp>
 #include <nil/crypto3/algebra/curves/detail/scalar_mul.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -55,7 +53,6 @@ namespace nil {
                     template<>
                     class element_edwards_g2<183> {
                     public:
-
                         using group_type = edwards_g2<183, forms::twisted_edwards, coordinates::inverted>;
 
                         using policy_type = edwards_basic_policy<183>;
@@ -75,22 +72,21 @@ namespace nil {
                          */
                         constexpr element_edwards_g2() :
                             element_edwards_g2(policy_type::g2_zero_fill[0], policy_type::g2_zero_fill[1],
-                                               policy_type::g2_zero_fill[2]) {};
+                                               policy_type::g2_zero_fill[2]) { };
 
                         /** @brief
                          *    @return the selected point $(X:Y:Z)$ in the projective coordinates
                          *
                          */
-                        constexpr element_edwards_g2(const underlying_field_value_type& X,
-                                                const underlying_field_value_type& Y,
-                                                const underlying_field_value_type& Z)
-                            : X(X), Y(Y), Z(Z)
-                        { }
+                        constexpr element_edwards_g2(const underlying_field_value_type &X,
+                                                     const underlying_field_value_type &Y,
+                                                     const underlying_field_value_type &Z) : X(X), Y(Y), Z(Z) {
+                        }
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
                         explicit constexpr element_edwards_g2(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                            const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                         }
 
@@ -99,7 +95,7 @@ namespace nil {
                          *
                          */
                         constexpr element_edwards_g2(underlying_field_value_type X, underlying_field_value_type Y) :
-                            element_edwards_g2(X, Y, X * Y) {};
+                            element_edwards_g2(X, Y, X * Y) { };
                         /** @brief Get the point at infinity
                          *
                          */
@@ -133,7 +129,7 @@ namespace nil {
                                 const auto Y2 = this->Y.squared();
                                 const auto Z2 = this->Z.squared();
 
-                                return (policy_type::a * Z2*Y2 + Z2*X2 == X2*Y2 + policy_type::d * Z2*Z2);
+                                return (policy_type::a * Z2 * Y2 + Z2 * X2 == X2 * Y2 + policy_type::d * Z2 * Z2);
                             }
                         }
 
@@ -194,8 +190,8 @@ namespace nil {
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr const element_edwards_g2& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                        constexpr const element_edwards_g2 &
+                            operator=(const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                             return *this;
                         }
@@ -220,7 +216,7 @@ namespace nil {
                             return result;
                         }
 
-                        constexpr element_edwards_g2& operator+=(const element_edwards_g2 &other) {
+                        constexpr element_edwards_g2 &operator+=(const element_edwards_g2 &other) {
                             // handle special cases having to do with O
                             if (this->is_zero()) {
                                 *this = other;
@@ -242,23 +238,24 @@ namespace nil {
                             return (*this) + (-other);
                         }
 
-                        constexpr element_edwards_g2& operator-=(const element_edwards_g2 &other) {
+                        constexpr element_edwards_g2 &operator-=(const element_edwards_g2 &other) {
                             return (*this) += (-other);
                         }
 
                         template<typename Backend,
-                             boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr element_edwards_g2& operator*=(const boost::multiprecision::number<Backend, ExpressionTemplates> &right) {
+                                 boost::multiprecision::expression_template_option ExpressionTemplates>
+                        constexpr element_edwards_g2 &
+                            operator*=(const boost::multiprecision::number<Backend, ExpressionTemplates> &right) {
                             (*this) = (*this) * right;
                             return *this;
                         }
 
                         template<typename FieldValueType>
                         typename std::enable_if<is_field<typename FieldValueType::field_type>::value &&
-                                                !is_extended_field<typename FieldValueType::field_type>::value,
+                                                    !is_extended_field<typename FieldValueType::field_type>::value,
                                                 element_edwards_g2>::type
                             operator*=(const FieldValueType &right) {
-                                return (*this) *= right.data;
+                            return (*this) *= right.data;
                         }
 
                         /** @brief
@@ -277,9 +274,9 @@ namespace nil {
                                 const underlying_field_value_type C = A + U;                  // C = A+U
                                 const underlying_field_value_type D = A - U;                  // D = A-U
                                 const underlying_field_value_type E =
-                                    (this->X + this->Y).squared() - A - B;       // E = (X1+Y1)^2-A-B
+                                    (this->X + this->Y).squared() - A - B;    // E = (X1+Y1)^2-A-B
                                 const underlying_field_value_type dZZ = mul_by_d(this->Z.squared());
-                                X = C * D;    // X3 = C*D
+                                X = C * D;                  // X3 = C*D
                                 Y = E * (C - dZZ - dZZ);    // Y3 = E*(C-2*d*Z1^2)
                                 Z = D * E;                  // Z3 = D*E
                             }
@@ -313,9 +310,9 @@ namespace nil {
                             const underlying_field_value_type H = C - mul_by_a(D);          // H = C-a*D
                             const underlying_field_value_type I =
                                 (this->X + this->Y) * (other.X + other.Y) - C - D;    // I = (X1+Y1)*(X2+Y2)-C-D
-                            X = (E + B) * H;       // X3 = (E+B)*H
-                            Y = (E - B) * I;       // Y3 = (E-B)*I
-                            Z = A * H * I;         // Z3 = A*H*I
+                            X = (E + B) * H;                                          // X3 = (E+B)*H
+                            Y = (E - B) * I;                                          // Y3 = (E-B)*I
+                            Z = A * H * I;                                            // Z3 = A*H*I
                         }
 
                     private:
@@ -331,9 +328,9 @@ namespace nil {
                             const underlying_field_value_type H = C - this->mul_by_a(D);          // H = C-a*D
                             const underlying_field_value_type I =
                                 (this->X + this->Y) * (other.X + other.Y) - C - D;    // I = (X1+Y1)*(X2+Y2)-C-D
-                            X = (E + B) * H;       // X3 = (E+B)*H
-                            Y = (E - B) * I;       // Y3 = (E-B)*I
-                            Z = A * H * I;         // Z3 = A*H*I
+                            X = (E + B) * H;                                          // X3 = (E+B)*H
+                            Y = (E - B) * I;                                          // Y3 = (E-B)*I
+                            Z = A * H * I;                                            // Z3 = A*H*I
                         }
 
                     public:
@@ -449,8 +446,8 @@ namespace nil {
                     constexpr typename element_edwards_g2<183>::g1_field_type_value
                         element_edwards_g2<183>::twist_mul_by_d_c0;
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_EDWARDS_G1_ELEMENT_HPP

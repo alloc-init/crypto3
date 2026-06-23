@@ -41,7 +41,7 @@ namespace nil {
                 class edwards_ate_precompute_g1<183> {
                     using curve_type = curves::edwards<183>;
 
-                    typedef detail::types_policy <curve_type> policy_type;
+                    typedef detail::types_policy<curve_type> policy_type;
 
                     using g2_type = typename curve_type::template g2_type<>;
                     using g2_affine_type = typename curve_type::template g2_type<curves::coordinates::affine>;
@@ -60,7 +60,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_EDWARDS_183_TATE_PRECOMPUTE_G2_HPP

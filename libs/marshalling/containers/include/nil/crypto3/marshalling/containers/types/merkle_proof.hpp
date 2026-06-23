@@ -53,12 +53,13 @@ namespace nil {
             namespace types {
                 template<typename TTypeBase, typename MerkleProof, typename = void>
                 struct merkle_proof_path_element {
-                    using type = nil::marshalling::types::bundle<TTypeBase,
-                        std::tuple<
-                            // std::size_t _position
-                            nil::marshalling::types::integral<TTypeBase, std::uint64_t>,
-                            // value_type _hash
-                            typename merkle_node_value<TTypeBase, MerkleProof>::type>>;
+                    using type =
+                        nil::marshalling::types::bundle<TTypeBase,
+                                                        std::tuple<
+                                                            // std::size_t _position
+                                                            nil::marshalling::types::integral<TTypeBase, std::uint64_t>,
+                                                            // value_type _hash
+                                                            typename merkle_node_value<TTypeBase, MerkleProof>::type>>;
                 };
 
                 template<typename TTypeBase, typename MerkleProof, typename = void>
@@ -85,15 +86,15 @@ namespace nil {
                                                                                  MerkleProof::arity>>::value,
                              bool>::type,
                          typename... TOptions>
-                using merkle_proof = nil::marshalling::types::bundle<
-                    TTypeBase,
-                    std::tuple<
-                        // std::size_t _li
-                        nil::marshalling::types::integral<TTypeBase, std::uint64_t>,
-                        // value_type _root
-                        typename merkle_node_value<TTypeBase, MerkleProof>::type,
-                        // path_type _path
-                        typename merkle_proof_path<TTypeBase, MerkleProof>::type>>;
+                using merkle_proof =
+                    nil::marshalling::types::bundle<TTypeBase,
+                                                    std::tuple<
+                                                        // std::size_t _li
+                                                        nil::marshalling::types::integral<TTypeBase, std::uint64_t>,
+                                                        // value_type _root
+                                                        typename merkle_node_value<TTypeBase, MerkleProof>::type,
+                                                        // path_type _path
+                                                        typename merkle_proof_path<TTypeBase, MerkleProof>::type>>;
 
                 template<typename MerkleProof, typename Endianness>
                 typename merkle_proof_path_element<nil::marshalling::field_type<Endianness>, MerkleProof>::type
@@ -109,8 +110,8 @@ namespace nil {
 
                 template<typename MerkleProof, typename Endianness>
                 typename MerkleProof::path_element_type make_merkle_proof_path_element(
-                    const typename merkle_proof_path_element<nil::marshalling::field_type<Endianness>, MerkleProof>::type &filled_proof_path_element)
-                {
+                    const typename merkle_proof_path_element<nil::marshalling::field_type<Endianness>,
+                                                             MerkleProof>::type &filled_proof_path_element) {
                     typename MerkleProof::path_element_type proof_path_element;
                     proof_path_element._position = std::get<0>(filled_proof_path_element.value()).value();
                     proof_path_element._hash =
@@ -133,9 +134,9 @@ namespace nil {
                 }
 
                 template<typename MerkleProof, typename Endianness>
-                typename MerkleProof::layer_type make_merkle_proof_layer(
-                    const typename merkle_proof_layer<nil::marshalling::field_type<Endianness>, MerkleProof>::type &filled_proof_layer)
-                {
+                typename MerkleProof::layer_type
+                    make_merkle_proof_layer(const typename merkle_proof_layer<nil::marshalling::field_type<Endianness>,
+                                                                              MerkleProof>::type &filled_proof_layer) {
                     typename MerkleProof::layer_type proof_layer;
                     for (std::size_t i = 0; i < filled_proof_layer.value().size(); ++i) {
                         proof_layer.at(i) =
@@ -158,9 +159,9 @@ namespace nil {
                 }
 
                 template<typename MerkleProof, typename Endianness>
-                typename MerkleProof::path_type make_merkle_proof_path(
-                    const typename merkle_proof_path<nil::marshalling::field_type<Endianness>, MerkleProof>::type &filled_proof_path)
-                {
+                typename MerkleProof::path_type
+                    make_merkle_proof_path(const typename merkle_proof_path<nil::marshalling::field_type<Endianness>,
+                                                                            MerkleProof>::type &filled_proof_path) {
                     typename MerkleProof::path_type proof_path;
                     proof_path.reserve(filled_proof_path.value().size());
                     for (std::size_t i = 0; i < filled_proof_path.value().size(); ++i) {
@@ -189,17 +190,17 @@ namespace nil {
 
                 template<typename MerkleProof, typename Endianness>
                 MerkleProof make_merkle_proof(
-                    const merkle_proof<nil::marshalling::field_type<Endianness>, MerkleProof> &filled_merkle_proof)
-                {
-                    MerkleProof mp(
-                        std::get<0>(filled_merkle_proof.value()).value(), // mp._li
-                        make_merkle_node_value<MerkleProof, Endianness>(std::get<1>(filled_merkle_proof.value())), // mp._root
-                        make_merkle_proof_path<MerkleProof, Endianness>(std::get<2>(filled_merkle_proof.value())) // mp._path
+                    const merkle_proof<nil::marshalling::field_type<Endianness>, MerkleProof> &filled_merkle_proof) {
+                    MerkleProof mp(std::get<0>(filled_merkle_proof.value()).value(),    // mp._li
+                                   make_merkle_node_value<MerkleProof, Endianness>(
+                                       std::get<1>(filled_merkle_proof.value())),    // mp._root
+                                   make_merkle_proof_path<MerkleProof, Endianness>(
+                                       std::get<2>(filled_merkle_proof.value()))    // mp._path
                     );
                     return mp;
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_MERKLE_PROOF_HPP

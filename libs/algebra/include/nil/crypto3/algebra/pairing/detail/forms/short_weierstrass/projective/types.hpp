@@ -76,7 +76,7 @@ namespace nil {
                             g2_field_value_type PX_twist;
                             g2_field_value_type PY_twist;
 
-                            bool operator==(const ate_g1_precomputed_type &other) const {
+                            bool operator==(const ate_g1_precomputed_type& other) const {
                                 return (this->PX == other.PX && this->PY == other.PY &&
                                         this->PX_twist == other.PX_twist && this->PY_twist == other.PY_twist);
                             }
@@ -91,7 +91,7 @@ namespace nil {
                             g2_field_value_type c_J;
                             g2_field_value_type c_L;
 
-                            bool operator==(const ate_dbl_coeffs &other) const {
+                            bool operator==(const ate_dbl_coeffs& other) const {
                                 return (this->c_H == other.c_H && this->c_4C == other.c_4C && this->c_J == other.c_J &&
                                         this->c_L == other.c_L);
                             }
@@ -102,7 +102,7 @@ namespace nil {
                             g2_field_value_type c_L1;
                             g2_field_value_type c_RZ;
 
-                            bool operator==(const ate_add_coeffs &other) const {
+                            bool operator==(const ate_add_coeffs& other) const {
                                 return (this->c_L1 == other.c_L1 && this->c_RZ == other.c_RZ);
                             }
                         };
@@ -119,7 +119,7 @@ namespace nil {
                             std::vector<dbl_coeffs_type> dbl_coeffs;
                             std::vector<add_coeffs_type> add_coeffs;
 
-                            bool operator==(const ate_g2_precomputed_type &other) const {
+                            bool operator==(const ate_g2_precomputed_type& other) const {
                                 return (this->QX == other.QX && this->QY == other.QY && this->QY2 == other.QY2 &&
                                         this->QX_over_twist == other.QX_over_twist &&
                                         this->QY_over_twist == other.QY_over_twist &&
@@ -129,47 +129,46 @@ namespace nil {
 
                         typedef ate_g2_precomputed_type g2_precomputed_type;
 
-                        friend std::ostream& operator<<(std::ostream& os, ate_g1_precomputed_type const& p)
-                        {
+                        friend std::ostream& operator<<(std::ostream& os, ate_g1_precomputed_type const& p) {
                             os << "{" << std::endl
-                                << "\"PX\":" << p.PX << "," << std::endl
-                                << "\"PY\":" << p.PY << "," << std::endl
-                                << "\"PX_twist\":" << p.PX_twist << "," << std::endl
-                                << "\"PY_twist\":" << p.PY_twist << "}";
+                               << "\"PX\":" << p.PX << "," << std::endl
+                               << "\"PY\":" << p.PY << "," << std::endl
+                               << "\"PX_twist\":" << p.PX_twist << "," << std::endl
+                               << "\"PY_twist\":" << p.PY_twist << "}";
                             return os;
                         }
 
-                        friend std::ostream& operator<<(std::ostream& os, ate_g2_precomputed_type const& p)
-                        {
+                        friend std::ostream& operator<<(std::ostream& os, ate_g2_precomputed_type const& p) {
                             os << "{" << std::endl
-                                << "\"QX\":" << p.QX << "," << std::endl
-                                << "\"QY\":" << p.QY << "," << std::endl
-                                << "\"QY2\":" << p.QY2 << "," << std::endl
-                                << "\"QX_over_twist\":" << p.QX_over_twist << "," << std::endl
-                                << "\"QY_over_twist\":" << p.QY_over_twist << "," << std::endl
-                                << "\"dbl_coeffs\":[" << std::endl;
-                            for(auto d = p.dbl_coeffs.begin(); d != p.dbl_coeffs.end(); ++d) {
+                               << "\"QX\":" << p.QX << "," << std::endl
+                               << "\"QY\":" << p.QY << "," << std::endl
+                               << "\"QY2\":" << p.QY2 << "," << std::endl
+                               << "\"QX_over_twist\":" << p.QX_over_twist << "," << std::endl
+                               << "\"QY_over_twist\":" << p.QY_over_twist << "," << std::endl
+                               << "\"dbl_coeffs\":[" << std::endl;
+                            for (auto d = p.dbl_coeffs.begin(); d != p.dbl_coeffs.end(); ++d) {
                                 os << "[" << d->c_H << "," << d->c_4C << "," << d->c_J << "," << d->c_L << "]";
                                 if (d != p.dbl_coeffs.end()) {
                                     os << "," << std::endl;
                                 }
                             }
                             os << "]," << std::endl << "\"add_coeffs\":[" << std::endl;
-                            for(auto a = p.add_coeffs.begin(); a != p.add_coeffs.end(); ++a) {
+                            for (auto a = p.add_coeffs.begin(); a != p.add_coeffs.end(); ++a) {
                                 os << "[" << a->c_L1 << "," << a->c_RZ << "]";
                                 if (a != p.add_coeffs.end()) {
-                                    os << "," << std::endl;;
+                                    os << "," << std::endl;
+                                    ;
                                 }
                             }
                             os << "]" << std::endl;
                             os << "}";
                             return os;
                         }
-                     };
+                    };
                 }    // namespace detail
-            }        // namespace pairing
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace pairing
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_PAIRING_SHORT_WEIERSTRASS_PROJECTIVE_TYPES_POLICY_HPP

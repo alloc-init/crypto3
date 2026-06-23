@@ -63,11 +63,10 @@ namespace nil {
                          bool T5 = false,
                          bool T6 = false>
                 struct fields_options_compatibility_calc {
-                    static const std::size_t value = static_cast<std::size_t>(T1) + static_cast<std::size_t>(T2)
-                                                     + static_cast<std::size_t>(T3) + static_cast<std::size_t>(T4)
-                                                     + static_cast<std::size_t>(T5) + static_cast<std::size_t>(T6);
+                    static const std::size_t value = static_cast<std::size_t>(T1) + static_cast<std::size_t>(T2) +
+                                                     static_cast<std::size_t>(T3) + static_cast<std::size_t>(T4) +
+                                                     static_cast<std::size_t>(T5) + static_cast<std::size_t>(T6);
                 };
-
 
                 template<bool THasInvalidByDefault>
                 struct adapt_field_invalid_by_default;
@@ -94,9 +93,7 @@ namespace nil {
                 template<>
                 struct adapt_field_custom_value_reader<true> {
                     template<typename TField, typename TOpts>
-                    using type
-                        = types::adapter::custom_value_reader<typename TOpts::custom_value_reader,
-                                                                                TField>;
+                    using type = types::adapter::custom_value_reader<typename TOpts::custom_value_reader, TField>;
                 };
 
                 template<>
@@ -135,8 +132,8 @@ namespace nil {
                 template<>
                 struct adapt_field_fixed_length<true> {
                     template<typename TField, typename TOpts>
-                    using type = types::adapter::
-                        fixed_length<TOpts::fixed_length, TOpts::fixed_length_sign_extend, TField>;
+                    using type =
+                        types::adapter::fixed_length<TOpts::fixed_length, TOpts::fixed_length_sign_extend, TField>;
                 };
 
                 template<>
@@ -175,8 +172,7 @@ namespace nil {
                 template<>
                 struct adapt_field_var_length<true> {
                     template<typename TField, typename TOpts>
-                    using type = types::adapter::
-                        var_length<TOpts::min_var_length, TOpts::max_var_length, TField>;
+                    using type = types::adapter::var_length<TOpts::min_var_length, TOpts::max_var_length, TField>;
                 };
 
                 template<>
@@ -252,8 +248,7 @@ namespace nil {
                 template<>
                 struct adapt_field_sequence_fixed_size<true> {
                     template<typename TField, typename TOpts>
-                    using type
-                        = types::adapter::sequence_fixed_size<TOpts::sequence_fixed_size, TField>;
+                    using type = types::adapter::sequence_fixed_size<TOpts::sequence_fixed_size, TField>;
                 };
 
                 template<>
@@ -273,8 +268,8 @@ namespace nil {
                 template<>
                 struct adapt_field_sequence_size_field_prefix<true> {
                     template<typename TField, typename TOpts>
-                    using type = types::adapter::
-                        sequence_size_field_prefix<typename TOpts::sequence_size_field_prefix, TField>;
+                    using type =
+                        types::adapter::sequence_size_field_prefix<typename TOpts::sequence_size_field_prefix, TField>;
                 };
 
                 template<>
@@ -287,7 +282,7 @@ namespace nil {
                 using adapt_field_sequence_size_field_prefix_type = typename adapt_field_sequence_size_field_prefix<
                     TOpts::has_sequence_size_field_prefix>::template type<TField, TOpts>;
 
-     //--
+                //--
                 template<bool THasSequenceSerLengthFieldPrefix>
                 struct adapt_field_sequence_ser_length_field_prefix;
 
@@ -369,8 +364,9 @@ namespace nil {
                 template<>
                 struct adapt_field_sequence_trailing_field_suffix<true> {
                     template<typename TField, typename TOpts>
-                    using type = types::adapter::
-                        sequence_trailing_field_suffix<typename TOpts::sequence_trailing_field_suffix, TField>;
+                    using type =
+                        types::adapter::sequence_trailing_field_suffix<typename TOpts::sequence_trailing_field_suffix,
+                                                                       TField>;
                 };
 
                 template<>
@@ -411,8 +407,8 @@ namespace nil {
                 template<>
                 struct adapt_field_default_value_initializer<true> {
                     template<typename TField, typename TOpts>
-                    using type = types::adapter::
-                        default_value_initializer<typename TOpts::default_value_initializer, TField>;
+                    using type =
+                        types::adapter::default_value_initializer<typename TOpts::default_value_initializer, TField>;
                 };
 
                 template<>
@@ -431,8 +427,9 @@ namespace nil {
                 template<>
                 struct adapt_field_num_value_multi_range_validator<true> {
                     template<typename TField, typename TOpts>
-                    using type = types::adapter::
-                        num_value_multi_range_validator<typename TOpts::multi_range_validation_ranges, TField>;
+                    using type =
+                        types::adapter::num_value_multi_range_validator<typename TOpts::multi_range_validation_ranges,
+                                                                        TField>;
                 };
 
                 template<>
@@ -452,8 +449,7 @@ namespace nil {
                 template<>
                 struct adapt_field_custom_validator<true> {
                     template<typename TField, typename TOpts>
-                    using type
-                        = types::adapter::custom_validator<typename TOpts::custom_validator, TField>;
+                    using type = types::adapter::custom_validator<typename TOpts::custom_validator, TField>;
                 };
 
                 template<>
@@ -472,8 +468,7 @@ namespace nil {
                 template<>
                 struct adapt_field_custom_refresher<true> {
                     template<typename TField, typename TOpts>
-                    using type
-                        = types::adapter::custom_refresher<typename TOpts::custom_refresher, TField>;
+                    using type = types::adapter::custom_refresher<typename TOpts::custom_refresher, TField>;
                 };
 
                 template<>
@@ -492,8 +487,7 @@ namespace nil {
                 template<>
                 struct adapt_field_fail_on_invalid<true> {
                     template<typename TField, typename TOpts>
-                    using type
-                        = types::adapter::fail_on_invalid<TOpts::fail_on_invalid_status, TField>;
+                    using type = types::adapter::fail_on_invalid<TOpts::fail_on_invalid_status, TField>;
                 };
 
                 template<>
@@ -543,144 +537,143 @@ namespace nil {
                 template<typename TField, typename TOpts>
                 using adapt_field_empty_serialization_type =
                     typename adapt_field_empty_serialization<TOpts::has_empty_serialization>::template type<TField>;
-                
+
                 template<typename TBasic, typename... TOptions>
                 class adapt_basic_field {
                     using parsed_options_type = options_parser<TOptions...>;
 
-                    static const bool custom_reader_incompatible
-                        = parsed_options_type::has_ser_offset || parsed_options_type::has_fixed_length_limit
-                          || parsed_options_type::has_fixed_bit_length_limit
-                          || parsed_options_type::has_var_length_limits
-                          || parsed_options_type::has_sequence_elem_length_forcing
-                          || parsed_options_type::has_sequence_size_forcing
-                          || parsed_options_type::has_sequence_length_forcing
-                          || parsed_options_type::has_sequence_fixed_size
-                          || parsed_options_type::has_sequence_size_field_prefix
-                          || parsed_options_type::has_sequence_ser_length_field_prefix
-                          || parsed_options_type::has_sequence_elem_ser_length_field_prefix
-                          || parsed_options_type::has_sequence_elem_fixed_ser_length_field_prefix
-                          || parsed_options_type::has_sequence_trailing_field_suffix
-                          || parsed_options_type::has_sequence_termination_field_suffix
-                                 | parsed_options_type::has_empty_serialization;
+                    static const bool custom_reader_incompatible =
+                        parsed_options_type::has_ser_offset || parsed_options_type::has_fixed_length_limit ||
+                        parsed_options_type::has_fixed_bit_length_limit || parsed_options_type::has_var_length_limits ||
+                        parsed_options_type::has_sequence_elem_length_forcing ||
+                        parsed_options_type::has_sequence_size_forcing ||
+                        parsed_options_type::has_sequence_length_forcing ||
+                        parsed_options_type::has_sequence_fixed_size ||
+                        parsed_options_type::has_sequence_size_field_prefix ||
+                        parsed_options_type::has_sequence_ser_length_field_prefix ||
+                        parsed_options_type::has_sequence_elem_ser_length_field_prefix ||
+                        parsed_options_type::has_sequence_elem_fixed_ser_length_field_prefix ||
+                        parsed_options_type::has_sequence_trailing_field_suffix ||
+                        parsed_options_type::has_sequence_termination_field_suffix |
+                            parsed_options_type::has_empty_serialization;
 
-                    static_assert((!parsed_options_type::has_custom_value_reader) || (!custom_reader_incompatible),
-                                  "custom_value_reader option is incompatible with following options: "
-                                  "num_value_ser_offset, fixed_length, fixed_bit_length, var_length, "
-                                  "has_sequence_elem_length_forcing, "
-                                  "sequence_size_forcing_enabled, sequence_length_forcing_enabled, sequence_fixed_size, "
-                                  "sequence_size_field_prefix, "
-                                  "sequence_ser_length_field_prefix, sequence_elem_ser_length_field_prefix, "
-                                  "sequence_elem_fixed_ser_length_field_prefix, sequence_trailing_field_suffix, "
-                                  "sequence_termination_field_suffix, empty_serialization");
+                    static_assert(
+                        (!parsed_options_type::has_custom_value_reader) || (!custom_reader_incompatible),
+                        "custom_value_reader option is incompatible with following options: "
+                        "num_value_ser_offset, fixed_length, fixed_bit_length, var_length, "
+                        "has_sequence_elem_length_forcing, "
+                        "sequence_size_forcing_enabled, sequence_length_forcing_enabled, sequence_fixed_size, "
+                        "sequence_size_field_prefix, "
+                        "sequence_ser_length_field_prefix, sequence_elem_ser_length_field_prefix, "
+                        "sequence_elem_fixed_ser_length_field_prefix, sequence_trailing_field_suffix, "
+                        "sequence_termination_field_suffix, empty_serialization");
 
-                    static const bool var_length_incompatible = parsed_options_type::has_fixed_length_limit
-                                                                || parsed_options_type::has_fixed_bit_length_limit;
+                    static const bool var_length_incompatible =
+                        parsed_options_type::has_fixed_length_limit || parsed_options_type::has_fixed_bit_length_limit;
 
                     static_assert((!parsed_options_type::has_var_length_limits) || (!var_length_incompatible),
                                   "var_length option is incompatible with fixed_length and fixed_bit_length");
 
-                    static_assert(1U >= fields_options_compatibility_calc<
-                                      parsed_options_type::has_sequence_size_field_prefix,
-                                      parsed_options_type::has_sequence_ser_length_field_prefix,
-                                      parsed_options_type::has_sequence_fixed_size,
-                                      parsed_options_type::has_sequence_size_forcing,
-                                      parsed_options_type::has_sequence_length_forcing,
-                                      parsed_options_type::has_sequence_termination_field_suffix>::value,
-                                  "The following options are incompatible, cannot be used together: "
-                                  "sequence_size_field_prefix, sequence_ser_length_field_prefix, "
-                                  "sequence_fixed_size, sequence_size_forcing_enabled, sequence_length_forcing_enabled, "
-                                  "sequence_termination_field_suffix");
+                    static_assert(
+                        1U >= fields_options_compatibility_calc<
+                                  parsed_options_type::has_sequence_size_field_prefix,
+                                  parsed_options_type::has_sequence_ser_length_field_prefix,
+                                  parsed_options_type::has_sequence_fixed_size,
+                                  parsed_options_type::has_sequence_size_forcing,
+                                  parsed_options_type::has_sequence_length_forcing,
+                                  parsed_options_type::has_sequence_termination_field_suffix>::value,
+                        "The following options are incompatible, cannot be used together: "
+                        "sequence_size_field_prefix, sequence_ser_length_field_prefix, "
+                        "sequence_fixed_size, sequence_size_forcing_enabled, sequence_length_forcing_enabled, "
+                        "sequence_termination_field_suffix");
 
                     static_assert(1U >= fields_options_compatibility_calc<
-                                      parsed_options_type::has_sequence_elem_ser_length_field_prefix,
-                                      parsed_options_type::has_sequence_elem_fixed_ser_length_field_prefix,
-                                      parsed_options_type::has_sequence_termination_field_suffix>::value,
+                                            parsed_options_type::has_sequence_elem_ser_length_field_prefix,
+                                            parsed_options_type::has_sequence_elem_fixed_ser_length_field_prefix,
+                                            parsed_options_type::has_sequence_termination_field_suffix>::value,
                                   "The following options are incompatible, cannot be used together: "
                                   "sequence_elem_ser_length_field_prefix, sequence_elem_fixed_ser_length_field_prefix "
                                   "sequence_termination_field_suffix");
 
-                    static_assert((!parsed_options_type::has_sequence_trailing_field_suffix)
-                                      || (!parsed_options_type::has_sequence_termination_field_suffix),
+                    static_assert((!parsed_options_type::has_sequence_trailing_field_suffix) ||
+                                      (!parsed_options_type::has_sequence_termination_field_suffix),
                                   "The following options are incompatible, cannot be used together: "
                                   "sequence_trailing_field_suffix, sequence_termination_field_suffix");
 
-                    static_assert((!parsed_options_type::has_fail_on_invalid)
-                                      || (!parsed_options_type::has_ignore_invalid),
+                    static_assert((!parsed_options_type::has_fail_on_invalid) ||
+                                      (!parsed_options_type::has_ignore_invalid),
                                   "The following options are incompatible, cannot be used together: "
                                   "fail_on_invalid, ignore_invalid");
 
-                    static_assert(
-                        1U >= fields_options_compatibility_calc<parsed_options_type::has_custom_value_reader,
-                                                                parsed_options_type::has_fixed_size_storage,
-                                                                parsed_options_type::has_orig_data_view>::value,
-                        "The following options are incompatible, cannot be used together: "
-                        "custom_storage_type, fixed_size_storage, orig_data_view");
+                    static_assert(1U >=
+                                      fields_options_compatibility_calc<parsed_options_type::has_custom_value_reader,
+                                                                        parsed_options_type::has_fixed_size_storage,
+                                                                        parsed_options_type::has_orig_data_view>::value,
+                                  "The following options are incompatible, cannot be used together: "
+                                  "custom_storage_type, fixed_size_storage, orig_data_view");
 
                     static_assert(
-                        (!parsed_options_type::has_sequence_fixed_size_use_fixed_size_storage)
-                            || (parsed_options_type::has_sequence_fixed_size),
+                        (!parsed_options_type::has_sequence_fixed_size_use_fixed_size_storage) ||
+                            (parsed_options_type::has_sequence_fixed_size),
                         "The option SequenceFixedSizeUseFixedSizeStorage cannot be used without sequence_fixed_size.");
 
-                    static_assert((!parsed_options_type::has_sequence_fixed_size_use_fixed_size_storage)
-                                      || (!parsed_options_type::has_fixed_size_storage),
+                    static_assert((!parsed_options_type::has_sequence_fixed_size_use_fixed_size_storage) ||
+                                      (!parsed_options_type::has_fixed_size_storage),
                                   "The following options are incompatible, cannot be used together: "
                                   "SequenceFixedSizeUseFixedSizeStorage, fixed_size_storage");
 
                     using invalid_by_default_adapted = adapt_field_invalid_by_default_type<TBasic, parsed_options_type>;
-                    using custom_reader_adapted
-                        = adapt_field_custom_value_reader_type<invalid_by_default_adapted, parsed_options_type>;
+                    using custom_reader_adapted =
+                        adapt_field_custom_value_reader_type<invalid_by_default_adapted, parsed_options_type>;
                     using ser_offset_adapted = adapt_field_ser_offset_type<custom_reader_adapted, parsed_options_type>;
-                    using fixed_length_adapted
-                        = adapt_field_fixed_length_type<ser_offset_adapted, parsed_options_type>;
-                    using fixed_bit_length_adapted
-                        = adapt_field_fixed_bit_length_type<fixed_length_adapted, parsed_options_type>;
-                    using var_length_adapted
-                        = adapt_field_var_length_type<fixed_bit_length_adapted, parsed_options_type>;
-                    using sequence_elem_length_forcing_adapted
-                        = adapt_field_sequence_elem_length_forcing_type<var_length_adapted, parsed_options_type>;
-                    using sequence_elem_ser_length_field_prefix_adapted
-                        = adapt_field_sequence_elem_ser_length_field_prefix_type<sequence_elem_length_forcing_adapted,
-                                                                                 parsed_options_type>;
-                    using sequence_elem_fixed_ser_length_field_prefix_adapted
-                        = adapt_field_sequence_elem_fixed_ser_length_field_prefix_type<
+                    using fixed_length_adapted = adapt_field_fixed_length_type<ser_offset_adapted, parsed_options_type>;
+                    using fixed_bit_length_adapted =
+                        adapt_field_fixed_bit_length_type<fixed_length_adapted, parsed_options_type>;
+                    using var_length_adapted =
+                        adapt_field_var_length_type<fixed_bit_length_adapted, parsed_options_type>;
+                    using sequence_elem_length_forcing_adapted =
+                        adapt_field_sequence_elem_length_forcing_type<var_length_adapted, parsed_options_type>;
+                    using sequence_elem_ser_length_field_prefix_adapted =
+                        adapt_field_sequence_elem_ser_length_field_prefix_type<sequence_elem_length_forcing_adapted,
+                                                                               parsed_options_type>;
+                    using sequence_elem_fixed_ser_length_field_prefix_adapted =
+                        adapt_field_sequence_elem_fixed_ser_length_field_prefix_type<
                             sequence_elem_ser_length_field_prefix_adapted,
                             parsed_options_type>;
-                    using sequence_size_forcing_adapted
-                        = adapt_field_sequence_size_forcing_type<sequence_elem_fixed_ser_length_field_prefix_adapted,
-                                                                 parsed_options_type>;
-                    using sequence_length_forcing_adapted
-                        = adapt_field_sequence_length_forcing_type<sequence_size_forcing_adapted, parsed_options_type>;
-                    using sequence_fixed_size_adapted
-                        = adapt_field_sequence_fixed_size_type<sequence_length_forcing_adapted, parsed_options_type>;
-                    using sequence_size_field_prefix_adapted
-                        = adapt_field_sequence_size_field_prefix_type<sequence_fixed_size_adapted, parsed_options_type>;
-                    using sequence_ser_length_field_prefix_adapted
-                        = adapt_field_sequence_ser_length_field_prefix_type<sequence_size_field_prefix_adapted,
-                                                                            parsed_options_type>;
-                    using sequence_trailing_field_suffix_adapted
-                        = adapt_field_sequence_trailing_field_suffix_type<sequence_ser_length_field_prefix_adapted,
+                    using sequence_size_forcing_adapted =
+                        adapt_field_sequence_size_forcing_type<sequence_elem_fixed_ser_length_field_prefix_adapted,
+                                                               parsed_options_type>;
+                    using sequence_length_forcing_adapted =
+                        adapt_field_sequence_length_forcing_type<sequence_size_forcing_adapted, parsed_options_type>;
+                    using sequence_fixed_size_adapted =
+                        adapt_field_sequence_fixed_size_type<sequence_length_forcing_adapted, parsed_options_type>;
+                    using sequence_size_field_prefix_adapted =
+                        adapt_field_sequence_size_field_prefix_type<sequence_fixed_size_adapted, parsed_options_type>;
+                    using sequence_ser_length_field_prefix_adapted =
+                        adapt_field_sequence_ser_length_field_prefix_type<sequence_size_field_prefix_adapted,
                                                                           parsed_options_type>;
-                    using sequence_termination_field_suffix_adapted
-                        = adapt_field_sequence_termination_field_suffix_type<sequence_trailing_field_suffix_adapted,
-                                                                             parsed_options_type>;
-                    using default_value_initializer_adapted
-                        = adapt_field_default_value_initializer_type<sequence_termination_field_suffix_adapted,
-                                                                     parsed_options_type>;
-                    using num_value_multi_range_validator_adapted
-                        = adapt_field_num_value_multi_range_validator_type<default_value_initializer_adapted,
+                    using sequence_trailing_field_suffix_adapted =
+                        adapt_field_sequence_trailing_field_suffix_type<sequence_ser_length_field_prefix_adapted,
+                                                                        parsed_options_type>;
+                    using sequence_termination_field_suffix_adapted =
+                        adapt_field_sequence_termination_field_suffix_type<sequence_trailing_field_suffix_adapted,
                                                                            parsed_options_type>;
-                    using custom_validator_adapted
-                        = adapt_field_custom_validator_type<num_value_multi_range_validator_adapted,
-                                                            parsed_options_type>;
-                    using custom_refresher_adapted
-                        = adapt_field_custom_refresher_type<custom_validator_adapted, parsed_options_type>;
-                    using fail_on_invalid_adapted
-                        = adapt_field_fail_on_invalid_type<custom_refresher_adapted, parsed_options_type>;
-                    using ignore_invalid_adapted
-                        = adapt_field_ignore_invalid_type<fail_on_invalid_adapted, parsed_options_type>;
-                    using empty_serialization_adapted
-                        = adapt_field_empty_serialization_type<ignore_invalid_adapted, parsed_options_type>;
+                    using default_value_initializer_adapted =
+                        adapt_field_default_value_initializer_type<sequence_termination_field_suffix_adapted,
+                                                                   parsed_options_type>;
+                    using num_value_multi_range_validator_adapted =
+                        adapt_field_num_value_multi_range_validator_type<default_value_initializer_adapted,
+                                                                         parsed_options_type>;
+                    using custom_validator_adapted =
+                        adapt_field_custom_validator_type<num_value_multi_range_validator_adapted, parsed_options_type>;
+                    using custom_refresher_adapted =
+                        adapt_field_custom_refresher_type<custom_validator_adapted, parsed_options_type>;
+                    using fail_on_invalid_adapted =
+                        adapt_field_fail_on_invalid_type<custom_refresher_adapted, parsed_options_type>;
+                    using ignore_invalid_adapted =
+                        adapt_field_ignore_invalid_type<fail_on_invalid_adapted, parsed_options_type>;
+                    using empty_serialization_adapted =
+                        adapt_field_empty_serialization_type<ignore_invalid_adapted, parsed_options_type>;
 
                 public:
                     using type = empty_serialization_adapted;
@@ -690,7 +683,7 @@ namespace nil {
                 using adapt_basic_field_type = typename adapt_basic_field<TBasic, TOptions...>::type;
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_ADAPT_BASIC_FIELD_HPP

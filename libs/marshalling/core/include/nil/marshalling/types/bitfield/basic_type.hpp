@@ -32,7 +32,7 @@
 #include <nil/detail/type_traits.hpp>
 
 // #include <nil/marshalling/processing/tuple.hpp>
-//#include <nil/marshalling/processing/size_to_type.hpp>
+// #include <nil/marshalling/processing/size_to_type.hpp>
 #include <nil/marshalling/processing/access.hpp>
 #include <nil/marshalling/assert_type.hpp>
 #include <nil/marshalling/status_type.hpp>
@@ -64,13 +64,13 @@ namespace nil {
                     static_assert(0U < length_, "Serialised length is expected to be greater than 0");
                     using serialized_type = typename processing::size_to_type<length_, false>::type;
 
-                    using fixed_integral_type = types::integral<TFieldBase, serialized_type, option::fixed_length<length_>>;
+                    using fixed_integral_type =
+                        types::integral<TFieldBase, serialized_type, option::fixed_length<length_>>;
 
                     using simple_integral_type = types::integral<TFieldBase, serialized_type>;
 
-                    using integral_type = typename std::conditional<((length_ & (length_ - 1)) == 0),
-                                                                           simple_integral_type,
-                                                                           fixed_integral_type>::type;
+                    using integral_type = typename std::
+                        conditional<((length_ & (length_ - 1)) == 0), simple_integral_type, fixed_integral_type>::type;
 
                 public:
                     using endian_type = typename base_impl_type::endian_type;
@@ -112,16 +112,14 @@ namespace nil {
 
                         auto serValue = base_impl_type::template read_data<serialized_type, length_>(iter);
                         status_type es = status_type::success;
-                        processing::tuple_for_each_with_template_param_idx(members_,
-                                                                                             read_helper(serValue, es));
+                        processing::tuple_for_each_with_template_param_idx(members_, read_helper(serValue, es));
                         return es;
                     }
 
                     template<typename TIter>
                     void read_no_status(TIter &iter) {
                         auto serValue = base_impl_type::template read_data<serialized_type, length_>(iter);
-                        processing::tuple_for_each_with_template_param_idx(
-                            members_, read_no_status_helper(serValue));
+                        processing::tuple_for_each_with_template_param_idx(members_, read_no_status_helper(serValue));
                     }
 
                     template<typename TIter>
@@ -132,8 +130,7 @@ namespace nil {
 
                         serialized_type serValue = 0;
                         status_type es = status_type::success;
-                        processing::tuple_for_each_with_template_param_idx(
-                            members_, write_helper(serValue, es));
+                        processing::tuple_for_each_with_template_param_idx(members_, write_helper(serValue, es));
                         if (es == status_type::success) {
                             processing::write_data<length_>(serValue, iter, endian_type());
                         }
@@ -143,8 +140,7 @@ namespace nil {
                     template<typename TIter>
                     void write_no_status(TIter &iter) const {
                         serialized_type serValue = 0;
-                        processing::tuple_for_each_with_template_param_idx(
-                            members_, write_no_status_helper(serValue));
+                        processing::tuple_for_each_with_template_param_idx(members_, write_no_status_helper(serValue));
                         processing::write_data<length_>(serValue, iter, endian_type());
                     }
 
@@ -179,8 +175,8 @@ namespace nil {
                             using field_type = typename std::decay<decltype(field)>::type;
                             static const auto Pos = detail::get_member_shift_pos<TIdx, value_type>();
                             static const auto Mask = (static_cast<serialized_type>(1)
-                                                      << detail::bitfield_member_length_retriever<field_type>::value)
-                                                     - 1;
+                                                      << detail::bitfield_member_length_retriever<field_type>::value) -
+                                                     1;
 
                             auto fieldSerValue = static_cast<serialized_type>((value_ >> Pos) & Mask);
 
@@ -191,8 +187,7 @@ namespace nil {
                             std::uint8_t buf[max_length];
                             auto *writeIter = &buf[0];
                             using FieldEndian = typename field_type::endian_type;
-                            processing::write_data<max_length>(
-                                fieldSerValue, writeIter, FieldEndian());
+                            processing::write_data<max_length>(fieldSerValue, writeIter, FieldEndian());
 
                             const auto *readIter = &buf[0];
                             es_ = field.read(readIter, max_length);
@@ -213,8 +208,8 @@ namespace nil {
                             using field_type = typename std::decay<decltype(field)>::type;
                             using FieldOptions = typename field_type::parsed_options_type;
                             static const auto Pos = detail::get_member_shift_pos<TIdx, value_type>();
-                            static const auto Mask
-                                = (static_cast<serialized_type>(1) << FieldOptions::fixed_bit_length) - 1;
+                            static const auto Mask =
+                                (static_cast<serialized_type>(1) << FieldOptions::fixed_bit_length) - 1;
 
                             auto fieldSerValue = static_cast<serialized_type>((value_ >> Pos) & Mask);
 
@@ -225,8 +220,7 @@ namespace nil {
                             std::uint8_t buf[max_length];
                             auto *writeIter = &buf[0];
                             using FieldEndian = typename field_type::endian_type;
-                            processing::write_data<max_length>(
-                                fieldSerValue, writeIter, FieldEndian());
+                            processing::write_data<max_length>(fieldSerValue, writeIter, FieldEndian());
 
                             const auto *readIter = &buf[0];
                             field.read_no_status(readIter);
@@ -262,13 +256,13 @@ namespace nil {
 
                             using FieldEndian = typename field_type::endian_type;
                             const auto *readIter = &buf[0];
-                            auto fieldSerValue = processing::read_data<serialized_type, max_length>(
-                                readIter, FieldEndian());
+                            auto fieldSerValue =
+                                processing::read_data<serialized_type, max_length>(readIter, FieldEndian());
 
                             static const auto Pos = detail::get_member_shift_pos<TIdx, value_type>();
                             static const auto Mask = (static_cast<serialized_type>(1)
-                                                      << detail::bitfield_member_length_retriever<field_type>::value)
-                                                     - 1;
+                                                      << detail::bitfield_member_length_retriever<field_type>::value) -
+                                                     1;
 
                             static const auto ClearMask = ~(Mask << Pos);
 
@@ -303,13 +297,13 @@ namespace nil {
 
                             using FieldEndian = typename field_type::endian_type;
                             const auto *readIter = &buf[0];
-                            auto fieldSerValue = processing::read_data<serialized_type, max_length>(
-                                readIter, FieldEndian());
+                            auto fieldSerValue =
+                                processing::read_data<serialized_type, max_length>(readIter, FieldEndian());
 
                             using FieldOptions = typename field_type::parsed_options_type;
                             static const auto Pos = detail::get_member_shift_pos<TIdx, value_type>();
-                            static const auto Mask
-                                = (static_cast<serialized_type>(1) << FieldOptions::fixed_bit_length) - 1;
+                            static const auto Mask =
+                                (static_cast<serialized_type>(1) << FieldOptions::fixed_bit_length) - 1;
 
                             static const auto ClearMask = ~(Mask << Pos);
 
@@ -341,7 +335,7 @@ namespace nil {
                 };
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BASIC_BITFIELD_HPP

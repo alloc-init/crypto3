@@ -51,11 +51,10 @@ namespace nil {
 
                     static_assert(TMaxLen <= sizeof(base_serialized_type), "The provided max length limit is too big");
 
-                    using serialized_type =
-                        typename std::conditional<(TMaxLen < sizeof(base_serialized_type)),
-                                                  typename processing::size_to_type<
-                                                      TMaxLen, std::is_signed<base_serialized_type>::value>::type,
-                                                  base_serialized_type>::type;
+                    using serialized_type = typename std::conditional<
+                        (TMaxLen < sizeof(base_serialized_type)),
+                        typename processing::size_to_type<TMaxLen, std::is_signed<base_serialized_type>::value>::type,
+                        base_serialized_type>::type;
 
                     using endian_type = typename base_impl_type::endian_type;
 
@@ -76,8 +75,8 @@ namespace nil {
                     var_length &operator=(var_length &&) = default;
 
                     std::size_t length() const {
-                        auto serValue
-                            = adjust_to_unsigned_serialized_var_length(to_serialized(base_impl_type::value()));
+                        auto serValue =
+                            adjust_to_unsigned_serialized_var_length(to_serialized(base_impl_type::value()));
                         std::size_t len = 0U;
                         while (0 < serValue) {
                             serValue >>= var_length_shift;
@@ -157,8 +156,8 @@ namespace nil {
                             if (size == 0) {
                                 return status_type::buffer_overflow;
                             }
-                            auto byte
-                                = remove_byte_from_serialized_value(val, byteCount, minLen, lastByte, endian_type());
+                            auto byte =
+                                remove_byte_from_serialized_value(val, byteCount, minLen, lastByte, endian_type());
                             if (!lastByte) {
                                 MARSHALLING_ASSERT((byte & var_length_continue_bit) == 0);
                                 byte |= var_length_continue_bit;
@@ -181,8 +180,8 @@ namespace nil {
                         bool lastByte = false;
                         auto minLen = std::max(length(), min_length());
                         while ((!lastByte) && (byteCount < max_length())) {
-                            auto byte
-                                = remove_byte_from_serialized_value(val, byteCount, minLen, lastByte, endian_type());
+                            auto byte =
+                                remove_byte_from_serialized_value(val, byteCount, minLen, lastByte, endian_type());
                             if (!lastByte) {
                                 MARSHALLING_ASSERT((byte & var_length_continue_bit) == 0);
                                 byte |= var_length_continue_bit;
@@ -207,15 +206,15 @@ namespace nil {
                         static_assert(max_length_ <= sizeof(unsigned_serialized_type),
                                       "max_length is expected to be shorter than size of serialized type.");
 
-                        static const auto ZeroBitsCount = ((sizeof(unsigned_serialized_type) - max_length_)
-                                                           * std::numeric_limits<std::uint8_t>::digits)
-                                                          + max_length_;
+                        static const auto ZeroBitsCount = ((sizeof(unsigned_serialized_type) - max_length_) *
+                                                           std::numeric_limits<std::uint8_t>::digits) +
+                                                          max_length_;
 
-                        static const auto TotalBits
-                            = sizeof(unsigned_serialized_type) * std::numeric_limits<std::uint8_t>::digits;
+                        static const auto TotalBits =
+                            sizeof(unsigned_serialized_type) * std::numeric_limits<std::uint8_t>::digits;
 
-                        static const unsigned_serialized_type Mask
-                            = (static_cast<unsigned_serialized_type>(1U) << (TotalBits - ZeroBitsCount)) - 1;
+                        static const unsigned_serialized_type Mask =
+                            (static_cast<unsigned_serialized_type>(1U) << (TotalBits - ZeroBitsCount)) - 1;
 
                         return static_cast<unsigned_serialized_type>(val) & Mask;
                     }
@@ -251,8 +250,8 @@ namespace nil {
                                                                                      std::size_t byteCount,
                                                                                      std::size_t min_length,
                                                                                      bool &lastByte) {
-                        static const unsigned_serialized_type Mask
-                            = ~(static_cast<unsigned_serialized_type>(var_length_value_bits_mask));
+                        static const unsigned_serialized_type Mask =
+                            ~(static_cast<unsigned_serialized_type>(var_length_value_bits_mask));
 
                         if ((byteCount + 1) < min_length) {
                             auto remLen = min_length - (byteCount + 1);
@@ -313,15 +312,15 @@ namespace nil {
                     }
 
                     static serialized_type sign_ext_unsigned_serialized(unsigned_serialized_type val, signed_tag) {
-                        static const auto ZeroBitsCount = ((sizeof(unsigned_serialized_type) - max_length_)
-                                                           * std::numeric_limits<std::uint8_t>::digits)
-                                                          + max_length_;
+                        static const auto ZeroBitsCount = ((sizeof(unsigned_serialized_type) - max_length_) *
+                                                           std::numeric_limits<std::uint8_t>::digits) +
+                                                          max_length_;
 
-                        static const auto TotalBits
-                            = sizeof(unsigned_serialized_type) * std::numeric_limits<std::uint8_t>::digits;
+                        static const auto TotalBits =
+                            sizeof(unsigned_serialized_type) * std::numeric_limits<std::uint8_t>::digits;
 
-                        static const auto Mask
-                            = (static_cast<unsigned_serialized_type>(1U) << (TotalBits - ZeroBitsCount)) - 1;
+                        static const auto Mask =
+                            (static_cast<unsigned_serialized_type>(1U) << (TotalBits - ZeroBitsCount)) - 1;
 
                         static const unsigned_serialized_type SignExtMask = ~Mask;
 
@@ -335,12 +334,12 @@ namespace nil {
 
                     static serialized_type sign_ext_unsigned_serialized(unsigned_serialized_type val,
                                                                         std::size_t byteCount, signed_tag) {
-                        auto zeroBitsCount = ((sizeof(unsigned_serialized_type) - byteCount)
-                                              * std::numeric_limits<std::uint8_t>::digits)
-                                             + max_length_;
+                        auto zeroBitsCount = ((sizeof(unsigned_serialized_type) - byteCount) *
+                                              std::numeric_limits<std::uint8_t>::digits) +
+                                             max_length_;
 
-                        static const auto TotalBits
-                            = sizeof(unsigned_serialized_type) * std::numeric_limits<std::uint8_t>::digits;
+                        static const auto TotalBits =
+                            sizeof(unsigned_serialized_type) * std::numeric_limits<std::uint8_t>::digits;
 
                         auto mask = (static_cast<unsigned_serialized_type>(1U) << (TotalBits - zeroBitsCount)) - 1;
 
@@ -358,10 +357,10 @@ namespace nil {
                     static const std::size_t max_length_ = TMaxLen;
                     static const std::size_t max_bit_length = max_length_ * std::numeric_limits<std::uint8_t>::digits;
                     static const std::size_t var_length_shift = 7;
-                    static const std::uint8_t var_length_value_bits_mask
-                        = (static_cast<std::uint8_t>(1U) << var_length_shift) - 1;
-                    static const std::uint8_t var_length_continue_bit
-                        = static_cast<std::uint8_t>(~(var_length_value_bits_mask));
+                    static const std::uint8_t var_length_value_bits_mask =
+                        (static_cast<std::uint8_t>(1U) << var_length_shift) - 1;
+                    static const std::uint8_t var_length_continue_bit =
+                        static_cast<std::uint8_t>(~(var_length_value_bits_mask));
 
                     static_assert(min_length_ > 0, "min_length is expected to be greater than 0");
                     static_assert(min_length_ <= max_length_,
@@ -369,7 +368,7 @@ namespace nil {
                 };
 
             }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_VAR_LENGTH_HPP

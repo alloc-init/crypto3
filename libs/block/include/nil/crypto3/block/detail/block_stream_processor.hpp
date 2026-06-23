@@ -73,11 +73,11 @@ namespace nil {
                 constexpr static const std::size_t length_bits = params_type::length_bits;
                 // FIXME: do something more intelligent than capping at sizeof(boost::uintmax_t) * CHAR_BIT
                 constexpr static const std::size_t length_type_bits = length_bits < word_bits ?
-                                                                      word_bits :
+                                                                          word_bits :
                                                                       length_bits >
-                                                                      sizeof(boost::uintmax_t) * CHAR_BIT ?
-                                                                      sizeof(boost::uintmax_t) * CHAR_BIT :
-                                                                      length_bits;
+                                                                              sizeof(boost::uintmax_t) * CHAR_BIT ?
+                                                                          sizeof(boost::uintmax_t) * CHAR_BIT :
+                                                                          length_bits;
                 typedef typename boost::uint_t<length_type_bits>::least length_type;
 
                 BOOST_STATIC_ASSERT(!length_bits || length_bits % word_bits == 0);
@@ -168,7 +168,7 @@ namespace nil {
                 cache_type cache;
             };
         }    // namespace block
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_BLOCK_STATE_PREPROCESSOR_HPP

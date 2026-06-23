@@ -791,15 +791,12 @@ BOOST_AUTO_TEST_CASE(test24) {
     typedef container::static_vector<std::uint8_t, 20> StaticVec;
     typedef container::static_vector<char, 20> StaticVecChar;
 
-    static_assert(types::detail::string_has_push_back<std::string>::value,
-                  "std::string must have push_back");
+    static_assert(types::detail::string_has_push_back<std::string>::value, "std::string must have push_back");
 
-    static_assert(types::detail::string_has_push_back<StaticStr>::value,
-                  "static_string must have push_back");
+    static_assert(types::detail::string_has_push_back<StaticStr>::value, "static_string must have push_back");
 
-    static_assert(
-        !types::detail::string_has_push_back<container::string_view>::value,
-        "string_view doesn't have push_back");
+    static_assert(!types::detail::string_has_push_back<container::string_view>::value,
+                  "string_view doesn't have push_back");
 
     static_assert(types::detail::string_has_assign<std::string>::value,
                   "std::string must have "
@@ -809,9 +806,7 @@ BOOST_AUTO_TEST_CASE(test24) {
                   "static_string must have "
                   "assign");
 
-    static_assert(
-        !types::detail::string_has_assign<container::string_view>::value,
-        "string_view doesn't have assign");
+    static_assert(!types::detail::string_has_assign<container::string_view>::value, "string_view doesn't have assign");
 
     static_assert(types::detail::vector_has_assign<std::vector<std::uint8_t>>::value,
                   "std::vector doesn't have assign");
@@ -820,31 +815,27 @@ BOOST_AUTO_TEST_CASE(test24) {
                   "static_vector doesn't "
                   "have assign");
 
-    static_assert(!types::detail::vector_has_assign<
-                      container::array_view<std::uint8_t>>::value,
+    static_assert(!types::detail::vector_has_assign<container::array_view<std::uint8_t>>::value,
                   "array_view has assign");
 
     static_assert(has_member_function_reserve<std::string>::value, "std::string must have reserve");
     static_assert(has_member_function_reserve<StaticStr>::value, "static_string must have reserve");
     static_assert(has_member_function_reserve<StaticVec>::value, "static_vector must have reserve");
-    static_assert(!has_member_function_reserve<container::string_view>::value,
-                  "string_view mustn't have reserve");
+    static_assert(!has_member_function_reserve<container::string_view>::value, "string_view mustn't have reserve");
 
     static_assert(has_member_function_clear<std::string>::value, "std::string must have clear");
     static_assert(has_member_function_clear<StaticStr>::value, "static_string must have clear");
     static_assert(has_member_function_clear<StaticVec>::value, "static_vector must have clear");
-    static_assert(!has_member_function_clear<container::string_view>::value,
-                  "string_view mustn't have clear");
+    static_assert(!has_member_function_clear<container::string_view>::value, "string_view mustn't have clear");
 
     static_assert(has_member_function_remove_suffix<container::string_view>::value,
                   "string_view must have remove_suffix");
 
-    static_assert(std::is_base_of<container::detail::static_vector_casted<char, unsigned char, 20>,
-                                  StaticVecChar>::value,
-                  "Wrong base class");
+    static_assert(
+        std::is_base_of<container::detail::static_vector_casted<char, unsigned char, 20>, StaticVecChar>::value,
+        "Wrong base class");
 
-    static_assert(std::is_base_of<container::detail::static_vector_generic<unsigned char, 20>,
-                                  StaticVecChar>::value,
+    static_assert(std::is_base_of<container::detail::static_vector_generic<unsigned char, 20>, StaticVecChar>::value,
                   "Wrong base class");
 }
 

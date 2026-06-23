@@ -144,8 +144,7 @@ namespace nil {
                     template<typename InputIterator>
                     itr_mac_impl(InputIterator first, InputIterator last, OutputIterator out,
                                  accumulator_set_type &&ise) :
-                        MacStateImpl(std::forward<accumulator_set_type>(ise)),
-                        out(std::move(out)) {
+                        MacStateImpl(std::forward<accumulator_set_type>(ise)), out(std::move(out)) {
                         BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<InputIterator>));
                         BOOST_CONCEPT_ASSERT((boost::OutputIteratorConcept<OutputIterator, result_type>));
 
@@ -158,8 +157,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace mac
-    }            // namespace crypto3
+        }    // namespace mac
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CODEC_POSTPROCESSOR_HPP

@@ -24,7 +24,7 @@
 //---------------------------------------------------------------------------//
 
 #define BOOST_TEST_MODULE crypto3_marshalling_integral_test
-// #define BOOST_TEST_MAIN 
+// #define BOOST_TEST_MAIN
 
 #include <boost/test/unit_test.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
@@ -53,7 +53,7 @@ T generate_random() {
     static boost::random::uniform_int_distribution<unsigned> ui(0, limbs);
     static boost::random::mt19937 gen;
     T val = gen();
-    unsigned lim = ui(gen); 
+    unsigned lim = ui(gen);
     for (unsigned i = 0; i < lim; ++i) {
         val *= (gen.max)();
         val += gen();
@@ -149,14 +149,14 @@ void test_round_trip_non_fixed_precision(T val) {
     using unit_type = OutputType;
 
     std::vector<unit_type> cv;
-    export_bits(val, std::back_inserter(cv), units_bits, 
-        std::is_same<TEndianness, nil::marshalling::option::big_endian>::value?true:false);
+    export_bits(val, std::back_inserter(cv), units_bits,
+                std::is_same<TEndianness, nil::marshalling::option::big_endian>::value ? true : false);
 
     nil::marshalling::status_type status;
     T test_val = nil::marshalling::pack<TEndianness>(cv, status);
 
     // std::cout << std::hex << test_val << '\n' << val << '\n';
-    
+
     // std::cout << "bits:\n";
     // for(auto a : cv){
     //     std::cout << a;
@@ -167,7 +167,6 @@ void test_round_trip_non_fixed_precision(T val) {
     //     std::cout << a;
     // }
     // std::cout << '\n';
-
 
     BOOST_CHECK(val == test_val);
     BOOST_CHECK(status == nil::marshalling::status_type::success);
@@ -203,15 +202,16 @@ BOOST_AUTO_TEST_CASE(integral_cpp_uint512) {
 }
 
 BOOST_AUTO_TEST_CASE(integral_cpp_int_backend_64) {
-    test_round_trip_fixed_precision<boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>, unsigned char>();
+    test_round_trip_fixed_precision<boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>,
+                                    unsigned char>();
 }
 
 BOOST_AUTO_TEST_CASE(integral_cpp_int_backend_23) {
-    test_round_trip_fixed_precision<boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>, unsigned char>();
+    test_round_trip_fixed_precision<boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>,
+                                    unsigned char>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
 
 BOOST_AUTO_TEST_SUITE(integral_test_suite_bits)
 
@@ -224,11 +224,13 @@ BOOST_AUTO_TEST_CASE(integral_cpp_uint512_bits) {
 }
 
 BOOST_AUTO_TEST_CASE(integral_cpp_int_backend_64_bits) {
-    test_round_trip_fixed_precision<boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>, bool>();
+    test_round_trip_fixed_precision<boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<64>>,
+                                    bool>();
 }
 
 BOOST_AUTO_TEST_CASE(integral_cpp_int_backend_23_bits) {
-    test_round_trip_fixed_precision<boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>, bool>();
+    test_round_trip_fixed_precision<boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<23>>,
+                                    bool>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

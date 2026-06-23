@@ -46,9 +46,9 @@ namespace nil {
 
                 template<typename Weight>
                 static inline typename std::enable_if<std::is_unsigned<typename Weight::first_type>::value &&
-                                                      std::is_unsigned<typename Weight::second_type>::value,
-                    bool>::type
-                check_weight(const Weight &w) {
+                                                          std::is_unsigned<typename Weight::second_type>::value,
+                                                      bool>::type
+                    check_weight(const Weight &w) {
                     return check_weight(w.first, w.second);
                 }
 
@@ -62,7 +62,7 @@ namespace nil {
                     assert(std::size(weights));
 
                     typename base_type::indexes_type result;
-                    for (const auto &weight: weights) {
+                    for (const auto &weight : weights) {
                         check_weight(weight);
                         for (std::size_t j = 1; j <= weight.second; ++j) {
                             bool emplace_status = result.emplace(weight.first * t + j).second;
@@ -73,8 +73,8 @@ namespace nil {
                     return result;
                 }
             };
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_SSS_WEIGHTED_BASIC_TYPES_HPP

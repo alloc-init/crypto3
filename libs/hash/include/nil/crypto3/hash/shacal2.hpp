@@ -91,9 +91,9 @@ namespace nil {
                         constexpr static const std::size_t value_bits = ValueBits;
 
                         // length_bits is the number of bits required to write the length of the block.
-                        // FIPS PUB 180-4 states it must be 64 bits for 256 bit version, and 128 bits for the 512 bit version.
-                        // Since for 256 bit version the standard requires to add another 64 bits of zeros for padding,
-                        // we use 2 * word_bits for both cases.
+                        // FIPS PUB 180-4 states it must be 64 bits for 256 bit version, and 128 bits for the 512 bit
+                        // version. Since for 256 bit version the standard requires to add another 64 bits of zeros for
+                        // padding, we use 2 * word_bits for both cases.
                         constexpr static const std::size_t length_bits = 2 * word_bits;
                     };
 
@@ -218,7 +218,7 @@ namespace nil {
                 }
             };
         }    // namespace block
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_CIPHERS_SHACAL2_HPP

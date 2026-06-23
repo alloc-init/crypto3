@@ -32,38 +32,35 @@ using namespace nil::crypto3::bench;
 using boost::multiprecision::detail::get_raw_base;
 using boost::multiprecision::detail::pow_unsigned;
 
-constexpr auto modulus_256 =
-    0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_cppui_modular256;
-constexpr auto x_256 =
-    0xb5d724ce6f44c3c587867bbcb417e9eb6fa05e7e2ef029166568f14eb3161387_cppui_modular256;
-constexpr auto y_256 =
-    0xad6e1fcc680392abfb075838eafa513811112f14c593e0efacb6e9d0d7770b4_cppui_modular256;
+constexpr auto modulus_256 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_cppui_modular256;
+constexpr auto x_256 = 0xb5d724ce6f44c3c587867bbcb417e9eb6fa05e7e2ef029166568f14eb3161387_cppui_modular256;
+constexpr auto y_256 = 0xad6e1fcc680392abfb075838eafa513811112f14c593e0efacb6e9d0d7770b4_cppui_modular256;
 
 struct MontgomeryCompileTimeCase {
     using big_mod_t = montgomery_big_mod<modulus_256>;
-    static constexpr big_mod_t x{x_256};
-    static constexpr big_mod_t y{y_256};
+    static constexpr big_mod_t x {x_256};
+    static constexpr big_mod_t y {y_256};
     static constexpr auto name = "[montgomery][compile-time]";
 };
 
 struct MontgomeryRuntimeCase {
     using big_mod_t = montgomery_big_mod_rt<256>;
-    static constexpr big_mod_t x{x_256, modulus_256};
-    static constexpr big_mod_t y{y_256, modulus_256};
+    static constexpr big_mod_t x {x_256, modulus_256};
+    static constexpr big_mod_t y {y_256, modulus_256};
     static constexpr auto name = "[montgomery][     runtime]";
 };
 
 struct BarrettCompileTimeCase {
     using big_mod_t = big_mod<modulus_256>;
-    static constexpr big_mod_t x{x_256};
-    static constexpr big_mod_t y{y_256};
+    static constexpr big_mod_t x {x_256};
+    static constexpr big_mod_t y {y_256};
     static constexpr auto name = "[   barrett][compile-time]";
 };
 
 struct BarrettRuntimeCase {
     using big_mod_t = big_mod_rt<256>;
-    static constexpr big_mod_t x{x_256, modulus_256};
-    static constexpr big_mod_t y{y_256, modulus_256};
+    static constexpr big_mod_t x {x_256, modulus_256};
+    static constexpr big_mod_t y {y_256, modulus_256};
     static constexpr auto name = "[   barrett][     runtime]";
 };
 
@@ -73,22 +70,22 @@ constexpr big_uint<64> goldilocks_modulus_big_uint = goldilocks_modulus;
 
 struct GoldilocksMontgomery {
     using big_mod_t = montgomery_big_mod<goldilocks_modulus_big_uint>;
-    static constexpr big_mod_t x{x_64};
-    static constexpr big_mod_t y{y_64};
+    static constexpr big_mod_t x {x_64};
+    static constexpr big_mod_t y {y_64};
     static constexpr auto name = "[montgomery][  goldilocks]";
 };
 
 struct GoldilocksBarrett {
     using big_mod_t = big_mod<goldilocks_modulus_big_uint>;
-    static constexpr big_mod_t x{x_64};
-    static constexpr big_mod_t y{y_64};
+    static constexpr big_mod_t x {x_64};
+    static constexpr big_mod_t y {y_64};
     static constexpr auto name = "[   barrett][  goldilocks]";
 };
 
 struct GoldilocksCustom {
     using big_mod_t = goldilocks_mod;
-    static constexpr big_mod_t x{x_64};
-    static constexpr big_mod_t y{y_64};
+    static constexpr big_mod_t x {x_64};
+    static constexpr big_mod_t y {y_64};
     static constexpr auto name = "[    custom][  goldilocks]";
 };
 
@@ -98,22 +95,22 @@ constexpr big_uint<31> babybear_modulus_big_uint = 0x78000001_cppui_modular31;
 
 struct BabyBearMontgomery {
     using big_mod_t = montgomery_big_mod<babybear_modulus_big_uint>;
-    static constexpr big_mod_t x{x_31};
-    static constexpr big_mod_t y{y_31};
+    static constexpr big_mod_t x {x_31};
+    static constexpr big_mod_t y {y_31};
     static constexpr auto name = "[montgomery][    babybear]";
 };
 
 struct BabyBearBarrett {
     using big_mod_t = big_mod<babybear_modulus_big_uint>;
-    static constexpr big_mod_t x{x_31};
-    static constexpr big_mod_t y{y_31};
+    static constexpr big_mod_t x {x_31};
+    static constexpr big_mod_t y {y_31};
     static constexpr auto name = "[   barrett][    babybear]";
 };
 
 struct BabyBearCustom {
     using big_mod_t = babybear_mod;
-    static constexpr big_mod_t x{x_31};
-    static constexpr big_mod_t y{y_31};
+    static constexpr big_mod_t x {x_31};
+    static constexpr big_mod_t y {y_31};
     static constexpr auto name = "[    custom][    babybear]";
 };
 
@@ -121,30 +118,28 @@ constexpr big_uint<31> mersenne31_modulus_big_uint = 0x7fffffff_cppui_modular31;
 
 struct Mersenne31Montgomery {
     using big_mod_t = montgomery_big_mod<mersenne31_modulus_big_uint>;
-    static constexpr big_mod_t x{x_31};
-    static constexpr big_mod_t y{y_31};
+    static constexpr big_mod_t x {x_31};
+    static constexpr big_mod_t y {y_31};
     static constexpr auto name = "[montgomery][  mersenne31]";
 };
 
 struct Mersenne31Barrett {
     using big_mod_t = big_mod<mersenne31_modulus_big_uint>;
-    static constexpr big_mod_t x{x_31};
-    static constexpr big_mod_t y{y_31};
+    static constexpr big_mod_t x {x_31};
+    static constexpr big_mod_t y {y_31};
     static constexpr auto name = "[   barrett][  mersenne31]";
 };
 
 struct Mersenne31Custom {
     using big_mod_t = mersenne31_mod;
-    static constexpr big_mod_t x{x_31};
-    static constexpr big_mod_t y{y_31};
+    static constexpr big_mod_t x {x_31};
+    static constexpr big_mod_t y {y_31};
     static constexpr auto name = "[    custom][  mersenne31]";
 };
 
-using cases =
-    std::tuple<MontgomeryCompileTimeCase, MontgomeryRuntimeCase, BarrettCompileTimeCase,
-               BarrettRuntimeCase, GoldilocksMontgomery, GoldilocksBarrett,
-               GoldilocksCustom, BabyBearMontgomery, BabyBearBarrett, BabyBearCustom,
-               Mersenne31Montgomery, Mersenne31Barrett, Mersenne31Custom>;
+using cases = std::tuple<MontgomeryCompileTimeCase, MontgomeryRuntimeCase, BarrettCompileTimeCase, BarrettRuntimeCase,
+                         GoldilocksMontgomery, GoldilocksBarrett, GoldilocksCustom, BabyBearMontgomery, BabyBearBarrett,
+                         BabyBearCustom, Mersenne31Montgomery, Mersenne31Barrett, Mersenne31Custom>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(direct_mul_perf, Case, cases) {
     auto x_raw_base = get_raw_base(Case::x);

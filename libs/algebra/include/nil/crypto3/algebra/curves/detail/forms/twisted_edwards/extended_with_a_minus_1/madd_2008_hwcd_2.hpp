@@ -40,48 +40,47 @@ namespace nil {
                     struct twisted_edwards_element_g1_extended_with_a_minus_1_madd_2008_hwcd_2 {
 
                         template<typename ElementType>
-                        constexpr static inline void process(ElementType &first,
-                                                                    const ElementType &second) {
+                        constexpr static inline void process(ElementType &first, const ElementType &second) {
 
                             using field_value_type = typename ElementType::field_type::value_type;
 
                             // assert(second.Z == field_value_type::one());
 
                             // A = X1*X2
-                            field_value_type A (first.X);
+                            field_value_type A(first.X);
                             A *= second.X;
 
                             // B = Y1*Y2
-                            field_value_type B (first.Y);
+                            field_value_type B(first.Y);
                             B *= second.Y;
 
                             // C = Z1*T2
-                            field_value_type C (first.Z);
+                            field_value_type C(first.Z);
                             C *= second.T;
 
                             // D = T1
-                            field_value_type D (first.T);
+                            field_value_type D(first.T);
 
                             // E = D+C
-                            field_value_type E (D);
+                            field_value_type E(D);
                             E += C;
 
                             // F = (X1-Y1)*(X2+Y2)+B-A
-                            field_value_type t0 (first.X);
+                            field_value_type t0(first.X);
                             t0 -= first.Y;
-                            field_value_type F (second.X);
+                            field_value_type F(second.X);
                             F += second.Y;
                             F *= t0;
                             F += B;
                             F -= A;
 
                             // G = B+a*A
-                            field_value_type G (A);
+                            field_value_type G(A);
                             G *= field_value_type(ElementType::params_type::a);
                             G += B;
 
                             // H = D-C
-                            field_value_type H (D);
+                            field_value_type H(D);
                             H -= C;
 
                             // X3 = E*F
@@ -102,8 +101,8 @@ namespace nil {
                         }
                     };
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_TWISTED_EDWARDS_G1_ELEMENT_EXTENDED_WITH_A_MINUS_1_MADD_2008_HWCD_2_HPP
