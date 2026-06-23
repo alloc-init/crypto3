@@ -489,9 +489,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         limb q0, q1, q2, q3;
 
         asm volatile(
-
             MUL_8_LIMBS_BY_9(dst, 0, src, 0)
-
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
@@ -606,10 +604,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb t0, t1, t2, t3;
         asm volatile(
-
             SUB_LIMBS_MOD(data, 0, data, 0, other, 0, t0, t1, t2, t3)
             SUB_LIMBS(data, 8, other, 8, t0)
-
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
