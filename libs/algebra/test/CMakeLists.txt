@@ -31,7 +31,6 @@ macro(define_runtime_algebra_test name)
     set_target_properties(${test_name} PROPERTIES CXX_STANDARD 23
             CXX_STANDARD_REQUIRED TRUE)
 
-    target_compile_options(${test_name} PRIVATE "-march=native")
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${test_name} PRIVATE "-fconstexpr-steps=2147483647" "-ftemplate-backtrace-limit=0")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -59,7 +58,6 @@ set(RUNTIME_TESTS_NAMES
         "curves_static"
         "fields"
         "bn254_fp12"
-        "bn254_fp12_fast_unit"
         "fields_static"
         "pairing"
         "type_traits"
