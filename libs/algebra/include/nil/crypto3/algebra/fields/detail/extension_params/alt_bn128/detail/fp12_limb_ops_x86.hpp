@@ -496,7 +496,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
               [p1]"m"(p1),
               [p2]"m"(p2),
               [p3]"m"(p3)
-            : "cc"
+            : "cc", "memory"
         );
     }
 
