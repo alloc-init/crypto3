@@ -1,10 +1,10 @@
-#---------------------------------------------------------------------------#
+# ---------------------------------------------------------------------------#
 # Copyright (c) 2018-2021 Mikhail Komarov <nemo@nil.foundation>
 #
 # Distributed under the Boost Software License, Version 1.0
 # See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt
-#---------------------------------------------------------------------------#
+# ---------------------------------------------------------------------------#
 
 include(CMConfig)
 include(CMSetupVersion)
@@ -19,7 +19,7 @@ include(CMDeploy)
 option(STANDARD_EC_INF_POINTS "Use standard zero points for Eliptic Curves" FALSE)
 
 if(STANDARD_EC_INF_POINTS)
-    add_definitions(-DSTANDARD_EC_INF_POINTS_ENABLED)
+        add_definitions(-DSTANDARD_EC_INF_POINTS_ENABLED)
 endif()
 
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
@@ -41,11 +41,15 @@ cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         INCLUDE include
         NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
 
+if(${CMAKE_TARGET_ARCHITECTURE} STREQUAL "x86_64" OR ${CMAKE_TARGET_ARCHITECTURE} STREQUAL "x86")
+        target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE "-march=native")
+endif()
+
 include(CMTest)
 cm_add_test_subdirectory(test)
 
 if(BUILD_EXAMPLES)
-    add_subdirectory(example)
+        add_subdirectory(example)
 endif()
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/

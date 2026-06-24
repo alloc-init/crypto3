@@ -81,6 +81,8 @@ macro(define_standalone_benchmark benchmark)
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED TRUE)
 
+    target_compile_options(${full_name} PRIVATE "-march=native")
+
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${full_name} PRIVATE "-fconstexpr-steps=2147483647")
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

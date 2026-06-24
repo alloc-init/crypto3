@@ -1,9 +1,10 @@
 #pragma once
 
-#include <array>
-#include <climits>
-#include <cstddef>
-#include <cstdint>
+#include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
+
+#if BOOST_ARCH_X86
+#include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_ops_x86.hpp>
+#endif
 
 namespace nil {
     namespace crypto3 {
@@ -11,21 +12,7 @@ namespace nil {
             namespace fields {
                 namespace detail {
                     namespace alt_bn128_fp12_limb_ops {
-
-                        using limb = std::uint64_t;
-#if defined(__SIZEOF_INT128__)
-                        using wide_limb = unsigned __int128;
-#else
-#error "alt_bn128 fp12 limb ops require unsigned __int128 support"
-#endif
-
-                        const size_t limb_bits = sizeof(limb) * CHAR_BIT;
-                        const size_t base_value_limb_count = 4u;
-                        const size_t storage_limb_count = 9u;
-
-                        using limb_array = std::array<limb, storage_limb_count>;
-
-                        // Loads limbs from a multiprecision backend value
+                        // Load a canonical 4-limb Fp value into the shared 8-limb scratch shape.
                         template<typename Backend>
                         static limb_array load_limbs(const Backend &backend) {
                             static_assert(Backend::limb_bits == limb_bits,
@@ -39,63 +26,108 @@ namespace nil {
                             return result;
                         }
 
-                        bool is_zero(const limb_array &x) {
-                            for (size_t i = 0; i < x.size(); i++) {
-                                if (x[i] != 0u) {
+                        template<size_t N>
+                        inline void add_limbs_portable(limb *z, const limb *x, const limb *y) {
+                            limb carry = 0u;
+                            for (size_t i = 0; i < N; i++) {
+                                const auto sum = (wide_limb)x[i] + y[i] + carry;
+                                z[i] = (limb)sum;
+                                carry = (limb)(sum >> limb_bits);
+                            }
+                        }
+
+                        template<size_t N>
+                        inline bool subtract_limbs_portable(limb *z, const limb *x, const limb *y) {
+                            bool borrow = false;
+                            for (size_t i = 0; i < N; i++) {
+                                const limb subtrahend = y[i] + (limb)borrow;
+                                const bool subtrahend_carry = subtrahend < y[i];
+                                const limb current = x[i];
+                                z[i] = current - subtrahend;
+                                borrow = subtrahend_carry || current < subtrahend;
+                            }
+                            return borrow;
+                        }
+
+                        inline bool ge_modulus_4(const limb *x, const limb *mod) {
+                            for (int i = 3; i >= 0; i--) {
+                                if (x[i] < mod[i]) {
                                     return false;
+                                }
+                                if (x[i] > mod[i]) {
+                                    return true;
                                 }
                             }
                             return true;
                         }
 
-                        int compare_limbs(const limb_array &x, const limb_array &y) {
-                            for (int i = x.size() - 1; i >= 0; i--) {
-                                if (x[i] < y[i]) {
-                                    return -1;
-                                }
-                                if (x[i] > y[i]) {
-                                    return 1;
-                                }
+                        inline bool ge_modulus(const limb *x, const limb *mod) {
+                            if (x[4] != 0u) {
+                                return true;
                             }
-                            return 0;
+                            return ge_modulus_4(x, mod);
                         }
 
-                        void add_limbs(limb_array &result, const limb_array &other) {
+                        template<class Field>
+                        inline void add_low_4_limbs_mod_portable(limb *z, const limb *x, const limb *y) {
+                            limb tmp[5] = {};
                             limb carry = 0u;
-                            for (size_t i = 0; i < result.size(); i++) {
-                                const auto sum = (wide_limb)result[i] + other[i] + carry;
-                                result[i] = (limb)sum;
+                            for (size_t i = 0; i < base_value_limb_count; i++) {
+                                const auto sum = (wide_limb)x[i] + y[i] + carry;
+                                tmp[i] = (limb)sum;
                                 carry = (limb)(sum >> limb_bits);
                             }
-                        }
-
-                        void subtract_limbs(limb_array &result, const limb_array &other) {
-                            limb borrow = 0u;
-                            for (size_t i = 0; i < result.size(); i++) {
-                                const limb subtrahend = other[i] + borrow;
-                                const bool subtrahend_carry = subtrahend < other[i];
-                                const limb current = result[i];
-                                result[i] = current - subtrahend;
-                                borrow = (subtrahend_carry || current < subtrahend) ? 1u : 0u;
+                            tmp[base_value_limb_count] = carry;
+                            static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                            // Normalize the 5-limb scratch, then copy only this coefficient back.
+                            // z may point into the middle of a contiguous fp2_base value.
+                            if (ge_modulus(tmp, p.data())) {
+                                subtract_limbs_portable<5>(tmp, tmp, p.data());
+                            }
+                            for (size_t i = 0; i < base_value_limb_count; i++) {
+                                z[i] = tmp[i];
                             }
                         }
 
-                        void left_shift_one(limb_array &result) {
-                            limb carry = 0u;
-                            for (size_t i = 0; i < result.size(); i++) {
-                                const limb next_carry = result[i] >> (limb_bits - 1u);
-                                result[i] = (result[i] << 1u) | carry;
-                                carry = next_carry;
+                        template<class Field>
+                        inline void add_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
+#if BOOST_ARCH_X86
+                            add_8_limbs_mod_x86<Field>(z, x, y);
+#else
+                            add_limbs_portable<8>(z.data(), x.data(), y.data());
+                            static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                            if (ge_modulus_4(z.data() + 4, p.data())) {
+                                subtract_limbs_portable<4>(z.data() + 4, z.data() + 4, p.data());
                             }
+#endif
                         }
 
-                        void multiply_by_limb(limb_array &result, limb value) {
-                            limb carry = 0u;
-                            for (size_t i = 0; i < result.size(); i++) {
-                                const wide_limb product = (wide_limb)result[i] * (wide_limb)value + carry;
-                                result[i] = (limb)product;
-                                carry = (limb)(product >> limb_bits);
+                        template<class Field>
+                        inline void subtract_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
+#if BOOST_ARCH_X86
+                            subtract_8_limbs_mod_x86<Field>(z, x, y);
+#else
+                            bool borrow = subtract_limbs_portable<8>(z.data(), x.data(), y.data());
+                            if (borrow) {
+                                // If the full 8-limb subtraction borrowed, add p to the high half
+                                // to keep the double value in the p * R residue class.
+                                static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                                add_limbs_portable<4>(z.data() + 4, z.data() + 4, p.data());
                             }
+#endif
+                        }
+
+                        template<class Field>
+                        inline void mul_8_limbs_by_9(limb_array &dst, const limb_array &src) {
+#if BOOST_ARCH_X86
+                            mul_8_limbs_by_9_x86<Field>(dst, src);
+#else
+                            limb_array cpy = src;
+                            add_8_limbs_mod<Field>(dst, src, src);    // 2x
+                            add_8_limbs_mod<Field>(dst, dst, dst);    // 4x
+                            add_8_limbs_mod<Field>(dst, dst, dst);    // 8x
+                            add_8_limbs_mod<Field>(dst, dst, cpy);    // 9x
+#endif
                         }
 
                         // Add one limb product into the current Comba column accumulator.
@@ -104,7 +136,7 @@ namespace nil {
                         // carry limb, and acc2 collects overflow from acc1. Each x*y product is 128 bits, so adding
                         // its low half to acc0 and high half to acc1 lets a column accumulate several partial
                         // products before multiply_emit advances to the next column.
-                        void multiply_partial(limb &acc0, limb &acc1, limb &acc2, limb x, limb y) {
+                        inline void multiply_partial(limb &acc0, limb &acc1, limb &acc2, limb x, limb y) {
                             // compute the base product x * y
                             const wide_limb product = (wide_limb)x * y;
                             // add the low bits of the new product to the lowest accumulator
@@ -123,7 +155,7 @@ namespace nil {
                         //
                         // After this, acc0/acc1 contain the carry state for the next column and acc2 is clear for
                         // new overflow. This is shared by the fixed 4x4 and 5x5 kernels.
-                        void multiply_emit(limb_array &result, size_t idx, limb &acc0, limb &acc1, limb &acc2) {
+                        inline void multiply_emit(limb *result, size_t idx, limb &acc0, limb &acc1, limb &acc2) {
                             result[idx] = acc0;
                             acc0 = acc1;
                             acc1 = acc2;
@@ -132,10 +164,9 @@ namespace nil {
 
                         // Multiply two base-width values using their low four limbs.
                         //
-                        // The result is the full 8-limb product placed in the 9-limb storage shape. This is the
+                        // The result is the full 8-limb product placed in the shared 8-limb storage shape. This is the
                         // common path for products of ordinary BN254 Fp Montgomery residues.
-                        void multiply_4x4(limb_array &result, const limb_array &x, const limb_array &y) {
-                            result = {};
+                        inline void multiply_4x4_portable(limb *result, const limb *x, const limb *y) {
                             limb acc0 = 0u;
                             limb acc1 = 0u;
                             limb acc2 = 0u;
@@ -170,147 +201,193 @@ namespace nil {
                             multiply_partial(acc0, acc1, acc2, x[3], y[3]);
                             multiply_emit(result, 6u, acc0, acc1, acc2);
                             result[7] = acc0;
-                            result[8] = acc1;
                         }
 
-                        // Multiply two Fp2-sum-width values using their low five limbs.
-                        //
-                        // Fp2 Karatsuba sums such as (a + b) can carry once past the four-limb base field value,
-                        // so the cross-term product needs a 5x5 kernel. These inputs are bounded by the tower
-                        // formulas, and their product fits the nine-limb pre-REDC storage used by this fast path.
-                        void multiply_5x5(limb_array &result, const limb_array &x, const limb_array &y) {
-                            result = {};
-                            limb acc0 = 0u;
-                            limb acc1 = 0u;
-                            limb acc2 = 0u;
-
-                            multiply_partial(acc0, acc1, acc2, x[0], y[0]);
-                            multiply_emit(result, 0u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[0], y[1]);
-                            multiply_partial(acc0, acc1, acc2, x[1], y[0]);
-                            multiply_emit(result, 1u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[0], y[2]);
-                            multiply_partial(acc0, acc1, acc2, x[1], y[1]);
-                            multiply_partial(acc0, acc1, acc2, x[2], y[0]);
-                            multiply_emit(result, 2u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[0], y[3]);
-                            multiply_partial(acc0, acc1, acc2, x[1], y[2]);
-                            multiply_partial(acc0, acc1, acc2, x[2], y[1]);
-                            multiply_partial(acc0, acc1, acc2, x[3], y[0]);
-                            multiply_emit(result, 3u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[0], y[4]);
-                            multiply_partial(acc0, acc1, acc2, x[1], y[3]);
-                            multiply_partial(acc0, acc1, acc2, x[2], y[2]);
-                            multiply_partial(acc0, acc1, acc2, x[3], y[1]);
-                            multiply_partial(acc0, acc1, acc2, x[4], y[0]);
-                            multiply_emit(result, 4u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[1], y[4]);
-                            multiply_partial(acc0, acc1, acc2, x[2], y[3]);
-                            multiply_partial(acc0, acc1, acc2, x[3], y[2]);
-                            multiply_partial(acc0, acc1, acc2, x[4], y[1]);
-                            multiply_emit(result, 5u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[2], y[4]);
-                            multiply_partial(acc0, acc1, acc2, x[3], y[3]);
-                            multiply_partial(acc0, acc1, acc2, x[4], y[2]);
-                            multiply_emit(result, 6u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[3], y[4]);
-                            multiply_partial(acc0, acc1, acc2, x[4], y[3]);
-                            multiply_emit(result, 7u, acc0, acc1, acc2);
-
-                            multiply_partial(acc0, acc1, acc2, x[4], y[4]);
-                            multiply_emit(result, 8u, acc0, acc1, acc2);
-                        }
-
-                        bool ge_modulus(const limb *x, const limb *p) {
-                            if (x[4] != 0u) {
-                                // p has 4 limbs, so if x has a nonzero 5th digit, it is greater
-                                return true;
-                            } else {
-                                for (int i = 4; i >= 0; i--) {
-                                    if (x[i] < p[i]) {
-                                        return false;
-                                    }
-                                    if (x[i] > p[i]) {
-                                        return true;
-                                    }
-                                }
-                                return true;
-                            }
-                        }
-
-                        void subtract_modulus(limb *x, const limb *p) {
-                            limb borrow = 0;
-                            for (size_t i = 0; i < 4u; i++) {
-                                const limb subtrahend = p[i] + borrow;
-                                const bool subtrahend_carry = subtrahend < p[i];
-                                const limb current = x[i];
-                                x[i] = current - subtrahend;
-                                borrow = (subtrahend_carry || current < subtrahend) ? 1u : 0u;
-                            }
-                            x[4] -= borrow;
+                        inline void multiply_4x4(limb *z, const limb *x, const limb *y) {
+#if BOOST_ARCH_X86
+                            multiply_4x4_x86(z, x, y);
+#else
+                            multiply_4x4_portable(z, x, y);
+#endif
                         }
 
                         template<class Field>
-                        void montgomery_reduce(limb_array &data) {
+                        inline void montgomery_reduce_portable(limb *result, const limb_array &data) {
                             // p is the field modulus as 4 limbs
-                            static limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+                            static const limb_array p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
                             // p_dash is -p^{-1} modulo one limb, B = 2^64.
                             // Multiplying the current low limb by p_dash gives the
                             // one-limb factor m that makes t[i] + m * p[0] == 0 mod B.
                             limb p_dash = Field::modulus_params.get_mod_obj().get_p_dash();
+                            limb_array buf = data;
 
-                            limb_array t = data;
                             // REDC over R = 2^(64 * 4). At step i, choose m so adding
-                            // m * p shifted by i limbs makes t[i] zero modulo 2^64.
+                            // m * p shifted by i limbs makes buf[i] zero modulo 2^64.
                             // After four steps the low four limbs have been cancelled,
-                            // so the high four limbs contain data * R^-1 modulo p.
+                            // so the high four limbs contain buf * R^-1 modulo p.
                             for (size_t i = 0; i < base_value_limb_count; i++) {
                                 // Only the low limb of this product is used. Because
-                                // p[0] * p_dash == -1 mod B, this m cancels t[i] when
+                                // p[0] * p_dash == -1 mod B, this m cancels buf[i] when
                                 // m * p is added into the current REDC column.
-                                const limb m = t[i] * p_dash;
+                                const limb m = buf[i] * p_dash;
                                 limb carry = 0;
 
-                                // Add m * p into t starting at limb i. The low limb of
-                                // this sum is constructed to cancel t[i].
+                                // Add m * p into buf starting at limb i. The low limb of
+                                // this sum is constructed to cancel buf[i].
                                 for (size_t j = 0; j < base_value_limb_count; ++j) {
                                     const wide_limb product =
-                                        (wide_limb)m * (wide_limb)p[j] + (wide_limb)t[i + j] + carry;
-                                    t[i + j] = (limb)product;
+                                        (wide_limb)m * (wide_limb)p[j] + (wide_limb)buf[i + j] + carry;
+                                    buf[i + j] = (limb)product;
                                     carry = (limb)(product >> limb_bits);
                                 }
 
                                 // Propagate any carry beyond the four modulus limbs.
-                                for (size_t j = i + base_value_limb_count; carry != 0 && j < t.size(); j++) {
-                                    const wide_limb sum = (wide_limb)t[j] + carry;
-                                    t[j] = (limb)sum;
+                                for (size_t j = i + base_value_limb_count; carry != 0 && j < storage_limb_count; j++) {
+                                    const wide_limb sum = (wide_limb)buf[j] + carry;
+                                    buf[j] = (limb)sum;
                                     carry = (limb)(sum >> limb_bits);
                                 }
                             }
 
-                            // The REDC output lives in t[4..8]. Bring it back into the
-                            // canonical field range before copying out the low four limbs.
-                            while (ge_modulus(t.data() + base_value_limb_count, p.data())) {
-                                // Could be as many as 18 reductions for the wide path
-                                subtract_modulus(t.data() + base_value_limb_count, p.data());
+                            // The REDC output lives in buf[4..7]. Bring it back into the
+                            // canonical field range before writing the four output limbs.
+                            if (ge_modulus_4(buf.data() + 4, p.data())) {
+                                subtract_limbs_portable<4>(buf.data() + 4, buf.data() + 4, p.data());
                             }
 
-                            // Keep the reduced 4-limb field value and clear the lazy
-                            // extension limbs in the shared storage shape.
+                            // Write the reduced 4-limb field value to the caller-provided Fp storage.
                             for (size_t i = 0; i < base_value_limb_count; i++) {
-                                data[i] = t[base_value_limb_count + i];
-                            }
-                            for (size_t i = base_value_limb_count; i < data.size(); i++) {
-                                data[i] = 0;
+                                result[i] = buf[base_value_limb_count + i];
                             }
                         }
+
+                        template<class Field>
+                        inline void montgomery_reduce(limb *result, const limb_array &data) {
+#if BOOST_ARCH_X86
+                            montgomery_reduce_x86<Field>(result, data.data());
+#else
+                            montgomery_reduce_portable<Field>(result, data);
+#endif
+                        }
+
+                        // fp2_base values are two contiguous 4-limb coefficients; each output
+                        // coefficient is normalized modulo p.
+                        template<class Field>
+                        inline void fp2_base_add_mod(limb *z, const limb *x, const limb *y) {
+#if BOOST_ARCH_X86
+                            fp2_base_add_mod_x86<Field>(z, x, y);
+#else
+                            add_low_4_limbs_mod_portable<Field>(z, x, y);
+                            add_low_4_limbs_mod_portable<Field>(z + 4, x + 4, y + 4);
+#endif
+                        }
+
+                        // Raw fp2_base coefficient-wise add. BN254 inputs are bounded so each
+                        // coefficient sum fits in four limbs.
+                        inline void fp2_base_add_pre(limb *z, const limb *x, const limb *y) {
+#if BOOST_ARCH_X86
+                            fp2_base_add_pre_x86(z, x, y);
+#else
+                            add_limbs_portable<4>(z, x, y);
+                            add_limbs_portable<4>(z + 4, x + 4, y + 4);
+#endif
+                        }
+
+                        template<class Field>
+                        inline void fp2_sub_pre(limb_array *data, const limb_array *other) {
+#if BOOST_ARCH_X86
+                            fp2_sub_pre_x86<Field>(data, other);
+#else
+                            subtract_8_limbs_mod<Field>(data[0], data[0], other[0]);
+                            subtract_limbs_portable<8>(data[1].data(), data[1].data(), other[1].data());
+#endif
+                        }
+
+                        // Out-of-place dst = src * xi + addend. Callers must use one of the
+                        // modify_* variants when dst aliases an input.
+                        template<class Field>
+                        inline void fp2_mul_xi_add(limb_array *dst, const limb_array *src, const limb_array *addend) {
+                            mul_8_limbs_by_9<Field>(dst[0], src[0]);
+                            subtract_8_limbs_mod<Field>(dst[0], dst[0], src[1]);
+                            mul_8_limbs_by_9<Field>(dst[1], src[1]);
+                            add_8_limbs_mod<Field>(dst[1], dst[1], src[0]);
+                            add_8_limbs_mod<Field>(dst[0], dst[0], addend[0]);
+                            add_8_limbs_mod<Field>(dst[1], dst[1], addend[1]);
+                        }
+
+                        template<class Field>
+                        inline void fp2_mul_xi_add_modify_src(limb_array *src, const limb_array *addend) {
+                            limb_array src0 = src[0];
+                            mul_8_limbs_by_9<Field>(src[0], src0);
+                            subtract_8_limbs_mod<Field>(src[0], src[0], src[1]);
+                            mul_8_limbs_by_9<Field>(src[1], src[1]);
+                            add_8_limbs_mod<Field>(src[1], src[1], src0);
+                            add_8_limbs_mod<Field>(src[0], src[0], addend[0]);
+                            add_8_limbs_mod<Field>(src[1], src[1], addend[1]);
+                        }
+
+                        template<class Field>
+                        inline void fp2_mul_xi_add_modify_addend(limb_array *addend, const limb_array *src) {
+                            limb_array tmp;
+                            mul_8_limbs_by_9<Field>(tmp, src[0]);
+                            subtract_8_limbs_mod<Field>(tmp, tmp, src[1]);
+                            add_8_limbs_mod<Field>(addend[0], addend[0], tmp);
+                            mul_8_limbs_by_9<Field>(tmp, src[1]);
+                            add_8_limbs_mod<Field>(tmp, tmp, src[0]);
+                            add_8_limbs_mod<Field>(addend[1], addend[1], tmp);
+                        }
+
+                        template<class Field>
+                        inline void fp2_mul_pre_portable(limb_array *z, const limb *x, const limb *y) {
+                            // For x = a + bu and y = c + du:
+                            //   xy = (a + bu) * (c + du)
+                            //      = ac + adu + bcu + bdu^2
+                            //      = ac + (ad + bc)u - bd      # since u^2 = -1
+                            //      = (ac - bd) + (ad + bc)u
+                            // Karatsuba computes the cross term with one product:
+                            //   ad + bc = (a + b)(c + d) - ac - bd.
+                            limb_array ac, bd, a_plus_b, c_plus_d;
+                            multiply_4x4(ac.data(), x, y);
+                            multiply_4x4(bd.data(), x + 4, y + 4);
+                            add_limbs_portable<4>(a_plus_b.data(), x, x + 4);
+                            add_limbs_portable<4>(c_plus_d.data(), y, y + 4);
+                            subtract_8_limbs_mod<Field>(z[0], ac, bd);
+                            multiply_4x4(z[1].data(), a_plus_b.data(), c_plus_d.data());
+                            subtract_limbs_portable<8>(z[1].data(), z[1].data(), ac.data());
+                            subtract_limbs_portable<8>(z[1].data(), z[1].data(), bd.data());
+                        }
+
+                        template<class Field>
+                        inline void fp2_mul_pre(limb_array *z, const limb *x, const limb *y) {
+#if BOOST_ARCH_X86
+                            fp2_mul_pre_x86<Field>(z, x, y);
+#else
+                            fp2_mul_pre_portable<Field>(z, x, y);
+#endif
+                        }
+
+                        template<class Field>
+                        inline void fp2_add_mul_pre_portable(limb_array *z, const limb *a, const limb *b, const limb *c,
+                                                             const limb *d) {
+                            // Build the raw fp2 sums in the same packed layout expected by fp2_mul_pre.
+                            limb x[8], y[8];
+                            add_limbs_portable<4>(x, a, b);
+                            add_limbs_portable<4>(x + 4, a + 4, b + 4);
+                            add_limbs_portable<4>(y, c, d);
+                            add_limbs_portable<4>(y + 4, c + 4, d + 4);
+                            fp2_mul_pre_portable<Field>(z, x, y);
+                        }
+
+                        template<class Field>
+                        inline void fp2_add_mul_pre(limb_array *z, const limb *a, const limb *b, const limb *c,
+                                                    const limb *d) {
+#if BOOST_ARCH_X86
+                            fp2_add_mul_pre_x86<Field>(z, a, b, c, d);
+#else
+                            fp2_add_mul_pre_portable<Field>(z, a, b, c, d);
+#endif
+                        }
+
                     }    // namespace alt_bn128_fp12_limb_ops
                 }    // namespace detail
             }    // namespace fields
