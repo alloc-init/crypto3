@@ -2,7 +2,7 @@
 
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
 
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_ops_x86.hpp>
 #endif
 
@@ -91,7 +91,7 @@ namespace nil {
 
                         template<class Field>
                         inline void add_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
                             add_8_limbs_mod_x86<Field>(z, x, y);
 #else
                             add_limbs_portable<8>(z.data(), x.data(), y.data());
@@ -104,7 +104,7 @@ namespace nil {
 
                         template<class Field>
                         inline void subtract_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
                             subtract_8_limbs_mod_x86<Field>(z, x, y);
 #else
                             bool borrow = subtract_limbs_portable<8>(z.data(), x.data(), y.data());
@@ -119,7 +119,7 @@ namespace nil {
 
                         template<class Field>
                         inline void mul_8_limbs_by_9(limb_array &dst, const limb_array &src) {
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
                             mul_8_limbs_by_9_x86<Field>(dst, src);
 #else
                             limb_array cpy = src;
@@ -204,7 +204,7 @@ namespace nil {
                         }
 
                         inline void multiply_4x4(limb *z, const limb *x, const limb *y) {
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
                             multiply_4x4_x86(z, x, y);
 #else
                             multiply_4x4_portable(z, x, y);
@@ -263,7 +263,7 @@ namespace nil {
 
                         template<class Field>
                         inline void montgomery_reduce(limb *result, const limb_array &data) {
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
                             montgomery_reduce_x86<Field>(result, data.data());
 #else
                             montgomery_reduce_portable<Field>(result, data);
@@ -274,7 +274,7 @@ namespace nil {
                         // coefficient is normalized modulo p.
                         template<class Field>
                         inline void fp2_base_add_mod(limb *z, const limb *x, const limb *y) {
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
                             fp2_base_add_mod_x86<Field>(z, x, y);
 #else
                             add_low_4_limbs_mod_portable<Field>(z, x, y);
@@ -285,7 +285,7 @@ namespace nil {
                         // Raw fp2_base coefficient-wise add. BN254 inputs are bounded so each
                         // coefficient sum fits in four limbs.
                         inline void fp2_base_add_pre(limb *z, const limb *x, const limb *y) {
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
                             fp2_base_add_pre_x86(z, x, y);
 #else
                             add_limbs_portable<4>(z, x, y);
@@ -295,7 +295,7 @@ namespace nil {
 
                         template<class Field>
                         inline void fp2_sub_pre(limb_array *data, const limb_array *other) {
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
                             fp2_sub_pre_x86<Field>(data, other);
 #else
                             subtract_8_limbs_mod<Field>(data[0], data[0], other[0]);
@@ -359,7 +359,7 @@ namespace nil {
 
                         template<class Field>
                         inline void fp2_mul_pre(limb_array *z, const limb *x, const limb *y) {
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
                             fp2_mul_pre_x86<Field>(z, x, y);
 #else
                             fp2_mul_pre_portable<Field>(z, x, y);
@@ -381,7 +381,7 @@ namespace nil {
                         template<class Field>
                         inline void fp2_add_mul_pre(limb_array *z, const limb *a, const limb *b, const limb *c,
                                                     const limb *d) {
-#if BOOST_ARCH_X86
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
                             fp2_add_mul_pre_x86<Field>(z, a, b, c, d);
 #else
                             fp2_add_mul_pre_portable<Field>(z, a, b, c, d);
