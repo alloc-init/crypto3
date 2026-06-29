@@ -41,10 +41,6 @@ cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         INCLUDE include
         NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
 
-if(${CMAKE_TARGET_ARCHITECTURE} STREQUAL "x86_64" OR ${CMAKE_TARGET_ARCHITECTURE} STREQUAL "x86")
-        target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE "-march=native")
-endif()
-
 include(CMTest)
 cm_add_test_subdirectory(test)
 
