@@ -74,8 +74,8 @@ namespace nil {
                     using reverse_linearised_iterator = std::reverse_iterator<linearised_iterator>;
                     using const_reverse_linearised_iterator = std::reverse_iterator<const_linearised_iterator>;
                     using linearised_iterator_range = std::pair<linearised_iterator, linearised_iterator>;
-                    using const_linearised_iterator_range
-                        = std::pair<const_linearised_iterator, const_linearised_iterator>;
+                    using const_linearised_iterator_range =
+                        std::pair<const_linearised_iterator, const_linearised_iterator>;
 
                     static_queue_base(storage_type_ptr data, std::size_t capacity) :
                         data_(data), capacity_(capacity), startIdx_(0), count_(0) {
@@ -436,8 +436,8 @@ namespace nil {
                         auto rangeOne = arrayOne();
                         auto rangeTwo = arrayTwo();
 
-                        auto isInRangeFunc
-                            = [](linearised_iterator pos, const linearised_iterator_range range) -> bool {
+                        auto isInRangeFunc = [](linearised_iterator pos,
+                                                const linearised_iterator_range range) -> bool {
                             return ((range.first <= pos) && (pos < range.second));
                         };
 
@@ -640,8 +640,8 @@ namespace nil {
                             otherCurrIter = otherRangeOne.first;
                         }
 
-                        MARSHALLING_ASSERT(std::distance(currIter, rangeTwo.second)
-                                           == std::distance(otherCurrIter, otherRangeTwo.second));
+                        MARSHALLING_ASSERT(std::distance(currIter, rangeTwo.second) ==
+                                           std::distance(otherCurrIter, otherRangeTwo.second));
                         return std::equal(currIter, rangeTwo.second, otherCurrIter);
                     }
 
@@ -704,8 +704,8 @@ namespace nil {
                             return arrayTwo().second - 1;
                         }
 
-                        auto isInRangeFunc
-                            = [](linearised_iterator pos, const linearised_iterator_range range) -> bool {
+                        auto isInRangeFunc = [](linearised_iterator pos,
+                                                const linearised_iterator_range range) -> bool {
                             return ((range.first <= pos) && (pos < range.second));
                         };
 
@@ -842,8 +842,8 @@ namespace nil {
                     template<typename TIter>
                     void move_range(TIter rangeBeg, TIter rangeEnd, TIter target) {
                         MARSHALLING_ASSERT(target < rangeBeg);
-                        auto moveConstructSize
-                            = std::min(std::distance(rangeBeg, rangeEnd), std::distance(target, rangeBeg));
+                        auto moveConstructSize =
+                            std::min(std::distance(rangeBeg, rangeEnd), std::distance(target, rangeBeg));
 
                         TIter moveConstructEnd = rangeBeg + moveConstructSize;
                         for (auto iter = rangeBeg; iter != moveConstructEnd; ++iter) {
@@ -1578,12 +1578,8 @@ namespace nil {
 
                 template<typename T>
                 class StaticQueueBaseOptimised<T *>
-                    : public CastWrapperQueueBase<
-                          T *,
-                          typename processing::size_to_type<sizeof(T *)>::type> {
-                    using Base
-                        = CastWrapperQueueBase<T *,
-                                               typename processing::size_to_type<sizeof(T *)>::type>;
+                    : public CastWrapperQueueBase<T *, typename processing::size_to_type<sizeof(T *)>::type> {
+                    using Base = CastWrapperQueueBase<T *, typename processing::size_to_type<sizeof(T *)>::type>;
 
                 protected:
                     using Base = typename Base::StorageTypePtr;

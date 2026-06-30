@@ -36,6 +36,8 @@
 #include <boost/static_assert.hpp>
 #include <boost/concept/assert.hpp>
 
+#include <nil/crypto3/algebra/curves/detail/scalar_mul.hpp>
+
 #include <nil/crypto3/hash/detail/h2c/h2c_suites.hpp>
 #include <nil/crypto3/hash/detail/h2c/h2c_policy.hpp>
 
@@ -339,7 +341,10 @@ namespace nil {
 
                 template<typename GroupValue>
                 static inline GroupValue clear_cofactor(const GroupValue &R) {
-                    return R * h2c_suite<typename GroupValue::group_type>::h_eff;
+                    GroupValue result = R;
+                    algebra::curves::detail::scalar_mul_inplace(result,
+                                                                h2c_suite<typename GroupValue::group_type>::h_eff);
+                    return result;
                 }
 
                 template<typename GroupType, uniformity_count_t count, typename U>

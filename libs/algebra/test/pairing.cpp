@@ -24,8 +24,7 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#include "nil/crypto3/algebra/curves/alt_bn128.hpp"
-#define BOOST_TEST_MODULE algebra_curves_test
+#define BOOST_TEST_MODULE algebra_pairing_test
 
 #include <iostream>
 #include <vector>
@@ -37,8 +36,6 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-
-#include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
 
 #include <nil/crypto3/algebra/curves/bls12.hpp>
 #include <nil/crypto3/algebra/curves/mnt4.hpp>
@@ -70,7 +67,7 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 boost::property_tree::ptree string_data(const std::string &test_name) {
@@ -82,8 +79,11 @@ boost::property_tree::ptree string_data(const std::string &test_name) {
 }
 
 enum Fr_enum : std::size_t { VKx_poly, VKy_poly, VKz_poly, A1_poly, B1_poly, C1_poly, A2_poly, B2_poly, C2_poly };
+
 enum G1_enum : std::size_t { A1, C1, A2, C2, VKx };
+
 enum G2_enum : std::size_t { B1, B2, VKy, VKz };
+
 enum GT_enum : std::size_t {
     pairing_A1_B1,
     pairing_A2_B2,
@@ -95,18 +95,19 @@ enum GT_enum : std::size_t {
     miller_loop_prec_A2_prec_B2,
     double_miller_loop_prec_A1_prec_B1_prec_A2_prec_B2
 };
+
 enum g1_precomp_enum : std::size_t { prec_A1, prec_A2 };
+
 enum g2_precomp_enum : std::size_t { prec_B1, prec_B2 };
 
-// TODO: add affine_pair_reduceding test
 template<typename CurveType, typename Fr_value_type, typename G1_value_type, typename G2_value_type,
          typename GT_value_type, typename g1_precomp_value_type, typename g2_precomp_value_type>
-void check_pairing_operations(std::vector<Fr_value_type> const& Fr_elements,
-                              std::vector<G1_value_type> const& G1_elements,
-                              std::vector<G2_value_type> const& G2_elements,
-                              std::vector<GT_value_type> const& GT_elements,
-                              std::vector<g1_precomp_value_type> const& G1_prec_elements,
-                              std::vector<g2_precomp_value_type> const& G2_prec_elements) {
+void check_pairing_operations(std::vector<Fr_value_type> const &Fr_elements,
+                              std::vector<G1_value_type> const &G1_elements,
+                              std::vector<G2_value_type> const &G2_elements,
+                              std::vector<GT_value_type> const &GT_elements,
+                              std::vector<g1_precomp_value_type> const &G1_prec_elements,
+                              std::vector<g2_precomp_value_type> const &G2_prec_elements) {
     std::cout << " * Basic fields and groups tests started..." << std::endl;
     BOOST_CHECK_EQUAL((Fr_elements[A1_poly] * Fr_elements[B1_poly] - Fr_elements[VKx_poly] * Fr_elements[VKy_poly]) *
                           Fr_elements[VKz_poly].inversed(),
@@ -130,13 +131,13 @@ void check_pairing_operations(std::vector<Fr_value_type> const& Fr_elements,
     std::cout << " * Basic fields and groups tests finished." << std::endl << std::endl;
 
     std::cout << " * Pairing with infinity tests started..." << std::endl;
-    BOOST_CHECK_EQUAL(final_exponentiation<CurveType>(pair<CurveType>(G1_value_type::zero(), G2_elements[B1])), GT_value_type::one());
+    BOOST_CHECK_EQUAL(*final_exponentiation<CurveType>(pair<CurveType>(G1_value_type::zero(), G2_elements[B1])),
+                      GT_value_type::one());
     std::cout << " * Pairing with infinity tests finished." << std::endl << std::endl;
 
     std::cout << " * Reduced pairing with infinity tests started..." << std::endl;
-    BOOST_CHECK_EQUAL(pair_reduced<CurveType>(G1_value_type::zero(), G2_elements[B1]), GT_value_type::one());
+    BOOST_CHECK_EQUAL(*pair_reduced<CurveType>(G1_value_type::zero(), G2_elements[B1]), GT_value_type::one());
     std::cout << " * Reduced pairing with infinity tests finished." << std::endl << std::endl;
-
 
     std::cout << " * Precomputing and pairing tests started..." << std::endl;
     BOOST_CHECK_EQUAL(precompute_g1<CurveType>(G1_elements[A1]), G1_prec_elements[prec_A1]);
@@ -147,39 +148,35 @@ void check_pairing_operations(std::vector<Fr_value_type> const& Fr_elements,
     BOOST_CHECK_EQUAL(pair<CurveType>(G1_elements[A2], G2_elements[B2]), GT_elements[pairing_A2_B2]);
     std::cout << " * Precomputing and pairing tests finished." << std::endl << std::endl;
 
-    // TODO: activate after pair_reduceding->cyclotomic_exp fixed. Bugs in final_exponentiation_last_chunk
     std::cout << " * Reduced pairing tests started..." << std::endl;
-    BOOST_CHECK_EQUAL(pair_reduced<CurveType>(G1_elements[A1], G2_elements[B1]), GT_elements[pair_reduceding_A1_B1]);
-    BOOST_CHECK_EQUAL(pair_reduced<CurveType>(G1_elements[A1], G2_elements[B1]),
-                      pair_reduced<CurveType>(G1_elements[VKx], G2_elements[VKy]) *
-                          pair_reduced<CurveType>(G1_elements[C1], G2_elements[VKz]));
-    BOOST_CHECK_EQUAL(pair_reduced<CurveType>(G1_elements[A2], G2_elements[B2]), GT_elements[pair_reduceding_A2_B2]);
-    BOOST_CHECK_EQUAL(pair_reduced<CurveType>(G1_elements[A2], G2_elements[B2]),
-                      pair_reduced<CurveType>(G1_elements[VKx], G2_elements[VKy]) *
-                          pair_reduced<CurveType>(G1_elements[C2], G2_elements[VKz]));
-    BOOST_CHECK_EQUAL(pair_reduced<CurveType>(G1_elements[A1], G2_elements[B1]) *
-                          pair_reduced<CurveType>(G1_elements[A2], G2_elements[B2]),
+    BOOST_CHECK_EQUAL(*pair_reduced<CurveType>(G1_elements[A1], G2_elements[B1]), GT_elements[pair_reduceding_A1_B1]);
+    BOOST_CHECK_EQUAL(*pair_reduced<CurveType>(G1_elements[A1], G2_elements[B1]),
+                      *pair_reduced<CurveType>(G1_elements[VKx], G2_elements[VKy]) *
+                          *pair_reduced<CurveType>(G1_elements[C1], G2_elements[VKz]));
+    BOOST_CHECK_EQUAL(*pair_reduced<CurveType>(G1_elements[A2], G2_elements[B2]), GT_elements[pair_reduceding_A2_B2]);
+    BOOST_CHECK_EQUAL(*pair_reduced<CurveType>(G1_elements[A2], G2_elements[B2]),
+                      *pair_reduced<CurveType>(G1_elements[VKx], G2_elements[VKy]) *
+                          *pair_reduced<CurveType>(G1_elements[C2], G2_elements[VKz]));
+    BOOST_CHECK_EQUAL(*pair_reduced<CurveType>(G1_elements[A1], G2_elements[B1]) *
+                          *pair_reduced<CurveType>(G1_elements[A2], G2_elements[B2]),
                       GT_elements[pair_reduceding_A1_B1_mul_pair_reduceding_A2_B2]);
     std::cout << " * Reduced pairing tests finished." << std::endl << std::endl;
 
-    // TODO: activate when scalar multiplication done
     std::cout << " * Reduced pairing tests with scalar multiplication started..." << std::endl;
-    BOOST_CHECK_EQUAL(pair_reduced<CurveType>(G1_elements[A1], G2_elements[B1]) *
-                          pair_reduced<CurveType>(G1_elements[A2], G2_elements[B2]),
-                      pair_reduced<CurveType>(Fr_value_type(2u) * G1_elements[VKx], G2_elements[VKy]) *
-                          pair_reduced<CurveType>(G1_elements[C1] + G1_elements[C2], G2_elements[VKz]));
-    BOOST_CHECK_EQUAL(pair_reduced<CurveType>(Fr_elements[VKx_poly] * G1_elements[A1], G2_elements[B1]),
+    BOOST_CHECK_EQUAL(*pair_reduced<CurveType>(G1_elements[A1], G2_elements[B1]) *
+                          *pair_reduced<CurveType>(G1_elements[A2], G2_elements[B2]),
+                      *pair_reduced<CurveType>(Fr_value_type(2u) * G1_elements[VKx], G2_elements[VKy]) *
+                          *pair_reduced<CurveType>(G1_elements[C1] + G1_elements[C2], G2_elements[VKz]));
+    BOOST_CHECK_EQUAL(*pair_reduced<CurveType>(Fr_elements[VKx_poly] * G1_elements[A1], G2_elements[B1]),
                       GT_elements[pair_reduceding_VKx_poly_A1_B1]);
-    BOOST_CHECK_EQUAL(pair_reduced<CurveType>(Fr_elements[VKx_poly] * G1_elements[A1], G2_elements[B1]),
-                      pair_reduced<CurveType>(G1_elements[A1], Fr_elements[VKx_poly] * G2_elements[B1]));
+    BOOST_CHECK_EQUAL(*pair_reduced<CurveType>(Fr_elements[VKx_poly] * G1_elements[A1], G2_elements[B1]),
+                      *pair_reduced<CurveType>(G1_elements[A1], Fr_elements[VKx_poly] * G2_elements[B1]));
     std::cout << " * Reduced pairing tests with scalar multiplication finished." << std::endl << std::endl;
 
-    // TODO: activate when pow will be override with field element
     std::cout << " * Reduced pairing tests with pow started..." << std::endl;
     BOOST_CHECK_EQUAL(
-        pair_reduced<CurveType>(Fr_elements[VKx_poly] * G1_elements[A1], G2_elements[B1]),
-        // TODO: fix pow to accept field element as exponent
-        pair_reduced<CurveType>(G1_elements[A1], G2_elements[B1]).pow(Fr_elements[VKx_poly].data));
+        *pair_reduced<CurveType>(Fr_elements[VKx_poly] * G1_elements[A1], G2_elements[B1]),
+        pair_reduced<CurveType>(G1_elements[A1], G2_elements[B1])->pow(Fr_elements[VKx_poly].to_integral()));
     std::cout << " * Reduced pairing tests with pow finished." << std::endl << std::endl;
 
     std::cout << " * Miller loop tests started..." << std::endl;
@@ -188,12 +185,12 @@ void check_pairing_operations(std::vector<Fr_value_type> const& Fr_elements,
     BOOST_CHECK_EQUAL(miller_loop<CurveType>(G1_prec_elements[prec_A2], G2_prec_elements[prec_B2]),
                       GT_elements[miller_loop_prec_A2_prec_B2]);
     BOOST_CHECK_EQUAL(double_miller_loop<CurveType>(G1_prec_elements[prec_A1], G2_prec_elements[prec_B1],
-                                                   G1_prec_elements[prec_A2], G2_prec_elements[prec_B2]),
+                                                    G1_prec_elements[prec_A2], G2_prec_elements[prec_B2]),
                       GT_elements[double_miller_loop_prec_A1_prec_B1_prec_A2_prec_B2]);
     BOOST_CHECK_EQUAL(miller_loop<CurveType>(G1_prec_elements[prec_A1], G2_prec_elements[prec_B1]) *
                           miller_loop<CurveType>(G1_prec_elements[prec_A2], G2_prec_elements[prec_B2]),
                       double_miller_loop<CurveType>(G1_prec_elements[prec_A1], G2_prec_elements[prec_B1],
-                                                   G1_prec_elements[prec_A2], G2_prec_elements[prec_B2]));
+                                                    G1_prec_elements[prec_A2], G2_prec_elements[prec_B2]));
     std::cout << " * Miller loop tests finished." << std::endl << std::endl;
 }
 
@@ -332,8 +329,8 @@ void pairing_test_Fr_init(std::vector<typename fields::detail::element_fp<FieldP
 }
 
 template<typename CurveType, typename TestSet>
-void pairing_test_G1_init(std::vector<typename CurveType::template g1_type<>::value_type> &elements, const TestSet &test_set) {
-
+void pairing_test_G1_init(std::vector<typename CurveType::template g1_type<>::value_type> &elements,
+                          const TestSet &test_set) {
     using value_type = typename CurveType::template g1_type<>::value_type;
 
     for (auto &elem_coords : test_set.second.get_child("G1")) {
@@ -342,8 +339,8 @@ void pairing_test_G1_init(std::vector<typename CurveType::template g1_type<>::va
 }
 
 template<typename CurveType, typename TestSet>
-void pairing_test_G2_init(std::vector<typename CurveType::template g2_type<>::value_type> &elements, const TestSet &test_set) {
-
+void pairing_test_G2_init(std::vector<typename CurveType::template g2_type<>::value_type> &elements,
+                          const TestSet &test_set) {
     using value_type = typename CurveType::template g2_type<>::value_type;
 
     for (auto &elem_coords : test_set.second.get_child("G2")) {
@@ -353,7 +350,6 @@ void pairing_test_G2_init(std::vector<typename CurveType::template g2_type<>::va
 
 template<typename CurveType, typename TestSet>
 void pairing_test_GT_init(std::vector<typename CurveType::gt_type::value_type> &elements, const TestSet &test_set) {
-
     using value_type = typename CurveType::gt_type::value_type;
 
     for (auto &elem_GT : test_set.second.get_child("GT")) {
@@ -362,8 +358,9 @@ void pairing_test_GT_init(std::vector<typename CurveType::gt_type::value_type> &
 }
 
 template<typename TestSet>
-void pairing_test_g1_precomp_init(std::vector<typename pairing::pairing_policy<curves::bls12<381>>::g1_precomputed_type> &elements,
-                                  const TestSet &test_set) {
+void pairing_test_g1_precomp_init(
+    std::vector<typename pairing::pairing_policy<curves::bls12<381>>::g1_precomputed_type> &elements,
+    const TestSet &test_set) {
     using curve_type = curves::bls12<381>;
     using pairing_policy = typename pairing::pairing_policy<curve_type>;
     using value_type = typename pairing_policy::g1_precomputed_type;
@@ -378,8 +375,9 @@ void pairing_test_g1_precomp_init(std::vector<typename pairing::pairing_policy<c
 }
 
 template<typename TestSet>
-void pairing_test_g1_precomp_init(std::vector<typename pairing::pairing_policy<curves::alt_bn128_254>::g1_precomputed_type> &elements,
-                                  const TestSet &test_set) {
+void pairing_test_g1_precomp_init(
+    std::vector<typename pairing::pairing_policy<curves::alt_bn128_254>::g1_precomputed_type> &elements,
+    const TestSet &test_set) {
     using curve_type = curves::alt_bn128_254;
     using pairing_policy = typename pairing::pairing_policy<curve_type>;
     using value_type = typename pairing_policy::g1_precomputed_type;
@@ -393,10 +391,10 @@ void pairing_test_g1_precomp_init(std::vector<typename pairing::pairing_policy<c
     }
 }
 
-
 template<typename TestSet>
-void pairing_test_g1_precomp_init(std::vector<typename pairing::pairing_policy<curves::mnt4<298>>::g1_precomputed_type> &elements,
-                                  const TestSet &test_set) {
+void pairing_test_g1_precomp_init(
+    std::vector<typename pairing::pairing_policy<curves::mnt4<298>>::g1_precomputed_type> &elements,
+    const TestSet &test_set) {
     using curve_type = curves::mnt4<298>;
     using pairing_policy = typename pairing::pairing_policy<curve_type>;
     using value_type = typename pairing_policy::g1_precomputed_type;
@@ -414,8 +412,9 @@ void pairing_test_g1_precomp_init(std::vector<typename pairing::pairing_policy<c
 }
 
 template<typename TestSet>
-void pairing_test_g1_precomp_init(std::vector<typename pairing::pairing_policy<curves::mnt6<298>>::g1_precomputed_type> &elements,
-                                  const TestSet &test_set) {
+void pairing_test_g1_precomp_init(
+    std::vector<typename pairing::pairing_policy<curves::mnt6<298>>::g1_precomputed_type> &elements,
+    const TestSet &test_set) {
     using curve_type = curves::mnt6<298>;
     using pairing_policy = typename pairing::pairing_policy<curve_type>;
     using value_type = typename pairing_policy::g1_precomputed_type;
@@ -433,8 +432,9 @@ void pairing_test_g1_precomp_init(std::vector<typename pairing::pairing_policy<c
 }
 
 template<typename TestSet>
-void pairing_test_g2_precomp_init(std::vector<typename pairing::pairing_policy<curves::alt_bn128_254>::g2_precomputed_type> &elements,
-                                  const TestSet &test_set) {
+void pairing_test_g2_precomp_init(
+    std::vector<typename pairing::pairing_policy<curves::alt_bn128_254>::g2_precomputed_type> &elements,
+    const TestSet &test_set) {
     using curve_type = curves::alt_bn128_254;
     using pairing_policy = typename pairing::pairing_policy<curve_type>;
     using value_type = typename pairing_policy::g2_precomputed_type;
@@ -463,10 +463,10 @@ void pairing_test_g2_precomp_init(std::vector<typename pairing::pairing_policy<c
     }
 }
 
-
 template<typename TestSet>
-void pairing_test_g2_precomp_init(std::vector<typename pairing::pairing_policy<curves::bls12<381>>::g2_precomputed_type> &elements,
-                                  const TestSet &test_set) {
+void pairing_test_g2_precomp_init(
+    std::vector<typename pairing::pairing_policy<curves::bls12<381>>::g2_precomputed_type> &elements,
+    const TestSet &test_set) {
     using curve_type = curves::bls12<381>;
     using pairing_policy = typename pairing::pairing_policy<curve_type>;
     using value_type = typename pairing_policy::g2_precomputed_type;
@@ -496,8 +496,9 @@ void pairing_test_g2_precomp_init(std::vector<typename pairing::pairing_policy<c
 }
 
 template<typename TestSet>
-void pairing_test_g2_precomp_init(std::vector<typename pairing::pairing_policy<curves::mnt4<298>>::g2_precomputed_type> &elements,
-                                  const TestSet &test_set) {
+void pairing_test_g2_precomp_init(
+    std::vector<typename pairing::pairing_policy<curves::mnt4<298>>::g2_precomputed_type> &elements,
+    const TestSet &test_set) {
     using curve_type = curves::mnt4<298>;
     using pairing_policy = typename pairing::pairing_policy<curve_type>;
     using value_type = typename pairing_policy::g2_precomputed_type;
@@ -545,8 +546,9 @@ void pairing_test_g2_precomp_init(std::vector<typename pairing::pairing_policy<c
 }
 
 template<typename TestSet>
-void pairing_test_g2_precomp_init(std::vector<typename pairing::pairing_policy<curves::mnt6<298>>::g2_precomputed_type> &elements,
-                                  const TestSet &test_set) {
+void pairing_test_g2_precomp_init(
+    std::vector<typename pairing::pairing_policy<curves::mnt6<298>>::g2_precomputed_type> &elements,
+    const TestSet &test_set) {
     using curve_type = curves::mnt6<298>;
     using pairing_policy = typename pairing::pairing_policy<curve_type>;
     using value_type = typename pairing_policy::g2_precomputed_type;
@@ -620,14 +622,13 @@ void pairing_operation_test(const TestSet &test_set) {
     std::vector<typename pairing::pairing_policy<CurveType>::g2_precomputed_type> G2_prec_elements;
 
     pairing_test_init<CurveType>(Fr_elements, G1_elements, G2_elements, GT_elements, G1_prec_elements, G2_prec_elements,
-                                test_set);
+                                 test_set);
     check_pairing_operations<CurveType>(Fr_elements, G1_elements, G2_elements, GT_elements, G1_prec_elements,
-                                       G2_prec_elements);
+                                        G2_prec_elements);
 }
 
 BOOST_AUTO_TEST_SUITE(pairing_manual_tests)
 
-// TODO: fix pair_reduceding
 BOOST_DATA_TEST_CASE(pairing_operation_test_bls12_381, string_data("pairing_operation_test_bls12_381"), data_set) {
     using curve_type = typename curves::bls12<381>;
 

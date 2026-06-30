@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/curves/forms.hpp>
 #include <nil/crypto3/algebra/curves/detail/babyjubjub/types.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -43,10 +41,10 @@ namespace nil {
 
                         // Edwards representation constants a and d
                         constexpr static const typename babyjubjub_types::integral_type
-                            a =                 ///< twisted Edwards elliptic curve
+                            a =                         ///< twisted Edwards elliptic curve
                             0x292FC_cppui_modular18;    ///< described by equation ax^2 + y^2 = 1 + dx^2y^2
                         constexpr static const typename babyjubjub_types::integral_type
-                            d =                 ///< twisted Edwards elliptic curve
+                            d =                         ///< twisted Edwards elliptic curve
                             0x292F8_cppui_modular18;    ///< described by equation ax^2 + y^2 = 1 + dx^2y^2
                     };
 
@@ -62,7 +60,7 @@ namespace nil {
 
                         // Montgomery representation constants A and B
                         constexpr static const typename babyjubjub_types::integral_type
-                            A =                 ///< Montgomery elliptic curve
+                            A =                         ///< Montgomery elliptic curve
                             0x292FA_cppui_modular18;    ///< described by equation b*y^2 = x^3 + a*x^2 + x
                         constexpr static const typename babyjubjub_types::integral_type
                             B =      ///< Montgomery elliptic curve
@@ -114,9 +112,9 @@ namespace nil {
                     constexpr std::array<typename babyjubjub_g1_params<forms::montgomery>::base_field_type::value_type,
                                          2> const babyjubjub_g1_params<forms::montgomery>::one_fill;
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_BABYJUBJUB_PARAMS_HPP

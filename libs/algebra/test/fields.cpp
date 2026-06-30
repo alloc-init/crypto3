@@ -55,12 +55,12 @@
 #include <nil/crypto3/algebra/fields/secp/secp_r1/base_field.hpp>
 #include <nil/crypto3/algebra/fields/secp/secp_r1/scalar_field.hpp>
 
+#include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/algebra/fields/curve25519/base_field.hpp>
 #include <nil/crypto3/algebra/fields/curve25519/scalar_field.hpp>
-#include <nil/crypto3/algebra/fields/goldilocks64/base_field.hpp>
-#include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
-#include <nil/crypto3/algebra/fields/m31/base_field.hpp>
-#include <nil/crypto3/algebra/fields/maxprime.hpp>
+#include <nil/crypto3/algebra/fields/goldilocks.hpp>
+#include <nil/crypto3/algebra/fields/koalabear.hpp>
+#include <nil/crypto3/algebra/fields/mersenne31.hpp>
 
 #include <nil/crypto3/algebra/fields/detail/element/fp.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/fp2.hpp>
@@ -84,10 +84,11 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 typedef std::size_t constant_type;
+
 enum field_operation_test_constants : std::size_t { C1, constants_set_size };
 
 enum field_operation_test_elements : std::size_t {
@@ -105,7 +106,6 @@ enum field_operation_test_elements : std::size_t {
 
     elements_set_size
 };
-
 
 boost::property_tree::ptree string_data(std::string test_name) {
     // if target == check-algebra just data/fields.json
@@ -238,10 +238,32 @@ struct field_element_init<fields::detail::element_fp12_2over3over2<FieldParams>>
             for (auto &elem_fp2 : elem_3over2.second) {
                 underlying_element_values[j++] = field_element_init<underlying_type>::process(elem_fp2);
             }
-            element_values[i++] = underlying_type_3over2(
-                underlying_element_values[0], underlying_element_values[1], underlying_element_values[2]);
+            element_values[i++] = underlying_type_3over2(underlying_element_values[0], underlying_element_values[1],
+                                                         underlying_element_values[2]);
         }
         return element_type(element_values[0], element_values[1]);
+    }
+};
+
+template<typename FieldParams>
+struct field_element_init<fields::detail::element_fpn<FieldParams>> {
+    using element_type = fields::detail::element_fpn<FieldParams>;
+
+    template<typename ElementData>
+    static inline element_type process(const ElementData &element_data) {
+        using underlying_type = typename element_type::underlying_type;
+
+        std::array<underlying_type, element_type::dimension> element_values;
+
+        auto i = 0;
+        for (auto &element_value : element_data.second) {
+            element_values[i++] = field_element_init<underlying_type>::process(element_value);
+        }
+        if (i != element_type::dimension) {
+            throw std::runtime_error("wrong number of elements");
+        }
+
+        return element_values;
     }
 };
 
@@ -262,9 +284,15 @@ template<typename element_type>
 void check_field_eq_operations(const std::vector<element_type> &elements) {
     element_type A;
 
-    A = elements[e1]; A += elements[e2]; BOOST_CHECK_EQUAL(A, elements[e1_plus_e2]);
-    A = elements[e1]; A -= elements[e2]; BOOST_CHECK_EQUAL(A, elements[e1_minus_e2]);
-    A = elements[e1]; A *= elements[e2]; BOOST_CHECK_EQUAL(A, elements[e1_mul_e2]);
+    A = elements[e1];
+    A += elements[e2];
+    BOOST_CHECK_EQUAL(A, elements[e1_plus_e2]);
+    A = elements[e1];
+    A -= elements[e2];
+    BOOST_CHECK_EQUAL(A, elements[e1_minus_e2]);
+    A = elements[e1];
+    A *= elements[e2];
+    BOOST_CHECK_EQUAL(A, elements[e1_mul_e2]);
 }
 
 template<typename element_type>
@@ -304,6 +332,13 @@ void check_field_operations(const std::vector<fields::detail::element_fp6_2over3
 
 template<typename FieldParams>
 void check_field_operations(const std::vector<fields::detail::element_fp12_2over3over2<FieldParams>> &elements,
+                            const std::vector<constant_type> &constants) {
+    check_field_operations_wo_sqrt(elements, constants);
+    check_field_eq_operations(elements);
+}
+
+template<typename FieldParams>
+void check_field_operations(const std::vector<fields::detail::element_fpn<FieldParams>> &elements,
                             const std::vector<constant_type> &constants) {
     check_field_operations_wo_sqrt(elements, constants);
     check_field_eq_operations(elements);
@@ -351,8 +386,26 @@ void field_not_square_test(const TestSet &test_set) {
 
 BOOST_AUTO_TEST_SUITE(fields_manual_tests)
 
-BOOST_DATA_TEST_CASE(field_operation_test_goldilocks64_fq, string_data("field_operation_test_goldilocks64_fq"), data_set) {
-    using policy_type = fields::goldilocks64_fq;
+BOOST_DATA_TEST_CASE(field_operation_test_goldilocks, string_data("field_operation_test_goldilocks"), data_set) {
+    using policy_type = fields::goldilocks;
+
+    field_operation_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_operation_test_mersenne31, string_data("field_operation_test_mersenne31"), data_set) {
+    using policy_type = fields::mersenne31;
+
+    field_operation_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_operation_test_koalabear, string_data("field_operation_test_koalabear"), data_set) {
+    using policy_type = fields::koalabear;
+
+    field_operation_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_operation_test_babybear, string_data("field_operation_test_babybear"), data_set) {
+    using policy_type = fields::babybear;
 
     field_operation_test<policy_type>(data_set);
 }
@@ -387,11 +440,6 @@ BOOST_DATA_TEST_CASE(field_operation_test_bls12_381_fq12,
     using policy_type = fields::fp12_2over3over2<fields::bls12_fq<381>>;
 
     field_operation_test<policy_type>(data_set);
-}
-
-BOOST_AUTO_TEST_CASE(field_operation_test_maxprime){
-    using maxprime_field_type = fields::maxprime<64>;
-    typename maxprime_field_type::value_type zero = maxprime_field_type::value_type::zero();
 }
 
 BOOST_DATA_TEST_CASE(field_operation_test_mnt4_fq, string_data("field_operation_test_mnt4_fq"), data_set) {
@@ -430,11 +478,11 @@ BOOST_DATA_TEST_CASE(field_operation_test_mnt6_fq6, string_data("field_operation
     field_operation_test<policy_type>(data_set);
 }
 
- BOOST_DATA_TEST_CASE(field_operation_test_secp256k1_fr, string_data("field_operation_test_secp256k1_fr"), data_set) {
-     using policy_type = fields::secp_k1_fr<256>;
+BOOST_DATA_TEST_CASE(field_operation_test_secp256k1_fr, string_data("field_operation_test_secp256k1_fr"), data_set) {
+    using policy_type = fields::secp_k1_fr<256>;
 
-     field_operation_test<policy_type>(data_set);
- }
+    field_operation_test<policy_type>(data_set);
+}
 
 BOOST_DATA_TEST_CASE(field_operation_test_secp256r1_fr, string_data("field_operation_test_secp256r1_fr"), data_set) {
     using policy_type = fields::secp_r1_fr<256>;
@@ -474,177 +522,211 @@ BOOST_DATA_TEST_CASE(field_operation_test_secp256r1_fq, string_data("field_opera
  * pallas_base_field
  * vesta_base_field
 
- * goldilocks64
+ * goldilocks
+ * mersenne31
+ * koalabear
+ * babybear
 
  */
 
-BOOST_DATA_TEST_CASE(field_not_square_test_mnt4_298_base_field, string_data("field_not_square_test_mnt4_298_base_field"), data_set) {
+BOOST_DATA_TEST_CASE(field_not_square_test_mnt4_298_base_field,
+                     string_data("field_not_square_test_mnt4_298_base_field"), data_set) {
     using policy_type = typename curves::mnt4_298::base_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
-BOOST_DATA_TEST_CASE(field_not_square_test_mnt4_298_scalar_field, string_data("field_not_square_test_mnt4_298_scalar_field"), data_set) {
+
+BOOST_DATA_TEST_CASE(field_not_square_test_mnt4_298_scalar_field,
+                     string_data("field_not_square_test_mnt4_298_scalar_field"), data_set) {
     using policy_type = typename curves::mnt4_298::scalar_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
+
 BOOST_DATA_TEST_CASE(field_not_square_test_mnt4_298_g2, string_data("field_not_square_test_mnt4_298_g2"), data_set) {
     using policy_type = typename curves::mnt4_298::template g2_type<>::field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
 
-
-BOOST_DATA_TEST_CASE(field_not_square_test_mnt6_298_base_field, string_data("field_not_square_test_mnt4_298_scalar_field"), data_set) {
+BOOST_DATA_TEST_CASE(field_not_square_test_mnt6_298_base_field,
+                     string_data("field_not_square_test_mnt4_298_scalar_field"), data_set) {
     using policy_type = typename curves::mnt6_298::base_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
-BOOST_DATA_TEST_CASE(field_not_square_test_mnt6_298_scalar_field, string_data("field_not_square_test_mnt4_298_base_field"), data_set) {
+
+BOOST_DATA_TEST_CASE(field_not_square_test_mnt6_298_scalar_field,
+                     string_data("field_not_square_test_mnt4_298_base_field"), data_set) {
     using policy_type = typename curves::mnt6_298::scalar_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
+
 BOOST_DATA_TEST_CASE(field_not_square_test_mnt6_298_g2, string_data("field_not_square_test_mnt6_298_g2"), data_set) {
     using policy_type = typename curves::mnt6_298::template g2_type<>::field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
 
-
-BOOST_DATA_TEST_CASE(field_not_square_test_bls12_381_base_field, string_data("field_not_square_test_bls12_381_base_field"), data_set) {
+BOOST_DATA_TEST_CASE(field_not_square_test_bls12_381_base_field,
+                     string_data("field_not_square_test_bls12_381_base_field"), data_set) {
     using policy_type = typename curves::bls12_381::base_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
-BOOST_DATA_TEST_CASE(field_not_square_test_bls12_381_scalar_field, string_data("field_not_square_test_bls12_381_scalar_field"), data_set) {
+
+BOOST_DATA_TEST_CASE(field_not_square_test_bls12_381_scalar_field,
+                     string_data("field_not_square_test_bls12_381_scalar_field"), data_set) {
     using policy_type = typename curves::bls12_381::scalar_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
+
 BOOST_DATA_TEST_CASE(field_not_square_test_bls12_381_g2, string_data("field_not_square_test_bls12_381_g2"), data_set) {
     using policy_type = typename curves::bls12_381::template g2_type<>::field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
 
-
-BOOST_DATA_TEST_CASE(field_not_square_test_bls12_377_base_field, string_data("field_not_square_test_bls12_377_base_field"), data_set) {
+BOOST_DATA_TEST_CASE(field_not_square_test_bls12_377_base_field,
+                     string_data("field_not_square_test_bls12_377_base_field"), data_set) {
     using policy_type = typename curves::bls12_377::base_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
-BOOST_DATA_TEST_CASE(field_not_square_test_bls12_377_scalar_field, string_data("field_not_square_test_bls12_377_scalar_field"), data_set) {
+
+BOOST_DATA_TEST_CASE(field_not_square_test_bls12_377_scalar_field,
+                     string_data("field_not_square_test_bls12_377_scalar_field"), data_set) {
     using policy_type = typename curves::bls12_377::scalar_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
+
 BOOST_DATA_TEST_CASE(field_not_square_test_bls12_377_g2, string_data("field_not_square_test_bls12_377_g2"), data_set) {
     using policy_type = typename curves::bls12_377::template g2_type<>::field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
 
-
-BOOST_DATA_TEST_CASE(field_not_square_test_pallas_base_field, string_data("field_not_square_test_pallas_base_field"), data_set) {
+BOOST_DATA_TEST_CASE(field_not_square_test_pallas_base_field, string_data("field_not_square_test_pallas_base_field"),
+                     data_set) {
     using policy_type = typename curves::pallas::base_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
-BOOST_DATA_TEST_CASE(field_not_square_test_pallas_scalar_field, string_data("field_not_square_test_pallas_scalar_field"), data_set) {
+
+BOOST_DATA_TEST_CASE(field_not_square_test_pallas_scalar_field,
+                     string_data("field_not_square_test_pallas_scalar_field"), data_set) {
     using policy_type = typename curves::pallas::scalar_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
 
-
-BOOST_DATA_TEST_CASE(field_not_square_test_vesta_base_field, string_data("field_not_square_test_pallas_scalar_field"), data_set) {
+BOOST_DATA_TEST_CASE(field_not_square_test_vesta_base_field, string_data("field_not_square_test_pallas_scalar_field"),
+                     data_set) {
     using policy_type = typename curves::vesta::base_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
-BOOST_DATA_TEST_CASE(field_not_square_test_vesta_scalar_field, string_data("field_not_square_test_pallas_base_field"), data_set) {
+
+BOOST_DATA_TEST_CASE(field_not_square_test_vesta_scalar_field, string_data("field_not_square_test_pallas_base_field"),
+                     data_set) {
     using policy_type = typename curves::vesta::scalar_field_type;
 
     field_not_square_test<policy_type>(data_set);
 }
 
+BOOST_DATA_TEST_CASE(field_not_square_test_goldilocks, string_data("field_not_square_test_goldilocks"), data_set) {
+    using policy_type = typename fields::goldilocks;
 
-BOOST_DATA_TEST_CASE(field_not_square_test_goldilocks64_base_field, string_data("field_not_square_test_goldilocks64_base_field"), data_set) {
-    using policy_type = typename fields::goldilocks64_base_field;
+    field_not_square_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_not_square_test_mersenne31, string_data("field_not_square_test_mersenne31"), data_set) {
+    using policy_type = typename fields::mersenne31;
+
+    field_not_square_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_not_square_test_koalabear, string_data("field_not_square_test_koalabear"), data_set) {
+    using policy_type = typename fields::koalabear;
+
+    field_not_square_test<policy_type>(data_set);
+}
+
+BOOST_DATA_TEST_CASE(field_not_square_test_babybear, string_data("field_not_square_test_babybear"), data_set) {
+    using policy_type = typename fields::babybear;
 
     field_not_square_test<policy_type>(data_set);
 }
 
 BOOST_AUTO_TEST_CASE(field_not_square_test_secp_k1) {
+    for (auto const &data_set : string_data("field_not_square_test_secp_k1_160_base_field")) {
+        field_not_square_test<typename curves::secp_k1<160>::base_field_type>(data_set);
+    }
+    for (auto const &data_set : string_data("field_not_square_test_secp_k1_192_base_field")) {
+        field_not_square_test<typename curves::secp_k1<192>::base_field_type>(data_set);
+    }
+    for (auto const &data_set : string_data("field_not_square_test_secp_k1_224_base_field")) {
+        field_not_square_test<typename curves::secp_k1<224>::base_field_type>(data_set);
+    }
+    for (auto const &data_set : string_data("field_not_square_test_secp_k1_256_base_field")) {
+        field_not_square_test<typename curves::secp_k1<256>::base_field_type>(data_set);
+    }
 
-    for(auto const& data_set: string_data("field_not_square_test_secp_k1_160_base_field") ) {
-        field_not_square_test<typename curves::secp_k1<160>::base_field_type>( data_set );
+    for (auto const &data_set : string_data("field_not_square_test_secp_k1_160_scalar_field")) {
+        field_not_square_test<typename curves::secp_k1<160>::scalar_field_type>(data_set);
     }
-    for(auto const& data_set: string_data("field_not_square_test_secp_k1_192_base_field") ) {
-        field_not_square_test<typename curves::secp_k1<192>::base_field_type>( data_set );
+    for (auto const &data_set : string_data("field_not_square_test_secp_k1_192_scalar_field")) {
+        field_not_square_test<typename curves::secp_k1<192>::scalar_field_type>(data_set);
     }
-    for(auto const& data_set: string_data("field_not_square_test_secp_k1_224_base_field") ) {
-        field_not_square_test<typename curves::secp_k1<224>::base_field_type>( data_set );
+    for (auto const &data_set : string_data("field_not_square_test_secp_k1_224_scalar_field")) {
+        field_not_square_test<typename curves::secp_k1<224>::scalar_field_type>(data_set);
     }
-    for(auto const& data_set: string_data("field_not_square_test_secp_k1_256_base_field") ) {
-        field_not_square_test<typename curves::secp_k1<256>::base_field_type>( data_set );
-    }
-
-    for(auto const& data_set: string_data("field_not_square_test_secp_k1_160_scalar_field") ) {
-        field_not_square_test<typename curves::secp_k1<160>::scalar_field_type>( data_set );
-    }
-    for(auto const& data_set: string_data("field_not_square_test_secp_k1_192_scalar_field") ) {
-        field_not_square_test<typename curves::secp_k1<192>::scalar_field_type>( data_set );
-    }
-    for(auto const& data_set: string_data("field_not_square_test_secp_k1_224_scalar_field") ) {
-        field_not_square_test<typename curves::secp_k1<224>::scalar_field_type>( data_set );
-    }
-    for(auto const& data_set: string_data("field_not_square_test_secp_k1_256_scalar_field") ) {
-        field_not_square_test<typename curves::secp_k1<256>::scalar_field_type>( data_set );
+    for (auto const &data_set : string_data("field_not_square_test_secp_k1_256_scalar_field")) {
+        field_not_square_test<typename curves::secp_k1<256>::scalar_field_type>(data_set);
     }
 }
 
 BOOST_AUTO_TEST_CASE(field_not_square_test_secp_r1) {
-
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_160_base_field") ) {
-        field_not_square_test<typename curves::secp_r1<160>::base_field_type>( data_set );
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_160_base_field")) {
+        field_not_square_test<typename curves::secp_r1<160>::base_field_type>(data_set);
     }
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_192_base_field") ) {
-        field_not_square_test<typename curves::secp_r1<192>::base_field_type>( data_set );
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_192_base_field")) {
+        field_not_square_test<typename curves::secp_r1<192>::base_field_type>(data_set);
     }
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_224_base_field") ) {
-        field_not_square_test<typename curves::secp_r1<224>::base_field_type>( data_set );
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_224_base_field")) {
+        field_not_square_test<typename curves::secp_r1<224>::base_field_type>(data_set);
     }
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_256_base_field") ) {
-        field_not_square_test<typename curves::secp_r1<256>::base_field_type>( data_set );
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_256_base_field")) {
+        field_not_square_test<typename curves::secp_r1<256>::base_field_type>(data_set);
     }
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_384_base_field") ) {
-        field_not_square_test<typename curves::secp_r1<384>::base_field_type>( data_set );
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_384_base_field")) {
+        field_not_square_test<typename curves::secp_r1<384>::base_field_type>(data_set);
     }
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_521_base_field") ) {
-        field_not_square_test<typename curves::secp_r1<521>::base_field_type>( data_set );
-    }
-
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_160_scalar_field") ) {
-        field_not_square_test<typename curves::secp_r1<160>::scalar_field_type>( data_set );
-    }
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_192_scalar_field") ) {
-        field_not_square_test<typename curves::secp_r1<192>::scalar_field_type>( data_set );
-    }
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_224_scalar_field") ) {
-        field_not_square_test<typename curves::secp_r1<224>::scalar_field_type>( data_set );
-    }
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_256_scalar_field") ) {
-        field_not_square_test<typename curves::secp_r1<256>::scalar_field_type>( data_set );
-    }
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_384_scalar_field") ) {
-        field_not_square_test<typename curves::secp_r1<384>::scalar_field_type>( data_set );
-    }
-    for(auto const& data_set: string_data("field_not_square_test_secp_r1_521_scalar_field") ) {
-        field_not_square_test<typename curves::secp_r1<521>::scalar_field_type>( data_set );
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_521_base_field")) {
+        field_not_square_test<typename curves::secp_r1<521>::base_field_type>(data_set);
     }
 
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_160_scalar_field")) {
+        field_not_square_test<typename curves::secp_r1<160>::scalar_field_type>(data_set);
+    }
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_192_scalar_field")) {
+        field_not_square_test<typename curves::secp_r1<192>::scalar_field_type>(data_set);
+    }
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_224_scalar_field")) {
+        field_not_square_test<typename curves::secp_r1<224>::scalar_field_type>(data_set);
+    }
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_256_scalar_field")) {
+        field_not_square_test<typename curves::secp_r1<256>::scalar_field_type>(data_set);
+    }
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_384_scalar_field")) {
+        field_not_square_test<typename curves::secp_r1<384>::scalar_field_type>(data_set);
+    }
+    for (auto const &data_set : string_data("field_not_square_test_secp_r1_521_scalar_field")) {
+        field_not_square_test<typename curves::secp_r1<521>::scalar_field_type>(data_set);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

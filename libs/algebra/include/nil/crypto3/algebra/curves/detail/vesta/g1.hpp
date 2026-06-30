@@ -45,7 +45,6 @@ namespace nil {
                     template<typename Form, typename Coordinates>
                     class vesta_g1 {
                     public:
-
                         using params_type = vesta_g1_params<Form>;
 
                         using curve_type = vesta;
@@ -57,20 +56,18 @@ namespace nil {
 #ifdef __ZKLLVM__
                         typedef __zkllvm_curve_vesta value_type;
 
-                        static value_type make_value(
-                            typename field_type::value_type affine_one_X,
-                            typename field_type::value_type affine_one_Y) {
+                        static value_type make_value(typename field_type::value_type affine_one_X,
+                                                     typename field_type::value_type affine_one_Y) {
                             return __builtin_assigner_vesta_curve_init(affine_one_X, affine_one_Y);
                         }
 
-                        static value_type one () {
+                        static value_type one() {
                             return make_value(
                                 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000000_cppui_modular256,
-                                0x2_cppui_modular256
-                                );
+                                0x2_cppui_modular256);
                         }
 
-                        static value_type zero () {
+                        static value_type zero() {
                             return make_value(0, 1);
                         }
 
@@ -80,8 +77,8 @@ namespace nil {
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_VESTA_G1_HPP

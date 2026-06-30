@@ -26,8 +26,6 @@
 #ifndef CRYPTO3_MERKLE_TREE_NODE_HPP
 #define CRYPTO3_MERKLE_TREE_NODE_HPP
 
-#include <numeric>
-
 namespace nil {
     namespace crypto3 {
         namespace containers {
@@ -43,8 +41,8 @@ namespace nil {
                     constexpr static const std::size_t value_bits = digest_bits;
                 };
             }    // namespace detail
-        }        // namespace containers
-    }        // namespace crypto3
+        }    // namespace containers
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_NODE_HPP

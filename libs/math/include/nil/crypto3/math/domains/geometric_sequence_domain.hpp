@@ -32,6 +32,8 @@
 
 #include <nil/crypto3/math/polynomial/basis_change.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
+#include <nil/actor/core/thread_pool.hpp>
+#include <nil/actor/core/parallelization_utils.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -118,9 +120,9 @@ namespace nil {
                     multiplication(a, g, T);
                     a.resize(this->m);
 
-                    for (std::size_t i = 0; i < this->m; i++) {
-                        a[i] = a[i] * T[i].inversed();
-                    }
+                    nil::crypto3::in_place_parallel_transform(
+                        a.begin(), a.end(), T.begin(),
+                        [](value_type &a_i, const field_value_type &T_i) { a_i *= T_i.inversed(); });
                 }
 
                 void inverse_fft(std::vector<value_type> &a) override {
@@ -155,14 +157,23 @@ namespace nil {
                     multiplication(a, W, T);
                     a.resize(this->m);
 
-                    for (std::size_t i = 0; i < this->m; i++) {
-                        a[i] = a[i] * geometric_triangular_sequence[i].inversed();
-                    }
+                    nil::crypto3::in_place_parallel_transform(
+                        a.begin(), a.end(), geometric_triangular_sequence.begin(),
+                        [](value_type &a_i, const field_value_type &g_i) { a_i *= g_i.inversed(); });
 
                     newton_to_monomial_basis_geometric<FieldType>(a, geometric_sequence, geometric_triangular_sequence,
                                                                   this->m);
                 }
 
+                void batch_fft(std::vector<std::vector<value_type>> &a) override {
+                    // TODO(martun): implement this.
+                    throw std::logic_error {"Not implemented yet"};
+                }
+
+                void batch_inverse_fft(std::vector<std::vector<value_type>> &a) override {
+                    // TODO(martun): implement this.
+                    throw std::logic_error {"Not implemented yet"};
+                }
                 std::vector<field_value_type> evaluate_all_lagrange_polynomials(const field_value_type &t) override {
                     /* Compute Lagrange polynomial of size m, with m+1 points (x_0, y_0), ... ,(x_m, y_m) */
                     /* Evaluate for x = t */
@@ -223,10 +234,13 @@ namespace nil {
                     return l;
                 }
 
-                std::vector<value_type> evaluate_all_lagrange_polynomials(const typename std::vector<value_type>::const_iterator &t_powers_begin,
-                                                                          const typename std::vector<value_type>::const_iterator &t_powers_end) override {
-                    if(std::size_t(std::distance(t_powers_begin, t_powers_end)) < this->m) {
-                        throw std::invalid_argument("geometric_sequence_radix2: expected std::distance(t_powers_begin, t_powers_end) >= this->m");
+                std::vector<value_type> evaluate_all_lagrange_polynomials(
+                    const typename std::vector<value_type>::const_iterator &t_powers_begin,
+                    const typename std::vector<value_type>::const_iterator &t_powers_end) override {
+                    if (std::size_t(std::distance(t_powers_begin, t_powers_end)) < this->m) {
+                        throw std::invalid_argument(
+                            "geometric_sequence_radix2: expected std::distance(t_powers_begin, t_powers_end) >= "
+                            "this->m");
                     }
 
                     /* Compute Lagrange polynomial of size m, with m+1 points (x_0, y_0), ... ,(x_m, y_m) */
@@ -285,14 +299,14 @@ namespace nil {
 
                     std::vector<value_type> result(this->m, value_type::zero());
 
-                    for(std::size_t j = 0; j < l[0].size(); ++j) {
+                    for (std::size_t j = 0; j < l[0].size(); ++j) {
                         result[0] = result[0] + t_powers_begin[j] * l[0][j];
                     }
                     result[0] = result[0] * g_i[0];
                     for (std::size_t i = 1; i < this->m; i++) {
                         g_i[i] = g_i[i - 1] * g[this->m - i] * -g[i].inversed() * geometric_sequence[i];
 
-                        for(std::size_t j = 0; j < l[i].size(); ++j) {
+                        for (std::size_t j = 0; j < l[i].size(); ++j) {
                             result[i] = result[i] + t_powers_begin[j] * l[i][j];
                         }
 
@@ -304,7 +318,7 @@ namespace nil {
                 }
 
                 // This one is not the unity root actually, but it's ok for our purposes.
-                const field_value_type& get_unity_root() override {
+                const field_value_type &get_unity_root() override {
                     return geometric_generator;
                 }
 
@@ -359,9 +373,9 @@ namespace nil {
                         multiplication(x, x, t);
                     }
 
-                    for (std::size_t i = 0; i < this->m + 1; i++) {
-                        H[i] += (x[i] * coeff);
-                    }
+                    nil::crypto3::in_place_parallel_transform(
+                        H.begin(), H.end(), x.begin(),
+                        [&coeff](field_value_type &H_i, const field_value_type &x_i) { H_i += x_i * coeff; });
                 }
 
                 void divide_by_z_on_coset(std::vector<field_value_type> &P) override {
@@ -369,13 +383,14 @@ namespace nil {
                         fields::arithmetic_params<FieldType>::multiplicative_generator); /* coset in geometric
                                                                                             sequence? */
                     const field_value_type Z_inverse_at_coset = compute_vanishing_polynomial(coset).inversed();
-                    for (std::size_t i = 0; i < this->m; ++i) {
-                        P[i] *= Z_inverse_at_coset;
-                    }
+
+                    nil::crypto3::parallel_foreach(P.begin(), P.end(), [&Z_inverse_at_coset](field_value_type &P_i) {
+                        P_i *= Z_inverse_at_coset;
+                    });
                 }
             };
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // ALGEBRA_FFT_GEOMETRIC_SEQUENCE_DOMAIN_HPP

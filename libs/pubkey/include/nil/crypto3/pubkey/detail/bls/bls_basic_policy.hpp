@@ -83,7 +83,7 @@ namespace nil {
                     typedef accumulator_set<h2c_policy> accumulator_type;
 
                     static inline gt_value_type pairing(const signature_type &U, const public_key_type &V) {
-                        return algebra::pair_reduced<curve_type>(U, V);
+                        return *algebra::pair_reduced<curve_type>(U, V);
                     }
                 };
 
@@ -119,7 +119,7 @@ namespace nil {
                     typedef accumulator_set<h2c_policy> accumulator_type;
 
                     static inline gt_value_type pairing(const signature_type &U, const public_key_type &V) {
-                        return algebra::pair_reduced<curve_type>(V, U);
+                        return *algebra::pair_reduced<curve_type>(V, U);
                     }
 
                     static inline public_key_serialized_type point_to_pubkey(const public_key_type &pubkey) {
@@ -130,9 +130,9 @@ namespace nil {
                         return bls_serializer::point_to_octets_compress(sig);
                     }
                 };
-            } // namespace detail
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace detail
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_BLS_BASIC_POLICY_HPP

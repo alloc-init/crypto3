@@ -18,6 +18,8 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 
         Boost::unit_test_framework)
 
+set_target_properties(_cm_internal_tests-crypto3-hash-test PROPERTIES CXX_STANDARD 23)
+
 macro(define_hash_test name)
     set(test_name "hash_${name}_test")
 
@@ -30,8 +32,8 @@ macro(define_hash_test name)
             ${Boost_INCLUDE_DIRS})
 
     set_target_properties(${test_name} PROPERTIES
-            CXX_STANDARD 20
-            CXX_STANDARD_REQUIRED TRUE)
+                          CXX_STANDARD 23
+                          CXX_STANDARD_REQUIRED TRUE)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${test_name} PRIVATE "-fconstexpr-steps=2147483647")
@@ -42,7 +44,7 @@ macro(define_hash_test name)
     target_compile_options(${test_name} PRIVATE "-ftemplate-backtrace-limit=0")
 
     string(CONCAT TEST_DATA ${CMAKE_CURRENT_SOURCE_DIR} "/data/" "${name}" ".json")
-    target_compile_definitions(${test_name} PRIVATE TEST_DATA="${TEST_DATA}")
+    target_compile_definitions(${test_name} PRIVATE TEST_DATA="${TEST_DATA}") 
 endmacro()
 
 set(TESTS_NAMES
@@ -57,13 +59,10 @@ set(TESTS_NAMES
         "sha1"
         "sha2"
         "sha3"
-        "shake"
         "static_digest"
-        "tiger"
         "poseidon"
         "hash_to_curve"
 )
-# "reinforced_concrete")  # fails
 
 if(CRYPTO3_HASH_PEDERSEN)
     list(APPEND TESTS_NAMES

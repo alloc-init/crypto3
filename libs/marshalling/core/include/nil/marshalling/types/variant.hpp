@@ -88,15 +88,15 @@ namespace nil {
             ///     @li @ref nil::marshalling::option::has_custom_read
             ///     @li @ref nil::marshalling::option::has_custom_refresh
             ///     @li @ref nil::marshalling::option::empty_serialization
-            ///     @li @ref nil::marshalling::option::version_storage
             /// @extends nil::marshalling::field_type
             /// @headerfile nil/marshalling/types/variant.hpp
             /// @see MARSHALLING_VARIANT_MEMBERS_ACCESS()
             /// @see MARSHALLING_VARIANT_MEMBERS_ACCESS_NOTEMPLATE()
             template<typename TFieldBase, typename TMembers, typename... TOptions>
-            class variant : private detail::adapt_basic_field_type<detail::basic_variant<TFieldBase, TMembers>, TOptions...> {
-                using base_impl_type
-                    = detail::adapt_basic_field_type<detail::basic_variant<TFieldBase, TMembers>, TOptions...>;
+            class variant
+                : private detail::adapt_basic_field_type<detail::basic_variant<TFieldBase, TMembers>, TOptions...> {
+                using base_impl_type =
+                    detail::adapt_basic_field_type<detail::basic_variant<TFieldBase, TMembers>, TOptions...>;
 
                 static_assert(nil::detail::is_tuple<TMembers>::value,
                               "TMembers is expected to be a tuple of std::tuple<...>");
@@ -106,9 +106,6 @@ namespace nil {
             public:
                 /// @brief endian_type used for serialization.
                 using endian_type = typename base_impl_type::endian_type;
-
-                /// @brief Version type
-                using version_type = typename base_impl_type::version_type;
 
                 /// @brief All the options provided to this class bundled into struct.
                 using parsed_options_type = detail::options_parser<TOptions...>;
@@ -350,23 +347,6 @@ namespace nil {
                     base_impl_type::reset();
                 }
 
-                /// @brief Compile time check if this class is version dependent
-                static constexpr bool is_version_dependent() {
-                    return parsed_options_type::has_custom_version_update || base_impl_type::is_version_dependent();
-                }
-
-                /// @brief Get version of the field.
-                /// @details Exists only if @ref nil::marshalling::option::version_storage option has been provided.
-                version_type get_version() const {
-                    return base_impl_type::get_version();
-                }
-
-                /// @brief Default implementation of version update.
-                /// @return @b true in case the field contents have changed, @b false otherwise
-                bool set_version(version_type version) {
-                    return base_impl_type::set_version(version);
-                }
-
             protected:
                 using base_impl_type::read_data;
                 using base_impl_type::write_data;
@@ -384,12 +364,12 @@ namespace nil {
                 static_assert(!parsed_options_type::has_sequence_elem_length_forcing,
                               "nil::marshalling::option::SequenceElemLengthForcingEnabled option is not applicable to "
                               "variant field");
-                static_assert(
-                    !parsed_options_type::has_sequence_size_forcing,
-                    "nil::marshalling::option::sequence_size_forcing_enabled option is not applicable to variant field");
-                static_assert(
-                    !parsed_options_type::has_sequence_length_forcing,
-                    "nil::marshalling::option::sequence_length_forcing_enabled option is not applicable to variant field");
+                static_assert(!parsed_options_type::has_sequence_size_forcing,
+                              "nil::marshalling::option::sequence_size_forcing_enabled option is not applicable to "
+                              "variant field");
+                static_assert(!parsed_options_type::has_sequence_length_forcing,
+                              "nil::marshalling::option::sequence_length_forcing_enabled option is not applicable to "
+                              "variant field");
                 static_assert(
                     !parsed_options_type::has_sequence_fixed_size,
                     "nil::marshalling::option::sequence_fixed_size option is not applicable to variant field");
@@ -428,9 +408,6 @@ namespace nil {
                               "nil::marshalling::option::orig_data_view option is not applicable to variant field");
                 static_assert(!parsed_options_type::has_multi_range_validation,
                               "nil::marshalling::option::valid_num_value_range (or similar) option is not applicable "
-                              "to variant field");
-                static_assert(!parsed_options_type::has_versions_range,
-                              "nil::marshalling::option::exists_between_versions (or similar) option is not applicable "
                               "to variant field");
                 static_assert(!parsed_options_type::has_invalid_by_default,
                               "nil::marshalling::option::invalid_by_default option is not applicable to variant field");
@@ -697,6 +674,6 @@ namespace nil {
     MARSHALLING_DO_VARIANT_MEM_ACC_FUNC_NOTEMPLATE(__VA_ARGS__)
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_VARIANT_HPP

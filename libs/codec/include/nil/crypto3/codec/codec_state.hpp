@@ -66,7 +66,7 @@ namespace nil {
                 digest<ProcessingMode::output_block_bits>,
                 boost::accumulators::features<accumulators::tag::codec<ProcessingMode>>, std::size_t>;
         }    // namespace codec
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CODEC_STATE_HPP

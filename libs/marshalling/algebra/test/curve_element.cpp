@@ -170,8 +170,7 @@ BOOST_AUTO_TEST_CASE(curve_element_jubjub_g1) {
     group_value_type expected = group_value_type(
         integral_type("34431432384332876907572759816814758423306059590054253468360681509944827160006"),
         integral_type("29404096654359671878917481308573927330727282437544669652502934947226949079135"));
-    group_value_type point =
-        nil::marshalling::pack<nil::marshalling::option::little_endian>(blob, status);
+    group_value_type point = nil::marshalling::pack<nil::marshalling::option::little_endian>(blob, status);
     BOOST_CHECK(point == expected);
     BOOST_CHECK(status == nil::marshalling::status_type::success);
 
@@ -230,8 +229,7 @@ BOOST_AUTO_TEST_CASE(curve_element_jubjub_g1) {
         1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0,
         1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0,
         1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0};
-    std::vector<std::uint8_t> cv =
-        nil::marshalling::pack<nil::marshalling::option::little_endian>(point, status);
+    std::vector<std::uint8_t> cv = nil::marshalling::pack<nil::marshalling::option::little_endian>(point, status);
     for (std::size_t i = 0; i < expected_bits.size(); ++i) {
         BOOST_CHECK(expected_bits[i] == ((cv[i / 8] >> (i % 8)) & 1));
     }

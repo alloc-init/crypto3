@@ -12,6 +12,7 @@ include(CMTest)
 cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         ${CMAKE_WORKSPACE_NAME}::multiprecision
         Boost::unit_test_framework)
+set_target_properties(_cm_internal_tests-crypto3-random-test PROPERTIES CXX_STANDARD 23)
 
 macro(define_random_test test)
     get_filename_component(name ${test} NAME)
@@ -25,28 +26,22 @@ macro(define_random_test test)
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(${full_test_name} PROPERTIES CXX_STANDARD 20)
+    set_target_properties(${full_test_name} PROPERTIES CXX_STANDARD 23)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${full_test_name} PRIVATE "-fconstexpr-steps=2147483647")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(${full_test_name} PRIVATE "-fconstexpr-ops-limit=4294967295")
     endif()
-
 endmacro()
 
-# TODO(uncomment the failing tests once they pass)
 set(TESTS_NAMES
 #        "chacha"
         "hash"
         "algebraic_engine"
         "ct_random_device"
-        "rfc6979"
-)
+        "rfc6979")
 
 foreach(TEST_NAME ${TESTS_NAMES})
     define_random_test(${TEST_NAME})
 endforeach()
-
-
-include_directories(${CMAKE_WORKSPACE_SOURCES_DIR})

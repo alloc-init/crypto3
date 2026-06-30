@@ -77,7 +77,6 @@ namespace nil {
             ///     @li @ref nil::marshalling::option::fail_on_invalid
             ///     @li @ref nil::marshalling::option::ignore_invalid
             ///     @li @ref nil::marshalling::option::empty_serialization
-            ///     @li @ref nil::marshalling::option::version_storage
             /// @extends nil::marshalling::field_type
             /// @headerfile nil/marshalling/types/bitmask_value.hpp
             /// @see MARSHALLING_BITMASK_BITS()
@@ -88,26 +87,20 @@ namespace nil {
             template<typename TFieldBase, typename... TOptions>
             class bitmask_value : public TFieldBase {
                 using base_impl_type = TFieldBase;
+
             public:
                 /// @brief endian_type used for serialization.
                 using endian_type = typename base_impl_type::endian_type;
-
-                /// @brief Version type
-                using version_type = typename base_impl_type::version_type;
 
                 /// @brief All the options provided to this class bundled into struct.
                 using parsed_options_type = detail::options_parser<TOptions...>;
 
             private:
-                
-                using bitmask_behaviour_type = 
-                    detail::bitmask_undertlying_type_type<parsed_options_type>;
+                using bitmask_behaviour_type = detail::bitmask_undertlying_type_type<parsed_options_type>;
 
-                using integral_type = 
-                    integral<TFieldBase, bitmask_behaviour_type, TOptions...>;
+                using integral_type = integral<TFieldBase, bitmask_behaviour_type, TOptions...>;
 
             public:
-
                 /// @brief Tag indicating type of the field
                 using tag = tag::bitmask;
 
@@ -258,23 +251,6 @@ namespace nil {
                     }
                 }
 
-                /// @brief Compile time check if this class is version dependent
-                static constexpr bool is_version_dependent() {
-                    return integral_type::is_version_dependent();
-                }
-
-                /// @brief Get version of the field.
-                /// @details Exists only if @ref nil::marshalling::option::version_storage option has been provided.
-                version_type get_version() const {
-                    return intValue_.get_version();
-                }
-
-                /// @brief Default implementation of version update.
-                /// @return @b true in case the field contents have changed, @b false otherwise
-                bool set_version(version_type version) {
-                    return intValue_.set_version(version);
-                }
-
             protected:
                 using base_impl_type::read_data;
                 using base_impl_type::write_data;
@@ -338,10 +314,6 @@ namespace nil {
                 static_assert(
                     !parsed_options_type::has_multi_range_validation,
                     "nil::marshalling::option::valid_num_value_range (or similar) option is not applicable to "
-                    "bitmask_value field");
-                static_assert(
-                    !parsed_options_type::has_versions_range,
-                    "nil::marshalling::option::exists_between_versions (or similar) option is not applicable to "
                     "bitmask_value field");
                 static_assert(
                     !parsed_options_type::has_invalid_by_default,
@@ -651,6 +623,6 @@ namespace nil {
     MARSHALLING_BITMASK_BITS_ACCESS_NOTEMPLATE(__VA_ARGS__)
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BITMASK_VALUE_HPP

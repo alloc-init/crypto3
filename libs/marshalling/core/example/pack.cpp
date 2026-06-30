@@ -136,7 +136,7 @@ void to_marshalling_type(T input) {
     }
 }
 
-template <typename T>
+template<typename T>
 void to_different_types(T input) {
     std::cout << "- big vector: ";
     to_big_vector(input);
@@ -158,14 +158,14 @@ int main(int argc, char *argv[]) {
     const std::array<uint16_t, 2> a_b_in = {0x1234, 0x5678};
     const std::array<uint8_t, 4> a_s_in = {0x12, 0x34, 0x56, 0x78};
     const uint32_t type_in = 0x12345678;
-    using marshalling_type_input = types::array_list<field_type<option::big_endian>,
-                                         types::integral<field_type<option::big_endian>, std::uint8_t>,
-                                         option::fixed_size_storage<4>>;
+    using marshalling_type_input =
+        types::array_list<field_type<option::big_endian>, types::integral<field_type<option::big_endian>, std::uint8_t>,
+                          option::fixed_size_storage<4>>;
     using input_seed_type = typename marshalling_type_input::value_type;
     marshalling_type_input marshalling_type_in;
     std::array<std::uint16_t, 4> inp_seed_blank = {{0x12, 0x34, 0x56, 0x78}};
     input_seed_type &inp_seed = marshalling_type_in.value();
-    for (unsigned short & it : inp_seed_blank) {
+    for (unsigned short &it : inp_seed_blank) {
         inp_seed.push_back(typename input_seed_type::value_type(it));
     }
 

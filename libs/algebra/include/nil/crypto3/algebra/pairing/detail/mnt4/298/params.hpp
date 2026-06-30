@@ -91,9 +91,9 @@ namespace nil {
                     constexpr bool const pairing_params<curves::mnt4<298>>::final_exponent_last_chunk_is_w0_neg;
 
                 }    // namespace detail
-            }        // namespace pairing
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace pairing
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_PAIRING_MNT4_298_PAIRING_PARAMS_HPP

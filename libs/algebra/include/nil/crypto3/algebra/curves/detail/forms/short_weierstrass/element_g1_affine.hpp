@@ -53,7 +53,6 @@ namespace nil {
                     template<typename CurveParams>
                     class curve_element<CurveParams, forms::short_weierstrass, coordinates::affine> {
                     public:
-
                         using field_type = typename CurveParams::field_type;
                         using params_type = CurveParams;
 
@@ -76,20 +75,20 @@ namespace nil {
                          *
                          */
                         constexpr curve_element() :
-                            curve_element(params_type::zero_fill[0], params_type::zero_fill[1]) {}
+                            curve_element(params_type::zero_fill[0], params_type::zero_fill[1]) {
+                        }
 
                         /** @brief
                          *    @return the selected point $(X:Y)$ in the affine coordinates
                          *
                          */
-                        constexpr curve_element(const field_value_type& X, const field_value_type& Y) 
-                            : X(X), Y(Y){
+                        constexpr curve_element(const field_value_type &X, const field_value_type &Y) : X(X), Y(Y) {
                         }
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
                         explicit constexpr curve_element(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                            const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                         }
 
@@ -176,8 +175,8 @@ namespace nil {
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                        constexpr const curve_element &
+                            operator=(const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                             return *this;
                         }
@@ -202,7 +201,7 @@ namespace nil {
                             return result;
                         }
 
-                        constexpr curve_element& operator+=(const curve_element &other) {
+                        constexpr curve_element &operator+=(const curve_element &other) {
                             // handle special cases having to do with O
                             if (this->is_zero()) {
                                 *this = other;
@@ -216,7 +215,6 @@ namespace nil {
                             return *this;
                         }
 
-
                         constexpr curve_element operator-() const {
                             return curve_element(this->X, -this->Y);
                         }
@@ -225,7 +223,7 @@ namespace nil {
                             return (*this) + (-other);
                         }
 
-                        constexpr curve_element& operator-=(const curve_element &other) {
+                        constexpr curve_element &operator-=(const curve_element &other) {
                             return (*this) += (-other);
                         }
 
@@ -241,8 +239,7 @@ namespace nil {
                                 field_value_type Xsquared3pa = 3u * X.squared() + params_type::a;
                                 field_value_type Y2i = Y.doubled().inversed();
 
-                                Y = (X.doubled() + X) * Xsquared3pa * Y2i -
-                                                      Xsquared3pa.pow(3u) * Y2i.pow(3u) - Y;
+                                Y = (X.doubled() + X) * Xsquared3pa * Y2i - Xsquared3pa.pow(3u) * Y2i.pow(3u) - Y;
                                 X = Xsquared3pa.squared() * Y2i * Y2i - X - X;
                             }
                         }
@@ -263,22 +260,21 @@ namespace nil {
                             }
                             X2mX1i = X2mX1i.inversed();
 
-                            Y = (2 * X + other.X) * Y2mY1 * X2mX1i -
-                                                  (Y2mY1.pow(3u)) * X2mX1i.pow(3u) - Y;
+                            Y = (2 * X + other.X) * Y2mY1 * X2mX1i - (Y2mY1.pow(3u)) * X2mX1i.pow(3u) - Y;
                             X = Y2mY1.squared() * X2mX1i * X2mX1i - X - other.X;
                         }
                     };
 
-
                     template<typename CurveParams>
-                    std::ostream& operator<<(std::ostream& os, curve_element<CurveParams, forms::short_weierstrass, coordinates::affine> const& e)
-                    {
+                    std::ostream &
+                        operator<<(std::ostream &os,
+                                   curve_element<CurveParams, forms::short_weierstrass, coordinates::affine> const &e) {
                         os << "{\"X\":" << e.X << ",\"Y\":" << e.Y << "}";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_HPP

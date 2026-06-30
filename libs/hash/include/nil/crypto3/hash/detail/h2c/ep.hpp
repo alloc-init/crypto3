@@ -33,6 +33,8 @@
 #include <type_traits>
 #include <climits>
 
+#include <nil/crypto3/algebra/curves/detail/scalar_mul.hpp>
+
 #include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
 
 namespace nil {
@@ -60,8 +62,8 @@ namespace nil {
 
                 // Sometimes hash is 512 bits, while the group element is 256 or 381 bits.
                 // In these cases we take the number module the modulus of the group.
-                typedef typename boost::multiprecision::cpp_int_modular_backend<
-                        L * CHAR_BIT> modular_backend_of_hash_size;
+                typedef typename boost::multiprecision::cpp_int_modular_backend<L * CHAR_BIT>
+                    modular_backend_of_hash_size;
 
                 constexpr static const modular_params_type p_modulus_params = suite_type::p.backend();
 
@@ -71,9 +73,9 @@ namespace nil {
                 static_assert(m == 1, "underlying field has wrong extension");
 
                 template<typename InputType, typename DstType,
-                        typename = typename std::enable_if<
-                                std::is_same<std::uint8_t, typename InputType::value_type>::value &&
-                                std::is_same<std::uint8_t, typename DstType::value_type>::value>::type>
+                         typename = typename std::enable_if<
+                             std::is_same<std::uint8_t, typename InputType::value_type>::value &&
+                             std::is_same<std::uint8_t, typename DstType::value_type>::value>::type>
                 static inline group_value_type hash_to_curve(const InputType &msg, const DstType &dst) {
                     auto u = hash_to_field<2, expand_message_ro>(msg, dst);
                     group_value_type Q0 = map_to_curve<GroupType>::process(u[0]);
@@ -91,12 +93,11 @@ namespace nil {
 
                 // private:
                 template<std::size_t N, typename expand_message_type, typename InputType, typename DstType,
-                        typename = typename std::enable_if<
-                                std::is_same<std::uint8_t, typename InputType::value_type>::value &&
-                                std::is_same<std::uint8_t, typename DstType::value_type>::value>::type>
-                static inline std::array<field_value_type, N> hash_to_field(const InputType &msg,
-                                                                            const DstType &dst) {
-                    std::array<std::uint8_t, N * m * L> uniform_bytes{0};
+                         typename = typename std::enable_if<
+                             std::is_same<std::uint8_t, typename InputType::value_type>::value &&
+                             std::is_same<std::uint8_t, typename DstType::value_type>::value>::type>
+                static inline std::array<field_value_type, N> hash_to_field(const InputType &msg, const DstType &dst) {
+                    std::array<std::uint8_t, N * m * L> uniform_bytes {0};
                     expand_message_type::process(N * m * L, msg, dst, uniform_bytes);
 
                     number<modular_backend_of_hash_size> e;
@@ -105,15 +106,14 @@ namespace nil {
                     for (std::size_t i = 0; i < N; i++) {
                         for (std::size_t j = 0; j < m; j++) {
                             auto elm_offset = L * (j + i * m);
-                            import_bits(e, uniform_bytes.begin() + elm_offset,
-                                        uniform_bytes.begin() + elm_offset + L);
+                            import_bits(e, uniform_bytes.begin() + elm_offset, uniform_bytes.begin() + elm_offset + L);
 
                             // Sometimes hash is 512 bits, while the group element is 256 or 381 bits.
                             // In these cases we take the number module the modulus of the group.
                             e %= p_modulus_params.get_mod();
 
-                            coordinates[j] = modular_type(modular_adaptor_type(
-                                    modular_backend(e.backend()), p_modulus_params));
+                            coordinates[j] =
+                                modular_type(modular_adaptor_type(modular_backend(e.backend()), p_modulus_params));
                         }
                         result[i] = field_value_type(coordinates[0]);
                     }
@@ -122,7 +122,9 @@ namespace nil {
                 }
 
                 static inline group_value_type clear_cofactor(const group_value_type &R) {
-                    return R * suite_type::h_eff;
+                    group_value_type result = R;
+                    algebra::curves::detail::scalar_mul_inplace(result, suite_type::h_eff);
+                    return result;
                 }
             };
         }    // namespace hashes

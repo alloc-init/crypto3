@@ -114,7 +114,7 @@ namespace nil {
                 typename ProcessingMode::result_type,
                 boost::accumulators::features<accumulators::tag::aggregate_verify_single_msg<ProcessingMode>>>;
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_STATE_HPP

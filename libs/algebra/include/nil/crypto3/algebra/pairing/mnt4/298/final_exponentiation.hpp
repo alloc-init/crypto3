@@ -30,6 +30,8 @@
 #include <nil/crypto3/algebra/pairing/detail/mnt4/298/params.hpp>
 #include <nil/crypto3/algebra/pairing/detail/forms/short_weierstrass/projective/types.hpp>
 
+#include <optional>
+
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -80,7 +82,12 @@ namespace nil {
                     }
 
                 public:
-                    static typename gt_type::value_type process(const typename gt_type::value_type &elt) {
+                    static std::optional<typename gt_type::value_type>
+                        process(const typename gt_type::value_type &elt) {
+
+                        if (elt.is_zero()) {
+                            return std::nullopt;
+                        }
 
                         const typename gt_type::value_type elt_inv = elt.inversed();
                         const typename gt_type::value_type elt_to_first_chunk =
@@ -91,7 +98,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_MNT4_298_FINAL_EXPONENTIATION_HPP

@@ -6,8 +6,6 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         ${CMAKE_WORKSPACE_NAME}::pkpad
         ${CMAKE_WORKSPACE_NAME}::random
 
-        "$<BOOL:${CRYPTO3_PUBKEY_ELGAMAL}:marshalling::${CMAKE_WORKSPACE_NAME}_zk>"
-
         Boost::unit_test_framework)
 
 macro(define_pubkey_test name)
@@ -20,7 +18,7 @@ macro(define_pubkey_test name)
 
             ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(pubkey_${name}_test PROPERTIES CXX_STANDARD 20)
+    set_target_properties(pubkey_${name}_test PROPERTIES CXX_STANDARD 23)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(pubkey_${name}_test PRIVATE "-fconstexpr-steps=2147483647" "-ftemplate-backtrace-limit=0")
@@ -35,10 +33,6 @@ set(TESTS_NAMES
         "secret_sharing"
         "eddsa"
         "schnorr")
-
-if(CRYPTO3_PUBKEY_ELGAMAL)
-#    list(APPEND TESTS_NAMES elgamal_verifiable)
-endif()
 
 foreach(TEST_NAME ${TESTS_NAMES})
     define_pubkey_test(${TEST_NAME})

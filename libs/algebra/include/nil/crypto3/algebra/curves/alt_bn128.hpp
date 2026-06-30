@@ -31,8 +31,8 @@
 #include <nil/crypto3/algebra/curves/detail/alt_bn128/g1.hpp>
 #include <nil/crypto3/algebra/curves/detail/alt_bn128/g2.hpp>
 
-//#include <nil/crypto3/algebra/pairing/alt_bn128.hpp>
-//#include <nil/crypto3/algebra/pairing/detail/alt_bn128/functions.hpp>
+// #include <nil/crypto3/algebra/pairing/alt_bn128.hpp>
+// #include <nil/crypto3/algebra/pairing/detail/alt_bn128/functions.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -66,9 +66,9 @@ namespace nil {
                 };
 
                 typedef alt_bn128<254> alt_bn128_254;
-            } // namespace curves
-        } // namespace algebra
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_ALT_BN128_HPP

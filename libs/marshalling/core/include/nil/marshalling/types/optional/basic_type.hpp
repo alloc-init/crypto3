@@ -38,17 +38,14 @@ namespace nil {
 
                 template<typename TField>
                 class basic_optional : public nil::marshalling::field_type<
-                                     nil::marshalling::option::endian<typename TField::endian_type>,
-                                     nil::marshalling::option::version_type<typename TField::version_type>> {
-                    using base_impl_type = nil::marshalling::field_type<
-                        nil::marshalling::option::endian<typename TField::endian_type>,
-                        nil::marshalling::option::version_type<typename TField::version_type>>;
+                                           nil::marshalling::option::endian<typename TField::endian_type>> {
+                    using base_impl_type =
+                        nil::marshalling::field_type<nil::marshalling::option::endian<typename TField::endian_type>>;
 
                 public:
                     using field_type = TField;
                     using value_type = TField;
                     using mode_type = types::optional_mode;
-                    using version_type = typename base_impl_type::version_type;
 
                     basic_optional() = default;
 
@@ -177,21 +174,13 @@ namespace nil {
                         field_.write_no_status(iter);
                     }
 
-                    static constexpr bool is_version_dependent() {
-                        return field_type::is_version_dependent();
-                    }
-
-                    bool set_version(version_type version) {
-                        return field_.set_version(static_cast<typename field_type::version_type>(version));
-                    }
-
                 private:
                     field_type field_;
                     mode_type mode_ = mode_type::tentative;
                 };
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BASIC_OPTIONAL_HPP

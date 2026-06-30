@@ -7,6 +7,8 @@
 // http://www.boost.org/LICENSE_1_0.txt
 //---------------------------------------------------------------------------//
 
+#include "nil/crypto3/algebra/fields/pallas/scalar_field.hpp"
+#include "nil/crypto3/hash/detail/poseidon/poseidon_policy.hpp"
 #define BOOST_TEST_MODULE poseidon_test
 
 #include <iostream>
@@ -22,7 +24,6 @@
 
 #include <nil/crypto3/hash/algorithm/hash.hpp>
 #include <nil/crypto3/hash/block_to_field_elements_wrapper.hpp>
-#include <nil/crypto3/hash/detail/poseidon/poseidon_policy.hpp>
 #include <nil/crypto3/hash/detail/poseidon/poseidon_permutation.hpp>
 #include <nil/crypto3/hash/hash_state.hpp>
 #include <nil/crypto3/hash/poseidon.hpp>
@@ -30,13 +31,11 @@
 #include <nil/crypto3/algebra/fields/alt_bn128/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/pallas/base_field.hpp>
-#include <nil/crypto3/algebra/fields/pallas/scalar_field.hpp>
 
 using namespace nil::crypto3;
 using namespace nil::crypto3::accumulators;
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::hashes::detail;
-
 
 namespace boost {
     namespace test_tools {
@@ -47,7 +46,7 @@ namespace boost {
             template<typename FieldParams>
             struct print_log_value<typename fields::detail::element_fp<FieldParams>> {
                 void operator()(std::ostream &os, typename fields::detail::element_fp<FieldParams> const &e) {
-                    os << e.data << std::endl;
+                    os << e << std::endl;
                 }
             };
 
@@ -55,21 +54,21 @@ namespace boost {
             struct print_log_value<std::array<typename fields::detail::element_fp<FieldParams>, array_size>> {
                 void operator()(std::ostream &os,
                                 std::array<typename fields::detail::element_fp<FieldParams>, array_size> const &arr) {
-                    for (auto &e: arr) {
-                        os << e.data << std::endl;
+                    for (auto &e : arr) {
+                        os << e << std::endl;
                     }
                 }
             };
 
-            //template<template<typename, typename> class P, typename K, typename V>
-            //struct print_log_value<P<K, V>> {
-            //    void operator()(std::ostream &, P<K, V> const &) {
-            //    }
-            //};
+            // template<template<typename, typename> class P, typename K, typename V>
+            // struct print_log_value<P<K, V>> {
+            //     void operator()(std::ostream &, P<K, V> const &) {
+            //     }
+            // };
 
-        } // namespace tt_detail
-    }     // namespace test_tools
-}         // namespace boost
+        }    // namespace tt_detail
+    }    // namespace test_tools
+}    // namespace boost
 
 template<typename field_type>
 void test_pasta_poseidon(std::vector<typename field_type::value_type> input,
@@ -101,6 +100,32 @@ void test_poseidon_permutation(typename poseidon_policy<FieldType, 128, Rate>::s
 
 BOOST_AUTO_TEST_SUITE(poseidon_tests)
 
+BOOST_AUTO_TEST_CASE(poseidon_with_padding_test) {
+    using field_type = fields::pallas_scalar_field;
+    using policy = pasta_poseidon_policy<field_type>;
+    using hash_type = hashes::poseidon<policy>;
+
+    std::vector<uint8_t> hash_input1 {0x00, 0x01, 0x02};
+    std::vector<uint8_t> hash_input2 {0x01, 0x02};
+
+    /* Default behavior: input bytes converted into field elements and padded
+     * with lowest bit in the next higher block:
+     * 0x0000000000000000000000000000000000000000000000000000000001000102
+     * and
+     * 0x0000000000000000000000000000000000000000000000000000000000010102
+     */
+    typename policy::digest_type result1 = nil::crypto3::hash<hash_type>(
+        nil::crypto3::hashes::conditional_block_to_field_elements_wrapper<typename hash_type::word_type,
+                                                                          decltype(hash_input1)>(hash_input1));
+
+    typename policy::digest_type result2 = nil::crypto3::hash<hash_type>(
+        nil::crypto3::hashes::conditional_block_to_field_elements_wrapper<typename hash_type::word_type,
+                                                                          decltype(hash_input2)>(hash_input2));
+
+    /* Results should not be equal */
+    BOOST_CHECK_NE(result1, result2);
+}
+
 BOOST_AUTO_TEST_CASE(poseidon_without_padding_test) {
     using field_type = fields::pallas_scalar_field;
     using policy = pasta_poseidon_policy<field_type>;
@@ -116,12 +141,14 @@ BOOST_AUTO_TEST_CASE(poseidon_without_padding_test) {
     typename policy::digest_type result1 = nil::crypto3::hash<hash_type>(
         nil::crypto3::hashes::conditional_block_to_field_elements_wrapper<typename hash_type::word_type,
                                                                           decltype(hash_input1),
-                                                                          true>(hash_input1));
+                                                                          true,
+                                                                          false /* padding */>(hash_input1));
 
     typename policy::digest_type result2 = nil::crypto3::hash<hash_type>(
         nil::crypto3::hashes::conditional_block_to_field_elements_wrapper<typename hash_type::word_type,
                                                                           decltype(hash_input2),
-                                                                          true>(hash_input2));
+                                                                          true,
+                                                                          false /* padding */>(hash_input2));
 
     /* Results should be equal */
     BOOST_CHECK_EQUAL(result1, result2);
@@ -227,31 +254,31 @@ BOOST_AUTO_TEST_CASE(poseidon_permutation_255_4) {
          0x03ff622da276830b9451b88b85e6184fd6ae15c8ab3ee25a5667be8592cce3b1_cppui_modular255});
 }
 
-BOOST_AUTO_TEST_CASE(poseidon_accumulator_255_4) {
+BOOST_AUTO_TEST_CASE(nil_poseidon_accumulator_255_4) {
     using policy = poseidon_policy<fields::bls12_scalar_field<381>, 128, /*Rate=*/4>;
-    using hash_type = hashes::poseidon<policy>;
-    accumulator_set<hash_type> acc;
+    using hash_t = hashes::poseidon<policy>;
+    accumulator_set<hash_t> acc;
 
     policy::word_type val = 0u;
 
     acc(val);
 
-    hash_type::digest_type s = extract::hash<hash_type>(acc);
+    hash_t::digest_type s = extract::hash<hash_t>(acc);
 
     BOOST_CHECK_EQUAL(s, 0x20CDA7B88718C51A894AE697F804FACD408616B1A7811A55023EA0E6060AA61C_cppui_modular255);
 }
 
-BOOST_AUTO_TEST_CASE(poseidon_stream_255_4) {
+BOOST_AUTO_TEST_CASE(nil_poseidon_stream_255_4) {
     // Since we don't have any test vectors for such a custom structure, just make sure
     // it produces something consistent
     using field_type = fields::bls12_scalar_field<381>;
     using policy = poseidon_policy<field_type, 128, /*Rate=*/4>;
-    using hash_type = hashes::poseidon<policy>;
+    using hash_t = hashes::poseidon<policy>;
 
     std::vector<typename field_type::value_type> input = {
         0x0_cppui_modular255, 0x0_cppui_modular255, 0x0_cppui_modular255, 0x0_cppui_modular255, 0x0_cppui_modular255};
 
-    typename policy::digest_type d = hash<hash_type>(input);
+    typename policy::digest_type d = hash<hash_t>(input);
     BOOST_CHECK_EQUAL(d, 0x44753e7f86d80790e762345ff8cb156be18eb0318f8846641193f815fbd64038_cppui_modular255);
 
     input = {0x2a918b9c9f9bd7bb509331c81e297b5707f6fc7393dcee1b13901a0b22202e18_cppui_modular255,
@@ -260,32 +287,32 @@ BOOST_AUTO_TEST_CASE(poseidon_stream_255_4) {
              0x4dc4e29d283afd2a491fe6aef122b9a968e74eff05341f3cc23fda1781dcb566_cppui_modular255,
              0x03ff622da276830b9451b88b85e6184fd6ae15c8ab3ee25a5667be8592cce3b1_cppui_modular255};
 
-    d = hash<hash_type>(input);
+    d = hash<hash_t>(input);
     BOOST_CHECK_EQUAL(d, 0x44bff12d3a4713b18bd79c17eaabf8e69e29ce45ca48d7afb702baa1c37f3695_cppui_modular255);
 }
 
-BOOST_AUTO_TEST_CASE(poseidon_wrapped_255_4) {
+BOOST_AUTO_TEST_CASE(nil_poseidon_wrapped_255_4) {
     // Make sure nil_block_poseidon converts non-field input to field elements as we expect
     using field_type = fields::bls12_scalar_field<381>;
     using policy = poseidon_policy<field_type, 128, /*Rate=*/4>;
-    using hash_type = hashes::poseidon<policy>;
+    using hash_t = hashes::poseidon<policy>;
 
     std::vector<std::uint8_t> uint8_input = {
         0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
         0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD,
         0xEF,    // 256 bits up to this place, the last value should be moved to
-                 // the next field element.
+                 // the next field element and padded with one bit in the next byte.
 
     };
 
     std::vector<typename field_type::value_type> field_input = {
         0x000123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCD_cppui_modular255,
-        0x00000000000000000000000000000000000000000000000000000000000000EF_cppui_modular255,
+        0x00000000000000000000000000000000000000000000000000000000000001EF_cppui_modular255,
     };
 
-    typename policy::digest_type d_uint8 = hash<hash_type>(
-        hashes::conditional_block_to_field_elements_wrapper<hash_type::word_type, decltype(uint8_input)>(uint8_input));
-    typename policy::digest_type d_field = hash<hash_type>(field_input);
+    typename policy::digest_type d_uint8 = hash<hash_t>(
+        hashes::conditional_block_to_field_elements_wrapper<hash_t::word_type, decltype(uint8_input)>(uint8_input));
+    typename policy::digest_type d_field = hash<hash_t>(field_input);
     BOOST_CHECK_EQUAL(d_uint8, d_field);
 }
 

@@ -74,12 +74,12 @@ namespace nil {
                             typename policy_type::Fq3_conic_coefficients cc = prec_Q[idx++];
 
                             typename gt_type::value_type g_RR_at_P = typename gt_type::value_type(
-                                    prec_P.P_XY * cc.c_XY + prec_P.P_XZ * cc.c_XZ, prec_P.P_ZZplusYZ * cc.c_ZZ);
+                                prec_P.P_XY * cc.c_XY + prec_P.P_XZ * cc.c_XZ, prec_P.P_ZZplusYZ * cc.c_ZZ);
                             f = f.squared() * g_RR_at_P;
                             if (bit) {
                                 cc = prec_Q[idx++];
                                 typename gt_type::value_type g_RQ_at_P = typename gt_type::value_type(
-                                        prec_P.P_ZZplusYZ * cc.c_ZZ, prec_P.P_XY * cc.c_XY + prec_P.P_XZ * cc.c_XZ);
+                                    prec_P.P_ZZplusYZ * cc.c_ZZ, prec_P.P_XY * cc.c_XY + prec_P.P_XZ * cc.c_XZ);
                                 f = f * g_RQ_at_P;
                             }
                         }
@@ -88,7 +88,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_EDWARDS_183_ATE_MILLER_LOOP_HPP

@@ -34,6 +34,8 @@
 #include <nil/crypto3/math/detail/field_utils.hpp>
 #include <nil/crypto3/detail/type_traits.hpp>
 
+#include <nil/actor/core/parallelization_utils.hpp>
+
 namespace nil {
     namespace crypto3 {
         namespace math {
@@ -49,8 +51,7 @@ namespace nil {
              * (divisor,modulus).
              */
             template<typename FieldRange>
-            FieldRange
-            modulus(const FieldRange &dividend, const FieldRange &divisor) {
+            FieldRange modulus(const FieldRange &dividend, const FieldRange &divisor) {
                 std::size_t divisor_length = std::distance(std::begin(divisor), std::end(divisor));
                 std::size_t dividend_length = std::distance(std::begin(dividend), std::end(dividend));
 
@@ -58,22 +59,19 @@ namespace nil {
                 std::size_t runs = dividend_length - divisor_length + 1;    // no. of iterations
 
                 auto mat = [](const typename FieldRange::value_type &x, const typename FieldRange::value_type &y,
-                              const typename FieldRange::value_type &z) {
-                    return z - (x * y);
-                };
+                              const typename FieldRange::value_type &z) { return z - (x * y); };
 
                 FieldRange running_dividend(dividend);
 
                 uint32_t divisor_ptr;
                 for (uint32_t i = 0; i < runs; i++) {
                     typename FieldRange::value_type div_const(
-                            running_dividend[dividend_length - 1]);    // get the highest degree coeff
+                        running_dividend[dividend_length - 1]);    // get the highest degree coeff
                     divisor_ptr = divisor_length - 1;
                     for (uint32_t j = 0; j < dividend_length - i - 1; j++) {
                         if (divisor_ptr > j) {
                             running_dividend[dividend_length - 1 - j] =
-                                    mat(divisor[divisor_ptr - 1 - j], div_const,
-                                        running_dividend[dividend_length - 2 - j]);
+                                mat(divisor[divisor_ptr - 1 - j], div_const, running_dividend[dividend_length - 2 - j]);
                         } else {
                             running_dividend[dividend_length - 1 - j] = running_dividend[dividend_length - 2 - j];
                         }
@@ -98,9 +96,8 @@ namespace nil {
             template<typename FieldRange, typename IntegerType,
                      typename = typename std::enable_if<nil::crypto3::detail::is_range<FieldRange>::value>::type>
             FieldRange power(const FieldRange &input, IntegerType power) {
-                typedef
-                typename std::iterator_traits<decltype(std::begin(
-                        std::declval<FieldRange>()))>::value_type field_value_type;
+                typedef typename std::iterator_traits<decltype(std::begin(std::declval<FieldRange>()))>::value_type
+                    field_value_type;
 
                 typedef typename field_value_type::field_type FieldType;
                 BOOST_STATIC_ASSERT(algebra::is_field<FieldType>::value);
@@ -130,14 +127,13 @@ namespace nil {
             template<typename Range>
             bool is_zero(const Range &a) {
                 typename Range::value_type zero =
-                        typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type();
+                    typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type();
                 return !std::any_of(
-                        std::begin(a),
-                        std::end(a),
-                        [zero](typename std::iterator_traits<decltype(std::begin(
-                                std::declval<Range>()))>::value_type i) {
-                            return i != zero;
-                        });
+                    std::begin(a),
+                    std::end(a),
+                    [zero](typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type i) {
+                        return i != zero;
+                    });
             }
 
             template<typename Range>
@@ -155,7 +151,7 @@ namespace nil {
             void condense(Range &a) {
                 std::size_t i = std::distance(std::cbegin(a), std::cend(a));
                 typename Range::value_type zero =
-                        typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type();
+                    typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type();
                 while (i > 1 && a[i - 1] == zero) {
                     --i;
                 }
@@ -170,7 +166,7 @@ namespace nil {
             void addition(Range &c, const Range &a, const Range &b) {
 
                 typedef
-                typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type value_type;
+                    typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type value_type;
 
                 if (is_zero(a)) {
                     c = b;
@@ -182,13 +178,13 @@ namespace nil {
 
                     if (a_size > b_size) {
                         c.resize(a_size);
-                        std::transform(
-                                std::begin(b), std::end(b), std::begin(a), std::begin(c), std::plus<value_type>());
+                        nil::crypto3::parallel_transform(std::begin(b), std::end(b), std::begin(a), std::begin(c),
+                                                         std::plus<value_type>());
                         std::copy(std::begin(a) + b_size, std::end(a), std::begin(c) + b_size);
                     } else {
                         c.resize(b_size);
-                        std::transform(
-                                std::begin(a), std::end(a), std::begin(b), std::begin(c), std::plus<value_type>());
+                        nil::crypto3::parallel_transform(std::begin(a), std::end(a), std::begin(b), std::begin(c),
+                                                         std::plus<value_type>());
                         std::copy(std::begin(b) + a_size, std::end(b), std::begin(c) + a_size);
                     }
                 }
@@ -204,25 +200,28 @@ namespace nil {
             void subtraction(Range &c, const Range &a, const Range &b) {
 
                 typedef
-                typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type value_type;
+                    typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type value_type;
 
                 if (is_zero(b)) {
                     c = a;
                 } else if (is_zero(a)) {
                     c.resize(b.size());
-                    std::transform(b.begin(), b.end(), c.begin(), std::negate<value_type>());
+                    nil::crypto3::parallel_transform(b.begin(), b.end(), c.begin(), std::negate<value_type>());
                 } else {
                     std::size_t a_size = a.size();
                     std::size_t b_size = b.size();
 
                     if (a_size > b_size) {
                         c.resize(a_size);
-                        std::transform(a.begin(), a.begin() + b_size, b.begin(), c.begin(), std::minus<value_type>());
+                        nil::crypto3::parallel_transform(a.begin(), a.begin() + b_size, b.begin(), c.begin(),
+                                                         std::minus<value_type>());
                         std::copy(a.begin() + b_size, a.end(), c.begin() + b_size);
                     } else {
                         c.resize(b_size);
-                        std::transform(a.begin(), a.end(), b.begin(), c.begin(), std::minus<value_type>());
-                        std::transform(b.begin() + a_size, b.end(), c.begin() + a_size, std::negate<value_type>());
+                        nil::crypto3::parallel_transform(a.begin(), a.end(), b.begin(), c.begin(),
+                                                         std::minus<value_type>());
+                        nil::crypto3::parallel_transform(b.begin() + a_size, b.end(), c.begin() + a_size,
+                                                         std::negate<value_type>());
                     }
                 }
 
@@ -237,12 +236,10 @@ namespace nil {
              */
             template<typename AlgebraicRange, typename FieldRange>
             void multiplication(AlgebraicRange &c, const AlgebraicRange &a, const FieldRange &b) {
-                typedef
-                typename std::iterator_traits<decltype(std::begin(
-                        std::declval<AlgebraicRange>()))>::value_type algebraic_value_type;
-                typedef
-                typename std::iterator_traits<decltype(std::begin(
-                        std::declval<FieldRange>()))>::value_type field_value_type;
+                typedef typename std::iterator_traits<decltype(std::begin(std::declval<AlgebraicRange>()))>::value_type
+                    algebraic_value_type;
+                typedef typename std::iterator_traits<decltype(std::begin(std::declval<FieldRange>()))>::value_type
+                    field_value_type;
 
                 typedef typename field_value_type::field_type FieldType;
                 BOOST_STATIC_ASSERT(algebra::is_field<FieldType>::value);
@@ -262,17 +259,13 @@ namespace nil {
                 detail::basic_radix2_fft<FieldType>(u, omega);
                 detail::basic_radix2_fft<FieldType>(v, omega);
 
-                for (std::size_t i = 0; i < n; ++i) {
-                    c[i] = u[i] * v[i];
-                }
+                parallel_for(0, n, [&c, &u, &v](std::size_t i) { c[i] = u[i] * v[i]; });
 
                 detail::basic_radix2_fft<FieldType>(c, omega.inversed());
 
                 const field_value_type sconst = field_value_type(n).inversed();
 
-                for(std::size_t i = 0; i < n; ++i) {
-                    c[i] = c[i] * sconst;
-                }
+                parallel_for(0, n, [&c, sconst](std::size_t i) { c[i] *= sconst; });
 
                 condense(c);
             }
@@ -283,7 +276,10 @@ namespace nil {
              * [Bostan, Lecerf, & Schost, 2003. Tellegen's Principle in Practice, on page 39].
              */
             template<typename AlgebraicRange, typename FieldRange>
-            AlgebraicRange transpose_multiplication(const std::size_t &n, const AlgebraicRange &a, const FieldRange &c) {
+            AlgebraicRange transpose_multiplication(const std::size_t &n, const AlgebraicRange &a,
+                                                    const FieldRange &c) {
+                typedef typename std::iterator_traits<decltype(std::begin(std::declval<AlgebraicRange>()))>::value_type
+                    value_type;
 
                 const std::size_t m = a.size();
                 // if (c.size() - 1 > m + n)
@@ -308,9 +304,8 @@ namespace nil {
              */
             template<typename Range>
             void division(Range &q, Range &r, const Range &a, const Range &b) {
-
                 typedef
-                typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type value_type;
+                    typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type value_type;
 
                 std::size_t d = b.size() - 1; /* Degree of B */
 
@@ -318,14 +313,13 @@ namespace nil {
                 if (d == 0) {
                     value_type c = b[0].inversed();
                     q.resize(a.size());
-                    std::transform(
-                            std::begin(a), std::end(a), std::begin(q),
-                            [&c](const value_type &value) { return value * c; });
+                    nil::crypto3::parallel_transform(std::begin(a), std::end(a), std::begin(q),
+                                                     [&c](const value_type &value) { return value * c; });
                     // We will always have no reminder here.
                     r.resize(1);
                     r[0] = 0u;
                 }
-                    // Special case when B = X^N + C.
+                // Special case when B = X^N + C.
                 else if (b.back() == value_type::one() && is_zero(b.begin() + 1, b.end() - 1) && a.size() >= b.size()) {
                     q = Range(a.size() - b.size() + 1, value_type::zero());
                     r = Range(a.begin(), a.end() - (a.size() - b.size() + 1));
@@ -359,7 +353,8 @@ namespace nil {
                         if (b.size() + shift + 1 > r.size())
                             r.resize(b.size() + shift + 1);
                         auto glambda = [=](value_type x, value_type y) { return y - (x * lead_coeff); };
-                        std::transform(b.begin(), b.end(), r.begin() + shift, r.begin() + shift, glambda);
+                        nil::crypto3::parallel_transform(b.begin(), b.end(), r.begin() + shift, r.begin() + shift,
+                                                         glambda);
 
                         condense(r);
                         r_deg = r.size() - 1;
@@ -368,7 +363,7 @@ namespace nil {
                 condense(q);
             }
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MATH_POLYNOMIAL_BASIC_OPERATIONS_HPP

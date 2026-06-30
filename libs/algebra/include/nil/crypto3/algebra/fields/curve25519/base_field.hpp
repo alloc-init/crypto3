@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -47,6 +45,8 @@ namespace nil {
                 public:
                     typedef field<255> policy_type;
 
+                    using small_subfield = curve25519_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
                     constexpr static const std::size_t value_bits = modulus_bits;
@@ -56,7 +56,7 @@ namespace nil {
                     typedef typename policy_type::extended_integral_type extended_integral_type;
 #ifdef __ZKLLVM__
                     typedef __zkllvm_field_curve25519_base value_type;
-#else               
+#else
                     constexpr static const integral_type modulus =
                         0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed_cppui_modular255;
                     constexpr static const integral_type group_order_minus_one_half =
@@ -64,10 +64,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<curve25519_base_field>> value_type;
@@ -89,8 +88,8 @@ namespace nil {
                 using ed25519 = curve25519_base_field;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_CURVE25519_BASE_FIELD_HPP

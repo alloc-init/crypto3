@@ -108,9 +108,8 @@ namespace nil {
              *  The matrix identity \f$ I_N \f$.
              */
             template<typename T, std::size_t N>
-            constexpr matrix<T, N, N> identity = generate<N, N>([](std::size_t i, std::size_t j) {
-                return T(i == j ? 1 : 0);
-            });
+            constexpr matrix<T, N, N> identity =
+                generate<N, N>([](std::size_t i, std::size_t j) { return T(i == j ? 1 : 0); });
 
             template<typename T, std::size_t N>
             constexpr matrix<T, N, N> get_identity() {
@@ -258,7 +257,7 @@ namespace nil {
             /** }@*/
 
         }    // namespace algebra
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_MATRIX_UTILITY_HPP

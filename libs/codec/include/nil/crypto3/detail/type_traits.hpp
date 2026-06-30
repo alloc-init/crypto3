@@ -25,6 +25,22 @@
 #ifndef CRYPTO3_TYPE_TRAITS_HPP
 #define CRYPTO3_TYPE_TRAITS_HPP
 
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#pragma push_macro("GENERATE_HAS_MEMBER_TYPE")
+#pragma push_macro("GENERATE_HAS_MEMBER")
+#pragma push_macro("GENERATE_HAS_MEMBER_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_CONST_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_RETURN_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION")
+#endif
+
+#undef GENERATE_HAS_MEMBER_TYPE
+#undef GENERATE_HAS_MEMBER
+#undef GENERATE_HAS_MEMBER_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_FUNCTION
+#undef GENERATE_HAS_MEMBER_RETURN_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
+
 #define GENERATE_HAS_MEMBER_TYPE(Type)                                                \
                                                                                       \
     template<class T>                                                                 \
@@ -252,7 +268,6 @@ namespace nil {
                                           has_decoded_block_type<T>::value && has_decoded_block_bits<T>::value &&
                                           has_encode<T>::value && has_decode<T>::value;
                 typedef T type;
-
             };
 
             template<typename T>
@@ -299,13 +314,24 @@ namespace nil {
                 typedef T type;
             };
 
-            template<typename T>
-            struct is_passhash {
-                static const bool value = has_generate<T>::value && has_check<T>::value;
-                typedef T type;
-            };
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
+
+#undef GENERATE_HAS_MEMBER_TYPE
+#undef GENERATE_HAS_MEMBER
+#undef GENERATE_HAS_MEMBER_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_FUNCTION
+#undef GENERATE_HAS_MEMBER_RETURN_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
+
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#pragma pop_macro("GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_RETURN_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_CONST_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER")
+#pragma pop_macro("GENERATE_HAS_MEMBER_TYPE")
+#endif
 
 #endif    // CRYPTO3_TYPE_TRAITS_HPP

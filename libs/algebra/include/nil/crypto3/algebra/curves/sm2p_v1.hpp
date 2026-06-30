@@ -29,8 +29,6 @@
 #include <nil/crypto3/algebra/fields/sm2p_v1/base_field.hpp>
 #include <nil/crypto3/algebra/fields/sm2p_v1/scalar_field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -65,8 +63,8 @@ namespace nil {
 
                 typedef sm2p_v1<256> sm2p256v1;
             }    // namespace curves
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_SM2P_V1_HPP

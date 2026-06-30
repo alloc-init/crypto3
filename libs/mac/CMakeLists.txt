@@ -65,7 +65,6 @@ set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         ${CMAKE_WORKSPACE_NAME}::block
         ${CMAKE_WORKSPACE_NAME}::hash
-        ${CMAKE_WORKSPACE_NAME}::modes
 
         Boost::container)
 

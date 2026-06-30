@@ -256,8 +256,8 @@ namespace nil {
                     template<typename T, typename TIter>
                     static void write(T value, std::size_t size, TIter &iter) {
                         using byte_type = byte_type<TIter>;
-                        static const bool IsPointerToUnsigned
-                            = std::is_pointer<TIter>::value && std::is_unsigned<byte_type>::value;
+                        static const bool IsPointerToUnsigned =
+                            std::is_pointer<TIter>::value && std::is_unsigned<byte_type>::value;
                         return write_random_access_helper<TEndian, IsPointerToUnsigned>::write(value, size, iter);
                     }
                 };
@@ -403,8 +403,8 @@ namespace nil {
                         using byte_type = byte_type<TIter>;
                         static const bool IsPointer = std::is_pointer<TIter>::value;
 
-                        static const bool IsUnsignedConstData
-                            = std::is_const<byte_type>::value && std::is_unsigned<byte_type>::value;
+                        static const bool IsUnsignedConstData =
+                            std::is_const<byte_type>::value && std::is_unsigned<byte_type>::value;
                         return read_random_access_helper<TEndian, IsPointer, IsUnsignedConstData>::template read<T>(
                             size, iter);
                     }
@@ -418,9 +418,9 @@ namespace nil {
                         using optimised_value_type = detail::optimised_value_type<value_type>;
 
                         static_assert(TSize <= sizeof(value_type), "Precondition failure");
-                        static const bool IsRandomAccess
-                            = std::is_same<typename std::iterator_traits<TIter>::iterator_category,
-                                           std::random_access_iterator_tag>::value;
+                        static const bool IsRandomAccess =
+                            std::is_same<typename std::iterator_traits<TIter>::iterator_category,
+                                         std::random_access_iterator_tag>::value;
                         THelper<TEndian, IsRandomAccess>::write(static_cast<optimised_value_type>(value), TSize, iter);
                     }
                 };
@@ -434,9 +434,9 @@ namespace nil {
                         using byte_type = detail::byte_type<TIter>;
 
                         static_assert(TSize <= sizeof(value_type), "Precondition failure");
-                        static const bool IsRandomAccess
-                            = std::is_same<typename std::iterator_traits<TIter>::iterator_category,
-                                           std::random_access_iterator_tag>::value;
+                        static const bool IsRandomAccess =
+                            std::is_same<typename std::iterator_traits<TIter>::iterator_category,
+                                         std::random_access_iterator_tag>::value;
                         auto retval = static_cast<value_type>(
                             THelper<TEndian, IsRandomAccess>::template read<optimised_value_type>(TSize, iter));
 

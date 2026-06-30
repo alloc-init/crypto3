@@ -64,8 +64,7 @@ namespace nil {
              *  Computes the elementwise real of a matrix
              */
             template<typename T, std::size_t M, std::size_t N>
-            constexpr matrix<typename remove_complex<T>::type, M, N> real(
-                const matrix<T, M, N> &m) {
+            constexpr matrix<typename remove_complex<T>::type, M, N> real(const matrix<T, M, N> &m) {
                 return elementwise([](auto i) { return std::real(i); }, m);
             }
 
@@ -126,9 +125,7 @@ namespace nil {
              */
             template<typename T, std::size_t M, std::size_t N>
             constexpr vector<T, N> vectmatmul(const vector<T, M> &v, const matrix<T, M, N> &m) {
-                return generate<N>([&v, &m](auto i) {
-                    return sum(v * m.column(i));
-                });
+                return generate<N>([&v, &m](auto i) { return sum(v * m.column(i)); });
             }
 
             /*!
@@ -139,9 +136,7 @@ namespace nil {
              */
             template<typename T, std::size_t M, std::size_t N>
             constexpr vector<T, M> matvectmul(const matrix<T, M, N> &m, const vector<T, N> &v) {
-                return generate<M>([&v, &m](auto i) {
-                    return sum(m.row(i) * v);
-                });
+                return generate<M>([&v, &m](auto i) { return sum(m.row(i) * v); });
             }
 
             /** @brief Computes the kronecker tensor product
@@ -187,12 +182,11 @@ namespace nil {
 
             /// @private
             template<typename T, std::size_t M, std::size_t N>
-            constexpr std::tuple<matrix<T, M, N>, std::size_t, T> gauss_jordan_impl(matrix<T, M, N> m, T tolerance) {
+            constexpr std::tuple<matrix<T, M, N>, std::size_t, T> gauss_jordan_impl(matrix<T, M, N> m) {
                 // CRYPTO3_DETAIL_ASSERT_FLOATING_POINT(T)
                 // CRYPTO3_DETAIL_ASSERT_REAL(T)
 
-                // Define function for determining if an element is negligible
-                auto negligible = [&tolerance](const T &v) { return abs(v) < tolerance; };
+                auto negligible = [](const T &v) { return v == T::zero(); };
 
                 T det = 1;
                 std::size_t rank = 0;
@@ -200,7 +194,7 @@ namespace nil {
                 while (i < M && j < N) {
                     // Choose largest magnitude as pivot to avoid adding different magnitudes
                     for (std::size_t ip = i + 1; ip < M; ++ip) {
-                        if (abs(m[ip][j]) > abs(m[i][j])) {
+                        if (m[ip][j] > m[i][j]) {
                             for (std::size_t jp = 0; jp < N; ++jp) {
                                 auto tmp = m[ip][jp];
                                 m[ip][jp] = m[i][jp];
@@ -227,8 +221,7 @@ namespace nil {
                             }
                             if (!negligible(m[ip][j])) {
                                 auto s = m[ip][j];
-                                [&]() {
-                                    // wrap this in a lambda to get around a gcc bug
+                                [&]() {    // wrap this in a lambda to get around a gcc bug
                                     for (std::size_t jp = 0; jp < N; ++jp) {
                                         m[ip][jp] -= s * m[i][jp];
                                     }
@@ -246,13 +239,6 @@ namespace nil {
                 }
                 det = (rank == M) ? det : 0;
                 return {m, rank, det};
-            }
-
-            /// @private
-            template<typename T, std::size_t M, std::size_t N>
-            constexpr std::tuple<matrix<T, M, N>, std::size_t, T> gauss_jordan_impl(const matrix<T, M, N> &m) {
-                T tol = T(std::max(N, M)) * std::numeric_limits<T>::epsilon() * mars(m);
-                return gauss_jordan_impl(m, tol);
             }
 
             /** @brief Compute the reduced row echelon form
@@ -335,8 +321,8 @@ namespace nil {
             }
 
             /** }@*/
-        } // namespace algebra
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace algebra
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_MATRIX_MATH_HPP

@@ -39,8 +39,7 @@ namespace nil {
                 template<>
                 struct bitmask_undertlying_type<true> {
                     template<typename ParsedOptions>
-                    using type =
-                        typename processing::size_to_type<ParsedOptions::fixed_length, false>::type;
+                    using type = typename processing::size_to_type<ParsedOptions::fixed_length, false>::type;
                 };
 
                 template<>
@@ -55,6 +54,6 @@ namespace nil {
 
             }    // namespace detail
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BITMASK_VALUE_BEHAVIOUR_HPP

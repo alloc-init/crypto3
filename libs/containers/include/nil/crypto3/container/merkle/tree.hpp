@@ -39,6 +39,9 @@
 #include <nil/crypto3/hash/algorithm/hash.hpp>
 #include <nil/crypto3/container/merkle/node.hpp>
 
+#include <nil/actor/core/thread_pool.hpp>
+#include <nil/actor/core/parallelization_utils.hpp>
+
 namespace nil {
     namespace crypto3 {
         namespace containers {
@@ -175,6 +178,7 @@ namespace nil {
 
                     typedef typename node_type::value_type value_type;
                     constexpr static const std::size_t value_bits = node_type::value_bits;
+                    constexpr static const std::size_t arity = Arity;
 
                     typedef std::vector<value_type> container_type;
 
@@ -190,25 +194,24 @@ namespace nil {
                     typedef typename container_type::reverse_iterator reverse_iterator;
                     typedef typename container_type::const_reverse_iterator const_reverse_iterator;
 
-                    merkle_tree_impl() : _size(0), _leaves(0), _rc(0) {};
+                    merkle_tree_impl() : _size(0), _leaves(0), _rc(0) { };
 
                     ~merkle_tree_impl() = default;
 
                     merkle_tree_impl(size_t n) :
-                            _size(detail::merkle_tree_length(n, Arity)), _leaves(n),
-                            _rc(detail::merkle_tree_row_count(n, Arity)) {
+                        _size(detail::merkle_tree_length(n, Arity)), _leaves(n),
+                        _rc(detail::merkle_tree_row_count(n, Arity)) {
                         BOOST_ASSERT_MSG(pow(Arity, round(std::log(n) / std::log(Arity))) == n,
                                          "Wrong leaves number, it must be a power of Arity.");
                     }
 
                     merkle_tree_impl(const merkle_tree_impl &x) :
-                            _hashes(x._hashes), _size(x._size), _leaves(x._leaves), _rc(x._rc) {
+                        _hashes(x._hashes), _size(x._size), _leaves(x._leaves), _rc(x._rc) {
                     }
 
-                    merkle_tree_impl(const merkle_tree_impl &x, const allocator_type &a) : _hashes(x.hashes(), a),
-                                                                                           _size(x._size),
-                                                                                           _leaves(x._leaves),
-                                                                                           _rc(x._rc) {}
+                    merkle_tree_impl(const merkle_tree_impl &x, const allocator_type &a) :
+                        _hashes(x.hashes(), a), _size(x._size), _leaves(x._leaves), _rc(x._rc) {
+                    }
 
                     merkle_tree_impl(const std::initializer_list<value_type> &il) : _hashes(il) {
                         set_leaves(detail::merkle_tree_leaves(std::distance(il.begin(), il.end()), Arity));
@@ -216,27 +219,29 @@ namespace nil {
                         set_complete_size(detail::merkle_tree_length(_leaves, Arity));
                     }
 
-                    template<typename Iterator, typename std::enable_if<std::is_same<typename Iterator::value_type, value_type>::value, bool>::type = true>
+                    template<typename Iterator,
+                             typename std::enable_if<std::is_same<typename Iterator::value_type, value_type>::value,
+                                                     bool>::type = true>
                     merkle_tree_impl(Iterator first, Iterator last) : _hashes(first, last) {
                         set_leaves(detail::merkle_tree_leaves(std::distance(first, last), Arity));
                         set_row_count(detail::merkle_tree_row_count(_leaves, Arity));
                         set_complete_size(detail::merkle_tree_length(_leaves, Arity));
                     }
 
-                    merkle_tree_impl(const std::initializer_list<value_type> &il, const allocator_type &a) : _hashes(il, a) {
+                    merkle_tree_impl(const std::initializer_list<value_type> &il, const allocator_type &a) :
+                        _hashes(il, a) {
                         set_leaves(detail::merkle_tree_leaves(std::distance(il.begin(), il.end()), Arity));
                         set_row_count(detail::merkle_tree_row_count(_leaves, Arity));
                         set_complete_size(detail::merkle_tree_length(_leaves, Arity));
                     }
 
                     merkle_tree_impl(merkle_tree_impl &&x)
-                    BOOST_NOEXCEPT(std::is_nothrow_move_constructible<allocator_type>::value):
-                            _hashes(x._hashes),
-                            _size(x._size), _leaves(x._leaves), _rc(x._rc) {
+                        BOOST_NOEXCEPT(std::is_nothrow_move_constructible<allocator_type>::value) :
+                        _hashes(x._hashes), _size(x._size), _leaves(x._leaves), _rc(x._rc) {
                     }
 
                     merkle_tree_impl(merkle_tree_impl &&x, const allocator_type &a) :
-                            _hashes(x.hashes(), a), _size(x._size), _leaves(x._leaves), _rc(x._rc) {
+                        _hashes(x.hashes(), a), _size(x._size), _leaves(x._leaves), _rc(x._rc) {
                     }
 
                     merkle_tree_impl &operator=(const merkle_tree_impl &x) {
@@ -393,12 +398,12 @@ namespace nil {
                     //
                     template<class... Args>
                     reference emplace_back(Args &&..._args) {
-                        return _hashes.emplace_back(_args...);
+                        return _hashes.template emplace_back<>(_args...);
                     }
 
                     template<class... Args>
-                    iterator emplace(const_iterator _position, Args &&... _args) {
-                        return _hashes.emplace(_position, _args...);
+                    iterator emplace(const_iterator _position, Args &&..._args) {
+                        return _hashes.template emplace<>(_position, _args...);
                     }
 
                     void pop_back() {
@@ -420,7 +425,7 @@ namespace nil {
                     void swap(merkle_tree_impl &other) {
                         _hashes.swap(other.hashes());
                         std::swap(_leaves, other.leaves());
-                        std::swap(_rc, other._rc);
+                        std::swap(_rc, other.row_count());
                         std::swap(_size, other.size());
                     }
 
@@ -482,21 +487,28 @@ namespace nil {
                 merkle_tree_impl<T, Arity> make_merkle_tree(LeafIterator first, LeafIterator last) {
                     typedef T node_type;
                     typedef typename node_type::hash_type hash_type;
+                    typedef typename node_type::value_type value_type;
+                    typedef typename std::iterator_traits<LeafIterator>::value_type leaf_value_type;
 
                     merkle_tree_impl<T, Arity> ret(std::distance(first, last));
-                    ret.reserve(ret.complete_size());
+                    ret.resize(ret.complete_size());
 
-                    while (first != last) {
-                        ret.emplace_back(crypto3::hash<hash_type>(*first++));
-                    }
+                    nil::crypto3::parallel_transform(first, last, ret.begin(), [](const leaf_value_type &leaf) {
+                        return static_cast<value_type>(crypto3::hash<hash_type>(leaf));
+                    });
 
                     std::size_t row_idx = ret.leaves(), row_size = row_idx / Arity;
                     typename merkle_tree_impl<T, Arity>::iterator it = ret.begin();
 
+                    std::size_t next_row_start_index = std::distance(first, last);
+
                     for (size_t row_number = 1; row_number < ret.row_count(); ++row_number, row_size /= Arity) {
-                        for (size_t i = 0; i < row_size; ++i, it += Arity) {
-                            ret.emplace_back(generate_hash<hash_type>(it, it + Arity));
-                        }
+                        nil::crypto3::parallel_for(0, row_size, [&ret, it, next_row_start_index](std::size_t index) {
+                            ret[next_row_start_index + index] =
+                                generate_hash<hash_type>(it + index * Arity, it + (index + 1) * Arity);
+                        });
+                        next_row_start_index += row_size;
+                        it += row_size * Arity;
                     }
                     return ret;
                 }
@@ -504,19 +516,19 @@ namespace nil {
 
             template<typename T, std::size_t Arity>
             using merkle_tree = typename std::conditional<nil::crypto3::detail::is_hash<T>::value,
-                    detail::merkle_tree_impl<detail::merkle_tree_node<T>, Arity>,
-                    detail::merkle_tree_impl<T, Arity>>::type;
+                                                          detail::merkle_tree_impl<detail::merkle_tree_node<T>, Arity>,
+                                                          detail::merkle_tree_impl<T, Arity>>::type;
 
             template<typename T, std::size_t Arity, typename LeafIterator>
             merkle_tree<T, Arity> make_merkle_tree(LeafIterator first, LeafIterator last) {
                 return detail::make_merkle_tree<typename std::conditional<nil::crypto3::detail::is_hash<T>::value,
-                        detail::merkle_tree_node<T>,
-                        T>::type,
-                        Arity>(first, last);
+                                                                          detail::merkle_tree_node<T>,
+                                                                          T>::type,
+                                                Arity>(first, last);
             }
 
         }    // namespace containers
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MERKLE_TREE_HPP

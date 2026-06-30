@@ -121,7 +121,7 @@ namespace nil {
                 typedef el_gamal_private_key<field_type> private_key_type;
             };
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

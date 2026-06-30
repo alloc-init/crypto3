@@ -57,16 +57,14 @@ namespace nil {
                 typedef typename container_type::reverse_iterator reverse_iterator;
                 typedef typename container_type::const_reverse_iterator const_reverse_iterator;
 
-                std::vector<element_type> &it;
+                std::vector<element_type>& it;
                 size_t _d;
 
                 polynomial_dfs_view(size_t d, std::vector<element_type>& vec) : it(vec), _d(d) {
                 }
 
                 polynomial_dfs_view(polynomial_dfs_view&& x)
-                    BOOST_NOEXCEPT(std::is_nothrow_move_constructible<allocator_type>::value) :
-                    it(x.it),
-                    _d(x._d) {
+                    BOOST_NOEXCEPT(std::is_nothrow_move_constructible<allocator_type>::value) : it(x.it), _d(x._d) {
                 }
 
                 ~polynomial_dfs_view() = default;
@@ -102,7 +100,7 @@ namespace nil {
                 //                }
 
                 bool operator==(const polynomial_dfs_view& rhs) const {
-                    return (*it) == (*(rhs.it)) && _d == rhs._d;
+                    return (*it) == (*(rhs.it)) && _d == rhs.data();
                 }
                 bool operator!=(const polynomial_dfs_view& rhs) const {
                     return !(rhs == *this);
@@ -239,7 +237,7 @@ namespace nil {
 
                 template<class... Args>
                 reference emplace_back(Args&&... _args) {
-                    return it.emplace_back(_args...);
+                    return it.template emplace_back<>(_args...);
                 }
 
                 void pop_back() {
@@ -255,7 +253,7 @@ namespace nil {
                 }
                 template<class... Args>
                 iterator emplace(const_iterator _position, Args&&... _args) {
-                    return it.emplace(_position, _args...);
+                    return it.template emplace<>(_position, _args...);
                 }
 
                 iterator insert(const_iterator _position, size_type _n, const_reference _x) {
@@ -309,7 +307,7 @@ namespace nil {
                 //                }
 
                 void swap(polynomial_dfs_view& other) {
-                    it.swap(other.it);
+                    it.swap(other.data());
                     std::swap(_d, other._d);
                 }
 
@@ -471,7 +469,7 @@ namespace nil {
                     return *this;
                 }
 
-                void from_coefficients(const container_type &tmp) {
+                void from_coefficients(const container_type& tmp) {
                     typedef typename value_type::field_type FieldType;
                     size_t n = detail::power_of_two(tmp.size());
                     value_type omega = unity_root<FieldType>(n);
@@ -503,7 +501,7 @@ namespace nil {
                 }
             };
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MATH_POLYNOMIAL_POLYNOM_DFS_VIEW_HPP

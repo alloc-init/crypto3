@@ -47,6 +47,8 @@ namespace nil {
                 struct bls12_base_field<381> : public field<381> {
                     typedef field<381> policy_type;
 
+                    using small_subfield = bls12_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
                     constexpr static const std::size_t value_bits = modulus_bits;
@@ -66,10 +68,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<bls12_base_field<381>>> value_type;
@@ -79,6 +80,8 @@ namespace nil {
                 template<>
                 struct bls12_base_field<377> : public field<377> {
                     typedef field<377> policy_type;
+
+                    using small_subfield = bls12_base_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
@@ -100,10 +103,9 @@ namespace nil {
                     typedef typename policy_type::modular_backend modular_backend;
                     typedef boost::multiprecision::backends::modular_params<modular_backend> modular_params_type;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<bls12_base_field<377>>> value_type;
@@ -124,8 +126,10 @@ namespace nil {
                 constexpr typename bls12_base_field<381>::integral_type const bls12_base_field<381>::modulus;
                 constexpr typename bls12_base_field<377>::integral_type const bls12_base_field<377>::modulus;
 
-                constexpr typename bls12_base_field<381>::integral_type const bls12_base_field<381>::group_order_minus_one_half;
-                constexpr typename bls12_base_field<377>::integral_type const bls12_base_field<377>::group_order_minus_one_half;
+                constexpr typename bls12_base_field<381>::integral_type const
+                    bls12_base_field<381>::group_order_minus_one_half;
+                constexpr typename bls12_base_field<377>::integral_type const
+                    bls12_base_field<377>::group_order_minus_one_half;
 
                 constexpr
                     typename bls12_base_field<381>::modular_params_type const bls12_base_field<381>::modulus_params;
@@ -139,8 +143,8 @@ namespace nil {
                 using bls12 = bls12_base_field<Version>;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_BLS12_BASE_FIELD_HPP

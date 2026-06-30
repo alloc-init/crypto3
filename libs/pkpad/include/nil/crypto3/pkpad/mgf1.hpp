@@ -53,16 +53,16 @@ namespace nil {
                         sh.update(first, last);
                         result = sh.end_message();
 
-                        out =
-                            std::transform(result.begin(), result.end(), out,
-                                           [&](const typename HashType::digest_type::value_type &v) { *out++ = v ^ *out; });
+                        out = std::transform(
+                            result.begin(), result.end(), out,
+                            [&](const typename HashType::digest_type::value_type &v) { *out++ = v ^ *out; });
                     }
 
                     return out;
                 }
             }    // namespace padding
-        }        // namespace pubkey
-    }            // namespace crypto3
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

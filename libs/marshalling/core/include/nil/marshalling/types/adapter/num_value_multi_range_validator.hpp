@@ -44,8 +44,8 @@ namespace nil {
                 public:
                     using value_type = typename base_impl_type::value_type;
 
-                    static_assert(std::is_integral<value_type>::value || std::is_enum<value_type>::value
-                                      || std::is_floating_point<value_type>::value,
+                    static_assert(std::is_integral<value_type>::value || std::is_enum<value_type>::value ||
+                                      std::is_floating_point<value_type>::value,
                                   "Only numeric fields are supported for multi range validation.");
 
                     num_value_multi_range_validator() = default;
@@ -65,9 +65,8 @@ namespace nil {
                     num_value_multi_range_validator &operator=(num_value_multi_range_validator &&) = default;
 
                     bool valid() const {
-                        return base_impl_type::valid()
-                               && processing::tuple_type_accumulate<TRanges>(
-                                   false, Validator(base_impl_type::value()));
+                        return base_impl_type::valid() &&
+                               processing::tuple_type_accumulate<TRanges>(false, Validator(base_impl_type::value()));
                     }
 
                 private:
@@ -79,15 +78,13 @@ namespace nil {
                         template<typename TRange>
                         bool operator()(bool val) const {
                             static_cast<void>(val);
-                            static_assert(nil::detail::is_tuple<TRange>::value,
-                                          "TRange must be a tuple");
+                            static_assert(nil::detail::is_tuple<TRange>::value, "TRange must be a tuple");
                             static_assert(std::tuple_size<TRange>::value == 2, "Tuple with 2 elements is expected");
                             using MinVal = typename std::tuple_element<0, TRange>::type;
                             using MaxVal = typename std::tuple_element<1, TRange>::type;
                             static_assert(MinVal::value <= MaxVal::value, "Invalid range");
-                            return val
-                                   || ((static_cast<value_type>(MinVal::value) <= m_val)
-                                       && (m_val <= static_cast<value_type>(MaxVal::value)));
+                            return val || ((static_cast<value_type>(MinVal::value) <= m_val) &&
+                                           (m_val <= static_cast<value_type>(MaxVal::value)));
                         }
 
                     private:
@@ -96,7 +93,7 @@ namespace nil {
                 };
 
             }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_NUM_VALUE_MULTI_RANGE_VALIDATOR_HPP

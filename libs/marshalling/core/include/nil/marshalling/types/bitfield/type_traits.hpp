@@ -60,8 +60,7 @@ namespace nil {
                 template<typename TField>
                 struct bitfield_member_length_retriever {
                     static const std::size_t value = bitfield_member_length_retrieve_helper<
-                        TField,
-                        TField::parsed_options_type::has_fixed_bit_length_limit>::value;
+                        TField, TField::parsed_options_type::has_fixed_bit_length_limit>::value;
                 };
 
                 template<std::size_t TRem, typename TMembers>
@@ -70,8 +69,8 @@ namespace nil {
                     using field_type = typename std::tuple_element<Idx, TMembers>::type;
 
                 public:
-                    static const std::size_t value = bitfield_bit_length_calc_helper<TRem - 1, TMembers>::value
-                                                     + bitfield_member_length_retriever<field_type>::value;
+                    static const std::size_t value = bitfield_bit_length_calc_helper<TRem - 1, TMembers>::value +
+                                                     bitfield_member_length_retriever<field_type>::value;
                 };
 
                 template<typename TMembers>
@@ -93,8 +92,8 @@ namespace nil {
                     static const std::size_t PrevFieldSize = bitfield_member_length_retriever<field_type>::value;
 
                 public:
-                    static const std::size_t value
-                        = bitfield_pos_retrieve_helper<TIdx - 1, TMembers>::value + PrevFieldSize;
+                    static const std::size_t value =
+                        bitfield_pos_retrieve_helper<TIdx - 1, TMembers>::value + PrevFieldSize;
                 };
 
                 template<typename TMembers>
@@ -109,7 +108,7 @@ namespace nil {
                 }
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BASIC_BITFIELD_TYPE_TRAITS_HPP

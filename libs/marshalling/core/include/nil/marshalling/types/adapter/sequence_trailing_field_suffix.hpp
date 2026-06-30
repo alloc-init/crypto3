@@ -39,9 +39,6 @@ namespace nil {
                     using base_impl_type = TBase;
                     using trail_field_type = TTrailField;
 
-                    static_assert(!trail_field_type::is_version_dependent(),
-                                  "Suffix fields must not be version dependent");
-
                 public:
                     using value_type = typename base_impl_type::value_type;
                     using element_type = typename base_impl_type::element_type;
@@ -113,7 +110,7 @@ namespace nil {
                 };
 
             }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_SEQUENCE_TRAILING_FIELD_SUFFIX_HPP

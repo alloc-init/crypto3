@@ -58,7 +58,7 @@ namespace nil {
                 };
 
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_MNT4_POLICY_HPP

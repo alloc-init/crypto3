@@ -39,9 +39,6 @@ namespace nil {
                     using base_impl_type = TBase;
                     using term_field_type = TTermFieldType;
 
-                    static_assert(!term_field_type::is_version_dependent(),
-                                  "Suffix fields must not be version dependent");
-
                 public:
                     using value_type = typename base_impl_type::value_type;
                     using element_type = typename base_impl_type::element_type;
@@ -82,11 +79,10 @@ namespace nil {
                                       "Only random access iterator for reading is supported with "
                                       "nil::marshalling::option::sequence_termination_field_suffix option");
 
-                        using elem_tag =
-                            typename std::conditional<std::is_integral<element_type>::value
-                                                          && (sizeof(element_type) == sizeof(std::uint8_t)),
-                                                      raw_data_tag,
-                                                      field_tag>::type;
+                        using elem_tag = typename std::conditional<std::is_integral<element_type>::value &&
+                                                                       (sizeof(element_type) == sizeof(std::uint8_t)),
+                                                                   raw_data_tag,
+                                                                   field_tag>::type;
 
                         return read_internal(iter, len, elem_tag());
                     }
@@ -169,7 +165,7 @@ namespace nil {
                 };
 
             }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_SEQUENCE_TERMINATION_FIELD_SUFFIX_HPP

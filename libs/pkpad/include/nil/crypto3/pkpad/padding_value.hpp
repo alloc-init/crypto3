@@ -145,9 +145,8 @@ namespace nil {
 
                         template<typename InputIterator>
                         itr_padding_impl(InputIterator first, InputIterator last, OutputIterator out,
-                                        accumulator_set_type &&ise) :
-                            PaddingStateImpl(std::forward<accumulator_set_type>(ise)),
-                            out(std::move(out)) {
+                                         accumulator_set_type &&ise) :
+                            PaddingStateImpl(std::forward<accumulator_set_type>(ise)), out(std::move(out)) {
                             BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<InputIterator>));
                             BOOST_CONCEPT_ASSERT((boost::OutputIteratorConcept<OutputIterator, result_type>));
 
@@ -160,9 +159,9 @@ namespace nil {
                         }
                     };
                 }    // namespace detail
-            }        // namespace padding
-        }            // namespace pubkey
-    }                // namespace crypto3
+            }    // namespace padding
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CODEC_POSTPROCESSOR_HPP

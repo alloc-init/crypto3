@@ -39,15 +39,17 @@ namespace nil {
     namespace crypto3 {
         namespace pubkey {
             template<typename SchemeType>
-            using encryption_verification_init_params_type = typename verify_encryption_op<SchemeType>::init_params_type;
+            using encryption_verification_init_params_type =
+                typename verify_encryption_op<SchemeType>::init_params_type;
         }
 
         template<typename SchemeType, typename Mode = pubkey::modes::verifiable_encryption<SchemeType>,
                  typename ProcessingMode = typename Mode::encryption_verification_policy, typename InputIterator,
                  typename OutputIterator>
-        OutputIterator verify_encryption(InputIterator first, InputIterator last,
-                                         const pubkey::encryption_verification_init_params_type<SchemeType> &init_params,
-                                         OutputIterator out) {
+        OutputIterator
+            verify_encryption(InputIterator first, InputIterator last,
+                              const pubkey::encryption_verification_init_params_type<SchemeType> &init_params,
+                              OutputIterator out) {
 
             typedef typename pubkey::pubkey_accumulator_set<ProcessingMode> PubkeyAccumulator;
 
@@ -60,9 +62,10 @@ namespace nil {
         template<typename SchemeType, typename Mode = pubkey::modes::verifiable_encryption<SchemeType>,
                  typename ProcessingMode = typename Mode::encryption_verification_policy, typename SinglePassRange,
                  typename OutputIterator>
-        OutputIterator verify_encryption(const SinglePassRange &range,
-                                         const pubkey::encryption_verification_init_params_type<SchemeType> &init_params,
-                                         OutputIterator out) {
+        OutputIterator
+            verify_encryption(const SinglePassRange &range,
+                              const pubkey::encryption_verification_init_params_type<SchemeType> &init_params,
+                              OutputIterator out) {
 
             typedef typename pubkey::pubkey_accumulator_set<ProcessingMode> PubkeyAccumulator;
 

@@ -41,8 +41,7 @@ namespace nil {
                     struct twisted_edwards_element_g1_inverted_add_2008_bbjlp {
 
                         template<typename ElementType>
-                        constexpr static inline void process(ElementType &first,
-                                                                    const ElementType &second) {
+                        constexpr static inline void process(ElementType &first, const ElementType &second) {
 
                             using field_value_type = typename ElementType::field_type::value_type;
 
@@ -55,16 +54,15 @@ namespace nil {
                             field_value_type I =
                                 (first.X + first.Y) * (second.X + second.Y) - C - D;    // I = (X1+Y1)*(X2+Y2)-C-D
 
-                            first.X = (E + B) * H;                          // X3 = (E+B)*H
-                            first.Y = (E - B) * I;                          // Y3 = (E-B)*I
-                            first.Z = A * H * I;                            // Z3 = A*H*I
-
+                            first.X = (E + B) * H;    // X3 = (E+B)*H
+                            first.Y = (E - B) * I;    // Y3 = (E-B)*I
+                            first.Z = A * H * I;      // Z3 = A*H*I
                         }
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_TWISTED_EDWARDS_G1_ELEMENT_INVERTED_ADD_2008_BBJLP_HPP

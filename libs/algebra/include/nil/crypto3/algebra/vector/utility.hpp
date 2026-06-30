@@ -28,6 +28,7 @@
 #define CRYPTO3_ALGEBRA_VECTOR_UTILITY_HPP
 
 #include <nil/crypto3/algebra/vector/vector.hpp>
+#include <nil/crypto3/detail/same_value.hpp>
 
 #include <tuple>
 
@@ -95,7 +96,7 @@ namespace nil {
             template<std::size_t N, typename T>
             constexpr vector<T, N> iota(T value = T()) {
                 vector<T, N> seq = {};
-                for (auto &x: seq) {
+                for (auto &x : seq) {
                     x = value;
                     value += 1;    // equivalent to value++, see GCC Bug 91705
                 }
@@ -123,7 +124,7 @@ namespace nil {
             template<std::size_t N, typename T>
             constexpr vector<T, N> fill(T value) {
                 vector<T, N> filled = {};
-                for (auto &x: filled)
+                for (auto &x : filled)
                     x = value;
                 return filled;
             }
@@ -203,6 +204,6 @@ namespace nil {
             /** }@*/
 
         }    // namespace algebra
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_VECTOR_UTILITY_HPP

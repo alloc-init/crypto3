@@ -47,21 +47,21 @@ namespace nil {
              * @brief Base exception class for all base64 decoding errors
              */
             template<std::uint8_t Version>
-            struct base_decode_error : virtual boost::exception, virtual std::exception {};
+            struct base_decode_error : virtual boost::exception, virtual std::exception { };
 
             /*!
              * @struct wrong_input_range
              * @brief Thrown in case of the range passed to base64 encoding is larger than 4 or smaller than 1
              */
             template<std::uint8_t Version>
-            struct wrong_input_range : virtual base_decode_error<Version> {};
+            struct wrong_input_range : virtual base_decode_error<Version> { };
 
             /*!
              * @struct wrong_input_symbol
              * @brief Thrown in case of the symbol passed to base58 encoding isn't in correct set for base58
              */
             template<std::uint8_t Version>
-            struct wrong_input_symbol : virtual base_decode_error<Version> {};
+            struct wrong_input_symbol : virtual base_decode_error<Version> { };
 
             /*!
              * @struct non_base_input
@@ -69,14 +69,14 @@ namespace nil {
              * Contains the offending character
              */
             template<std::uint8_t Version>
-            struct non_base_input : virtual base_decode_error<Version> {};
+            struct non_base_input : virtual base_decode_error<Version> { };
 
             typedef boost::error_info<struct bad_char_, char> bad_char;
 
             namespace detail {
 
                 template<std::size_t Version>
-                class basic_base_policy {};
+                class basic_base_policy { };
 
                 template<>
                 class basic_base_policy<32> {
@@ -191,7 +191,7 @@ namespace nil {
                 };
 
                 template<std::size_t Version>
-                class base_functions : public basic_base_policy<Version> {};
+                class base_functions : public basic_base_policy<Version> { };
 
                 template<>
                 class base_functions<32> : public basic_base_policy<32> {
@@ -230,8 +230,8 @@ namespace nil {
                              * If we're at the end of the input, pad with 0s and truncate
                              */
                             if (std::distance(it, encoded.end()) == 1 && std::distance(output_buffer.begin(), oit)) {
-                                for (auto itr = oit;
-                                     std::distance(output_buffer.begin(), itr) < decoded_block_bits / CHAR_BIT;
+                                for (auto itr = oit; std::distance(output_buffer.begin(), itr) <
+                                                     (std::ptrdiff_t)decoded_block_bits / CHAR_BIT;
                                      ++itr) {
                                     *itr = 0x00U;
                                 }
@@ -273,7 +273,8 @@ namespace nil {
                                               'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm',
                                               'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'}));
 
-                    CRYPTO3_INLINE_VARIABLE(inverted_constants_type, inverted_constants,
+                    CRYPTO3_INLINE_VARIABLE(
+                        inverted_constants_type, inverted_constants,
                         ({0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
                           0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
                           0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
@@ -321,7 +322,7 @@ namespace nil {
                             out.emplace_back(constants()[r.template convert_to<std::uint8_t>()]);
                             v = q;
                         }
-                        
+
                         return out;
                     }
 
@@ -385,8 +386,8 @@ namespace nil {
                              * If we're at the end of the input, pad with 0s and truncate
                              */
                             if (std::distance(it, encoded.end()) == 1 && std::distance(output_buffer.begin(), oit)) {
-                                for (auto itr = oit;
-                                     std::distance(output_buffer.begin(), itr) < decoded_block_bits / CHAR_BIT;
+                                for (auto itr = oit; std::distance(output_buffer.begin(), itr) <
+                                                     (std::ptrdiff_t)decoded_block_bits / CHAR_BIT;
                                      ++itr) {
                                     *itr = 0x00;
                                 }
@@ -412,8 +413,8 @@ namespace nil {
                 public:
                 };
             }    // namespace detail
-        }        // namespace codec
-    }            // namespace crypto3
+        }    // namespace codec
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BASE_POLICY_HPP

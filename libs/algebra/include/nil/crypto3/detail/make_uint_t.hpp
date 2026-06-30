@@ -56,7 +56,7 @@ namespace nil {
                 return make_uint_t<Size, typename std::tuple_element<0, std::tuple<Args...>>::type>({args...});
             }
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MAKE_UINT_T_HPP

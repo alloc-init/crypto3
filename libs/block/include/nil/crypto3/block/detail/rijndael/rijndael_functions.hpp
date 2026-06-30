@@ -137,11 +137,10 @@ namespace nil {
                     static const prefetched_constants_type prefetch_constants(const constants_type &constants) {
                         BOOST_ALIGNMENT(64) prefetched_constants_type result;
 
-                        copy_n_if(constants.begin(), result.size(), result.begin(),
-                                  [](const typename constants_type::value_type &c) ->
-                                  typename prefetched_constants_type::value_type {
-                                      return {xtime(c), c, c, xtime3(c)};
-                                  });
+                        copy_n_if(
+                            constants.begin(), result.size(), result.begin(),
+                            [](const typename constants_type::value_type &c) ->
+                            typename prefetched_constants_type::value_type { return {xtime(c), c, c, xtime3(c)}; });
 
                         return result;
                     }
@@ -170,8 +169,8 @@ namespace nil {
                 constexpr typename rijndael_functions<KeyBits, BlockBits>::constants_type const
                     rijndael_functions<KeyBits, BlockBits>::pow_;
             }    // namespace detail
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_RIJNDAEL_FUNCTIONS_CPP_HPP

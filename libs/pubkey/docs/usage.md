@@ -19,7 +19,7 @@ with BLS:
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::pubkey;
 using namespace nil::crypto3::hashes;
-using namespace nil::crypto3::multiprecision;
+using namespace boost::multiprecision;
 
     using curve_type = curves::bls12_381;
     using scheme_type = bls<bls_default_public_params<>, bls_mps_ro_version, bls_basic_scheme, curve_type>;
@@ -61,7 +61,7 @@ In case of public-key scheme source data accumulation necessity is present, foll
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::pubkey;
 using namespace nil::crypto3::hashes;
-using namespace nil::crypto3::multiprecision;
+using namespace boost::multiprecision;
 
     using curve_type = curves::bls12_381;
     using scheme_type = bls<bls_default_public_params<>, bls_mps_ro_version, bls_basic_scheme, curve_type>;

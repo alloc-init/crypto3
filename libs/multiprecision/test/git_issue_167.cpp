@@ -13,9 +13,8 @@ int main() {
         std::string s = d.str();
 
         BOOST_CHECK_EQUAL(s, "1234.56");
-    } catch (const std::runtime_error&) {
+    } catch (const std::runtime_error &) {
     }    // No en-US locale
 
     return boost::report_errors();
 }
-

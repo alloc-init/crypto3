@@ -12,7 +12,7 @@
 #include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
 
 template<class Number>
-void test_specific(const std::integral_constant<int, boost::multiprecision::number_kind_integer>&) {
+void test_specific(const std::integral_constant<int, boost::multiprecision::number_kind_integer> &) {
     if (std::numeric_limits<Number>::is_modulo) {
         if (!std::numeric_limits<Number>::is_signed) {
             BOOST_TEST(1 + (std::numeric_limits<Number>::max)() == 0);
@@ -22,7 +22,7 @@ void test_specific(const std::integral_constant<int, boost::multiprecision::numb
 }
 
 template<class Number, class T>
-void test_specific(const T&) {
+void test_specific(const T &) {
 }
 
 template<class Number>
@@ -43,15 +43,12 @@ void test() {
     if (std::numeric_limits<Number>::is_integer) {
         std::cout << std::hex << std::showbase;
     }
-    std::cout << "max()"
-              << " = " << (std::numeric_limits<Number>::max)() << std::endl;
+    std::cout << "max()" << " = " << (std::numeric_limits<Number>::max)() << std::endl;
     if (std::numeric_limits<Number>::is_integer) {
         std::cout << std::dec;
     }
-    std::cout << "max()"
-              << " = " << (std::numeric_limits<Number>::max)() << std::endl;
-    std::cout << "min()"
-              << " = " << (std::numeric_limits<Number>::min)() << std::endl;
+    std::cout << "max()" << " = " << (std::numeric_limits<Number>::max)() << std::endl;
+    std::cout << "min()" << " = " << (std::numeric_limits<Number>::min)() << std::endl;
 #ifndef BOOST_NO_CXX11_NUMERIC_LIMITS
     PRINT(lowest());
 #endif
@@ -73,7 +70,6 @@ void test() {
     PRINT(has_infinity);
     PRINT(has_quiet_NaN);
     PRINT(has_signaling_NaN);
-    PRINT(has_denorm);
     PRINT(has_denorm_loss);
     PRINT(infinity());
     PRINT(quiet_NaN());

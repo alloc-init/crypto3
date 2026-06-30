@@ -27,10 +27,12 @@
 #define MARSHALLING_ARRAY_LIST_HPP
 
 #include <vector>
+#include <map>
 
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/types/array_list/behaviour.hpp>
 #include <nil/marshalling/types/detail/options_parser.hpp>
+#include <nil/detail/type_traits.hpp>
 
 #include <nil/marshalling/types/tag.hpp>
 
@@ -91,7 +93,6 @@ namespace nil {
             ///     @li @ref nil::marshalling::option::orig_data_view (valid only if TElement is integral type
             ///         of 1 byte size.
             ///     @li @ref nil::marshalling::option::empty_serialization
-            ///     @li @ref nil::marshalling::option::version_storage
             /// @extends nil::marshalling::field_type
             /// @headerfile nil/marshalling/types/array_list.hpp
             template<typename TFieldBase, typename TElement, typename... TOptions>
@@ -101,9 +102,6 @@ namespace nil {
             public:
                 /// @brief endian_type used for serialization.
                 using endian_type = typename base_impl_type::endian_type;
-
-                /// @brief Version type
-                using version_type = typename base_impl_type::version_type;
 
                 /// @brief All the options provided to this class bundled into struct.
                 using parsed_options_type = detail::options_parser<TOptions...>;
@@ -167,7 +165,7 @@ namespace nil {
                 constexpr std::size_t bit_length() const {
                     return base_impl_type::bit_length();
                 }
-                
+
                 /// @brief Read field value from input data sequence
                 /// @details By default, the read operation will try to consume all the
                 ///     data available, unless size limiting option (such as
@@ -265,7 +263,8 @@ namespace nil {
                 }
 
                 /// @brief Force available length for the next read() invocation.
-                /// @details Exists only if @ref nil::marshalling::option::sequence_length_forcing_enabled option has been
+                /// @details Exists only if @ref nil::marshalling::option::sequence_length_forcing_enabled option has
+                /// been
                 ///     used.
                 /// @param[in] count Number of elements to read during following read operation.
                 void force_read_length(std::size_t count) {
@@ -274,7 +273,8 @@ namespace nil {
 
                 /// @brief Clear forcing of the available length in the next read()
                 ///     invocation.
-                /// @details Exists only if @ref nil::marshalling::option::sequence_length_forcing_enabled option has been
+                /// @details Exists only if @ref nil::marshalling::option::sequence_length_forcing_enabled option has
+                /// been
                 ///     used.
                 void clear_read_length_forcing() {
                     return base_impl_type::clear_read_length_forcing();
@@ -295,23 +295,6 @@ namespace nil {
                 ///     used.
                 void clear_read_elem_length_forcing() {
                     return base_impl_type::clear_read_elem_length_forcing();
-                }
-
-                /// @brief Compile time check if this class is version dependent
-                static constexpr bool is_version_dependent() {
-                    return parsed_options_type::has_custom_version_update || base_impl_type::is_version_dependent();
-                }
-
-                /// @brief Get version of the field.
-                /// @details Exists only if @ref nil::marshalling::option::version_storage option has been provided.
-                version_type get_version() const {
-                    return base_impl_type::get_version();
-                }
-
-                /// @brief Default implementation of version update.
-                /// @return @b true in case the field contents have changed, @b false otherwise
-                bool set_version(version_type version) {
-                    return base_impl_type::set_version(version);
                 }
 
             protected:
@@ -338,14 +321,10 @@ namespace nil {
                               "nil::marshalling::option::valid_num_value_range (or similar) option is not applicable "
                               "to array_list field");
                 static_assert(
-                    (!parsed_options_type::has_orig_data_view)
-                        || (std::is_integral<TElement>::value && (sizeof(TElement) == sizeof(std::uint8_t))),
+                    (!parsed_options_type::has_orig_data_view) ||
+                        (std::is_integral<TElement>::value && (sizeof(TElement) == sizeof(std::uint8_t))),
                     "Usage of nil::marshalling::option::orig_data_view option is allowed only for raw binary data "
                     "(std::uint8_t) types.");
-                static_assert(
-                    !parsed_options_type::has_versions_range,
-                    "nil::marshalling::option::exists_between_versions (or similar) option is not applicable to "
-                    "array_list field");
                 static_assert(
                     !parsed_options_type::has_invalid_by_default,
                     "nil::marshalling::option::invalid_by_default option is not applicable to array_list field");
@@ -404,7 +383,87 @@ namespace nil {
                 return field;
             }
 
+            // We use this type of array_list waay too often, so this is a shortcut, not to copy-paste it all the time.
+            template<typename TFieldBase, typename TElement>
+            using standard_array_list =
+                array_list<TFieldBase, TElement,
+                           nil::marshalling::option::size_t_sequence_size_field_prefix<TFieldBase>>;
+
+            // Very often we just need an array list of std::size_t, so here's another shortcut.
+            template<typename TFieldBase>
+            using standard_size_t_array_list =
+                array_list<TFieldBase, nil::marshalling::types::integral<TFieldBase, std::size_t>,
+                           nil::marshalling::option::size_t_sequence_size_field_prefix<TFieldBase>>;
+
+            // Helper functions to convert to/from an arraylist.
+            template<typename TFieldBase, typename TMarshalledElement, typename Range>
+            typename std::enable_if<nil::detail::is_range<Range>::value,
+                                    standard_array_list<TFieldBase, TMarshalledElement>>::type
+                fill_standard_array_list(const Range &input_range,
+                                         std::function<TMarshalledElement(const typename Range::value_type &)>
+                                             element_marshalling) {
+                standard_array_list<TFieldBase, TMarshalledElement> result;
+                for (const auto &v : input_range) {
+                    result.value().push_back(element_marshalling(v));
+                }
+                return result;
+            }
+
+            template<typename TFieldBase, typename TElement, typename TMarshalledElement>
+            std::vector<TElement>
+                make_standard_array_list(const standard_array_list<TFieldBase, TMarshalledElement> &filled_array,
+                                         std::function<TElement(const TMarshalledElement &)>
+                                             element_de_marshalling) {
+                std::vector<TElement> result;
+                result.reserve(filled_array.value().size());
+                for (const auto &v : filled_array.value()) {
+                    result.push_back(element_de_marshalling(v));
+                }
+                return result;
+            }
+
+            // Helper functions to marshall an std::map.
+            // We keep TKey, TValue at the end, because they can be decuded from the map type, but the other 3
+            // arguments must be provided explicitly.
+            template<typename TFieldBase, typename TMarshalledKey, typename TMarshalledValue, typename TKey,
+                     typename TValue>
+            std::pair<standard_array_list<TFieldBase, TMarshalledKey>,
+                      standard_array_list<TFieldBase, TMarshalledValue>>
+                fill_std_map(const std::map<TKey, TValue> &input_map,
+                             std::function<TMarshalledKey(const TKey &)>
+                                 key_marshalling,
+                             std::function<TMarshalledValue(const TValue &)>
+                                 value_marshalling) {
+                standard_array_list<TFieldBase, TMarshalledKey> result_keys;
+                standard_array_list<TFieldBase, TMarshalledValue> result_values;
+                for (const auto &[k, v] : input_map) {
+                    result_keys.value().push_back(key_marshalling(k));
+                    result_values.value().push_back(value_marshalling(v));
+                }
+                return {result_keys, result_values};
+            }
+
+            template<typename TFieldBase, typename TKey, typename TValue, typename TMarshalledKey,
+                     typename TMarshalledValue>
+            std::map<TKey, TValue> make_std_map(const standard_array_list<TFieldBase, TMarshalledKey> &filled_keys,
+                                                const standard_array_list<TFieldBase, TMarshalledValue> &filled_values,
+                                                std::function<TKey(const TMarshalledKey &)>
+                                                    key_de_marshalling,
+                                                std::function<TValue(const TMarshalledValue &)>
+                                                    value_de_marshalling) {
+                if (filled_keys.value().size() != filled_values.value().size()) {
+                    throw std::invalid_argument("Number of values and keys do not match");
+                    ;
+                }
+
+                std::map<TKey, TValue> result;
+                for (std::size_t i = 0; i < filled_keys.value().size(); ++i) {
+                    result[key_de_marshalling(filled_keys.value()[i])] = value_de_marshalling(filled_values.value()[i]);
+                }
+                return result;
+            }
+
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_ARRAY_LIST_HPP

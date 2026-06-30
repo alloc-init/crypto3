@@ -51,8 +51,10 @@ namespace nil {
 
                     using chained_curve_type = curves::babyjubjub;
 
-                    using precompute_g1 = pairing::short_weierstrass_jacobian_with_a4_0_sbit_ate_precompute_g1<curve_type>;
-                    using precompute_g2 = pairing::short_weierstrass_jacobian_with_a4_0_sbit_ate_precompute_g2<curve_type>;
+                    using precompute_g1 =
+                        pairing::short_weierstrass_jacobian_with_a4_0_sbit_ate_precompute_g1<curve_type>;
+                    using precompute_g2 =
+                        pairing::short_weierstrass_jacobian_with_a4_0_sbit_ate_precompute_g2<curve_type>;
                     using miller_loop = pairing::short_weierstrass_jacobian_with_a4_0_sbit_ate_miller_loop<curve_type>;
                     using double_miller_loop =
                         pairing::short_weierstrass_jacobian_with_a4_0_sbit_ate_double_miller_loop<curve_type>;
@@ -64,7 +66,7 @@ namespace nil {
                 };
 
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_ALT_BN128_POLICY_HPP

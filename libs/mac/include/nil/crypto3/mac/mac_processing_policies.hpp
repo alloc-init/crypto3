@@ -109,7 +109,7 @@ namespace nil {
                 typedef detail::verification_policy<mac_type> verification_policy;
             };
         }    // namespace mac
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MAC_PROCESSING_POLICIES_HPP

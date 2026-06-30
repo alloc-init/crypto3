@@ -57,8 +57,7 @@ namespace nil {
                         // Y
                         field_element<TTypeBase, typename CurveGroupType::value_type::field_type::value_type>,
                         // is_infinity
-                        nil::marshalling::types::integral<TTypeBase, std::uint8_t>
-                    >>;
+                        nil::marshalling::types::integral<TTypeBase, std::uint8_t>>>;
 
                 template<typename CurveGroupType, typename Endianness>
                 fast_curve_element<nil::marshalling::field_type<Endianness>, CurveGroupType>
@@ -72,24 +71,23 @@ namespace nil {
                     auto affine_point = point.to_affine();
 
                     return fast_curve_element<nil::marshalling::field_type<Endianness>, CurveGroupType>(
-                        std::make_tuple(
-                                        field_element_type(affine_point.X),
+                        std::make_tuple(field_element_type(affine_point.X),
                                         field_element_type(affine_point.Y),
-                                        nil::marshalling::types::integral<TTypeBase, std::uint8_t>(is_infinity)
-                                        ));
+                                        nil::marshalling::types::integral<TTypeBase, std::uint8_t>(is_infinity)));
                 }
 
                 template<typename CurveGroupType, typename Endianness>
-                typename CurveGroupType::value_type make_fast_curve_element(
-                    const fast_curve_element<nil::marshalling::field_type<Endianness>, CurveGroupType>
-                        &filled_curve_element) {
+                typename CurveGroupType::value_type
+                    make_fast_curve_element(const fast_curve_element<nil::marshalling::field_type<Endianness>,
+                                                                     CurveGroupType> &filled_curve_element) {
                     std::uint8_t is_infinity = std::get<2>(filled_curve_element.value()).value();
-                    if(is_infinity) {
+                    if (is_infinity) {
                         return typename CurveGroupType::value_type();
                     }
-                    return typename CurveGroupType::value_type(std::move(std::get<0>(filled_curve_element.value()).value()),
-                                     std::move(std::get<1>(filled_curve_element.value()).value()),
-                                     CurveGroupType::value_type::field_type::value_type::one());
+                    return typename CurveGroupType::value_type(
+                        std::move(std::get<0>(filled_curve_element.value()).value()),
+                        std::move(std::get<1>(filled_curve_element.value()).value()),
+                        CurveGroupType::value_type::field_type::value_type::one());
                 }
 
                 template<typename CurveGroupType, typename Endianness>
@@ -130,20 +128,18 @@ namespace nil {
                         &curve_elem_vector) {
 
                     std::vector<typename CurveGroupType::value_type> result;
-                    const std::vector<fast_curve_element<nil::marshalling::field_type<Endianness>, CurveGroupType>> &values =
-                        curve_elem_vector.value();
+                    const std::vector<fast_curve_element<nil::marshalling::field_type<Endianness>, CurveGroupType>>
+                        &values = curve_elem_vector.value();
                     std::size_t size = values.size();
 
                     for (std::size_t i = 0; i < size; i++) {
-                        result.push_back(
-                            make_fast_curve_element<CurveGroupType, Endianness>(values[i])
-                        );
+                        result.push_back(make_fast_curve_element<CurveGroupType, Endianness>(values[i]));
                     }
                     return result;
                 }
 
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_FAST_CURVE_ELEMENT_HPP

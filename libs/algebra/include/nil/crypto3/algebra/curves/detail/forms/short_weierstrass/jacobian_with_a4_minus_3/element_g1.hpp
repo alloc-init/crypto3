@@ -57,16 +57,18 @@ namespace nil {
                     template<typename CurveParams>
                     class curve_element<CurveParams, forms::short_weierstrass, coordinates::jacobian_with_a4_minus_3> {
                     public:
-
                         using params_type = CurveParams;
                         using field_type = typename params_type::field_type;
 
                     private:
                         using field_value_type = typename field_type::value_type;
 
-                        using common_addition_processor = short_weierstrass_element_g1_jacobian_with_a4_minus_3_add_2007_bl;
-                        using common_doubling_processor = short_weierstrass_element_g1_jacobian_with_a4_minus_3_dbl_2007_bl;
-                        using mixed_addition_processor = short_weierstrass_element_g1_jacobian_with_a4_minus_3_madd_2007_bl;
+                        using common_addition_processor =
+                            short_weierstrass_element_g1_jacobian_with_a4_minus_3_add_2007_bl;
+                        using common_doubling_processor =
+                            short_weierstrass_element_g1_jacobian_with_a4_minus_3_dbl_2007_bl;
+                        using mixed_addition_processor =
+                            short_weierstrass_element_g1_jacobian_with_a4_minus_3_madd_2007_bl;
 
                     public:
                         using form = forms::short_weierstrass;
@@ -87,20 +89,22 @@ namespace nil {
                         constexpr curve_element() :
                             curve_element(params_type::zero_fill[0],
                                           params_type::zero_fill[1],
-                                          field_value_type::zero()) {}
+                                          field_value_type::zero()) {
+                        }
 
                         /** @brief
                          *    @return the selected point (X:Y:Z)
                          *
                          */
-                        constexpr curve_element(const field_value_type& X, const field_value_type& Y, const field_value_type& Z = field_value_type::one())
-                            : X(X), Y(Y), Z(Z)
-                        { }
+                        constexpr curve_element(const field_value_type &X, const field_value_type &Y,
+                                                const field_value_type &Z = field_value_type::one()) :
+                            X(X), Y(Y), Z(Z) {
+                        }
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
                         explicit constexpr curve_element(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                            const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                         }
 
@@ -194,7 +198,7 @@ namespace nil {
                                 field_value_type Z6 = Z3.squared();
                                 field_value_type XXX = this->X.doubled() + this->X;
 
-                                return (Y2 == X3 - XXX* Z4 + params_type::b * Z6);
+                                return (Y2 == X3 - XXX * Z4 + params_type::b * Z6);
                             }
                         }
 
@@ -239,13 +243,14 @@ namespace nil {
                             return result_type(X * Zi, Y * Zi * Zi, Z);
                         }
 
-                        static curve_element from_affine(curve_element<params_type, form, curves::coordinates::affine> const &other) {
+                        static curve_element
+                            from_affine(curve_element<params_type, form, curves::coordinates::affine> const &other) {
                             return curve_element(other.X, other.Y, field_value_type::one());
                         }
 
                         /*************************  Arithmetic operations  ***********************************/
 
-                        constexpr curve_element& operator=(const curve_element &other) {
+                        constexpr curve_element &operator=(const curve_element &other) {
                             // handle special cases having to do with O
                             this->X = other.X;
                             this->Y = other.Y;
@@ -256,8 +261,8 @@ namespace nil {
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                        constexpr const curve_element &
+                            operator=(const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                             return *this;
                         }
@@ -282,7 +287,7 @@ namespace nil {
                             return result;
                         }
 
-                        constexpr curve_element& operator+=(const curve_element &other) {
+                        constexpr curve_element &operator+=(const curve_element &other) {
                             // handle special cases having to do with O
                             if (this->is_zero()) {
                                 *this = other;
@@ -304,7 +309,7 @@ namespace nil {
                             return (*this) + (-other);
                         }
 
-                        constexpr curve_element& operator-=(const curve_element &other) {
+                        constexpr curve_element &operator-=(const curve_element &other) {
                             return (*this) += (-other);
                         }
 
@@ -338,14 +343,15 @@ namespace nil {
                     };
 
                     template<typename CurveParams>
-                    std::ostream& operator<<(std::ostream& os, curve_element<CurveParams, forms::short_weierstrass, coordinates::jacobian_with_a4_minus_3> const& e)
-                    {
+                    std::ostream &operator<<(std::ostream &os,
+                                             curve_element<CurveParams, forms::short_weierstrass,
+                                                           coordinates::jacobian_with_a4_minus_3> const &e) {
                         os << "{\"X\":" << e.X << ",\"Y\":" << e.Y << ",\"Z\":" << e.Z << "}";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_SHORT_WEIERSTRASS_G1_ELEMENT_JACOBIAN_WITH_A4_MINUS_3_HPP

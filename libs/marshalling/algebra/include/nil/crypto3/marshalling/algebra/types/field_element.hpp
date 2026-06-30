@@ -51,11 +51,12 @@ namespace nil {
                     template<typename FieldValueType>
                     typename std::enable_if<!(algebra::is_extended_field_element<FieldValueType>::value),
                                             std::array<typename FieldValueType::field_type::integral_type,
-                                                FieldValueType::field_type::arity>>::type
+                                                       FieldValueType::field_type::arity>>::type
                         fill_field_data(const FieldValueType &field_elem) {
 
                         std::array<typename FieldValueType::field_type::integral_type,
-                            FieldValueType::field_type::arity> result;
+                                   FieldValueType::field_type::arity>
+                            result;
                         result[0] = typename FieldValueType::field_type::integral_type(field_elem.data);
                         return result;
                     }
@@ -63,18 +64,19 @@ namespace nil {
                     template<typename FieldValueType>
                     typename std::enable_if<algebra::is_extended_field_element<FieldValueType>::value,
                                             std::array<typename FieldValueType::field_type::integral_type,
-                                                FieldValueType::field_type::arity>>::type
+                                                       FieldValueType::field_type::arity>>::type
                         fill_field_data(const FieldValueType &field_elem) {
 
                         std::array<typename FieldValueType::field_type::integral_type,
-                            FieldValueType::field_type::arity> result;
+                                   FieldValueType::field_type::arity>
+                            result;
 
-                        for (std::size_t i = 0; i < FieldValueType::field_type::arity /
-                                FieldValueType::underlying_type::field_type::arity; i++) {
+                        for (std::size_t i = 0;
+                             i < FieldValueType::field_type::arity / FieldValueType::underlying_type::field_type::arity;
+                             i++) {
                             std::array<typename FieldValueType::field_type::integral_type,
-                                FieldValueType::underlying_type::field_type::arity>
-                                intermediate_res =
-                                    fill_field_data(field_elem.data[i]);
+                                       FieldValueType::underlying_type::field_type::arity>
+                                intermediate_res = fill_field_data(field_elem.data[i]);
                             std::copy(intermediate_res.begin(),
                                       intermediate_res.end(),
                                       result.begin() + i * FieldValueType::underlying_type::field_type::arity);
@@ -87,8 +89,9 @@ namespace nil {
                     typename std::enable_if<algebra::is_field_element<FieldValueType>::value &&
                                                 !(algebra::is_extended_field_element<FieldValueType>::value),
                                             FieldValueType>::type
-                        make_field_element(typename std::array<typename FieldValueType::field_type::integral_type,
-                                                               FieldValueType::field_type::arity>::iterator field_elem_data_iter) {
+                        make_field_element(
+                            typename std::array<typename FieldValueType::field_type::integral_type,
+                                                FieldValueType::field_type::arity>::iterator field_elem_data_iter) {
 
                         return FieldValueType(*field_elem_data_iter);
                     }
@@ -96,8 +99,9 @@ namespace nil {
                     template<typename FieldValueType>
                     typename std::enable_if<algebra::is_extended_field_element<FieldValueType>::value,
                                             FieldValueType>::type
-                        make_field_element(typename std::array<typename FieldValueType::field_type::integral_type,
-                                                               FieldValueType::field_type::arity>::iterator field_elem_data_iter) {
+                        make_field_element(
+                            typename std::array<typename FieldValueType::field_type::integral_type,
+                                                FieldValueType::field_type::arity>::iterator field_elem_data_iter) {
 
                         constexpr static const std::size_t cur_arity =
                             FieldValueType::field_type::arity / FieldValueType::underlying_type::field_type::arity;
@@ -113,13 +117,10 @@ namespace nil {
                     }
                 }    // namespace detail
 
-                template<typename TTypeBase,
-                         typename FieldValueType,
-                         typename... TOptions>
-                class pure_field_element
-                    : private ::nil::marshalling::types::detail::adapt_basic_field_type<
-                          integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
-                          TOptions...> {
+                template<typename TTypeBase, typename FieldValueType, typename... TOptions>
+                class pure_field_element : private ::nil::marshalling::types::detail::adapt_basic_field_type<
+                                               integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
+                                               TOptions...> {
 
                     static_assert(algebra::is_field_element<FieldValueType>::value);
                     static_assert(!algebra::is_extended_field_element<FieldValueType>::value);
@@ -131,9 +132,6 @@ namespace nil {
                 public:
                     /// @brief endian_type used for serialization.
                     using endian_type = typename base_impl_type::endian_type;
-
-                    /// @brief Version type
-                    using version_type = typename base_impl_type::version_type;
 
                     /// @brief All the options provided to this class bundled into struct.
                     using parsed_options_type = ::nil::marshalling::types::detail::options_parser<TOptions...>;
@@ -147,8 +145,8 @@ namespace nil {
                     pure_field_element() = default;
 
                     /// @brief Constructor
-                    explicit pure_field_element(const FieldValueType &field_elem)
-                    : base_impl_type(typename FieldValueType::field_type::integral_type(field_elem.data)){
+                    explicit pure_field_element(const FieldValueType &field_elem) :
+                        base_impl_type(typename FieldValueType::field_type::integral_type(field_elem.data)) {
                     }
 
                     /// @brief Copy constructor
@@ -245,23 +243,6 @@ namespace nil {
                         base_impl_type::write_no_status(iter);
                     }
 
-                    /// @brief Compile time check if this class is version dependent
-                    static constexpr bool is_version_dependent() {
-                        return parsed_options_type::has_custom_version_update || base_impl_type::is_version_dependent();
-                    }
-
-                    /// @brief Get version of the field.
-                    /// @details Exists only if @ref nil::marshalling::option::version_storage option has been provided.
-                    version_type get_version() const {
-                        return base_impl_type::get_version();
-                    }
-
-                    /// @brief Default implementation of version update.
-                    /// @return @b true in case the field contents have changed, @b false otherwise
-                    bool set_version(version_type version) {
-                        return base_impl_type::set_version(version);
-                    }
-
                 protected:
                     using base_impl_type::read_data;
                     using base_impl_type::write_data;
@@ -332,22 +313,15 @@ namespace nil {
                     static_assert(!parsed_options_type::has_orig_data_view,
                                   "nil::marshalling::option::orig_data_view option is not applicable to "
                                   "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_versions_range,
-                        "nil::marshalling::option::exists_between_versions (or similar) option is not applicable to "
-                        "crypto3::field_element type");
                 };
 
-                template<typename TTypeBase,
-                         typename FieldValueType,
-                         typename... TOptions>
+                template<typename TTypeBase, typename FieldValueType, typename... TOptions>
                 class extended_field_element
                     : private ::nil::marshalling::types::detail::adapt_basic_field_type<
-                            nil::marshalling::types::array_list<
-                                nil::marshalling::field_type<nil::marshalling::option::little_endian>,
-                                integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
-                                nil::marshalling::option::fixed_size_storage<
-                                    FieldValueType::field_type::arity>>,
+                          nil::marshalling::types::array_list<
+                              nil::marshalling::field_type<nil::marshalling::option::little_endian>,
+                              integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
+                              nil::marshalling::option::fixed_size_storage<FieldValueType::field_type::arity>>,
                           TOptions...> {
 
                     static_assert(algebra::is_field_element<FieldValueType>::value);
@@ -355,18 +329,14 @@ namespace nil {
 
                     using base_impl_type = ::nil::marshalling::types::detail::adapt_basic_field_type<
                         typename nil::marshalling::types::array_list<
-                                                  nil::marshalling::field_type<nil::marshalling::option::little_endian>,
-                                                  integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
-                                                  nil::marshalling::option::fixed_size_storage<
-                                                    FieldValueType::field_type::arity>>,
+                            nil::marshalling::field_type<nil::marshalling::option::little_endian>,
+                            integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
+                            nil::marshalling::option::fixed_size_storage<FieldValueType::field_type::arity>>,
                         TOptions...>;
 
                 public:
                     /// @brief endian_type used for serialization.
                     using endian_type = typename base_impl_type::endian_type;
-
-                    /// @brief Version type
-                    using version_type = typename base_impl_type::version_type;
 
                     /// @brief All the options provided to this class bundled into struct.
                     using parsed_options_type = ::nil::marshalling::types::detail::options_parser<TOptions...>;
@@ -382,8 +352,9 @@ namespace nil {
                     /// @brief Constructor
                     explicit extended_field_element(const FieldValueType &field_elem) {
 
-                        std::array<typename FieldValueType::field_type::integral_type, FieldValueType::field_type::arity> val_container =
-                            detail::fill_field_data(field_elem);
+                        std::array<typename FieldValueType::field_type::integral_type,
+                                   FieldValueType::field_type::arity>
+                            val_container = detail::fill_field_data(field_elem);
                         for (std::size_t i = 0; i < FieldValueType::field_type::arity; i++) {
                             (base_impl_type::value()).emplace_back(val_container[i]);
                         }
@@ -401,7 +372,9 @@ namespace nil {
                     /// @brief Get access to field_element value storage.
                     FieldValueType const value() const {
 
-                        std::array<typename FieldValueType::field_type::integral_type, FieldValueType::field_type::arity> field_elem_data;
+                        std::array<typename FieldValueType::field_type::integral_type,
+                                   FieldValueType::field_type::arity>
+                            field_elem_data;
 
                         for (std::size_t i = 0; i < FieldValueType::field_type::arity; i++) {
                             field_elem_data[i] = base_impl_type::value()[i].value();
@@ -413,7 +386,9 @@ namespace nil {
                     /// @brief Get access to field_element value storage.
                     FieldValueType value() {
 
-                        std::array<typename FieldValueType::field_type::integral_type, FieldValueType::field_type::arity> field_elem_data;
+                        std::array<typename FieldValueType::field_type::integral_type,
+                                   FieldValueType::field_type::arity>
+                            field_elem_data;
 
                         for (std::size_t i = 0; i < FieldValueType::field_type::arity; i++) {
                             field_elem_data[i] = base_impl_type::value()[i].value();
@@ -497,23 +472,6 @@ namespace nil {
                         base_impl_type::write_no_status(iter);
                     }
 
-                    /// @brief Compile time check if this class is version dependent
-                    static constexpr bool is_version_dependent() {
-                        return parsed_options_type::has_custom_version_update || base_impl_type::is_version_dependent();
-                    }
-
-                    /// @brief Get version of the field.
-                    /// @details Exists only if @ref nil::marshalling::option::version_storage option has been provided.
-                    version_type get_version() const {
-                        return base_impl_type::get_version();
-                    }
-
-                    /// @brief Default implementation of version update.
-                    /// @return @b true in case the field contents have changed, @b false otherwise
-                    bool set_version(version_type version) {
-                        return base_impl_type::set_version(version);
-                    }
-
                 protected:
                     using base_impl_type::read_data;
                     using base_impl_type::write_data;
@@ -584,15 +542,9 @@ namespace nil {
                     static_assert(!parsed_options_type::has_orig_data_view,
                                   "nil::marshalling::option::orig_data_view option is not applicable to "
                                   "crypto3::field_element type");
-                    static_assert(
-                        !parsed_options_type::has_versions_range,
-                        "nil::marshalling::option::exists_between_versions (or similar) option is not applicable to "
-                        "crypto3::field_element type");
                 };
 
-                template<typename TTypeBase,
-                         typename FieldValueType,
-                         typename... TOptions>
+                template<typename TTypeBase, typename FieldValueType, typename... TOptions>
                 using field_element =
                     typename std::conditional<algebra::is_extended_field_element<FieldValueType>::value,
                                               extended_field_element<TTypeBase, FieldValueType, TOptions...>,
@@ -626,7 +578,8 @@ namespace nil {
                 //                         int>::type
                 //     compare_field_data(const FieldValueType &field_elem1,
                 //                        const FieldValueType &field_elem2) {
-                //     return (field_elem1.data < field_elem2.data) ? -1 : ((field_elem1.data > field_elem2.data) ? 1 : 0);
+                //     return (field_elem1.data < field_elem2.data) ? -1 : ((field_elem1.data > field_elem2.data) ? 1 :
+                //     0);
                 // }
 
                 // template<typename FieldValueType>
@@ -668,7 +621,8 @@ namespace nil {
                 //     return false;
                 // }
 
-                // /// @brief Upcast type of the field definition to its parent nil::marshalling::types::field_element type
+                // /// @brief Upcast type of the field definition to its parent nil::marshalling::types::field_element
+                // type
                 // ///     in order to have access to its internal types.
                 // /// @related nil::marshalling::types::field_element
                 // template<typename TTypeBase, typename CurveGroupType, typename... TOptions>
@@ -677,7 +631,8 @@ namespace nil {
                 //     return field;
                 // }
 
-                // /// @brief Upcast type of the field definition to its parent nil::marshalling::types::field_element type
+                // /// @brief Upcast type of the field definition to its parent nil::marshalling::types::field_element
+                // type
                 // ///     in order to have access to its internal types.
                 // /// @related nil::marshalling::types::field_element
                 // template<typename TTypeBase, typename CurveGroupType, typename... TOptions>
@@ -685,6 +640,10 @@ namespace nil {
                 //     to_field_base(const field_element<TTypeBase, CurveGroupType, TOptions...> &field) {
                 //     return field;
                 // }
+
+                template<typename FieldValueType, typename TTypeBase>
+                using field_element_vector =
+                    nil::marshalling::types::standard_array_list<TTypeBase, field_element<TTypeBase, FieldValueType>>;
 
                 template<typename FieldValueType, typename Endianness>
                 nil::marshalling::types::array_list<
@@ -726,7 +685,7 @@ namespace nil {
                     return result;
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_FIELD_ELEMENT_HPP

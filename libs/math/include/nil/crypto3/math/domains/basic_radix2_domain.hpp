@@ -34,6 +34,9 @@
 #include <nil/crypto3/math/domains/detail/basic_radix2_domain_aux.hpp>
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
+#include <nil/actor/core/parallelization_utils.hpp>
+
+#include <nil/crypto3/bench/scoped_profiler.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -52,8 +55,8 @@ namespace nil {
                 std::shared_ptr<cache_type> fft_cache;
 
                 void create_fft_cache() {
-                    fft_cache = std::make_shared<cache_type>(std::vector<field_value_type>(),
-                                                             std::vector<field_value_type>());
+                    fft_cache =
+                        std::make_shared<cache_type>(std::vector<field_value_type>(), std::vector<field_value_type>());
                     detail::create_fft_cache<FieldType>(this->m, omega, fft_cache->first);
                     detail::create_fft_cache<FieldType>(this->m, omega.inversed(), fft_cache->second);
                 }
@@ -63,9 +66,8 @@ namespace nil {
 
                 field_value_type omega;
 
-                basic_radix2_domain(const std::size_t m)
-                        : evaluation_domain<FieldType, ValueType>(m),
-                          omega(unity_root<FieldType>(m)) {
+                basic_radix2_domain(const std::size_t m) :
+                    evaluation_domain<FieldType, ValueType>(m), omega(unity_root<FieldType>(m)) {
                     if (m <= 1)
                         throw std::invalid_argument("basic_radix2(): expected m > 1");
 
@@ -73,8 +75,12 @@ namespace nil {
                         const std::size_t logm = static_cast<std::size_t>(std::ceil(std::log2(m)));
                         if (logm > (fields::arithmetic_params<FieldType>::s))
                             throw std::invalid_argument(
-                                    "basic_radix2(): expected logm <= fields::arithmetic_params<FieldType>::s");
+                                "basic_radix2(): expected logm <= "
+                                "fields::arithmetic_params<FieldType>::s");
                     }
+
+                    // We need to always create fft cache, we cannot create it when needed in parallel environment.
+                    create_fft_cache();
                 }
 
                 void fft(std::vector<value_type> &a) override {
@@ -82,14 +88,69 @@ namespace nil {
                         if (a.size() < this->m) {
                             a.resize(this->m, value_type::zero());
                         } else {
-                            throw std::invalid_argument("basic_radix2: expected a.size() == this->m");
+                            throw std::invalid_argument("basic_radix2: expected a.size() <= this->m");
                         }
                     }
 
-                    if (!fft_cache) {
-                        create_fft_cache();
-                    }
                     detail::basic_radix2_fft_cached<FieldType>(a, fft_cache->first);
+                }
+
+                void resize_to_domain_size(std::vector<std::vector<value_type>> &a) {
+                    if (a[0].size() == this->m) {
+                        return;
+                    }
+
+                    PROFILE_SCOPE("Resize to domain size {} vectors from size {} to {}", a.size(), a[0].size(),
+                                  this->m);
+
+                    for (auto &p : a) {
+                        if (p.size() != this->m) {
+                            if (p.size() < this->m) {
+                                p.resize(this->m, value_type::zero());
+                            } else {
+                                throw std::invalid_argument("Expected polynomail size <= domain size");
+                            }
+                        }
+                    }
+                }
+
+                /** \brief Batch version of the 'fft' function
+                 *  \param[in] polys - Each element of 'polys' represents coefficients of a polynomial.
+                 *                  So if we have 100 polynomials of size 2^20 to FFT, the dimensions of
+                 *                  'polys' will be [100x2^20].
+                 */
+                void batch_fft(std::vector<std::vector<value_type>> &polys) override {
+                    if (polys.size() == 0)
+                        return;
+                    resize_to_domain_size(polys);
+
+                    nil::crypto3::parallel_foreach(
+                        polys.begin(), polys.end(),
+                        [this](std::vector<value_type> &p) {
+                            detail::basic_radix2_fft_cached<FieldType>(p, this->fft_cache->first);
+                        },
+                        thread_pool::pool_level::HIGH);
+                }
+
+                /** \brief Batch version of the 'inverse_fft' function
+                 *  \param[in] polys - Each element of 'polys' represents coefficients of a polynomial.
+                 *                  So if we have 100 polynomials of size 2^20 to FFT, the dimensions of
+                 *                  'polys' will be [100x2^20].
+                 */
+                void batch_inverse_fft(std::vector<std::vector<value_type>> &polys) override {
+                    if (polys.size() == 0)
+                        return;
+                    resize_to_domain_size(polys);
+
+                    const field_value_type sconst = field_value_type(this->m).inversed();
+                    nil::crypto3::parallel_foreach(
+                        polys.begin(), polys.end(),
+                        [&sconst, this](std::vector<value_type> &p) {
+                            detail::basic_radix2_fft_cached<FieldType>(p, this->fft_cache->second);
+                            nil::crypto3::parallel_foreach(p.begin(), p.end(),
+                                                           [&sconst](value_type &p_i) { p_i *= sconst; });
+                        },
+                        thread_pool::pool_level::HIGH);
                 }
 
                 void inverse_fft(std::vector<value_type> &a) override {
@@ -101,15 +162,10 @@ namespace nil {
                         }
                     }
 
-                    if (!fft_cache) {
-                        create_fft_cache();
-                    }
                     detail::basic_radix2_fft_cached<FieldType>(a, fft_cache->second);
 
-                    const field_value_type sconst = field_value_type(a.size()).inversed();
-                    for (std::size_t i = 0; i < a.size(); ++i) {
-                        a[i] = a[i] * sconst;
-                    }
+                    const field_value_type sconst = field_value_type(this->m).inversed();
+                    nil::crypto3::parallel_foreach(a.begin(), a.end(), [&sconst](value_type &a_i) { a_i *= sconst; });
                 }
 
                 std::vector<field_value_type> evaluate_all_lagrange_polynomials(const field_value_type &t) override {
@@ -117,11 +173,11 @@ namespace nil {
                 }
 
                 std::vector<value_type> evaluate_all_lagrange_polynomials(
-                        const typename std::vector<value_type>::const_iterator &t_powers_begin,
-                        const typename std::vector<value_type>::const_iterator &t_powers_end) override {
+                    const typename std::vector<value_type>::const_iterator &t_powers_begin,
+                    const typename std::vector<value_type>::const_iterator &t_powers_end) override {
                     if (std::size_t(std::distance(t_powers_begin, t_powers_end)) < this->m) {
                         throw std::invalid_argument(
-                                "basic_radix2: expected std::distance(t_powers_begin, t_powers_end) >= this->m");
+                            "basic_radix2: expected std::distance(t_powers_begin, t_powers_end) >= this->m");
                     }
                     std::vector<value_type> tmp(t_powers_begin, t_powers_begin + this->m);
                     this->inverse_fft(tmp);
@@ -158,9 +214,8 @@ namespace nil {
                 void divide_by_z_on_coset(std::vector<field_value_type> &P) override {
                     const field_value_type coset = fields::arithmetic_params<FieldType>::multiplicative_generator;
                     const field_value_type Z_inverse_at_coset = this->compute_vanishing_polynomial(coset).inversed();
-                    for (std::size_t i = 0; i < this->m; ++i) {
-                        P[i] *= Z_inverse_at_coset;
-                    }
+                    nil::crypto3::parallel_foreach(
+                        P.begin(), P.end(), [&Z_inverse_at_coset](field_value_type &v) { v *= Z_inverse_at_coset; });
                 }
 
                 bool operator==(const basic_radix2_domain &rhs) const {
@@ -172,7 +227,7 @@ namespace nil {
                 }
             };
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // ALGEBRA_FFT_BASIC_RADIX2_DOMAIN_HPP

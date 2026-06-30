@@ -75,7 +75,8 @@ namespace nil {
             ///     @li @ref nil::marshalling::option::default_value_initializer or
             ///     nil::marshalling::option::default_num_value.
             ///     @li @ref nil::marshalling::option::contents_validator
-            ///     @li @ref nil::marshalling::option::valid_num_value_range, @ref nil::marshalling::option::valid_num_value,
+            ///     @li @ref nil::marshalling::option::valid_num_value_range, @ref
+            ///     nil::marshalling::option::valid_num_value,
             ///         @ref nil::marshalling::option::valid_big_unsigned_num_value_range, @ref
             ///         nil::marshalling::option::valid_big_unsigned_num_value_range
             ///     @li @ref nil::marshalling::option::valid_ranges_clear
@@ -86,22 +87,18 @@ namespace nil {
             ///     @li @ref nil::marshalling::option::ignore_invalid
             ///     @li @ref nil::marshalling::option::empty_serialization
             ///     @li @ref nil::marshalling::option::invalid_by_default
-            ///     @li @ref nil::marshalling::option::version_storage
             /// @extends nil::marshalling::field_type
             /// @headerfile nil/marshalling/types/enumeration.hpp
             template<typename TFieldBase, typename TEnum, typename... TOptions>
             class enumeration
                 : private detail::adapt_basic_field_type<detail::basic_enumeration<TFieldBase, TEnum>, TOptions...> {
-                using base_impl_type
-                    = detail::adapt_basic_field_type<detail::basic_enumeration<TFieldBase, TEnum>, TOptions...>;
+                using base_impl_type =
+                    detail::adapt_basic_field_type<detail::basic_enumeration<TFieldBase, TEnum>, TOptions...>;
                 static_assert(std::is_enum<TEnum>::value, "TEnum must be enum type");
 
             public:
                 /// @brief endian_type used for serialization.
                 using endian_type = typename base_impl_type::endian_type;
-
-                /// @brief Version type
-                using version_type = typename base_impl_type::version_type;
 
                 /// @brief All the options provided to this class bundled into struct.
                 using parsed_options_type = detail::options_parser<TOptions...>;
@@ -208,23 +205,6 @@ namespace nil {
                     return base_impl_type::refresh();
                 }
 
-                /// @brief Compile time check if this class is version dependent
-                static constexpr bool is_version_dependent() {
-                    return parsed_options_type::has_custom_version_update || base_impl_type::is_version_dependent();
-                }
-
-                /// @brief Get version of the field.
-                /// @details Exists only if @ref nil::marshalling::option::version_storage option has been provided.
-                version_type get_version() const {
-                    return base_impl_type::get_version();
-                }
-
-                /// @brief Default implementation of version update.
-                /// @return @b true in case the field contents have changed, @b false otherwise
-                bool set_version(version_type version) {
-                    return base_impl_type::set_version(version);
-                }
-
             protected:
                 using base_impl_type::read_data;
                 using base_impl_type::write_data;
@@ -279,10 +259,6 @@ namespace nil {
                               "nil::marshalling::option::Units option is not applicable to enumeration field");
                 static_assert(!parsed_options_type::has_orig_data_view,
                               "nil::marshalling::option::orig_data_view option is not applicable to enumeration field");
-                static_assert(
-                    !parsed_options_type::has_versions_range,
-                    "nil::marshalling::option::exists_between_versions (or similar) option is not applicable to "
-                    "enumeration field");
             };
 
             // Implementation
@@ -339,6 +315,6 @@ namespace nil {
             }
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_ENUM_VALUE_HPP

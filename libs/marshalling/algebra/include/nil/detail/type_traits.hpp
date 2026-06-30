@@ -34,6 +34,22 @@
 #include <boost/tti/tti.hpp>
 #include <boost/array.hpp>
 
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#pragma push_macro("GENERATE_HAS_MEMBER_TYPE")
+#pragma push_macro("GENERATE_HAS_MEMBER")
+#pragma push_macro("GENERATE_HAS_MEMBER_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_CONST_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_RETURN_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION")
+#endif
+
+#undef GENERATE_HAS_MEMBER_TYPE
+#undef GENERATE_HAS_MEMBER
+#undef GENERATE_HAS_MEMBER_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_FUNCTION
+#undef GENERATE_HAS_MEMBER_RETURN_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
+
 #ifndef GENERATE_HAS_MEMBER_TYPE
 #define GENERATE_HAS_MEMBER_TYPE(Type)                                                                                 \
     template<class T, typename Enable = void>                                                                          \
@@ -64,7 +80,7 @@
                                                                                                                        \
     template<class T>                                                                                                  \
     struct has_##Type : public std::integral_constant<bool, HasMemberType_##Type<T>::RESULT> { };
-#endif //GENERATE_HAS_MEMBER_TYPE
+#endif    // GENERATE_HAS_MEMBER_TYPE
 
 #ifndef GENERATE_HAS_MEMBER
 #define GENERATE_HAS_MEMBER(member)                                                                                  \
@@ -96,7 +112,7 @@
                                                                                                                      \
     template<class T>                                                                                                \
     struct has_##member : public std::integral_constant<bool, HasMember_##member<T>::RESULT> { };
-#endif //GENERATE_HAS_MEMBER
+#endif    // GENERATE_HAS_MEMBER
 
 #ifndef GENERATE_HAS_MEMBER_FUNCTION
 #define GENERATE_HAS_MEMBER_FUNCTION(Function, ...)                                  \
@@ -120,7 +136,7 @@
                                                                                      \
         static bool const value = sizeof(f<Derived>(0)) == 2;                        \
     };
-#endif //GENERATE_HAS_MEMBER_FUNCTION
+#endif    // GENERATE_HAS_MEMBER_FUNCTION
 
 #ifndef GENERATE_HAS_MEMBER_CONST_FUNCTION
 #define GENERATE_HAS_MEMBER_CONST_FUNCTION(Function, ...)                                  \
@@ -144,7 +160,7 @@
                                                                                            \
         static bool const value = sizeof(f<Derived>(0)) == 2;                              \
     };
-#endif //GENERATE_HAS_MEMBER_CONST_FUNCTION
+#endif    // GENERATE_HAS_MEMBER_CONST_FUNCTION
 
 #ifndef GENERATE_HAS_MEMBER_RETURN_FUNCTION
 #define GENERATE_HAS_MEMBER_RETURN_FUNCTION(Function, ReturnType, ...)                       \
@@ -174,7 +190,7 @@
                                                                                              \
         static bool const value = sizeof(f<Derived>(0)) == 2;                                \
     };
-#endif //GENERATE_HAS_MEMBER_RETURN_FUNCTION
+#endif    // GENERATE_HAS_MEMBER_RETURN_FUNCTION
 
 #ifndef GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
 #define GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION(Function, ReturnType, ...)                 \
@@ -204,7 +220,7 @@
                                                                                              \
         static bool const value = sizeof(f<Derived>(0)) == 2;                                \
     };
-#endif //GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
+#endif    // GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
 
 namespace nil {
     namespace detail {
@@ -236,8 +252,8 @@ namespace nil {
 
         template<typename Container>
         struct is_container {
-            static const bool value
-                = has_const_iterator<Container>::value && has_begin<Container>::value && has_end<Container>::value;
+            static const bool value =
+                has_const_iterator<Container>::value && has_begin<Container>::value && has_end<Container>::value;
         };
 
         /// @brief Check whether provided type is a variant of
@@ -277,8 +293,8 @@ namespace nil {
         template<typename TType, typename TFirst, typename... TRest>
         class is_in_tuple<TType, std::tuple<TFirst, TRest...>> {
         public:
-            static const bool value
-                = std::is_same<TType, TFirst>::value || is_in_tuple<TType, std::tuple<TRest...>>::value;
+            static const bool value =
+                std::is_same<TType, TFirst>::value || is_in_tuple<TType, std::tuple<TRest...>>::value;
         };
 
         template<typename TType>
@@ -305,5 +321,21 @@ namespace nil {
         /// @endcond
     }    // namespace detail
 }    // namespace nil
+
+#undef GENERATE_HAS_MEMBER_TYPE
+#undef GENERATE_HAS_MEMBER
+#undef GENERATE_HAS_MEMBER_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_FUNCTION
+#undef GENERATE_HAS_MEMBER_RETURN_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
+
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#pragma pop_macro("GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_RETURN_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_CONST_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER")
+#pragma pop_macro("GENERATE_HAS_MEMBER_TYPE")
+#endif
 
 #endif    // NIL_DETAIL_TYPE_TRAITS_HPP

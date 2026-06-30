@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -50,6 +48,8 @@ namespace nil {
                 struct secp_k1_scalar_field<160> : public field<161> {
                     typedef field<161> policy_type;
 
+                    using small_subfield = secp_k1_scalar_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -64,10 +64,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<secp_k1_scalar_field<160>>> value_type;
@@ -79,6 +78,8 @@ namespace nil {
                 template<>
                 struct secp_k1_scalar_field<192> : public field<192> {
                     typedef field<192> policy_type;
+
+                    using small_subfield = secp_k1_scalar_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
@@ -94,10 +95,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<secp_k1_scalar_field<192>>> value_type;
@@ -110,6 +110,8 @@ namespace nil {
                 template<>
                 struct secp_k1_scalar_field<224> : public field<225> {
                     typedef field<225> policy_type;
+
+                    using small_subfield = secp_k1_scalar_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
@@ -125,10 +127,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<secp_k1_scalar_field<224>>> value_type;
@@ -140,6 +141,8 @@ namespace nil {
                 template<>
                 struct secp_k1_scalar_field<256> : public field<256> {
                     typedef field<256> policy_type;
+
+                    using small_subfield = secp_k1_scalar_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
@@ -155,10 +158,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<secp_k1_scalar_field<256>>> value_type;
@@ -198,8 +200,8 @@ namespace nil {
                 constexpr typename secp_k1_fr<256>::integral_type const secp_k1_fr<256>::group_order_minus_one_half;
                 constexpr typename secp_k1_fr<256>::modular_params_type const secp_k1_fr<256>::modulus_params;
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_NIST_SCALAR_FIELD_HPP

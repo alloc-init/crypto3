@@ -38,7 +38,7 @@ namespace nil {
             template<typename SchemeType, typename T = void>
             struct verification_key;
         }    // namespace pubkey
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_VERIFICATION_KEY_HPP

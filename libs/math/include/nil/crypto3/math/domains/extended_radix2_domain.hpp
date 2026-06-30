@@ -52,11 +52,12 @@ namespace nil {
                 std::unique_ptr<cache_type> fft_cache;
 
                 void create_fft_cache() {
-                    fft_cache = std::make_unique<cache_type>(std::vector<field_value_type>(),
-                                                             std::vector<field_value_type>());
+                    fft_cache =
+                        std::make_unique<cache_type>(std::vector<field_value_type>(), std::vector<field_value_type>());
                     detail::create_fft_cache<FieldType>(small_m, omega, fft_cache->first);
                     detail::create_fft_cache<FieldType>(small_m, omega.inversed(), fft_cache->second);
                 }
+
             public:
                 typedef FieldType field_type;
 
@@ -64,11 +65,9 @@ namespace nil {
                 const field_value_type omega;
                 const field_value_type shift;
 
-                extended_radix2_domain(const std::size_t m)
-                        : evaluation_domain<FieldType, ValueType>(m),
-                          small_m(m / 2),
-                          omega(unity_root<FieldType>(small_m)),
-                          shift(detail::coset_shift<FieldType>()) {
+                extended_radix2_domain(const std::size_t m) :
+                    evaluation_domain<FieldType, ValueType>(m), small_m(m / 2), omega(unity_root<FieldType>(small_m)),
+                    shift(detail::coset_shift<FieldType>()) {
                     if (m <= 1)
                         throw std::invalid_argument("extended_radix2(): expected m > 1");
 
@@ -76,8 +75,10 @@ namespace nil {
                         const std::size_t logm = static_cast<std::size_t>(std::ceil(std::log2(m)));
                         if (logm != (fields::arithmetic_params<FieldType>::s + 1))
                             throw std::invalid_argument(
-                                "extended_radix2(): expected logm == fields::arithmetic_params<FieldType>::s + 1");
+                                "extended_radix2(): expected logm == "
+                                "fields::arithmetic_params<FieldType>::s + 1");
                     }
+                    create_fft_cache();
                 }
 
                 void fft(std::vector<value_type> &a) override {
@@ -102,9 +103,6 @@ namespace nil {
                         shift_i *= shift;
                     }
 
-                    if (fft_cache == nullptr) {
-                        create_fft_cache();
-                    }
                     detail::basic_radix2_fft_cached<FieldType>(a0, fft_cache->first);
                     detail::basic_radix2_fft_cached<FieldType>(a1, fft_cache->first);
 
@@ -134,7 +132,8 @@ namespace nil {
                     detail::basic_radix2_fft_cached<FieldType>(a1, fft_cache->second);
 
                     const field_value_type shift_to_small_m = shift.pow(small_m);
-                    const field_value_type sconst = (field_value_type(small_m) * (field_value_type::one() - shift_to_small_m)).inversed();
+                    const field_value_type sconst =
+                        (field_value_type(small_m) * (field_value_type::one() - shift_to_small_m)).inversed();
 
                     const field_value_type shift_inverse = shift.inversed();
                     field_value_type shift_inverse_i = field_value_type::one();
@@ -145,6 +144,16 @@ namespace nil {
 
                         shift_inverse_i *= shift_inverse;
                     }
+                }
+
+                void batch_fft(std::vector<std::vector<value_type>> &a) override {
+                    // TODO(martun): implement this.
+                    throw std::logic_error {"Not implemented yet"};
+                }
+
+                void batch_inverse_fft(std::vector<std::vector<value_type>> &a) override {
+                    // TODO(martun): implement this.
+                    throw std::logic_error {"Not implemented yet"};
                 }
 
                 std::vector<field_value_type> evaluate_all_lagrange_polynomials(const field_value_type &t) override {
@@ -169,10 +178,12 @@ namespace nil {
                     return result;
                 }
 
-                std::vector<value_type> evaluate_all_lagrange_polynomials(const typename std::vector<value_type>::const_iterator &t_powers_begin,
-                                                                          const typename std::vector<value_type>::const_iterator &t_powers_end) override {
-                    if(std::size_t(std::distance(t_powers_begin, t_powers_end)) < this->m) {
-                        throw std::invalid_argument("extended_radix2: expected std::distance(t_powers_begin, t_powers_end) >= this->m");
+                std::vector<value_type> evaluate_all_lagrange_polynomials(
+                    const typename std::vector<value_type>::const_iterator &t_powers_begin,
+                    const typename std::vector<value_type>::const_iterator &t_powers_end) override {
+                    if (std::size_t(std::distance(t_powers_begin, t_powers_end)) < this->m) {
+                        throw std::invalid_argument(
+                            "extended_radix2: expected std::distance(t_powers_begin, t_powers_end) >= this->m");
                     }
 
                     basic_radix2_domain<FieldType, ValueType> basic_domain(small_m);
@@ -186,15 +197,15 @@ namespace nil {
                     std::vector<value_type> shift_inv_t_powers(small_m);
                     std::vector<value_type> shift_inv_t_powers_times_t_to_small_m(small_m);
                     field_value_type shift_inverse_i = field_value_type::one();
-                    for(std::size_t i = 0; i < small_m; ++i) {
+                    for (std::size_t i = 0; i < small_m; ++i) {
                         shift_inv_t_powers[i] = shift_inverse_i * t_powers_begin[i];
                         shift_inv_t_powers_times_t_to_small_m[i] = shift_inverse_i * t_powers_begin[i + small_m];
                         shift_inverse_i *= shift_inverse;
                     }
-                    std::vector<value_type> T1 =
-                        basic_domain.evaluate_all_lagrange_polynomials(shift_inv_t_powers.cbegin(), shift_inv_t_powers.cend());
-                    std::vector<value_type> T1_times_t_to_small_m =
-                        basic_domain.evaluate_all_lagrange_polynomials(shift_inv_t_powers_times_t_to_small_m.cbegin(), shift_inv_t_powers_times_t_to_small_m.cend());
+                    std::vector<value_type> T1 = basic_domain.evaluate_all_lagrange_polynomials(
+                        shift_inv_t_powers.cbegin(), shift_inv_t_powers.cend());
+                    std::vector<value_type> T1_times_t_to_small_m = basic_domain.evaluate_all_lagrange_polynomials(
+                        shift_inv_t_powers_times_t_to_small_m.cbegin(), shift_inv_t_powers_times_t_to_small_m.cend());
 
                     std::vector<value_type> result(this->m, value_type::zero());
 
@@ -211,7 +222,7 @@ namespace nil {
                     return result;
                 }
 
-                const field_value_type& get_unity_root() override {
+                const field_value_type &get_unity_root() override {
                     return omega;
                 }
 
@@ -228,10 +239,10 @@ namespace nil {
                 }
 
                 polynomial<field_value_type> get_vanishing_polynomial() override {
-                    polynomial<field_value_type> z(2*small_m + 1, field_value_type::zero());
+                    polynomial<field_value_type> z(2 * small_m + 1, field_value_type::zero());
                     field_value_type shift_to_small_m = shift.pow(small_m);
-                    z[2*small_m] = field_value_type::one();
-                    z[small_m] = - (shift_to_small_m + field_value_type::one());
+                    z[2 * small_m] = field_value_type::one();
+                    z[small_m] = -(shift_to_small_m + field_value_type::one());
                     z[0] = shift_to_small_m;
                     return z;
                 }
@@ -256,7 +267,7 @@ namespace nil {
                     const field_value_type Z0 =
                         (coset_to_small_m - field_value_type::one()) * (coset_to_small_m - shift_to_small_m);
                     const field_value_type Z1 = (coset_to_small_m * shift_to_small_m - field_value_type::one()) *
-                                          (coset_to_small_m * shift_to_small_m - shift_to_small_m);
+                                                (coset_to_small_m * shift_to_small_m - shift_to_small_m);
 
                     const field_value_type Z0_inverse = Z0.inversed();
                     const field_value_type Z1_inverse = Z1.inversed();
@@ -268,7 +279,7 @@ namespace nil {
                 }
             };
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // ALGEBRA_FFT_EXTENDED_RADIX2_DOMAIN_HPP

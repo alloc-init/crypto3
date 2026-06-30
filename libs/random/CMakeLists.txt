@@ -10,10 +10,6 @@ cmake_minimum_required(VERSION 3.21)
 
 set(BOOST_CMAKE FALSE)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake"
-     "${CMAKE_CURRENT_LIST_DIR}/cmake/packages"
-     "${CMAKE_CURRENT_LIST_DIR}/cmake/modules/share/modules/cmake")
-
 include(CMDeploy)
 include(CMConfig)
 include(CMSetupVersion)
@@ -27,6 +23,8 @@ cm_project(random WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME})
 cm_setup_version(VERSION 1.74.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 add_library(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE)
+add_library(${CMAKE_WORKSPACE_NAME}::${CURRENT_PROJECT_NAME} ALIAS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
+
 set_property(TARGET ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTY
              EXPORT_NAME ${CURRENT_PROJECT_NAME})
 

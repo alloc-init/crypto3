@@ -29,25 +29,40 @@ include(CMSetupVersion)
 include(CMDeploy)
 include(CMSetupVersion)
 
+if(NOT Boost_FOUND AND NOT CMAKE_CROSSCOMPILING)
+    find_package(Boost COMPONENTS REQUIRED filesystem)
+endif()
+
 cm_project(containers WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME})
 
 option(BUILD_DOXYGEN_DOCS "Build with configuring Doxygen documentation compiler" TRUE)
 
 set(DOXYGEN_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/docs" CACHE STRING "Specify doxygen output directory")
 
+list(APPEND ${CURRENT_PROJECT_NAME}_PUBLIC_HEADERS
+)
+
+list(APPEND ${CURRENT_PROJECT_NAME}_UNGROUPED_SOURCES)
+
+list(APPEND ${CURRENT_PROJECT_NAME}_HEADERS
+        ${${CURRENT_PROJECT_NAME}_PUBLIC_HEADERS}
+        ${${CURRENT_PROJECT_NAME}_UNGROUPED_SOURCES})
+
+list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
+        ${${CURRENT_PROJECT_NAME}_UNGROUPED_SOURCES})
+
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 add_library(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE)
+add_library(${CMAKE_WORKSPACE_NAME}::${CURRENT_PROJECT_NAME} ALIAS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
         EXPORT_NAME ${CURRENT_PROJECT_NAME})
 
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
 
-        ${CMAKE_WORKSPACE_NAME}::algebra
-        ${CMAKE_WORKSPACE_NAME}::hash
-
-        Boost::container)
+        crypto3::algebra
+        crypto3::hash)
 
 target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -59,8 +74,7 @@ cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         INCLUDE include
         NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
 
-include(CMTest)
-cm_add_test_subdirectory(test)
+add_tests(test)
 
 if(BUILD_EXAMPLES)
     add_subdirectory(example)

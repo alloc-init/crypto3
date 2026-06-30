@@ -77,22 +77,22 @@ namespace nil {
                 };
 
                 constexpr static detail::stream_processor_type stream_processor =
-                        detail::stream_processor_type::raw_delegating;
-                using accumulator_tag = accumulators::tag::forwarding_hash<pedersen_to_point<params_type,
-                    BasePointGeneratorHash, group_type>>;
+                    detail::stream_processor_type::raw_delegating;
+                using accumulator_tag = accumulators::tag::forwarding_hash<
+                    pedersen_to_point<params_type, BasePointGeneratorHash, group_type>>;
 
                 // TODO: sync definition of the chunk_bits with circuit
                 static constexpr std::size_t chunk_bits = 3;
                 /// See definition of \p c in https://zips.z.cash/protocol/protocol.pdf#concretepedersenhash
                 static constexpr std::size_t chunks_per_base_point =
-                        detail::chunks_per_base_point<typename curve_type::scalar_field_type>(chunk_bits);
+                    detail::chunks_per_base_point<typename curve_type::scalar_field_type>(chunk_bits);
 
                 class accumulator_type {
                     std::size_t bits_supplied = 0;
                     std::vector<bool> cached_bits;
                     typename curve_type::scalar_field_type::integral_type pow_two = 1;
                     typename curve_type::scalar_field_type::value_type encoded_segment =
-                            curve_type::scalar_field_type::value_type::zero();
+                        curve_type::scalar_field_type::value_type::zero();
                     group_value_type current_base_point = hash<base_point_generator>({
                         static_cast<std::uint32_t>(0),
                     });
@@ -109,9 +109,9 @@ namespace nil {
                     inline bool is_time_to_go_to_new_segment() const {
                         return supplied_chunks() > 1 &&
                                ///< first base point is initialized by default, there is no
-                                                             ///< need to update when processing first segment
+                               ///< need to update when processing first segment
                                supplied_chunks() % chunks_per_base_point ==
-                               1; ///< it's time to update base point if we moved to a new segment
+                                   1;    ///< it's time to update base point if we moved to a new segment
                     }
 
                     inline void update_result() {
@@ -122,9 +122,7 @@ namespace nil {
                         assert(bits_supplied > 0);
                         assert(is_time_to_go_to_new_segment());
                         current_base_point = hash<base_point_generator>({
-                            static_cast<std::uint32_t>(
-                                supplied_chunks() /
-                                chunks_per_base_point),
+                            static_cast<std::uint32_t>(supplied_chunks() / chunks_per_base_point),
                         });
                         pow_two = 1;
                         encoded_segment = curve_type::scalar_field_type::value_type::zero();
@@ -133,14 +131,14 @@ namespace nil {
                     inline void update_current_segment() {
                         assert(cached_bits.size() == chunk_bits);
                         typename curve_type::scalar_field_type::value_type encoded_chunk =
-                                detail::lookup<typename curve_type::scalar_field_type::value_type, chunk_bits>::process(
-                                    cached_bits) *
-                                pow_two;
+                            detail::lookup<typename curve_type::scalar_field_type::value_type, chunk_bits>::process(
+                                cached_bits) *
+                            pow_two;
                         encoded_segment = encoded_segment + encoded_chunk;
                         pow_two = pow_two << (chunk_bits + 1);
                         cached_bits.clear();
                         ///< current chunk was processed, we could clear cache and be ready to
-                                               ///< accepts bits of the next chunk
+                        ///< accepts bits of the next chunk
                     }
 
                 public:
@@ -175,10 +173,10 @@ namespace nil {
                     typename InputRange,
                     typename std::enable_if<
                         std::is_same<bool,
-                            typename std::iterator_traits<typename InputRange::iterator>::value_type>::value,
+                                     typename std::iterator_traits<typename InputRange::iterator>::value_type>::value,
                         bool>::type = true>
                 static inline void update(accumulator_type &acc, const InputRange &range) {
-                    for (auto b: range) {
+                    for (auto b : range) {
                         acc.update(b);
                     }
                 }
@@ -224,9 +222,9 @@ namespace nil {
                 using result_type = digest_type;
 
                 constexpr static detail::stream_processor_type stream_processor =
-                        detail::stream_processor_type::raw_delegating;
-                using accumulator_tag = accumulators::tag::forwarding_hash<pedersen<params_type, BasePointGeneratorHash,
-                    group_type>>;
+                    detail::stream_processor_type::raw_delegating;
+                using accumulator_tag =
+                    accumulators::tag::forwarding_hash<pedersen<params_type, BasePointGeneratorHash, group_type>>;
 
                 struct construction {
                     struct params_type {
@@ -256,13 +254,12 @@ namespace nil {
                     nil::marshalling::status_type status;
                     // TODO: check status
                     result_type result =
-                            nil::marshalling::pack<typename construction::params_type::digest_endian>(result_point,
-                                status);
+                        nil::marshalling::pack<typename construction::params_type::digest_endian>(result_point, status);
                     return result;
                 }
             };
-        } // namespace hashes
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace hashes
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_HASH_PEDERSEN_HPP

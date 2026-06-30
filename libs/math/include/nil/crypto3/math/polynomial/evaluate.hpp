@@ -26,7 +26,6 @@
 #ifndef CRYPTO3_MATH_EVALUATE_HPP
 #define CRYPTO3_MATH_EVALUATE_HPP
 
-#include <algorithm>
 #include <vector>
 
 #include <boost/math/tools/polynomial.hpp>
@@ -109,7 +108,7 @@ namespace nil {
                 return evaluate_lagrange_polynomial(domain.begin(), domain.end(), t, m, idx);
             }
         }    // namespace math
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // ALGEBRA_FFT_NAIVE_EVALUATE_HPP

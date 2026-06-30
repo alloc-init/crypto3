@@ -42,6 +42,8 @@ namespace nil {
                 public:
                     typedef field<64> policy_type;
 
+                    using small_subfield = goldilocks64_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
                     constexpr static const std::size_t value_bits = modulus_bits;
@@ -53,16 +55,14 @@ namespace nil {
                     typedef __zkllvm_field_goldilocks64_base value_type;
 #else
                     // 2^64 - 2^32 + 1
-                    constexpr static const integral_type modulus =
-                        0xFFFFFFFF00000001_cppui_modular64;
+                    constexpr static const integral_type modulus = 0xFFFFFFFF00000001_cppui_modular64;
                     constexpr static const integral_type group_order_minus_one_half = (modulus - 1u) / 2;
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<goldilocks64_base_field>> value_type;
@@ -76,7 +76,8 @@ namespace nil {
 #ifdef __ZKLLVM__
 #else
                 constexpr typename goldilocks64_base_field::integral_type const goldilocks64_base_field::modulus;
-                constexpr typename goldilocks64_base_field::integral_type const goldilocks64_base_field::group_order_minus_one_half;
+                constexpr typename goldilocks64_base_field::integral_type const
+                    goldilocks64_base_field::group_order_minus_one_half;
                 constexpr
                     typename goldilocks64_base_field::modular_params_type const goldilocks64_base_field::modulus_params;
 #endif
@@ -85,8 +86,8 @@ namespace nil {
                 using goldilocks64 = goldilocks64_base_field;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_GOLDILOCKS64_BASE_FIELD_HPP

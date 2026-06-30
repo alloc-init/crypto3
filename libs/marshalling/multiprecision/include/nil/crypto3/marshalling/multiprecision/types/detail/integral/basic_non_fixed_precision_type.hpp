@@ -52,6 +52,7 @@ namespace nil {
                         using base_impl_type = TTypeBase;
 
                         std::size_t cur_length = 0;
+
                     public:
                         using value_type = T;
                         using serialized_type = value_type;
@@ -62,7 +63,7 @@ namespace nil {
 
                             std::size_t bits_count = boost::multiprecision::msb(val) + 1;
 
-                            cur_length = bits_count / 8 + (bits_count%8?1:0);
+                            cur_length = bits_count / 8 + (bits_count % 8 ? 1 : 0);
                         }
 
                         basic_integral(const basic_integral &) = default;
@@ -127,8 +128,8 @@ namespace nil {
                     private:
                         template<typename TIter>
                         void read_no_status(TIter &iter, std::size_t size) {
-                            size = std::is_same_v<typename std::iterator_traits<TIter>::value_type, bool> ? 
-                                        size : size * 8;
+                            size = std::is_same_v<typename std::iterator_traits<TIter>::value_type, bool> ? size :
+                                                                                                            size * 8;
                             value_ =
                                 crypto3::marshalling::processing::read_data<T, typename base_impl_type::endian_type>(
                                     iter, size);
@@ -156,8 +157,8 @@ namespace nil {
                         value_type value_ = static_cast<value_type>(0);
                     };
                 }    // namespace detail
-            }        // namespace types
-        }            // namespace marshalling
-    }                // namespace crypto3
+            }    // namespace types
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_BASIC_INTEGRAL_NON_FIXED_PRECISION_HPP

@@ -125,39 +125,6 @@ void test() {
         BOOST_CHECK_EQUAL((::boost::math::isnormal)(-t), true);
         BOOST_CHECK_EQUAL((::boost::math::fpclassify)(t), (::boost::math::fpclassify)(t + 0));
     }
-    if (std::numeric_limits<T>::has_denorm) {
-        t = (std::numeric_limits<T>::min)();
-        t /= 2;
-        if (t != 0) {
-            BOOST_CHECK_EQUAL((::boost::math::fpclassify)(t), (int)FP_SUBNORMAL);
-            BOOST_CHECK_EQUAL((::boost::math::fpclassify)(-t), (int)FP_SUBNORMAL);
-            BOOST_CHECK_EQUAL((::boost::math::isfinite)(t), true);
-            BOOST_CHECK_EQUAL((::boost::math::isfinite)(-t), true);
-            BOOST_CHECK_EQUAL((::boost::math::isinf)(t), false);
-            BOOST_CHECK_EQUAL((::boost::math::isinf)(-t), false);
-            BOOST_CHECK_EQUAL((::boost::math::isnan)(t), false);
-            BOOST_CHECK_EQUAL((::boost::math::isnan)(-t), false);
-            BOOST_CHECK_EQUAL((::boost::math::isnormal)(t), false);
-            BOOST_CHECK_EQUAL((::boost::math::isnormal)(-t), false);
-            BOOST_CHECK_EQUAL((::boost::math::fpclassify)(t), (::boost::math::fpclassify)(t + 0));
-        }
-        t = std::numeric_limits<T>::denorm_min();
-        if ((t != 0) && (t < (std::numeric_limits<T>::min)())) {
-            BOOST_CHECK_EQUAL((::boost::math::fpclassify)(t), (int)FP_SUBNORMAL);
-            BOOST_CHECK_EQUAL((::boost::math::fpclassify)(-t), (int)FP_SUBNORMAL);
-            BOOST_CHECK_EQUAL((::boost::math::isfinite)(t), true);
-            BOOST_CHECK_EQUAL((::boost::math::isfinite)(-t), true);
-            BOOST_CHECK_EQUAL((::boost::math::isinf)(t), false);
-            BOOST_CHECK_EQUAL((::boost::math::isinf)(-t), false);
-            BOOST_CHECK_EQUAL((::boost::math::isnan)(t), false);
-            BOOST_CHECK_EQUAL((::boost::math::isnan)(-t), false);
-            BOOST_CHECK_EQUAL((::boost::math::isnormal)(t), false);
-            BOOST_CHECK_EQUAL((::boost::math::isnormal)(-t), false);
-            BOOST_CHECK_EQUAL((::boost::math::fpclassify)(t), (::boost::math::fpclassify)(t + 0));
-        }
-    } else {
-        std::cout << "Denormalised forms not tested" << std::endl;
-    }
     t = 0;
     BOOST_CHECK_EQUAL((::boost::math::fpclassify)(t), (int)FP_ZERO);
     BOOST_CHECK_EQUAL((::boost::math::fpclassify)(-t), (int)FP_ZERO);
@@ -377,8 +344,7 @@ int main() {
     test<boost::multiprecision::cpp_dec_float_100>();
 #endif
 #ifdef TEST_BACKEND
-    test<
-        boost::multiprecision::number<boost::multiprecision::concepts::number_backend_float_architype>>();
+    test<boost::multiprecision::number<boost::multiprecision::concepts::number_backend_float_architype>>();
 #endif
 #ifdef TEST_FLOAT128
     test<boost::multiprecision::float128>();

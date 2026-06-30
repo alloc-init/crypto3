@@ -9,10 +9,10 @@
 
 template<unsigned MinBits, unsigned MaxBits, boost::multiprecision::cpp_integer_type SignType, class Allocator,
          boost::multiprecision::expression_template_option ExpressionTemplates>
-struct is_twos_complement_integer<boost::multiprecision::number<
-    boost::multiprecision::cpp_int_modular_backend<MinBits, MaxBits, SignType, boost::multiprecision::checked,
-                                                  Allocator>,
-    ExpressionTemplates>> : public std::integral_constant<bool, false> { };
+struct is_twos_complement_integer<
+    boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<
+                                      MinBits, MaxBits, SignType, boost::multiprecision::checked, Allocator>,
+                                  ExpressionTemplates>> : public std::integral_constant<bool, false> { };
 
 template<>
 struct related_type<boost::multiprecision::cpp_int> {
@@ -30,6 +30,6 @@ struct related_type<boost::multiprecision::number<
 
 int main() {
     test<boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<>,
-                                              boost::multiprecision::et_off>>();
+                                       boost::multiprecision::et_off>>();
     return boost::report_errors();
 }

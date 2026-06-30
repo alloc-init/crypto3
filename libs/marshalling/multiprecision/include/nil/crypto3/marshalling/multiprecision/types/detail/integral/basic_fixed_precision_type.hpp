@@ -98,15 +98,13 @@ namespace nil {
                         }
 
                         static constexpr std::size_t min_bit_length() {
-                            return boost::multiprecision::backends::min_precision<backend_type>::value ==
-                                           UINT_MAX ?
+                            return boost::multiprecision::backends::min_precision<backend_type>::value == UINT_MAX ?
                                        INT_MAX :
                                        boost::multiprecision::backends::min_precision<backend_type>::value;
                         }
 
                         static constexpr std::size_t max_bit_length() {
-                            return boost::multiprecision::backends::max_precision<backend_type>::value ==
-                                           UINT_MAX ?
+                            return boost::multiprecision::backends::max_precision<backend_type>::value == UINT_MAX ?
                                        INT_MAX :
                                        boost::multiprecision::backends::max_precision<backend_type>::value;
                         }
@@ -121,15 +119,17 @@ namespace nil {
 
                         template<typename TIter>
                         nil::marshalling::status_type read(TIter &iter, std::size_t size) {
-                            
+
                             if (size < (std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value ?
-                                            bit_length() : length())) {
+                                            bit_length() :
+                                            length())) {
                                 return nil::marshalling::status_type::not_enough_data;
                             }
 
                             read_no_status(iter);
                             iter += (std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value ?
-                                            max_bit_length() : max_length());
+                                         max_bit_length() :
+                                         max_length());
                             return nil::marshalling::status_type::success;
                         }
 
@@ -142,14 +142,16 @@ namespace nil {
                         template<typename TIter>
                         nil::marshalling::status_type write(TIter &iter, std::size_t size) const {
                             if (size < (std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value ?
-                                            bit_length() : length())) {
+                                            bit_length() :
+                                            length())) {
                                 return nil::marshalling::status_type::buffer_overflow;
                             }
 
                             write_no_status(iter);
 
                             iter += (std::is_same<typename std::iterator_traits<TIter>::value_type, bool>::value ?
-                                            max_bit_length() : max_length());
+                                         max_bit_length() :
+                                         max_length());
                             return nil::marshalling::status_type::success;
                         }
 
@@ -164,8 +166,8 @@ namespace nil {
                         value_type value_ = static_cast<value_type>(0);
                     };
                 }    // namespace detail
-            }        // namespace types
-        }            // namespace marshalling
-    }                // namespace crypto3
+            }    // namespace types
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_BASIC_INTEGRAL_FIXED_PRECISION_HPP

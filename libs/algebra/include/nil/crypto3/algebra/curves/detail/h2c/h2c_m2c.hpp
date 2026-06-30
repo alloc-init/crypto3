@@ -103,9 +103,9 @@ namespace nil {
                     struct map_to_curve<typename bls12_381::g2_type<>>
                         : m2c_simple_swu_zeroAB<typename bls12_381::g2_type<>> { };
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_CURVES_HASH_TO_CURVE_MAP_TO_CURVE_HPP

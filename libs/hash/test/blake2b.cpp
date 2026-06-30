@@ -53,7 +53,7 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 BOOST_TEST_DONT_PRINT_LOG_VALUE(hashes::blake2b<224>::construction::type::digest_type)
@@ -411,16 +411,16 @@ BOOST_AUTO_TEST_CASE(blake2b_512_shortmsg_byte3) {
 }
 
 BOOST_AUTO_TEST_CASE(blake2b_longmsg_byte1) {
-    hashes::blake2b<224>::digest_type d = hash<hashes::blake2b<224>>({
-        '\xBE', '\xFA', '\xB5', '\x74', '\x39', '\x6D', '\x7F', '\x8B', '\x67', '\x05', '\xE2', '\xD5', '\xB5',
-        '\x8B', '\x2C', '\x1C', '\x82', '\x0B', '\xB2', '\x4E', '\x3F', '\x4B', '\xAE', '\x3E', '\x8F', '\xBC',
-        '\xD3', '\x6D', '\xBF', '\x73', '\x4E', '\xE1', '\x4E', '\x5D', '\x6A', '\xB9', '\x72', '\xAE', '\xDD',
-        '\x35', '\x40', '\x23', '\x54', '\x66', '\xE8', '\x25', '\x85', '\x0E', '\xE4', '\xC5', '\x12', '\xEA',
-        '\x97', '\x95', '\xAB', '\xFD', '\x33', '\xF3', '\x30', '\xD9', '\xFD', '\x7F', '\x79', '\xE6', '\x2B',
-        '\xBB', '\x63', '\xA6', '\xEA', '\x85', '\xDE', '\x15', '\xBE', '\xAE', '\xEA', '\x6F', '\x8D', '\x20',
-        '\x4A', '\x28', '\x95', '\x60', '\x59', '\xE2', '\x63', '\x2D', '\x11', '\x86', '\x1D', '\xFB', '\x0E',
-        '\x65', '\xBC', '\x07', '\xAC', '\x8A', '\x15', '\x93', '\x88', '\xD5', '\xC3', '\x27', '\x7E', '\x22',
-        '\x72', '\x86', '\xF6', '\x5F', '\xF5', '\xE5', '\xB5', '\xAE', '\xC1'});
+    hashes::blake2b<224>::digest_type d = hash<hashes::blake2b<224>>(
+        {'\xBE', '\xFA', '\xB5', '\x74', '\x39', '\x6D', '\x7F', '\x8B', '\x67', '\x05', '\xE2', '\xD5', '\xB5',
+         '\x8B', '\x2C', '\x1C', '\x82', '\x0B', '\xB2', '\x4E', '\x3F', '\x4B', '\xAE', '\x3E', '\x8F', '\xBC',
+         '\xD3', '\x6D', '\xBF', '\x73', '\x4E', '\xE1', '\x4E', '\x5D', '\x6A', '\xB9', '\x72', '\xAE', '\xDD',
+         '\x35', '\x40', '\x23', '\x54', '\x66', '\xE8', '\x25', '\x85', '\x0E', '\xE4', '\xC5', '\x12', '\xEA',
+         '\x97', '\x95', '\xAB', '\xFD', '\x33', '\xF3', '\x30', '\xD9', '\xFD', '\x7F', '\x79', '\xE6', '\x2B',
+         '\xBB', '\x63', '\xA6', '\xEA', '\x85', '\xDE', '\x15', '\xBE', '\xAE', '\xEA', '\x6F', '\x8D', '\x20',
+         '\x4A', '\x28', '\x95', '\x60', '\x59', '\xE2', '\x63', '\x2D', '\x11', '\x86', '\x1D', '\xFB', '\x0E',
+         '\x65', '\xBC', '\x07', '\xAC', '\x8A', '\x15', '\x93', '\x88', '\xD5', '\xC3', '\x27', '\x7E', '\x22',
+         '\x72', '\x86', '\xF6', '\x5F', '\xF5', '\xE5', '\xB5', '\xAE', '\xC1'});
 
     BOOST_CHECK_EQUAL("3d6c866ebaa149e0c6ad8ba5e9a685e1ad56d81a00fb99d9020f11c0", std::to_string(d).data());
 }

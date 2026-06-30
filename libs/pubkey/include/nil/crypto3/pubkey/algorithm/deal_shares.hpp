@@ -41,7 +41,7 @@ namespace nil {
 
             template<typename SchemeType>
             using shares_dealing_processing_mode_default =
-                    typename modes::isomorphic<SchemeType>::template bind<shares_dealing_policy<SchemeType>>::type;
+                typename modes::isomorphic<SchemeType>::template bind<shares_dealing_policy<SchemeType>>::type;
         }    // namespace pubkey
 
         /*!
@@ -64,7 +64,7 @@ namespace nil {
          * @return OutputIterator
          */
         template<typename SchemeType, typename InputIterator, typename OutputIterator,
-                typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>>
+                 typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>>
         OutputIterator deal_shares(InputIterator first, InputIterator last, std::size_t n, OutputIterator out) {
 
             typedef typename pubkey::shares_dealing_accumulator_set<ProcessingMode> DealingAccumulator;
@@ -73,8 +73,8 @@ namespace nil {
             typedef pubkey::detail::itr_pubkey_impl<StreamSchemeImpl, OutputIterator> SchemeImpl;
 
             return SchemeImpl(
-                    first, last, std::move(out),
-                    DealingAccumulator(n, nil::crypto3::accumulators::threshold_value = std::distance(first, last)));
+                first, last, std::move(out),
+                DealingAccumulator(n, nil::crypto3::accumulators::threshold_value = std::distance(first, last)));
         }
 
         /*!
@@ -96,7 +96,7 @@ namespace nil {
          * @return OutputIterator
          */
         template<typename SchemeType, typename SinglePassRange, typename OutputIterator,
-                typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>>
+                 typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>>
         OutputIterator deal_shares(const SinglePassRange &range, std::size_t n, OutputIterator out) {
 
             typedef typename pubkey::shares_dealing_accumulator_set<ProcessingMode> DealingAccumulator;
@@ -129,7 +129,7 @@ namespace nil {
          * @return OutputIterator
          */
         template<typename SchemeType, typename InputIterator, typename OutputIterator,
-                typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>>
+                 typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>>
         OutputIterator deal_shares(InputIterator first, InputIterator last, std::size_t n,
                                    const typename SchemeType::weights_type &weights, OutputIterator out) {
 
@@ -139,9 +139,9 @@ namespace nil {
             typedef pubkey::detail::itr_pubkey_impl<StreamSchemeImpl, OutputIterator> SchemeImpl;
 
             return SchemeImpl(
-                    first, last, std::move(out),
-                    DealingAccumulator(n, nil::crypto3::accumulators::threshold_value = std::distance(first, last),
-                                       nil::crypto3::accumulators::weights = weights));
+                first, last, std::move(out),
+                DealingAccumulator(n, nil::crypto3::accumulators::threshold_value = std::distance(first, last),
+                                   nil::crypto3::accumulators::weights = weights));
         }
 
         /*!
@@ -164,7 +164,7 @@ namespace nil {
          * @return OutputIterator
          */
         template<typename SchemeType, typename SinglePassRange, typename OutputIterator,
-                typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>>
+                 typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>>
         OutputIterator deal_shares(const SinglePassRange &range, std::size_t n,
                                    const typename SchemeType::weights_type &weights, OutputIterator out) {
 
@@ -197,11 +197,11 @@ namespace nil {
          * @return OutputAccumulator
          */
         template<typename SchemeType, typename InputIterator,
-                typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
-                typename OutputAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>>
+                 typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
+                 typename OutputAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>>
         typename std::enable_if<boost::accumulators::detail::is_accumulator_set<OutputAccumulator>::value,
-                OutputAccumulator>::type &
-        deal_shares(InputIterator first, InputIterator last, OutputAccumulator &acc) {
+                                OutputAccumulator>::type &
+            deal_shares(InputIterator first, InputIterator last, OutputAccumulator &acc) {
 
             typedef pubkey::detail::ref_pubkey_impl<OutputAccumulator> StreamSchemeImpl;
             typedef pubkey::detail::range_pubkey_impl<StreamSchemeImpl> SchemeImpl;
@@ -227,11 +227,11 @@ namespace nil {
          * @return OutputAccumulator
          */
         template<typename SchemeType, typename SinglePassRange,
-                typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
-                typename OutputAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>>
+                 typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
+                 typename OutputAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>>
         typename std::enable_if<boost::accumulators::detail::is_accumulator_set<OutputAccumulator>::value,
-                OutputAccumulator>::type &
-        deal_shares(const SinglePassRange &range, OutputAccumulator &acc) {
+                                OutputAccumulator>::type &
+            deal_shares(const SinglePassRange &range, OutputAccumulator &acc) {
 
             typedef pubkey::detail::ref_pubkey_impl<OutputAccumulator> StreamSchemeImpl;
             typedef pubkey::detail::range_pubkey_impl<StreamSchemeImpl> SchemeImpl;
@@ -261,15 +261,15 @@ namespace nil {
          * @return SchemeImpl
          */
         template<typename SchemeType, typename InputIterator,
-                typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
-                typename DealingAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>,
-                typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<DealingAccumulator>,
-                typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
+                 typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
+                 typename DealingAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>,
+                 typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<DealingAccumulator>,
+                 typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
         SchemeImpl deal_shares(InputIterator first, InputIterator last, std::size_t n) {
 
             return SchemeImpl(
-                    first, last,
-                    DealingAccumulator(n, nil::crypto3::accumulators::threshold_value = std::distance(first, last)));
+                first, last,
+                DealingAccumulator(n, nil::crypto3::accumulators::threshold_value = std::distance(first, last)));
         }
 
         /*!
@@ -293,10 +293,10 @@ namespace nil {
          * @return SchemeImpl
          */
         template<typename SchemeType, typename SinglePassRange,
-                typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
-                typename DealingAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>,
-                typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<DealingAccumulator>,
-                typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
+                 typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
+                 typename DealingAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>,
+                 typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<DealingAccumulator>,
+                 typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
         SchemeImpl deal_shares(const SinglePassRange &range, std::size_t n) {
 
             return SchemeImpl(range, DealingAccumulator(n, nil::crypto3::accumulators::threshold_value = range.size()));
@@ -325,17 +325,17 @@ namespace nil {
          * @return SchemeImpl
          */
         template<typename SchemeType, typename InputIterator,
-                typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
-                typename DealingAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>,
-                typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<DealingAccumulator>,
-                typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
+                 typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
+                 typename DealingAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>,
+                 typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<DealingAccumulator>,
+                 typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
         SchemeImpl deal_shares(InputIterator first, InputIterator last, std::size_t n,
                                const typename SchemeType::weights_type &weights) {
 
             return SchemeImpl(
-                    first, last,
-                    DealingAccumulator(n, nil::crypto3::accumulators::threshold_value = std::distance(first, last),
-                                       nil::crypto3::accumulators::weights = weights));
+                first, last,
+                DealingAccumulator(n, nil::crypto3::accumulators::threshold_value = std::distance(first, last),
+                                   nil::crypto3::accumulators::weights = weights));
         }
 
         /*!
@@ -360,10 +360,10 @@ namespace nil {
          * @return SchemeImpl
          */
         template<typename SchemeType, typename SinglePassRange,
-                typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
-                typename DealingAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>,
-                typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<DealingAccumulator>,
-                typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
+                 typename ProcessingMode = pubkey::shares_dealing_processing_mode_default<SchemeType>,
+                 typename DealingAccumulator = typename pubkey::shares_dealing_accumulator_set<ProcessingMode>,
+                 typename StreamSchemeImpl = pubkey::detail::value_pubkey_impl<DealingAccumulator>,
+                 typename SchemeImpl = pubkey::detail::range_pubkey_impl<StreamSchemeImpl>>
         SchemeImpl deal_shares(const SinglePassRange &range, std::size_t n,
                                const typename SchemeType::weights_type &weights) {
 

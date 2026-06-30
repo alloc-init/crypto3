@@ -29,6 +29,22 @@
 #include <complex>
 #include <type_traits>
 
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#pragma push_macro("GENERATE_HAS_MEMBER_TYPE")
+#pragma push_macro("GENERATE_HAS_MEMBER")
+#pragma push_macro("GENERATE_HAS_MEMBER_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_CONST_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_RETURN_FUNCTION")
+#pragma push_macro("GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION")
+#endif
+
+#undef GENERATE_HAS_MEMBER_TYPE
+#undef GENERATE_HAS_MEMBER
+#undef GENERATE_HAS_MEMBER_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_FUNCTION
+#undef GENERATE_HAS_MEMBER_RETURN_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
+
 #ifndef GENERATE_HAS_MEMBER_TYPE
 #define GENERATE_HAS_MEMBER_TYPE(Type)                                                                                 \
     template<class T, typename Enable = void>                                                                          \
@@ -59,7 +75,7 @@
                                                                                                                        \
     template<class T>                                                                                                  \
     struct has_##Type : public std::integral_constant<bool, HasMemberType_##Type<T>::RESULT> { };
-#endif //GENERATE_HAS_MEMBER_TYPE
+#endif    // GENERATE_HAS_MEMBER_TYPE
 
 #ifndef GENERATE_HAS_MEMBER
 #define GENERATE_HAS_MEMBER(member)                                                                                  \
@@ -91,7 +107,7 @@
                                                                                                                      \
     template<class T>                                                                                                \
     struct has_##member : public std::integral_constant<bool, HasMember_##member<T>::RESULT> { };
-#endif //GENERATE_HAS_MEMBER
+#endif    // GENERATE_HAS_MEMBER
 
 #ifndef GENERATE_HAS_MEMBER_FUNCTION
 #define GENERATE_HAS_MEMBER_FUNCTION(Function, ...)                                  \
@@ -115,7 +131,7 @@
                                                                                      \
         static bool const value = sizeof(f<Derived>(0)) == 2;                        \
     };
-#endif //GENERATE_HAS_MEMBER_FUNCTION
+#endif    // GENERATE_HAS_MEMBER_FUNCTION
 
 #ifndef GENERATE_HAS_MEMBER_CONST_FUNCTION
 #define GENERATE_HAS_MEMBER_CONST_FUNCTION(Function, ...)                                  \
@@ -139,7 +155,7 @@
                                                                                            \
         static bool const value = sizeof(f<Derived>(0)) == 2;                              \
     };
-#endif //GENERATE_HAS_MEMBER_CONST_FUNCTION
+#endif    // GENERATE_HAS_MEMBER_CONST_FUNCTION
 
 #ifndef GENERATE_HAS_MEMBER_RETURN_FUNCTION
 #define GENERATE_HAS_MEMBER_RETURN_FUNCTION(Function, ReturnType, ...)                       \
@@ -169,7 +185,7 @@
                                                                                              \
         static bool const value = sizeof(f<Derived>(0)) == 2;                                \
     };
-#endif //GENERATE_HAS_MEMBER_RETURN_FUNCTION
+#endif    // GENERATE_HAS_MEMBER_RETURN_FUNCTION
 
 #ifndef GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
 #define GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION(Function, ReturnType, ...)                 \
@@ -199,7 +215,7 @@
                                                                                              \
         static bool const value = sizeof(f<Derived>(0)) == 2;                                \
     };
-#endif //GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
+#endif    // GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
 
 namespace nil {
     namespace crypto3 {
@@ -329,10 +345,10 @@ namespace nil {
                 static char test(...);
 
                 template<typename U, typename = typename std::iterator_traits<U>::difference_type,
-                        typename = typename std::iterator_traits<U>::pointer,
-                        typename = typename std::iterator_traits<U>::reference,
-                        typename = typename std::iterator_traits<U>::value_type,
-                        typename = typename std::iterator_traits<U>::iterator_category>
+                         typename = typename std::iterator_traits<U>::pointer,
+                         typename = typename std::iterator_traits<U>::reference,
+                         typename = typename std::iterator_traits<U>::value_type,
+                         typename = typename std::iterator_traits<U>::iterator_category>
                 static long test(U &&);
 
                 constexpr static bool value = std::is_same<decltype(test(std::declval<T>())), long>::value;
@@ -346,8 +362,7 @@ namespace nil {
             template<typename Container>
             struct is_container {
                 static const bool value =
-                        has_const_iterator<Container>::value && has_begin<Container>::value &&
-                        has_end<Container>::value;
+                    has_const_iterator<Container>::value && has_begin<Container>::value && has_end<Container>::value;
             };
 
             template<typename T>
@@ -358,7 +373,6 @@ namespace nil {
                                           has_decoded_block_type<T>::value && has_decoded_block_bits<T>::value &&
                                           has_encode<T>::value && has_decode<T>::value;
                 typedef T type;
-
             };
 
             template<typename T>
@@ -406,23 +420,17 @@ namespace nil {
             };
 
             template<typename T>
-            struct is_passhash {
-                static const bool value = has_generate<T>::value && has_check<T>::value;
-                typedef T type;
-            };
-
-            template<typename T>
             struct is_curve {
-                static const bool value = has_base_field_bits<T>::value && has_base_field_type<T>::value &&
-                                          has_number_type<T>::value && has_base_field_modulus<T>::value &&
-                                          has_scalar_field_bits<T>::value && has_scalar_field_type<T>::value &&
-                                          has_scalar_field_modulus<T>::value && has_g1_type<T>::value &&
-                                          has_g2_type<T>::value && has_gt_type<T>::value && has_p<T>::value &&
-                                          has_q<T>::value;
+                static const bool value =
+                    has_base_field_bits<T>::value && has_base_field_type<T>::value && has_number_type<T>::value &&
+                    has_base_field_modulus<T>::value && has_scalar_field_bits<T>::value &&
+                    has_scalar_field_type<T>::value && has_scalar_field_modulus<T>::value && has_g1_type<T>::value &&
+                    has_g2_type<T>::value && has_gt_type<T>::value && has_p<T>::value && has_q<T>::value;
                 typedef T type;
             };
 
-            template<typename T> //TODO: we should add some other params to curve group policy to identify it more clearly
+            template<typename T>    // TODO: we should add some other params to curve group policy to identify it more
+                                    // clearly
             struct is_curve_group {
                 static const bool value = has_value_type<T>::value && has_underlying_field_type<T>::value &&
                                           has_value_bits<T>::value && has_curve_type<T>::value;
@@ -447,11 +455,9 @@ namespace nil {
             };
 
             template<typename T>
-            struct is_complex : std::false_type {
-            };
+            struct is_complex : std::false_type { };
             template<typename T>
-            struct is_complex<std::complex<T>> : std::true_type {
-            };
+            struct is_complex<std::complex<T>> : std::true_type { };
             template<typename T>
             constexpr bool is_complex_v = is_complex<T>::value;
 
@@ -466,7 +472,23 @@ namespace nil {
             template<typename T>
             using remove_complex_t = typename remove_complex<T>::type;
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
+
+#undef GENERATE_HAS_MEMBER_TYPE
+#undef GENERATE_HAS_MEMBER
+#undef GENERATE_HAS_MEMBER_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_FUNCTION
+#undef GENERATE_HAS_MEMBER_RETURN_FUNCTION
+#undef GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION
+
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#pragma pop_macro("GENERATE_HAS_MEMBER_CONST_RETURN_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_RETURN_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_CONST_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER_FUNCTION")
+#pragma pop_macro("GENERATE_HAS_MEMBER")
+#pragma pop_macro("GENERATE_HAS_MEMBER_TYPE")
+#endif
 
 #endif    // CRYPTO3_TYPE_TRAITS_HPP

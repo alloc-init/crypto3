@@ -35,8 +35,8 @@ namespace nil {
                 typedef shacal_policy shacal1_policy;
 
             }    // namespace detail
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_BLOCK_CIPHERS_DETAIL_SHACAL1_POLICY_HPP

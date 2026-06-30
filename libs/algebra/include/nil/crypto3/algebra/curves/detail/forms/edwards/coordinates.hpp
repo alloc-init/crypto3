@@ -44,9 +44,9 @@ namespace nil {
                     struct yz_squared_d;
 
                 }    // namespace coordinates
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_ALGEBRA_CURVES_EDWARDS_COORDINATES_REPRESENTATIONS_HPP

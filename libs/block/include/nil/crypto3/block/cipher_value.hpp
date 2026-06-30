@@ -26,8 +26,8 @@
 #ifndef CRYPTO3_BLOCK_CIPHER_VALUE_HPP
 #define CRYPTO3_BLOCK_CIPHER_VALUE_HPP
 
-//#include <type_traits>
-//#include <iterator>
+// #include <type_traits>
+// #include <iterator>
 
 #include <boost/assert.hpp>
 #include <boost/concept_check.hpp>
@@ -196,9 +196,7 @@ namespace nil {
 
                     template<typename InputIterator>
                     itr_cipher_impl(InputIterator first, InputIterator last, OutputIterator out,
-                                    const accumulator_set_type &ise) :
-                        CipherStateImpl(ise),
-                        out(std::move(out)) {
+                                    const accumulator_set_type &ise) : CipherStateImpl(ise), out(std::move(out)) {
                         BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<InputIterator>));
 
                         typedef typename std::iterator_traits<InputIterator>::value_type value_type;
@@ -219,8 +217,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace block
-    }            // namespace crypto3
+        }    // namespace block
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CODEC_POSTPROCESSOR_HPP

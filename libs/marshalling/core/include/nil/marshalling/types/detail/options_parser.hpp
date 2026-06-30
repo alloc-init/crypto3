@@ -73,9 +73,6 @@ namespace nil {
                     static const bool has_orig_data_view = false;
                     static const bool has_empty_serialization = false;
                     static const bool has_multi_range_validation = false;
-                    static const bool has_custom_version_update = false;
-                    static const bool has_versions_range = false;
-                    static const bool has_version_storage = false;
                 };
 
                 template<typename T, typename... TOptions>
@@ -178,8 +175,7 @@ namespace nil {
                 public:
                     static const bool has_sequence_ser_length_field_prefix = true;
                     using sequence_ser_length_field_prefix = TField;
-                    static const status_type sequence_ser_length_field_read_error_status
-                        = TReadErrorStatus;
+                    static const status_type sequence_ser_length_field_read_error_status = TReadErrorStatus;
                 };
 
                 template<typename TField, status_type TReadErrorStatus, typename... TOptions>
@@ -189,8 +185,7 @@ namespace nil {
                 public:
                     static const bool has_sequence_elem_ser_length_field_prefix = true;
                     using sequence_elem_ser_length_field_prefix = TField;
-                    static const status_type sequence_elem_ser_length_field_read_error_status
-                        = TReadErrorStatus;
+                    static const status_type sequence_elem_ser_length_field_read_error_status = TReadErrorStatus;
                 };
 
                 template<typename TField, status_type TReadErrorStatus, typename... TOptions>
@@ -200,8 +195,7 @@ namespace nil {
                 public:
                     static const bool has_sequence_elem_fixed_ser_length_field_prefix = true;
                     using sequence_elem_fixed_ser_length_field_prefix = TField;
-                    static const status_type sequence_elem_fixed_ser_length_field_read_error_status
-                        = TReadErrorStatus;
+                    static const status_type sequence_elem_fixed_ser_length_field_read_error_status = TReadErrorStatus;
                 };
 
                 template<typename TTrailField, typename... TOptions>
@@ -358,8 +352,8 @@ namespace nil {
                         "of nil::marshalling::option::valid_num_value_range options. Either use it only once or"
                         "upgrade your compiler.");
 #endif
-                    using multi_range_validation_ranges
-                        = multi_range_assembler_type<base_impl_type, std::intmax_t, TMinValue, TMaxValue>;
+                    using multi_range_validation_ranges =
+                        multi_range_assembler_type<base_impl_type, std::intmax_t, TMinValue, TMaxValue>;
                     static const bool has_multi_range_validation = true;
                 };
 
@@ -386,32 +380,9 @@ namespace nil {
                         "of nil::marshalling::option::valid_num_value_range options. Either use it only once or"
                         "upgrade your compiler.");
 #endif
-                    using multi_range_validation_ranges
-                        = multi_range_assembler_type<base_impl_type, std::uintmax_t, TMinValue, TMaxValue>;
+                    using multi_range_validation_ranges =
+                        multi_range_assembler_type<base_impl_type, std::uintmax_t, TMinValue, TMaxValue>;
                     static const bool has_multi_range_validation = true;
-                };
-
-                template<typename... TOptions>
-                class options_parser<nil::marshalling::option::has_custom_version_update, TOptions...>
-                    : public options_parser<TOptions...> {
-                public:
-                    static const bool has_custom_version_update = true;
-                };
-
-                template<std::uintmax_t TFrom, std::uintmax_t TUntil, typename... TOptions>
-                class options_parser<nil::marshalling::option::exists_between_versions<TFrom, TUntil>, TOptions...>
-                    : public options_parser<TOptions...> {
-                public:
-                    static const bool has_versions_range = true;
-                    static const std::uintmax_t exists_from_version = TFrom;
-                    static const std::uintmax_t exists_until_version = TUntil;
-                };
-
-                template<typename... TOptions>
-                class options_parser<nil::marshalling::option::version_storage, TOptions...>
-                    : public options_parser<TOptions...> {
-                public:
-                    static const bool has_version_storage = true;
                 };
 
                 template<typename... TOptions>
@@ -423,7 +394,7 @@ namespace nil {
                     : public options_parser<TTupleOptions..., TOptions...> { };
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_OPTIONS_PARSER_HPP

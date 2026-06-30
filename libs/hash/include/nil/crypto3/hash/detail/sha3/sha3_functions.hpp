@@ -67,8 +67,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_SHA3_FUNCTIONS_HPP

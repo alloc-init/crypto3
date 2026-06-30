@@ -23,18 +23,12 @@ macro(define_mac_test name)
 
                                ${Boost_INCLUDE_DIRS})
 
-    set_target_properties(${name}_test PROPERTIES CXX_STANDARD 14)
+    set_target_properties(${name}_test PROPERTIES CXX_STANDARD 23)
 
 endmacro()
 
 set(TESTS_NAMES
         "hmac"
-#        "cmac"
-#        "gmac"
-#        "siphash"
-#        "x919_mac"
-#        "cbc_mac"
-#        "poly1305"
 )
 
 foreach(TEST_NAME ${TESTS_NAMES})

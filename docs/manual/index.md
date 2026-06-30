@@ -29,7 +29,6 @@ root
 ├── libs: all directories added as submodules which are independent projects.
 │   ├── algebra: algebraic operations and structures being used for elliptic-curve cryptography
 │   ├── block: block ciphers
-│   ├── blueprint: components and circuits for zk schemes
 │   ├── codec: encoding/decoding algorithms
 │   ├── containers:containers and generic commitment schemes for accumulating data, includes Merkle Tree
 │   ├── hash: hashing algorithms
@@ -38,7 +37,6 @@ root
 │   ├── math: set of Fast Fourier Transforms evaluation algorithms and Polynomial Arithmetics
 │   ├── modes: cipher modes
 │   ├── multiprecision: integer, rational, floating-point, complex and interval number types. 
-│   ├── passhash: password hashing operations 
 │   ├── pbkdf: password based key derivation functions
 │   ├── pkmodes: threshold, aggregation modes for public key schemes
 │   ├── pkpad: padding module for public key schemes

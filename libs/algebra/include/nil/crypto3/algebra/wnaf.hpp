@@ -34,8 +34,9 @@ namespace nil {
         namespace algebra {
             template<typename BaseValueType, typename Backend,
                      boost::multiprecision::expression_template_option ExpressionTemplates>
-            BaseValueType fixed_window_wnaf_exp(const std::size_t window_size, const BaseValueType &base,
-                                                const boost::multiprecision::number<Backend, ExpressionTemplates> &scalar) {
+            BaseValueType
+                fixed_window_wnaf_exp(const std::size_t window_size, const BaseValueType &base,
+                                      const boost::multiprecision::number<Backend, ExpressionTemplates> &scalar) {
                 std::vector<long> naf = boost::multiprecision::find_wnaf(window_size, scalar);
                 std::vector<BaseValueType> table(1ul << (window_size - 1));
                 BaseValueType tmp = base;
@@ -69,9 +70,10 @@ namespace nil {
             // TODO: check, that CurveGroupValueType is a curve group element. Otherwise it has no wnaf_window_table
             template<typename CurveGroupValueType, typename Backend,
                      boost::multiprecision::expression_template_option ExpressionTemplates>
-            CurveGroupValueType opt_window_wnaf_exp(const CurveGroupValueType &base,
-                                                    const boost::multiprecision::number<Backend, ExpressionTemplates> &scalar,
-                                                    const std::size_t scalar_bits) {
+            CurveGroupValueType
+                opt_window_wnaf_exp(const CurveGroupValueType &base,
+                                    const boost::multiprecision::number<Backend, ExpressionTemplates> &scalar,
+                                    const std::size_t scalar_bits) {
                 std::size_t best = 0;
                 for (long i =
                          curves::wnaf_params<typename CurveGroupValueType::group_type>::wnaf_window_table.size() - 1;
@@ -91,6 +93,6 @@ namespace nil {
                 }
             }
         }    // namespace algebra
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_RANDOM_ELEMENT_HPP

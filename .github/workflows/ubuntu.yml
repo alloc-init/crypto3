@@ -1,0 +1,120 @@
+name: Ubuntu CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Linux / ${{ matrix.scenario }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, Linux, X64, hetzner-public]
+    container:
+      image: ubuntu:26.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - scenario: Release
+          artifact_name: release
+          build_dir: build/release
+          build_type: Release
+          cxx_flags: -Werror
+          cmake_flags: -DBUILD_TESTS=ON
+          asan_options: ""
+          ubsan_options: ""
+        - scenario: ASan UBSan
+          artifact_name: asan-ubsan
+          build_dir: build/asan-ubsan
+          build_type: Release
+          cxx_flags: -Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
+          cmake_flags: -DBUILD_TESTS=ON
+          asan_options: detect_leaks=1:halt_on_error=1:strict_init_order=1:strict_string_checks=1
+          ubsan_options: print_stacktrace=1:halt_on_error=1
+    env:
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPRESS: "true"
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 5G
+      CTEST_TIMEOUT_SECONDS: 1800
+
+    steps:
+    - name: Install dependencies
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          build-essential \
+          ca-certificates \
+          ccache \
+          cmake \
+          git \
+          libboost-all-dev \
+          perl \
+          zstd
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Restore compiler cache
+      uses: actions/cache@v4
+      with:
+        path: .ccache
+        key: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
+        restore-keys: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}-
+
+    - name: Configure compiler cache
+      run: ccache --max-size="$CCACHE_MAXSIZE"
+
+    - name: Configure
+      shell: bash
+      run: |
+        cmake_args=(
+          -S .
+          -B "${{ matrix.build_dir }}"
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }}"
+          -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"
+        )
+
+        cmake "${cmake_args[@]}" ${{ matrix.cmake_flags }}
+
+    - name: List tests
+      run: ctest --test-dir "${{ matrix.build_dir }}" -N | tee "${{ matrix.build_dir }}/ctest-tests.txt"
+
+    - name: Compile tests
+      run: |
+        cmake --build "${{ matrix.build_dir }}" --target tests --parallel "$(nproc)"
+
+    - name: Run tests
+      env:
+        ASAN_OPTIONS: ${{ matrix.asan_options }}
+        UBSAN_OPTIONS: ${{ matrix.ubsan_options }}
+      run: |
+        ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure --parallel "$(nproc)" --timeout "$CTEST_TIMEOUT_SECONDS" --output-junit "${{ matrix.build_dir }}/ctest-results.xml"
+
+    - name: Upload test logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ubuntu-ci-${{ matrix.artifact_name }}-test-results
+        path: |
+          ${{ matrix.build_dir }}/ctest-tests.txt
+          ${{ matrix.build_dir }}/ctest-results.xml
+          ${{ matrix.build_dir }}/Testing/
+        if-no-files-found: ignore

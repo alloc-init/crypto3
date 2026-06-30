@@ -32,6 +32,12 @@ namespace nil {
     namespace marshalling {
         namespace processing {
 
+            // BC: workaround for C++23 deprecation of std::aligned_storage
+            template<std::size_t Size, std::size_t Align>
+            struct raw_storage {
+                alignas(Align) std::byte data[Size];
+            };
+
             /// @cond SKIP_DOC
             template<typename TType, typename... TTypes>
             class aligned_union {
@@ -42,19 +48,19 @@ namespace nil {
                 static const std::size_t first_size = sizeof(first_storage_type);
                 static const std::size_t first_alignment = std::alignment_of<first_storage_type>::value;
                 static const std::size_t max_size = first_size > other_size ? first_size : other_size;
-                static const std::size_t max_alignment
-                    = first_alignment > other_alignment ? first_alignment : other_alignment;
+                static const std::size_t max_alignment =
+                    first_alignment > other_alignment ? first_alignment : other_alignment;
 
             public:
                 /// Type that has proper size and proper alignment to keep any of the
                 /// specified types
-                using type = typename std::aligned_storage<max_size, max_alignment>::type;
+                using type = raw_storage<max_size, max_alignment>;
             };
 
             template<typename TType>
             class aligned_union<TType> {
             public:
-                using type = typename std::aligned_storage<sizeof(TType), std::alignment_of<TType>::value>::type;
+                using type = raw_storage<sizeof(TType), std::alignment_of<TType>::value>;
             };
 
             /// @endcond

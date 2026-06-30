@@ -35,7 +35,7 @@ namespace nil {
                 class ate_miller_loop;
 
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_ATE_MILLER_LOOP_HPP

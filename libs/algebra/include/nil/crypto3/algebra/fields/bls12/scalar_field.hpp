@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -48,6 +46,8 @@ namespace nil {
                 template<>
                 struct bls12_scalar_field<381> : public field<255> {
                     typedef field<255> policy_type;
+
+                    using small_subfield = bls12_scalar_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
@@ -68,10 +68,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<bls12_scalar_field<381>>> value_type;
@@ -81,6 +80,8 @@ namespace nil {
                 template<>
                 struct bls12_scalar_field<377> : public field<253> {
                     typedef field<253> policy_type;
+
+                    using small_subfield = bls12_scalar_field;
 
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
@@ -100,10 +101,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<bls12_scalar_field<377>>> value_type;
@@ -123,8 +123,10 @@ namespace nil {
 #else
                 constexpr typename bls12_scalar_field<381>::integral_type const bls12_scalar_field<381>::modulus;
                 constexpr typename bls12_scalar_field<377>::integral_type const bls12_scalar_field<377>::modulus;
-                constexpr typename bls12_scalar_field<381>::integral_type const bls12_scalar_field<381>::group_order_minus_one_half;
-                constexpr typename bls12_scalar_field<377>::integral_type const bls12_scalar_field<377>::group_order_minus_one_half;
+                constexpr typename bls12_scalar_field<381>::integral_type const
+                    bls12_scalar_field<381>::group_order_minus_one_half;
+                constexpr typename bls12_scalar_field<377>::integral_type const
+                    bls12_scalar_field<377>::group_order_minus_one_half;
 
                 constexpr
                     typename bls12_scalar_field<381>::modular_params_type const bls12_scalar_field<381>::modulus_params;
@@ -135,8 +137,8 @@ namespace nil {
                 using bls12_fr = bls12_scalar_field<Version>;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_BLS12_SCALAR_FIELD_HPP

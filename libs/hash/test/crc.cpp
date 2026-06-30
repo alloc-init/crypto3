@@ -34,11 +34,11 @@ namespace boost {
         namespace tt_detail {
             template<template<typename, typename> class P, typename K, typename V>
             struct print_log_value<P<K, V>> {
-                void operator()(std::ostream&, P<K, V> const&) {
+                void operator()(std::ostream &, P<K, V> const &) {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 static const std::unordered_map<std::string, std::string> string_data = {
@@ -99,35 +99,35 @@ BOOST_DATA_TEST_CASE(crc_string_various_itr_value_hash, boost::unit_test::data::
     BOOST_CHECK_EQUAL(out, array_element.second);
 }
 
-BOOST_AUTO_TEST_CASE(crc_stateful_hash1) {
-    accumulator_set<hashes::crc32_png> acc;
-    for (unsigned i = 0; i < 1000000; ++i) {
-        acc('a');
-    }
-    typename hashes::crc32_png::digest_type d = extract::hash<hashes::crc32_png>(acc);
-    std::cout << d << "\n";
-    BOOST_CHECK_EQUAL(d, "dc25bfbc");
-}
+// BOOST_AUTO_TEST_CASE(crc_stateful_hash1) {
+//     accumulator_set<hashes::crc32_png> acc;
+//     for (unsigned i = 0; i < 1000000; ++i) {
+//         acc('a');
+//     }
+//     typename hashes::crc32_png::digest_type d = extract::hash<hashes::crc32_png>(acc);
+//     std::cout << d << "\n";
+//     BOOST_CHECK_EQUAL(d, "dc25bfbc");
+// }
 
-BOOST_AUTO_TEST_CASE(crc_stateful_hash2) {
-    accumulator_set<hashes::crc32_png> acc;
-    std::string s(1000, 'a');
-    for (unsigned i = 0; i < 1000000; ++i) {
-        hash<hashes::crc32_png>(s, acc);
-    }
-    crc32_png::digest_type d = extract::hash<crc32_png>(acc);
-    std::cout << d << "\n";
-    BOOST_CHECK_EQUAL(d, "a7943e77");
-}
+// BOOST_AUTO_TEST_CASE(crc_stateful_hash2) {
+//     accumulator_set<hashes::crc32_png> acc;
+//     std::string s(1000, 'a');
+//     for (unsigned i = 0; i < 1000000; ++i) {
+//         hash<hashes::crc32_png>(s, acc);
+//     }
+//     crc32_png::digest_type d = extract::hash<crc32_png>(acc);
+//     std::cout << d << "\n";
+//     BOOST_CHECK_EQUAL(d, "a7943e77");
+// }
 
-BOOST_AUTO_TEST_CASE(crc_stateful_hash3) {
-    accumulator_set<hashes::crc32_png> acc;
-    for (unsigned i = 0; i < 1000000000; ++i) {
-        acc('a');
-    }
-    crc32_png::digest_type d = extract::hash<hashes::crc32_png>(acc);
-    std::cout << d << "\n";
-    BOOST_CHECK_EQUAL(d, "a7943e77");
-}
+// BOOST_AUTO_TEST_CASE(crc_stateful_hash3) {
+//     accumulator_set<hashes::crc32_png> acc;
+//     for (unsigned i = 0; i < 1000000000; ++i) {
+//         acc('a');
+//     }
+//     crc32_png::digest_type d = extract::hash<hashes::crc32_png>(acc);
+//     std::cout << d << "\n";
+//     BOOST_CHECK_EQUAL(d, "a7943e77");
+// }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/fp6_3over2.hpp>
 #include <nil/crypto3/algebra/fields/fp2.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -95,9 +93,9 @@ namespace nil {
                         typename fp12_2over3over2_extension_params<bn128_base_field<Version>>::integral_type,
                         12 * 2> const fp12_2over3over2_extension_params<bn128_base_field<Version>>::Frobenius_coeffs_c1;
                 }    // namespace detail
-            }        // namespace fields
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace fields
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_BN128_FP12_2OVER3OVER2_EXTENSION_PARAMS_HPP

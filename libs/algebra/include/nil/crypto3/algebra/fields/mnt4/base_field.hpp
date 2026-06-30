@@ -31,8 +31,6 @@
 #include <nil/crypto3/algebra/fields/params.hpp>
 #include <nil/crypto3/algebra/fields/field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -49,6 +47,8 @@ namespace nil {
                 struct mnt4_base_field<298> : public field<298> {
                     typedef field<298> policy_type;
 
+                    using small_subfield = mnt4_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -64,10 +64,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<mnt4_base_field<298>>> value_type;
@@ -84,7 +83,8 @@ namespace nil {
 
                 constexpr typename mnt4_base_field<298>::integral_type const mnt4_base_field<298>::modulus;
 
-                constexpr typename mnt4_base_field<298>::integral_type const mnt4_base_field<298>::group_order_minus_one_half;
+                constexpr
+                    typename mnt4_base_field<298>::integral_type const mnt4_base_field<298>::group_order_minus_one_half;
 
                 constexpr typename mnt4_base_field<298>::modular_params_type const mnt4_base_field<298>::modulus_params;
 
@@ -95,8 +95,8 @@ namespace nil {
                 using mnt4 = mnt4_base_field<Version>;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_MNT4_BASE_FIELD_HPP

@@ -64,8 +64,8 @@ namespace nil {
                 };
 
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_DETAIL_MD4_POLICY_HPP

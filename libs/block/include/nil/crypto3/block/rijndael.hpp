@@ -118,7 +118,7 @@ namespace nil {
                 typedef detail::rijndael_policy<KeyBits, BlockBits> policy_type;
 
                 typedef
-                typename std::conditional<BlockBits == 128 && (KeyBits == 128 || KeyBits == 192 || KeyBits == 256),
+                    typename std::conditional<BlockBits == 128 && (KeyBits == 128 || KeyBits == 192 || KeyBits == 256),
 #if defined(CRYPTO3_HAS_RIJNDAEL_NI) && (BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64)
                                               detail::rijndael_ni_impl<KeyBits, BlockBits>,
 #elif defined(CRYPTO3_HAS_RIJNDAEL_SSSE3) && \
@@ -130,9 +130,9 @@ namespace nil {
 #elif defined(CRYPTO3_HAS_RIJNDAEL_POWER8) || (BOOST_ARCH_PPC >= BOOST_VERSION_NUMBER(8, 0, 0) || BOOST_ARCH_PPC_64)
                                               detail::rijndael_power8_impl<KeyBits, BlockBits>,
 #else
-                    detail::rijndael_impl<KeyBits, BlockBits>,
+                                              detail::rijndael_impl<KeyBits, BlockBits>,
 #endif
-                    detail::rijndael_impl<KeyBits, BlockBits>>::type impl_type;
+                                              detail::rijndael_impl<KeyBits, BlockBits>>::type impl_type;
 
                 constexpr static const std::size_t key_schedule_words = policy_type::key_schedule_words;
                 constexpr static const std::size_t key_schedule_bytes = policy_type::key_schedule_bytes;
@@ -187,8 +187,8 @@ namespace nil {
             protected:
                 key_schedule_type encryption_key, decryption_key;
             };
-        } // namespace block
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace block
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif

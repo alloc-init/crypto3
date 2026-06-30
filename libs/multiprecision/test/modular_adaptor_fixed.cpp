@@ -10,11 +10,14 @@
 
 #define BOOST_TEST_MODULE modular_fixed_multiprecision_test
 
-// Suddenly, BOOST_MP_ASSERT is NOT constexpr, and it is used in constexpr functions throughout the boost, resulting to compilation errors on all compilers in debug mode. We need to switch assertions off inside cpp_int to make this code compile in debug mode. So we use this workaround to turn off file 'boost/multiprecision/detail/assert.hpp' which contains definition of BOOST_MP_ASSERT and BOOST_MP_ASSERT_MSG. 
+// Suddenly, BOOST_MP_ASSERT is NOT constexpr, and it is used in constexpr functions throughout the boost, resulting to
+// compilation errors on all compilers in debug mode. We need to switch assertions off inside cpp_int to make this code
+// compile in debug mode. So we use this workaround to turn off file 'boost/multiprecision/detail/assert.hpp' which
+// contains definition of BOOST_MP_ASSERT and BOOST_MP_ASSERT_MSG.
 #ifndef BOOST_MP_DETAIL_ASSERT_HPP
-    #define BOOST_MP_DETAIL_ASSERT_HPP
-    #define BOOST_MP_ASSERT(expr) ((void)0)
-    #define BOOST_MP_ASSERT_MSG(expr, msg) ((void)0)
+#define BOOST_MP_DETAIL_ASSERT_HPP
+#define BOOST_MP_ASSERT(expr) ((void)0)
+#define BOOST_MP_ASSERT_MSG(expr, msg) ((void)0)
 #endif
 
 #include <boost/test/unit_test.hpp>
@@ -88,7 +91,8 @@ bool base_operations_test(std::array<Number, test_set_len> test_set) {
     typedef typename Backend::cpp_int_type CppIntBackend;
 
     typedef typename boost::multiprecision::default_ops::double_precision_type<Backend>::type Backend_doubled;
-    typedef typename boost::multiprecision::default_ops::double_precision_type<CppIntBackend>::type CppIntBackend_doubled;
+    typedef
+        typename boost::multiprecision::default_ops::double_precision_type<CppIntBackend>::type CppIntBackend_doubled;
     using params_safe_type = modular_params_rt<Backend>;
     using modular_adaptor_type = modular_adaptor<Backend, params_safe_type>;
     typedef boost::multiprecision::number<modular_adaptor_type> modular_number;
@@ -101,17 +105,13 @@ bool base_operations_test(std::array<Number, test_set_len> test_set) {
     standard_number e_cppint = test_set[mod_e].backend().to_cpp_int();
 
     dbl_standard_number a_add_b_s =
-        (static_cast<dbl_standard_number>(a_cppint) + static_cast<dbl_standard_number>(b_cppint)) %
-        e_cppint;
-    dbl_standard_number a_sub_b_s = (static_cast<dbl_standard_number>(a_cppint) -
-                                     static_cast<dbl_standard_number>(b_cppint) + e_cppint) %
-                                    e_cppint;
+        (static_cast<dbl_standard_number>(a_cppint) + static_cast<dbl_standard_number>(b_cppint)) % e_cppint;
+    dbl_standard_number a_sub_b_s =
+        (static_cast<dbl_standard_number>(a_cppint) - static_cast<dbl_standard_number>(b_cppint) + e_cppint) % e_cppint;
     dbl_standard_number a_mul_b_s =
-        (static_cast<dbl_standard_number>(a_cppint) * static_cast<dbl_standard_number>(b_cppint)) %
-        e_cppint;
+        (static_cast<dbl_standard_number>(a_cppint) * static_cast<dbl_standard_number>(b_cppint)) % e_cppint;
     dbl_standard_number a_mod_b_s =
-        (static_cast<dbl_standard_number>(a_cppint) % static_cast<dbl_standard_number>(b_cppint)) %
-        e_cppint;
+        (static_cast<dbl_standard_number>(a_cppint) % static_cast<dbl_standard_number>(b_cppint)) % e_cppint;
     standard_number a_and_b_s = (a_cppint & b_cppint) % e_cppint;
     standard_number a_or_b_s = (a_cppint | b_cppint) % e_cppint;
     standard_number a_xor_b_s = (a_cppint ^ b_cppint) % e_cppint;
@@ -187,7 +187,6 @@ bool base_operations_test(std::array<std::array<Number, enum_len>, N> test_data)
     }
     return true;
 }
-
 
 BOOST_AUTO_TEST_SUITE(static_tests)
 
@@ -437,16 +436,26 @@ BOOST_AUTO_TEST_CASE(base_ops_even_mod_backend_17) {
     using test_set = std::array<standard_number, test_set_len>;
     using test_data_t = std::array<test_set, 20>;
     constexpr test_data_t test_data = {{
-        {0x1e240_cppui_modular17, 0x3a97_cppui_modular17, 0xc070_cppui_modular17},   {0x1e240_cppui_modular17, 0x1dea7_cppui_modular17, 0x1aaab_cppui_modular17},
-        {0x1e240_cppui_modular17, 0x1936f_cppui_modular17, 0xfb0b_cppui_modular17},  {0x1e240_cppui_modular17, 0x13067_cppui_modular17, 0x1566c_cppui_modular17},
-        {0x1e240_cppui_modular17, 0x1b960_cppui_modular17, 0x1773f_cppui_modular17}, {0x1e240_cppui_modular17, 0x101e4_cppui_modular17, 0x156ca_cppui_modular17},
-        {0x1e240_cppui_modular17, 0x167f3_cppui_modular17, 0x13c52_cppui_modular17}, {0x1e240_cppui_modular17, 0xc536_cppui_modular17, 0x14c8e_cppui_modular17},
-        {0x1e240_cppui_modular17, 0xed02_cppui_modular17, 0x1dafc_cppui_modular17},  {0x1e240_cppui_modular17, 0x126a6_cppui_modular17, 0x18a8b_cppui_modular17},
-        {0x1e240_cppui_modular17, 0x111ac_cppui_modular17, 0x94c2_cppui_modular17},  {0x1e240_cppui_modular17, 0x3a03_cppui_modular17, 0x89d8_cppui_modular17},
-        {0x1e240_cppui_modular17, 0x3add_cppui_modular17, 0x101ae_cppui_modular17},  {0x1e240_cppui_modular17, 0x8db4_cppui_modular17, 0x50e2_cppui_modular17},
-        {0x1e240_cppui_modular17, 0x1bab_cppui_modular17, 0x1d5f6_cppui_modular17},  {0x1e240_cppui_modular17, 0x144dc_cppui_modular17, 0x172f8_cppui_modular17},
-        {0x1e240_cppui_modular17, 0x1cd30_cppui_modular17, 0x1a5c_cppui_modular17},  {0x1e240_cppui_modular17, 0x13c3d_cppui_modular17, 0x4358_cppui_modular17},
-        {0x1e240_cppui_modular17, 0x18d68_cppui_modular17, 0x1299d_cppui_modular17}, {0x1e240_cppui_modular17, 0x10153_cppui_modular17, 0x2c8a_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x3a97_cppui_modular17, 0xc070_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x1dea7_cppui_modular17, 0x1aaab_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x1936f_cppui_modular17, 0xfb0b_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x13067_cppui_modular17, 0x1566c_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x1b960_cppui_modular17, 0x1773f_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x101e4_cppui_modular17, 0x156ca_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x167f3_cppui_modular17, 0x13c52_cppui_modular17},
+        {0x1e240_cppui_modular17, 0xc536_cppui_modular17, 0x14c8e_cppui_modular17},
+        {0x1e240_cppui_modular17, 0xed02_cppui_modular17, 0x1dafc_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x126a6_cppui_modular17, 0x18a8b_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x111ac_cppui_modular17, 0x94c2_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x3a03_cppui_modular17, 0x89d8_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x3add_cppui_modular17, 0x101ae_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x8db4_cppui_modular17, 0x50e2_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x1bab_cppui_modular17, 0x1d5f6_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x144dc_cppui_modular17, 0x172f8_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x1cd30_cppui_modular17, 0x1a5c_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x13c3d_cppui_modular17, 0x4358_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x18d68_cppui_modular17, 0x1299d_cppui_modular17},
+        {0x1e240_cppui_modular17, 0x10153_cppui_modular17, 0x2c8a_cppui_modular17},
     }};
 
     bool res = base_operations_test(test_data);
@@ -458,16 +467,26 @@ BOOST_AUTO_TEST_CASE(base_ops_odd_mod_backend_17) {
     using test_set = std::array<standard_number, test_set_len>;
     using test_data_t = std::array<test_set, 20>;
     constexpr test_data_t test_data = {{
-        {0x1e241_cppui_modular17, 0x3a97_cppui_modular17, 0xc070_cppui_modular17},   {0x1e241_cppui_modular17, 0x1dea7_cppui_modular17, 0x1aaab_cppui_modular17},
-        {0x1e241_cppui_modular17, 0x1936f_cppui_modular17, 0xfb0b_cppui_modular17},  {0x1e241_cppui_modular17, 0x13067_cppui_modular17, 0x1566c_cppui_modular17},
-        {0x1e241_cppui_modular17, 0x1b960_cppui_modular17, 0x1773f_cppui_modular17}, {0x1e241_cppui_modular17, 0x101e4_cppui_modular17, 0x156ca_cppui_modular17},
-        {0x1e241_cppui_modular17, 0x167f3_cppui_modular17, 0x13c52_cppui_modular17}, {0x1e241_cppui_modular17, 0xc536_cppui_modular17, 0x14c8e_cppui_modular17},
-        {0x1e241_cppui_modular17, 0xed02_cppui_modular17, 0x1dafc_cppui_modular17},  {0x1e241_cppui_modular17, 0x126a6_cppui_modular17, 0x18a8b_cppui_modular17},
-        {0x1e241_cppui_modular17, 0x111ac_cppui_modular17, 0x94c2_cppui_modular17},  {0x1e241_cppui_modular17, 0x3a03_cppui_modular17, 0x89d8_cppui_modular17},
-        {0x1e241_cppui_modular17, 0x3add_cppui_modular17, 0x101ae_cppui_modular17},  {0x1e241_cppui_modular17, 0x8db4_cppui_modular17, 0x50e2_cppui_modular17},
-        {0x1e241_cppui_modular17, 0x1bab_cppui_modular17, 0x1d5f6_cppui_modular17},  {0x1e241_cppui_modular17, 0x144dc_cppui_modular17, 0x172f8_cppui_modular17},
-        {0x1e241_cppui_modular17, 0x1cd30_cppui_modular17, 0x1a5c_cppui_modular17},  {0x1e241_cppui_modular17, 0x13c3d_cppui_modular17, 0x4358_cppui_modular17},
-        {0x1e241_cppui_modular17, 0x18d68_cppui_modular17, 0x1299d_cppui_modular17}, {0x1e241_cppui_modular17, 0x10153_cppui_modular17, 0x2c8a_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x3a97_cppui_modular17, 0xc070_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x1dea7_cppui_modular17, 0x1aaab_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x1936f_cppui_modular17, 0xfb0b_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x13067_cppui_modular17, 0x1566c_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x1b960_cppui_modular17, 0x1773f_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x101e4_cppui_modular17, 0x156ca_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x167f3_cppui_modular17, 0x13c52_cppui_modular17},
+        {0x1e241_cppui_modular17, 0xc536_cppui_modular17, 0x14c8e_cppui_modular17},
+        {0x1e241_cppui_modular17, 0xed02_cppui_modular17, 0x1dafc_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x126a6_cppui_modular17, 0x18a8b_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x111ac_cppui_modular17, 0x94c2_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x3a03_cppui_modular17, 0x89d8_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x3add_cppui_modular17, 0x101ae_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x8db4_cppui_modular17, 0x50e2_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x1bab_cppui_modular17, 0x1d5f6_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x144dc_cppui_modular17, 0x172f8_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x1cd30_cppui_modular17, 0x1a5c_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x13c3d_cppui_modular17, 0x4358_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x18d68_cppui_modular17, 0x1299d_cppui_modular17},
+        {0x1e241_cppui_modular17, 0x10153_cppui_modular17, 0x2c8a_cppui_modular17},
     }};
 
     bool res = base_operations_test(test_data);
@@ -484,9 +503,12 @@ BOOST_AUTO_TEST_CASE(secp256k1_incorrect_multiplication) {
     using modular_adaptor_type = modular_adaptor<Backend, params_safe_type>;
     using modular_number = boost::multiprecision::number<modular_adaptor_type>;
 
-    constexpr standart_number modulus = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_cppui_modular256;
-    constexpr standart_number x_standard = 0xb5d724ce6f44c3c587867bbcb417e9eb6fa05e7e2ef029166568f14eb3161387_cppui_modular256;
-    constexpr standart_number res_standard = 0xad6e1fcc680392abfb075838eafa513811112f14c593e0efacb6e9d0d7770b4_cppui_modular256;
+    constexpr standart_number modulus =
+        0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_cppui_modular256;
+    constexpr standart_number x_standard =
+        0xb5d724ce6f44c3c587867bbcb417e9eb6fa05e7e2ef029166568f14eb3161387_cppui_modular256;
+    constexpr standart_number res_standard =
+        0xad6e1fcc680392abfb075838eafa513811112f14c593e0efacb6e9d0d7770b4_cppui_modular256;
     constexpr modular_number x(modular_adaptor_type(x_standard.backend(), modulus.backend()));
     constexpr modular_number res(modular_adaptor_type(res_standard.backend(), modulus.backend()));
     BOOST_CHECK_EQUAL(x * x, res);
@@ -498,7 +520,8 @@ BOOST_AUTO_TEST_CASE(bad_negation) {
     using params_safe_type = modular_params_rt<Backend>;
     using modular_backend = modular_adaptor<Backend, params_safe_type>;
     using modular_number = boost::multiprecision::number<modular_backend>;
-    constexpr standart_number modulus = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_cppui_modular256;
+    constexpr standart_number modulus =
+        0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_cppui_modular256;
     constexpr modular_number x(modular_backend(0u, modulus.backend()));
     constexpr modular_number res = -x;
     assert(res == 0u);

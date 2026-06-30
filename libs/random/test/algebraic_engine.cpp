@@ -44,30 +44,30 @@ using namespace nil::crypto3;
 
 template<typename FieldParams>
 void print_field_element(std::ostream &os, const typename algebra::fields::detail::element_fp<FieldParams> &e) {
-    os << std::hex << e.data;
+    os << std::hex << e;
 }
 
 template<typename FieldParams>
 void print_field_element(std::ostream &os, const typename algebra::fields::detail::element_fp2<FieldParams> &e) {
-    os << "[" << e.data[0].data << ", " << e.data[1].data << "]";
+    os << "[" << e.data[0] << ", " << e.data[1] << "]";
 }
 
 template<typename FpCurveGroupElement>
 void print_fp_curve_group_element(std::ostream &os, const FpCurveGroupElement &e) {
-    os << "( " << e.X.data << " : " << e.Y.data << " : " << e.Z.data << " )";
+    os << "( " << e.X << " : " << e.Y << " : " << e.Z << " )";
 }
 
 template<typename Fp2CurveGroupElement>
 void print_fp2_curve_group_element(std::ostream &os, const Fp2CurveGroupElement &e) {
-    os << "(" << e.X.data[0].data << " , " << e.X.data[1].data << ") : (" << e.Y.data[0].data << " , "
-       << e.Y.data[1].data << ") : (" << e.Z.data[0].data << " , " << e.Z.data[1].data << ")";
+    os << "(" << e.X.data[0] << " , " << e.X.data[1] << ") : (" << e.Y.data[0] << " , " << e.Y.data[1] << ") : ("
+       << e.Z.data[0] << " , " << e.Z.data[1] << ")";
 }
 
 template<typename Fp3CurveGroupElement>
 void print_fp3_curve_group_element(std::ostream &os, const Fp3CurveGroupElement &e) {
-    os << "(" << e.X.data[0].data << " , " << e.X.data[1].data << " , " << e.X.data[2].data << ") : ("
-       << e.Y.data[0].data << " , " << e.Y.data[1].data << " , " << e.Y.data[2].data << ") : (" << e.Z.data[0].data
-       << " , " << e.Z.data[1].data << " , " << e.Z.data[2].data << ")";
+    os << "(" << e.X.data[0] << " , " << e.X.data[1] << " , " << e.X.data[2] << ") : (" << e.Y.data[0] << " , "
+       << e.Y.data[1] << " , " << e.Y.data[2] << ") : (" << e.Z.data[0] << " , " << e.Z.data[1] << " , " << e.Z.data[2]
+       << ")";
 }
 
 namespace boost {
@@ -89,7 +89,8 @@ namespace boost {
 
             template<typename FieldParams>
             struct print_log_value<typename algebra::fields::detail::element_fp6_3over2<FieldParams>> {
-                void operator()(std::ostream &os, typename algebra::fields::detail::element_fp6_3over2<FieldParams> const &e) {
+                void operator()(std::ostream &os,
+                                typename algebra::fields::detail::element_fp6_3over2<FieldParams> const &e) {
                     print_field_element(os, e);
                 }
             };
@@ -118,14 +119,16 @@ namespace boost {
 
             template<>
             struct print_log_value<typename algebra::curves::bls12<381>::g1_type<>::value_type> {
-                void operator()(std::ostream &os, typename algebra::curves::bls12<381>::g1_type<>::value_type const &e) {
+                void operator()(std::ostream &os,
+                                typename algebra::curves::bls12<381>::g1_type<>::value_type const &e) {
                     print_fp_curve_group_element(os, e);
                 }
             };
 
             template<>
             struct print_log_value<typename algebra::curves::bls12<381>::g2_type<>::value_type> {
-                void operator()(std::ostream &os, typename algebra::curves::bls12<381>::g2_type<>::value_type const &e) {
+                void operator()(std::ostream &os,
+                                typename algebra::curves::bls12<381>::g2_type<>::value_type const &e) {
                     print_fp2_curve_group_element(os, e);
                 }
             };
@@ -136,7 +139,7 @@ namespace boost {
                 }
             };
         }    // namespace tt_detail
-    }        // namespace test_tools
+    }    // namespace test_tools
 }    // namespace boost
 
 template<typename T>

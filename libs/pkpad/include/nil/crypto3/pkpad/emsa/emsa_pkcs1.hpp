@@ -69,7 +69,8 @@ namespace nil {
                         }
 
                         secure_vector<uint8_t> T(output_length);
-                        const size_t P_LENGTH = output_length - message_length - HashType::policy_type::pkcs_id.size() - 2;
+                        const size_t P_LENGTH =
+                            output_length - message_length - HashType::policy_type::pkcs_id.size() - 2;
 
                         T[0] = 0x01;
                         set_mem(&T[1], P_LENGTH, 0xFF);
@@ -149,8 +150,8 @@ namespace nil {
                     }
                 };
             }    // namespace padding
-        }        // namespace pubkey
-    }            // namespace crypto3
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

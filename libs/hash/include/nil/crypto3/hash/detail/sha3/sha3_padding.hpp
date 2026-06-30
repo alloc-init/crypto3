@@ -30,7 +30,6 @@
 #include <nil/crypto3/hash/detail/keccak/keccak_padding.hpp>
 #include <nil/crypto3/hash/detail/sha3/sha3_policy.hpp>
 
-
 namespace nil {
     namespace crypto3 {
         namespace hashes {
@@ -51,9 +50,10 @@ namespace nil {
                     constexpr static const std::size_t block_words = policy_type::block_words;
                     typedef typename policy_type::block_type block_type;
 
-                    typedef ::nil::crypto3::detail::injector<stream_endian::big_octet_big_bit, stream_endian::little_octet_little_bit, word_bits,
-                            block_words>
-                            injector_type;
+                    typedef ::nil::crypto3::detail::injector<stream_endian::big_octet_big_bit,
+                                                             stream_endian::little_octet_little_bit, word_bits,
+                                                             block_words>
+                        injector_type;
 
                 public:
                     static std::vector<block_type> get_padded_blocks(const block_type &block, std::size_t block_seen) {
@@ -63,10 +63,11 @@ namespace nil {
                         std::vector<block_type> padded_blocks;
                         block_type new_block = block;
                         // set variable to 01
-                        word_type sha_specific_bits = unbounded_shr(high_bits<word_bits>(~word_type(), 1), 1);
+                        word_type sha_specific_bits =
+                            nil::crypto3::detail::unbounded_shr(high_bits<word_bits>(~word_type(), 1), 1);
                         // get how many bits from it could fit into current block
-                        const std::size_t sha_specific_bits_n_for_first_block = std::min(block_bits - block_seen,
-                                                                                         std::size_t{2});
+                        const std::size_t sha_specific_bits_n_for_first_block =
+                            std::min(block_bits - block_seen, std::size_t {2});
                         // inject this amount of bits
                         injector_type::inject(sha_specific_bits, sha_specific_bits_n_for_first_block, new_block,
                                               block_seen);
@@ -84,8 +85,8 @@ namespace nil {
                                                   block_seen, sha_specific_bits_n_for_first_block);
                         }
 
-                        auto keccak_padding_result = keccak_1600_padder<PolicyType>::get_padded_blocks(new_block,
-                                                                                                       block_seen);
+                        auto keccak_padding_result =
+                            keccak_1600_padder<PolicyType>::get_padded_blocks(new_block, block_seen);
                         padded_blocks.insert(padded_blocks.end(),
                                              std::make_move_iterator(keccak_padding_result.begin()),
                                              std::make_move_iterator(keccak_padding_result.end()));

@@ -30,7 +30,7 @@ namespace nil {
         namespace detail {
             template<typename T, typename U>
             constexpr T pow(T x, U n) {
-                T result = 1u;
+                T result = 1;
                 while (n > 0) {
                     if (n % 2 == 0) {
                         // n is even
@@ -45,7 +45,7 @@ namespace nil {
                 return result;
             }
         }    // namespace detail
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // #ifndef CRYPTO3_DETAIL_STATIC_POW_HPP

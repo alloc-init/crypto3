@@ -67,8 +67,10 @@ namespace nil {
             private:
                 constexpr static const std::size_t length_bits = params_type::length_bits;
                 // FIXME: do something more intelligent than capping at 64
-                constexpr static const std::size_t length_type_bits =
-                    length_bits < input_block_bits ? input_block_bits : length_bits > 64 ? 64 : length_bits;
+                constexpr static const std::size_t length_type_bits = length_bits < input_block_bits ?
+                                                                          input_block_bits :
+                                                                      length_bits > 64 ? 64 :
+                                                                                         length_bits;
                 typedef typename boost::uint_t<length_type_bits>::least length_type;
 
                 BOOST_STATIC_ASSERT(!length_bits || length_bits % input_block_bits == 0);
@@ -84,7 +86,8 @@ namespace nil {
                         // Convert the input into words
                         input_block_type block = {0};
 
-                        ::nil::crypto3::detail::pack_to<endian_type, value_bits, input_value_bits>(cache.begin(), cache.end(), block.begin());
+                        ::nil::crypto3::detail::pack_to<endian_type, value_bits, input_value_bits>(
+                            cache.begin(), cache.end(), block.begin());
 
                         // Process the block
                         std::size_t ibb = input_block_bits;
@@ -110,8 +113,8 @@ namespace nil {
                         // Convert the input into words
                         input_block_type block = {0};
 
-                        ::nil::crypto3::detail::pack_to<endian_type, value_bits, input_value_bits>(first, first + block_values, block.begin());
-
+                        ::nil::crypto3::detail::pack_to<endian_type, value_bits, input_value_bits>(
+                            first, first + block_values, block.begin());
 
                         seen += value_bits * block_values;
 
@@ -124,7 +127,6 @@ namespace nil {
                         }
                     }
 #endif
-
 
                     for (; n; --n, ++first) {
                         update_one(*first);
@@ -140,8 +142,8 @@ namespace nil {
                         input_block_type block = {0};
                         typename input_block_type::const_iterator v = block.cbegin();
 
-                        ::nil::crypto3::detail::pack_to<endian_type, value_bits, input_value_bits>(cache.begin(), cache.begin() + cache.size(), block.begin());
-
+                        ::nil::crypto3::detail::pack_to<endian_type, value_bits, input_value_bits>(
+                            cache.begin(), cache.begin() + cache.size(), block.begin());
 
                         for (length_type itr = seen - (seen % input_block_bits); itr < seen; itr += value_bits) {
                             state(*v++);
@@ -188,7 +190,7 @@ namespace nil {
                 cache_type cache;
             };
         }    // namespace codec
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_FIXED_BLOCK_STREAM_PROCESSOR_HPP

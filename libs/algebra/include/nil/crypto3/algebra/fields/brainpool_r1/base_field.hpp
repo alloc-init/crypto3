@@ -31,8 +31,6 @@
 
 #include <nil/crypto3/algebra/fields/field.hpp>
 
-
-
 namespace nil {
     namespace crypto3 {
         namespace algebra {
@@ -49,6 +47,8 @@ namespace nil {
                 struct brainpool_r1_base_field<160> : public field<160> {
                     typedef field<160> policy_type;
 
+                    using small_subfield = brainpool_r1_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -56,14 +56,14 @@ namespace nil {
 
                     constexpr static const std::size_t number_bits = policy_type::number_bits;
 
-                    constexpr static const integral_type modulus = 0xE95E4A5F737059DC60DFC7AD95B3D8139515620F_cppui_modular160;
+                    constexpr static const integral_type modulus =
+                        0xE95E4A5F737059DC60DFC7AD95B3D8139515620F_cppui_modular160;
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<brainpool_r1_base_field<160>>> value_type;
@@ -76,6 +76,8 @@ namespace nil {
                 struct brainpool_r1_base_field<192> : public field<192> {
                     typedef field<192> policy_type;
 
+                    using small_subfield = brainpool_r1_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -86,10 +88,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<brainpool_r1_base_field<192>>> value_type;
@@ -102,6 +103,8 @@ namespace nil {
                 struct brainpool_r1_base_field<224> : public field<224> {
                     typedef field<224> policy_type;
 
+                    using small_subfield = brainpool_r1_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -112,10 +115,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<brainpool_r1_base_field<224>>> value_type;
@@ -128,6 +130,8 @@ namespace nil {
                 struct brainpool_r1_base_field<256> : public field<256> {
                     typedef field<256> policy_type;
 
+                    using small_subfield = brainpool_r1_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -138,10 +142,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<brainpool_r1_base_field<256>>> value_type;
@@ -154,6 +157,8 @@ namespace nil {
                 struct brainpool_r1_base_field<320> : public field<320> {
                     typedef field<320> policy_type;
 
+                    using small_subfield = brainpool_r1_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -164,10 +169,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<brainpool_r1_base_field<320>>> value_type;
@@ -180,6 +184,8 @@ namespace nil {
                 struct brainpool_r1_base_field<384> : public field<384> {
                     typedef field<384> policy_type;
 
+                    using small_subfield = brainpool_r1_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -190,10 +196,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<brainpool_r1_base_field<384>>> value_type;
@@ -206,6 +211,8 @@ namespace nil {
                 struct brainpool_r1_base_field<512> : public field<512> {
                     typedef field<512> policy_type;
 
+                    using small_subfield = brainpool_r1_base_field;
+
                     constexpr static const std::size_t modulus_bits = policy_type::modulus_bits;
                     typedef typename policy_type::integral_type integral_type;
 
@@ -216,10 +223,9 @@ namespace nil {
 
                     typedef typename policy_type::modular_backend modular_backend;
                     constexpr static const modular_params_type modulus_params = modulus.backend();
-                    typedef boost::multiprecision::number<
-                        boost::multiprecision::backends::modular_adaptor<
-                            modular_backend,
-                            boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
+                    typedef boost::multiprecision::number<boost::multiprecision::backends::modular_adaptor<
+                        modular_backend,
+                        boost::multiprecision::backends::modular_params_ct<modular_backend, modulus_params>>>
                         modular_type;
 
                     typedef typename detail::element_fp<params<brainpool_r1_base_field<512>>> value_type;
@@ -289,8 +295,8 @@ namespace nil {
                 using brainpool_r1 = brainpool_r1_base_field<Version>;
 
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_BRAINPOOL_R1_BASE_FIELD_HPP

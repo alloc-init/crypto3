@@ -40,17 +40,17 @@ namespace nil {
                  * @brief A struct representing a pallas curve.
                  */
 #ifdef __ZKLLVM__
-                    struct pallas_scalar_field {
-                        typedef __zkllvm_field_pallas_scalar value_type;
-                    };
+                struct pallas_scalar_field {
+                    typedef __zkllvm_field_pallas_scalar value_type;
+                };
 #else
                 using pallas_scalar_field = vesta_base_field;
 
                 using pallas_fr = pallas_scalar_field;
 #endif
             }    // namespace fields
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_PALLAS_SCALAR_FIELD_HPP

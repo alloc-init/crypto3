@@ -109,7 +109,7 @@ namespace nil {
 
                         if (!cache.empty()) {
                             input_block_type ib = {0};
-                            std::move(cache.begin(), cache.end(), ib.begin());
+                            copy_range(cache.begin(), cache.end(), ib.begin());
                             output_block_type ob = codec_mode_type::process_block(ib);
                             std::move(ob.begin(), ob.end(), std::inserter(res, res.end()));
                         }
@@ -143,7 +143,7 @@ namespace nil {
                     inline void process(const input_value_type &value, std::size_t) {
                         if (cache.size() == cache.max_size()) {
                             input_block_type ib = {0};
-                            std::move(cache.begin(), cache.end(), ib.begin());
+                            copy_range(cache.begin(), cache.end(), ib.begin());
                             output_block_type ob = codec_mode_type::process_block(ib);
                             std::move(ob.begin(), ob.end(), std::inserter(dgst, dgst.end()));
 
@@ -159,20 +159,37 @@ namespace nil {
                         if (cache.empty()) {
                             ob = codec_mode_type::process_block(block);
                         } else {
-                            input_block_type b = make_array<input_block_values>(cache.begin(), cache.end());
-                            typename input_block_type::const_iterator itr =
-                                block.begin() + (cache.max_size() - cache.size());
+                            input_block_type b = {0};
+                            std::size_t out_index = 0;
+                            for (typename cache_type::const_iterator itr = cache.begin();
+                                 itr != cache.end() && out_index < b.size(); ++itr, ++out_index) {
+                                b[out_index] = *itr;
+                            }
 
-                            std::move(block.begin(), itr, b.end());
+                            typename input_block_type::const_iterator itr = block.begin();
+
+                            for (; out_index < b.size() && itr != block.end(); ++out_index, ++itr) {
+                                b[out_index] = *itr;
+                            }
 
                             ob = codec_mode_type::process_block(b);
 
                             cache.clear();
-                            cache.insert(cache.end(), itr, block.end());
+                            for (; itr != block.end(); ++itr) {
+                                cache.push_back(*itr);
+                            }
                         }
 
                         std::move(ob.begin(), ob.end(), std::inserter(dgst, dgst.end()));
                         seen += input_block_bits;
+                    }
+
+                    template<typename InputIterator, typename OutputIterator>
+                    static OutputIterator copy_range(InputIterator first, InputIterator last, OutputIterator out) {
+                        for (; first != last; ++first, ++out) {
+                            *out = *first;
+                        }
+                        return out;
                     }
 
                     std::size_t seen;
@@ -239,7 +256,7 @@ namespace nil {
                     std::size_t leading_zeros;
                     input_block_type input;
                 };    // namespace impl
-            }         // namespace impl
+            }    // namespace impl
 
             namespace tag {
                 template<typename ProcessingMode>
@@ -276,8 +293,8 @@ namespace nil {
                     return boost::accumulators::extract_result<tag::codec<typename Codec::stream_decoder_type>>(acc);
                 }
             }    // namespace extract
-        }        // namespace accumulators
-    }            // namespace crypto3
+        }    // namespace accumulators
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_CODEC_HPP

@@ -57,7 +57,6 @@ namespace nil {
                     template<typename CurveParams>
                     class curve_element<CurveParams, forms::edwards, coordinates::inverted> {
                     public:
-
                         using params_type = CurveParams;
                         using field_type = typename params_type::field_type;
 
@@ -87,20 +86,20 @@ namespace nil {
                         constexpr curve_element() :
                             curve_element(params_type::zero_fill[0],
                                           params_type::zero_fill[1],
-                                          params_type::zero_fill[2]) {};
+                                          params_type::zero_fill[2]) { };
 
                         /** @brief
                          *    @return the selected point (X:Y:Z)
                          *
                          */
-                        constexpr curve_element(const field_value_type& X, const field_value_type& Y, const field_value_type& Z) 
-                            : X(X), Y(Y), Z(Z) 
-                        { }
+                        constexpr curve_element(const field_value_type &X, const field_value_type &Y,
+                                                const field_value_type &Z) : X(X), Y(Y), Z(Z) {
+                        }
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
                         explicit constexpr curve_element(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                            const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                         }
 
@@ -169,7 +168,7 @@ namespace nil {
                                 const auto Y2 = this->Y.squared();
                                 const auto Z2 = this->Z.squared();
 
-                                return (params_type::a * Z2*Y2 + Z2*X2 == X2*Y2 + params_type::d * Z2*Z2);
+                                return (params_type::a * Z2 * Y2 + Z2 * X2 == X2 * Y2 + params_type::d * Z2 * Z2);
                             }
                         }
 
@@ -208,8 +207,8 @@ namespace nil {
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                        constexpr const curve_element &
+                            operator=(const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                             return *this;
                         }
@@ -234,7 +233,7 @@ namespace nil {
                             return result;
                         }
 
-                        constexpr curve_element& operator+=(const curve_element &other) {
+                        constexpr curve_element &operator+=(const curve_element &other) {
                             // handle special cases having to do with O
                             if (this->is_zero()) {
                                 *this = other;
@@ -256,7 +255,7 @@ namespace nil {
                             return (*this) + (-other);
                         }
 
-                        constexpr curve_element& operator-=(const curve_element &other) {
+                        constexpr curve_element &operator-=(const curve_element &other) {
                             return (*this) += (-other);
                         }
 
@@ -286,14 +285,15 @@ namespace nil {
                     };
 
                     template<typename CurveParams>
-                    std::ostream& operator<<(std::ostream& os, curve_element<CurveParams, forms::edwards, coordinates::inverted>  const& e)
-                    {
+                    std::ostream &
+                        operator<<(std::ostream &os,
+                                   curve_element<CurveParams, forms::edwards, coordinates::inverted> const &e) {
                         os << "{\"X\":" << e.X << ",\"Y\":" << e.Y << ",\"Z\":" << e.Z << "}";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_EDWARDS_G1_ELEMENT_INVERTED_HPP

@@ -71,14 +71,13 @@ void test_curve_element_fixed_size_container_big_endian(std::array<T, TSize> val
     static_assert(nil::marshalling::is_compatible<T>::value);
 
     nil::marshalling::status_type status;
-    std::vector<unit_type> cv =
-        nil::marshalling::pack<Endianness>(val_container, status);
+    std::vector<unit_type> cv = nil::marshalling::pack<Endianness>(val_container, status);
 
     BOOST_CHECK(status == nil::marshalling::status_type::success);
 
-   std::array<T, TSize> test_val = nil::marshalling::pack<Endianness>(cv, status);
+    std::array<T, TSize> test_val = nil::marshalling::pack<Endianness>(cv, status);
 
-   BOOST_CHECK(std::equal(val_container.begin(), val_container.end(), test_val.begin()));
+    BOOST_CHECK(std::equal(val_container.begin(), val_container.end(), test_val.begin()));
     BOOST_CHECK(status == nil::marshalling::status_type::success);
 }
 
@@ -94,7 +93,7 @@ void test_curve_element_fixed_size_container() {
         for (std::size_t i = 0; i < TSize; i++) {
             val_container[i] = nil::crypto3::algebra::random_element<CurveGroup>();
         }
-        test_curve_element_fixed_size_container_big_endian<typename CurveGroup::value_type, TSize>(val_container);
+        test_curve_element_fixed_size_container_big_endian(val_container);
         // test_curve_element_fixed_size_container_little_endian<typename CurveGroup::value_type, TSize>(val_container);
     }
 }

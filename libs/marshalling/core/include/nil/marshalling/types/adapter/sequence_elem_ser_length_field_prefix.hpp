@@ -42,8 +42,6 @@ namespace nil {
                     using base_impl_type = TBase;
                     using LenField = TLenField;
 
-                    static_assert(!LenField::is_version_dependent(), "Prefix fields must not be version dependent");
-
                 public:
                     using value_type = typename base_impl_type::value_type;
                     using element_type = typename base_impl_type::element_type;
@@ -60,11 +58,11 @@ namespace nil {
 
                     sequence_elem_ser_length_field_prefix(sequence_elem_ser_length_field_prefix &&) = default;
 
-                    sequence_elem_ser_length_field_prefix &operator=(const sequence_elem_ser_length_field_prefix &)
-                        = default;
+                    sequence_elem_ser_length_field_prefix &
+                        operator=(const sequence_elem_ser_length_field_prefix &) = default;
 
-                    sequence_elem_ser_length_field_prefix &operator=(sequence_elem_ser_length_field_prefix &&)
-                        = default;
+                    sequence_elem_ser_length_field_prefix &
+                        operator=(sequence_elem_ser_length_field_prefix &&) = default;
 
                     std::size_t length() const {
                         return length_internal(Len_field_length_tag(), ElemLengthTag());
@@ -185,14 +183,14 @@ namespace nil {
                                                   FixedLengthLenFieldTag,
                                                   VarLengthLenFieldTag>::type;
 
-                    using ElemLengthTag = typename std::conditional<base_impl_type::min_element_length()
-                                                                        == base_impl_type::max_element_length(),
+                    using ElemLengthTag = typename std::conditional<base_impl_type::min_element_length() ==
+                                                                        base_impl_type::max_element_length(),
                                                                     FixedLengthElemTag,
                                                                     VarLengthElemTag>::type;
 
                     std::size_t length_internal(FixedLengthLenFieldTag, FixedLengthElemTag) const {
-                        return (LenField::min_length() + base_impl_type::min_element_length())
-                               * base_impl_type::value().size();
+                        return (LenField::min_length() + base_impl_type::min_element_length()) *
+                               base_impl_type::value().size();
                     }
 
                     std::size_t length_internal(FixedLengthLenFieldTag, VarLengthElemTag) const {
@@ -206,8 +204,8 @@ namespace nil {
                     std::size_t length_internal(VarLengthLenFieldTag, FixedLengthElemTag) const {
                         LenField lenField;
                         lenField.value() = base_impl_type::min_element_length();
-                        return (lenField.length() + base_impl_type::min_element_length())
-                               * base_impl_type::value().size();
+                        return (lenField.length() + base_impl_type::min_element_length()) *
+                               base_impl_type::value().size();
                     }
 
                     std::size_t length_internal(VarLengthLenFieldTag, VarLengthElemTag) const {
@@ -246,7 +244,7 @@ namespace nil {
                 };
 
             }    // namespace adapter
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_SEQUENCE_ELEM_SER_LENGTH_FIELD_PREFIX_HPP

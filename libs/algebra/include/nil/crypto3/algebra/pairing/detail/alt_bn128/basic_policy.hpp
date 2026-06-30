@@ -75,8 +75,8 @@ namespace nil {
                     constexpr typename alt_bn128_basic_policy<254>::integral_type const
                         alt_bn128_basic_policy<254>::ate_loop_count;
                 }    // namespace detail
-            }        // namespace pairing
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace pairing
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_ALT_BN128_BASIC_POLICY_HPP

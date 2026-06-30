@@ -53,16 +53,13 @@ namespace nil {
 
                     using g2_field_type_value = typename g2_type::field_type::value_type;
 
-
                     /* https://eprint.iacr.org/2013/722.pdf
                      * Equations (11) at p.13
                      * current *= 2, output ell coefficients in c
                      */
-                    static void doubling_step_for_miller_loop(
-                            const typename base_field_type::value_type &two_inv,
-                            typename g2_type::value_type &current,
-                            typename policy_type::ate_ell_coeffs &c)
-                    {
+                    static void doubling_step_for_miller_loop(const typename base_field_type::value_type &two_inv,
+                                                              typename g2_type::value_type &current,
+                                                              typename policy_type::ate_ell_coeffs &c) {
 
                         const g2_field_type_value X = current.X, Y = current.Y, Z = current.Z;
 
@@ -72,24 +69,24 @@ namespace nil {
                         const g2_field_type_value D = C.doubled() + C;                   // D = 3 * C
                         const g2_field_type_value E = params_type::twist_coeff_b * D;    // E = twist_b * D
 
-                        const g2_field_type_value F = E.doubled() + E;                       // F = 3 * E
+                        const g2_field_type_value F = E.doubled() + E;                // F = 3 * E
                         const g2_field_type_value G = two_inv * (B + F);              // G = (B+F)/2
                         const g2_field_type_value H = (Y + Z).squared() - (B + C);    // H = (Y1+Z1)^2-(B+C)
                         const g2_field_type_value I = E - B;                          // I = E-B
                         const g2_field_type_value J = X.squared();                    // J = X1^2
                         const g2_field_type_value E_squared = E.squared();            // E_squared = E^2
 
-                        current.X = A * (B - F);                         // X3 = A * (B-F)
+                        current.X = A * (B - F);                                        // X3 = A * (B-F)
                         current.Y = G.squared() - (E_squared.doubled() + E_squared);    // Y3 = G^2 - 3*E^2
-                        current.Z = B * H;                               // Z3 = B * H
+                        current.Z = B * H;                                              // Z3 = B * H
 
                         if (params_type::twist_type == curve_twist_type::TWIST_TYPE_M) {
                             c.ell_0 = I;
-                            c.ell_VW = J.doubled()+J;
+                            c.ell_VW = J.doubled() + J;
                             c.ell_VV = -H;
                         } else {
                             c.ell_0 = -H;
-                            c.ell_VW = J.doubled()+J;
+                            c.ell_VW = J.doubled() + J;
                             c.ell_VV = I;
                         }
                     }
@@ -98,11 +95,9 @@ namespace nil {
                      * Equations (14?) at p.14
                      */
                     /* current += base, output ell coefficients in c */
-                    static void mixed_addition_step_for_miller_loop(
-                            const typename g2_affine_type::value_type base,
-                            typename g2_type::value_type &current,
-                            typename policy_type::ate_ell_coeffs &c)
-                    {
+                    static void mixed_addition_step_for_miller_loop(const typename g2_affine_type::value_type base,
+                                                                    typename g2_type::value_type &current,
+                                                                    typename policy_type::ate_ell_coeffs &c) {
 
                         const g2_field_type_value X1 = current.X, Y1 = current.Y, Z1 = current.Z;
                         const g2_field_type_value &x2 = base.X, &y2 = base.Y;
@@ -133,8 +128,13 @@ namespace nil {
                         }
                     }
 
-                    static typename g2_affine_type::value_type mul_by_char(
-                            typename g2_affine_type::value_type const& Q) {
+                    /* Multiply curve point by field characteristic.
+                     * For G2 groups the base field is $F_{p^k}$ and field
+                     * characteristic is $p$. This multiplication can be done
+                     * more efficiently rather than direct multiplication by
+                     * scalar */
+                    static typename g2_affine_type::value_type
+                        mul_by_char(typename g2_affine_type::value_type const &Q) {
 
                         typename g2_affine_type::value_type result;
 
@@ -177,14 +177,14 @@ namespace nil {
 
                         typename policy_type::ate_ell_coeffs c;
 
-                        for(auto bit = params_type::ate_loop_count_sbit.rbegin()+1; /* skip first bit */
-                                bit != params_type::ate_loop_count_sbit.rend();
-                                ++bit) {
+                        for (auto bit = params_type::ate_loop_count_sbit.rbegin() + 1; /* skip first bit */
+                             bit != params_type::ate_loop_count_sbit.rend();
+                             ++bit) {
 
                             doubling_step_for_miller_loop(two_inv, R, c);
                             result.coeffs.push_back(c);
 
-                            switch(*bit) {
+                            switch (*bit) {
                                 case 1:
                                     mixed_addition_step_for_miller_loop(Qcopy, R, c);
                                     result.coeffs.push_back(c);
@@ -215,7 +215,7 @@ namespace nil {
                     }
                 };
             }    // namespace pairing
-        }        // namespace algebra
-    }            // namespace crypto3
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_PAIRING_SHORT_WEIERSTRASS_JACOBIAN_WITH_A4_0_SBIT_ATE_PRECOMPUTE_G2_HPP

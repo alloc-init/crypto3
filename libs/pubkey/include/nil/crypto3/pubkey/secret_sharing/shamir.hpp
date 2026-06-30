@@ -66,13 +66,13 @@ namespace nil {
                 typedef std::vector<typename basic_policy::public_coeff_type> public_coeffs_type;
 
                 static inline typename basic_policy::private_element_type
-                eval_basis_poly(const typename basic_policy::indexes_type &indexes, std::size_t i) {
+                    eval_basis_poly(const typename basic_policy::indexes_type &indexes, std::size_t i) {
                     assert(basic_policy::check_participant_index(i));
 
                     typename basic_policy::private_element_type e_i(i);
                     typename basic_policy::private_element_type result = basic_policy::private_element_type::one();
 
-                    for (auto j: indexes) {
+                    for (auto j : indexes) {
                         if (j != i) {
                             result = result * (typename basic_policy::private_element_type(j) *
                                                (typename basic_policy::private_element_type(j) - e_i).inversed());
@@ -92,8 +92,8 @@ namespace nil {
                 }
 
                 template<
-                        typename Generator = random::algebraic_random_device<typename basic_policy::coeff_type::field_type>,
-                        typename Distribution = void>
+                    typename Generator = random::algebraic_random_device<typename basic_policy::coeff_type::field_type>,
+                    typename Distribution = void>
                 static inline coeffs_type get_poly(std::size_t t) {
                     assert(basic_policy::check_minimal_size(t));
 
@@ -147,8 +147,8 @@ namespace nil {
                     assert(scheme_type::check_participant_index(get_index()));
                 }
 
-                public_share_sss(std::size_t i,
-                                 const typename public_share_type::second_type &ps) : public_share(i, ps) {
+                public_share_sss(std::size_t i, const typename public_share_type::second_type &ps) :
+                    public_share(i, ps) {
                     assert(scheme_type::check_participant_index(get_index()));
                 }
 
@@ -210,12 +210,12 @@ namespace nil {
                     return share;
                 }
 
-                template<
-                        typename SchemeType,
-                        typename std::enable_if<
-                                std::is_convertible<typename std::remove_cv<typename std::remove_reference<SchemeType>::type>::type,
-                                        scheme_type>::value,
-                                bool>::type = true>
+                template<typename SchemeType,
+                         typename std::enable_if<
+                             std::is_convertible<
+                                 typename std::remove_cv<typename std::remove_reference<SchemeType>::type>::type,
+                                 scheme_type>::value,
+                             bool>::type = true>
                 operator public_share_sss<SchemeType>() const {
                     using To = public_share_sss<SchemeType>;
 
@@ -237,7 +237,7 @@ namespace nil {
                     assert(scheme_type::check_exp(exp));
 
                     share.second =
-                            share.second + coeff * typename scheme_type::private_element_type(share.first).pow(exp);
+                        share.second + coeff * typename scheme_type::private_element_type(share.first).pow(exp);
                 }
 
             protected:
@@ -252,23 +252,23 @@ namespace nil {
                 typedef public_secret_type value_type;
 
                 template<typename PublicShares>
-                public_secret_sss(const PublicShares &public_shares) : public_secret_sss(
-                        std::cbegin(public_shares), std::cend(public_shares)) {
+                public_secret_sss(const PublicShares &public_shares) :
+                    public_secret_sss(std::cbegin(public_shares), std::cend(public_shares)) {
                 }
 
                 template<typename PublicShareIt>
-                public_secret_sss(PublicShareIt first, PublicShareIt last) : public_secret(
-                        reconstruct_public_secret(first, last)) {
+                public_secret_sss(PublicShareIt first, PublicShareIt last) :
+                    public_secret(reconstruct_public_secret(first, last)) {
                 }
 
                 template<typename PublicShares>
-                public_secret_sss(const PublicShares &public_shares, const indexes_type &indexes) : public_secret_sss(
-                        std::cbegin(public_shares), std::cend(public_shares), indexes) {
+                public_secret_sss(const PublicShares &public_shares, const indexes_type &indexes) :
+                    public_secret_sss(std::cbegin(public_shares), std::cend(public_shares), indexes) {
                 }
 
                 template<typename PublicShareIt>
-                public_secret_sss(PublicShareIt first, PublicShareIt last, const indexes_type &indexes) : public_secret(
-                        reconstruct_public_secret(first, last, indexes)) {
+                public_secret_sss(PublicShareIt first, PublicShareIt last, const indexes_type &indexes) :
+                    public_secret(reconstruct_public_secret(first, last, indexes)) {
                 }
 
                 inline const value_type &get_value() const {
@@ -285,12 +285,12 @@ namespace nil {
 
             private:
                 template<
-                        typename PublicShareIt,
-                        typename std::enable_if<
-                                std::is_convertible<typename std::remove_cv<typename std::remove_reference<
-                                        typename std::iterator_traits<PublicShareIt>::value_type>::type>::type,
-                                        public_share_sss<scheme_type>>::value,
-                                bool>::type = true>
+                    typename PublicShareIt,
+                    typename std::enable_if<
+                        std::is_convertible<typename std::remove_cv<typename std::remove_reference<
+                                                typename std::iterator_traits<PublicShareIt>::value_type>::type>::type,
+                                            public_share_sss<scheme_type>>::value,
+                        bool>::type = true>
                 static inline public_secret_type reconstruct_public_secret(PublicShareIt first, PublicShareIt last) {
                     BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<PublicShareIt>));
 
@@ -298,12 +298,12 @@ namespace nil {
                 }
 
                 template<
-                        typename PublicShareIt,
-                        typename std::enable_if<
-                                std::is_convertible<typename std::remove_cv<typename std::remove_reference<
-                                        typename std::iterator_traits<PublicShareIt>::value_type>::type>::type,
-                                        public_share_sss<scheme_type>>::value,
-                                bool>::type = true>
+                    typename PublicShareIt,
+                    typename std::enable_if<
+                        std::is_convertible<typename std::remove_cv<typename std::remove_reference<
+                                                typename std::iterator_traits<PublicShareIt>::value_type>::type>::type,
+                                            public_share_sss<scheme_type>>::value,
+                        bool>::type = true>
                 static inline public_secret_type reconstruct_public_secret(PublicShareIt first, PublicShareIt last,
                                                                            const indexes_type &indexes) {
                     BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<PublicShareIt>));
@@ -311,8 +311,7 @@ namespace nil {
                     public_secret_type public_secret = public_secret_type::zero();
                     for (auto it = first; it != last; it++) {
                         public_secret =
-                                public_secret + it->get_value() *
-                                                scheme_type::eval_basis_poly(indexes, it->get_index());
+                            public_secret + it->get_value() * scheme_type::eval_basis_poly(indexes, it->get_index());
                     }
 
                     return public_secret;
@@ -337,13 +336,13 @@ namespace nil {
                 }
 
                 template<typename Shares>
-                secret_sss(const Shares &shares, const indexes_type &indexes) : secret_sss(
-                        std::cbegin(shares), std::cend(shares), indexes) {
+                secret_sss(const Shares &shares, const indexes_type &indexes) :
+                    secret_sss(std::cbegin(shares), std::cend(shares), indexes) {
                 }
 
                 template<typename ShareIt>
-                secret_sss(ShareIt first, ShareIt last, const indexes_type &indexes) : secret(
-                        reconstruct_secret(first, last, indexes)) {
+                secret_sss(ShareIt first, ShareIt last, const indexes_type &indexes) :
+                    secret(reconstruct_secret(first, last, indexes)) {
                 }
 
                 inline const value_type &get_value() const {
@@ -359,11 +358,11 @@ namespace nil {
                 }
 
                 template<typename SchemeType,
-                        typename std::enable_if<
-                                std::is_convertible<typename std::remove_cv<typename std::remove_reference<
-                                        SchemeType>::type>::type,
-                                        scheme_type>::value,
-                                bool>::type = true>
+                         typename std::enable_if<
+                             std::is_convertible<
+                                 typename std::remove_cv<typename std::remove_reference<SchemeType>::type>::type,
+                                 scheme_type>::value,
+                             bool>::type = true>
                 operator public_secret_sss<SchemeType>() const {
                     using To = public_secret_sss<SchemeType>;
 
@@ -371,24 +370,26 @@ namespace nil {
                 }
 
             protected:
-                template<typename ShareIterator,
-                        typename std::enable_if<
-                                std::is_convertible<typename std::remove_cv<typename std::remove_reference<
-                                        typename std::iterator_traits<ShareIterator>::value_type>::type>::type,
-                                        share_sss<scheme_type>>::value,
-                                bool>::type = true>
+                template<
+                    typename ShareIterator,
+                    typename std::enable_if<
+                        std::is_convertible<typename std::remove_cv<typename std::remove_reference<
+                                                typename std::iterator_traits<ShareIterator>::value_type>::type>::type,
+                                            share_sss<scheme_type>>::value,
+                        bool>::type = true>
                 static inline secret_type reconstruct_secret(ShareIterator first, ShareIterator last) {
                     BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<ShareIterator>));
 
                     return reconstruct_secret(first, last, scheme_type::get_indexes(first, last));
                 }
 
-                template<typename ShareIterator,
-                        typename std::enable_if<
-                                std::is_convertible<typename std::remove_cv<typename std::remove_reference<
-                                        typename std::iterator_traits<ShareIterator>::value_type>::type>::type,
-                                        share_sss<scheme_type>>::value,
-                                bool>::type = true>
+                template<
+                    typename ShareIterator,
+                    typename std::enable_if<
+                        std::is_convertible<typename std::remove_cv<typename std::remove_reference<
+                                                typename std::iterator_traits<ShareIterator>::value_type>::type>::type,
+                                            share_sss<scheme_type>>::value,
+                        bool>::type = true>
                 static inline secret_type reconstruct_secret(ShareIterator first, ShareIterator last,
                                                              const indexes_type &indexes) {
                     BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<ShareIterator>));
@@ -520,8 +521,8 @@ namespace nil {
                     return _process<result_type>(acc);
                 }
             };
-        } // namespace pubkey
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace pubkey
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_PUBKEY_SHAMIR_SSS_HPP

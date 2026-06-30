@@ -40,8 +40,7 @@ int main() {
     // This example is OK.
     {
         boost::multiprecision::cpp_rational expected = 0;
-        BOOST_ASSERT(expected ==
-                     boost::multiprecision::cpp_rational("0"));    // direct cpp_rational from str is OK.
+        BOOST_ASSERT(expected == boost::multiprecision::cpp_rational("0"));    // direct cpp_rational from str is OK.
     }
     // This example fails.
     {

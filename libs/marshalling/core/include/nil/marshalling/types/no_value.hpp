@@ -55,9 +55,6 @@ namespace nil {
                 /// @brief endian_type used for serialization.
                 using endian_type = typename base_impl_type::endian_type;
 
-                /// @brief Version type
-                using version_type = typename base_impl_type::version_type;
-
                 /// @brief All the options provided to this class bundled into struct.
                 using parsed_options_type = detail::options_parser<>;
 
@@ -161,17 +158,6 @@ namespace nil {
                     base_impl_type::write_no_status(iter);
                 }
 
-                /// @brief Compile time check if this class is version dependent
-                static constexpr bool is_version_dependent() {
-                    return parsed_options_type::has_custom_version_update || base_impl_type::is_version_dependent();
-                }
-
-                /// @brief Default implementation of version update.
-                /// @return @b true in case the field contents have changed, @b false otherwise
-                bool set_version(version_type version) {
-                    return base_impl_type::set_version(version);
-                }
-
             protected:
                 using base_impl_type::read_data;
                 using base_impl_type::write_data;
@@ -221,6 +207,6 @@ namespace nil {
             }
 
         }    // namespace types
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_NO_VALUE_HPP

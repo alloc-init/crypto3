@@ -12,19 +12,20 @@ macro(define_algebra_example name)
             ${CMAKE_WORKSPACE_NAME}_algebra
             ${CMAKE_WORKSPACE_NAME}_random
 
-            $<TARGET_NAME_IF_EXISTS:boost_multiprecision>)
+                          crypto3::multiprecision
+                          Boost::random
+                      )
 
-    set_target_properties(algebra_${name}_example PROPERTIES CXX_STANDARD 20)
+    set_target_properties(algebra_${name}_example PROPERTIES CXX_STANDARD 23)
 endmacro()
 
 set(EXAMPLES_NAMES
-        "multiexp"
-        "short_weierstrass_coordinates"
-        "curves"
-        "fields"
-        "pairing"
-        "random_element"
-        "hash_to_curve")
+    "multiexp"
+    "short_weierstrass_coordinates"
+    "curves"
+    "fields"
+    "pairing"
+    "random_element")
 
 foreach(EXAMPLE_NAME ${EXAMPLES_NAMES})
     define_algebra_example(${EXAMPLE_NAME})

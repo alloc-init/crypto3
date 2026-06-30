@@ -54,16 +54,16 @@ namespace nil {
                                 field_value_type E = (first.X + first.Y).squared() - A - B;    // E = (X1+Y1)^2-A-B
                                 field_value_type d2 =
                                     ElementType::params_type::d + ElementType::params_type::d;    // d2=2*d
-                                first.X = C * D;                                   // X3 = C*D
-                                first.Y = E * (C - d2 * first.Z.squared());           // Y3 = E*(C-d2*Z1^2)
-                                first.Z = D * E;                                      // Z3 = D*E
+                                first.X = C * D;                                                  // X3 = C*D
+                                first.Y = E * (C - d2 * first.Z.squared());                       // Y3 = E*(C-d2*Z1^2)
+                                first.Z = D * E;                                                  // Z3 = D*E
                             }
                         }
                     };
 
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_TWISTED_EDWARDS_G1_ELEMENT_INVERTED_DBL_2008_BBJLP_HPP

@@ -139,8 +139,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace pubkey
-    }            // namespace crypto3
+        }    // namespace pubkey
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

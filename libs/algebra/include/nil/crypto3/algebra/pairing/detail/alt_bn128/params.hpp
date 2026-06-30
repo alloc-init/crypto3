@@ -58,14 +58,14 @@ namespace nil {
                         using g2_field_type = typename curve_type::g2_type<>::params_type::field_type;
 
                         // g2_type::params_type::twist.pow((p-1)/3), twist = (9, 1)
-                        constexpr static const typename g2_field_type::value_type
-                            TWIST_MUL_BY_Q_X = typename g2_field_type::value_type(
+                        constexpr static const typename g2_field_type::value_type TWIST_MUL_BY_Q_X =
+                            typename g2_field_type::value_type(
                                 0x2FB347984F7911F74C0BEC3CF559B143B78CC310C2C3330C99E39557176F553D_cppui_modular254,
                                 0x16C9E55061EBAE204BA4CC8BD75A079432AE2A1D0B7C9DCE1665D51C640FCBA2_cppui_modular254);
 
                         // g2_type::params_type::twist.pow((p-1)/2), twist = (9, 1)
-                        constexpr static const typename g2_field_type::value_type
-                            TWIST_MUL_BY_Q_Y = typename g2_field_type::value_type(
+                        constexpr static const typename g2_field_type::value_type TWIST_MUL_BY_Q_Y =
+                            typename g2_field_type::value_type(
                                 0x63CF305489AF5DCDC5EC698B6E2F9B9DBAAE0EDA9C95998DC54014671A0135A_cppui_modular254,
                                 0x7C03CBCAC41049A0704B5A7EC796F2B21807DC98FA25BD282D37F632623B0E3_cppui_modular254);
 
@@ -114,29 +114,23 @@ namespace nil {
                          * */
 
                         /* signed bit representation for ate_loop_count*/
-                        constexpr static const std::array<int8_t,65> ate_loop_count_sbit = {
-                            0, 0, 0, 1, 0, 1, 0,-1, 0, 0, 1,-1, 0, 0, 1, 0,
-                            0, 1, 1, 0,-1, 0, 0, 1, 0,-1, 0, 0, 0, 0, 1, 1,
-                            1, 0, 0,-1, 0, 0, 1, 0, 0, 0, 0, 0,-1, 0, 0, 1,
-                            1, 0, 0,-1, 0, 0, 0, 1, 1, 0,-1, 0, 0, 1, 0, 1,
-                            1,
+                        constexpr static const std::array<int8_t, 65> ate_loop_count_sbit = {
+                            0,  0, 0, 1,  0, 1, 0, -1, 0, 0, 1, -1, 0, 0,  1,  0, 0, 1, 1, 0, -1, 0,
+                            0,  1, 0, -1, 0, 0, 0, 0,  1, 1, 1, 0,  0, -1, 0,  0, 1, 0, 0, 0, 0,  0,
+                            -1, 0, 0, 1,  1, 0, 0, -1, 0, 0, 0, 1,  1, 0,  -1, 0, 0, 1, 0, 1, 1,
                         };
 
-
-                        constexpr static const integral_type final_exponent_z =
-                            integral_type(0x44E992B44A6909F1);
+                        constexpr static const integral_type final_exponent_z = integral_type(0x44E992B44A6909F1);
                         constexpr static const bool final_exponent_is_z_neg = false;
 
                         using g2_field_type_value = typename curve_type::g2_type<>::field_type::value_type;
 
-                        constexpr static const g2_field_type_value twist =
-                            curve_type::g2_type<>::params_type::twist;
+                        constexpr static const g2_field_type_value twist = curve_type::g2_type<>::params_type::twist;
 
                         constexpr static const g2_field_type_value twist_coeff_b =
                             curve_type::template g2_type<>::params_type::b;
 
                         constexpr static const curve_twist_type twist_type = curve_twist_type::TWIST_TYPE_D;
-
                     };
 
                     constexpr typename pairing_params<curves::alt_bn128<254>>::integral_type const
@@ -152,9 +146,9 @@ namespace nil {
                     constexpr bool const pairing_params<curves::alt_bn128<254>>::final_exponent_is_z_neg;
 
                 }    // namespace detail
-            }        // namespace pairing
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace pairing
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ALGEBRA_PAIRING_ALT_BN128_PAIRING_PARAMS_HPP

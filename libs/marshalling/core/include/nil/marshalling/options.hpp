@@ -43,6 +43,13 @@
 
 namespace nil {
     namespace marshalling {
+
+        // Forward declare integral to avoid #include-order hell
+        namespace types {
+            template<typename TFieldBase, typename T, typename... TOptions>
+            class integral;
+        };
+
         namespace option {
             namespace detail {
 
@@ -286,6 +293,10 @@ namespace nil {
             template<typename TField>
             struct sequence_size_field_prefix { };
 
+            template<typename TTypeBase>
+            using size_t_sequence_size_field_prefix =
+                sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::size_t>>;
+
             /// @brief Option that modifies the default behaviour of collection fields to
             ///     prepend the serialized data with number of @b bytes information.
             /// @details Similar to @ref sequence_size_field_prefix, but instead of
@@ -310,8 +321,7 @@ namespace nil {
             /// @tparam TField Type of the field that represents serialization length
             /// @tparam TReadErrorStatus Error status to return in case read operation fails when should not
             /// @headerfile nil/marshalling/options.hpp
-            template<typename TField,
-                     status_type TReadErrorStatus = status_type::invalid_msg_data>
+            template<typename TField, status_type TReadErrorStatus = status_type::invalid_msg_data>
             struct sequence_ser_length_field_prefix { };
 
             /// @brief Option that forces <b>every element</b> of @ref nil::marshalling::types::array_list to
@@ -321,8 +331,7 @@ namespace nil {
             /// @tparam TField Type of the field that represents serialization length
             /// @tparam TReadErrorStatus Error status to return in case read operation fails when should not
             /// @headerfile nil/marshalling/options.hpp
-            template<typename TField,
-                     status_type TReadErrorStatus = status_type::invalid_msg_data>
+            template<typename TField, status_type TReadErrorStatus = status_type::invalid_msg_data>
             struct sequence_elem_ser_length_field_prefix { };
 
             /// @brief Option that forces @b first element only of @ref nil::marshalling::types::array_list to
@@ -334,8 +343,7 @@ namespace nil {
             /// @tparam TField Type of the field that represents serialization length
             /// @tparam TReadErrorStatus Error status to return in case read operation fails when should not
             /// @headerfile nil/marshalling/options.hpp
-            template<typename TField,
-                     status_type TReadErrorStatus = status_type::invalid_msg_data>
+            template<typename TField, status_type TReadErrorStatus = status_type::invalid_msg_data>
             struct sequence_elem_fixed_ser_length_field_prefix { };
 
             /// @brief Option that forces termination of the sequence when predefined value
@@ -652,73 +660,73 @@ namespace nil {
 
             /// @brief Alias option, specifying field value units are "nanoseconds".
             /// @headerfile nil/marshalling/options.hpp
-            using units_nanoseconds
-                = units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::nanoseconds_ratio>;
+            using units_nanoseconds =
+                units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::nanoseconds_ratio>;
 
             /// @brief Alias option, specifying field value units are "microseconds".
             /// @headerfile nil/marshalling/options.hpp
-            using units_microseconds
-                = units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::microseconds_ratio>;
+            using units_microseconds =
+                units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::microseconds_ratio>;
 
             /// @brief Alias option, specifying field value units are "milliseconds".
             /// @headerfile nil/marshalling/options.hpp
-            using units_milliseconds
-                = units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::milliseconds_ratio>;
+            using units_milliseconds =
+                units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::milliseconds_ratio>;
 
             /// @brief Alias option, specifying field value units are "seconds".
             /// @headerfile nil/marshalling/options.hpp
-            using units_seconds
-                = units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::seconds_ratio>;
+            using units_seconds =
+                units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::seconds_ratio>;
 
             /// @brief Alias option, specifying field value units are "minutes".
             /// @headerfile nil/marshalling/options.hpp
-            using units_minutes
-                = units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::minutes_ratio>;
+            using units_minutes =
+                units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::minutes_ratio>;
 
             /// @brief Alias option, specifying field value units are "hours".
             /// @headerfile nil/marshalling/options.hpp
-            using units_hours
-                = units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::hours_ratio>;
+            using units_hours =
+                units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::hours_ratio>;
 
             /// @brief Alias option, specifying field value units are "days".
             /// @headerfile nil/marshalling/options.hpp
-            using units_days
-                = units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::days_ratio>;
+            using units_days =
+                units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::days_ratio>;
 
             /// @brief Alias option, specifying field value units are "weeks".
             /// @headerfile nil/marshalling/options.hpp
-            using units_weeks
-                = units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::weeks_ratio>;
+            using units_weeks =
+                units<nil::marshalling::traits::units::Time, nil::marshalling::traits::units::weeks_ratio>;
 
             /// @brief Alias option, specifying field value units are "nanometers".
             /// @headerfile nil/marshalling/options.hpp
-            using units_nanometers
-                = units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::nanometers_ratio>;
+            using units_nanometers =
+                units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::nanometers_ratio>;
 
             /// @brief Alias option, specifying field value units are "micrometers".
             /// @headerfile nil/marshalling/options.hpp
-            using units_micrometers
-                = units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::micrometers_ratio>;
+            using units_micrometers =
+                units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::micrometers_ratio>;
 
             /// @brief Alias option, specifying field value units are "millimeters".
             /// @headerfile nil/marshalling/options.hpp
-            using units_millimeters
-                = units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::millimeters_ratio>;
+            using units_millimeters =
+                units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::millimeters_ratio>;
 
             /// @brief Alias option, specifying field value units are "centimeters".
             /// @headerfile nil/marshalling/options.hpp
-            using units_centimeters
-                = units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::centimeters_ratio>;
+            using units_centimeters =
+                units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::centimeters_ratio>;
 
             /// @brief Alias option, specifying field value units are "meters".
             /// @headerfile nil/marshalling/options.hpp
-            using units_meters
-                = units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::meters_ratio>;
+            using units_meters =
+                units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::meters_ratio>;
 
             /// @brief Alias option, specifying field value units are "kilometers".
             /// @headerfile nil/marshalling/options.hpp
-            using units_kilometers
-                = units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::kilometers_ratio>;
+            using units_kilometers =
+                units<nil::marshalling::traits::units::distance, nil::marshalling::traits::units::kilometers_ratio>;
 
             /// @brief Alias option, specifying field value units are "nanometers per second".
             /// @headerfile nil/marshalling/options.hpp
@@ -742,8 +750,8 @@ namespace nil {
 
             /// @brief Alias option, specifying field value units are "meters per second".
             /// @headerfile nil/marshalling/options.hpp
-            using units_meters_per_second = units<nil::marshalling::traits::units::speed,
-                                                  nil::marshalling::traits::units::meters_per_second_ratio>;
+            using units_meters_per_second =
+                units<nil::marshalling::traits::units::speed, nil::marshalling::traits::units::meters_per_second_ratio>;
 
             /// @brief Alias option, specifying field value units are "kilometers per second".
             /// @headerfile nil/marshalling/options.hpp
@@ -757,83 +765,83 @@ namespace nil {
 
             /// @brief Alias option, specifying field value units are "hertz".
             /// @headerfile nil/marshalling/options.hpp
-            using units_hertz
-                = units<nil::marshalling::traits::units::frequency, nil::marshalling::traits::units::hz_ratio>;
+            using units_hertz =
+                units<nil::marshalling::traits::units::frequency, nil::marshalling::traits::units::hz_ratio>;
 
             /// @brief Alias option, specifying field value units are "kilohertz".
             /// @headerfile nil/marshalling/options.hpp
-            using units_kilohertz
-                = units<nil::marshalling::traits::units::frequency, nil::marshalling::traits::units::kilo_hz_ratio>;
+            using units_kilohertz =
+                units<nil::marshalling::traits::units::frequency, nil::marshalling::traits::units::kilo_hz_ratio>;
 
             /// @brief Alias option, specifying field value units are "megahertz".
             /// @headerfile nil/marshalling/options.hpp
-            using units_megahertz
-                = units<nil::marshalling::traits::units::frequency, nil::marshalling::traits::units::mega_hz_ratio>;
+            using units_megahertz =
+                units<nil::marshalling::traits::units::frequency, nil::marshalling::traits::units::mega_hz_ratio>;
 
             /// @brief Alias option, specifying field value units are "gigahertz".
             /// @headerfile nil/marshalling/options.hpp
-            using units_gigahertz
-                = units<nil::marshalling::traits::units::frequency, nil::marshalling::traits::units::giga_hz_ratio>;
+            using units_gigahertz =
+                units<nil::marshalling::traits::units::frequency, nil::marshalling::traits::units::giga_hz_ratio>;
 
             /// @brief Alias option, specifying field value units are "degrees".
             /// @headerfile nil/marshalling/options.hpp
-            using units_degrees
-                = units<nil::marshalling::traits::units::angle, nil::marshalling::traits::units::degrees_ratio>;
+            using units_degrees =
+                units<nil::marshalling::traits::units::angle, nil::marshalling::traits::units::degrees_ratio>;
 
             /// @brief Alias option, specifying field value units are "radians".
             /// @headerfile nil/marshalling/options.hpp
-            using units_radians
-                = units<nil::marshalling::traits::units::angle, nil::marshalling::traits::units::radians_ratio>;
+            using units_radians =
+                units<nil::marshalling::traits::units::angle, nil::marshalling::traits::units::radians_ratio>;
 
             /// @brief Alias option, specifying field value units are "nanoamps".
             /// @headerfile nil/marshalling/options.hpp
-            using units_nanoamps
-                = units<nil::marshalling::traits::units::current, nil::marshalling::traits::units::nanoamps_ratio>;
+            using units_nanoamps =
+                units<nil::marshalling::traits::units::current, nil::marshalling::traits::units::nanoamps_ratio>;
 
             /// @brief Alias option, specifying field value units are "microamps".
             /// @headerfile nil/marshalling/options.hpp
-            using units_microamps
-                = units<nil::marshalling::traits::units::current, nil::marshalling::traits::units::microamps_ratio>;
+            using units_microamps =
+                units<nil::marshalling::traits::units::current, nil::marshalling::traits::units::microamps_ratio>;
 
             /// @brief Alias option, specifying field value units are "milliamps".
             /// @headerfile nil/marshalling/options.hpp
-            using units_milliamps
-                = units<nil::marshalling::traits::units::current, nil::marshalling::traits::units::milliamps_ratio>;
+            using units_milliamps =
+                units<nil::marshalling::traits::units::current, nil::marshalling::traits::units::milliamps_ratio>;
 
             /// @brief Alias option, specifying field value units are "amps".
             /// @headerfile nil/marshalling/options.hpp
-            using units_amps
-                = units<nil::marshalling::traits::units::current, nil::marshalling::traits::units::amps_ratio>;
+            using units_amps =
+                units<nil::marshalling::traits::units::current, nil::marshalling::traits::units::amps_ratio>;
 
             /// @brief Alias option, specifying field value units are "kiloamps".
             /// @headerfile nil/marshalling/options.hpp
-            using units_kiloamps
-                = units<nil::marshalling::traits::units::current, nil::marshalling::traits::units::kiloamps_ratio>;
+            using units_kiloamps =
+                units<nil::marshalling::traits::units::current, nil::marshalling::traits::units::kiloamps_ratio>;
 
             /// @brief Alias option, specifying field value units are "nanovolts".
             /// @headerfile nil/marshalling/options.hpp
-            using units_nanovolts
-                = units<nil::marshalling::traits::units::voltage, nil::marshalling::traits::units::nanovolts_ratio>;
+            using units_nanovolts =
+                units<nil::marshalling::traits::units::voltage, nil::marshalling::traits::units::nanovolts_ratio>;
 
             /// @brief Alias option, specifying field value units are "microvolts".
             /// @headerfile nil/marshalling/options.hpp
-            using units_microvolts
-                = units<nil::marshalling::traits::units::voltage, nil::marshalling::traits::units::microvolts_ratio>;
+            using units_microvolts =
+                units<nil::marshalling::traits::units::voltage, nil::marshalling::traits::units::microvolts_ratio>;
 
             /// @brief Alias option, specifying field value units are "millivolts".
             /// @headerfile nil/marshalling/options.hpp
-            using units_millivolts
-                = units<nil::marshalling::traits::units::voltage, nil::marshalling::traits::units::millivolts_ratio>;
+            using units_millivolts =
+                units<nil::marshalling::traits::units::voltage, nil::marshalling::traits::units::millivolts_ratio>;
 
             /// @brief Alias option, specifying field value units are "volts".
             /// @headerfile nil/marshalling/options.hpp
-            using units_volts
-                = units<nil::marshalling::traits::units::voltage, nil::marshalling::traits::units::volts_ratio>;
+            using units_volts =
+                units<nil::marshalling::traits::units::voltage, nil::marshalling::traits::units::volts_ratio>;
 
             /// @brief Alias option, specifying field value units are "kilovolts".
             /// @headerfile nil/marshalling/options.hpp
-            using units_kilovolts
-                = units<nil::marshalling::traits::units::voltage, nil::marshalling::traits::units::kilovolts_ratio>;
+            using units_kilovolts =
+                units<nil::marshalling::traits::units::voltage, nil::marshalling::traits::units::kilovolts_ratio>;
 
             namespace detail {
 
@@ -932,8 +940,8 @@ namespace nil {
             /// @see @ref DefaultBigUnsignedNumValue
             /// @headerfile nil/marshalling/options.hpp
             template<std::intmax_t TVal>
-            using default_num_value
-                = default_value_initializer<detail::default_num_value_initializer<std::intmax_t, TVal>>;
+            using default_num_value =
+                default_value_initializer<detail::default_num_value_initializer<std::intmax_t, TVal>>;
 
             /// @brief Alias to default_value_initializer, it defines initializer class that
             ///     assigns big unsigned numeric value provided as the template argument to this option.
@@ -944,8 +952,8 @@ namespace nil {
             /// @see @ref DefaultBigUnsignedNumValue
             /// @headerfile nil/marshalling/options.hpp
             template<std::uintmax_t TVal>
-            using default_big_unsigned_num_value
-                = default_value_initializer<detail::default_num_value_initializer<std::uintmax_t, TVal>>;
+            using default_big_unsigned_num_value =
+                default_value_initializer<detail::default_num_value_initializer<std::uintmax_t, TVal>>;
 
             /// @brief Provide range of valid numeric values.
             /// @details Quite often numeric fields such as nil::marshalling::types::integral or
@@ -976,8 +984,8 @@ namespace nil {
             /// @see @ref ValidBigUnsignedNumValueRangeOverride
             /// @deprecated Use @ref valid_ranges_clear instead.
             template<std::intmax_t TMinValue, std::intmax_t TMaxValue>
-            using valid_num_value_range_override
-                = std::tuple<valid_num_value_range<TMinValue, TMaxValue>, valid_ranges_clear>;
+            using valid_num_value_range_override =
+                std::tuple<valid_num_value_range<TMinValue, TMaxValue>, valid_ranges_clear>;
 
             /// @brief Alias to @ref valid_num_value_range.
             /// @details Equivalent to @b valid_num_value_range<TValue, TValue>
@@ -1014,8 +1022,8 @@ namespace nil {
             /// @see @ref ValidBigUnsignedNumValueOverride
             /// @deprecated Use @ref valid_ranges_clear instead.
             template<std::uintmax_t TMinValue, std::uintmax_t TMaxValue>
-            using valid_big_unsigned_num_value_range_override
-                = std::tuple<valid_big_unsigned_num_value_range<TMinValue, TMaxValue>, valid_ranges_clear>;
+            using valid_big_unsigned_num_value_range_override =
+                std::tuple<valid_big_unsigned_num_value_range<TMinValue, TMaxValue>, valid_ranges_clear>;
 
             /// @brief Alias to @ref valid_big_unsigned_num_value_range.
             /// @details Equivalent to @b valid_big_unsigned_num_value_range<TValue, TValue>
@@ -1111,51 +1119,10 @@ namespace nil {
             /// @headerfile nil/marshalling/options.hpp
             struct has_custom_refresh { };
 
-            /// @brief Provide type to be used for versioning
-            /// @tparam T Type of the version value. Expected to be unsigned integral one.
-            template<typename T>
-            struct version_type {
-                static_assert(std::is_integral<T>::value, "Only unsigned integral types are supported for versions");
-                static_assert(std::is_unsigned<T>::value, "Only unsigned integral types are supported for versions");
-            };
-
-            /// @brief Mark this class to have custom
-            ///     implementation of version update functionality.
-            /// @headerfile nil/marshalling/options.hpp
-            struct has_custom_version_update { };
-
-            /// @brief Mark an @ref nil::marshalling::types::optional field as existing
-            ///     between specified versions.
-            /// @tparam TFrom First version when field has been added
-            /// @tparam TUntil Last version when field still hasn't been removed.
-            /// @pre @b TFrom <= @b TUntil
-            template<std::uintmax_t TFrom, std::uintmax_t TUntil>
-            struct exists_between_versions {
-                static_assert(TFrom <= TUntil, "Invalid version parameters");
-            };
-
-            /// @brief Mark an @ref nil::marshalling::types::optional field as existing
-            ///     starting from specified version.
-            /// @details Alias to @ref ExistsBetweenVersions
-            /// @tparam TVer First version when field has been added
-            template<std::uintmax_t TVer>
-            using exists_since_version = exists_between_versions<TVer, std::numeric_limits<std::uintmax_t>::max()>;
-
-            /// @brief Mark an @ref nil::marshalling::types::optional field as existing
-            ///     only until specified version.
-            /// @details Alias to @ref ExistsBetweenVersions
-            /// @tparam TVer Last version when field still hasn't been removed.
-            template<std::uintmax_t TVer>
-            using exists_until_version = exists_between_versions<0, TVer>;
-
             /// @brief Make the field's contents to be invalid by default.
             struct invalid_by_default { };
 
-            /// @brief Add storage of version information inside private data members.
-            /// @details The version information can be accessed using @b get_version() member function.
-            struct version_storage { };
-
         }    // namespace option
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_OPTIONS_HPP

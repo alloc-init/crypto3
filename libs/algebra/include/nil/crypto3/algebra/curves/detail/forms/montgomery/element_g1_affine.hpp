@@ -78,19 +78,19 @@ namespace nil {
                          *    @return the point at infinity by default
                          *
                          */
-                        constexpr curve_element() : is_inf_point(true) {};
+                        constexpr curve_element() : is_inf_point(true) { };
 
                         /**
                          * @brief
                          *    @return the selected point $(X:Y:Z)$ in the projective coordinates
                          */
                         constexpr curve_element(const field_value_type &in_X, const field_value_type &in_Y) :
-                            is_inf_point(false), X(in_X), Y(in_Y) {};
+                            is_inf_point(false), X(in_X), Y(in_Y) { };
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
                         explicit constexpr curve_element(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                            const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                         }
 
@@ -205,8 +205,8 @@ namespace nil {
 
                         template<typename Backend,
                                  boost::multiprecision::expression_template_option ExpressionTemplates>
-                        constexpr const curve_element& operator=(
-                                  const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
+                        constexpr const curve_element &
+                            operator=(const boost::multiprecision::number<Backend, ExpressionTemplates> &value) {
                             *this = one() * value;
                             return *this;
                         }
@@ -231,7 +231,7 @@ namespace nil {
                             return result;
                         }
 
-                        constexpr curve_element& operator+=(const curve_element &other) {
+                        constexpr curve_element &operator+=(const curve_element &other) {
                             // handle special cases having to do with O
                             if (this->is_zero()) {
                                 *this = other;
@@ -258,7 +258,7 @@ namespace nil {
                             return (*this) + (-other);
                         }
 
-                        constexpr curve_element& operator-=(const curve_element &other) {
+                        constexpr curve_element &operator-=(const curve_element &other) {
                             return (*this) += (-other);
                         }
 
@@ -273,9 +273,11 @@ namespace nil {
                          * @return doubled element from group G1
                          */
                         constexpr void double_inplace() {
-                            if ( 2 * params_type::B * this->Y == field_value_type::zero() ) {
+                            if (2 * params_type::B * this->Y == field_value_type::zero()) {
                                 this->is_inf_point = true;
+                                return;
                             }
+
                             if (!this->is_zero()) {
                                 const field_value_type two(2u);
                                 const field_value_type three(3u);
@@ -288,15 +290,13 @@ namespace nil {
                                 const field_value_type temp1i_sqr = temp1i.squared();
                                 const field_value_type temp2_sqr = temp2.squared();
 
-                                const field_value_type
-                                    X2 = (B * temp2_sqr) * temp1i_sqr - A - this->X - this->X,
-                                    Y2 = ((three * this->X + A) * temp2) * temp1i -
-                                        (B * temp2 * temp2_sqr) * (temp1i * temp1i_sqr) - this->Y;
+                                const field_value_type X2 = (B * temp2_sqr) * temp1i_sqr - A - this->X - this->X,
+                                                       Y2 = ((three * this->X + A) * temp2) * temp1i -
+                                                            (B * temp2 * temp2_sqr) * (temp1i * temp1i_sqr) - this->Y;
                                 X = X2;
                                 Y = Y2;
                             }
                         }
-
 
                     private:
                         /**
@@ -387,12 +387,14 @@ namespace nil {
                                        (static_cast<field_value_type>(result_params::a) +
                                         static_cast<field_value_type>(result_params::d)) *
                                        (static_cast<field_value_type>(result_params::a) -
-                                        static_cast<field_value_type>(result_params::d)).inversed());
+                                        static_cast<field_value_type>(result_params::d))
+                                           .inversed());
 
                             field_value_type s_inv = field_value_type::one();
                             field_value_type B_ =
                                 static_cast<field_value_type>(4u) * (static_cast<field_value_type>(result_params::a) -
-                                                                    static_cast<field_value_type>(result_params::d)).inversed();
+                                                                     static_cast<field_value_type>(result_params::d))
+                                                                        .inversed();
                             if (static_cast<field_value_type>(params_type::B) != B_) {
                                 s_inv = (B_ * static_cast<field_value_type>(params_type::B).inversed()).sqrt();
                             }
@@ -404,14 +406,15 @@ namespace nil {
                     };
 
                     template<typename CurveParams>
-                    std::ostream& operator<<(std::ostream& os, curve_element<CurveParams, forms::montgomery, coordinates::affine> const& e)
-                    {
+                    std::ostream &
+                        operator<<(std::ostream &os,
+                                   curve_element<CurveParams, forms::montgomery, coordinates::affine> const &e) {
                         os << "{\"X\":" << e.X << ",\"Y\":" << e.Y << "}";
                         return os;
                     }
                 }    // namespace detail
-            }        // namespace curves
-        }            // namespace algebra
-    }                // namespace crypto3
+            }    // namespace curves
+        }    // namespace algebra
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_ALGEBRA_CURVES_MONTGOMERY_G1_ELEMENT_AFFINE_HPP

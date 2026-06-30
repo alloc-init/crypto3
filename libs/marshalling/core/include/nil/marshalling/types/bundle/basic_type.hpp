@@ -46,7 +46,6 @@ namespace nil {
                 class basic_bundle : public TFieldBase {
                 public:
                     using value_type = TMembers;
-                    using version_type = typename TFieldBase::version_type;
 
                     basic_bundle() = default;
 
@@ -75,32 +74,29 @@ namespace nil {
                     }
 
                     constexpr std::size_t length() const {
-                        return processing::tuple_accumulate(value(), std::size_t(0),
-                                                                              length_calc_helper());
+                        return processing::tuple_accumulate(value(), std::size_t(0), length_calc_helper());
                     }
 
                     template<std::size_t TFromIdx>
                     constexpr std::size_t length_from() const {
-                        return processing::tuple_accumulate_from_until<
-                            TFromIdx, std::tuple_size<value_type>::value>(value(), std::size_t(0),
-                                                                          length_calc_helper());
+                        return processing::tuple_accumulate_from_until<TFromIdx, std::tuple_size<value_type>::value>(
+                            value(), std::size_t(0), length_calc_helper());
                     }
 
                     template<std::size_t TUntilIdx>
                     constexpr std::size_t length_until() const {
-                        return processing::tuple_accumulate_from_until<0, TUntilIdx>(
-                            value(), std::size_t(0), length_calc_helper());
+                        return processing::tuple_accumulate_from_until<0, TUntilIdx>(value(), std::size_t(0),
+                                                                                     length_calc_helper());
                     }
 
                     template<std::size_t TFromIdx, std::size_t TUntilIdx>
                     constexpr std::size_t length_from_until() const {
-                        return processing::tuple_accumulate_from_until<TFromIdx, TUntilIdx>(
-                            value(), std::size_t(0), length_calc_helper());
+                        return processing::tuple_accumulate_from_until<TFromIdx, TUntilIdx>(value(), std::size_t(0),
+                                                                                            length_calc_helper());
                     }
 
                     static constexpr std::size_t min_length() {
-                        return processing::tuple_type_accumulate<value_type>(
-                            std::size_t(0), min_length_calc_helper());
+                        return processing::tuple_type_accumulate<value_type>(std::size_t(0), min_length_calc_helper());
                     }
 
                     template<std::size_t TFromIdx>
@@ -118,14 +114,12 @@ namespace nil {
 
                     template<std::size_t TFromIdx, std::size_t TUntilIdx>
                     static constexpr std::size_t min_length_from_until() {
-                        return processing::tuple_type_accumulate_from_until<TFromIdx, TUntilIdx,
-                                                                                              value_type>(
+                        return processing::tuple_type_accumulate_from_until<TFromIdx, TUntilIdx, value_type>(
                             std::size_t(0), min_length_calc_helper());
                     }
 
                     static constexpr std::size_t max_length() {
-                        return processing::tuple_type_accumulate<value_type>(
-                            std::size_t(0), max_length_calc_helper());
+                        return processing::tuple_type_accumulate<value_type>(std::size_t(0), max_length_calc_helper());
                     }
 
                     template<std::size_t TFromIdx>
@@ -143,8 +137,7 @@ namespace nil {
 
                     template<std::size_t TFromIdx, std::size_t TUntilIdx>
                     static constexpr std::size_t max_length_from_until() {
-                        return processing::tuple_type_accumulate_from_until<TFromIdx, TUntilIdx,
-                                                                                              value_type>(
+                        return processing::tuple_type_accumulate_from_until<TFromIdx, TUntilIdx, value_type>(
                             std::size_t(0), max_length_calc_helper());
                     }
 
@@ -166,16 +159,14 @@ namespace nil {
                     template<std::size_t TFromIdx, typename TIter>
                     status_type read_from(TIter &iter, std::size_t len) {
                         status_type es = status_type::success;
-                        processing::template tuple_for_each_from<TFromIdx>(
-                            value(), make_read_helper(es, iter, len));
+                        processing::template tuple_for_each_from<TFromIdx>(value(), make_read_helper(es, iter, len));
                         return es;
                     }
 
                     template<std::size_t TUntilIdx, typename TIter>
                     status_type read_until(TIter &iter, std::size_t len) {
                         status_type es = status_type::success;
-                        processing::template tuple_for_each_until<TUntilIdx>(
-                            value(), make_read_helper(es, iter, len));
+                        processing::template tuple_for_each_until<TUntilIdx>(value(), make_read_helper(es, iter, len));
                         return es;
                     }
 
@@ -194,14 +185,12 @@ namespace nil {
 
                     template<std::size_t TFromIdx, typename TIter>
                     void read_from_no_status(TIter &iter) {
-                        processing::template tuple_for_each_from<TFromIdx>(
-                            value(), make_read_no_status_helper(iter));
+                        processing::template tuple_for_each_from<TFromIdx>(value(), make_read_no_status_helper(iter));
                     }
 
                     template<std::size_t TUntilIdx, typename TIter>
                     void read_until_no_status(TIter &iter) {
-                        processing::template tuple_for_each_until<TUntilIdx>(
-                            value(), make_read_no_status_helper(iter));
+                        processing::template tuple_for_each_until<TUntilIdx>(value(), make_read_no_status_helper(iter));
                     }
 
                     template<std::size_t TFromIdx, std::size_t TUntilIdx, typename TIter>
@@ -220,16 +209,14 @@ namespace nil {
                     template<std::size_t TFromIdx, typename TIter>
                     status_type write_from(TIter &iter, std::size_t len) const {
                         status_type es = status_type::success;
-                        processing::template tuple_for_each_from<TFromIdx>(
-                            value(), make_write_helper(es, iter, len));
+                        processing::template tuple_for_each_from<TFromIdx>(value(), make_write_helper(es, iter, len));
                         return es;
                     }
 
                     template<std::size_t TUntilIdx, typename TIter>
                     status_type write_until(TIter &iter, std::size_t len) const {
                         status_type es = status_type::success;
-                        processing::template tuple_for_each_until<TUntilIdx>(
-                            value(), make_write_helper(es, iter, len));
+                        processing::template tuple_for_each_until<TUntilIdx>(value(), make_write_helper(es, iter, len));
                         return es;
                     }
 
@@ -248,28 +235,19 @@ namespace nil {
 
                     template<std::size_t TFromIdx, typename TIter>
                     void write_from_no_status(TIter &iter) const {
-                        processing::template tuple_for_each_from<TFromIdx>(
-                            value(), make_write_no_status_helper(iter));
+                        processing::template tuple_for_each_from<TFromIdx>(value(), make_write_no_status_helper(iter));
                     }
 
                     template<std::size_t TUntilIdx, typename TIter>
                     void write_until_no_status(TIter &iter) const {
-                        processing::template tuple_for_each_until<TUntilIdx>(
-                            value(), make_write_no_status_helper(iter));
+                        processing::template tuple_for_each_until<TUntilIdx>(value(),
+                                                                             make_write_no_status_helper(iter));
                     }
 
                     template<std::size_t TFromIdx, std::size_t TUntilIdx, typename TIter>
                     void write_from_until_no_status(TIter &iter) const {
                         processing::template tuple_for_each_from_until<TFromIdx, TUntilIdx>(
                             value(), make_write_no_status_helper(iter));
-                    }
-
-                    static constexpr bool is_version_dependent() {
-                        return common_funcs::are_members_version_dependent<value_type>();
-                    }
-
-                    bool set_version(version_type version) {
-                        return common_funcs::set_version_for_members(value(), version);
                     }
 
                 private:
@@ -333,8 +311,7 @@ namespace nil {
                     };
 
                     template<typename TIter>
-                    static read_helper<TIter> make_read_helper(status_type &es, TIter &iter,
-                                                               std::size_t len) {
+                    static read_helper<TIter> make_read_helper(status_type &es, TIter &iter, std::size_t len) {
                         return read_helper<TIter>(es, iter, len);
                     }
 
@@ -407,13 +384,12 @@ namespace nil {
                         return write_no_status_helper<TIter>(iter);
                     }
 
-                    static_assert(nil::detail::is_tuple<value_type>::value,
-                                  "value_type must be tuple");
+                    static_assert(nil::detail::is_tuple<value_type>::value, "value_type must be tuple");
                     value_type members_;
                 };
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BASIC_BUNDLE_HPP

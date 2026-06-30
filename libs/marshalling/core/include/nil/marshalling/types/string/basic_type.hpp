@@ -272,10 +272,9 @@ namespace nil {
                     }
 
                     void eval_reserve(std::size_t len) {
-                        using tag =
-                            typename std::conditional<has_member_function_reserve<value_type>::value,
-                                                      reserve_exists_tag,
-                                                      reserve_missing_tag>::type;
+                        using tag = typename std::conditional<has_member_function_reserve<value_type>::value,
+                                                              reserve_exists_tag,
+                                                              reserve_missing_tag>::type;
                         eval_reserve(len, tag());
                     }
 
@@ -308,7 +307,7 @@ namespace nil {
                 };
 
             }    // namespace detail
-        }        // namespace types
-    }            // namespace marshalling
+        }    // namespace types
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_BASIC_STRING_HPP

@@ -49,7 +49,6 @@ root
 │   ├── math: set of Fast Fourier Transforms evaluation algorithms and Polynomial Arithmetics
 │   ├── modes: cipher modes
 │   ├── multiprecision: integer, rational, floating-point, complex and interval number types. 
-│   ├── passhash: password hashing operations 
 │   ├── pbkdf: password based key derivation functions
 │   ├── pkmodes: threshold, aggregation modes for public key schemes
 │   ├── pkpad: padding module for public key schemes
@@ -80,6 +79,12 @@ Homebrew packages:
 #### Tested on the following systems:
 * Apple Silicon: it's tested on:Homebrew clang version 20.1.5
 
+Note, for recent mac homebrew builds use the following cmake flags to avoid using homebrew stdc++ headers while linking to old mac stdc++ lib:
+
+```
+cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=1 -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -Wno-deprecated-declarations" -DBUILD_CRYPTO3_BENCH_TESTS=1 -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS="-nostdinc++ -isystem $(xcrun --show-sdk-path)/usr/include/c++/v1"
+```
+
 ### Clone & Build
 
 ```
@@ -90,33 +95,6 @@ make tests
 ```
 
 > Note that you might need to set `-DCMAKE_CXX_COMPILER` to point to an up-to-date clang and `-DBOOST_ROOT` with  `-DBoost_NO_SYSTEM_PATHS=ON` to point to correct version of boost.
-
-## Nix support
-
-This repository provides Nix flake, so once you have installed Nix with flake support, you can use single command to fetch all the dependencies and build:
-
-```bash
-nix build
-```
-
-To activate Nix development environment:
-
-```bash
-nix develop
-```
-
-To run all tests:
-
-```bash
-nix flake check
-```
-
-To run single test:
-
-```bash
-nix develop . -c cmake -B build -DCMAKE_CXX_STANDARD=20 -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=FALSE -DCMAKE_ENABLE_TESTS=TRUE -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug  -DCMAKE_CXX_FLAGS=-ggdb
-nix develop -c cmake --build build -t <test_target> // for example multiprecision_modular_adaptor_fixed_test
-```
 
 ## Usage
 

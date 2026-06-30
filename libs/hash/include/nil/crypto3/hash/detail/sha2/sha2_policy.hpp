@@ -33,7 +33,6 @@
 
 #include <nil/crypto3/detail/static_digest.hpp>
 
-
 namespace nil {
     namespace crypto3 {
         namespace hashes {
@@ -172,8 +171,8 @@ namespace nil {
                 constexpr typename sha2_policy<512>::pkcs_id_type const sha2_policy<512>::pkcs_id;
 
             }    // namespace detail
-        }        // namespace hashes
-    }            // namespace crypto3
+        }    // namespace hashes
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_DETAIL_SHA2_POLICY_HPP

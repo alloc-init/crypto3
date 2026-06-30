@@ -41,9 +41,6 @@ namespace nil {
             protected:
                 // Use big endian by default
                 using endian_type = nil::marshalling::endian::big_endian;
-
-                // Use unsigned type by default for versioning
-                using version_type = unsigned;
             };
 
             template<typename TEndian, typename... TOptions>
@@ -51,13 +48,6 @@ namespace nil {
             protected:
                 using endian_type = TEndian;
             };
-
-            template<typename T, typename... TOptions>
-            class field_base<nil::marshalling::option::version_type<T>, TOptions...> : public field_base<TOptions...> {
-            protected:
-                using version_type = T;
-            };
-
             template<typename... TOptions>
             class field_base<nil::marshalling::option::empty_option, TOptions...> : public field_base<TOptions...> { };
 
@@ -65,6 +55,6 @@ namespace nil {
             class field_base<std::tuple<TTuple...>, TOptions...> : public field_base<TTuple..., TOptions...> { };
 
         }    // namespace detail
-    }        // namespace marshalling
+    }    // namespace marshalling
 }    // namespace nil
 #endif    // MARSHALLING_FIELD_BASE_HPP
