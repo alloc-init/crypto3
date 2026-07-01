@@ -64,9 +64,7 @@ set(BENCHMARK_NAMES
 
     "math/polynomial_dfs"
 
-    "multiprecision/big_mod"
-
-    "zk/lpc"
+    # "zk/lpc"
 )
 
 foreach(BENCHMARK_NAME ${BENCHMARK_NAMES})
