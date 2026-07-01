@@ -146,9 +146,10 @@ namespace nil {
                     return out;
                 }
 
-                template<typename InputRange, typename OutputRange>
-                void process(InputRange &in, OutputRange &out, key_schedule_type &schedule, block_type &block) {
-                    process_n(in, block_size, out, schedule, block);
+                template<typename InputIterator, typename OutputIterator>
+                OutputIterator process(InputIterator first, OutputIterator out, key_schedule_type &schedule,
+                                       block_type &block) {
+                    return process_n(first, block_size, out, schedule, block);
                 }
 
                 void seek(block_type &block, key_schedule_type &schedule, std::uint64_t offset) {

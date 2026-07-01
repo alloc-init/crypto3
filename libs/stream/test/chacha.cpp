@@ -577,9 +577,10 @@ BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_block_vector) {
     std::uint8_t *in = plaintext.data();
     std::uint8_t *out = ciphertext.data();
 
-    cipher.process(in, out, schedule, block);
+    std::uint8_t *returned_out = cipher.process(in, out, schedule, block);
 
     BOOST_TEST(std::equal(rfc8439_expected_block.begin(), rfc8439_expected_block.end(), ciphertext.begin()));
+    BOOST_TEST(returned_out == ciphertext.data() + ciphertext.size());
     BOOST_TEST(schedule[12] == 2u);
     BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
     BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
