@@ -195,6 +195,15 @@ namespace nil {
                 std::size_t block_offset;
                 bool ietf_counter_exhausted;
             };
+
+            template<std::size_t KeyBits = 256, std::size_t Rounds = 20>
+            using ietf_chacha = chacha<96, KeyBits, Rounds>;
+
+            template<std::size_t KeyBits = 256, std::size_t Rounds = 20>
+            using original_chacha = chacha<64, KeyBits, Rounds>;
+
+            using chacha20 = ietf_chacha<256, 20>;
+            using original_chacha20 = original_chacha<256, 20>;
         }    // namespace stream
     }        // namespace crypto3
 }    // namespace nil

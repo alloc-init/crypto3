@@ -28,6 +28,7 @@
 #include <array>
 #include <cstdint>
 #include <stdexcept>
+#include <type_traits>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/endian/conversion.hpp>
@@ -158,6 +159,13 @@ BOOST_AUTO_TEST_CASE(chacha_policy_accepts_supported_round_counts) {
     BOOST_TEST((detail::chacha_policy<20, 96, 256>::rounds == 20u));
 }
 
+BOOST_AUTO_TEST_CASE(public_chacha_aliases_document_standard_variants) {
+    BOOST_TEST((std::is_same<chacha20, chacha<96, 256, 20>>::value));
+    BOOST_TEST((std::is_same<original_chacha20, chacha<64, 256, 20>>::value));
+    BOOST_TEST((std::is_same<ietf_chacha<128, 12>, chacha<96, 128, 12>>::value));
+    BOOST_TEST((std::is_same<original_chacha<128, 8>, chacha<64, 128, 8>>::value));
+}
+
 BOOST_AUTO_TEST_CASE(ietf_chacha20_x4_matches_rfc8439_first_block) {
     using impl_type = detail::chacha_impl<20, 96, 256>;
 
@@ -267,7 +275,7 @@ BOOST_AUTO_TEST_CASE(chacha_functions_rejects_ietf_counter_wrap) {
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_constructor_uses_schedule_iv_block_argument) {
-    using cipher_type = chacha<96, 256, 20>;
+    using cipher_type = chacha20;
 
     cipher_type::block_type block = {0};
     cipher_type::key_schedule_type schedule = {0};
@@ -288,7 +296,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_constructor_uses_schedule_iv_block_argument) 
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_block_vector) {
-    using cipher_type = chacha<96, 256, 20>;
+    using cipher_type = chacha20;
 
     cipher_type::block_type block = {0};
     cipher_type::key_schedule_type schedule = {0};
@@ -313,7 +321,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_block_vector) {
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_encryption_vector) {
-    using cipher_type = chacha<96, 256, 20>;
+    using cipher_type = chacha20;
 
     cipher_type::block_type encrypt_block = {0};
     cipher_type::key_schedule_type encrypt_schedule = {0};
@@ -346,7 +354,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_encryption_vector) {
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_sets_32_bit_counter_and_preserves_nonce) {
-    using cipher_type = chacha<96, 256, 20>;
+    using cipher_type = chacha20;
 
     cipher_type::block_type block = {0};
     cipher_type::key_schedule_type schedule = {0};
@@ -369,7 +377,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_sets_32_bit_counter_and_preserves_n
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_rejects_counter_overflow) {
-    using cipher_type = chacha<96, 256, 20>;
+    using cipher_type = chacha20;
 
     cipher_type::block_type block = {0};
     cipher_type::key_schedule_type schedule = {0};
@@ -383,7 +391,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_rejects_counter_overflow) {
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_accepts_maximum_counter_block) {
-    using cipher_type = chacha<96, 256, 20>;
+    using cipher_type = chacha20;
 
     cipher_type::block_type block = {0};
     cipher_type::key_schedule_type schedule = {0};
@@ -424,7 +432,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_accepts_maximum_counter_block) {
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_seek_original_sets_64_bit_counter) {
-    using cipher_type = chacha<64, 256, 20>;
+    using cipher_type = original_chacha20;
 
     cipher_type::block_type block = {0};
     cipher_type::key_schedule_type schedule = {0};
@@ -448,7 +456,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_seek_original_sets_64_bit_counter) {
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_seek_original_sets_high_counter_word) {
-    using cipher_type = chacha<64, 256, 20>;
+    using cipher_type = original_chacha20;
 
     cipher_type::block_type block = {0};
     cipher_type::key_schedule_type schedule = {0};
@@ -473,7 +481,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_seek_original_sets_high_counter_word) {
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_process_advances_across_consecutive_blocks) {
-    using cipher_type = chacha<96, 256, 20>;
+    using cipher_type = chacha20;
 
     cipher_type::block_type block = {0};
     cipher_type::key_schedule_type schedule = {0};
@@ -506,7 +514,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_process_advances_across_consecutive_blocks) {
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_process_handles_partial_range_and_resume) {
-    using cipher_type = chacha<96, 256, 20>;
+    using cipher_type = chacha20;
 
     cipher_type::block_type block = {0};
     cipher_type::key_schedule_type schedule = {0};
@@ -561,7 +569,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_process_handles_partial_range_and_resume) {
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_seek_supports_byte_offsets_inside_block) {
-    using cipher_type = chacha<96, 256, 20>;
+    using cipher_type = chacha20;
 
     cipher_type::block_type block = {0};
     cipher_type::key_schedule_type schedule = {0};
@@ -591,7 +599,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_seek_supports_byte_offsets_inside_block) {
 }
 
 BOOST_DATA_TEST_CASE(chacha_single_range_encrypt, boost::unit_test::data::xrange(7), index) {
-    using cipher_type = chacha<96, 256, 20>;
+    using cipher_type = chacha20;
 
     cipher_type::block_type encrypt_block = {0};
     cipher_type::block_type decrypt_block = {0};
