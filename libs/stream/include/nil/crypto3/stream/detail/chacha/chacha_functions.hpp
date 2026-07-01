@@ -25,7 +25,12 @@
 #ifndef CRYPTO3_STREAM_CHACHA_FUNCTIONS_HPP
 #define CRYPTO3_STREAM_CHACHA_FUNCTIONS_HPP
 
+#include <cstddef>
+#include <cstdint>
+
 #include <boost/predef/architecture.h>
+
+#include <nil/crypto3/stream/detail/chacha/chacha_impl.hpp>
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -33,17 +38,39 @@
 #elif defined(CRYPTO3_HAS_CHACHA_SSE2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_SSE2_VERSION)
 #include <nil/crypto3/stream/detail/chacha/chacha_sse2_impl.hpp>
-#else
-#include <nil/crypto3/stream/detail/chacha/chacha_impl.hpp>
 #endif
 
 namespace nil {
     namespace crypto3 {
         namespace stream {
             namespace detail {
+                template<typename ByteArray>
+                static std::uint32_t load_little_u32(const ByteArray &bytes, std::size_t offset) {
+                    return static_cast<std::uint32_t>(bytes[offset]) |
+                           (static_cast<std::uint32_t>(bytes[offset + 1]) << 8) |
+                           (static_cast<std::uint32_t>(bytes[offset + 2]) << 16) |
+                           (static_cast<std::uint32_t>(bytes[offset + 3]) << 24);
+                }
+
                 template<std::size_t Round, std::size_t IVSize, std::size_t KeyBits>
-                struct chacha_functions : public chacha_policy<Round, IVSize, KeyBits> {
+                struct chacha_block_functions {
                     typedef chacha_policy<Round, IVSize, KeyBits> policy_type;
+                    typedef chacha_impl<Round, IVSize, KeyBits> scalar_impl_type;
+
+                    typedef typename policy_type::block_type block_type;
+                    typedef typename policy_type::key_schedule_type key_schedule_type;
+
+                    static void generate_block(block_type &block, key_schedule_type &schedule) {
+                        scalar_impl_type::chacha_block(block, schedule);
+                    }
+                };
+
+                template<std::size_t Round, std::size_t IVSize, std::size_t KeyBits>
+                struct chacha_functions : public chacha_policy<Round, IVSize, KeyBits>,
+                                          public chacha_block_functions<Round, IVSize, KeyBits> {
+                    typedef chacha_policy<Round, IVSize, KeyBits> policy_type;
+                    typedef chacha_block_functions<Round, IVSize, KeyBits> block_functions_type;
+                    using block_functions_type::generate_block;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -79,17 +106,18 @@ namespace nil {
                         schedule[3] = policy_type::sigma()[3];
 
                         for (std::uint8_t itr = 0; itr < 4; itr++) {
-                            schedule[itr + 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
-                            schedule[itr + 2 * 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
+                            schedule[itr + 4] = load_little_u32(key, 4 * itr);
+                            schedule[itr + 2 * 4] = load_little_u32(key, 4 * itr);
                         }
                     }
                 };
 
                 template<std::size_t Round, std::size_t IVSize>
-                struct chacha_functions<Round, IVSize, 128> : public chacha_policy<Round, IVSize, 128> {
+                struct chacha_functions<Round, IVSize, 128> : public chacha_policy<Round, IVSize, 128>,
+                                                              public chacha_block_functions<Round, IVSize, 128> {
                     typedef chacha_policy<Round, IVSize, 128> policy_type;
+                    typedef chacha_block_functions<Round, IVSize, 128> block_functions_type;
+                    using block_functions_type::generate_block;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -125,17 +153,18 @@ namespace nil {
                         schedule[3] = policy_type::tau()[3];
 
                         for (std::uint8_t itr = 0; itr < 4; itr++) {
-                            schedule[itr + 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
-                            schedule[itr + 2 * 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
+                            schedule[itr + 4] = load_little_u32(key, 4 * itr);
+                            schedule[itr + 2 * 4] = load_little_u32(key, 4 * itr);
                         }
                     }
                 };
 
                 template<std::size_t Round>
-                struct chacha_functions<Round, 64, 128> : public chacha_policy<Round, 64, 128> {
+                struct chacha_functions<Round, 64, 128> : public chacha_policy<Round, 64, 128>,
+                                                          public chacha_block_functions<Round, 64, 128> {
                     typedef chacha_policy<Round, 64, 128> policy_type;
+                    typedef chacha_block_functions<Round, 64, 128> block_functions_type;
+                    using block_functions_type::generate_block;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -167,10 +196,10 @@ namespace nil {
                     static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv) {
                         schedule[12] = 0;
                         schedule[13] = 0;
-                        schedule[14] = boost::endian::native_to_little(make_uint_t(iv[0], iv[1], iv[2], iv[3]));
-                        schedule[15] = boost::endian::native_to_little(make_uint_t(iv[4], iv[5], iv[6], iv[7]));
+                        schedule[14] = load_little_u32(iv, 0);
+                        schedule[15] = load_little_u32(iv, 4);
 
-                        impl_type::template chacha_x<4>(block, schedule);
+                        generate_block(block, schedule);
                     }
 
                     static void schedule_key(key_schedule_type &schedule, const key_type &key) {
@@ -180,17 +209,18 @@ namespace nil {
                         schedule[3] = policy_type::tau()[3];
 
                         for (std::uint8_t itr = 0; itr < 4; itr++) {
-                            schedule[itr + 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
-                            schedule[itr + 2 * 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
+                            schedule[itr + 4] = load_little_u32(key, 4 * itr);
+                            schedule[itr + 2 * 4] = load_little_u32(key, 4 * itr);
                         }
                     }
                 };
 
                 template<std::size_t Round>
-                struct chacha_functions<Round, 96, 128> : public chacha_policy<Round, 96, 128> {
+                struct chacha_functions<Round, 96, 128> : public chacha_policy<Round, 96, 128>,
+                                                          public chacha_block_functions<Round, 96, 128> {
                     typedef chacha_policy<Round, 96, 128> policy_type;
+                    typedef chacha_block_functions<Round, 96, 128> block_functions_type;
+                    using block_functions_type::generate_block;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -221,11 +251,11 @@ namespace nil {
 
                     static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv) {
                         schedule[12] = 0;
-                        schedule[13] = boost::endian::native_to_little(make_uint_t(iv[0], iv[1], iv[2], iv[3]));
-                        schedule[14] = boost::endian::native_to_little(make_uint_t(iv[4], iv[5], iv[6], iv[7]));
-                        schedule[15] = boost::endian::native_to_little(make_uint_t(iv[8], iv[9], iv[10], iv[11]));
+                        schedule[13] = load_little_u32(iv, 0);
+                        schedule[14] = load_little_u32(iv, 4);
+                        schedule[15] = load_little_u32(iv, 8);
 
-                        impl_type::template chacha_x<4>(block, schedule);
+                        generate_block(block, schedule);
                     }
 
                     static void schedule_key(key_schedule_type &schedule, const key_type &key) {
@@ -235,18 +265,19 @@ namespace nil {
                         schedule[3] = policy_type::tau()[3];
 
                         for (std::uint8_t itr = 0; itr < 4; itr++) {
-                            schedule[itr + 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
-                            schedule[itr + 2 * 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
+                            schedule[itr + 4] = load_little_u32(key, 4 * itr);
+                            schedule[itr + 2 * 4] = load_little_u32(key, 4 * itr);
                         }
                     }
                 };
 
                 template<std::size_t Round, std::size_t IVSize>
-                struct chacha_functions<Round, IVSize, 256> : public chacha_policy<Round, IVSize, 256> {
+                struct chacha_functions<Round, IVSize, 256> : public chacha_policy<Round, IVSize, 256>,
+                                                              public chacha_block_functions<Round, IVSize, 256> {
 
                     typedef chacha_policy<Round, IVSize, 256> policy_type;
+                    typedef chacha_block_functions<Round, IVSize, 256> block_functions_type;
+                    using block_functions_type::generate_block;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -282,16 +313,18 @@ namespace nil {
                         schedule[3] = policy_type::sigma()[3];
 
                         for (std::uint8_t itr = 0; itr < 8; itr++) {
-                            schedule[itr + 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
+                            schedule[itr + 4] = load_little_u32(key, 4 * itr);
                         }
                     }
                 };
 
                 template<std::size_t Round>
-                struct chacha_functions<Round, 64, 256> : public chacha_policy<Round, 64, 256> {
+                struct chacha_functions<Round, 64, 256> : public chacha_policy<Round, 64, 256>,
+                                                          public chacha_block_functions<Round, 64, 256> {
 
                     typedef chacha_policy<Round, 64, 256> policy_type;
+                    typedef chacha_block_functions<Round, 64, 256> block_functions_type;
+                    using block_functions_type::generate_block;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -324,10 +357,10 @@ namespace nil {
                     static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv) {
                         schedule[12] = 0;
                         schedule[13] = 0;
-                        schedule[14] = boost::endian::native_to_little(make_uint_t(iv[0], iv[1], iv[2], iv[3]));
-                        schedule[15] = boost::endian::native_to_little(make_uint_t(iv[4], iv[5], iv[6], iv[7]));
+                        schedule[14] = load_little_u32(iv, 0);
+                        schedule[15] = load_little_u32(iv, 4);
 
-                        impl_type::template chacha_x<4>(block, schedule);
+                        generate_block(block, schedule);
                     }
 
                     static void schedule_key(key_schedule_type &schedule, const key_type &key) {
@@ -337,16 +370,18 @@ namespace nil {
                         schedule[3] = policy_type::sigma()[3];
 
                         for (std::uint8_t itr = 0; itr < 8; itr++) {
-                            schedule[itr + 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
+                            schedule[itr + 4] = load_little_u32(key, 4 * itr);
                         }
                     }
                 };
 
                 template<std::size_t Round>
-                struct chacha_functions<Round, 96, 256> : public chacha_policy<Round, 96, 256> {
+                struct chacha_functions<Round, 96, 256> : public chacha_policy<Round, 96, 256>,
+                                                          public chacha_block_functions<Round, 96, 256> {
 
                     typedef chacha_policy<Round, 96, 256> policy_type;
+                    typedef chacha_block_functions<Round, 96, 256> block_functions_type;
+                    using block_functions_type::generate_block;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -377,11 +412,11 @@ namespace nil {
 
                     static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv) {
                         schedule[12] = 0;
-                        schedule[13] = boost::endian::native_to_little(make_uint_t(iv[0], iv[1], iv[2], iv[3]));
-                        schedule[14] = boost::endian::native_to_little(make_uint_t(iv[4], iv[5], iv[6], iv[7]));
-                        schedule[15] = boost::endian::native_to_little(make_uint_t(iv[8], iv[9], iv[10], iv[11]));
+                        schedule[13] = load_little_u32(iv, 0);
+                        schedule[14] = load_little_u32(iv, 4);
+                        schedule[15] = load_little_u32(iv, 8);
 
-                        impl_type::template chacha_x<4>(block, schedule);
+                        generate_block(block, schedule);
                     }
 
                     static void schedule_key(key_schedule_type &schedule, const key_type &key) {
@@ -391,8 +426,7 @@ namespace nil {
                         schedule[3] = policy_type::sigma()[3];
 
                         for (std::uint8_t itr = 0; itr < 8; itr++) {
-                            schedule[itr + 4] = boost::endian::native_to_little(
-                                make_uint_t(key[4 * itr + 0], key[4 * itr + 1], key[4 * itr + 2], key[4 * itr + 3]));
+                            schedule[itr + 4] = load_little_u32(key, 4 * itr);
                         }
                     }
                 };

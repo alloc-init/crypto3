@@ -104,6 +104,25 @@ namespace nil {
                         }
                     }
 
+                    static void chacha_block_original(block_type &block, key_schedule_type &input) {
+                        chacha_block(block.data(), input);
+                        increment_counter(input, counter_mode::original);
+                    }
+
+                    static void chacha_block_ietf(block_type &block, key_schedule_type &input) {
+                        chacha_block(block.data(), input);
+                        increment_counter(input, counter_mode::ietf);
+                    }
+
+                    static void chacha_block(block_type &block, key_schedule_type &input) {
+                        BOOST_STATIC_ASSERT(IVSize == 64 || IVSize == 96);
+                        if (IVSize == 96) {
+                            chacha_block_ietf(block, input);
+                        } else {
+                            chacha_block_original(block, input);
+                        }
+                    }
+
                 private:
                     enum class counter_mode { original, ietf };
 

@@ -25,6 +25,12 @@
 #ifndef CRYPTO3_STREAM_CHACHA_HPP
 #define CRYPTO3_STREAM_CHACHA_HPP
 
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+
+#include <boost/assert.hpp>
+
 #include <nil/crypto3/stream/detail/chacha/chacha_functions.hpp>
 
 namespace nil {
@@ -44,6 +50,7 @@ namespace nil {
                 constexpr static const std::size_t min_key_schedule_bits = policy_type::min_key_schedule_bits;
                 constexpr static const std::size_t min_key_schedule_size = policy_type::min_key_schedule_size;
                 typedef typename policy_type::key_schedule_type key_schedule_type;
+                typedef typename key_schedule_type::value_type word_type;
 
                 constexpr static const std::size_t iv_bits = policy_type::iv_bits;
                 typedef typename policy_type::iv_type iv_type;
@@ -55,7 +62,9 @@ namespace nil {
 
                 template<typename InputRange, typename OutputRange>
                 void process(InputRange &in, OutputRange &out, key_schedule_type &schedule, block_type &block) {
-                    xor_buf(out, in, block, block_size);
+                    for (std::size_t i = 0; i != block_size; ++i) {
+                        out[i] = in[i] ^ block[i];
+                    }
                 }
             };
             /*!
@@ -79,6 +88,7 @@ namespace nil {
                 constexpr static const std::size_t min_key_schedule_bits = policy_type::min_key_schedule_bits;
                 constexpr static const std::size_t min_key_schedule_size = policy_type::min_key_schedule_size;
                 typedef typename policy_type::key_schedule_type key_schedule_type;
+                typedef typename key_schedule_type::value_type word_type;
 
                 constexpr static const std::size_t iv_bits = policy_type::iv_bits;
                 typedef typename policy_type::iv_type iv_type;
@@ -88,29 +98,32 @@ namespace nil {
                 constexpr static const std::size_t key_bits = policy_type::key_bits;
                 typedef typename policy_type::key_type key_type;
 
-                chacha(key_schedule_type &schedule, const key_type &key, const iv_type &iv = iv_type()) {
+                chacha(block_type &block, key_schedule_type &schedule, const key_type &key,
+                       const iv_type &iv = iv_type()) {
                     policy_type::schedule_key(schedule, key);
-                    policy_type::schedule_iv(schedule, iv);
+                    policy_type::schedule_iv(block, schedule, iv);
                 }
 
                 template<typename InputRange, typename OutputRange>
                 void process(InputRange &in, OutputRange &out, key_schedule_type &schedule, block_type &block) {
-                    xor_buf(out, in, block, block_size);
-                    policy_type::chacha_x4(block, schedule);
+                    for (std::size_t i = 0; i != block_size; ++i) {
+                        out[i] = in[i] ^ block[i];
+                    }
+                    policy_type::generate_block(block, schedule);
                 }
 
-                void seek(block_type &block, key_schedule_type &schedule, uint64_t offset) {
-                    // Find the block offset
-                    uint64_t counter = offset / 64;
+                void seek(block_type &block, key_schedule_type &schedule, std::uint64_t offset) {
+                    BOOST_STATIC_ASSERT(IVBits == 64 || IVBits == 96);
 
-                    uint8_t out[8];
-
-                    boost::endian::store_little_u64(out, counter);
-
-                    schedule[12] = boost::endian::store_little_u32(out, 0);
-                    schedule[13] += boost::endian::store_little_u32(out, 1);
-
-                    policy_type::chacha_x4(block, schedule);
+                    const std::uint64_t counter = offset / block_size;
+                    if (IVBits == 96) {
+                        BOOST_ASSERT(counter <= std::numeric_limits<std::uint32_t>::max());
+                        schedule[12] = static_cast<word_type>(counter);
+                    } else {
+                        schedule[12] = static_cast<word_type>(counter);
+                        schedule[13] = static_cast<word_type>(counter >> 32);
+                    }
+                    policy_type::generate_block(block, schedule);
                 }
             };
         }    // namespace stream

@@ -51,7 +51,7 @@ namespace nil {
                     typedef typename nil::crypto3::detail::basic_functions<32>::word_type word_type;
 
                     constexpr static const std::size_t rounds = Rounds;
-                    BOOST_STATIC_ASSERT(Rounds % 2 == 0);
+                    BOOST_STATIC_ASSERT(Rounds == 8 || Rounds == 12 || Rounds == 20);
 
                     constexpr static const std::size_t value_bits = CHAR_BIT;
                     typedef byte_type value_type;
