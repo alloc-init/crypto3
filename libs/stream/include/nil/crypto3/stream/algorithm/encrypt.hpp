@@ -26,7 +26,6 @@
 #define CRYPTO3_STREAM_ENCRYPT_HPP
 
 #include <cstdint>
-#include <type_traits>
 
 #include <nil/crypto3/stream/algorithm/stream.hpp>
 
@@ -36,22 +35,12 @@
 
 namespace nil {
     namespace crypto3 {
-        template<typename StreamCipher, typename InputIterator, typename OutputIterator>
-        OutputIterator encrypt(InputIterator first, InputIterator last, const typename StreamCipher::key_type &key,
-                               const typename StreamCipher::iv_type &nonce, OutputIterator out,
-                               std::uint32_t initial_counter) {
-            static_assert(std::is_same<StreamCipher, stream::chacha20>::value,
-                          "This stream encrypt overload currently supports only stream::chacha20");
-
-            stream::chacha20_cipher cipher(key, nonce, initial_counter);
-            return cipher.process(first, last, out);
-        }
-
         template<typename InputIterator, typename OutputIterator>
         OutputIterator encrypt(InputIterator first, InputIterator last, const stream::chacha20::key_type &key,
                                const stream::chacha20::iv_type &nonce, OutputIterator out,
                                std::uint32_t initial_counter) {
-            return encrypt<stream::chacha20>(first, last, key, nonce, out, initial_counter);
+            stream::chacha20_cipher cipher(key, nonce, initial_counter);
+            return cipher.process(first, last, out);
         }
 
         /*!

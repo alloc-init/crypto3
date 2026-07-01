@@ -105,7 +105,7 @@ namespace {
                                                std::uint32_t counter,
                                                const std::vector<std::uint8_t> &plaintext) {
         std::vector<std::uint8_t> ciphertext(plaintext.size());
-        nil::crypto3::encrypt<chacha20>(plaintext.begin(), plaintext.end(), key, iv, ciphertext.begin(), counter);
+        nil::crypto3::encrypt(plaintext.begin(), plaintext.end(), key, iv, ciphertext.begin(), counter);
         return ciphertext;
     }
 
@@ -659,7 +659,7 @@ BOOST_AUTO_TEST_CASE(public_chacha20_cipher_processes_resumable_byte_streams) {
     }
 
     std::vector<std::uint8_t> expected(plaintext.size());
-    nil::crypto3::encrypt<chacha20>(plaintext.begin(), plaintext.end(), key, iv, expected.begin(), 1);
+    nil::crypto3::encrypt(plaintext.begin(), plaintext.end(), key, iv, expected.begin(), 1);
 
     chacha20_cipher cipher(key, iv, 1);
     std::vector<std::uint8_t> ciphertext(plaintext.size());
@@ -705,13 +705,13 @@ BOOST_AUTO_TEST_CASE(public_chacha20_cipher_supports_in_place_encryption) {
 
     const std::vector<std::uint8_t> plaintext = buffer;
     std::vector<std::uint8_t> expected(buffer.size());
-    nil::crypto3::encrypt<chacha20>(plaintext.begin(), plaintext.end(), key, iv, expected.begin(), 0);
+    nil::crypto3::encrypt(plaintext.begin(), plaintext.end(), key, iv, expected.begin(), 0);
 
-    nil::crypto3::encrypt<chacha20>(buffer.begin(), buffer.end(), key, iv, buffer.begin(), 0);
+    nil::crypto3::encrypt(buffer.begin(), buffer.end(), key, iv, buffer.begin(), 0);
 
     BOOST_TEST(std::equal(expected.begin(), expected.end(), buffer.begin()));
 
-    nil::crypto3::decrypt<chacha20>(buffer.begin(), buffer.end(), key, iv, buffer.begin(), 0);
+    nil::crypto3::decrypt(buffer.begin(), buffer.end(), key, iv, buffer.begin(), 0);
 
     BOOST_TEST(std::equal(plaintext.begin(), plaintext.end(), buffer.begin()));
 }
@@ -722,18 +722,14 @@ BOOST_AUTO_TEST_CASE(public_chacha20_encrypt_decrypt_helpers_match_rfc8439_vecto
 
     std::array<std::uint8_t, rfc8439_sunscreen_plaintext.size()> ciphertext = {0};
     std::array<std::uint8_t, rfc8439_sunscreen_ciphertext.size()> decrypted = {0};
-    std::array<std::uint8_t, rfc8439_sunscreen_plaintext.size()> ciphertext_without_explicit_cipher = {0};
 
-    nil::crypto3::encrypt<chacha20>(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), key, iv,
-                                    ciphertext.begin(), 1);
-    nil::crypto3::decrypt<chacha20>(ciphertext.begin(), ciphertext.end(), key, iv, decrypted.begin(), 1);
     nil::crypto3::encrypt(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), key, iv,
-                          ciphertext_without_explicit_cipher.begin(), 1);
+                          ciphertext.begin(), 1);
+    nil::crypto3::decrypt(ciphertext.begin(), ciphertext.end(), key, iv, decrypted.begin(), 1);
 
     BOOST_TEST(std::equal(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(),
                           ciphertext.begin()));
     BOOST_TEST(std::equal(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), decrypted.begin()));
-    BOOST_TEST(std::equal(ciphertext.begin(), ciphertext.end(), ciphertext_without_explicit_cipher.begin()));
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha20_cipher_rejects_ietf_counter_wrap) {
@@ -754,8 +750,8 @@ BOOST_AUTO_TEST_CASE(public_chacha20_cipher_rejects_ietf_counter_wrap) {
     BOOST_CHECK_THROW(cipher.process(extra_plaintext.begin(), extra_plaintext.end(), extra_ciphertext.begin()),
                       std::out_of_range);
     BOOST_CHECK_THROW(cipher.seek(chacha20::block_size), std::out_of_range);
-    BOOST_CHECK_THROW(nil::crypto3::encrypt<chacha20>(too_long_plaintext.begin(), too_long_plaintext.end(), key, iv,
-                                                      too_long_ciphertext.begin(), 0xffffffff),
+    BOOST_CHECK_THROW(nil::crypto3::encrypt(too_long_plaintext.begin(), too_long_plaintext.end(), key, iv,
+                                            too_long_ciphertext.begin(), 0xffffffff),
                       std::out_of_range);
 }
 
