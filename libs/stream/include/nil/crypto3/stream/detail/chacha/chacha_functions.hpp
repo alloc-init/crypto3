@@ -25,8 +25,10 @@
 #ifndef CRYPTO3_STREAM_CHACHA_FUNCTIONS_HPP
 #define CRYPTO3_STREAM_CHACHA_FUNCTIONS_HPP
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 
 #include <boost/predef/architecture.h>
 
@@ -34,10 +36,10 @@
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
-#include <nil/crypto3/stream/detail/chacha/chacha_avx2_impl.hpp>
+#define CRYPTO3_CHACHA_AVX2_SELECTED
 #elif defined(CRYPTO3_HAS_CHACHA_SSE2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_SSE2_VERSION)
-#include <nil/crypto3/stream/detail/chacha/chacha_sse2_impl.hpp>
+#define CRYPTO3_CHACHA_SSE2_SELECTED
 #endif
 
 namespace nil {
@@ -51,6 +53,147 @@ namespace nil {
                            (static_cast<std::uint32_t>(bytes[offset + 2]) << 16) |
                            (static_cast<std::uint32_t>(bytes[offset + 3]) << 24);
                 }
+
+                template<std::size_t Round, std::size_t IVSize, std::size_t KeyBits>
+                struct chacha_unimplemented_simd_impl {
+                    typedef chacha_policy<Round, IVSize, KeyBits> policy_type;
+
+                    constexpr static const std::size_t block_size = policy_type::block_size;
+                    typedef typename policy_type::key_schedule_type key_schedule_type;
+
+                    static void chacha_x8(std::array<std::uint8_t, block_size * 8> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x8(const std::array<std::uint8_t, block_size * 8> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x8_original(std::array<std::uint8_t, block_size * 8> &,
+                                                   key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x8_ietf(std::array<std::uint8_t, block_size * 8> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4(std::array<std::uint8_t, block_size * 4> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4(const std::array<std::uint8_t, block_size * 4> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4_original(std::array<std::uint8_t, block_size * 4> &,
+                                                   key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4_ietf(std::array<std::uint8_t, block_size * 4> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                private:
+                    static void throw_unimplemented() {
+                        throw std::logic_error("ChaCha SIMD implementation is not implemented");
+                    }
+                };
+
+                template<std::size_t Round, std::size_t IVSize, std::size_t KeyBits>
+                struct chacha_unimplemented_avx2_impl : public chacha_unimplemented_simd_impl<Round, IVSize, KeyBits> {
+                    typedef chacha_policy<Round, IVSize, KeyBits> policy_type;
+
+                    constexpr static const std::size_t block_size = policy_type::block_size;
+                    typedef typename policy_type::key_schedule_type key_schedule_type;
+
+                    static void chacha_x8(std::array<std::uint8_t, block_size * 8> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x8(const std::array<std::uint8_t, block_size * 8> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x8_original(std::array<std::uint8_t, block_size * 8> &,
+                                                   key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x8_ietf(std::array<std::uint8_t, block_size * 8> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4(std::array<std::uint8_t, block_size * 4> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4(const std::array<std::uint8_t, block_size * 4> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4_original(std::array<std::uint8_t, block_size * 4> &,
+                                                   key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4_ietf(std::array<std::uint8_t, block_size * 4> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                private:
+                    static void throw_unimplemented() {
+                        throw std::logic_error("ChaCha AVX2 implementation is not implemented");
+                    }
+                };
+
+                template<std::size_t Round, std::size_t IVSize, std::size_t KeyBits>
+                struct chacha_unimplemented_sse2_impl : public chacha_unimplemented_simd_impl<Round, IVSize, KeyBits> {
+                    typedef chacha_policy<Round, IVSize, KeyBits> policy_type;
+
+                    constexpr static const std::size_t block_size = policy_type::block_size;
+                    typedef typename policy_type::key_schedule_type key_schedule_type;
+
+                    static void chacha_x8(std::array<std::uint8_t, block_size * 8> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x8(const std::array<std::uint8_t, block_size * 8> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x8_original(std::array<std::uint8_t, block_size * 8> &,
+                                                   key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x8_ietf(std::array<std::uint8_t, block_size * 8> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4(std::array<std::uint8_t, block_size * 4> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4(const std::array<std::uint8_t, block_size * 4> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4_original(std::array<std::uint8_t, block_size * 4> &,
+                                                   key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                    static void chacha_x4_ietf(std::array<std::uint8_t, block_size * 4> &, key_schedule_type &) {
+                        throw_unimplemented();
+                    }
+
+                private:
+                    static void throw_unimplemented() {
+                        throw std::logic_error("ChaCha SSE2 implementation is not implemented");
+                    }
+                };
 
                 template<std::size_t Round, std::size_t IVSize, std::size_t KeyBits>
                 struct chacha_block_functions {
@@ -78,12 +221,10 @@ namespace nil {
                     using block_functions_type::generate_block;
                     using block_functions_type::generate_block_without_counter_increment;
 
-#if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
-                    typedef detail::chacha_avx2_impl<Round, IVSize, KeyBits> impl_type;
-#elif defined(CRYPTO3_HAS_CHACHA_SSE2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_SSE2_VERSION)
-                    typedef detail::chacha_sse2_impl<Round, IVSize, KeyBits> impl_type;
+#if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
+                    typedef detail::chacha_unimplemented_avx2_impl<Round, IVSize, KeyBits> impl_type;
+#elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
+                    typedef detail::chacha_unimplemented_sse2_impl<Round, IVSize, KeyBits> impl_type;
 #else
                     typedef detail::chacha_impl<Round, IVSize, KeyBits> impl_type;
 #endif
@@ -126,12 +267,10 @@ namespace nil {
                     using block_functions_type::generate_block;
                     using block_functions_type::generate_block_without_counter_increment;
 
-#if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
-                    typedef detail::chacha_avx2_impl<Round, IVSize, 128> impl_type;
-#elif defined(CRYPTO3_HAS_CHACHA_SSE2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_SSE2_VERSION)
-                    typedef detail::chacha_sse2_impl<Round, IVSize, 128> impl_type;
+#if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
+                    typedef detail::chacha_unimplemented_avx2_impl<Round, IVSize, 128> impl_type;
+#elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
+                    typedef detail::chacha_unimplemented_sse2_impl<Round, IVSize, 128> impl_type;
 #else
                     typedef detail::chacha_impl<Round, IVSize, 128> impl_type;
 #endif
@@ -174,12 +313,10 @@ namespace nil {
                     using block_functions_type::generate_block;
                     using block_functions_type::generate_block_without_counter_increment;
 
-#if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
-                    typedef detail::chacha_avx2_impl<Round, 64, 128> impl_type;
-#elif defined(CRYPTO3_HAS_CHACHA_SSE2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_SSE2_VERSION)
-                    typedef detail::chacha_sse2_impl<Round, 64, 128> impl_type;
+#if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
+                    typedef detail::chacha_unimplemented_avx2_impl<Round, 64, 128> impl_type;
+#elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
+                    typedef detail::chacha_unimplemented_sse2_impl<Round, 64, 128> impl_type;
 #else
                     typedef detail::chacha_impl<Round, 64, 128> impl_type;
 #endif
@@ -231,12 +368,10 @@ namespace nil {
                     using block_functions_type::generate_block;
                     using block_functions_type::generate_block_without_counter_increment;
 
-#if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
-                    typedef detail::chacha_avx2_impl<Round, 96, 128> impl_type;
-#elif defined(CRYPTO3_HAS_CHACHA_SSE2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_SSE2_VERSION)
-                    typedef detail::chacha_sse2_impl<Round, 96, 128> impl_type;
+#if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
+                    typedef detail::chacha_unimplemented_avx2_impl<Round, 96, 128> impl_type;
+#elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
+                    typedef detail::chacha_unimplemented_sse2_impl<Round, 96, 128> impl_type;
 #else
                     typedef detail::chacha_impl<Round, 96, 128> impl_type;
 #endif
@@ -289,12 +424,10 @@ namespace nil {
                     using block_functions_type::generate_block;
                     using block_functions_type::generate_block_without_counter_increment;
 
-#if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
-                    typedef detail::chacha_avx2_impl<Round, IVSize, 256> impl_type;
-#elif defined(CRYPTO3_HAS_CHACHA_SSE2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_SSE2_VERSION)
-                    typedef detail::chacha_sse2_impl<Round, IVSize, 256> impl_type;
+#if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
+                    typedef detail::chacha_unimplemented_avx2_impl<Round, IVSize, 256> impl_type;
+#elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
+                    typedef detail::chacha_unimplemented_sse2_impl<Round, IVSize, 256> impl_type;
 #else
                     typedef detail::chacha_impl<Round, IVSize, 256> impl_type;
 #endif
@@ -337,12 +470,10 @@ namespace nil {
                     using block_functions_type::generate_block;
                     using block_functions_type::generate_block_without_counter_increment;
 
-#if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
-                    typedef detail::chacha_avx2_impl<Round, 64, 256> impl_type;
-#elif defined(CRYPTO3_HAS_CHACHA_SSE2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_SSE2_VERSION)
-                    typedef detail::chacha_sse2_impl<Round, 64, 256> impl_type;
+#if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
+                    typedef detail::chacha_unimplemented_avx2_impl<Round, 64, 256> impl_type;
+#elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
+                    typedef detail::chacha_unimplemented_sse2_impl<Round, 64, 256> impl_type;
 #else
                     typedef detail::chacha_impl<Round, 64, 256> impl_type;
 #endif
@@ -395,12 +526,10 @@ namespace nil {
                     using block_functions_type::generate_block;
                     using block_functions_type::generate_block_without_counter_increment;
 
-#if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
-                    typedef detail::chacha_avx2_impl<Round, 96, 256> impl_type;
-#elif defined(CRYPTO3_HAS_CHACHA_SSE2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_SSE2_VERSION)
-                    typedef detail::chacha_sse2_impl<Round, 96, 256> impl_type;
+#if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
+                    typedef detail::chacha_unimplemented_avx2_impl<Round, 96, 256> impl_type;
+#elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
+                    typedef detail::chacha_unimplemented_sse2_impl<Round, 96, 256> impl_type;
 #else
                     typedef detail::chacha_impl<Round, 96, 256> impl_type;
 #endif
@@ -446,5 +575,8 @@ namespace nil {
         }        // namespace stream
     }            // namespace crypto3
 }    // namespace nil
+
+#undef CRYPTO3_CHACHA_AVX2_SELECTED
+#undef CRYPTO3_CHACHA_SSE2_SELECTED
 
 #endif    // CRYPTO3_CHACHA_FUNCTIONS_HPP
