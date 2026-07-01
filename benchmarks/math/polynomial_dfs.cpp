@@ -143,13 +143,8 @@ BENCHMARK_AUTO_TEST_CASE(dummy_test, 100) {
     STOP_TIMER("dummy")
 }
 
-<<<<<<< HEAD:libs/math/test/benchmarks/polynomial_dfs_benchmark.cpp
 BENCHMARK_AUTO_TEST_CASE(polynomial_product_test, 20) {
     using FieldType = nil::crypto3::algebra::fields::bls12_fr<381>;
-=======
-BENCHMARK_AUTO_TEST_CASE(polynomial_product_test, 10) {
-    using Field = nil::crypto3::algebra::fields::bls12_fr<381>;
->>>>>>> nil/master:benchmarks/math/polynomial_dfs.cpp
 
     std::vector<polynomial_dfs<typename FieldType::value_type>> random_polynomials;
     random_polynomials.reserve(8);
@@ -164,13 +159,8 @@ BENCHMARK_AUTO_TEST_CASE(polynomial_product_test, 10) {
     STOP_TIMER("polynomial_product")
 }
 
-<<<<<<< HEAD:libs/math/test/benchmarks/polynomial_dfs_benchmark.cpp
 BENCHMARK_AUTO_TEST_CASE(polynomial_sum_real_test, 20) {
     using FieldType = nil::crypto3::algebra::fields::bls12_fr<381>;
-=======
-BENCHMARK_AUTO_TEST_CASE(polynomial_sum_real_test, 10) {
-    using Field = nil::crypto3::algebra::fields::bls12_fr<381>;
->>>>>>> nil/master:benchmarks/math/polynomial_dfs.cpp
 
     std::vector<polynomial_dfs<typename FieldType::value_type>> random_polynomials;
     random_polynomials.reserve(8);

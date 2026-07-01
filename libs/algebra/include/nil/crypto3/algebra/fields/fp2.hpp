@@ -29,7 +29,6 @@
 #include <nil/crypto3/algebra/fields/detail/element/fp2.hpp>
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/fp2.hpp>
 #include <nil/crypto3/algebra/fields/detail/extension_params/bls12/fp2.hpp>
-#include <nil/crypto3/algebra/fields/detail/extension_params/bn128/fp2.hpp>
 /*#include <nil/crypto3/algebra/fields/detail/extension_params/frp_v1.hpp>
 #include <nil/crypto3/algebra/fields/detail/extension_params/gost_A.hpp>*/
 #include <nil/crypto3/algebra/fields/detail/extension_params/mnt4/fp2.hpp>
