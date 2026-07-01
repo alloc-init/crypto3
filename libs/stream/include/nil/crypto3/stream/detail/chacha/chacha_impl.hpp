@@ -30,22 +30,6 @@
 
 #include <nil/crypto3/stream/detail/chacha/chacha_policy.hpp>
 
-#define CHACHA_QUARTER_ROUND(a, b, c, d) \
-    do {                                 \
-        a += b;                          \
-        d ^= a;                          \
-        d = policy_type::template rotl<16>(d);    \
-        c += d;                          \
-        b ^= c;                          \
-        b = policy_type::template rotl<12>(b);    \
-        a += b;                          \
-        d ^= a;                          \
-        d = policy_type::template rotl<8>(d);     \
-        c += d;                          \
-        b ^= c;                          \
-        b = policy_type::template rotl<7>(b);     \
-    } while (0)
-
 namespace nil {
     namespace crypto3 {
         namespace stream {
@@ -131,6 +115,21 @@ namespace nil {
                         chacha_block(block.data(), input);
                     }
 
+                    static void quarter_round(word_type &a, word_type &b, word_type &c, word_type &d) {
+                        a += b;
+                        d ^= a;
+                        d = policy_type::template rotl<16>(d);
+                        c += d;
+                        b ^= c;
+                        b = policy_type::template rotl<12>(b);
+                        a += b;
+                        d ^= a;
+                        d = policy_type::template rotl<8>(d);
+                        c += d;
+                        b ^= c;
+                        b = policy_type::template rotl<7>(b);
+                    }
+
                 private:
                     enum class counter_mode { original, ietf };
 
@@ -173,15 +172,15 @@ namespace nil {
                                   x14 = input[14], x15 = input[15];
 
                         for (std::size_t r = 0; r != rounds / 2; ++r) {
-                            CHACHA_QUARTER_ROUND(x00, x04, x08, x12);
-                            CHACHA_QUARTER_ROUND(x01, x05, x09, x13);
-                            CHACHA_QUARTER_ROUND(x02, x06, x10, x14);
-                            CHACHA_QUARTER_ROUND(x03, x07, x11, x15);
+                            quarter_round(x00, x04, x08, x12);
+                            quarter_round(x01, x05, x09, x13);
+                            quarter_round(x02, x06, x10, x14);
+                            quarter_round(x03, x07, x11, x15);
 
-                            CHACHA_QUARTER_ROUND(x00, x05, x10, x15);
-                            CHACHA_QUARTER_ROUND(x01, x06, x11, x12);
-                            CHACHA_QUARTER_ROUND(x02, x07, x08, x13);
-                            CHACHA_QUARTER_ROUND(x03, x04, x09, x14);
+                            quarter_round(x00, x05, x10, x15);
+                            quarter_round(x01, x06, x11, x12);
+                            quarter_round(x02, x07, x08, x13);
+                            quarter_round(x03, x04, x09, x14);
                         }
 
                         boost::endian::store_little_u32(out + 4 * 0, x00 + input[0]);
@@ -204,8 +203,7 @@ namespace nil {
                 };
             }    // namespace detail
         }        // namespace stream
-    }            // namespace crypto3
+}            // namespace crypto3
 }    // namespace nil
 
-#undef CHACHA_QUARTER_ROUND
 #endif    // CRYPTO3_CHACHA_IMPL_HPP
