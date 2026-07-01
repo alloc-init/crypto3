@@ -388,6 +388,91 @@ BOOST_AUTO_TEST_CASE(public_chacha_process_advances_across_consecutive_blocks) {
     BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
 }
 
+BOOST_AUTO_TEST_CASE(public_chacha_process_handles_partial_range_and_resume) {
+    using cipher_type = chacha<96, 256, 20>;
+
+    cipher_type::block_type block = {0};
+    cipher_type::key_schedule_type schedule = {0};
+    cipher_type::key_type key = rfc8439_key();
+    cipher_type::iv_type iv = rfc8439_iv();
+    cipher_type cipher(block, schedule, key, iv);
+
+    std::array<std::uint8_t, 70> plaintext = {0};
+    std::array<std::uint8_t, 70> ciphertext = {0};
+    std::array<std::uint8_t, 70> expected_ciphertext = {0};
+
+    for (std::size_t i = 0; i != plaintext.size(); ++i) {
+        plaintext[i] = static_cast<std::uint8_t>((i * 5 + 1) & 0xff);
+    }
+
+    schedule_type first_state = rfc8439_block_state();
+    first_state[12] = 0;
+    const std::array<std::uint8_t, 64> first_block = reference_block(first_state);
+    const std::array<std::uint8_t, 64> second_block = rfc8439_expected_block;
+
+    for (std::size_t i = 0; i != 64; ++i) {
+        expected_ciphertext[i] = plaintext[i] ^ first_block[i];
+    }
+    for (std::size_t i = 64; i != plaintext.size(); ++i) {
+        expected_ciphertext[i] = plaintext[i] ^ second_block[i - 64];
+    }
+
+    cipher.process(plaintext.begin(), plaintext.end(), ciphertext.begin(), schedule, block);
+
+    BOOST_TEST(std::equal(expected_ciphertext.begin(), expected_ciphertext.end(), ciphertext.begin()));
+    BOOST_TEST(schedule[12] == 2u);
+    BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
+    BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
+    BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
+
+    std::array<std::uint8_t, 58> continuation = {0};
+    std::array<std::uint8_t, 58> continuation_ciphertext = {0};
+    std::array<std::uint8_t, 58> expected_continuation = {0};
+
+    for (std::size_t i = 0; i != continuation.size(); ++i) {
+        continuation[i] = static_cast<std::uint8_t>((i * 7 + 3) & 0xff);
+        expected_continuation[i] = continuation[i] ^ second_block[i + 6];
+    }
+
+    cipher.process(continuation.begin(), continuation.end(), continuation_ciphertext.begin(), schedule, block);
+
+    BOOST_TEST(std::equal(expected_continuation.begin(), expected_continuation.end(), continuation_ciphertext.begin()));
+    BOOST_TEST(schedule[12] == 3u);
+    BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
+    BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
+    BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha_seek_supports_byte_offsets_inside_block) {
+    using cipher_type = chacha<96, 256, 20>;
+
+    cipher_type::block_type block = {0};
+    cipher_type::key_schedule_type schedule = {0};
+    cipher_type::key_type key = rfc8439_key();
+    cipher_type::iv_type iv = rfc8439_iv();
+    cipher_type cipher(block, schedule, key, iv);
+
+    const std::uint64_t offset = cipher_type::block_size + 7;
+    cipher.seek(block, schedule, offset);
+
+    std::array<std::uint8_t, 10> plaintext = {0};
+    std::array<std::uint8_t, 10> ciphertext = {0};
+    std::array<std::uint8_t, 10> expected_ciphertext = {0};
+
+    for (std::size_t i = 0; i != plaintext.size(); ++i) {
+        plaintext[i] = static_cast<std::uint8_t>(0xa0 + i);
+        expected_ciphertext[i] = plaintext[i] ^ rfc8439_expected_block[i + 7];
+    }
+
+    cipher.process(plaintext.begin(), plaintext.end(), ciphertext.begin(), schedule, block);
+
+    BOOST_TEST(std::equal(expected_ciphertext.begin(), expected_ciphertext.end(), ciphertext.begin()));
+    BOOST_TEST(schedule[12] == 2u);
+    BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
+    BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
+    BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
+}
+
 BOOST_DATA_TEST_CASE(chacha_single_range_encrypt, boost::unit_test::data::xrange(7), index) {
     using cipher_type = chacha<96, 256, 20>;
 

@@ -99,23 +99,60 @@ namespace nil {
                 typedef typename policy_type::key_type key_type;
 
                 chacha(block_type &block, key_schedule_type &schedule, const key_type &key,
-                       const iv_type &iv = iv_type()) {
+                       const iv_type &iv = iv_type()) : block_offset(0) {
                     policy_type::schedule_key(schedule, key);
                     policy_type::schedule_iv(block, schedule, iv);
                 }
 
+                template<typename InputIterator, typename OutputIterator>
+                OutputIterator process(InputIterator first, InputIterator last, OutputIterator out,
+                                       key_schedule_type &schedule, block_type &block) {
+                    while (first != last) {
+                        *out = *first ^ block[block_offset];
+
+                        ++first;
+                        ++out;
+                        ++block_offset;
+
+                        if (block_offset == block_size) {
+                            policy_type::generate_block(block, schedule);
+                            block_offset = 0;
+                        }
+                    }
+
+                    return out;
+                }
+
+                template<typename InputIterator, typename OutputIterator>
+                OutputIterator process_n(InputIterator first, std::size_t length, OutputIterator out,
+                                         key_schedule_type &schedule, block_type &block) {
+                    while (length != 0) {
+                        *out = *first ^ block[block_offset];
+
+                        ++first;
+                        ++out;
+                        --length;
+                        ++block_offset;
+
+                        if (block_offset == block_size) {
+                            policy_type::generate_block(block, schedule);
+                            block_offset = 0;
+                        }
+                    }
+
+                    return out;
+                }
+
                 template<typename InputRange, typename OutputRange>
                 void process(InputRange &in, OutputRange &out, key_schedule_type &schedule, block_type &block) {
-                    for (std::size_t i = 0; i != block_size; ++i) {
-                        out[i] = in[i] ^ block[i];
-                    }
-                    policy_type::generate_block(block, schedule);
+                    process_n(in, block_size, out, schedule, block);
                 }
 
                 void seek(block_type &block, key_schedule_type &schedule, std::uint64_t offset) {
                     BOOST_STATIC_ASSERT(IVBits == 64 || IVBits == 96);
 
                     const std::uint64_t counter = offset / block_size;
+                    block_offset = offset % block_size;
                     if (IVBits == 96) {
                         BOOST_ASSERT(counter <= std::numeric_limits<std::uint32_t>::max());
                         schedule[12] = static_cast<word_type>(counter);
@@ -125,6 +162,9 @@ namespace nil {
                     }
                     policy_type::generate_block(block, schedule);
                 }
+
+            private:
+                std::size_t block_offset;
             };
         }    // namespace stream
     }        // namespace crypto3
