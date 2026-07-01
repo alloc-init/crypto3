@@ -28,6 +28,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 
 #include <boost/predef/architecture.h>
@@ -54,8 +55,12 @@ namespace nil {
                            (static_cast<std::uint32_t>(bytes[offset + 3]) << 24);
                 }
 
+                static constexpr std::uint64_t ietf_counter_limit() {
+                    return std::numeric_limits<std::uint32_t>::max();
+                }
+
                 static void validate_ietf_initial_counter(std::uint64_t initial_counter) {
-                    if (initial_counter > 0xffffffffULL) {
+                    if (initial_counter > ietf_counter_limit()) {
                         throw std::out_of_range("ChaCha20 IETF counter exhausted");
                     }
                 }
@@ -417,7 +422,11 @@ namespace nil {
                     static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv,
                                             std::uint64_t initial_counter = 0) {
                         schedule_iv(schedule, iv, initial_counter);
-                        generate_block(block, schedule);
+                        if (initial_counter == ietf_counter_limit()) {
+                            generate_block_without_counter_increment(block, schedule);
+                        } else {
+                            generate_block(block, schedule);
+                        }
                     }
 
                     static void schedule_key(key_schedule_type &schedule, const key_type &key) {
@@ -587,7 +596,11 @@ namespace nil {
                     static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv,
                                             std::uint64_t initial_counter = 0) {
                         schedule_iv(schedule, iv, initial_counter);
-                        generate_block(block, schedule);
+                        if (initial_counter == ietf_counter_limit()) {
+                            generate_block_without_counter_increment(block, schedule);
+                        } else {
+                            generate_block(block, schedule);
+                        }
                     }
 
                     static void schedule_key(key_schedule_type &schedule, const key_type &key) {

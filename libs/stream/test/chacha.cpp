@@ -419,6 +419,50 @@ BOOST_AUTO_TEST_CASE(chacha_functions_schedule_iv_rejects_ietf_initial_counter_o
     BOOST_CHECK_THROW(functions_type::schedule_iv(block, schedule, iv, std::uint64_t(1) << 32), std::out_of_range);
 }
 
+BOOST_AUTO_TEST_CASE(chacha_functions_schedule_iv_accepts_maximum_ietf_initial_counter) {
+    {
+        using functions_type = detail::chacha_functions<20, 96, 128>;
+
+        functions_type::key_schedule_type expected_schedule = {0};
+        functions_type::key_schedule_type schedule = {0};
+        functions_type::block_type block = {0};
+        functions_type::key_type key = {0};
+        functions_type::iv_type iv = rfc8439_iv();
+
+        functions_type::schedule_key(expected_schedule, key);
+        functions_type::schedule_iv(expected_schedule, iv, 0xffffffffULL);
+
+        functions_type::schedule_key(schedule, key);
+        functions_type::schedule_iv(block, schedule, iv, 0xffffffffULL);
+
+        const std::array<std::uint8_t, 64> expected_block = reference_block(expected_schedule);
+
+        BOOST_TEST(std::equal(expected_block.begin(), expected_block.end(), block.begin()));
+        BOOST_TEST(std::equal(expected_schedule.begin(), expected_schedule.end(), schedule.begin()));
+    }
+
+    {
+        using functions_type = detail::chacha_functions<20, 96, 256>;
+
+        functions_type::key_schedule_type expected_schedule = {0};
+        functions_type::key_schedule_type schedule = {0};
+        functions_type::block_type block = {0};
+        functions_type::key_type key = rfc8439_key();
+        functions_type::iv_type iv = rfc8439_iv();
+
+        functions_type::schedule_key(expected_schedule, key);
+        functions_type::schedule_iv(expected_schedule, iv, 0xffffffffULL);
+
+        functions_type::schedule_key(schedule, key);
+        functions_type::schedule_iv(block, schedule, iv, 0xffffffffULL);
+
+        const std::array<std::uint8_t, 64> expected_block = reference_block(expected_schedule);
+
+        BOOST_TEST(std::equal(expected_block.begin(), expected_block.end(), block.begin()));
+        BOOST_TEST(std::equal(expected_schedule.begin(), expected_schedule.end(), schedule.begin()));
+    }
+}
+
 BOOST_AUTO_TEST_CASE(chacha_functions_schedule_iv_splits_original_initial_counter) {
     using functions_type = detail::chacha_functions<20, 64, 256>;
 
@@ -573,6 +617,11 @@ BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_encryption_vector) {
 
     BOOST_TEST(std::equal(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), decrypted.begin()));
     BOOST_TEST(decrypt_schedule[12] == 3u);
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha20_cipher_is_not_copyable) {
+    BOOST_TEST(!std::is_copy_constructible<chacha20_cipher>::value);
+    BOOST_TEST(!std::is_copy_assignable<chacha20_cipher>::value);
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha20_cipher_matches_rfc8439_encryption_vector) {

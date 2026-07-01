@@ -221,6 +221,9 @@ namespace nil {
                     cipher(block, schedule, key, nonce, initial_counter_value) {
                 }
 
+                chacha20_cipher(const chacha20_cipher &) = delete;
+                chacha20_cipher &operator=(const chacha20_cipher &) = delete;
+
                 template<typename InputIterator, typename OutputIterator>
                 OutputIterator process(InputIterator first, InputIterator last, OutputIterator out) {
                     return cipher.process(first, last, out, schedule, block);
