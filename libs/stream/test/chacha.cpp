@@ -104,12 +104,8 @@ namespace {
     std::vector<std::uint8_t> chacha20_encrypt(const chacha20::key_type &key, const chacha20::iv_type &iv,
                                                std::uint32_t counter,
                                                const std::vector<std::uint8_t> &plaintext) {
-        chacha20::block_type block = {0};
-        chacha20::key_schedule_type schedule = {0};
-        chacha20 cipher(block, schedule, key, iv, counter);
-
         std::vector<std::uint8_t> ciphertext(plaintext.size());
-        cipher.process(plaintext.begin(), plaintext.end(), ciphertext.begin(), schedule, block);
+        nil::crypto3::encrypt<chacha20>(plaintext.begin(), plaintext.end(), key, iv, ciphertext.begin(), counter);
         return ciphertext;
     }
 
@@ -577,6 +573,140 @@ BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_encryption_vector) {
 
     BOOST_TEST(std::equal(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), decrypted.begin()));
     BOOST_TEST(decrypt_schedule[12] == 3u);
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha20_cipher_matches_rfc8439_encryption_vector) {
+    chacha20::key_type key = rfc8439_key();
+    chacha20::iv_type iv = rfc8439_encryption_iv();
+
+    chacha20_cipher encrypt_cipher(key, iv, 1);
+    std::array<std::uint8_t, rfc8439_sunscreen_plaintext.size()> ciphertext = {0};
+
+    const auto encrypt_out = encrypt_cipher.process(rfc8439_sunscreen_plaintext.begin(),
+                                                    rfc8439_sunscreen_plaintext.end(), ciphertext.begin());
+
+    BOOST_TEST((encrypt_out == ciphertext.end()));
+    BOOST_TEST(std::equal(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(),
+                          ciphertext.begin()));
+
+    chacha20_cipher decrypt_cipher(key, iv, 1);
+    std::array<std::uint8_t, rfc8439_sunscreen_ciphertext.size()> decrypted = {0};
+
+    const auto decrypt_out = decrypt_cipher.process(rfc8439_sunscreen_ciphertext.begin(),
+                                                    rfc8439_sunscreen_ciphertext.end(), decrypted.begin());
+
+    BOOST_TEST((decrypt_out == decrypted.end()));
+    BOOST_TEST(std::equal(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), decrypted.begin()));
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha20_cipher_processes_resumable_byte_streams) {
+    chacha20::key_type key = rfc8439_key();
+    chacha20::iv_type iv = rfc8439_iv();
+
+    std::vector<std::uint8_t> plaintext(129);
+    for (std::size_t i = 0; i != plaintext.size(); ++i) {
+        plaintext[i] = static_cast<std::uint8_t>((i * 11 + 5) & 0xff);
+    }
+
+    std::vector<std::uint8_t> expected(plaintext.size());
+    nil::crypto3::encrypt<chacha20>(plaintext.begin(), plaintext.end(), key, iv, expected.begin(), 1);
+
+    chacha20_cipher cipher(key, iv, 1);
+    std::vector<std::uint8_t> ciphertext(plaintext.size());
+
+    const std::size_t first_chunk = 70;
+    auto out = cipher.process(plaintext.begin(), plaintext.begin() + first_chunk, ciphertext.begin());
+    out = cipher.process(plaintext.begin() + first_chunk, plaintext.end(), out);
+
+    BOOST_TEST((out == ciphertext.end()));
+    BOOST_TEST(std::equal(expected.begin(), expected.end(), ciphertext.begin()));
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha20_cipher_seek_is_relative_to_initial_counter) {
+    chacha20::key_type key = rfc8439_key();
+    chacha20::iv_type iv = rfc8439_iv();
+    chacha20_cipher cipher(key, iv, 1);
+
+    const std::uint64_t offset = 7;
+    cipher.seek(offset);
+
+    std::array<std::uint8_t, 10> plaintext = {0};
+    std::array<std::uint8_t, 10> ciphertext = {0};
+    std::array<std::uint8_t, 10> expected_ciphertext = {0};
+
+    for (std::size_t i = 0; i != plaintext.size(); ++i) {
+        plaintext[i] = static_cast<std::uint8_t>(0xa0 + i);
+        expected_ciphertext[i] = plaintext[i] ^ rfc8439_expected_block[i + offset];
+    }
+
+    cipher.process(plaintext.begin(), plaintext.end(), ciphertext.begin());
+
+    BOOST_TEST(std::equal(expected_ciphertext.begin(), expected_ciphertext.end(), ciphertext.begin()));
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha20_cipher_supports_in_place_encryption) {
+    chacha20::key_type key = rfc8439_key();
+    chacha20::iv_type iv = rfc8439_iv();
+
+    std::vector<std::uint8_t> buffer(130);
+    for (std::size_t i = 0; i != buffer.size(); ++i) {
+        buffer[i] = static_cast<std::uint8_t>((i * 13 + 9) & 0xff);
+    }
+
+    const std::vector<std::uint8_t> plaintext = buffer;
+    std::vector<std::uint8_t> expected(buffer.size());
+    nil::crypto3::encrypt<chacha20>(plaintext.begin(), plaintext.end(), key, iv, expected.begin(), 0);
+
+    nil::crypto3::encrypt<chacha20>(buffer.begin(), buffer.end(), key, iv, buffer.begin(), 0);
+
+    BOOST_TEST(std::equal(expected.begin(), expected.end(), buffer.begin()));
+
+    nil::crypto3::decrypt<chacha20>(buffer.begin(), buffer.end(), key, iv, buffer.begin(), 0);
+
+    BOOST_TEST(std::equal(plaintext.begin(), plaintext.end(), buffer.begin()));
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha20_encrypt_decrypt_helpers_match_rfc8439_vector) {
+    chacha20::key_type key = rfc8439_key();
+    chacha20::iv_type iv = rfc8439_encryption_iv();
+
+    std::array<std::uint8_t, rfc8439_sunscreen_plaintext.size()> ciphertext = {0};
+    std::array<std::uint8_t, rfc8439_sunscreen_ciphertext.size()> decrypted = {0};
+    std::array<std::uint8_t, rfc8439_sunscreen_plaintext.size()> ciphertext_without_explicit_cipher = {0};
+
+    nil::crypto3::encrypt<chacha20>(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), key, iv,
+                                    ciphertext.begin(), 1);
+    nil::crypto3::decrypt<chacha20>(ciphertext.begin(), ciphertext.end(), key, iv, decrypted.begin(), 1);
+    nil::crypto3::encrypt(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), key, iv,
+                          ciphertext_without_explicit_cipher.begin(), 1);
+
+    BOOST_TEST(std::equal(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(),
+                          ciphertext.begin()));
+    BOOST_TEST(std::equal(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), decrypted.begin()));
+    BOOST_TEST(std::equal(ciphertext.begin(), ciphertext.end(), ciphertext_without_explicit_cipher.begin()));
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha20_cipher_rejects_ietf_counter_wrap) {
+    chacha20::key_type key = rfc8439_key();
+    chacha20::iv_type iv = rfc8439_iv();
+    chacha20_cipher cipher(key, iv, 0xffffffff);
+
+    chacha20::block_type plaintext = {0};
+    chacha20::block_type ciphertext = {0};
+
+    cipher.process(plaintext.begin(), plaintext.end(), ciphertext.begin());
+
+    std::array<std::uint8_t, 1> extra_plaintext = {0};
+    std::array<std::uint8_t, 1> extra_ciphertext = {0};
+    std::array<std::uint8_t, chacha20::block_size + 1> too_long_plaintext = {0};
+    std::array<std::uint8_t, chacha20::block_size + 1> too_long_ciphertext = {0};
+
+    BOOST_CHECK_THROW(cipher.process(extra_plaintext.begin(), extra_plaintext.end(), extra_ciphertext.begin()),
+                      std::out_of_range);
+    BOOST_CHECK_THROW(cipher.seek(chacha20::block_size), std::out_of_range);
+    BOOST_CHECK_THROW(nil::crypto3::encrypt<chacha20>(too_long_plaintext.begin(), too_long_plaintext.end(), key, iv,
+                                                      too_long_ciphertext.begin(), 0xffffffff),
+                      std::out_of_range);
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha20_matches_rfc8439_additional_block_vectors) {

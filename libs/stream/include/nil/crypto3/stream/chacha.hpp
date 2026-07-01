@@ -206,6 +206,46 @@ namespace nil {
 
             using chacha20 = ietf_chacha<256, 20>;
             using original_chacha20 = original_chacha<256, 20>;
+
+            class chacha20_cipher {
+            public:
+                typedef chacha20 cipher_type;
+
+                constexpr static const std::size_t block_size = cipher_type::block_size;
+                typedef typename cipher_type::key_type key_type;
+                typedef typename cipher_type::iv_type nonce_type;
+                typedef typename cipher_type::iv_type iv_type;
+
+                chacha20_cipher(const key_type &key, const nonce_type &nonce, std::uint32_t initial_counter_value) :
+                    initial_counter(initial_counter_value), block(), schedule(),
+                    cipher(block, schedule, key, nonce, initial_counter_value) {
+                }
+
+                template<typename InputIterator, typename OutputIterator>
+                OutputIterator process(InputIterator first, InputIterator last, OutputIterator out) {
+                    return cipher.process(first, last, out, schedule, block);
+                }
+
+                void seek(std::uint64_t byte_offset) {
+                    const std::uint64_t initial_offset =
+                        static_cast<std::uint64_t>(initial_counter) * block_size;
+                    const std::uint64_t max_offset =
+                        static_cast<std::uint64_t>(std::numeric_limits<std::uint32_t>::max()) * block_size +
+                        (block_size - 1);
+
+                    if (byte_offset > max_offset - initial_offset) {
+                        throw std::out_of_range("ChaCha20 IETF counter exhausted");
+                    }
+
+                    cipher.seek(block, schedule, initial_offset + byte_offset);
+                }
+
+            private:
+                std::uint32_t initial_counter;
+                typename cipher_type::block_type block;
+                typename cipher_type::key_schedule_type schedule;
+                cipher_type cipher;
+            };
         }    // namespace stream
     }        // namespace crypto3
 }    // namespace nil
