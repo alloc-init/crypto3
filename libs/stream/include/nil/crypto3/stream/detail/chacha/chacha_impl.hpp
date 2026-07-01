@@ -25,6 +25,9 @@
 #ifndef CRYPTO3_STREAM_CHACHA_IMPL_HPP
 #define CRYPTO3_STREAM_CHACHA_IMPL_HPP
 
+#include <limits>
+#include <stdexcept>
+
 #include <nil/crypto3/stream/detail/chacha/chacha_policy.hpp>
 
 #define CHACHA_QUARTER_ROUND(a, b, c, d) \
@@ -110,6 +113,7 @@ namespace nil {
                     }
 
                     static void chacha_block_ietf(block_type &block, key_schedule_type &input) {
+                        validate_can_advance_counter(input, counter_mode::ietf, 1);
                         chacha_block(block.data(), input);
                         increment_counter(input, counter_mode::ietf);
                     }
@@ -123,18 +127,39 @@ namespace nil {
                         }
                     }
 
+                    static void chacha_block_no_increment(block_type &block, const key_schedule_type &input) {
+                        chacha_block(block.data(), input);
+                    }
+
                 private:
                     enum class counter_mode { original, ietf };
 
                     static void chacha_blocks(std::uint8_t *out, std::size_t blocks, key_schedule_type &input,
                                               counter_mode mode) {
+                        validate_can_advance_counter(input, mode, blocks);
+
                         for (std::size_t i = 0; i != blocks; ++i) {
                             chacha_block(out + block_size * i, input);
                             increment_counter(input, mode);
                         }
                     }
 
+                    static void validate_can_advance_counter(const key_schedule_type &input, counter_mode mode,
+                                                             std::size_t blocks) {
+                        const std::uint64_t max_counter = std::numeric_limits<std::uint32_t>::max();
+
+                        if (mode == counter_mode::ietf && blocks != 0 &&
+                            (blocks > max_counter || input[12] > max_counter - blocks)) {
+                            throw std::out_of_range("ChaCha20 IETF counter exhausted");
+                        }
+                    }
+
                     static void increment_counter(key_schedule_type &input, counter_mode mode) {
+                        if (mode == counter_mode::ietf &&
+                            input[12] == std::numeric_limits<std::uint32_t>::max()) {
+                            throw std::out_of_range("ChaCha20 IETF counter exhausted");
+                        }
+
                         ++input[12];
                         if (mode == counter_mode::original && input[12] == 0) {
                             ++input[13];

@@ -63,6 +63,11 @@ namespace nil {
                     static void generate_block(block_type &block, key_schedule_type &schedule) {
                         scalar_impl_type::chacha_block(block, schedule);
                     }
+
+                    static void generate_block_without_counter_increment(block_type &block,
+                                                                         const key_schedule_type &schedule) {
+                        scalar_impl_type::chacha_block_no_increment(block, schedule);
+                    }
                 };
 
                 template<std::size_t Round, std::size_t IVSize, std::size_t KeyBits>
@@ -71,6 +76,7 @@ namespace nil {
                     typedef chacha_policy<Round, IVSize, KeyBits> policy_type;
                     typedef chacha_block_functions<Round, IVSize, KeyBits> block_functions_type;
                     using block_functions_type::generate_block;
+                    using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -118,6 +124,7 @@ namespace nil {
                     typedef chacha_policy<Round, IVSize, 128> policy_type;
                     typedef chacha_block_functions<Round, IVSize, 128> block_functions_type;
                     using block_functions_type::generate_block;
+                    using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -165,6 +172,7 @@ namespace nil {
                     typedef chacha_policy<Round, 64, 128> policy_type;
                     typedef chacha_block_functions<Round, 64, 128> block_functions_type;
                     using block_functions_type::generate_block;
+                    using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -221,6 +229,7 @@ namespace nil {
                     typedef chacha_policy<Round, 96, 128> policy_type;
                     typedef chacha_block_functions<Round, 96, 128> block_functions_type;
                     using block_functions_type::generate_block;
+                    using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -278,6 +287,7 @@ namespace nil {
                     typedef chacha_policy<Round, IVSize, 256> policy_type;
                     typedef chacha_block_functions<Round, IVSize, 256> block_functions_type;
                     using block_functions_type::generate_block;
+                    using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -325,6 +335,7 @@ namespace nil {
                     typedef chacha_policy<Round, 64, 256> policy_type;
                     typedef chacha_block_functions<Round, 64, 256> block_functions_type;
                     using block_functions_type::generate_block;
+                    using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
@@ -382,6 +393,7 @@ namespace nil {
                     typedef chacha_policy<Round, 96, 256> policy_type;
                     typedef chacha_block_functions<Round, 96, 256> block_functions_type;
                     using block_functions_type::generate_block;
+                    using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
     ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)

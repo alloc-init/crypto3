@@ -28,8 +28,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <stdexcept>
 
-#include <boost/assert.hpp>
+#include <boost/static_assert.hpp>
 
 #include <nil/crypto3/stream/detail/chacha/chacha_functions.hpp>
 
@@ -99,7 +100,7 @@ namespace nil {
                 typedef typename policy_type::key_type key_type;
 
                 chacha(block_type &block, key_schedule_type &schedule, const key_type &key,
-                       const iv_type &iv = iv_type()) : block_offset(0) {
+                       const iv_type &iv = iv_type()) : block_offset(0), ietf_counter_exhausted(false) {
                     policy_type::schedule_key(schedule, key);
                     policy_type::schedule_iv(block, schedule, iv);
                 }
@@ -108,16 +109,16 @@ namespace nil {
                 OutputIterator process(InputIterator first, InputIterator last, OutputIterator out,
                                        key_schedule_type &schedule, block_type &block) {
                     while (first != last) {
+                        if (block_offset == block_size) {
+                            generate_next_block(block, schedule);
+                            block_offset = 0;
+                        }
+
                         *out = *first ^ block[block_offset];
 
                         ++first;
                         ++out;
                         ++block_offset;
-
-                        if (block_offset == block_size) {
-                            policy_type::generate_block(block, schedule);
-                            block_offset = 0;
-                        }
                     }
 
                     return out;
@@ -127,17 +128,17 @@ namespace nil {
                 OutputIterator process_n(InputIterator first, std::size_t length, OutputIterator out,
                                          key_schedule_type &schedule, block_type &block) {
                     while (length != 0) {
+                        if (block_offset == block_size) {
+                            generate_next_block(block, schedule);
+                            block_offset = 0;
+                        }
+
                         *out = *first ^ block[block_offset];
 
                         ++first;
                         ++out;
                         --length;
                         ++block_offset;
-
-                        if (block_offset == block_size) {
-                            policy_type::generate_block(block, schedule);
-                            block_offset = 0;
-                        }
                     }
 
                     return out;
@@ -154,17 +155,45 @@ namespace nil {
                     const std::uint64_t counter = offset / block_size;
                     block_offset = offset % block_size;
                     if (IVBits == 96) {
-                        BOOST_ASSERT(counter <= std::numeric_limits<std::uint32_t>::max());
+                        if (counter > ietf_counter_limit()) {
+                            throw_ietf_counter_exhausted();
+                        }
                         schedule[12] = static_cast<word_type>(counter);
                     } else {
                         schedule[12] = static_cast<word_type>(counter);
                         schedule[13] = static_cast<word_type>(counter >> 32);
                     }
-                    policy_type::generate_block(block, schedule);
+                    ietf_counter_exhausted = false;
+                    generate_next_block(block, schedule);
                 }
 
             private:
+                static constexpr std::uint64_t ietf_counter_limit() {
+                    return std::numeric_limits<std::uint32_t>::max();
+                }
+
+                static void throw_ietf_counter_exhausted() {
+                    throw std::out_of_range("ChaCha20 IETF counter exhausted");
+                }
+
+                void generate_next_block(block_type &block, key_schedule_type &schedule) {
+                    if (IVBits == 96) {
+                        if (ietf_counter_exhausted) {
+                            throw_ietf_counter_exhausted();
+                        }
+                        if (schedule[12] == ietf_counter_limit()) {
+                            policy_type::generate_block_without_counter_increment(block, schedule);
+                            ietf_counter_exhausted = true;
+                            return;
+                        }
+                    }
+
+                    policy_type::generate_block(block, schedule);
+                    ietf_counter_exhausted = false;
+                }
+
                 std::size_t block_offset;
+                bool ietf_counter_exhausted;
             };
         }    // namespace stream
     }        // namespace crypto3

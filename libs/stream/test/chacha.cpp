@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <stdexcept>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/endian/conversion.hpp>
@@ -151,13 +152,26 @@ BOOST_AUTO_TEST_CASE(ietf_chacha20_x4_does_not_carry_into_nonce_word) {
     using impl_type = detail::chacha_impl<20, 96, 256>;
 
     impl_type::key_schedule_type state = rfc8439_block_state();
-    state[12] = 0xffffffff;
+    state[12] = 0xfffffffb;
     state[13] = 0x11223344;
     block4_type out = {0};
 
     impl_type::chacha_x4_ietf(out, state);
 
-    BOOST_TEST(state[12] == 3u);
+    BOOST_TEST(state[12] == 0xffffffffu);
+    BOOST_TEST(state[13] == 0x11223344u);
+}
+
+BOOST_AUTO_TEST_CASE(ietf_chacha20_x4_rejects_counter_wrap) {
+    using impl_type = detail::chacha_impl<20, 96, 256>;
+
+    impl_type::key_schedule_type state = rfc8439_block_state();
+    state[12] = 0xfffffffc;
+    state[13] = 0x11223344;
+    block4_type out = {0};
+
+    BOOST_CHECK_THROW(impl_type::chacha_x4_ietf(out, state), std::out_of_range);
+    BOOST_TEST(state[12] == 0xfffffffcu);
     BOOST_TEST(state[13] == 0x11223344u);
 }
 
@@ -213,6 +227,20 @@ BOOST_AUTO_TEST_CASE(chacha_functions_generates_single_block) {
     BOOST_TEST(state[15] == 0x00000000u);
 }
 
+BOOST_AUTO_TEST_CASE(chacha_functions_rejects_ietf_counter_wrap) {
+    using functions_type = detail::chacha_functions<20, 96, 256>;
+
+    functions_type::key_schedule_type state = rfc8439_block_state();
+    state[12] = 0xffffffff;
+    functions_type::block_type out = {0};
+
+    BOOST_CHECK_THROW(functions_type::generate_block(out, state), std::out_of_range);
+    BOOST_TEST(state[12] == 0xffffffffu);
+    BOOST_TEST(state[13] == rfc8439_block_state()[13]);
+    BOOST_TEST(state[14] == rfc8439_block_state()[14]);
+    BOOST_TEST(state[15] == rfc8439_block_state()[15]);
+}
+
 BOOST_AUTO_TEST_CASE(public_chacha_constructor_uses_schedule_iv_block_argument) {
     using cipher_type = chacha<96, 256, 20>;
 
@@ -253,7 +281,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_block_vector) {
     cipher.process(in, out, schedule, block);
 
     BOOST_TEST(std::equal(rfc8439_expected_block.begin(), rfc8439_expected_block.end(), ciphertext.begin()));
-    BOOST_TEST(schedule[12] == 3u);
+    BOOST_TEST(schedule[12] == 2u);
     BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
     BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
     BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
@@ -282,6 +310,20 @@ BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_sets_32_bit_counter_and_preserves_n
     BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
 }
 
+BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_rejects_counter_overflow) {
+    using cipher_type = chacha<96, 256, 20>;
+
+    cipher_type::block_type block = {0};
+    cipher_type::key_schedule_type schedule = {0};
+    cipher_type::key_type key = rfc8439_key();
+    cipher_type::iv_type iv = rfc8439_iv();
+    cipher_type cipher(block, schedule, key, iv);
+
+    const std::uint64_t offset = (std::uint64_t(1) << 32) * cipher_type::block_size;
+
+    BOOST_CHECK_THROW(cipher.seek(block, schedule, offset), std::out_of_range);
+}
+
 BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_accepts_maximum_counter_block) {
     using cipher_type = chacha<96, 256, 20>;
 
@@ -300,10 +342,27 @@ BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_accepts_maximum_counter_block) {
     const std::array<std::uint8_t, 64> expected_block = reference_block(expected_state);
 
     BOOST_TEST(std::equal(expected_block.begin(), expected_block.end(), block.begin()));
-    BOOST_TEST(schedule[12] == 0u);
+    BOOST_TEST(schedule[12] == 0xffffffffu);
     BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
     BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
     BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
+
+    cipher_type::block_type plaintext = {0};
+    cipher_type::block_type ciphertext = {0};
+    std::uint8_t *in = plaintext.data();
+    std::uint8_t *out = ciphertext.data();
+
+    cipher.process(in, out, schedule, block);
+
+    BOOST_TEST(std::equal(expected_block.begin(), expected_block.end(), ciphertext.begin()));
+    BOOST_TEST(schedule[12] == 0xffffffffu);
+
+    std::array<std::uint8_t, 1> extra_plaintext = {0};
+    std::array<std::uint8_t, 1> extra_ciphertext = {0};
+
+    BOOST_CHECK_THROW(cipher.process(extra_plaintext.begin(), extra_plaintext.end(), extra_ciphertext.begin(), schedule,
+                                     block),
+                      std::out_of_range);
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_seek_original_sets_64_bit_counter) {
@@ -382,7 +441,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_process_advances_across_consecutive_blocks) {
 
     BOOST_TEST(std::equal(expected_first_block.begin(), expected_first_block.end(), first_ciphertext.begin()));
     BOOST_TEST(std::equal(rfc8439_expected_block.begin(), rfc8439_expected_block.end(), second_ciphertext.begin()));
-    BOOST_TEST(schedule[12] == 3u);
+    BOOST_TEST(schedule[12] == 2u);
     BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
     BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
     BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
@@ -437,7 +496,7 @@ BOOST_AUTO_TEST_CASE(public_chacha_process_handles_partial_range_and_resume) {
     cipher.process(continuation.begin(), continuation.end(), continuation_ciphertext.begin(), schedule, block);
 
     BOOST_TEST(std::equal(expected_continuation.begin(), expected_continuation.end(), continuation_ciphertext.begin()));
-    BOOST_TEST(schedule[12] == 3u);
+    BOOST_TEST(schedule[12] == 2u);
     BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
     BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
     BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
@@ -504,8 +563,8 @@ BOOST_DATA_TEST_CASE(chacha_single_range_encrypt, boost::unit_test::data::xrange
 
     BOOST_TEST(!std::equal(plaintext.begin(), plaintext.end(), ciphertext.begin()));
     BOOST_TEST(std::equal(plaintext.begin(), plaintext.end(), decrypted.begin()));
-    BOOST_TEST(encrypt_schedule[12] == 2u);
-    BOOST_TEST(decrypt_schedule[12] == 2u);
+    BOOST_TEST(encrypt_schedule[12] == 1u);
+    BOOST_TEST(decrypt_schedule[12] == 1u);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
