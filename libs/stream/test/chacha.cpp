@@ -106,9 +106,7 @@ namespace {
                                                const std::vector<std::uint8_t> &plaintext) {
         chacha20::block_type block = {0};
         chacha20::key_schedule_type schedule = {0};
-        chacha20 cipher(block, schedule, key, iv);
-
-        cipher.seek(block, schedule, static_cast<std::uint64_t>(counter) * chacha20::block_size);
+        chacha20 cipher(block, schedule, key, iv, counter);
 
         std::vector<std::uint8_t> ciphertext(plaintext.size());
         cipher.process(plaintext.begin(), plaintext.end(), ciphertext.begin(), schedule, block);
@@ -394,6 +392,59 @@ BOOST_AUTO_TEST_CASE(chacha_functions_rejects_ietf_counter_wrap) {
     BOOST_TEST(state[15] == rfc8439_block_state()[15]);
 }
 
+BOOST_AUTO_TEST_CASE(chacha_functions_schedule_iv_uses_ietf_initial_counter) {
+    using functions_type = detail::chacha_functions<20, 96, 256>;
+
+    functions_type::key_schedule_type schedule = {0};
+    functions_type::block_type block = {0};
+    functions_type::key_type key = rfc8439_key();
+    functions_type::iv_type iv = rfc8439_iv();
+
+    functions_type::schedule_key(schedule, key);
+    functions_type::schedule_iv(block, schedule, iv, 1);
+
+    BOOST_TEST(std::equal(rfc8439_expected_block.begin(), rfc8439_expected_block.end(), block.begin()));
+    BOOST_TEST(schedule[12] == 2u);
+    BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
+    BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
+    BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
+}
+
+BOOST_AUTO_TEST_CASE(chacha_functions_schedule_iv_rejects_ietf_initial_counter_overflow) {
+    using functions_type = detail::chacha_functions<20, 96, 256>;
+
+    functions_type::key_schedule_type schedule = {0};
+    functions_type::block_type block = {0};
+    functions_type::key_type key = rfc8439_key();
+    functions_type::iv_type iv = rfc8439_iv();
+
+    functions_type::schedule_key(schedule, key);
+
+    BOOST_CHECK_THROW(functions_type::schedule_iv(block, schedule, iv, std::uint64_t(1) << 32), std::out_of_range);
+}
+
+BOOST_AUTO_TEST_CASE(chacha_functions_schedule_iv_splits_original_initial_counter) {
+    using functions_type = detail::chacha_functions<20, 64, 256>;
+
+    functions_type::key_schedule_type schedule = original_chacha_state();
+    functions_type::block_type block = {0};
+    functions_type::iv_type iv = {{0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00}};
+    const std::uint64_t counter = std::uint64_t(1) << 32;
+
+    functions_type::schedule_iv(block, schedule, iv, counter);
+
+    schedule_type expected_state = original_chacha_state();
+    expected_state[12] = 0;
+    expected_state[13] = 1;
+    const std::array<std::uint8_t, 64> expected_block = reference_block(expected_state);
+
+    BOOST_TEST(std::equal(expected_block.begin(), expected_block.end(), block.begin()));
+    BOOST_TEST(schedule[12] == 1u);
+    BOOST_TEST(schedule[13] == 1u);
+    BOOST_TEST(schedule[14] == original_chacha_state()[14]);
+    BOOST_TEST(schedule[15] == original_chacha_state()[15]);
+}
+
 BOOST_AUTO_TEST_CASE(public_chacha_constructor_uses_schedule_iv_block_argument) {
     using cipher_type = chacha20;
 
@@ -413,6 +464,61 @@ BOOST_AUTO_TEST_CASE(public_chacha_constructor_uses_schedule_iv_block_argument) 
     BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
     BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
     BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha_constructor_uses_initial_counter) {
+    using cipher_type = chacha20;
+
+    cipher_type::block_type block = {0};
+    cipher_type::key_schedule_type schedule = {0};
+    cipher_type::key_type key = rfc8439_key();
+    cipher_type::iv_type iv = rfc8439_iv();
+
+    cipher_type cipher(block, schedule, key, iv, 1);
+
+    (void)cipher;
+    BOOST_TEST(std::equal(rfc8439_expected_block.begin(), rfc8439_expected_block.end(), block.begin()));
+    BOOST_TEST(schedule[12] == 2u);
+    BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
+    BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
+    BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha_constructor_accepts_maximum_ietf_initial_counter) {
+    using cipher_type = chacha20;
+
+    cipher_type::block_type block = {0};
+    cipher_type::key_schedule_type schedule = {0};
+    cipher_type::key_type key = rfc8439_key();
+    cipher_type::iv_type iv = rfc8439_iv();
+    cipher_type cipher(block, schedule, key, iv, 0xffffffffULL);
+
+    schedule_type expected_state = rfc8439_block_state();
+    expected_state[12] = 0xffffffff;
+    const std::array<std::uint8_t, 64> expected_block = reference_block(expected_state);
+
+    BOOST_TEST(std::equal(expected_block.begin(), expected_block.end(), block.begin()));
+    BOOST_TEST(schedule[12] == 0xffffffffu);
+    BOOST_TEST(schedule[13] == rfc8439_block_state()[13]);
+    BOOST_TEST(schedule[14] == rfc8439_block_state()[14]);
+    BOOST_TEST(schedule[15] == rfc8439_block_state()[15]);
+
+    cipher_type::block_type plaintext = {0};
+    cipher_type::block_type ciphertext = {0};
+    std::uint8_t *in = plaintext.data();
+    std::uint8_t *out = ciphertext.data();
+
+    cipher.process(in, out, schedule, block);
+
+    BOOST_TEST(std::equal(expected_block.begin(), expected_block.end(), ciphertext.begin()));
+    BOOST_TEST(schedule[12] == 0xffffffffu);
+
+    std::array<std::uint8_t, 1> extra_plaintext = {0};
+    std::array<std::uint8_t, 1> extra_ciphertext = {0};
+
+    BOOST_CHECK_THROW(cipher.process(extra_plaintext.begin(), extra_plaintext.end(), extra_ciphertext.begin(), schedule,
+                                     block),
+                      std::out_of_range);
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_block_vector) {

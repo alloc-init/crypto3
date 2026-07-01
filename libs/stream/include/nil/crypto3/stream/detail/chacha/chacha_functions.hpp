@@ -54,6 +54,12 @@ namespace nil {
                            (static_cast<std::uint32_t>(bytes[offset + 3]) << 24);
                 }
 
+                static void validate_ietf_initial_counter(std::uint64_t initial_counter) {
+                    if (initial_counter > 0xffffffffULL) {
+                        throw std::out_of_range("ChaCha20 IETF counter exhausted");
+                    }
+                }
+
                 template<std::size_t Round, std::size_t IVSize, std::size_t KeyBits>
                 struct chacha_unimplemented_simd_impl {
                     typedef chacha_policy<Round, IVSize, KeyBits> policy_type;
@@ -338,12 +344,17 @@ namespace nil {
                     constexpr static const std::size_t iv_bits = policy_type::iv_bits;
                     typedef typename policy_type::iv_type iv_type;
 
-                    static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv) {
-                        schedule[12] = 0;
-                        schedule[13] = 0;
+                    static void schedule_iv(key_schedule_type &schedule, const iv_type &iv,
+                                            std::uint64_t initial_counter = 0) {
+                        schedule[12] = static_cast<typename key_schedule_type::value_type>(initial_counter);
+                        schedule[13] = static_cast<typename key_schedule_type::value_type>(initial_counter >> 32);
                         schedule[14] = load_little_u32(iv, 0);
                         schedule[15] = load_little_u32(iv, 4);
+                    }
 
+                    static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv,
+                                            std::uint64_t initial_counter = 0) {
+                        schedule_iv(schedule, iv, initial_counter);
                         generate_block(block, schedule);
                     }
 
@@ -393,12 +404,19 @@ namespace nil {
                     constexpr static const std::size_t iv_bits = policy_type::iv_bits;
                     typedef typename policy_type::iv_type iv_type;
 
-                    static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv) {
-                        schedule[12] = 0;
+                    static void schedule_iv(key_schedule_type &schedule, const iv_type &iv,
+                                            std::uint64_t initial_counter = 0) {
+                        validate_ietf_initial_counter(initial_counter);
+
+                        schedule[12] = static_cast<typename key_schedule_type::value_type>(initial_counter);
                         schedule[13] = load_little_u32(iv, 0);
                         schedule[14] = load_little_u32(iv, 4);
                         schedule[15] = load_little_u32(iv, 8);
+                    }
 
+                    static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv,
+                                            std::uint64_t initial_counter = 0) {
+                        schedule_iv(schedule, iv, initial_counter);
                         generate_block(block, schedule);
                     }
 
@@ -496,12 +514,17 @@ namespace nil {
                     constexpr static const std::size_t iv_bits = policy_type::iv_bits;
                     typedef typename policy_type::iv_type iv_type;
 
-                    static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv) {
-                        schedule[12] = 0;
-                        schedule[13] = 0;
+                    static void schedule_iv(key_schedule_type &schedule, const iv_type &iv,
+                                            std::uint64_t initial_counter = 0) {
+                        schedule[12] = static_cast<typename key_schedule_type::value_type>(initial_counter);
+                        schedule[13] = static_cast<typename key_schedule_type::value_type>(initial_counter >> 32);
                         schedule[14] = load_little_u32(iv, 0);
                         schedule[15] = load_little_u32(iv, 4);
+                    }
 
+                    static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv,
+                                            std::uint64_t initial_counter = 0) {
+                        schedule_iv(schedule, iv, initial_counter);
                         generate_block(block, schedule);
                     }
 
@@ -551,12 +574,19 @@ namespace nil {
                     constexpr static const std::size_t iv_bits = policy_type::iv_bits;
                     typedef typename policy_type::iv_type iv_type;
 
-                    static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv) {
-                        schedule[12] = 0;
+                    static void schedule_iv(key_schedule_type &schedule, const iv_type &iv,
+                                            std::uint64_t initial_counter = 0) {
+                        validate_ietf_initial_counter(initial_counter);
+
+                        schedule[12] = static_cast<typename key_schedule_type::value_type>(initial_counter);
                         schedule[13] = load_little_u32(iv, 0);
                         schedule[14] = load_little_u32(iv, 4);
                         schedule[15] = load_little_u32(iv, 8);
+                    }
 
+                    static void schedule_iv(block_type &block, key_schedule_type &schedule, const iv_type &iv,
+                                            std::uint64_t initial_counter = 0) {
+                        schedule_iv(schedule, iv, initial_counter);
                         generate_block(block, schedule);
                     }
 

@@ -100,9 +100,11 @@ namespace nil {
                 typedef typename policy_type::key_type key_type;
 
                 chacha(block_type &block, key_schedule_type &schedule, const key_type &key,
-                       const iv_type &iv = iv_type()) : block_offset(0), ietf_counter_exhausted(false) {
+                       const iv_type &iv = iv_type(), std::uint64_t initial_counter = 0) :
+                    block_offset(0), ietf_counter_exhausted(false) {
                     policy_type::schedule_key(schedule, key);
-                    policy_type::schedule_iv(block, schedule, iv);
+                    policy_type::schedule_iv(schedule, iv, initial_counter);
+                    generate_next_block(block, schedule);
                 }
 
                 template<typename InputIterator, typename OutputIterator>
