@@ -25,9 +25,15 @@
 #ifndef CRYPTO3_STREAM_CHACHA_POLICY_HPP
 #define CRYPTO3_STREAM_CHACHA_POLICY_HPP
 
+#include <array>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
+
 #include <boost/endian/conversion.hpp>
 
 #include <boost/container/small_vector.hpp>
+#include <boost/static_assert.hpp>
 
 #include <nil/crypto3/detail/inline_variable.hpp>
 

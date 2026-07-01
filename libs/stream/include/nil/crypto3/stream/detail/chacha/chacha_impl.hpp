@@ -56,80 +56,107 @@ namespace nil {
 
                     constexpr static const std::size_t rounds = policy_type::rounds;
 
-                    constexpr static const std::size_t min_key_schedule_bits = policy_type::min_key_schedule_bits;
-                    constexpr static const std::size_t min_key_schedule_size = policy_type::min_key_schedule_size;
+                    constexpr static const std::size_t min_key_schedule_bits = policy_type::key_schedule_bits;
+                    constexpr static const std::size_t min_key_schedule_size = policy_type::key_schedule_size;
                     typedef typename policy_type::key_schedule_type key_schedule_type;
 
                     constexpr static const std::size_t block_bits = policy_type::block_bits;
                     constexpr static const std::size_t block_size = policy_type::block_size;
                     typedef typename policy_type::block_type block_type;
 
-                    inline static void chacha_x8(const std::array<std::uint8_t, block_size * 8> &block,
-                                                 key_schedule_type &schedule) {
-                        chacha_x4(block, schedule);
-                        chacha_x4(std::array<std::uint8_t, block_size * 4>(block.begin() + block_size * 4, block.end()),
-                                  schedule);
+                    static void chacha_x8_original(std::array<std::uint8_t, block_size * 8> &block,
+                                                   key_schedule_type &input) {
+                        chacha_blocks(block.data(), 8, input, counter_mode::original);
                     }
 
-                    static void chacha_x4(const std::array<std::uint8_t, block_size * 4> &block,
+                    static void chacha_x8_ietf(std::array<std::uint8_t, block_size * 8> &block,
+                                               key_schedule_type &input) {
+                        chacha_blocks(block.data(), 8, input, counter_mode::ietf);
+                    }
+
+                    static void chacha_x8(std::array<std::uint8_t, block_size * 8> &block,
                                           key_schedule_type &input) {
-                        // TODO interleave rounds
-                        for (size_t i = 0; i != 4; ++i) {
-                            word_type x00 = input[0], x01 = input[1], x02 = input[2], x03 = input[3], x04 = input[4],
-                                      x05 = input[5], x06 = input[6], x07 = input[7], x08 = input[8], x09 = input[9],
-                                      x10 = input[10], x11 = input[11], x12 = input[12], x13 = input[13],
-                                      x14 = input[14], x15 = input[15];
-
-                            for (size_t r = 0; r != rounds / 2; ++r) {
-                                CHACHA_QUARTER_ROUND(x00, x04, x08, x12);
-                                CHACHA_QUARTER_ROUND(x01, x05, x09, x13);
-                                CHACHA_QUARTER_ROUND(x02, x06, x10, x14);
-                                CHACHA_QUARTER_ROUND(x03, x07, x11, x15);
-
-                                CHACHA_QUARTER_ROUND(x00, x05, x10, x15);
-                                CHACHA_QUARTER_ROUND(x01, x06, x11, x12);
-                                CHACHA_QUARTER_ROUND(x02, x07, x08, x13);
-                                CHACHA_QUARTER_ROUND(x03, x04, x09, x14);
-                            }
-
-                            x00 += input[0];
-                            x01 += input[1];
-                            x02 += input[2];
-                            x03 += input[3];
-                            x04 += input[4];
-                            x05 += input[5];
-                            x06 += input[6];
-                            x07 += input[7];
-                            x08 += input[8];
-                            x09 += input[9];
-                            x10 += input[10];
-                            x11 += input[11];
-                            x12 += input[12];
-                            x13 += input[13];
-                            x14 += input[14];
-                            x15 += input[15];
-
-                            boost::endian::store_little_u32(x00, block + 64 * i + 4 * 0);
-                            boost::endian::store_little_u32(x01, block + 64 * i + 4 * 1);
-                            boost::endian::store_little_u32(x02, block + 64 * i + 4 * 2);
-                            boost::endian::store_little_u32(x03, block + 64 * i + 4 * 3);
-                            boost::endian::store_little_u32(x04, block + 64 * i + 4 * 4);
-                            boost::endian::store_little_u32(x05, block + 64 * i + 4 * 5);
-                            boost::endian::store_little_u32(x06, block + 64 * i + 4 * 6);
-                            boost::endian::store_little_u32(x07, block + 64 * i + 4 * 7);
-                            boost::endian::store_little_u32(x08, block + 64 * i + 4 * 8);
-                            boost::endian::store_little_u32(x09, block + 64 * i + 4 * 9);
-                            boost::endian::store_little_u32(x10, block + 64 * i + 4 * 10);
-                            boost::endian::store_little_u32(x11, block + 64 * i + 4 * 11);
-                            boost::endian::store_little_u32(x12, block + 64 * i + 4 * 12);
-                            boost::endian::store_little_u32(x13, block + 64 * i + 4 * 13);
-                            boost::endian::store_little_u32(x14, block + 64 * i + 4 * 14);
-                            boost::endian::store_little_u32(x15, block + 64 * i + 4 * 15);
-
-                            input[12]++;
-                            input[13] += input[12] < i;    // carry?
+                        BOOST_STATIC_ASSERT(IVSize == 64 || IVSize == 96);
+                        if (IVSize == 96) {
+                            chacha_x8_ietf(block, input);
+                        } else {
+                            chacha_x8_original(block, input);
                         }
-                    };
+                    }
+
+                    static void chacha_x4_original(std::array<std::uint8_t, block_size * 4> &block,
+                                                   key_schedule_type &input) {
+                        chacha_blocks(block.data(), 4, input, counter_mode::original);
+                    }
+
+                    static void chacha_x4_ietf(std::array<std::uint8_t, block_size * 4> &block,
+                                               key_schedule_type &input) {
+                        chacha_blocks(block.data(), 4, input, counter_mode::ietf);
+                    }
+
+                    static void chacha_x4(std::array<std::uint8_t, block_size * 4> &block,
+                                          key_schedule_type &input) {
+                        BOOST_STATIC_ASSERT(IVSize == 64 || IVSize == 96);
+                        if (IVSize == 96) {
+                            chacha_x4_ietf(block, input);
+                        } else {
+                            chacha_x4_original(block, input);
+                        }
+                    }
+
+                private:
+                    enum class counter_mode { original, ietf };
+
+                    static void chacha_blocks(std::uint8_t *out, std::size_t blocks, key_schedule_type &input,
+                                              counter_mode mode) {
+                        for (std::size_t i = 0; i != blocks; ++i) {
+                            chacha_block(out + block_size * i, input);
+                            increment_counter(input, mode);
+                        }
+                    }
+
+                    static void increment_counter(key_schedule_type &input, counter_mode mode) {
+                        ++input[12];
+                        if (mode == counter_mode::original && input[12] == 0) {
+                            ++input[13];
+                        }
+                    }
+
+                    static void chacha_block(std::uint8_t *out, const key_schedule_type &input) {
+                        word_type x00 = input[0], x01 = input[1], x02 = input[2], x03 = input[3], x04 = input[4],
+                                  x05 = input[5], x06 = input[6], x07 = input[7], x08 = input[8], x09 = input[9],
+                                  x10 = input[10], x11 = input[11], x12 = input[12], x13 = input[13],
+                                  x14 = input[14], x15 = input[15];
+
+                        for (std::size_t r = 0; r != rounds / 2; ++r) {
+                            CHACHA_QUARTER_ROUND(x00, x04, x08, x12);
+                            CHACHA_QUARTER_ROUND(x01, x05, x09, x13);
+                            CHACHA_QUARTER_ROUND(x02, x06, x10, x14);
+                            CHACHA_QUARTER_ROUND(x03, x07, x11, x15);
+
+                            CHACHA_QUARTER_ROUND(x00, x05, x10, x15);
+                            CHACHA_QUARTER_ROUND(x01, x06, x11, x12);
+                            CHACHA_QUARTER_ROUND(x02, x07, x08, x13);
+                            CHACHA_QUARTER_ROUND(x03, x04, x09, x14);
+                        }
+
+                        boost::endian::store_little_u32(out + 4 * 0, x00 + input[0]);
+                        boost::endian::store_little_u32(out + 4 * 1, x01 + input[1]);
+                        boost::endian::store_little_u32(out + 4 * 2, x02 + input[2]);
+                        boost::endian::store_little_u32(out + 4 * 3, x03 + input[3]);
+                        boost::endian::store_little_u32(out + 4 * 4, x04 + input[4]);
+                        boost::endian::store_little_u32(out + 4 * 5, x05 + input[5]);
+                        boost::endian::store_little_u32(out + 4 * 6, x06 + input[6]);
+                        boost::endian::store_little_u32(out + 4 * 7, x07 + input[7]);
+                        boost::endian::store_little_u32(out + 4 * 8, x08 + input[8]);
+                        boost::endian::store_little_u32(out + 4 * 9, x09 + input[9]);
+                        boost::endian::store_little_u32(out + 4 * 10, x10 + input[10]);
+                        boost::endian::store_little_u32(out + 4 * 11, x11 + input[11]);
+                        boost::endian::store_little_u32(out + 4 * 12, x12 + input[12]);
+                        boost::endian::store_little_u32(out + 4 * 13, x13 + input[13]);
+                        boost::endian::store_little_u32(out + 4 * 14, x14 + input[14]);
+                        boost::endian::store_little_u32(out + 4 * 15, x15 + input[15]);
+                    }
                 };
             }    // namespace detail
         }        // namespace stream
