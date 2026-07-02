@@ -192,9 +192,7 @@ namespace nil {
 
                     template<typename InputIterator>
                     itr_cipher_impl(InputIterator first, InputIterator last, OutputIterator out,
-                                    const accumulator_set_type &ise) :
-                        CipherStateImpl(ise),
-                        out(std::move(out)) {
+                                    const accumulator_set_type &ise) : CipherStateImpl(ise), out(std::move(out)) {
                         BOOST_CONCEPT_ASSERT((boost::InputIteratorConcept<InputIterator>));
 
                         typedef typename std::iterator_traits<InputIterator>::value_type value_type;
@@ -215,8 +213,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace stream
-    }            // namespace crypto3
+        }    // namespace stream
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CODEC_POSTPROCESSOR_HPP

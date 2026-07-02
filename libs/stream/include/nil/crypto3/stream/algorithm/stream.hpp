@@ -39,6 +39,6 @@ namespace nil {
          * @brief Algorithms are meant to provide decryption interface similar to STL algorithms' one.
          */
     }
-}
+}    // namespace nil
 
 #endif    // CRYPTO3_STREAM_HPP

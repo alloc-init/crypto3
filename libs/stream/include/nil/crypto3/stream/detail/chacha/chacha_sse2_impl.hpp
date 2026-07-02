@@ -124,9 +124,9 @@ namespace nil {
                     }
 
                     static BOOST_ATTRIBUTE_TARGET("sse2") void chacha_x4_impl(std::uint8_t *out,
-                                                                               key_schedule_type &schedule,
-                                                                               counter_mode mode,
-                                                                               std::size_t advance_blocks) {
+                                                                              key_schedule_type &schedule,
+                                                                              counter_mode mode,
+                                                                              std::size_t advance_blocks) {
                         validate_can_advance_counter(schedule, mode, advance_blocks);
 
                         const __m128i *input_mm = reinterpret_cast<const __m128i *>(schedule.data());
@@ -362,8 +362,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace stream
-    }            // namespace crypto3
+        }    // namespace stream
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CHACHA_SSE2_IMPL_HPP

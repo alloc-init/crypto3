@@ -71,7 +71,7 @@ namespace nil {
              * not fast enough.
              */
             template<typename StreamCipher = stream::chacha<64, 128, 20>,
-                    typename MessageAuthenticationCode = mac::hmac<hashes::sha2<256>>>
+                     typename MessageAuthenticationCode = mac::hmac<hashes::sha2<256>>>
             struct chacha : private boost::noncopyable {
                 typedef StreamCipher stream_cipher_type;
                 typedef MessageAuthenticationCode mac_type;
@@ -124,7 +124,7 @@ namespace nil {
                     update(first, last);
 
                     if (CHAR_BIT * std::distance(first, last) *
-                        sizeof(typename std::iterator_traits<InputIterator>::value_type) >=
+                            sizeof(typename std::iterator_traits<InputIterator>::value_type) >=
                         reseed_interval) {
                         cnt = 0;
                     }
@@ -162,7 +162,7 @@ namespace nil {
                 stream::accumulator_set<StreamCipher> acc;
             };
         }    // namespace random
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif /* BOOST_RANDOM_RANDOM_DEVICE_HPP */

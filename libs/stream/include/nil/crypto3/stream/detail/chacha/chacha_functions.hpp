@@ -472,8 +472,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace stream
-    }            // namespace crypto3
+        }    // namespace stream
+    }    // namespace crypto3
 }    // namespace nil
 
 #undef CRYPTO3_CHACHA_AVX2_SELECTED

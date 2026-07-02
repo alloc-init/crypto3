@@ -291,8 +291,7 @@ namespace nil {
                 }
 
                 void seek(std::uint64_t byte_offset) {
-                    const std::uint64_t initial_offset =
-                        static_cast<std::uint64_t>(initial_counter) * block_size;
+                    const std::uint64_t initial_offset = static_cast<std::uint64_t>(initial_counter) * block_size;
                     const std::uint64_t max_offset =
                         static_cast<std::uint64_t>(std::numeric_limits<std::uint32_t>::max()) * block_size +
                         (block_size - 1);
@@ -311,7 +310,7 @@ namespace nil {
                 cipher_type cipher;
             };
         }    // namespace stream
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

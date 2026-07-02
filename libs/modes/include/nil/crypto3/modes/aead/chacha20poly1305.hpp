@@ -43,8 +43,7 @@ namespace nil {
                              std::size_t TagBits,
                              typename StreamCipher,
                              typename MessageAuthenticationCode,
-                             template<typename>
-                             class Allocator>
+                             template<typename> class Allocator>
                     struct chacha20poly1305_policy {
                         typedef std::size_t size_type;
 
@@ -67,8 +66,7 @@ namespace nil {
                              std::size_t TagBits,
                              typename StreamCipher,
                              typename MessageAuthenticationCode,
-                             template<typename>
-                             class Allocator>
+                             template<typename> class Allocator>
                     struct chacha20poly1305_encryption_policy
                         : public chacha20poly1305_policy<Padding,
                                                          NonceBits,
@@ -103,7 +101,7 @@ namespace nil {
 
                             m_chacha->set_iv(nonce, nonce_len);
 
-                            secure_vector<uint8_t> init(64); // zeros
+                            secure_vector<uint8_t> init(64);    // zeros
                             m_chacha->encrypt(init);
 
                             m_poly1305->set_key(init.data(), 32);
@@ -128,7 +126,7 @@ namespace nil {
                             block_type block = {0};
 
                             m_chacha->cipher1(buf, sz);
-                            m_poly1305->update(buf, sz); // poly1305 of ciphertext
+                            m_poly1305->update(buf, sz);    // poly1305 of ciphertext
                             m_ctext_len += sz;
 
                             return cipher.encrypt(block);
@@ -161,8 +159,7 @@ namespace nil {
                              std::size_t TagBits,
                              typename StreamCipher,
                              typename MessageAuthenticationCode,
-                             template<typename>
-                             class Allocator>
+                             template<typename> class Allocator>
                     struct chacha20poly1305_decryption_policy
                         : public chacha20poly1305_policy<Padding,
                                                          NonceBits,
@@ -196,7 +193,7 @@ namespace nil {
 
                             m_chacha->set_iv(nonce, nonce_len);
 
-                            secure_vector<uint8_t> init(64); // zeros
+                            secure_vector<uint8_t> init(64);    // zeros
                             m_chacha->encrypt(init);
 
                             m_poly1305->set_key(init.data(), 32);
@@ -219,7 +216,7 @@ namespace nil {
                         inline static block_type process_block(const cipher_type &cipher, const block_type &plaintext) {
                             block_type block = {0};
 
-                            m_poly1305->update(buf, sz); // poly1305 of ciphertext
+                            m_poly1305->update(buf, sz);    // poly1305 of ciphertext
                             m_chacha->cipher1(buf, sz);
                             m_ctext_len += sz;
 
@@ -238,7 +235,7 @@ namespace nil {
                             const size_t remaining = sz - tag_size();
 
                             if (remaining) {
-                                m_poly1305->update(buf, remaining); // poly1305 of ciphertext
+                                m_poly1305->update(buf, remaining);    // poly1305 of ciphertext
                                 m_chacha->cipher1(buf, remaining);
                                 m_ctext_len += remaining;
                             }
@@ -285,8 +282,7 @@ namespace nil {
 
                         template<typename AssociatedDataContainer>
                         chacha20poly1305(const stream_cipher_type &cipher,
-                                         const AssociatedDataContainer &associated_data) :
-                            cipher(cipher) {
+                                         const AssociatedDataContainer &associated_data) : cipher(cipher) {
                             schedule_associated_data(associated_data);
                         }
 
@@ -353,8 +349,11 @@ namespace nil {
                                                                        Allocator>
                         decryption_policy;
 
-                    template<template<typename, typename, std::size_t, std::size_t, template<typename> class>
-                             class PolicyType>
+                    template<template<typename,
+                                      typename,
+                                      std::size_t,
+                                      std::size_t,
+                                      template<typename> class> class PolicyType>
                     struct bind {
                         typedef detail::chacha20poly1305<
                             PolicyType<stream_cipher_type, padding_type, NonceBits, TagBits, Allocator>>
@@ -362,7 +361,7 @@ namespace nil {
                     };
                 };
             }    // namespace modes
-        }        // namespace stream
+        }    // namespace stream
     }    // namespace crypto3
 }    // namespace nil
 

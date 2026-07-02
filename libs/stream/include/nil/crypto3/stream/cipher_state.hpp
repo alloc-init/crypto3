@@ -48,7 +48,7 @@ namespace nil {
                 digest<ProcessingMode::block_bits>,
                 boost::accumulators::features<accumulators::tag::stream<ProcessingMode>>>;
         }    // namespace stream
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CIPHER_STATE_PREPROCESSOR_HPP

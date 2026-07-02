@@ -133,9 +133,9 @@ namespace nil {
                     }
 
                     static BOOST_ATTRIBUTE_TARGET("avx2") void chacha_x8_impl(std::uint8_t *out,
-                                                                               key_schedule_type &schedule,
-                                                                               counter_mode mode,
-                                                                               std::size_t advance_blocks) {
+                                                                              key_schedule_type &schedule,
+                                                                              counter_mode mode,
+                                                                              std::size_t advance_blocks) {
                         validate_can_advance_counter(schedule, mode, advance_blocks);
 
                         _mm256_zeroupper();
@@ -398,8 +398,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace stream
-    }            // namespace crypto3
+        }    // namespace stream
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CHACHA_AVX2_IMPL_HPP

@@ -107,8 +107,7 @@ namespace {
     }
 
     std::vector<std::uint8_t> chacha20_encrypt(const chacha20::key_type &key, const chacha20::iv_type &iv,
-                                               std::uint32_t counter,
-                                               const std::vector<std::uint8_t> &plaintext) {
+                                               std::uint32_t counter, const std::vector<std::uint8_t> &plaintext) {
         std::vector<std::uint8_t> ciphertext(plaintext.size());
         nil::crypto3::encrypt(plaintext.begin(), plaintext.end(), key, iv, ciphertext.begin(), counter);
         return ciphertext;
@@ -162,34 +161,26 @@ namespace {
     }
 
     schedule_type rfc8439_block_state() {
-        return {{0x61707865, 0x3320646e, 0x79622d32, 0x6b206574,
-                 0x03020100, 0x07060504, 0x0b0a0908, 0x0f0e0d0c,
-                 0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c,
-                 0x00000001, 0x09000000, 0x4a000000, 0x00000000}};
+        return {{0x61707865, 0x3320646e, 0x79622d32, 0x6b206574, 0x03020100, 0x07060504, 0x0b0a0908, 0x0f0e0d0c,
+                 0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c, 0x00000001, 0x09000000, 0x4a000000, 0x00000000}};
     }
 
     std::array<std::uint8_t, 32> rfc8439_key() {
-        return {{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-                 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-                 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f}};
+        return {{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+                 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f}};
     }
 
     std::array<std::uint8_t, 12> rfc8439_iv() {
-        return {{0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x4a,
-                 0x00, 0x00, 0x00, 0x00}};
+        return {{0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00}};
     }
 
     std::array<std::uint8_t, 12> rfc8439_encryption_iv() {
-        return {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a,
-                 0x00, 0x00, 0x00, 0x00}};
+        return {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00}};
     }
 
     schedule_type original_chacha_state() {
-        return {{0x61707865, 0x3320646e, 0x79622d32, 0x6b206574,
-                 0x03020100, 0x07060504, 0x0b0a0908, 0x0f0e0d0c,
-                 0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c,
-                 0x00000000, 0x00000000, 0x4a000000, 0x00000000}};
+        return {{0x61707865, 0x3320646e, 0x79622d32, 0x6b206574, 0x03020100, 0x07060504, 0x0b0a0908, 0x0f0e0d0c,
+                 0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c, 0x00000000, 0x00000000, 0x4a000000, 0x00000000}};
     }
 
     const std::array<std::uint8_t, 64> rfc8439_expected_block = {
@@ -199,24 +190,22 @@ namespace {
          0xb5, 0x12, 0x9c, 0xd1, 0xde, 0x16, 0x4e, 0xb9, 0xcb, 0xd0, 0x83, 0xe8, 0xa2, 0x50, 0x3c, 0x4e}};
 
     const std::array<std::uint8_t, 114> rfc8439_sunscreen_plaintext = {
-        {0x4c, 0x61, 0x64, 0x69, 0x65, 0x73, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x47, 0x65, 0x6e, 0x74, 0x6c,
-         0x65, 0x6d, 0x65, 0x6e, 0x20, 0x6f, 0x66, 0x20, 0x74, 0x68, 0x65, 0x20, 0x63, 0x6c, 0x61, 0x73,
-         0x73, 0x20, 0x6f, 0x66, 0x20, 0x27, 0x39, 0x39, 0x3a, 0x20, 0x49, 0x66, 0x20, 0x49, 0x20, 0x63,
-         0x6f, 0x75, 0x6c, 0x64, 0x20, 0x6f, 0x66, 0x66, 0x65, 0x72, 0x20, 0x79, 0x6f, 0x75, 0x20, 0x6f,
-         0x6e, 0x6c, 0x79, 0x20, 0x6f, 0x6e, 0x65, 0x20, 0x74, 0x69, 0x70, 0x20, 0x66, 0x6f, 0x72, 0x20,
-         0x74, 0x68, 0x65, 0x20, 0x66, 0x75, 0x74, 0x75, 0x72, 0x65, 0x2c, 0x20, 0x73, 0x75, 0x6e, 0x73,
-         0x63, 0x72, 0x65, 0x65, 0x6e, 0x20, 0x77, 0x6f, 0x75, 0x6c, 0x64, 0x20, 0x62, 0x65, 0x20, 0x69,
-         0x74, 0x2e}};
+        {0x4c, 0x61, 0x64, 0x69, 0x65, 0x73, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x47, 0x65, 0x6e, 0x74, 0x6c, 0x65,
+         0x6d, 0x65, 0x6e, 0x20, 0x6f, 0x66, 0x20, 0x74, 0x68, 0x65, 0x20, 0x63, 0x6c, 0x61, 0x73, 0x73, 0x20,
+         0x6f, 0x66, 0x20, 0x27, 0x39, 0x39, 0x3a, 0x20, 0x49, 0x66, 0x20, 0x49, 0x20, 0x63, 0x6f, 0x75, 0x6c,
+         0x64, 0x20, 0x6f, 0x66, 0x66, 0x65, 0x72, 0x20, 0x79, 0x6f, 0x75, 0x20, 0x6f, 0x6e, 0x6c, 0x79, 0x20,
+         0x6f, 0x6e, 0x65, 0x20, 0x74, 0x69, 0x70, 0x20, 0x66, 0x6f, 0x72, 0x20, 0x74, 0x68, 0x65, 0x20, 0x66,
+         0x75, 0x74, 0x75, 0x72, 0x65, 0x2c, 0x20, 0x73, 0x75, 0x6e, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x20,
+         0x77, 0x6f, 0x75, 0x6c, 0x64, 0x20, 0x62, 0x65, 0x20, 0x69, 0x74, 0x2e}};
 
     const std::array<std::uint8_t, 114> rfc8439_sunscreen_ciphertext = {
-        {0x6e, 0x2e, 0x35, 0x9a, 0x25, 0x68, 0xf9, 0x80, 0x41, 0xba, 0x07, 0x28, 0xdd, 0x0d, 0x69, 0x81,
-         0xe9, 0x7e, 0x7a, 0xec, 0x1d, 0x43, 0x60, 0xc2, 0x0a, 0x27, 0xaf, 0xcc, 0xfd, 0x9f, 0xae, 0x0b,
-         0xf9, 0x1b, 0x65, 0xc5, 0x52, 0x47, 0x33, 0xab, 0x8f, 0x59, 0x3d, 0xab, 0xcd, 0x62, 0xb3, 0x57,
-         0x16, 0x39, 0xd6, 0x24, 0xe6, 0x51, 0x52, 0xab, 0x8f, 0x53, 0x0c, 0x35, 0x9f, 0x08, 0x61, 0xd8,
-         0x07, 0xca, 0x0d, 0xbf, 0x50, 0x0d, 0x6a, 0x61, 0x56, 0xa3, 0x8e, 0x08, 0x8a, 0x22, 0xb6, 0x5e,
-         0x52, 0xbc, 0x51, 0x4d, 0x16, 0xcc, 0xf8, 0x06, 0x81, 0x8c, 0xe9, 0x1a, 0xb7, 0x79, 0x37, 0x36,
-         0x5a, 0xf9, 0x0b, 0xbf, 0x74, 0xa3, 0x5b, 0xe6, 0xb4, 0x0b, 0x8e, 0xed, 0xf2, 0x78, 0x5e, 0x42,
-         0x87, 0x4d}};
+        {0x6e, 0x2e, 0x35, 0x9a, 0x25, 0x68, 0xf9, 0x80, 0x41, 0xba, 0x07, 0x28, 0xdd, 0x0d, 0x69, 0x81, 0xe9,
+         0x7e, 0x7a, 0xec, 0x1d, 0x43, 0x60, 0xc2, 0x0a, 0x27, 0xaf, 0xcc, 0xfd, 0x9f, 0xae, 0x0b, 0xf9, 0x1b,
+         0x65, 0xc5, 0x52, 0x47, 0x33, 0xab, 0x8f, 0x59, 0x3d, 0xab, 0xcd, 0x62, 0xb3, 0x57, 0x16, 0x39, 0xd6,
+         0x24, 0xe6, 0x51, 0x52, 0xab, 0x8f, 0x53, 0x0c, 0x35, 0x9f, 0x08, 0x61, 0xd8, 0x07, 0xca, 0x0d, 0xbf,
+         0x50, 0x0d, 0x6a, 0x61, 0x56, 0xa3, 0x8e, 0x08, 0x8a, 0x22, 0xb6, 0x5e, 0x52, 0xbc, 0x51, 0x4d, 0x16,
+         0xcc, 0xf8, 0x06, 0x81, 0x8c, 0xe9, 0x1a, 0xb7, 0x79, 0x37, 0x36, 0x5a, 0xf9, 0x0b, 0xbf, 0x74, 0xa3,
+         0x5b, 0xe6, 0xb4, 0x0b, 0x8e, 0xed, 0xf2, 0x78, 0x5e, 0x42, 0x87, 0x4d}};
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(chacha_test_suite)
@@ -253,14 +242,12 @@ BOOST_AUTO_TEST_CASE(chacha_quarter_round_matches_rfc8439_vector) {
 BOOST_AUTO_TEST_CASE(chacha_quarter_round_on_state_matches_rfc8439_vector) {
     using impl_type = detail::chacha_impl<20, 96, 256>;
 
-    schedule_type state = {{0x879531e0, 0xc5ecf37d, 0x516461b1, 0xc9a62f8a,
-                            0x44c20ef3, 0x3390af7f, 0xd9fc690b, 0x2a5f714c,
-                            0x53372767, 0xb00a5631, 0x974c541a, 0x359e9963,
-                            0x5c971061, 0x3d631689, 0x2098d9d6, 0x91dbd320}};
-    const schedule_type expected = {{0x879531e0, 0xc5ecf37d, 0xbdb886dc, 0xc9a62f8a,
-                                     0x44c20ef3, 0x3390af7f, 0xd9fc690b, 0xcfacafd2,
-                                     0xe46bea80, 0xb00a5631, 0x974c541a, 0x359e9963,
-                                     0x5c971061, 0xccc07c79, 0x2098d9d6, 0x91dbd320}};
+    schedule_type state = {{0x879531e0, 0xc5ecf37d, 0x516461b1, 0xc9a62f8a, 0x44c20ef3, 0x3390af7f, 0xd9fc690b,
+                            0x2a5f714c, 0x53372767, 0xb00a5631, 0x974c541a, 0x359e9963, 0x5c971061, 0x3d631689,
+                            0x2098d9d6, 0x91dbd320}};
+    const schedule_type expected = {{0x879531e0, 0xc5ecf37d, 0xbdb886dc, 0xc9a62f8a, 0x44c20ef3, 0x3390af7f, 0xd9fc690b,
+                                     0xcfacafd2, 0xe46bea80, 0xb00a5631, 0x974c541a, 0x359e9963, 0x5c971061, 0xccc07c79,
+                                     0x2098d9d6, 0x91dbd320}};
 
     impl_type::quarter_round(state[2], state[7], state[8], state[13]);
 
@@ -622,9 +609,9 @@ BOOST_AUTO_TEST_CASE(public_chacha_constructor_accepts_maximum_ietf_initial_coun
     std::array<std::uint8_t, 1> extra_plaintext = {0};
     std::array<std::uint8_t, 1> extra_ciphertext = {0};
 
-    BOOST_CHECK_THROW(cipher.process(extra_plaintext.begin(), extra_plaintext.end(), extra_ciphertext.begin(), schedule,
-                                     block),
-                      std::out_of_range);
+    BOOST_CHECK_THROW(
+        cipher.process(extra_plaintext.begin(), extra_plaintext.end(), extra_ciphertext.begin(), schedule, block),
+        std::out_of_range);
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_block_vector) {
@@ -665,11 +652,11 @@ BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_encryption_vector) {
     encrypt_cipher.seek(encrypt_block, encrypt_schedule, cipher_type::block_size);
 
     std::array<std::uint8_t, rfc8439_sunscreen_plaintext.size()> ciphertext = {0};
-    encrypt_cipher.process(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(),
-                           ciphertext.begin(), encrypt_schedule, encrypt_block);
+    encrypt_cipher.process(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), ciphertext.begin(),
+                           encrypt_schedule, encrypt_block);
 
-    BOOST_TEST(std::equal(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(),
-                          ciphertext.begin()));
+    BOOST_TEST(
+        std::equal(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(), ciphertext.begin()));
     BOOST_TEST(encrypt_schedule[12] == 3u);
 
     cipher_type::block_type decrypt_block = {0};
@@ -679,8 +666,8 @@ BOOST_AUTO_TEST_CASE(public_chacha_facade_matches_rfc8439_encryption_vector) {
     decrypt_cipher.seek(decrypt_block, decrypt_schedule, cipher_type::block_size);
 
     std::array<std::uint8_t, rfc8439_sunscreen_ciphertext.size()> decrypted = {0};
-    decrypt_cipher.process(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(),
-                           decrypted.begin(), decrypt_schedule, decrypt_block);
+    decrypt_cipher.process(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(), decrypted.begin(),
+                           decrypt_schedule, decrypt_block);
 
     BOOST_TEST(std::equal(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), decrypted.begin()));
     BOOST_TEST(decrypt_schedule[12] == 3u);
@@ -702,8 +689,8 @@ BOOST_AUTO_TEST_CASE(public_chacha20_cipher_matches_rfc8439_encryption_vector) {
                                                     rfc8439_sunscreen_plaintext.end(), ciphertext.begin());
 
     BOOST_TEST((encrypt_out == ciphertext.end()));
-    BOOST_TEST(std::equal(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(),
-                          ciphertext.begin()));
+    BOOST_TEST(
+        std::equal(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(), ciphertext.begin()));
 
     chacha20_cipher decrypt_cipher(key, iv, 1);
     std::array<std::uint8_t, rfc8439_sunscreen_ciphertext.size()> decrypted = {0};
@@ -829,8 +816,8 @@ BOOST_AUTO_TEST_CASE(public_chacha20_encrypt_decrypt_helpers_match_rfc8439_vecto
                           ciphertext.begin(), 1);
     nil::crypto3::decrypt(ciphertext.begin(), ciphertext.end(), key, iv, decrypted.begin(), 1);
 
-    BOOST_TEST(std::equal(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(),
-                          ciphertext.begin()));
+    BOOST_TEST(
+        std::equal(rfc8439_sunscreen_ciphertext.begin(), rfc8439_sunscreen_ciphertext.end(), ciphertext.begin()));
     BOOST_TEST(std::equal(rfc8439_sunscreen_plaintext.begin(), rfc8439_sunscreen_plaintext.end(), decrypted.begin()));
 }
 
@@ -902,47 +889,41 @@ BOOST_AUTO_TEST_CASE(public_chacha20_matches_rfc8439_additional_block_vectors) {
         const char *block;
     };
 
-    const block_vector vectors[] = {
-        {"00000000000000000000000000000000"
-         "00000000000000000000000000000000",
-         "000000000000000000000000",
-         0,
-         "76b8e0ada0f13d90405d6ae55386bd28"
-         "bdd219b8a08ded1aa836efcc8b770dc7"
-         "da41597c5157488d7724e03fb8d84a37"
-         "6a43b8f41518a11cc387b669b2ee6586"},
-        {"00000000000000000000000000000000"
-         "00000000000000000000000000000000",
-         "000000000000000000000000",
-         1,
-         "9f07e7be5551387a98ba977c732d080d"
-         "cb0f29a048e3656912c6533e32ee7aed"
-         "29b721769ce64e43d57133b074d839d5"
-         "31ed1f28510afb45ace10a1f4b794d6f"},
-        {"00000000000000000000000000000000"
-         "00000000000000000000000000000001",
-         "000000000000000000000000",
-         1,
-         "3aeb5224ecf849929b9d828db1ced4dd"
-         "832025e8018b8160b82284f3c949aa5a"
-         "8eca00bbb4a73bdad192b5c42f73f2fd"
-         "4e273644c8b36125a64addeb006c13a0"},
-        {"00ff0000000000000000000000000000"
-         "00000000000000000000000000000000",
-         "000000000000000000000000",
-         2,
-         "72d54dfbf12ec44b362692df94137f32"
-         "8fea8da73990265ec1bbbea1ae9af0ca"
-         "13b25aa26cb4a648cb9b9d1be65b2c09"
-         "24a66c54d545ec1b7374f4872e99f096"},
-        {"00000000000000000000000000000000"
-         "00000000000000000000000000000000",
-         "000000000000000000000002",
-         0,
-         "c2c64d378cd536374ae204b9ef933fcd"
-         "1a8b2288b3dfa49672ab765b54ee27c7"
-         "8a970e0e955c14f3a88e741b97c286f7"
-         "5f8fc299e8148362fa198a39531bed6d"}};
+    const block_vector vectors[] = {{"00000000000000000000000000000000"
+                                     "00000000000000000000000000000000",
+                                     "000000000000000000000000", 0,
+                                     "76b8e0ada0f13d90405d6ae55386bd28"
+                                     "bdd219b8a08ded1aa836efcc8b770dc7"
+                                     "da41597c5157488d7724e03fb8d84a37"
+                                     "6a43b8f41518a11cc387b669b2ee6586"},
+                                    {"00000000000000000000000000000000"
+                                     "00000000000000000000000000000000",
+                                     "000000000000000000000000", 1,
+                                     "9f07e7be5551387a98ba977c732d080d"
+                                     "cb0f29a048e3656912c6533e32ee7aed"
+                                     "29b721769ce64e43d57133b074d839d5"
+                                     "31ed1f28510afb45ace10a1f4b794d6f"},
+                                    {"00000000000000000000000000000000"
+                                     "00000000000000000000000000000001",
+                                     "000000000000000000000000", 1,
+                                     "3aeb5224ecf849929b9d828db1ced4dd"
+                                     "832025e8018b8160b82284f3c949aa5a"
+                                     "8eca00bbb4a73bdad192b5c42f73f2fd"
+                                     "4e273644c8b36125a64addeb006c13a0"},
+                                    {"00ff0000000000000000000000000000"
+                                     "00000000000000000000000000000000",
+                                     "000000000000000000000000", 2,
+                                     "72d54dfbf12ec44b362692df94137f32"
+                                     "8fea8da73990265ec1bbbea1ae9af0ca"
+                                     "13b25aa26cb4a648cb9b9d1be65b2c09"
+                                     "24a66c54d545ec1b7374f4872e99f096"},
+                                    {"00000000000000000000000000000000"
+                                     "00000000000000000000000000000000",
+                                     "000000000000000000000002", 0,
+                                     "c2c64d378cd536374ae204b9ef933fcd"
+                                     "1a8b2288b3dfa49672ab765b54ee27c7"
+                                     "8a970e0e955c14f3a88e741b97c286f7"
+                                     "5f8fc299e8148362fa198a39531bed6d"}};
 
     const std::vector<std::uint8_t> plaintext(64, 0);
 
@@ -970,92 +951,88 @@ BOOST_AUTO_TEST_CASE(public_chacha20_matches_rfc8439_additional_encryption_vecto
         const char *ciphertext;
     };
 
-    const encryption_vector vectors[] = {
-        {"00000000000000000000000000000000"
-         "00000000000000000000000000000000",
-         "000000000000000000000000",
-         0,
-         "00000000000000000000000000000000"
-         "00000000000000000000000000000000"
-         "00000000000000000000000000000000"
-         "00000000000000000000000000000000",
-         "76b8e0ada0f13d90405d6ae55386bd28"
-         "bdd219b8a08ded1aa836efcc8b770dc7"
-         "da41597c5157488d7724e03fb8d84a37"
-         "6a43b8f41518a11cc387b669b2ee6586"},
-        {"00000000000000000000000000000000"
-         "00000000000000000000000000000001",
-         "000000000000000000000002",
-         1,
-         "416e79207375626d697373696f6e2074"
-         "6f20746865204945544620696e74656e"
-         "6465642062792074686520436f6e7472"
-         "696275746f7220666f72207075626c69"
-         "636174696f6e20617320616c6c206f72"
-         "2070617274206f6620616e2049455446"
-         "20496e7465726e65742d447261667420"
-         "6f722052464320616e6420616e792073"
-         "746174656d656e74206d616465207769"
-         "7468696e2074686520636f6e74657874"
-         "206f6620616e20494554462061637469"
-         "7669747920697320636f6e7369646572"
-         "656420616e20224945544620436f6e74"
-         "7269627574696f6e222e205375636820"
-         "73746174656d656e747320696e636c75"
-         "6465206f72616c2073746174656d656e"
-         "747320696e20494554462073657373696f6e73"
-         "2c2061732077656c6c20617320777269"
-         "7474656e20616e6420656c656374726f"
-         "6e696320636f6d6d756e69636174696f"
-         "6e73206d61646520617420616e792074"
-         "696d65206f7220706c6163652c207768"
-         "69636820617265206164647265737365"
-         "6420746f",
-         "a3fbf07df3fa2fde4f376ca23e827370"
-         "41605d9f4f4f57bd8cff2c1d4b7955ec"
-         "2a97948bd3722915c8f3d337f7d37005"
-         "0e9e96d647b7c39f56e031ca5eb6250d"
-         "4042e02785ececfa4b4bb5e8ead0440e"
-         "20b6e8db09d881a7c6132f420e527950"
-         "42bdfa7773d8a9051447b3291ce1411c"
-         "680465552aa6c405b7764d5e87bea85a"
-         "d00f8449ed8f72d0d662ab052691ca66"
-         "424bc86d2df80ea41f43abf937d3259d"
-         "c4b2d0dfb48a6c9139ddd7f76966e928"
-         "e635553ba76c5c879d7b35d49eb2e62b"
-         "0871cdac638939e25e8a1e0ef9d5280f"
-         "a8ca328b351c3c765989cbcf3daa8b6c"
-         "cc3aaf9f3979c92b3720fc88dc95ed84"
-         "a1be059c6499b9fda236e7e818b04b0b"
-         "c39c1e876b193bfe5569753f88128cc0"
-         "8aaa9b63d1a16f80ef2554d7189c411f"
-         "5869ca52c5b83fa36ff216b9c1d30062"
-         "bebcfd2dc5bce0911934fda79a86f6e6"
-         "98ced759c3ff9b6477338f3da4f9cd85"
-         "14ea9982ccafb341b2384dd902f3d1ab"
-         "7ac61dd29c6f21ba5b862f3730e37cfd"
-         "c4fd806c22f221"},
-        {"1c9240a5eb55d38af333888604f6b5f0"
-         "473917c1402b80099dca5cbc207075c0",
-         "000000000000000000000002",
-         42,
-         "2754776173206272696c6c69672c2061"
-         "6e642074686520736c6974687920746f"
-         "7665730a446964206779726520616e64"
-         "2067696d626c6520696e207468652077"
-         "6162653a0a416c6c206d696d737920"
-         "776572652074686520626f726f676f76"
-         "65732c0a416e6420746865206d6f6d"
-         "65207261746873206f75746772616265"
-         "2e",
-         "62e6347f95ed87a45ffae7426f27a1df"
-         "5fb69110044c0d73118effa95b01e5cf"
-         "166d3df2d721caf9b21e5fb14c616871"
-         "fd84c54f9d65b283196c7fe4f60553eb"
-         "f39c6402c42234e32a356b3e764312a6"
-         "1a5532055716ead6962568f87d3f3f77"
-         "04c6a8d1bcd1bf4d50d6154b6da731b1"
-         "87b58dfd728afa36757a797ac188d1"}};
+    const encryption_vector vectors[] = {{"00000000000000000000000000000000"
+                                          "00000000000000000000000000000000",
+                                          "000000000000000000000000", 0,
+                                          "00000000000000000000000000000000"
+                                          "00000000000000000000000000000000"
+                                          "00000000000000000000000000000000"
+                                          "00000000000000000000000000000000",
+                                          "76b8e0ada0f13d90405d6ae55386bd28"
+                                          "bdd219b8a08ded1aa836efcc8b770dc7"
+                                          "da41597c5157488d7724e03fb8d84a37"
+                                          "6a43b8f41518a11cc387b669b2ee6586"},
+                                         {"00000000000000000000000000000000"
+                                          "00000000000000000000000000000001",
+                                          "000000000000000000000002", 1,
+                                          "416e79207375626d697373696f6e2074"
+                                          "6f20746865204945544620696e74656e"
+                                          "6465642062792074686520436f6e7472"
+                                          "696275746f7220666f72207075626c69"
+                                          "636174696f6e20617320616c6c206f72"
+                                          "2070617274206f6620616e2049455446"
+                                          "20496e7465726e65742d447261667420"
+                                          "6f722052464320616e6420616e792073"
+                                          "746174656d656e74206d616465207769"
+                                          "7468696e2074686520636f6e74657874"
+                                          "206f6620616e20494554462061637469"
+                                          "7669747920697320636f6e7369646572"
+                                          "656420616e20224945544620436f6e74"
+                                          "7269627574696f6e222e205375636820"
+                                          "73746174656d656e747320696e636c75"
+                                          "6465206f72616c2073746174656d656e"
+                                          "747320696e20494554462073657373696f6e73"
+                                          "2c2061732077656c6c20617320777269"
+                                          "7474656e20616e6420656c656374726f"
+                                          "6e696320636f6d6d756e69636174696f"
+                                          "6e73206d61646520617420616e792074"
+                                          "696d65206f7220706c6163652c207768"
+                                          "69636820617265206164647265737365"
+                                          "6420746f",
+                                          "a3fbf07df3fa2fde4f376ca23e827370"
+                                          "41605d9f4f4f57bd8cff2c1d4b7955ec"
+                                          "2a97948bd3722915c8f3d337f7d37005"
+                                          "0e9e96d647b7c39f56e031ca5eb6250d"
+                                          "4042e02785ececfa4b4bb5e8ead0440e"
+                                          "20b6e8db09d881a7c6132f420e527950"
+                                          "42bdfa7773d8a9051447b3291ce1411c"
+                                          "680465552aa6c405b7764d5e87bea85a"
+                                          "d00f8449ed8f72d0d662ab052691ca66"
+                                          "424bc86d2df80ea41f43abf937d3259d"
+                                          "c4b2d0dfb48a6c9139ddd7f76966e928"
+                                          "e635553ba76c5c879d7b35d49eb2e62b"
+                                          "0871cdac638939e25e8a1e0ef9d5280f"
+                                          "a8ca328b351c3c765989cbcf3daa8b6c"
+                                          "cc3aaf9f3979c92b3720fc88dc95ed84"
+                                          "a1be059c6499b9fda236e7e818b04b0b"
+                                          "c39c1e876b193bfe5569753f88128cc0"
+                                          "8aaa9b63d1a16f80ef2554d7189c411f"
+                                          "5869ca52c5b83fa36ff216b9c1d30062"
+                                          "bebcfd2dc5bce0911934fda79a86f6e6"
+                                          "98ced759c3ff9b6477338f3da4f9cd85"
+                                          "14ea9982ccafb341b2384dd902f3d1ab"
+                                          "7ac61dd29c6f21ba5b862f3730e37cfd"
+                                          "c4fd806c22f221"},
+                                         {"1c9240a5eb55d38af333888604f6b5f0"
+                                          "473917c1402b80099dca5cbc207075c0",
+                                          "000000000000000000000002", 42,
+                                          "2754776173206272696c6c69672c2061"
+                                          "6e642074686520736c6974687920746f"
+                                          "7665730a446964206779726520616e64"
+                                          "2067696d626c6520696e207468652077"
+                                          "6162653a0a416c6c206d696d737920"
+                                          "776572652074686520626f726f676f76"
+                                          "65732c0a416e6420746865206d6f6d"
+                                          "65207261746873206f75746772616265"
+                                          "2e",
+                                          "62e6347f95ed87a45ffae7426f27a1df"
+                                          "5fb69110044c0d73118effa95b01e5cf"
+                                          "166d3df2d721caf9b21e5fb14c616871"
+                                          "fd84c54f9d65b283196c7fe4f60553eb"
+                                          "f39c6402c42234e32a356b3e764312a6"
+                                          "1a5532055716ead6962568f87d3f3f77"
+                                          "04c6a8d1bcd1bf4d50d6154b6da731b1"
+                                          "87b58dfd728afa36757a797ac188d1"}};
 
     for (std::size_t i = 0; i != sizeof(vectors) / sizeof(vectors[0]); ++i) {
         const encryption_vector &vector = vectors[i];
@@ -1148,9 +1125,9 @@ BOOST_AUTO_TEST_CASE(public_chacha_seek_ietf_accepts_maximum_counter_block) {
     std::array<std::uint8_t, 1> extra_plaintext = {0};
     std::array<std::uint8_t, 1> extra_ciphertext = {0};
 
-    BOOST_CHECK_THROW(cipher.process(extra_plaintext.begin(), extra_plaintext.end(), extra_ciphertext.begin(), schedule,
-                                     block),
-                      std::out_of_range);
+    BOOST_CHECK_THROW(
+        cipher.process(extra_plaintext.begin(), extra_plaintext.end(), extra_ciphertext.begin(), schedule, block),
+        std::out_of_range);
 }
 
 BOOST_AUTO_TEST_CASE(public_chacha_seek_original_sets_64_bit_counter) {

@@ -61,8 +61,7 @@ namespace nil {
                         chacha_blocks(block.data(), 8, input, counter_mode::ietf);
                     }
 
-                    static void chacha_x8(std::array<std::uint8_t, block_size * 8> &block,
-                                          key_schedule_type &input) {
+                    static void chacha_x8(std::array<std::uint8_t, block_size * 8> &block, key_schedule_type &input) {
                         BOOST_STATIC_ASSERT(IVSize == 64 || IVSize == 96);
                         if (IVSize == 96) {
                             chacha_x8_ietf(block, input);
@@ -81,8 +80,7 @@ namespace nil {
                         chacha_blocks(block.data(), 4, input, counter_mode::ietf);
                     }
 
-                    static void chacha_x4(std::array<std::uint8_t, block_size * 4> &block,
-                                          key_schedule_type &input) {
+                    static void chacha_x4(std::array<std::uint8_t, block_size * 4> &block, key_schedule_type &input) {
                         BOOST_STATIC_ASSERT(IVSize == 64 || IVSize == 96);
                         if (IVSize == 96) {
                             chacha_x4_ietf(block, input);
@@ -154,8 +152,7 @@ namespace nil {
                     }
 
                     static void increment_counter(key_schedule_type &input, counter_mode mode) {
-                        if (mode == counter_mode::ietf &&
-                            input[12] == std::numeric_limits<std::uint32_t>::max()) {
+                        if (mode == counter_mode::ietf && input[12] == std::numeric_limits<std::uint32_t>::max()) {
                             throw std::out_of_range("ChaCha20 IETF counter exhausted");
                         }
 
@@ -168,8 +165,8 @@ namespace nil {
                     static void chacha_block(std::uint8_t *out, const key_schedule_type &input) {
                         word_type x00 = input[0], x01 = input[1], x02 = input[2], x03 = input[3], x04 = input[4],
                                   x05 = input[5], x06 = input[6], x07 = input[7], x08 = input[8], x09 = input[9],
-                                  x10 = input[10], x11 = input[11], x12 = input[12], x13 = input[13],
-                                  x14 = input[14], x15 = input[15];
+                                  x10 = input[10], x11 = input[11], x12 = input[12], x13 = input[13], x14 = input[14],
+                                  x15 = input[15];
 
                         for (std::size_t r = 0; r != rounds / 2; ++r) {
                             quarter_round(x00, x04, x08, x12);
@@ -202,8 +199,8 @@ namespace nil {
                     }
                 };
             }    // namespace detail
-        }        // namespace stream
-}            // namespace crypto3
+        }    // namespace stream
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CHACHA_IMPL_HPP

@@ -85,8 +85,8 @@ namespace nil {
                     typedef std::array<byte_type, iv_size> iv_type;
                 };
             }    // namespace detail
-        }        // namespace stream
-    }            // namespace crypto3
+        }    // namespace stream
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_CHACHA_POLICY_HPP
