@@ -145,33 +145,53 @@ namespace nil {
                         const word_type C = 0xFFFFFFFF - schedule[12];
                         const __m256i CTR1 = _mm256_set_epi32(C < 7, C < 6, C < 5, C < 4, C < 3, C < 2, C < 1, 0);
 
-                        __m256i R00 = _mm256_set1_epi32(schedule[0]);
-                        __m256i R01 = _mm256_set1_epi32(schedule[1]);
-                        __m256i R02 = _mm256_set1_epi32(schedule[2]);
-                        __m256i R03 = _mm256_set1_epi32(schedule[3]);
-                        __m256i R04 = _mm256_set1_epi32(schedule[4]);
-                        __m256i R05 = _mm256_set1_epi32(schedule[5]);
-                        __m256i R06 = _mm256_set1_epi32(schedule[6]);
-                        __m256i R07 = _mm256_set1_epi32(schedule[7]);
-                        __m256i R08 = _mm256_set1_epi32(schedule[8]);
-                        __m256i R09 = _mm256_set1_epi32(schedule[9]);
-                        __m256i R10 = _mm256_set1_epi32(schedule[10]);
-                        __m256i R11 = _mm256_set1_epi32(schedule[11]);
-                        __m256i R12 = _mm256_set1_epi32(schedule[12]) + CTR0;
-                        __m256i R13 = _mm256_set1_epi32(schedule[13]) + CTR1;
-                        __m256i R14 = _mm256_set1_epi32(schedule[14]);
-                        __m256i R15 = _mm256_set1_epi32(schedule[15]);
+                        const __m256i input0 = _mm256_set1_epi32(schedule[0]);
+                        const __m256i input1 = _mm256_set1_epi32(schedule[1]);
+                        const __m256i input2 = _mm256_set1_epi32(schedule[2]);
+                        const __m256i input3 = _mm256_set1_epi32(schedule[3]);
+                        const __m256i input4 = _mm256_set1_epi32(schedule[4]);
+                        const __m256i input5 = _mm256_set1_epi32(schedule[5]);
+                        const __m256i input6 = _mm256_set1_epi32(schedule[6]);
+                        const __m256i input7 = _mm256_set1_epi32(schedule[7]);
+                        const __m256i input8 = _mm256_set1_epi32(schedule[8]);
+                        const __m256i input9 = _mm256_set1_epi32(schedule[9]);
+                        const __m256i input10 = _mm256_set1_epi32(schedule[10]);
+                        const __m256i input11 = _mm256_set1_epi32(schedule[11]);
+                        const __m256i input12 = _mm256_add_epi32(_mm256_set1_epi32(schedule[12]), CTR0);
+                        const __m256i input13 = _mm256_add_epi32(_mm256_set1_epi32(schedule[13]), CTR1);
+                        const __m256i input14 = _mm256_set1_epi32(schedule[14]);
+                        const __m256i input15 = _mm256_set1_epi32(schedule[15]);
+
+                        __m256i R00 = input0;
+                        __m256i R01 = input1;
+                        __m256i R02 = input2;
+                        __m256i R03 = input3;
+                        __m256i R04 = input4;
+                        __m256i R05 = input5;
+                        __m256i R06 = input6;
+                        __m256i R07 = input7;
+                        __m256i R08 = input8;
+                        __m256i R09 = input9;
+                        __m256i R10 = input10;
+                        __m256i R11 = input11;
+                        __m256i R12 = input12;
+                        __m256i R13 = input13;
+                        __m256i R14 = input14;
+                        __m256i R15 = input15;
+
+#define CRYPTO3_CHACHA_AVX2_ADD(dst, src) dst = _mm256_add_epi32(dst, src)
+#define CRYPTO3_CHACHA_AVX2_XOR(dst, src) dst = _mm256_xor_si256(dst, src)
 
                         for (std::size_t r = 0; r != rounds / 2; ++r) {
-                            R00 += R04;
-                            R01 += R05;
-                            R02 += R06;
-                            R03 += R07;
+                            CRYPTO3_CHACHA_AVX2_ADD(R00, R04);
+                            CRYPTO3_CHACHA_AVX2_ADD(R01, R05);
+                            CRYPTO3_CHACHA_AVX2_ADD(R02, R06);
+                            CRYPTO3_CHACHA_AVX2_ADD(R03, R07);
 
-                            R12 ^= R00;
-                            R13 ^= R01;
-                            R14 ^= R02;
-                            R15 ^= R03;
+                            CRYPTO3_CHACHA_AVX2_XOR(R12, R00);
+                            CRYPTO3_CHACHA_AVX2_XOR(R13, R01);
+                            CRYPTO3_CHACHA_AVX2_XOR(R14, R02);
+                            CRYPTO3_CHACHA_AVX2_XOR(R15, R03);
 
                             const __m256i shuf_rotl_16 =
                                 _mm256_set_epi8(13, 12, 15, 14, 9, 8, 11, 10, 5, 4, 7, 6, 1, 0, 3, 2, 13, 12, 15, 14, 9,
@@ -182,30 +202,30 @@ namespace nil {
                             R14 = _mm256_shuffle_epi8(R14, shuf_rotl_16);
                             R15 = _mm256_shuffle_epi8(R15, shuf_rotl_16);
 
-                            R08 += R12;
-                            R09 += R13;
-                            R10 += R14;
-                            R11 += R15;
+                            CRYPTO3_CHACHA_AVX2_ADD(R08, R12);
+                            CRYPTO3_CHACHA_AVX2_ADD(R09, R13);
+                            CRYPTO3_CHACHA_AVX2_ADD(R10, R14);
+                            CRYPTO3_CHACHA_AVX2_ADD(R11, R15);
 
-                            R04 ^= R08;
-                            R05 ^= R09;
-                            R06 ^= R10;
-                            R07 ^= R11;
+                            CRYPTO3_CHACHA_AVX2_XOR(R04, R08);
+                            CRYPTO3_CHACHA_AVX2_XOR(R05, R09);
+                            CRYPTO3_CHACHA_AVX2_XOR(R06, R10);
+                            CRYPTO3_CHACHA_AVX2_XOR(R07, R11);
 
                             R04 = _mm256_or_si256(_mm256_slli_epi32(R04, 12), _mm256_srli_epi32(R04, 32 - 12));
                             R05 = _mm256_or_si256(_mm256_slli_epi32(R05, 12), _mm256_srli_epi32(R05, 32 - 12));
                             R06 = _mm256_or_si256(_mm256_slli_epi32(R06, 12), _mm256_srli_epi32(R06, 32 - 12));
                             R07 = _mm256_or_si256(_mm256_slli_epi32(R07, 12), _mm256_srli_epi32(R07, 32 - 12));
 
-                            R00 += R04;
-                            R01 += R05;
-                            R02 += R06;
-                            R03 += R07;
+                            CRYPTO3_CHACHA_AVX2_ADD(R00, R04);
+                            CRYPTO3_CHACHA_AVX2_ADD(R01, R05);
+                            CRYPTO3_CHACHA_AVX2_ADD(R02, R06);
+                            CRYPTO3_CHACHA_AVX2_ADD(R03, R07);
 
-                            R12 ^= R00;
-                            R13 ^= R01;
-                            R14 ^= R02;
-                            R15 ^= R03;
+                            CRYPTO3_CHACHA_AVX2_XOR(R12, R00);
+                            CRYPTO3_CHACHA_AVX2_XOR(R13, R01);
+                            CRYPTO3_CHACHA_AVX2_XOR(R14, R02);
+                            CRYPTO3_CHACHA_AVX2_XOR(R15, R03);
 
                             const __m256i shuf_rotl_8 =
                                 _mm256_set_epi8(14, 13, 12, 15, 10, 9, 8, 11, 6, 5, 4, 7, 2, 1, 0, 3, 14, 13, 12, 15,
@@ -216,75 +236,75 @@ namespace nil {
                             R14 = _mm256_shuffle_epi8(R14, shuf_rotl_8);
                             R15 = _mm256_shuffle_epi8(R15, shuf_rotl_8);
 
-                            R08 += R12;
-                            R09 += R13;
-                            R10 += R14;
-                            R11 += R15;
+                            CRYPTO3_CHACHA_AVX2_ADD(R08, R12);
+                            CRYPTO3_CHACHA_AVX2_ADD(R09, R13);
+                            CRYPTO3_CHACHA_AVX2_ADD(R10, R14);
+                            CRYPTO3_CHACHA_AVX2_ADD(R11, R15);
 
-                            R04 ^= R08;
-                            R05 ^= R09;
-                            R06 ^= R10;
-                            R07 ^= R11;
+                            CRYPTO3_CHACHA_AVX2_XOR(R04, R08);
+                            CRYPTO3_CHACHA_AVX2_XOR(R05, R09);
+                            CRYPTO3_CHACHA_AVX2_XOR(R06, R10);
+                            CRYPTO3_CHACHA_AVX2_XOR(R07, R11);
 
                             R04 = _mm256_or_si256(_mm256_slli_epi32(R04, 7), _mm256_srli_epi32(R04, 32 - 7));
                             R05 = _mm256_or_si256(_mm256_slli_epi32(R05, 7), _mm256_srli_epi32(R05, 32 - 7));
                             R06 = _mm256_or_si256(_mm256_slli_epi32(R06, 7), _mm256_srli_epi32(R06, 32 - 7));
                             R07 = _mm256_or_si256(_mm256_slli_epi32(R07, 7), _mm256_srli_epi32(R07, 32 - 7));
 
-                            R00 += R05;
-                            R01 += R06;
-                            R02 += R07;
-                            R03 += R04;
+                            CRYPTO3_CHACHA_AVX2_ADD(R00, R05);
+                            CRYPTO3_CHACHA_AVX2_ADD(R01, R06);
+                            CRYPTO3_CHACHA_AVX2_ADD(R02, R07);
+                            CRYPTO3_CHACHA_AVX2_ADD(R03, R04);
 
-                            R15 ^= R00;
-                            R12 ^= R01;
-                            R13 ^= R02;
-                            R14 ^= R03;
+                            CRYPTO3_CHACHA_AVX2_XOR(R15, R00);
+                            CRYPTO3_CHACHA_AVX2_XOR(R12, R01);
+                            CRYPTO3_CHACHA_AVX2_XOR(R13, R02);
+                            CRYPTO3_CHACHA_AVX2_XOR(R14, R03);
 
                             R15 = _mm256_shuffle_epi8(R15, shuf_rotl_16);
                             R12 = _mm256_shuffle_epi8(R12, shuf_rotl_16);
                             R13 = _mm256_shuffle_epi8(R13, shuf_rotl_16);
                             R14 = _mm256_shuffle_epi8(R14, shuf_rotl_16);
 
-                            R10 += R15;
-                            R11 += R12;
-                            R08 += R13;
-                            R09 += R14;
+                            CRYPTO3_CHACHA_AVX2_ADD(R10, R15);
+                            CRYPTO3_CHACHA_AVX2_ADD(R11, R12);
+                            CRYPTO3_CHACHA_AVX2_ADD(R08, R13);
+                            CRYPTO3_CHACHA_AVX2_ADD(R09, R14);
 
-                            R05 ^= R10;
-                            R06 ^= R11;
-                            R07 ^= R08;
-                            R04 ^= R09;
+                            CRYPTO3_CHACHA_AVX2_XOR(R05, R10);
+                            CRYPTO3_CHACHA_AVX2_XOR(R06, R11);
+                            CRYPTO3_CHACHA_AVX2_XOR(R07, R08);
+                            CRYPTO3_CHACHA_AVX2_XOR(R04, R09);
 
                             R05 = _mm256_or_si256(_mm256_slli_epi32(R05, 12), _mm256_srli_epi32(R05, 32 - 12));
                             R06 = _mm256_or_si256(_mm256_slli_epi32(R06, 12), _mm256_srli_epi32(R06, 32 - 12));
                             R07 = _mm256_or_si256(_mm256_slli_epi32(R07, 12), _mm256_srli_epi32(R07, 32 - 12));
                             R04 = _mm256_or_si256(_mm256_slli_epi32(R04, 12), _mm256_srli_epi32(R04, 32 - 12));
 
-                            R00 += R05;
-                            R01 += R06;
-                            R02 += R07;
-                            R03 += R04;
+                            CRYPTO3_CHACHA_AVX2_ADD(R00, R05);
+                            CRYPTO3_CHACHA_AVX2_ADD(R01, R06);
+                            CRYPTO3_CHACHA_AVX2_ADD(R02, R07);
+                            CRYPTO3_CHACHA_AVX2_ADD(R03, R04);
 
-                            R15 ^= R00;
-                            R12 ^= R01;
-                            R13 ^= R02;
-                            R14 ^= R03;
+                            CRYPTO3_CHACHA_AVX2_XOR(R15, R00);
+                            CRYPTO3_CHACHA_AVX2_XOR(R12, R01);
+                            CRYPTO3_CHACHA_AVX2_XOR(R13, R02);
+                            CRYPTO3_CHACHA_AVX2_XOR(R14, R03);
 
                             R15 = _mm256_shuffle_epi8(R15, shuf_rotl_8);
                             R12 = _mm256_shuffle_epi8(R12, shuf_rotl_8);
                             R13 = _mm256_shuffle_epi8(R13, shuf_rotl_8);
                             R14 = _mm256_shuffle_epi8(R14, shuf_rotl_8);
 
-                            R10 += R15;
-                            R11 += R12;
-                            R08 += R13;
-                            R09 += R14;
+                            CRYPTO3_CHACHA_AVX2_ADD(R10, R15);
+                            CRYPTO3_CHACHA_AVX2_ADD(R11, R12);
+                            CRYPTO3_CHACHA_AVX2_ADD(R08, R13);
+                            CRYPTO3_CHACHA_AVX2_ADD(R09, R14);
 
-                            R05 ^= R10;
-                            R06 ^= R11;
-                            R07 ^= R08;
-                            R04 ^= R09;
+                            CRYPTO3_CHACHA_AVX2_XOR(R05, R10);
+                            CRYPTO3_CHACHA_AVX2_XOR(R06, R11);
+                            CRYPTO3_CHACHA_AVX2_XOR(R07, R08);
+                            CRYPTO3_CHACHA_AVX2_XOR(R04, R09);
 
                             R05 = _mm256_or_si256(_mm256_slli_epi32(R05, 7), _mm256_srli_epi32(R05, 32 - 7));
                             R06 = _mm256_or_si256(_mm256_slli_epi32(R06, 7), _mm256_srli_epi32(R06, 32 - 7));
@@ -292,22 +312,22 @@ namespace nil {
                             R04 = _mm256_or_si256(_mm256_slli_epi32(R04, 7), _mm256_srli_epi32(R04, 32 - 7));
                         }
 
-                        R00 += _mm256_set1_epi32(schedule[0]);
-                        R01 += _mm256_set1_epi32(schedule[1]);
-                        R02 += _mm256_set1_epi32(schedule[2]);
-                        R03 += _mm256_set1_epi32(schedule[3]);
-                        R04 += _mm256_set1_epi32(schedule[4]);
-                        R05 += _mm256_set1_epi32(schedule[5]);
-                        R06 += _mm256_set1_epi32(schedule[6]);
-                        R07 += _mm256_set1_epi32(schedule[7]);
-                        R08 += _mm256_set1_epi32(schedule[8]);
-                        R09 += _mm256_set1_epi32(schedule[9]);
-                        R10 += _mm256_set1_epi32(schedule[10]);
-                        R11 += _mm256_set1_epi32(schedule[11]);
-                        R12 += _mm256_set1_epi32(schedule[12]) + CTR0;
-                        R13 += _mm256_set1_epi32(schedule[13]) + CTR1;
-                        R14 += _mm256_set1_epi32(schedule[14]);
-                        R15 += _mm256_set1_epi32(schedule[15]);
+                        CRYPTO3_CHACHA_AVX2_ADD(R00, input0);
+                        CRYPTO3_CHACHA_AVX2_ADD(R01, input1);
+                        CRYPTO3_CHACHA_AVX2_ADD(R02, input2);
+                        CRYPTO3_CHACHA_AVX2_ADD(R03, input3);
+                        CRYPTO3_CHACHA_AVX2_ADD(R04, input4);
+                        CRYPTO3_CHACHA_AVX2_ADD(R05, input5);
+                        CRYPTO3_CHACHA_AVX2_ADD(R06, input6);
+                        CRYPTO3_CHACHA_AVX2_ADD(R07, input7);
+                        CRYPTO3_CHACHA_AVX2_ADD(R08, input8);
+                        CRYPTO3_CHACHA_AVX2_ADD(R09, input9);
+                        CRYPTO3_CHACHA_AVX2_ADD(R10, input10);
+                        CRYPTO3_CHACHA_AVX2_ADD(R11, input11);
+                        CRYPTO3_CHACHA_AVX2_ADD(R12, input12);
+                        CRYPTO3_CHACHA_AVX2_ADD(R13, input13);
+                        CRYPTO3_CHACHA_AVX2_ADD(R14, input14);
+                        CRYPTO3_CHACHA_AVX2_ADD(R15, input15);
 
                         __m256i T0 = _mm256_unpacklo_epi32(R00, R01);
                         __m256i T1 = _mm256_unpacklo_epi32(R02, R03);
@@ -372,6 +392,9 @@ namespace nil {
                         _mm256_zeroupper();
 
                         advance_counter(schedule, mode, advance_blocks);
+
+#undef CRYPTO3_CHACHA_AVX2_ADD
+#undef CRYPTO3_CHACHA_AVX2_XOR
                     }
                 };
             }    // namespace detail
