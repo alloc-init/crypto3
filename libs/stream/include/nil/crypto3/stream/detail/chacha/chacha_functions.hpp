@@ -31,15 +31,13 @@
 #include <limits>
 #include <stdexcept>
 
-#include <boost/predef/architecture.h>
-
 #include <nil/crypto3/stream/detail/chacha/chacha_impl.hpp>
 
-#if defined(CRYPTO3_HAS_CHACHA_AVX2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_AVX2_VERSION)
+#if defined(__AVX2__) && (defined(__x86_64__) || defined(__i386__))
+#include <nil/crypto3/stream/detail/chacha/chacha_avx2_impl.hpp>
 #define CRYPTO3_CHACHA_AVX2_SELECTED
-#elif defined(CRYPTO3_HAS_CHACHA_SSE2) || \
-    ((BOOST_ARCH_X86_32 || BOOST_ARCH_X86_64) && BOOST_HW_SIMD_X86 >= BOOST_HW_SIMD_X86_SSE2_VERSION)
+#elif defined(__SSE2__) && (defined(__x86_64__) || defined(__i386__))
+#include <nil/crypto3/stream/detail/chacha/chacha_sse2_impl.hpp>
 #define CRYPTO3_CHACHA_SSE2_SELECTED
 #endif
 
@@ -233,9 +231,9 @@ namespace nil {
                     using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
-                    typedef detail::chacha_unimplemented_avx2_impl<Round, IVSize, KeyBits> impl_type;
+                    typedef detail::chacha_avx2_impl<Round, IVSize, KeyBits> impl_type;
 #elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
-                    typedef detail::chacha_unimplemented_sse2_impl<Round, IVSize, KeyBits> impl_type;
+                    typedef detail::chacha_sse2_impl<Round, IVSize, KeyBits> impl_type;
 #else
                     typedef detail::chacha_impl<Round, IVSize, KeyBits> impl_type;
 #endif
@@ -279,9 +277,9 @@ namespace nil {
                     using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
-                    typedef detail::chacha_unimplemented_avx2_impl<Round, IVSize, 128> impl_type;
+                    typedef detail::chacha_avx2_impl<Round, IVSize, 128> impl_type;
 #elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
-                    typedef detail::chacha_unimplemented_sse2_impl<Round, IVSize, 128> impl_type;
+                    typedef detail::chacha_sse2_impl<Round, IVSize, 128> impl_type;
 #else
                     typedef detail::chacha_impl<Round, IVSize, 128> impl_type;
 #endif
@@ -325,9 +323,9 @@ namespace nil {
                     using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
-                    typedef detail::chacha_unimplemented_avx2_impl<Round, 64, 128> impl_type;
+                    typedef detail::chacha_avx2_impl<Round, 64, 128> impl_type;
 #elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
-                    typedef detail::chacha_unimplemented_sse2_impl<Round, 64, 128> impl_type;
+                    typedef detail::chacha_sse2_impl<Round, 64, 128> impl_type;
 #else
                     typedef detail::chacha_impl<Round, 64, 128> impl_type;
 #endif
@@ -385,9 +383,9 @@ namespace nil {
                     using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
-                    typedef detail::chacha_unimplemented_avx2_impl<Round, 96, 128> impl_type;
+                    typedef detail::chacha_avx2_impl<Round, 96, 128> impl_type;
 #elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
-                    typedef detail::chacha_unimplemented_sse2_impl<Round, 96, 128> impl_type;
+                    typedef detail::chacha_sse2_impl<Round, 96, 128> impl_type;
 #else
                     typedef detail::chacha_impl<Round, 96, 128> impl_type;
 #endif
@@ -452,9 +450,9 @@ namespace nil {
                     using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
-                    typedef detail::chacha_unimplemented_avx2_impl<Round, IVSize, 256> impl_type;
+                    typedef detail::chacha_avx2_impl<Round, IVSize, 256> impl_type;
 #elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
-                    typedef detail::chacha_unimplemented_sse2_impl<Round, IVSize, 256> impl_type;
+                    typedef detail::chacha_sse2_impl<Round, IVSize, 256> impl_type;
 #else
                     typedef detail::chacha_impl<Round, IVSize, 256> impl_type;
 #endif
@@ -498,9 +496,9 @@ namespace nil {
                     using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
-                    typedef detail::chacha_unimplemented_avx2_impl<Round, 64, 256> impl_type;
+                    typedef detail::chacha_avx2_impl<Round, 64, 256> impl_type;
 #elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
-                    typedef detail::chacha_unimplemented_sse2_impl<Round, 64, 256> impl_type;
+                    typedef detail::chacha_sse2_impl<Round, 64, 256> impl_type;
 #else
                     typedef detail::chacha_impl<Round, 64, 256> impl_type;
 #endif
@@ -559,9 +557,9 @@ namespace nil {
                     using block_functions_type::generate_block_without_counter_increment;
 
 #if defined(CRYPTO3_CHACHA_AVX2_SELECTED)
-                    typedef detail::chacha_unimplemented_avx2_impl<Round, 96, 256> impl_type;
+                    typedef detail::chacha_avx2_impl<Round, 96, 256> impl_type;
 #elif defined(CRYPTO3_CHACHA_SSE2_SELECTED)
-                    typedef detail::chacha_unimplemented_sse2_impl<Round, 96, 256> impl_type;
+                    typedef detail::chacha_sse2_impl<Round, 96, 256> impl_type;
 #else
                     typedef detail::chacha_impl<Round, 96, 256> impl_type;
 #endif

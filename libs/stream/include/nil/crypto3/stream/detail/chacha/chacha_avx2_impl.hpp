@@ -25,6 +25,13 @@
 #ifndef CRYPTO3_STREAM_CHACHA_AVX2_IMPL_HPP
 #define CRYPTO3_STREAM_CHACHA_AVX2_IMPL_HPP
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <stdexcept>
+
 #include <nil/crypto3/detail/config.hpp>
 
 #include <nil/crypto3/stream/detail/chacha/chacha_policy.hpp>
@@ -52,9 +59,85 @@ namespace nil {
                     constexpr static const std::size_t block_size = policy_type::block_size;
                     typedef typename policy_type::block_type block_type;
 
-                    static BOOST_ATTRIBUTE_TARGET("avx2") void chacha_x8(
-                        const std::array<std::uint8_t, block_size * 8> &block,
-                        key_schedule_type &schedule) {
+                    static void chacha_x8_original(std::array<std::uint8_t, block_size * 8> &block,
+                                                   key_schedule_type &schedule) {
+                        chacha_x8_impl(block.data(), schedule, counter_mode::original, 8);
+                    }
+
+                    static void chacha_x8_ietf(std::array<std::uint8_t, block_size * 8> &block,
+                                               key_schedule_type &schedule) {
+                        chacha_x8_impl(block.data(), schedule, counter_mode::ietf, 8);
+                    }
+
+                    static void chacha_x8(std::array<std::uint8_t, block_size * 8> &block,
+                                          key_schedule_type &schedule) {
+                        static_assert(IVSize == 64 || IVSize == 96, "ChaCha supports only 64-bit or 96-bit IVs");
+                        if (IVSize == 96) {
+                            chacha_x8_ietf(block, schedule);
+                        } else {
+                            chacha_x8_original(block, schedule);
+                        }
+                    }
+
+                    static void chacha_x4_original(std::array<std::uint8_t, block_size * 4> &block,
+                                                   key_schedule_type &schedule) {
+                        std::array<std::uint8_t, block_size * 8> tmp = {0};
+                        key_schedule_type working_schedule = schedule;
+
+                        chacha_x8_impl(tmp.data(), working_schedule, counter_mode::original, 0);
+                        std::copy(tmp.begin(), tmp.begin() + block.size(), block.begin());
+                        advance_counter(schedule, counter_mode::original, 4);
+                    }
+
+                    static void chacha_x4_ietf(std::array<std::uint8_t, block_size * 4> &block,
+                                               key_schedule_type &schedule) {
+                        validate_can_advance_counter(schedule, counter_mode::ietf, 4);
+
+                        std::array<std::uint8_t, block_size * 8> tmp = {0};
+                        key_schedule_type working_schedule = schedule;
+
+                        chacha_x8_impl(tmp.data(), working_schedule, counter_mode::ietf, 0);
+                        std::copy(tmp.begin(), tmp.begin() + block.size(), block.begin());
+                        advance_counter(schedule, counter_mode::ietf, 4);
+                    }
+
+                    static void chacha_x4(std::array<std::uint8_t, block_size * 4> &block,
+                                          key_schedule_type &schedule) {
+                        static_assert(IVSize == 64 || IVSize == 96, "ChaCha supports only 64-bit or 96-bit IVs");
+                        if (IVSize == 96) {
+                            chacha_x4_ietf(block, schedule);
+                        } else {
+                            chacha_x4_original(block, schedule);
+                        }
+                    }
+
+                private:
+                    enum class counter_mode { original, ietf };
+
+                    static void validate_can_advance_counter(const key_schedule_type &schedule, counter_mode mode,
+                                                             std::size_t blocks) {
+                        const std::uint64_t max_counter = std::numeric_limits<std::uint32_t>::max();
+
+                        if (mode == counter_mode::ietf && blocks != 0 &&
+                            (blocks > max_counter || schedule[12] > max_counter - blocks)) {
+                            throw std::out_of_range("ChaCha20 IETF counter exhausted");
+                        }
+                    }
+
+                    static void advance_counter(key_schedule_type &schedule, counter_mode mode, std::size_t blocks) {
+                        const word_type old_counter = schedule[12];
+                        schedule[12] += static_cast<word_type>(blocks);
+                        if (mode == counter_mode::original && schedule[12] < old_counter) {
+                            ++schedule[13];
+                        }
+                    }
+
+                    static BOOST_ATTRIBUTE_TARGET("avx2") void chacha_x8_impl(std::uint8_t *out,
+                                                                               key_schedule_type &schedule,
+                                                                               counter_mode mode,
+                                                                               std::size_t advance_blocks) {
+                        validate_can_advance_counter(schedule, mode, advance_blocks);
+
                         _mm256_zeroupper();
 
                         const __m256i CTR0 = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
@@ -79,7 +162,7 @@ namespace nil {
                         __m256i R14 = _mm256_set1_epi32(schedule[14]);
                         __m256i R15 = _mm256_set1_epi32(schedule[15]);
 
-                        for (size_t r = 0; r != rounds / 2; ++r) {
+                        for (std::size_t r = 0; r != rounds / 2; ++r) {
                             R00 += R04;
                             R01 += R05;
                             R02 += R06;
@@ -266,7 +349,7 @@ namespace nil {
                         R14 = _mm256_unpacklo_epi64(T2, T3);
                         R15 = _mm256_unpackhi_epi64(T2, T3);
 
-                        __m256i *output_mm = reinterpret_cast<__m256i *>(block.data());
+                        __m256i *output_mm = reinterpret_cast<__m256i *>(out);
 
                         _mm256_storeu_si256(output_mm, _mm256_permute2x128_si256(R00, R04, 0 + (2 << 4)));
                         _mm256_storeu_si256(output_mm + 1, _mm256_permute2x128_si256(R08, R12, 0 + (2 << 4)));
@@ -286,11 +369,9 @@ namespace nil {
                         _mm256_storeu_si256(output_mm + 14, _mm256_permute2x128_si256(R03, R07, 1 + (3 << 4)));
                         _mm256_storeu_si256(output_mm + 15, _mm256_permute2x128_si256(R11, R15, 1 + (3 << 4)));
 
-                        _mm256_zeroall();
+                        _mm256_zeroupper();
 
-                        schedule[12] += 8;
-                        if (schedule[12] < 8)
-                            schedule[13]++;
+                        advance_counter(schedule, mode, advance_blocks);
                     }
                 };
             }    // namespace detail

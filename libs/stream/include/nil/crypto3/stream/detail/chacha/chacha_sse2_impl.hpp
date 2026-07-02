@@ -25,6 +25,12 @@
 #ifndef CRYPTO3_STREAM_CHACHA_SSE2_IMPL_HPP
 #define CRYPTO3_STREAM_CHACHA_SSE2_IMPL_HPP
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <stdexcept>
+
 #include <nil/crypto3/detail/config.hpp>
 
 #include <nil/crypto3/stream/detail/chacha/chacha_policy.hpp>
@@ -52,25 +58,85 @@ namespace nil {
                     constexpr static const std::size_t block_size = policy_type::block_size;
                     typedef typename policy_type::block_type block_type;
 
-                    inline static void chacha_x8(const std::array<std::uint8_t, block_size * 8> &block,
-                                                 key_schedule_type &schedule) {
-                        chacha_x4(block, schedule);
-                        chacha_x4(std::array<std::uint8_t, block_size * 4>(block.begin() + block_size * 4, block.end()),
-                                  schedule);
+                    static void chacha_x8_original(std::array<std::uint8_t, block_size * 8> &block,
+                                                   key_schedule_type &schedule) {
+                        chacha_x4_impl(block.data(), schedule, counter_mode::original, 4);
+                        chacha_x4_impl(block.data() + block_size * 4, schedule, counter_mode::original, 4);
                     }
 
-                    static BOOST_ATTRIBUTE_TARGET("sse2") void chacha_x4(
-                        const std::array<std::uint8_t, block_size * 4> &block,
-                        key_schedule_type &schedule) {
-                        const __m128i *input_mm = reinterpret_cast<const __m128i *>(schedule);
-                        __m128i *output_mm = reinterpret_cast<__m128i *>(block);
+                    static void chacha_x8_ietf(std::array<std::uint8_t, block_size * 8> &block,
+                                               key_schedule_type &schedule) {
+                        validate_can_advance_counter(schedule, counter_mode::ietf, 8);
+                        chacha_x4_impl(block.data(), schedule, counter_mode::ietf, 0);
+                        chacha_x4_impl(block.data() + block_size * 4, schedule, counter_mode::ietf, 0);
+                        advance_counter(schedule, counter_mode::ietf, 8);
+                    }
+
+                    static void chacha_x8(std::array<std::uint8_t, block_size * 8> &block,
+                                          key_schedule_type &schedule) {
+                        static_assert(IVSize == 64 || IVSize == 96, "ChaCha supports only 64-bit or 96-bit IVs");
+                        if (IVSize == 96) {
+                            chacha_x8_ietf(block, schedule);
+                        } else {
+                            chacha_x8_original(block, schedule);
+                        }
+                    }
+
+                    static void chacha_x4_original(std::array<std::uint8_t, block_size * 4> &block,
+                                                   key_schedule_type &schedule) {
+                        chacha_x4_impl(block.data(), schedule, counter_mode::original, 4);
+                    }
+
+                    static void chacha_x4_ietf(std::array<std::uint8_t, block_size * 4> &block,
+                                               key_schedule_type &schedule) {
+                        validate_can_advance_counter(schedule, counter_mode::ietf, 4);
+                        chacha_x4_impl(block.data(), schedule, counter_mode::ietf, 4);
+                    }
+
+                    static void chacha_x4(std::array<std::uint8_t, block_size * 4> &block,
+                                          key_schedule_type &schedule) {
+                        static_assert(IVSize == 64 || IVSize == 96, "ChaCha supports only 64-bit or 96-bit IVs");
+                        if (IVSize == 96) {
+                            chacha_x4_ietf(block, schedule);
+                        } else {
+                            chacha_x4_original(block, schedule);
+                        }
+                    }
+
+                private:
+                    enum class counter_mode { original, ietf };
+
+                    static void validate_can_advance_counter(const key_schedule_type &schedule, counter_mode mode,
+                                                             std::size_t blocks) {
+                        const std::uint64_t max_counter = std::numeric_limits<std::uint32_t>::max();
+
+                        if (mode == counter_mode::ietf && blocks != 0 &&
+                            (blocks > max_counter || schedule[12] > max_counter - blocks)) {
+                            throw std::out_of_range("ChaCha20 IETF counter exhausted");
+                        }
+                    }
+
+                    static void advance_counter(key_schedule_type &schedule, counter_mode mode, std::size_t blocks) {
+                        const word_type old_counter = schedule[12];
+                        schedule[12] += static_cast<word_type>(blocks);
+                        if (mode == counter_mode::original && schedule[12] < old_counter) {
+                            ++schedule[13];
+                        }
+                    }
+
+                    static BOOST_ATTRIBUTE_TARGET("sse2") void chacha_x4_impl(std::uint8_t *out,
+                                                                               key_schedule_type &schedule,
+                                                                               counter_mode mode,
+                                                                               std::size_t advance_blocks) {
+                        validate_can_advance_counter(schedule, mode, advance_blocks);
+
+                        const __m128i *input_mm = reinterpret_cast<const __m128i *>(schedule.data());
+                        __m128i *output_mm = reinterpret_cast<__m128i *>(out);
 
                         __m128i input0 = _mm_loadu_si128(input_mm);
                         __m128i input1 = _mm_loadu_si128(input_mm + 1);
                         __m128i input2 = _mm_loadu_si128(input_mm + 2);
                         __m128i input3 = _mm_loadu_si128(input_mm + 3);
-
-                        // TODO: try transposing, which would avoid the permutations each round
 
 #define mm_rotl(r, n) _mm_or_si128(_mm_slli_epi32(r, n), _mm_srli_epi32(r, 32 - (n)))
 
@@ -94,7 +160,7 @@ namespace nil {
                         __m128i r3_2 = input2;
                         __m128i r3_3 = _mm_add_epi64(r0_3, _mm_set_epi32(0, 0, 0, 3));
 
-                        for (size_t r = 0; r != rounds / 2; ++r) {
+                        for (std::size_t r = 0; r != rounds / 2; ++r) {
                             r0_0 = _mm_add_epi32(r0_0, r0_1);
                             r1_0 = _mm_add_epi32(r1_0, r1_1);
                             r2_0 = _mm_add_epi32(r2_0, r2_1);
@@ -293,10 +359,7 @@ namespace nil {
 
 #undef mm_rotl
 
-                        schedule[12] += 4;
-                        if (schedule[12] < 4) {
-                            schedule[13]++;
-                        }
+                        advance_counter(schedule, mode, advance_blocks);
                     }
                 };
             }    // namespace detail

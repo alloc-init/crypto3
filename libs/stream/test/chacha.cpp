@@ -46,8 +46,13 @@
 
 using namespace nil::crypto3::stream;
 
+#if defined(__AVX2__) || (defined(__SSE2__) && (defined(__x86_64__) || defined(__i386__)))
+#define CRYPTO3_CHACHA_TEST_SELECTED_SIMD
+#endif
+
 namespace {
     using block4_type = std::array<std::uint8_t, 256>;
+    using block8_type = std::array<std::uint8_t, 512>;
     using schedule_type = std::array<std::uint32_t, 16>;
 
     std::uint8_t hex_value(char c) {
@@ -109,7 +114,8 @@ namespace {
         return ciphertext;
     }
 
-    bool equal_block(const block4_type &actual, std::size_t block_index,
+    template<std::size_t Size>
+    bool equal_block(const std::array<std::uint8_t, Size> &actual, std::size_t block_index,
                      const std::array<std::uint8_t, 64> &expected) {
         return std::equal(expected.begin(), expected.end(), actual.begin() + block_index * 64);
     }
@@ -278,6 +284,85 @@ BOOST_AUTO_TEST_CASE(chacha_unimplemented_simd_path_throws) {
     BOOST_CHECK_EXCEPTION(sse2_impl_type::chacha_x4_ietf(out, state), std::logic_error, [](const std::logic_error &e) {
         return std::string(e.what()) == "ChaCha SSE2 implementation is not implemented";
     });
+}
+
+BOOST_AUTO_TEST_CASE(selected_chacha_simd_x4_matches_scalar_reference) {
+#if defined(CRYPTO3_CHACHA_TEST_SELECTED_SIMD)
+    using functions_type = detail::chacha_functions<20, 96, 256>;
+
+    functions_type::key_schedule_type state = rfc8439_block_state();
+    block4_type out = {0};
+
+    functions_type::impl_type::chacha_x4_ietf(out, state);
+
+    schedule_type expected_state = rfc8439_block_state();
+    for (std::size_t i = 0; i != 4; ++i) {
+        BOOST_TEST(equal_block(out, i, reference_block(expected_state)));
+        ++expected_state[12];
+    }
+
+    BOOST_TEST(state[12] == 5u);
+    BOOST_TEST(state[13] == rfc8439_block_state()[13]);
+#else
+    BOOST_TEST(true);
+#endif
+}
+
+BOOST_AUTO_TEST_CASE(selected_chacha_simd_x8_matches_scalar_reference) {
+#if defined(CRYPTO3_CHACHA_TEST_SELECTED_SIMD)
+    using functions_type = detail::chacha_functions<20, 96, 256>;
+
+    functions_type::key_schedule_type state = rfc8439_block_state();
+    block8_type out = {0};
+
+    functions_type::impl_type::chacha_x8_ietf(out, state);
+
+    schedule_type expected_state = rfc8439_block_state();
+    for (std::size_t i = 0; i != 8; ++i) {
+        BOOST_TEST(equal_block(out, i, reference_block(expected_state)));
+        ++expected_state[12];
+    }
+
+    BOOST_TEST(state[12] == 9u);
+    BOOST_TEST(state[13] == rfc8439_block_state()[13]);
+#else
+    BOOST_TEST(true);
+#endif
+}
+
+BOOST_AUTO_TEST_CASE(selected_chacha_simd_ietf_x8_rejects_counter_wrap) {
+#if defined(CRYPTO3_CHACHA_TEST_SELECTED_SIMD)
+    using functions_type = detail::chacha_functions<20, 96, 256>;
+
+    functions_type::key_schedule_type state = rfc8439_block_state();
+    state[12] = 0xfffffff8;
+    state[13] = 0x11223344;
+    block8_type out = {0};
+
+    BOOST_CHECK_THROW(functions_type::impl_type::chacha_x8_ietf(out, state), std::out_of_range);
+    BOOST_TEST(state[12] == 0xfffffff8u);
+    BOOST_TEST(state[13] == 0x11223344u);
+#else
+    BOOST_TEST(true);
+#endif
+}
+
+BOOST_AUTO_TEST_CASE(selected_chacha_simd_original_x8_carries_counter) {
+#if defined(CRYPTO3_CHACHA_TEST_SELECTED_SIMD)
+    using functions_type = detail::chacha_functions<20, 64, 256>;
+
+    functions_type::key_schedule_type state = original_chacha_state();
+    state[12] = 0xfffffffc;
+    state[13] = 7;
+    block8_type out = {0};
+
+    functions_type::impl_type::chacha_x8_original(out, state);
+
+    BOOST_TEST(state[12] == 4u);
+    BOOST_TEST(state[13] == 8u);
+#else
+    BOOST_TEST(true);
+#endif
 }
 
 BOOST_AUTO_TEST_CASE(ietf_chacha20_x4_matches_rfc8439_first_block) {
@@ -1215,5 +1300,7 @@ BOOST_DATA_TEST_CASE(chacha_single_range_encrypt, boost::unit_test::data::xrange
     BOOST_TEST(encrypt_schedule[12] == 1u);
     BOOST_TEST(decrypt_schedule[12] == 1u);
 }
+
+#undef CRYPTO3_CHACHA_TEST_SELECTED_SIMD
 
 BOOST_AUTO_TEST_SUITE_END()
