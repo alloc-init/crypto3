@@ -16,7 +16,6 @@ include(TargetConfiguration)
 include(PlatformConfiguration)
 
 option(CRYPTO3_STREAM_CHACHA "Build with CHACHA stream encryption support" TRUE)
-option(CRYPTO3_STREAM_SALSA20 "Build with SALSA20 stream encryption support" TRUE)
 
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 

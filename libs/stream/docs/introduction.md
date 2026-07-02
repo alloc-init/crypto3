@@ -18,7 +18,6 @@ A small part of each topic is reviewed right at introduction, but the detailed i
 Crypto3.Stream library contains following block ciphers:
 
 * [Chacha](@ref chacha)
-* [Salsa20](@ref salsa20)
 
 ## Dependencies ## {#stream_dependencies}
 

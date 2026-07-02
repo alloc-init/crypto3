@@ -30,8 +30,6 @@ endmacro()
 
 set(TESTS_NAMES
         "chacha"
-        # Uncomment once fixed.
-        #    "salsa20"
 )
 
 foreach(TEST_NAME ${TESTS_NAMES})
