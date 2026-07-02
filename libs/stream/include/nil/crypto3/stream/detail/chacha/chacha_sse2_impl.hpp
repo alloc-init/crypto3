@@ -67,9 +67,8 @@ namespace nil {
                     static void chacha_x8_ietf(std::array<std::uint8_t, block_size * 8> &block,
                                                key_schedule_type &schedule) {
                         validate_can_advance_counter(schedule, counter_mode::ietf, 8);
-                        chacha_x4_impl(block.data(), schedule, counter_mode::ietf, 0);
-                        chacha_x4_impl(block.data() + block_size * 4, schedule, counter_mode::ietf, 0);
-                        advance_counter(schedule, counter_mode::ietf, 8);
+                        chacha_x4_impl(block.data(), schedule, counter_mode::ietf, 4);
+                        chacha_x4_impl(block.data() + block_size * 4, schedule, counter_mode::ietf, 4);
                     }
 
                     static void chacha_x8(std::array<std::uint8_t, block_size * 8> &block,
