@@ -757,6 +757,42 @@ BOOST_AUTO_TEST_CASE(public_chacha20_cipher_processes_resumable_byte_streams) {
     BOOST_TEST(std::equal(expected.begin(), expected.end(), ciphertext.begin()));
 }
 
+BOOST_AUTO_TEST_CASE(public_chacha20_cipher_processes_bulk_full_blocks) {
+    chacha20::key_type key = rfc8439_key();
+    chacha20::iv_type iv = rfc8439_iv();
+    const std::uint32_t initial_counter = 3;
+
+    std::vector<std::uint8_t> plaintext(chacha20::block_size * 14 + 17);
+    for (std::size_t i = 0; i != plaintext.size(); ++i) {
+        plaintext[i] = static_cast<std::uint8_t>((i * 17 + 29) & 0xff);
+    }
+
+    std::vector<std::uint8_t> expected(plaintext.size());
+    schedule_type state = rfc8439_block_state();
+    state[12] = initial_counter;
+
+    for (std::size_t offset = 0; offset != plaintext.size();) {
+        const std::array<std::uint8_t, 64> keystream = reference_block(state);
+        const std::size_t remaining = plaintext.size() - offset;
+        const std::size_t chunk = remaining < chacha20::block_size ? remaining : chacha20::block_size;
+
+        for (std::size_t i = 0; i != chunk; ++i) {
+            expected[offset + i] = plaintext[offset + i] ^ keystream[i];
+        }
+
+        offset += chunk;
+        ++state[12];
+    }
+
+    chacha20_cipher cipher(key, iv, initial_counter);
+    std::vector<std::uint8_t> ciphertext(plaintext.size());
+
+    const auto out = cipher.process(plaintext.begin(), plaintext.end(), ciphertext.begin());
+
+    BOOST_TEST((out == ciphertext.end()));
+    BOOST_TEST(std::equal(expected.begin(), expected.end(), ciphertext.begin()));
+}
+
 BOOST_AUTO_TEST_CASE(public_chacha20_cipher_seek_is_relative_to_initial_counter) {
     chacha20::key_type key = rfc8439_key();
     chacha20::iv_type iv = rfc8439_iv();
@@ -837,6 +873,43 @@ BOOST_AUTO_TEST_CASE(public_chacha20_cipher_rejects_ietf_counter_wrap) {
     BOOST_CHECK_THROW(cipher.seek(chacha20::block_size), std::out_of_range);
     BOOST_CHECK_THROW(nil::crypto3::encrypt(too_long_plaintext.begin(), too_long_plaintext.end(), key, iv,
                                             too_long_ciphertext.begin(), 0xffffffff),
+                      std::out_of_range);
+}
+
+BOOST_AUTO_TEST_CASE(public_chacha20_cipher_allows_exact_final_ietf_counter_block) {
+    chacha20::key_type key = rfc8439_key();
+    chacha20::iv_type iv = rfc8439_iv();
+    const std::uint32_t initial_counter = 0xfffffffb;
+
+    std::vector<std::uint8_t> plaintext(chacha20::block_size * 5);
+    for (std::size_t i = 0; i != plaintext.size(); ++i) {
+        plaintext[i] = static_cast<std::uint8_t>((i * 19 + 7) & 0xff);
+    }
+
+    std::vector<std::uint8_t> expected(plaintext.size());
+    schedule_type state = rfc8439_block_state();
+    state[12] = initial_counter;
+
+    for (std::size_t offset = 0; offset != plaintext.size(); offset += chacha20::block_size) {
+        const std::array<std::uint8_t, 64> keystream = reference_block(state);
+        for (std::size_t i = 0; i != chacha20::block_size; ++i) {
+            expected[offset + i] = plaintext[offset + i] ^ keystream[i];
+        }
+        ++state[12];
+    }
+
+    chacha20_cipher cipher(key, iv, initial_counter);
+    std::vector<std::uint8_t> ciphertext(plaintext.size());
+
+    const auto out = cipher.process(plaintext.begin(), plaintext.end(), ciphertext.begin());
+
+    BOOST_TEST((out == ciphertext.end()));
+    BOOST_TEST(std::equal(expected.begin(), expected.end(), ciphertext.begin()));
+
+    std::array<std::uint8_t, 1> extra_plaintext = {0};
+    std::array<std::uint8_t, 1> extra_ciphertext = {0};
+
+    BOOST_CHECK_THROW(cipher.process(extra_plaintext.begin(), extra_plaintext.end(), extra_ciphertext.begin()),
                       std::out_of_range);
 }
 

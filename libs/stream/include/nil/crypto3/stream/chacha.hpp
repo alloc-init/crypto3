@@ -25,8 +25,10 @@
 #ifndef CRYPTO3_STREAM_CHACHA_HPP
 #define CRYPTO3_STREAM_CHACHA_HPP
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 #include <stdexcept>
 
@@ -110,8 +112,15 @@ namespace nil {
                 template<typename InputIterator, typename OutputIterator>
                 OutputIterator process(InputIterator first, InputIterator last, OutputIterator out,
                                        key_schedule_type &schedule, block_type &block) {
+                    typedef typename std::iterator_traits<InputIterator>::iterator_category input_iterator_category;
+
                     while (first != last) {
                         if (block_offset == block_size) {
+                            out = process_full_blocks(first, last, out, schedule, input_iterator_category());
+                            if (first == last) {
+                                return out;
+                            }
+
                             generate_next_block(block, schedule);
                             block_offset = 0;
                         }
@@ -177,6 +186,57 @@ namespace nil {
 
                 static void throw_ietf_counter_exhausted() {
                     throw std::out_of_range("ChaCha20 IETF counter exhausted");
+                }
+
+                static bool can_process_block_batch(const key_schedule_type &schedule, std::size_t blocks) {
+                    if (IVBits != 96) {
+                        return true;
+                    }
+                    return blocks != 0 && schedule[12] <= ietf_counter_limit() - blocks;
+                }
+
+                template<typename InputIterator, typename OutputIterator>
+                static OutputIterator xor_keystream(InputIterator &first, const std::uint8_t *keystream,
+                                                    std::size_t length, OutputIterator out) {
+                    for (std::size_t i = 0; i != length; ++i) {
+                        *out = *first ^ keystream[i];
+                        ++first;
+                        ++out;
+                    }
+                    return out;
+                }
+
+                template<typename InputIterator>
+                static std::size_t available_full_blocks(InputIterator first, InputIterator last) {
+                    const auto remaining = last - first;
+                    if (remaining <= 0) {
+                        return 0;
+                    }
+                    return static_cast<std::size_t>(remaining) / block_size;
+                }
+
+                template<typename InputIterator, typename OutputIterator, typename IteratorCategory>
+                OutputIterator process_full_blocks(InputIterator &, InputIterator, OutputIterator out,
+                                                   key_schedule_type &, IteratorCategory) {
+                    return out;
+                }
+
+                template<typename InputIterator, typename OutputIterator>
+                OutputIterator process_full_blocks(InputIterator &first, InputIterator last, OutputIterator out,
+                                                   key_schedule_type &schedule, std::random_access_iterator_tag) {
+                    while (available_full_blocks(first, last) >= 8 && can_process_block_batch(schedule, 8)) {
+                        std::array<std::uint8_t, block_size * 8> blocks = {0};
+                        policy_type::impl_type::chacha_x8(blocks, schedule);
+                        out = xor_keystream(first, blocks.data(), blocks.size(), out);
+                    }
+
+                    while (available_full_blocks(first, last) >= 4 && can_process_block_batch(schedule, 4)) {
+                        std::array<std::uint8_t, block_size * 4> blocks = {0};
+                        policy_type::impl_type::chacha_x4(blocks, schedule);
+                        out = xor_keystream(first, blocks.data(), blocks.size(), out);
+                    }
+
+                    return out;
                 }
 
                 void generate_next_block(block_type &block, key_schedule_type &schedule) {
