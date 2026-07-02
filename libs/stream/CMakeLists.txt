@@ -15,8 +15,6 @@ cm_project(stream WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 include(TargetConfiguration)
 include(PlatformConfiguration)
 
-option(CRYPTO3_STREAM_CHACHA "Build with CHACHA stream encryption support" TRUE)
-
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 add_library(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE)

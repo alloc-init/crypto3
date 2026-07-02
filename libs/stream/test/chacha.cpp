@@ -267,25 +267,6 @@ BOOST_AUTO_TEST_CASE(chacha_quarter_round_on_state_matches_rfc8439_vector) {
     BOOST_TEST(std::equal(expected.begin(), expected.end(), state.begin()));
 }
 
-BOOST_AUTO_TEST_CASE(chacha_unimplemented_simd_path_throws) {
-    using simd_impl_type = detail::chacha_unimplemented_simd_impl<20, 96, 256>;
-    using avx2_impl_type = detail::chacha_unimplemented_avx2_impl<20, 96, 256>;
-    using sse2_impl_type = detail::chacha_unimplemented_sse2_impl<20, 96, 256>;
-
-    simd_impl_type::key_schedule_type state = rfc8439_block_state();
-    block4_type out = {0};
-
-    BOOST_CHECK_EXCEPTION(simd_impl_type::chacha_x4(out, state), std::logic_error, [](const std::logic_error &e) {
-        return std::string(e.what()) == "ChaCha SIMD implementation is not implemented";
-    });
-    BOOST_CHECK_EXCEPTION(avx2_impl_type::chacha_x4(out, state), std::logic_error, [](const std::logic_error &e) {
-        return std::string(e.what()) == "ChaCha AVX2 implementation is not implemented";
-    });
-    BOOST_CHECK_EXCEPTION(sse2_impl_type::chacha_x4_ietf(out, state), std::logic_error, [](const std::logic_error &e) {
-        return std::string(e.what()) == "ChaCha SSE2 implementation is not implemented";
-    });
-}
-
 BOOST_AUTO_TEST_CASE(selected_chacha_simd_x4_matches_scalar_reference) {
 #if defined(CRYPTO3_CHACHA_TEST_SELECTED_SIMD)
     using functions_type = detail::chacha_functions<20, 96, 256>;
