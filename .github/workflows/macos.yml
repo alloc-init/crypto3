@@ -18,4 +18,4 @@ jobs:
     - name: configure
       run: mkdir -p build && cd build && cmake -DCMAKE_CXX_FLAGS="-Werror -fsanitize=address,undefined -fno-omit-frame-pointer"  -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ ..
     - name: run test harness
-      run: cd build && ../scripts/test_all.sh -j8 -l -t0s
+      run: cd build && --parallel 8 --output-on-failure
