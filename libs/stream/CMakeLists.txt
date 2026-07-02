@@ -24,7 +24,6 @@ check_avx()
 
 option(CRYPTO3_STREAM_CHACHA "Build with CHACHA stream encryption support" TRUE)
 option(CRYPTO3_STREAM_SALSA20 "Build with SALSA20 stream encryption support" TRUE)
-option(CRYPTO3_STREAM_RC4 "Build with RC4 stream encryption support" TRUE)
 
 set(BUILD_WITH_TARGET_ARCHITECTURE "" CACHE STRING "Target build architecture")
 

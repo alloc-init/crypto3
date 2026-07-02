@@ -19,7 +19,6 @@ Crypto3.Stream library contains following block ciphers:
 
 * [Chacha](@ref chacha)
 * [Salsa20](@ref salsa20)
-* [RC4](@ref rc4)
 
 ## Dependencies ## {#stream_dependencies}
 

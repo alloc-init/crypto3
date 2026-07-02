@@ -31,7 +31,6 @@ endmacro()
 set(TESTS_NAMES
         "chacha"
         # Uncomment once fixed.
-        #    "rc4"
         #    "salsa20"
 )
 
