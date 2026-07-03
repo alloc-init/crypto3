@@ -35,3 +35,15 @@ set(TESTS_NAMES
 foreach(TEST_NAME ${TESTS_NAMES})
     define_stream_test(${TEST_NAME})
 endforeach()
+
+cm_test(NAME stream_chacha20poly1305_test SOURCES ../../modes/test/aead_chacha20poly1305.cpp)
+
+target_include_directories(stream_chacha20poly1305_test PRIVATE
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../modes/include>"
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../mac/include>")
+
+target_link_libraries(stream_chacha20poly1305_test
+        ${CMAKE_WORKSPACE_NAME}::mac)
+
+set_target_properties(stream_chacha20poly1305_test PROPERTIES CXX_STANDARD 23
+        CXX_STANDARD_REQUIRED TRUE)
