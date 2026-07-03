@@ -29,6 +29,7 @@ endmacro()
 
 set(TESTS_NAMES
         "hmac"
+        "poly1305"
 )
 
 foreach(TEST_NAME ${TESTS_NAMES})
