@@ -36,6 +36,7 @@ macro(define_random_test test)
 endmacro()
 
 set(TESTS_NAMES
+        "chacha"
         "hash"
         "algebraic_engine"
         "ct_random_device"

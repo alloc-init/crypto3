@@ -54,6 +54,7 @@ root
 │   ├── pkpad: padding module for public key schemes
 │   ├── pubkey: pubkey signing APIs
 │   ├── random: randomisation primitives 
+│   ├── stream: stream ciphers
 │   ├── zk: zk cryptography schemes
 ```
 
