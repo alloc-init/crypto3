@@ -62,6 +62,7 @@ namespace nil {
                         typedef typename non_residue_field_type::value_type non_residue_type;
                         typedef fields::fp6_3over2<base_field_type> underlying_field_type;
                         typedef typename underlying_field_type::value_type underlying_type;
+                        typedef typename base_field_type::value_type base_value_type;
 
                         constexpr static const std::array<integral_type, 12 * 2> Frobenius_coeffs_c1 = {
                             0x01,
@@ -95,7 +96,7 @@ namespace nil {
                         // Make fast multiply path available to generic Fp12 element mul
                         template<typename Fp12Value>
                         static Fp12Value multiply(const Fp12Value &x, const Fp12Value &y) {
-                            return bls12_381_fp12_fast_multiply<
+                            return bls12_fp12_fast_multiply<
                                 base_field_type, fp12_2over3over2_extension_params<base_field_type>>::multiply(x, y);
                         }
                     };
@@ -117,6 +118,7 @@ namespace nil {
                         typedef typename non_residue_field_type::value_type non_residue_type;
                         typedef fields::fp6_3over2<base_field_type> underlying_field_type;
                         typedef typename underlying_field_type::value_type underlying_type;
+                        typedef typename base_field_type::value_type base_value_type;
 
                         constexpr static const std::array<integral_type, 12 * 2> Frobenius_coeffs_c1 = {
                             0x01,
