@@ -30,6 +30,7 @@
 #include <nil/crypto3/algebra/fields/bls12/base_field.hpp>
 #include <nil/crypto3/algebra/fields/fp6_3over2.hpp>
 #include <nil/crypto3/algebra/fields/fp2.hpp>
+#include <nil/crypto3/algebra/fields/detail/extension_params/bls12/detail/fp12_fast.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -90,6 +91,13 @@ namespace nil {
                             0x144E4211384586C16BD3AD4AFA99CC9170DF3560E77982D0DB45F3536814F0BD5871C1908BD478CD1EE605167FF82995_cppui_modular381};
 
                         constexpr static const non_residue_type non_residue = non_residue_type(0x01u, 0x01u);
+
+                        // Make fast multiply path available to generic Fp12 element mul
+                        template<typename Fp12Value>
+                        static Fp12Value multiply(const Fp12Value &x, const Fp12Value &y) {
+                            return bls12_381_fp12_fast_multiply<
+                                base_field_type, fp12_2over3over2_extension_params<base_field_type>>::multiply(x, y);
+                        }
                     };
 
                     /************************* BLS12-377 ***********************************/
