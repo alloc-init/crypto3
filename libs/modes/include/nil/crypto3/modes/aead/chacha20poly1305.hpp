@@ -1,5 +1,6 @@
 //---------------------------------------------------------------------------//
 // Copyright (c) 2019 Mikhail Komarov <nemo@nil.foundation>
+// Copyright (c) 2026 Alloc Init
 //
 // MIT License
 //
@@ -25,344 +26,174 @@
 #ifndef CRYPTO3_MODE_AEAD_CHACHA20_POLY1305_HPP
 #define CRYPTO3_MODE_AEAD_CHACHA20_POLY1305_HPP
 
-#include <nil/crypto3/modes/aead/aead.hpp>
+#include <algorithm>
+#include <array>
+#include <climits>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <stdexcept>
+#include <vector>
+
+#include <nil/crypto3/mac/algorithm/compute.hpp>
+#include <nil/crypto3/mac/poly1305.hpp>
+#include <nil/crypto3/stream/chacha.hpp>
 
 namespace nil {
     namespace crypto3 {
-        namespace mac {
-            class poly_1305;
-        }
-        namespace stream {
-            template<std::size_t IVBits = 64, std::size_t KeyBits = 128, std::size_t Rounds = 20>
-            class chacha;
+        namespace modes {
+            namespace aead {
+                class chacha20poly1305 {
+                public:
+                    typedef stream::chacha20 stream_type;
+                    typedef stream_type::key_type key_type;
+                    typedef stream_type::iv_type nonce_type;
+                    typedef mac::poly1305::key_type poly1305_key_type;
+                    typedef mac::poly1305::digest_type tag_type;
 
-            namespace modes {
-                namespace detail {
-                    template<typename Padding,
-                             std::size_t NonceBits,
-                             std::size_t TagBits,
-                             typename StreamCipher,
-                             typename MessageAuthenticationCode,
-                             template<typename> class Allocator>
-                    struct chacha20poly1305_policy {
-                        typedef std::size_t size_type;
+                    constexpr static const std::size_t key_size = stream_type::key_bits / CHAR_BIT;
+                    constexpr static const std::size_t nonce_size = stream_type::iv_bits / CHAR_BIT;
+                    constexpr static const std::size_t tag_size = mac::poly1305::digest_octets;
 
-                        typedef StreamCipher stream_cipher_type;
-                        typedef MessageAuthenticationCode mac_type;
-                        typedef Padding padding_type;
+                    static poly1305_key_type poly1305_key_gen(const key_type &key, const nonce_type &nonce) {
+                        std::array<std::uint8_t, stream_type::block_size> zeros = {0};
+                        std::array<std::uint8_t, stream_type::block_size> block = {0};
 
-                        constexpr static const std::size_t nonce_bits = NonceBits;
-                        constexpr static const std::size_t nonce_size = nonce_bits / CHAR_BIT;
-                        typedef std::array<std::uint8_t, nonce_size> nonce_type;
+                        stream::chacha20_cipher cipher(key, nonce, 0);
+                        cipher.process(zeros.begin(), zeros.end(), block.begin());
 
-                        BOOST_STATIC_ASSERT(nonce_bits == 8 * CHAR_BIT || nonce_bits == 12 * CHAR_BIT);
+                        poly1305_key_type one_time_key = {0};
+                        std::copy(block.begin(), block.begin() + one_time_key.size(), one_time_key.begin());
+                        return one_time_key;
+                    }
 
-                        typedef std::vector<boost::uint_t<CHAR_BIT>, Allocator<boost::uint_t<CHAR_BIT>>>
-                            associated_data_type;
-                    };
+                    template<typename PlaintextIterator, typename AadIterator, typename OutputIterator>
+                    static tag_type encrypt(PlaintextIterator plaintext_first, PlaintextIterator plaintext_last,
+                                            AadIterator aad_first, AadIterator aad_last, const key_type &key,
+                                            const nonce_type &nonce, OutputIterator ciphertext_out) {
+                        const std::vector<std::uint8_t> plaintext = to_byte_vector(plaintext_first, plaintext_last);
+                        const std::vector<std::uint8_t> aad = to_byte_vector(aad_first, aad_last);
+                        ensure_plaintext_size(plaintext.size());
 
-                    template<typename Padding,
-                             std::size_t NonceBits,
-                             std::size_t TagBits,
-                             typename StreamCipher,
-                             typename MessageAuthenticationCode,
-                             template<typename> class Allocator>
-                    struct chacha20poly1305_encryption_policy
-                        : public chacha20poly1305_policy<Padding,
-                                                         NonceBits,
-                                                         TagBits,
-                                                         StreamCipher,
-                                                         MessageAuthenticationCode,
-                                                         Allocator> {
-                        typedef chacha20poly1305_policy<Padding,
-                                                        NonceBits,
-                                                        TagBits,
-                                                        StreamCipher,
-                                                        MessageAuthenticationCode,
-                                                        Allocator>
-                            policy_type;
+                        std::vector<std::uint8_t> ciphertext(plaintext.size());
+                        stream::chacha20_cipher cipher(key, nonce, 1);
+                        cipher.process(plaintext.begin(), plaintext.end(), ciphertext.begin());
 
-                        typedef typename policy_type::stream_cipher_type stream_cipher_type;
-                        typedef typename policy_type::padding_type padding_type;
+                        std::copy(ciphertext.begin(), ciphertext.end(), ciphertext_out);
+                        return compute_tag(aad, ciphertext, key, nonce);
+                    }
 
-                        typedef typename policy_type::associated_data_type associated_data_type;
-                        typedef typename policy_type::nonce_type nonce_type;
+                    template<typename PlaintextRange, typename AadRange, typename OutputIterator>
+                    static tag_type encrypt(const PlaintextRange &plaintext, const AadRange &aad, const key_type &key,
+                                            const nonce_type &nonce, OutputIterator ciphertext_out) {
+                        return encrypt(std::begin(plaintext), std::end(plaintext), std::begin(aad), std::end(aad), key,
+                                       nonce, ciphertext_out);
+                    }
 
-                        constexpr static const std::size_t block_bits = policy_type::block_bits;
-                        constexpr static const std::size_t block_words = policy_type::block_words;
-                        typedef typename policy_type::block_type block_type;
+                    template<typename CiphertextIterator, typename AadIterator, typename OutputIterator>
+                    static bool decrypt(CiphertextIterator ciphertext_first, CiphertextIterator ciphertext_last,
+                                        AadIterator aad_first, AadIterator aad_last, const tag_type &tag,
+                                        const key_type &key, const nonce_type &nonce, OutputIterator plaintext_out) {
+                        const std::vector<std::uint8_t> ciphertext = to_byte_vector(ciphertext_first, ciphertext_last);
+                        const std::vector<std::uint8_t> aad = to_byte_vector(aad_first, aad_last);
+                        ensure_plaintext_size(ciphertext.size());
 
-                        inline static block_type begin_message(const stream_cipher_type &cipher,
-                                                               const block_type &plaintext) {
-                            block_type block = {0};
-
-                            m_ctext_len = 0;
-                            m_nonce_len = nonce_len;
-
-                            m_chacha->set_iv(nonce, nonce_len);
-
-                            secure_vector<uint8_t> init(64);    // zeros
-                            m_chacha->encrypt(init);
-
-                            m_poly1305->set_key(init.data(), 32);
-                            // Remainder of output is discard
-
-                            m_poly1305->update(m_ad);
-
-                            if (cfrg_version()) {
-                                if (m_ad.size() % 16) {
-                                    const uint8_t zeros[16] = {0};
-                                    m_poly1305->update(zeros, 16 - m_ad.size() % 16);
-                                }
-                            } else {
-                                update_len(m_ad.size());
-                            }
-
-                            return cipher.encrypt(block);
+                        const tag_type expected_tag = compute_tag(aad, ciphertext, key, nonce);
+                        if (!constant_time_equal(expected_tag, tag)) {
+                            return false;
                         }
 
-                        inline static block_type process_block(const stream_cipher_type &cipher,
-                                                               const block_type &plaintext) {
-                            block_type block = {0};
+                        std::vector<std::uint8_t> plaintext(ciphertext.size());
+                        stream::chacha20_cipher cipher(key, nonce, 1);
+                        cipher.process(ciphertext.begin(), ciphertext.end(), plaintext.begin());
+                        std::copy(plaintext.begin(), plaintext.end(), plaintext_out);
+                        return true;
+                    }
 
-                            m_chacha->cipher1(buf, sz);
-                            m_poly1305->update(buf, sz);    // poly1305 of ciphertext
-                            m_ctext_len += sz;
+                    template<typename CiphertextRange, typename AadRange, typename OutputIterator>
+                    static bool decrypt(const CiphertextRange &ciphertext, const AadRange &aad, const tag_type &tag,
+                                        const key_type &key, const nonce_type &nonce, OutputIterator plaintext_out) {
+                        return decrypt(std::begin(ciphertext), std::end(ciphertext), std::begin(aad), std::end(aad),
+                                       tag, key, nonce, plaintext_out);
+                    }
 
-                            return cipher.encrypt(block);
+                    template<typename ByteRange>
+                    static bool constant_time_equal(const ByteRange &lhs, const ByteRange &rhs) {
+                        if (lhs.size() != rhs.size()) {
+                            return false;
                         }
 
-                        inline static block_type end_message(const stream_cipher_type &cipher,
-                                                             const block_type &plaintext) {
-                            block_type result = {0};
-
-                            update(buffer, offset);
-                            if (cfrg_version()) {
-                                if (m_ctext_len % 16) {
-                                    const uint8_t zeros[16] = {0};
-                                    m_poly1305->update(zeros, 16 - m_ctext_len % 16);
-                                }
-                                update_len(m_ad.size());
-                            }
-                            update_len(m_ctext_len);
-
-                            const secure_vector<uint8_t> mac = m_poly1305->final();
-                            buffer += std::make_pair(mac.data(), tag_size());
-                            m_ctext_len = 0;
-
-                            return result;
+                        std::uint8_t diff = 0;
+                        for (std::size_t i = 0; i != lhs.size(); ++i) {
+                            diff |= static_cast<std::uint8_t>(lhs[i] ^ rhs[i]);
                         }
-                    };
+                        return diff == 0;
+                    }
 
-                    template<typename Padding,
-                             std::size_t NonceBits,
-                             std::size_t TagBits,
-                             typename StreamCipher,
-                             typename MessageAuthenticationCode,
-                             template<typename> class Allocator>
-                    struct chacha20poly1305_decryption_policy
-                        : public chacha20poly1305_policy<Padding,
-                                                         NonceBits,
-                                                         TagBits,
-                                                         StreamCipher,
-                                                         MessageAuthenticationCode,
-                                                         Allocator> {
-                        typedef chacha20poly1305_policy<Padding,
-                                                        NonceBits,
-                                                        TagBits,
-                                                        StreamCipher,
-                                                        MessageAuthenticationCode,
-                                                        Allocator>
-                            policy_type;
+                private:
+                    static constexpr std::uint64_t max_plaintext_size() {
+                        return static_cast<std::uint64_t>(std::numeric_limits<std::uint32_t>::max()) *
+                               stream_type::block_size;
+                    }
 
-                        typedef typename policy_type::stream_cipher_type cipher_type;
-                        typedef typename policy_type::padding_type padding_type;
-
-                        typedef typename policy_type::associated_data_type associated_data_type;
-                        typedef typename policy_type::nonce_type nonce_type;
-
-                        constexpr static const std::size_t block_bits = policy_type::block_bits;
-                        constexpr static const std::size_t block_words = policy_type::block_words;
-                        typedef typename policy_type::block_type block_type;
-
-                        inline static block_type begin_message(const cipher_type &cipher, const block_type &plaintext) {
-                            block_type block = {0};
-
-                            m_ctext_len = 0;
-                            m_nonce_len = nonce_len;
-
-                            m_chacha->set_iv(nonce, nonce_len);
-
-                            secure_vector<uint8_t> init(64);    // zeros
-                            m_chacha->encrypt(init);
-
-                            m_poly1305->set_key(init.data(), 32);
-                            // Remainder of output is discard
-
-                            m_poly1305->update(m_ad);
-
-                            if (cfrg_version()) {
-                                if (m_ad.size() % 16) {
-                                    const uint8_t zeros[16] = {0};
-                                    m_poly1305->update(zeros, 16 - m_ad.size() % 16);
-                                }
-                            } else {
-                                update_len(m_ad.size());
-                            }
-
-                            return cipher.encrypt(block);
+                    static void ensure_plaintext_size(std::size_t size) {
+                        if (size > max_plaintext_size()) {
+                            throw std::out_of_range("ChaCha20-Poly1305 plaintext is too large");
                         }
+                    }
 
-                        inline static block_type process_block(const cipher_type &cipher, const block_type &plaintext) {
-                            block_type block = {0};
-
-                            m_poly1305->update(buf, sz);    // poly1305 of ciphertext
-                            m_chacha->cipher1(buf, sz);
-                            m_ctext_len += sz;
-
-                            return cipher.encrypt(block);
+                    template<typename InputIterator>
+                    static std::vector<std::uint8_t> to_byte_vector(InputIterator first, InputIterator last) {
+                        std::vector<std::uint8_t> bytes;
+                        for (; first != last; ++first) {
+                            bytes.push_back(static_cast<std::uint8_t>(*first));
                         }
+                        return bytes;
+                    }
 
-                        inline static block_type end_message(const cipher_type &cipher, const block_type &plaintext) {
-                            block_type result = {0};
+                    static void append_pad16(std::vector<std::uint8_t> &out, std::size_t size) {
+                        const std::size_t padding = size % 16 == 0 ? 0 : 16 - size % 16;
+                        out.insert(out.end(), padding, 0);
+                    }
 
-                            BOOST_ASSERT_MSG(buffer.size() >= offset, "Offset is sane");
-                            const size_t sz = buffer.size() - offset;
-                            uint8_t *buf = buffer.data() + offset;
-
-                            BOOST_ASSERT_MSG(sz >= tag_size(), "Have the tag as part of final input");
-
-                            const size_t remaining = sz - tag_size();
-
-                            if (remaining) {
-                                m_poly1305->update(buf, remaining);    // poly1305 of ciphertext
-                                m_chacha->cipher1(buf, remaining);
-                                m_ctext_len += remaining;
-                            }
-
-                            if (cfrg_version()) {
-                                if (m_ctext_len % 16) {
-                                    const uint8_t zeros[16] = {0};
-                                    m_poly1305->update(zeros, 16 - m_ctext_len % 16);
-                                }
-                                update_len(m_ad.size());
-                            }
-
-                            update_len(m_ctext_len);
-                            const secure_vector<uint8_t> mac = m_poly1305->final();
-
-                            const uint8_t *included_tag = &buf[remaining];
-
-                            m_ctext_len = 0;
-
-                            if (!constant_time_compare(mac.data(), included_tag, tag_size())) {
-                                throw integrity_failure("ChaCha20Poly1305 tag check failed");
-                            }
-                            buffer.resize(offset + remaining);
-
-                            return result;
+                    static void append_u64_le(std::vector<std::uint8_t> &out, std::uint64_t value) {
+                        for (std::size_t i = 0; i != 8; ++i) {
+                            out.push_back(static_cast<std::uint8_t>((value >> (8 * i)) & 0xff));
                         }
-                    };
+                    }
 
-                    template<typename PolicyType>
-                    class chacha20poly1305 {
-                        typedef PolicyType policy_type;
+                    static std::vector<std::uint8_t> mac_data(const std::vector<std::uint8_t> &aad,
+                                                              const std::vector<std::uint8_t> &ciphertext) {
+                        std::vector<std::uint8_t> data;
+                        data.reserve(aad.size() + ciphertext.size() + 32);
 
-                    public:
-                        typedef typename policy_type::stream_cipher_type stream_cipher_type;
-                        typedef typename policy_type::padding_type padding_type;
-                        typedef typename policy_type::mac_type mac_type;
+                        data.insert(data.end(), aad.begin(), aad.end());
+                        append_pad16(data, aad.size());
+                        data.insert(data.end(), ciphertext.begin(), ciphertext.end());
+                        append_pad16(data, ciphertext.size());
+                        append_u64_le(data, static_cast<std::uint64_t>(aad.size()));
+                        append_u64_le(data, static_cast<std::uint64_t>(ciphertext.size()));
+                        return data;
+                    }
 
-                        typedef typename stream_cipher_type::key_type key_type;
-                        typedef typename policy_type::associated_data_type associated_data_type;
-
-                        constexpr static const std::size_t block_bits = policy_type::block_bits;
-                        constexpr static const std::size_t block_words = policy_type::block_words;
-                        typedef typename stream_cipher_type::block_type block_type;
-
-                        template<typename AssociatedDataContainer>
-                        chacha20poly1305(const stream_cipher_type &cipher,
-                                         const AssociatedDataContainer &associated_data) : cipher(cipher) {
-                            schedule_associated_data(associated_data);
-                        }
-
-                        inline block_type begin_message(const block_type &plaintext) {
-                            return policy_type::begin_message(cipher, plaintext, ad);
-                        }
-
-                        inline block_type process_block(const block_type &plaintext) {
-                            return policy_type::process_block(cipher, plaintext, ad);
-                        }
-
-                        inline block_type end_message(const block_type &plaintext) {
-                            return policy_type::end_message(cipher, plaintext, ad);
-                        }
-
-                        inline static std::size_t required_output_size(std::size_t inputlen) {
-                            return padding_type::required_output_size(inputlen);
-                        }
-
-                    protected:
-                        template<typename AssociatedDataContainer>
-                        inline void schedule_associated_data(const AssociatedDataContainer &iad) {
-                        }
-
-                        associated_data_type ad;
-
-                        stream_cipher_type cipher;
-                        mac_type mac;
-                    };
-                }    // namespace detail
-
-                /*!
-                 * @brief See draft-irtf-cfrg-chacha20-poly1305-03 for specification
-                 * If a nonce of 64 bits is used the older version described in
-                 * draft-agl-tls-chacha20poly1305-04 is used instead.
-                 *
-                 * @tparam StreamCipher
-                 * @tparam Padding
-                 * @tparam CiphertextStealingMode
-                 */
-                template<template<typename> class Padding,
-                         std::size_t NonceBits,
-                         std::size_t TagBits = 16 * CHAR_BIT,
-                         typename StreamCipher = stream::chacha<>,
-                         typename MessageAuthenticationCode = mac::poly_1305,
-                         template<typename> class Allocator = std::allocator>
-                struct chacha20poly1305 {
-                    typedef StreamCipher stream_cipher_type;
-                    typedef MessageAuthenticationCode mac_type;
-                    typedef Padding<StreamCipher> padding_type;
-
-                    typedef detail::chacha20poly1305_encryption_policy<padding_type,
-                                                                       NonceBits,
-                                                                       TagBits,
-                                                                       stream_cipher_type,
-                                                                       mac_type,
-                                                                       Allocator>
-                        encryption_policy;
-                    typedef detail::chacha20poly1305_decryption_policy<padding_type,
-                                                                       NonceBits,
-                                                                       TagBits,
-                                                                       stream_cipher_type,
-                                                                       mac_type,
-                                                                       Allocator>
-                        decryption_policy;
-
-                    template<template<typename,
-                                      typename,
-                                      std::size_t,
-                                      std::size_t,
-                                      template<typename> class> class PolicyType>
-                    struct bind {
-                        typedef detail::chacha20poly1305<
-                            PolicyType<stream_cipher_type, padding_type, NonceBits, TagBits, Allocator>>
-                            type;
-                    };
+                    static tag_type compute_tag(const std::vector<std::uint8_t> &aad,
+                                                const std::vector<std::uint8_t> &ciphertext, const key_type &key,
+                                                const nonce_type &nonce) {
+                        const poly1305_key_type one_time_key = poly1305_key_gen(key, nonce);
+                        const mac::mac_key<mac::poly1305> poly1305_key(one_time_key);
+                        const std::vector<std::uint8_t> data = mac_data(aad, ciphertext);
+                        return compute<mac::poly1305>(data, poly1305_key);
+                    }
                 };
+            }    // namespace aead
+        }    // namespace modes
+
+        namespace stream {
+            namespace modes {
+                typedef ::nil::crypto3::modes::aead::chacha20poly1305 chacha20poly1305;
             }    // namespace modes
         }    // namespace stream
     }    // namespace crypto3
 }    // namespace nil
 
-#endif
+#endif    // CRYPTO3_MODE_AEAD_CHACHA20_POLY1305_HPP
