@@ -8,28 +8,6 @@
 #endif
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
-
-    template<class Field>
-    inline void add_low_4_limbs_mod_portable(limb *z, const limb *x, const limb *y) {
-        limb tmp[5] = {};
-        limb carry = 0u;
-        for (size_t i = 0; i < base_value_limb_count; i++) {
-            const auto sum = (wide_limb)x[i] + y[i] + carry;
-            tmp[i] = (limb)sum;
-            carry = (limb)(sum >> limb_bits);
-        }
-        tmp[base_value_limb_count] = carry;
-        static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-        // Normalize the 5-limb scratch, then copy only this coefficient back.
-        // z may point into the middle of a contiguous fp2_base value.
-        if (ge_modulus_wide<4>(tmp, p.data())) {
-            subtract_limbs_portable<5>(tmp, tmp, p.data());
-        }
-        for (size_t i = 0; i < base_value_limb_count; i++) {
-            z[i] = tmp[i];
-        }
-    }
-
     template<class Field>
     inline void add_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
@@ -217,8 +195,8 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         fp2_base_add_mod_x86<Field>(z, x, y);
 #else
-        add_low_4_limbs_mod_portable<Field>(z, x, y);
-        add_low_4_limbs_mod_portable<Field>(z + 4, x + 4, y + 4);
+        add_low_limbs_mod_portable<Field, 4>(z, x, y);
+        add_low_limbs_mod_portable<Field, 4>(z + 4, x + 4, y + 4);
 #endif
     }
 

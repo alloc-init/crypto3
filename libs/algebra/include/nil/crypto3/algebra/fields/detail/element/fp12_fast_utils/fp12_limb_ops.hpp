@@ -57,4 +57,25 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
         return fp12_fast_utils::ge_modulus<N>(x, mod);
     }
 
-}    // namespace nil::crypto3::algebra::fields::detail::fp12
+    template<class Field, size_t N>
+    inline void add_low_limbs_mod_portable(limb *z, const limb *x, const limb *y) {
+        limb tmp[N + 1] = {};
+        limb carry = 0u;
+        for (size_t i = 0; i < N; i++) {
+            const auto sum = (wide_limb)x[i] + y[i] + carry;
+            tmp[i] = (limb)sum;
+            carry = (limb)(sum >> limb_bits);
+        }
+        tmp[N] = carry;
+        static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+        // Normalize the 5-limb scratch, then copy only this coefficient back.
+        // z may point into the middle of a contiguous fp2_base value.
+        if (ge_modulus_wide<4>(tmp, p.data())) {
+            subtract_limbs_portable<5>(tmp, tmp, p.data());
+        }
+        for (size_t i = 0; i < N; i++) {
+            z[i] = tmp[i];
+        }
+    }
+
+}    // namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils
