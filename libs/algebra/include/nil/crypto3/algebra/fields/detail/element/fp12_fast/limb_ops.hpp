@@ -208,4 +208,43 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #endif
     }
 
+    template<class Field, size_t BaseLimbCount>
+    inline void fp2_mul_pre(limb *z, const limb *x, const limb *y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        fp2_mul_pre_x86<Field>(z, x, y);
+#else
+        // For x = a + bu and y = c + du:
+        //   xy = (a + bu) * (c + du)
+        //      = ac + adu + bcu + bdu^2
+        //      = ac + (ad + bc)u - bd      # since u^2 = -1
+        //      = (ac - bd) + (ad + bc)u
+        // Karatsuba computes the cross term with one product:
+        //   ad + bc = (a + b)(c + d) - ac - bd.
+        std::array<limb, BaseLimbCount * 2> ac, bd, a_plus_b, c_plus_d;
+        multiply<BaseLimbCount>(ac.data(), x, y);
+        multiply<BaseLimbCount>(bd.data(), x + BaseLimbCount, y + BaseLimbCount);
+        add_limbs_portable<BaseLimbCount>(a_plus_b.data(), x, x + BaseLimbCount);
+        add_limbs_portable<BaseLimbCount>(c_plus_d.data(), y, y + BaseLimbCount);
+        subtract_limbs_mod<Field, BaseLimbCount * 2>(z, ac.data(), bd.data());
+        multiply<BaseLimbCount>(z + BaseLimbCount * 2, a_plus_b.data(), c_plus_d.data());
+        subtract_limbs_portable<BaseLimbCount * 2>(z + BaseLimbCount * 2, z + BaseLimbCount * 2, ac.data());
+        subtract_limbs_portable<BaseLimbCount * 2>(z + BaseLimbCount * 2, z + BaseLimbCount * 2, bd.data());
+#endif
+    }
+
+    template<class Field, size_t BaseLimbCount>
+    inline void fp2_add_mul_pre(limb *z, const limb *a, const limb *b, const limb *c, const limb *d) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        fp2_add_mul_pre_x86<Field>(z, a, b, c, d);
+#else
+        // Build the raw fp2 sums in the same packed layout expected by fp2_mul_pre.
+        limb x[BaseLimbCount * 2], y[BaseLimbCount * 2];
+        add_limbs_portable<BaseLimbCount>(x, a, b);
+        add_limbs_portable<BaseLimbCount>(x + BaseLimbCount, a + BaseLimbCount, b + BaseLimbCount);
+        add_limbs_portable<BaseLimbCount>(y, c, d);
+        add_limbs_portable<BaseLimbCount>(y + BaseLimbCount, c + BaseLimbCount, d + BaseLimbCount);
+        fp2_mul_pre<Field, BaseLimbCount>(z, x, y);
+#endif
+    }
+
 }    // namespace nil::crypto3::algebra::fields::detail::fp12_fast

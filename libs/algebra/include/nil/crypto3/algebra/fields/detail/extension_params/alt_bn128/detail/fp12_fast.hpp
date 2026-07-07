@@ -90,12 +90,14 @@ namespace nil::crypto3::algebra::fields::detail {
 
             static void add_mul_pre(fp2_dbl &result, const fp2_base &a, const fp2_base &b, const fp2_base &c,
                                     const fp2_base &d) {
-                alt_bn128_fp12_limb_ops::fp2_add_mul_pre<base_field_type>(result.data.data(), a.data.data(),
-                                                                          b.data.data(), c.data.data(), d.data.data());
+                alt_bn128_fp12_limb_ops::fp2_add_mul_pre<base_field_type,
+                                                         alt_bn128_fp12_limb_ops::base_value_limb_count>(
+                    result.data[0].data(), a.data.data(), b.data.data(), c.data.data(), d.data.data());
             }
 
             static void mul_pre(fp2_dbl &result, const fp2_base &x, const fp2_base &y) {
-                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type>(result.data.data(), x.data.data(), y.data.data());
+                alt_bn128_fp12_limb_ops::fp2_mul_pre<base_field_type, alt_bn128_fp12_limb_ops::base_value_limb_count>(
+                    result.data[0].data(), x.data.data(), y.data.data());
             }
 
             // dst = src * xi + addend
