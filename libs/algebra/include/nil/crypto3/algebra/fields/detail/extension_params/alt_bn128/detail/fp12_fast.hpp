@@ -119,9 +119,9 @@ namespace nil {
 
                             void to_non_residue(non_residue_type &ret) const {
                                 alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(
-                                    (limb *)ret.data[0].data.backend().base_data().limbs(), data[0]);
+                                    (limb *)ret.data[0].data.backend().base_data().limbs(), data[0].data());
                                 alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(
-                                    (limb *)ret.data[1].data.backend().base_data().limbs(), data[1]);
+                                    (limb *)ret.data[1].data.backend().base_data().limbs(), data[1].data());
                             }
                         };
 

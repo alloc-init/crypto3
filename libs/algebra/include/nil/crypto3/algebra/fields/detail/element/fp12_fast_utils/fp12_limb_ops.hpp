@@ -78,4 +78,66 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
         }
     }
 
+    template<size_t N>
+    void multiply_portable(limb *result, const limb *x, const limb *y) {
+        for (size_t i = 0; i < 2 * N; i++) {
+            result[i] = 0;
+        }
+        for (size_t i = 0; i < N; i++) {
+            limb carry = 0;
+            for (size_t j = 0; j < N; j++) {
+                wide_limb product = (wide_limb)x[j] * y[i];
+                wide_limb sum = (wide_limb)result[i + j] + product + carry;
+                result[i + j] = (limb)sum;
+                carry = (limb)(sum >> limb_bits);
+            }
+            result[i + N] += carry;
+        }
+    }
+
+    template<class Field, size_t N>
+    inline void montgomery_reduce_portable(limb *result, const limb *data) {
+        // p is the field modulus as 4 limbs
+        static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+        // p_dash is -p^{-1} modulo one limb, B = 2^64.
+        // Multiplying the current low limb by p_dash gives the
+        // one-limb factor m that makes t[i] + m * p[0] == 0 mod B.
+        limb p_dash = Field::modulus_params.get_mod_obj().get_p_dash();
+        std::array<limb, N> buf;
+        std::copy_n(data, N, buf.begin());
+        // REDC over R = 2^(64 * 4). At step i, choose m so adding
+        // m * p shifted by i limbs makes buf[i] zero modulo 2^64.
+        // After N/2 steps the low N/2 limbs have been cancelled,
+        // so the high N/2 limbs contain buf * R^-1 modulo p.
+        for (size_t i = 0; i < N / 2; i++) {
+            // Only the low limb of this product is used. Because
+            // p[0] * p_dash == -1 mod B, this m cancels buf[i] when
+            // m * p is added into the current REDC column.
+            const limb m = buf[i] * p_dash;
+            limb carry = 0;
+            // Add m * p into buf starting at limb i. The low limb of
+            // this sum is constructed to cancel buf[i].
+            for (size_t j = 0; j < N / 2; ++j) {
+                const wide_limb product = (wide_limb)m * (wide_limb)p[j] + (wide_limb)buf[i + j] + carry;
+                buf[i + j] = (limb)product;
+                carry = (limb)(product >> limb_bits);
+            }
+            // Propagate any carry beyond the N/2 modulus limbs.
+            for (size_t j = i + N / 2; carry != 0 && j < N; j++) {
+                const wide_limb sum = (wide_limb)buf[j] + carry;
+                buf[j] = (limb)sum;
+                carry = (limb)(sum >> limb_bits);
+            }
+        }
+        // The REDC output lives in buf[4..7]. Bring it back into the
+        // canonical field range before writing the N/2 output limbs.
+        if (ge_modulus<N / 2>(buf.data() + N / 2, p.data())) {
+            subtract_limbs_portable<N / 2>(buf.data() + N / 2, buf.data() + N / 2, p.data());
+        }
+        // Write the reduced N/2-limb field value to the caller-provided Fp storage.
+        for (size_t i = 0; i < N / 2; i++) {
+            result[i] = buf[N / 2 + i];
+        }
+    }
+
 }    // namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils
