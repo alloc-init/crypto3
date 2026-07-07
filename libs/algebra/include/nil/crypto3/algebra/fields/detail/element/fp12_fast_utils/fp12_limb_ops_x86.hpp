@@ -1,6 +1,6 @@
 #pragma once
 
-#include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
+#include <nil/crypto3/algebra/fields/detail/element/fp12_fast_utils/fp12_limb_types.hpp>
 #include <boost/preprocessor.hpp>
 
 // clang-format off
@@ -330,7 +330,7 @@
     "adcq %[" #T2 "], " PTR2(Z, Z_BASE, 6) "\n"                        \
     "adcq %[" #T3 "], " PTR2(Z, Z_BASE, 7) "\n"
 
-namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
+namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
     inline void multiply_4x4_x86(limb *z, const limb *x, const limb *y) {
         limb low, zero, high;
         limb d0, d1, d2, d3;
@@ -689,7 +689,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
             : "rdx", "cc", "memory"
         );
     }
-}    // namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops
+}
 
 #undef STR_IMPL
 #undef STR

@@ -140,4 +140,31 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
         }
     }
 
+    template<class Field, size_t N>
+    inline void add_limbs_mod(limb *z, const limb *x, const limb *y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        add_8_limbs_mod_x86<Field>(z, x, y);
+#else
+        add_limbs_portable<N>(z, x, y);
+        static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+        if (ge_modulus<N / 2>(z + N / 2, p.data())) {
+            subtract_limbs_portable<N / 2>(z + N / 2, z + N / 2, p.data());
+        }
+#endif
+    }
+
+    template<class Field, size_t N>
+    inline void subtract_limbs_mod(limb *z, const limb *x, const limb *y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        subtract_8_limbs_mod_x86<Field>(z, x, y);
+#else
+        bool borrow = subtract_limbs_portable<N>(z, x, y);
+        if (borrow) {
+            // If the full 8-limb subtraction borrowed, add p to the high half
+            // to keep the double value in the p * R residue class.
+            static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+            add_limbs_portable<N / 2>(z + N / 2, z + N / 2, p.data());
+        }
+#endif
+    }
 }    // namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils

@@ -8,33 +8,6 @@
 #endif
 
 namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
-    template<class Field>
-    inline void add_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        add_8_limbs_mod_x86<Field>(z, x, y);
-#else
-        add_limbs_portable<8>(z.data(), x.data(), y.data());
-        static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-        if (ge_modulus<4>(z.data() + 4, p.data())) {
-            subtract_limbs_portable<4>(z.data() + 4, z.data() + 4, p.data());
-        }
-#endif
-    }
-
-    template<class Field>
-    inline void subtract_8_limbs_mod(limb_array &z, const limb_array &x, const limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        subtract_8_limbs_mod_x86<Field>(z, x, y);
-#else
-        bool borrow = subtract_limbs_portable<8>(z.data(), x.data(), y.data());
-        if (borrow) {
-            // If the full 8-limb subtraction borrowed, add p to the high half
-            // to keep the double value in the p * R residue class.
-            static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-            add_limbs_portable<4>(z.data() + 4, z.data() + 4, p.data());
-        }
-#endif
-    }
 
     template<class Field>
     inline void mul_8_limbs_by_9(limb_array &dst, const limb_array &src) {
@@ -42,10 +15,10 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         mul_8_limbs_by_9_x86<Field>(dst, src);
 #else
         limb_array cpy = src;
-        add_8_limbs_mod<Field>(dst, src, src);    // 2x
-        add_8_limbs_mod<Field>(dst, dst, dst);    // 4x
-        add_8_limbs_mod<Field>(dst, dst, dst);    // 8x
-        add_8_limbs_mod<Field>(dst, dst, cpy);    // 9x
+        add_limbs_mod<Field, 8>(dst.data(), src.data(), src.data());    // 2x
+        add_limbs_mod<Field, 8>(dst.data(), dst.data(), dst.data());    // 4x
+        add_limbs_mod<Field, 8>(dst.data(), dst.data(), dst.data());    // 8x
+        add_limbs_mod<Field, 8>(dst.data(), dst.data(), cpy.data());    // 9x
 #endif
     }
 
@@ -94,7 +67,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         fp2_sub_pre_x86<Field>(data, other);
 #else
-        subtract_8_limbs_mod<Field>(data[0], data[0], other[0]);
+        subtract_limbs_mod<Field, 8>(data[0].data(), data[0].data(), other[0].data());
         subtract_limbs_portable<8>(data[1].data(), data[1].data(), other[1].data());
 #endif
     }
@@ -104,33 +77,33 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
     template<class Field>
     inline void fp2_mul_xi_add(limb_array *dst, const limb_array *src, const limb_array *addend) {
         mul_8_limbs_by_9<Field>(dst[0], src[0]);
-        subtract_8_limbs_mod<Field>(dst[0], dst[0], src[1]);
+        subtract_limbs_mod<Field, 8>(dst[0].data(), dst[0].data(), src[1].data());
         mul_8_limbs_by_9<Field>(dst[1], src[1]);
-        add_8_limbs_mod<Field>(dst[1], dst[1], src[0]);
-        add_8_limbs_mod<Field>(dst[0], dst[0], addend[0]);
-        add_8_limbs_mod<Field>(dst[1], dst[1], addend[1]);
+        add_limbs_mod<Field, 8>(dst[1].data(), dst[1].data(), src[0].data());
+        add_limbs_mod<Field, 8>(dst[0].data(), dst[0].data(), addend[0].data());
+        add_limbs_mod<Field, 8>(dst[1].data(), dst[1].data(), addend[1].data());
     }
 
     template<class Field>
     inline void fp2_mul_xi_add_modify_src(limb_array *src, const limb_array *addend) {
         limb_array src0 = src[0];
         mul_8_limbs_by_9<Field>(src[0], src0);
-        subtract_8_limbs_mod<Field>(src[0], src[0], src[1]);
+        subtract_limbs_mod<Field, 8>(src[0].data(), src[0].data(), src[1].data());
         mul_8_limbs_by_9<Field>(src[1], src[1]);
-        add_8_limbs_mod<Field>(src[1], src[1], src0);
-        add_8_limbs_mod<Field>(src[0], src[0], addend[0]);
-        add_8_limbs_mod<Field>(src[1], src[1], addend[1]);
+        add_limbs_mod<Field, 8>(src[1].data(), src[1].data(), src0.data());
+        add_limbs_mod<Field, 8>(src[0].data(), src[0].data(), addend[0].data());
+        add_limbs_mod<Field, 8>(src[1].data(), src[1].data(), addend[1].data());
     }
 
     template<class Field>
     inline void fp2_mul_xi_add_modify_addend(limb_array *addend, const limb_array *src) {
         limb_array tmp;
         mul_8_limbs_by_9<Field>(tmp, src[0]);
-        subtract_8_limbs_mod<Field>(tmp, tmp, src[1]);
-        add_8_limbs_mod<Field>(addend[0], addend[0], tmp);
+        subtract_limbs_mod<Field, 8>(tmp.data(), tmp.data(), src[1].data());
+        add_limbs_mod<Field, 8>(addend[0].data(), addend[0].data(), tmp.data());
         mul_8_limbs_by_9<Field>(tmp, src[1]);
-        add_8_limbs_mod<Field>(tmp, tmp, src[0]);
-        add_8_limbs_mod<Field>(addend[1], addend[1], tmp);
+        add_limbs_mod<Field, 8>(tmp.data(), tmp.data(), src[0].data());
+        add_limbs_mod<Field, 8>(addend[1].data(), addend[1].data(), tmp.data());
     }
 
     template<class Field>
@@ -147,7 +120,7 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         multiply_4x4(bd.data(), x + 4, y + 4);
         add_limbs_portable<4>(a_plus_b.data(), x, x + 4);
         add_limbs_portable<4>(c_plus_d.data(), y, y + 4);
-        subtract_8_limbs_mod<Field>(z[0], ac, bd);
+        subtract_limbs_mod<Field, 8>(z[0].data(), ac.data(), bd.data());
         multiply_4x4(z[1].data(), a_plus_b.data(), c_plus_d.data());
         subtract_limbs_portable<8>(z[1].data(), z[1].data(), ac.data());
         subtract_limbs_portable<8>(z[1].data(), z[1].data(), bd.data());
