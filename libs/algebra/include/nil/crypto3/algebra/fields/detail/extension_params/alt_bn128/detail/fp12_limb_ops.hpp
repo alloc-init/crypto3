@@ -1,7 +1,7 @@
 #pragma once
 
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_types.hpp>
-#include <nil/crypto3/algebra/fields/detail/element/fp12_fast_utils/fp12_limb_ops.hpp>
+#include <nil/crypto3/algebra/fields/detail/element/fp12_fast/limb_ops.hpp>
 
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
 #include <nil/crypto3/algebra/fields/detail/extension_params/alt_bn128/detail/fp12_limb_ops_x86.hpp>
@@ -19,56 +19,6 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         add_limbs_mod<Field, 8>(dst.data(), dst.data(), dst.data());    // 4x
         add_limbs_mod<Field, 8>(dst.data(), dst.data(), dst.data());    // 8x
         add_limbs_mod<Field, 8>(dst.data(), dst.data(), cpy.data());    // 9x
-#endif
-    }
-
-    inline void multiply_4x4(limb *z, const limb *x, const limb *y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        multiply_4x4_x86(z, x, y);
-#else
-        multiply_portable<4>(z, x, y);
-#endif
-    }
-
-    template<class Field>
-    inline void montgomery_reduce(limb *result, const limb *data) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        montgomery_reduce_x86<Field>(result, data);
-#else
-        montgomery_reduce_portable<Field, 8>(result, data);
-#endif
-    }
-
-    // fp2_base values are two contiguous 4-limb coefficients; each output
-    // coefficient is normalized modulo p.
-    template<class Field>
-    inline void fp2_base_add_mod(limb *z, const limb *x, const limb *y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_base_add_mod_x86<Field>(z, x, y);
-#else
-        add_low_limbs_mod_portable<Field, 4>(z, x, y);
-        add_low_limbs_mod_portable<Field, 4>(z + 4, x + 4, y + 4);
-#endif
-    }
-
-    // Raw fp2_base coefficient-wise add. BN254 inputs are bounded so each
-    // coefficient sum fits in four limbs.
-    inline void fp2_base_add_pre(limb *z, const limb *x, const limb *y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_base_add_pre_x86(z, x, y);
-#else
-        add_limbs_portable<4>(z, x, y);
-        add_limbs_portable<4>(z + 4, x + 4, y + 4);
-#endif
-    }
-
-    template<class Field>
-    inline void fp2_sub_pre(limb_array *data, const limb_array *other) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_sub_pre_x86<Field>(data, other);
-#else
-        subtract_limbs_mod<Field, 8>(data[0].data(), data[0].data(), other[0].data());
-        subtract_limbs_portable<8>(data[1].data(), data[1].data(), other[1].data());
 #endif
     }
 
@@ -116,12 +66,12 @@ namespace nil::crypto3::algebra::fields::detail::alt_bn128_fp12_limb_ops {
         // Karatsuba computes the cross term with one product:
         //   ad + bc = (a + b)(c + d) - ac - bd.
         limb_array ac, bd, a_plus_b, c_plus_d;
-        multiply_4x4(ac.data(), x, y);
-        multiply_4x4(bd.data(), x + 4, y + 4);
+        multiply<4>(ac.data(), x, y);
+        multiply<4>(bd.data(), x + 4, y + 4);
         add_limbs_portable<4>(a_plus_b.data(), x, x + 4);
         add_limbs_portable<4>(c_plus_d.data(), y, y + 4);
         subtract_limbs_mod<Field, 8>(z[0].data(), ac.data(), bd.data());
-        multiply_4x4(z[1].data(), a_plus_b.data(), c_plus_d.data());
+        multiply<4>(z[1].data(), a_plus_b.data(), c_plus_d.data());
         subtract_limbs_portable<8>(z[1].data(), z[1].data(), ac.data());
         subtract_limbs_portable<8>(z[1].data(), z[1].data(), bd.data());
     }

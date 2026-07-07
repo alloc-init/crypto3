@@ -1,8 +1,8 @@
 #pragma once
 
-#include <nil/crypto3/algebra/fields/detail/element/fp12_fast_utils/fp12_limb_types.hpp>
+#include <nil/crypto3/algebra/fields/detail/element/fp12_fast/types.hpp>
 
-namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
+namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<typename Backend>
     static std::array<limb, Backend::internal_limb_count> load_limbs(const Backend &backend) {
         static_assert(Backend::limb_bits == limb_bits, "fp12 fast path expects 64-bit field limbs");
@@ -54,7 +54,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
         if (x[N] != 0u) {
             return true;
         }
-        return fp12_fast_utils::ge_modulus<N>(x, mod);
+        return ge_modulus<N>(x, mod);
     }
 
     template<class Field, size_t N>
@@ -140,31 +140,72 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
         }
     }
 
-    template<class Field, size_t N>
+    template<class Field, size_t LazyLimbCount>
     inline void add_limbs_mod(limb *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         add_8_limbs_mod_x86<Field>(z, x, y);
 #else
-        add_limbs_portable<N>(z, x, y);
+        add_limbs_portable<LazyLimbCount>(z, x, y);
         static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-        if (ge_modulus<N / 2>(z + N / 2, p.data())) {
-            subtract_limbs_portable<N / 2>(z + N / 2, z + N / 2, p.data());
+        if (ge_modulus<LazyLimbCount / 2>(z + LazyLimbCount / 2, p.data())) {
+            subtract_limbs_portable<LazyLimbCount / 2>(z + LazyLimbCount / 2, z + LazyLimbCount / 2, p.data());
         }
 #endif
     }
 
-    template<class Field, size_t N>
+    template<class Field, size_t LazyLimbCount>
     inline void subtract_limbs_mod(limb *z, const limb *x, const limb *y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         subtract_8_limbs_mod_x86<Field>(z, x, y);
 #else
-        bool borrow = subtract_limbs_portable<N>(z, x, y);
+        bool borrow = subtract_limbs_portable<LazyLimbCount>(z, x, y);
         if (borrow) {
             // If the full 8-limb subtraction borrowed, add p to the high half
             // to keep the double value in the p * R residue class.
             static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-            add_limbs_portable<N / 2>(z + N / 2, z + N / 2, p.data());
+            add_limbs_portable<LazyLimbCount / 2>(z + LazyLimbCount / 2, z + LazyLimbCount / 2, p.data());
         }
 #endif
     }
-}    // namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils
+
+    template<size_t BaseLimbCount>
+    inline void multiply(limb *z, const limb *x, const limb *y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        multiply_4x4_x86(z, x, y);
+#else
+        multiply_portable<BaseLimbCount>(z, x, y);
+#endif
+    }
+
+    template<class Field, size_t N>
+    inline void montgomery_reduce(limb *result, const limb *data) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        montgomery_reduce_x86<Field>(result, data);
+#else
+        montgomery_reduce_portable<Field, N>(result, data);
+#endif
+    }
+
+    // fp2_base values are two contiguous 4-limb coefficients; each output
+    // coefficient is normalized modulo p.
+    template<class Field, size_t BaseLimbCount>
+    inline void fp2_base_add_mod(limb *z, const limb *x, const limb *y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        fp2_base_add_mod_x86<Field>(z, x, y);
+#else
+        add_low_limbs_mod_portable<Field, BaseLimbCount>(z, x, y);
+        add_low_limbs_mod_portable<Field, BaseLimbCount>(z + 4, x + 4, y + 4);
+#endif
+    }
+
+    template<class Field, size_t LazyLimbCount>
+    inline void fp2_sub_pre(limb *data, const limb *other) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        fp2_sub_pre_x86<Field>(data, other);
+#else
+        subtract_limbs_mod<Field, LazyLimbCount>(data, data, other);
+        subtract_limbs_portable<LazyLimbCount>(data + LazyLimbCount, data + LazyLimbCount, other + LazyLimbCount);
+#endif
+    }
+
+}    // namespace nil::crypto3::algebra::fields::detail::fp12_fast

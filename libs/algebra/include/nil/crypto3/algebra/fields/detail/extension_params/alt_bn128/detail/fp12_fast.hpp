@@ -36,7 +36,9 @@ namespace nil::crypto3::algebra::fields::detail {
             }
 
             static void add_mod(fp2_base &z, const fp2_base &x, const fp2_base &y) {
-                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type>(z.data.data(), x.data.data(), y.data.data());
+                alt_bn128_fp12_limb_ops::fp2_base_add_mod<base_field_type,
+                                                          alt_bn128_fp12_limb_ops::base_value_limb_count>(
+                    z.data.data(), x.data.data(), y.data.data());
             }
 
             fp2_base &operator+=(const fp2_base &other) {
@@ -54,17 +56,19 @@ namespace nil::crypto3::algebra::fields::detail {
             fp2_dbl() = default;
 
             static void add_mod(fp2_dbl &z, const fp2_dbl &x, const fp2_dbl &y) {
-                alt_bn128_fp12_limb_ops::add_limbs_mod<base_field_type, 8>(z.data[0].data(), x.data[0].data(),
-                                                                           y.data[0].data());
-                alt_bn128_fp12_limb_ops::add_limbs_mod<base_field_type, 8>(z.data[1].data(), x.data[1].data(),
-                                                                           y.data[1].data());
+                alt_bn128_fp12_limb_ops::add_limbs_mod<base_field_type, alt_bn128_fp12_limb_ops::storage_limb_count>(
+                    z.data[0].data(), x.data[0].data(), y.data[0].data());
+                alt_bn128_fp12_limb_ops::add_limbs_mod<base_field_type, alt_bn128_fp12_limb_ops::storage_limb_count>(
+                    z.data[1].data(), x.data[1].data(), y.data[1].data());
             }
 
             static void sub_mod(fp2_dbl &z, const fp2_dbl &x, const fp2_dbl &y) {
-                alt_bn128_fp12_limb_ops::subtract_limbs_mod<base_field_type, 8>(z.data[0].data(), x.data[0].data(),
-                                                                                y.data[0].data());
-                alt_bn128_fp12_limb_ops::subtract_limbs_mod<base_field_type, 8>(z.data[1].data(), x.data[1].data(),
-                                                                                y.data[1].data());
+                alt_bn128_fp12_limb_ops::subtract_limbs_mod<base_field_type,
+                                                            alt_bn128_fp12_limb_ops::storage_limb_count>(
+                    z.data[0].data(), x.data[0].data(), y.data[0].data());
+                alt_bn128_fp12_limb_ops::subtract_limbs_mod<base_field_type,
+                                                            alt_bn128_fp12_limb_ops::storage_limb_count>(
+                    z.data[1].data(), x.data[1].data(), y.data[1].data());
             }
 
             fp2_dbl &operator+=(const fp2_dbl &other) {
@@ -80,7 +84,8 @@ namespace nil::crypto3::algebra::fields::detail {
             // Karatsuba correction: the real coefficient uses bounded subtraction,
             // while the imaginary coefficient is known nonnegative and can raw-subtract.
             void sub_pre(const fp2_dbl &other) {
-                alt_bn128_fp12_limb_ops::fp2_sub_pre<base_field_type>(data.data(), other.data.data());
+                alt_bn128_fp12_limb_ops::fp2_sub_pre<base_field_type, alt_bn128_fp12_limb_ops::storage_limb_count>(
+                    data[0].data(), other.data[0].data());
             }
 
             static void add_mul_pre(fp2_dbl &result, const fp2_base &a, const fp2_base &b, const fp2_base &c,
@@ -112,9 +117,11 @@ namespace nil::crypto3::algebra::fields::detail {
             }
 
             void to_non_residue(non_residue_type &ret) const {
-                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(
+                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type,
+                                                           alt_bn128_fp12_limb_ops::storage_limb_count>(
                     (limb *)ret.data[0].data.backend().base_data().limbs(), data[0].data());
-                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type>(
+                alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type,
+                                                           alt_bn128_fp12_limb_ops::storage_limb_count>(
                     (limb *)ret.data[1].data.backend().base_data().limbs(), data[1].data());
             }
         };
