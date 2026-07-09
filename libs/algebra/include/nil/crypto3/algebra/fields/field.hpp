@@ -35,6 +35,9 @@ namespace nil {
         namespace algebra {
             namespace fields {
 
+                // Un-templated tag for concepts to see if a class is derived from a field.
+                struct field_base { };
+
                 /**
                  * Arithmetic in the finite field F[p], for prime p of fixed length.
                  *
@@ -43,15 +46,11 @@ namespace nil {
                  * passed as a template parameter, to avoid per-element overheads.
                  */
                 template<std::size_t ModulusBits>
-                struct field {
+                struct field : field_base {
 
                     constexpr static const std::size_t modulus_bits = ModulusBits;
                     constexpr static const std::size_t number_bits = ModulusBits;
 
-#ifdef __ZKLLVM__
-                    typedef int integral_type;
-                    typedef int extended_integral_type;
-#else
                     typedef boost::multiprecision::number<
                         boost::multiprecision::backends::cpp_int_modular_backend<modulus_bits>>
                         integral_type;
@@ -64,7 +63,6 @@ namespace nil {
                     typedef boost::multiprecision::backends::cpp_int_modular_backend<modulus_bits> modular_backend;
 
                     typedef boost::multiprecision::backends::modular_params<modular_backend> modular_params_type;
-#endif
                 };
 
             }    // namespace fields
