@@ -330,7 +330,7 @@
     "adcq %[" #T2 "], " PTR2(Z, Z_BASE, 6) "\n"                        \
     "adcq %[" #T3 "], " PTR2(Z, Z_BASE, 7) "\n"
 
-namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
+namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void multiply_4x4_x86(limb *z, const limb *x, const limb *y) {
         limb low, zero, high;
         limb d0, d1, d2, d3;
@@ -557,7 +557,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
         //      = ac + (ad + bc)u - bd      # since u^2 = -1
         //      = (ac - bd) + (ad + bc)u
         limb low, high, zero, d0, d1, d2, d3;
-        limb *cratch;
+        limb scratch[8];
         asm volatile(
             SCHOOLBOOK(z, 0, x, 0, y, 0)
             SCHOOLBOOK(scratch, 0, x, 4, y, 4)
@@ -575,7 +575,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
             :   [x]"r"(x),
                 [y]"r"(y),
                 [z]"r"(z),
-                [scratch]"r"(&scratch),
+                [scratch]"r"(scratch),
                 [p0]"m"(p0),
                 [p1]"m"(p1),
                 [p2]"m"(p2),
@@ -589,9 +589,9 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb low, high, zero, d0, d1, d2, d3;
         struct {
-            limb *;
-            limb *;
-            limb *mp;
+            limb x[8];
+            limb y[8];
+            limb tmp[8];
         } data;
         asm volatile(
             ADD_LOW_4_LIMBS(data, 0, a, 0, b, 0, low)
