@@ -2,6 +2,10 @@
 
 #include <nil/crypto3/algebra/fields/detail/element/fp12_fast/types.hpp>
 
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#include <nil/crypto3/algebra/fields/detail/element/fp12_fast/limb_ops_x86.hpp>
+#endif
+
 namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<typename Backend>
     static std::array<limb, Backend::internal_limb_count> load_limbs(const Backend &backend) {
@@ -183,6 +187,20 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         montgomery_reduce_x86<Field>(result, data);
 #else
         montgomery_reduce_portable<Field, N>(result, data);
+#endif
+    }
+
+    template<class Field>
+    inline void mul_8_limbs_by_9(limb *dst, const limb *src) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        mul_8_limbs_by_9_x86<Field>(dst, src);
+#else
+        limb cpy[8];
+        std::copy_n(src, 8, cpy);
+        add_limbs_mod<Field, 8>(dst, src, src);    // 2x
+        add_limbs_mod<Field, 8>(dst, dst, dst);    // 4x
+        add_limbs_mod<Field, 8>(dst, dst, dst);    // 8x
+        add_limbs_mod<Field, 8>(dst, dst, cpy);    // 9x
 #endif
     }
 
