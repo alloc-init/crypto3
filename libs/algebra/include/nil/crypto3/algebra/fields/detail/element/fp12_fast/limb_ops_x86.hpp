@@ -414,19 +414,19 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
         );
     }
 
-    inline void subtract_8_limbs_x86(limb_array &result, const limb_array &other) {
+    inline void subtract_8_limbs_x86(limb *result, const limb *other) {
         limb scratch;
         asm volatile(
             SUB_LIMBS(result, 0, other, 0, scratch)
             : [scratch]"=&r"(scratch)
-            : [result]"r"(result.data()),
-              [other]"r"(other.data())
+            : [result]"r"(result),
+              [other]"r"(other)
             : "cc", "memory"
         );
     }
 
     template<class Field>
-    inline void add_8_limbs_mod_x86(limb_array &z, const limb_array &x, const limb_array &y) {
+    inline void add_8_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb t0, t1, t2, t3, q0, q1, q2, q3;
         asm volatile(
@@ -439,9 +439,9 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
               [q1]"=&r"(q1),
               [q2]"=&r"(q2),
               [q3]"=&r"(q3)
-            : [z]"r"(z.data()),
-              [x]"r"(x.data()),
-              [y]"r"(y.data()),
+            : [z]"r"(z),
+              [x]"r"(x),
+              [y]"r"(y),
               [p0]"m"(p0),
               [p1]"m"(p1),
               [p2]"m"(p2),
@@ -451,7 +451,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
     }
 
     template<class Field>
-    inline void subtract_8_limbs_mod_x86(limb_array &z, const limb_array &x, const limb_array &y) {
+    inline void subtract_8_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb t0, t1, t2, t3;
         asm volatile(
@@ -460,9 +460,9 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
               [t3]"=&r"(t3)
-            : [z]"r"(z.data()),
-              [x]"r"(x.data()),
-              [y]"r"(y.data()),
+            : [z]"r"(z),
+              [x]"r"(x),
+              [y]"r"(y),
               [p0]"m"(p0),
               [p1]"m"(p1),
               [p2]"m"(p2),
@@ -472,7 +472,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
     }
 
     template<class Field>
-    inline void mul_8_limbs_by_9_x86(limb_array &dst, const limb_array &src) {
+    inline void mul_8_limbs_by_9_x86(limb *dst, const limb *src) {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb t0, t1, t2, t3, t4, t5, t6, t7;
         limb q0, q1, q2, q3;
@@ -490,8 +490,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
               [q1]"=&r"(q1),
               [q2]"=&r"(q2),
               [q3]"=&r"(q3)
-            : [src]"r"(src.data()),
-              [dst]"r"(dst.data()),
+            : [src]"r"(src),
+              [dst]"r"(dst),
               [p0]"m"(p0),
               [p1]"m"(p1),
               [p2]"m"(p2),
@@ -528,7 +528,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
     }
 
     template<class Field>
-    inline void fp2_sub_pre_x86(limb_array *data, const limb_array *other) {
+    inline void fp2_sub_pre_x86(limb *data, const limb *other) {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb t0, t1, t2, t3;
         asm volatile(
@@ -538,8 +538,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
               [t3]"=&r"(t3)
-            : [data]"r"(data->data()),
-              [other]"r"(other->data()),
+            : [data]"r"(data),
+              [other]"r"(other),
               [p0]"m"(p0),
               [p1]"m"(p1),
               [p2]"m"(p2),
@@ -549,7 +549,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
     }
 
     template<class Field>
-    inline void fp2_mul_pre_x86(limb_array *z, const limb *x, const limb *y) {
+    inline void fp2_mul_pre_x86(limb *z, const limb *x, const limb *y) {
         SET_STATIC_MODULUS_FROM_FIELD();
         // For x = a + bu and y = c + du:
         //   xy = (a + bu) * (c + du)
@@ -557,7 +557,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
         //      = ac + (ad + bc)u - bd      # since u^2 = -1
         //      = (ac - bd) + (ad + bc)u
         limb low, high, zero, d0, d1, d2, d3;
-        limb_array scratch;
+        limb *cratch;
         asm volatile(
             SCHOOLBOOK(z, 0, x, 0, y, 0)
             SCHOOLBOOK(scratch, 0, x, 4, y, 4)
@@ -585,13 +585,13 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast_utils {
     }
 
     template<class Field>
-    inline void fp2_add_mul_pre_x86(limb_array *z, const limb  *a, const limb  *b, const limb  *c, const limb  *d) {
+    inline void fp2_add_mul_pre_x86(limb *z, const limb  *a, const limb  *b, const limb  *c, const limb  *d) {
         SET_STATIC_MODULUS_FROM_FIELD();
         limb low, high, zero, d0, d1, d2, d3;
         struct {
-            limb_array x;
-            limb_array y;
-            limb_array tmp;
+            limb *;
+            limb *;
+            limb *mp;
         } data;
         asm volatile(
             ADD_LOW_4_LIMBS(data, 0, a, 0, b, 0, low)
