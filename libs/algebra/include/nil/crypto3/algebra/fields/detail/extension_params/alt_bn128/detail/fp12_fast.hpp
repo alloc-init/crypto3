@@ -106,18 +106,6 @@ namespace nil::crypto3::algebra::fields::detail {
                                                                          addend.data.data());
             }
 
-            // src = src * xi + addend
-            static void mul_xi_add_modify_src(fp2_dbl &src, const fp2_dbl &addend) {
-                alt_bn128_fp12_limb_ops::fp2_mul_xi_add_modify_src<base_field_type>(src.data.data(),
-                                                                                    addend.data.data());
-            }
-
-            // addend = src * xi + addend
-            static void mul_xi_add_modify_addend(fp2_dbl &addend, const fp2_dbl &src) {
-                alt_bn128_fp12_limb_ops::fp2_mul_xi_add_modify_addend<base_field_type>(addend.data.data(),
-                                                                                       src.data.data());
-            }
-
             void to_non_residue(non_residue_type &ret) const {
                 alt_bn128_fp12_limb_ops::montgomery_reduce<base_field_type,
                                                            alt_bn128_fp12_limb_ops::storage_limb_count>(
@@ -233,8 +221,8 @@ namespace nil::crypto3::algebra::fields::detail {
                 //   z0 = ad + xi*za
                 //   z1 = zb + xi*cf
                 //   z2 = zc + be
-                fp2_dbl::mul_xi_add_modify_src(za, ad);
-                fp2_dbl::mul_xi_add_modify_addend(zb, cf);
+                fp2_dbl::mul_xi_add(za, za, ad);
+                fp2_dbl::mul_xi_add(zb, cf, zb);
                 zc += be;
             }
 
