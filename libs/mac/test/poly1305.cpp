@@ -98,23 +98,30 @@ namespace {
         return key;
     }
 
+    template<typename MacType>
+    void check_poly1305_vector_for(const std::vector<std::uint8_t> &key_bytes,
+                                   const std::vector<std::uint8_t> &message,
+                                   const std::array<std::uint8_t, 16> &expected) {
+        mac::mac_key<MacType> key(key_bytes);
+
+        const typename MacType::digest_type tag = compute<MacType>(message, key);
+        BOOST_TEST(std::equal(tag.begin(), tag.end(), expected.begin()));
+
+        mac::computation_accumulator_set<mac::computation_policy<MacType>> acc(key);
+        const std::size_t split = message.size() / 2;
+        compute<MacType>(message.begin(), message.begin() + split, acc);
+        compute<MacType>(message.begin() + split, message.end(), acc);
+
+        const typename MacType::digest_type streamed_tag =
+            accumulators::extract::mac<mac::computation_policy<MacType>>(acc);
+        BOOST_TEST(std::equal(streamed_tag.begin(), streamed_tag.end(), expected.begin()));
+    }
+
     void check_poly1305_vector(const std::vector<std::uint8_t> &key_bytes,
                                const std::vector<std::uint8_t> &message,
                                const std::array<std::uint8_t, 16> &expected) {
-        typedef mac::poly1305 mac_type;
-        mac::mac_key<mac_type> key(key_bytes);
-
-        const typename mac_type::digest_type tag = compute<mac_type>(message, key);
-        BOOST_TEST(std::equal(tag.begin(), tag.end(), expected.begin()));
-
-        mac::computation_accumulator_set<mac::computation_policy<mac_type>> acc(key);
-        const std::size_t split = message.size() / 2;
-        compute<mac_type>(message.begin(), message.begin() + split, acc);
-        compute<mac_type>(message.begin() + split, message.end(), acc);
-
-        const typename mac_type::digest_type streamed_tag =
-            accumulators::extract::mac<mac::computation_policy<mac_type>>(acc);
-        BOOST_TEST(std::equal(streamed_tag.begin(), streamed_tag.end(), expected.begin()));
+        check_poly1305_vector_for<mac::poly1305>(key_bytes, message, expected);
+        check_poly1305_vector_for<mac::poly1305_reference>(key_bytes, message, expected);
     }
 }    // namespace
 
@@ -197,10 +204,10 @@ BOOST_AUTO_TEST_CASE(poly1305_matches_rfc8439_appendix_a3_vectors) {
 }
 
 BOOST_AUTO_TEST_CASE(poly1305_rejects_wrong_key_size) {
-    typedef mac::poly1305 mac_type;
     std::vector<std::uint8_t> short_key(31, 0);
 
-    BOOST_CHECK_THROW(mac::mac_key<mac_type> key(short_key), std::invalid_argument);
+    BOOST_CHECK_THROW(mac::mac_key<mac::poly1305> key(short_key), std::invalid_argument);
+    BOOST_CHECK_THROW(mac::mac_key<mac::poly1305_reference> key(short_key), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
