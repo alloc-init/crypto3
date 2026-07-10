@@ -8,13 +8,18 @@
 
 namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<typename Backend>
-    static std::array<limb, Backend::internal_limb_count> load_limbs(const Backend &backend) {
+    static constexpr std::array<limb, Backend::internal_limb_count> load_limbs(const Backend &backend) {
         static_assert(Backend::limb_bits == limb_bits, "fp12 fast path expects 64-bit field limbs");
         std::array<limb, Backend::internal_limb_count> result = {};
         for (size_t i = 0; i < Backend::internal_limb_count; i++) {
             result[i] = (limb)backend.limbs()[i];
         }
         return result;
+    }
+
+    template<Fp12FastParams Params>
+    auto modulus_limbs() {
+        return load_limbs(Params::base_field_type::modulus_params.get_mod_obj().get_mod());
     }
 
     template<size_t N>
@@ -61,54 +66,40 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         return ge_modulus<N>(x, mod);
     }
 
-    template<class Field, size_t N>
-    inline void add_low_limbs_mod_portable(limb *z, const limb *x, const limb *y) {
-        limb tmp[N + 1] = {};
-        limb carry = 0u;
-        for (size_t i = 0; i < N; i++) {
-            const auto sum = (wide_limb)x[i] + y[i] + carry;
-            tmp[i] = (limb)sum;
-            carry = (limb)(sum >> limb_bits);
+    template<size_t BaseLimbCount>
+    inline void multiply(limb *z, const limb *x, const limb *y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        multiply_4x4_x86(z, x, y);
+#else
+        for (size_t i = 0; i < 2 * BaseLimbCount; i++) {
+            z[i] = 0;
         }
-        tmp[N] = carry;
-        static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-        // Normalize the 5-limb scratch, then copy only this coefficient back.
-        // z may point into the middle of a contiguous fp2_base value.
-        if (ge_modulus_wide<4>(tmp, p.data())) {
-            subtract_limbs_portable<5>(tmp, tmp, p.data());
-        }
-        for (size_t i = 0; i < N; i++) {
-            z[i] = tmp[i];
-        }
-    }
-
-    template<size_t N>
-    void multiply_portable(limb *result, const limb *x, const limb *y) {
-        for (size_t i = 0; i < 2 * N; i++) {
-            result[i] = 0;
-        }
-        for (size_t i = 0; i < N; i++) {
+        for (size_t i = 0; i < BaseLimbCount; i++) {
             limb carry = 0;
-            for (size_t j = 0; j < N; j++) {
+            for (size_t j = 0; j < BaseLimbCount; j++) {
                 wide_limb product = (wide_limb)x[j] * y[i];
-                wide_limb sum = (wide_limb)result[i + j] + product + carry;
-                result[i + j] = (limb)sum;
+                wide_limb sum = (wide_limb)z[i + j] + product + carry;
+                z[i + j] = (limb)sum;
                 carry = (limb)(sum >> limb_bits);
             }
-            result[i + N] += carry;
+            z[i + BaseLimbCount] += carry;
         }
+#endif
     }
 
-    template<class Field, size_t N>
-    inline void montgomery_reduce_portable(limb *result, const limb *data) {
+    template<Fp12FastParams Params>
+    inline void montgomery_reduce(limb *result, const typename Params::limb_array &data) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        montgomery_reduce_x86<Params::base_field_type>(result, data);
+#else
+        constexpr size_t N = Params::storage_limb_count;
         // p is the field modulus as 4 limbs
-        static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
+        static const auto p = modulus_limbs<Params>();
         // p_dash is -p^{-1} modulo one limb, B = 2^64.
         // Multiplying the current low limb by p_dash gives the
         // one-limb factor m that makes t[i] + m * p[0] == 0 mod B.
-        limb p_dash = Field::modulus_params.get_mod_obj().get_p_dash();
-        std::array<limb, N> buf;
-        std::copy_n(data, N, buf.begin());
+        limb p_dash = Params::base_field_type::modulus_params.get_mod_obj().get_p_dash();
+        typename Params::limb_array buf = data;
         // REDC over R = 2^(64 * 4). At step i, choose m so adding
         // m * p shifted by i limbs makes buf[i] zero modulo 2^64.
         // After N/2 steps the low N/2 limbs have been cancelled,
@@ -142,95 +133,110 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         for (size_t i = 0; i < N / 2; i++) {
             result[i] = buf[N / 2 + i];
         }
+#endif
     }
 
-    template<class Field, size_t LazyLimbCount>
-    inline void add_limbs_mod(limb *z, const limb *x, const limb *y) {
+    template<Fp12FastParams Params>
+    inline void add_limbs_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
+                              const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        add_8_limbs_mod_x86<Field>(z, x, y);
+        add_8_limbs_mod_x86<Params>(z, x, y);
 #else
-        add_limbs_portable<LazyLimbCount>(z, x, y);
-        static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-        if (ge_modulus<LazyLimbCount / 2>(z + LazyLimbCount / 2, p.data())) {
-            subtract_limbs_portable<LazyLimbCount / 2>(z + LazyLimbCount / 2, z + LazyLimbCount / 2, p.data());
+        constexpr size_t N = Params::base_value_limb_count;
+        add_limbs_portable<Params::storage_limb_count>(z.data(), x.data(), y.data());
+        static const auto p = modulus_limbs<Params>();
+        if (ge_modulus<N>(z.data() + N, p.data())) {
+            subtract_limbs_portable<N>(z.data() + N, z.data() + N, p.data());
         }
 #endif
     }
 
-    template<class Field, size_t LazyLimbCount>
-    inline void subtract_limbs_mod(limb *z, const limb *x, const limb *y) {
+    template<Fp12FastParams Params>
+    inline void subtract_limbs_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
+                                   const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        subtract_8_limbs_mod_x86<Field>(z, x, y);
+        subtract_8_limbs_mod_x86<Params>(z, x, y);
 #else
-        bool borrow = subtract_limbs_portable<LazyLimbCount>(z, x, y);
+        constexpr size_t N = Params::base_value_limb_count;
+        bool borrow = subtract_limbs_portable<Params::storage_limb_count>(z.data(), x.data(), y.data());
         if (borrow) {
             // If the full 8-limb subtraction borrowed, add p to the high half
             // to keep the double value in the p * R residue class.
-            static const auto p = load_limbs(Field::modulus_params.get_mod_obj().get_mod());
-            add_limbs_portable<LazyLimbCount / 2>(z + LazyLimbCount / 2, z + LazyLimbCount / 2, p.data());
+            static const auto p = modulus_limbs<Params>();
+            add_limbs_portable<N>(z.data() + N, z.data() + N, p.data());
         }
 #endif
     }
 
-    template<size_t BaseLimbCount>
-    inline void multiply(limb *z, const limb *x, const limb *y) {
+    template<Fp12FastParams Params>
+    inline void mul_limbs_by_9(typename Params::limb_array &dst, const typename Params::limb_array &src) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        multiply_4x4_x86(z, x, y);
+        mul_8_limbs_by_9_x86<Params>(dst, src);
 #else
-        multiply_portable<BaseLimbCount>(z, x, y);
+        typename Params::limb_array cpy = src;
+        add_limbs_mod<Params>(dst, src, src);    // 2x
+        add_limbs_mod<Params>(dst, dst, dst);    // 4x
+        add_limbs_mod<Params>(dst, dst, dst);    // 8x
+        add_limbs_mod<Params>(dst, dst, cpy);    // 9x
 #endif
     }
 
-    template<class Field, size_t N>
-    inline void montgomery_reduce(limb *result, const limb *data) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        montgomery_reduce_x86<Field>(result, data);
-#else
-        montgomery_reduce_portable<Field, N>(result, data);
-#endif
-    }
-
-    template<class Field>
-    inline void mul_8_limbs_by_9(limb *dst, const limb *src) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        mul_8_limbs_by_9_x86<Field>(dst, src);
-#else
-        limb cpy[8];
-        std::copy_n(src, 8, cpy);
-        add_limbs_mod<Field, 8>(dst, src, src);    // 2x
-        add_limbs_mod<Field, 8>(dst, dst, dst);    // 4x
-        add_limbs_mod<Field, 8>(dst, dst, dst);    // 8x
-        add_limbs_mod<Field, 8>(dst, dst, cpy);    // 9x
-#endif
+    template<Fp12FastParams Params>
+    inline void add_low_limbs_mod_portable(limb *z, const limb *x, const limb *y) {
+        constexpr size_t N = Params::base_value_limb_count;
+        limb tmp[N + 1] = {};
+        limb carry = 0u;
+        for (size_t i = 0; i < N; i++) {
+            const auto sum = (wide_limb)x[i] + y[i] + carry;
+            tmp[i] = (limb)sum;
+            carry = (limb)(sum >> limb_bits);
+        }
+        tmp[N] = carry;
+        static const auto p = modulus_limbs<Params>();
+        // Normalize the 5-limb scratch, then copy only this coefficient back.
+        // z may point into the middle of a contiguous fp2_base value.
+        if (ge_modulus_wide<N>(tmp, p.data())) {
+            subtract_limbs_portable<N + 1>(tmp, tmp, p.data());
+        }
+        for (size_t i = 0; i < N; i++) {
+            z[i] = tmp[i];
+        }
     }
 
     // fp2_base values are two contiguous 4-limb coefficients; each output
     // coefficient is normalized modulo p.
-    template<class Field, size_t BaseLimbCount>
-    inline void fp2_base_add_mod(limb *z, const limb *x, const limb *y) {
+    template<Fp12FastParams Params>
+    inline void fp2_base_add_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
+                                 const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_base_add_mod_x86<Field>(z, x, y);
+        fp2_base_add_mod_x86<Params>(z, x, y);
 #else
-        add_low_limbs_mod_portable<Field, BaseLimbCount>(z, x, y);
-        add_low_limbs_mod_portable<Field, BaseLimbCount>(z + 4, x + 4, y + 4);
+        constexpr size_t N = Params::base_value_limb_count;
+        add_low_limbs_mod_portable<Params>(z.data(), x.data(), y.data());
+        add_low_limbs_mod_portable<Params>(z.data() + N, x.data() + N, y.data() + N);
 #endif
     }
 
-    template<class Field, size_t LazyLimbCount>
-    inline void fp2_sub_pre(limb *data, const limb *other) {
+    template<Fp12FastParams Params>
+    inline void fp2_sub_pre(std::array<typename Params::limb_array, 2> &data,
+                            const std::array<typename Params::limb_array, 2> &other) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_sub_pre_x86<Field>(data, other);
+        fp2_sub_pre_x86<Params>(data, other);
 #else
-        subtract_limbs_mod<Field, LazyLimbCount>(data, data, other);
-        subtract_limbs_portable<LazyLimbCount>(data + LazyLimbCount, data + LazyLimbCount, other + LazyLimbCount);
+        constexpr size_t N = Params::storage_limb_count;
+        subtract_limbs_mod<Params>(data[0], data[0], other[0]);
+        subtract_limbs_portable<Params::storage_limb_count>(data[1].data(), data[1].data(), other[1].data());
 #endif
     }
 
-    template<class Field, size_t BaseLimbCount>
-    inline void fp2_mul_pre(limb *z, const limb *x, const limb *y) {
+    template<Fp12FastParams Params>
+    inline void fp2_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &x,
+                            const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_mul_pre_x86<Field>(z, x, y);
+        fp2_mul_pre_x86<Params>(z, x, y);
 #else
+        constexpr size_t N = Params::base_value_limb_count;
+        constexpr size_t M = Params::storage_limb_count;
         // For x = a + bu and y = c + du:
         //   xy = (a + bu) * (c + du)
         //      = ac + adu + bcu + bdu^2
@@ -238,30 +244,33 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         //      = (ac - bd) + (ad + bc)u
         // Karatsuba computes the cross term with one product:
         //   ad + bc = (a + b)(c + d) - ac - bd.
-        std::array<limb, BaseLimbCount * 2> ac, bd, a_plus_b, c_plus_d;
-        multiply<BaseLimbCount>(ac.data(), x, y);
-        multiply<BaseLimbCount>(bd.data(), x + BaseLimbCount, y + BaseLimbCount);
-        add_limbs_portable<BaseLimbCount>(a_plus_b.data(), x, x + BaseLimbCount);
-        add_limbs_portable<BaseLimbCount>(c_plus_d.data(), y, y + BaseLimbCount);
-        subtract_limbs_mod<Field, BaseLimbCount * 2>(z, ac.data(), bd.data());
-        multiply<BaseLimbCount>(z + BaseLimbCount * 2, a_plus_b.data(), c_plus_d.data());
-        subtract_limbs_portable<BaseLimbCount * 2>(z + BaseLimbCount * 2, z + BaseLimbCount * 2, ac.data());
-        subtract_limbs_portable<BaseLimbCount * 2>(z + BaseLimbCount * 2, z + BaseLimbCount * 2, bd.data());
+        typename Params::limb_array ac, bd, a_plus_b, c_plus_d;
+        multiply<N>(ac.data(), x.data(), y.data());
+        multiply<N>(bd.data(), x.data() + N, y.data() + N);
+        add_limbs_portable<N>(a_plus_b.data(), x.data(), x.data() + N);
+        add_limbs_portable<N>(c_plus_d.data(), y.data(), y.data() + N);
+        subtract_limbs_mod<Params>(z[0], ac, bd);
+        multiply<N>(z[1].data(), a_plus_b.data(), c_plus_d.data());
+        subtract_limbs_portable<M>(z[1].data(), z[1].data(), ac.data());
+        subtract_limbs_portable<M>(z[1].data(), z[1].data(), bd.data());
 #endif
     }
 
-    template<class Field, size_t BaseLimbCount>
-    inline void fp2_add_mul_pre(limb *z, const limb *a, const limb *b, const limb *c, const limb *d) {
+    template<Fp12FastParams Params>
+    inline void fp2_add_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &a,
+                                const typename Params::limb_array &b, const typename Params::limb_array &c,
+                                const typename Params::limb_array &d) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_add_mul_pre_x86<Field>(z, a, b, c, d);
+        fp2_add_mul_pre_x86<Params>(z, a, b, c, d);
 #else
+        constexpr size_t N = Params::base_value_limb_count;
         // Build the raw fp2 sums in the same packed layout expected by fp2_mul_pre.
-        limb x[BaseLimbCount * 2], y[BaseLimbCount * 2];
-        add_limbs_portable<BaseLimbCount>(x, a, b);
-        add_limbs_portable<BaseLimbCount>(x + BaseLimbCount, a + BaseLimbCount, b + BaseLimbCount);
-        add_limbs_portable<BaseLimbCount>(y, c, d);
-        add_limbs_portable<BaseLimbCount>(y + BaseLimbCount, c + BaseLimbCount, d + BaseLimbCount);
-        fp2_mul_pre<Field, BaseLimbCount>(z, x, y);
+        typename Params::limb_array x, y;
+        add_limbs_portable<N>(x.data(), a.data(), b.data());
+        add_limbs_portable<N>(x.data() + N, a.data() + N, b.data() + N);
+        add_limbs_portable<N>(y.data(), c.data(), d.data());
+        add_limbs_portable<N>(y.data() + N, c.data() + N, d.data() + N);
+        fp2_mul_pre<Params>(z, x, y);
 #endif
     }
 
