@@ -90,42 +90,42 @@ namespace nil::crypto3::algebra::fields::detail {
 
         constexpr static const non_residue_type non_residue = non_residue_type(0x01u, 0x01u);
 
-        struct fast_params {
-            using parent = fp12_2over3over2_extension_params<fields::bls12<381>>;
+        // struct fast_params {
+        //     using parent = fp12_2over3over2_extension_params<fields::bls12<381>>;
 
-        public:
-            using base_field_type = parent::base_field_type;
-            using non_residue_type = parent::non_residue_type;
-            using underlying_type = parent::underlying_type;
+        // public:
+        //     using base_field_type = parent::base_field_type;
+        //     using non_residue_type = parent::non_residue_type;
+        //     using underlying_type = parent::underlying_type;
 
-            static constexpr size_t base_value_limb_count = 6;
-            static constexpr size_t storage_limb_count = 12;
+        //     static constexpr size_t base_value_limb_count = 6;
+        //     static constexpr size_t storage_limb_count = 12;
 
-            using limb_array = std::array<fp12_fast::limb, storage_limb_count>;
+        //     using limb_array = std::array<fp12_fast::limb, storage_limb_count>;
 
-            // BLS12_381 Fp12 uses xi = 1 + u, u^2 = -1
-            // So, (a + bu)(1 + u)
-            //   = (a + au + bu + bu^2)
-            //   = a + (a + b)u + bu^2
-            //   = (a - b) + (a + b)u
-            static inline void fp2_mul_xi_add(std::array<limb_array, 2> &dst, const std::array<limb_array, 2> &src,
-                                              const std::array<limb_array, 2> &addend) {
-                using namespace fp12_fast;
-                limb_array buf[2];  // necessary since inputs might alias dst
-                subtract_limbs_mod<fast_params>(buf[0], src[0], src[1]);
-                add_limbs_mod<fast_params>(buf[1], src[0], src[1]);
-                add_limbs_mod<fast_params>(buf[0], buf[0], addend[0]);
-                add_limbs_mod<fast_params>(buf[1], buf[1], addend[1]);
-                dst[0] = buf[0];
-                dst[1] = buf[1];
-            }
-        };
+        //     // BLS12_381 Fp12 uses xi = 1 + u, u^2 = -1
+        //     // So, (a + bu)(1 + u)
+        //     //   = (a + au + bu + bu^2)
+        //     //   = a + (a + b)u + bu^2
+        //     //   = (a - b) + (a + b)u
+        //     static inline void fp2_mul_xi_add(std::array<limb_array, 2> &dst, const std::array<limb_array, 2> &src,
+        //                                       const std::array<limb_array, 2> &addend) {
+        //         using namespace fp12_fast;
+        //         limb_array buf[2];  // necessary since inputs might alias dst
+        //         subtract_limbs_mod<fast_params>(buf[0], src[0], src[1]);
+        //         add_limbs_mod<fast_params>(buf[1], src[0], src[1]);
+        //         add_limbs_mod<fast_params>(buf[0], buf[0], addend[0]);
+        //         add_limbs_mod<fast_params>(buf[1], buf[1], addend[1]);
+        //         dst[0] = buf[0];
+        //         dst[1] = buf[1];
+        //     }
+        // };
 
-        // Make fast multiply path available to generic Fp12 element mul
-        template<typename Fp12Value>
-        static Fp12Value multiply(const Fp12Value &x, const Fp12Value &y) {
-            return fp12_fast::fp12_fast<fast_params>::multiply(x, y);
-        }
+        // // Make fast multiply path available to generic Fp12 element mul
+        // template<typename Fp12Value>
+        // static Fp12Value multiply(const Fp12Value &x, const Fp12Value &y) {
+        //     return fp12_fast::fp12_fast<fast_params>::multiply(x, y);
+        // }
     };
 
     /************************* BLS12-377 ***********************************/

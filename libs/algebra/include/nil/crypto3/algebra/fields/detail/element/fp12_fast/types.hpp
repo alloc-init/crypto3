@@ -21,7 +21,9 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<typename Params>
     concept Fp12FastParams =
         requires(std::array<typename Params::limb_array, 2> &dst, const std::array<typename Params::limb_array, 2> &src,
-                 const std::array<typename Params::limb_array, 2> &addend) {
+                 const std::array<typename Params::limb_array, 2> &addend, const typename Params::limb_array &a,
+                 const typename Params::limb_array &b, const typename Params::limb_array &c,
+                 const typename Params::limb_array &d) {
             typename Params::base_field_type;     // Fp
             typename Params::non_residue_type;    // Fp2
             typename Params::underlying_type;     // Fp6
@@ -36,5 +38,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             requires std::same_as<typename Params::limb_array, std::array<limb, Params::storage_limb_count>>;
 
             { Params::fp2_mul_xi_add(dst, src, addend) } -> std::same_as<void>;
+            { Params::fp2_mul_pre(dst, a, b) } -> std::same_as<void>;
+            { Params::fp2_add_mul_pre(dst, a, b, c, d) } -> std::same_as<void>;
         };
 }    // namespace nil::crypto3::algebra::fields::detail::fp12_fast
