@@ -90,7 +90,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     inline void montgomery_reduce(limb *result, const typename Params::limb_array &data) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        montgomery_reduce_x86<Params::base_field_type>(result, data);
+        montgomery_reduce_x86<typename Params::base_field_type>(result, data.data());
 #else
         constexpr size_t N = Params::storage_limb_count;
         // p is the field modulus as 4 limbs
@@ -140,7 +140,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void add_limbs_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
                               const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        add_8_limbs_mod_x86<Params>(z, x, y);
+        add_8_limbs_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
 #else
         constexpr size_t N = Params::base_value_limb_count;
         add_limbs_portable<Params::storage_limb_count>(z.data(), x.data(), y.data());
@@ -155,7 +155,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void subtract_limbs_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
                                    const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        subtract_8_limbs_mod_x86<Params>(z, x, y);
+        subtract_8_limbs_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
 #else
         constexpr size_t N = Params::base_value_limb_count;
         bool borrow = subtract_limbs_portable<Params::storage_limb_count>(z.data(), x.data(), y.data());
@@ -171,7 +171,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     inline void mul_limbs_by_9(typename Params::limb_array &dst, const typename Params::limb_array &src) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        mul_8_limbs_by_9_x86<Params>(dst, src);
+        mul_8_limbs_by_9_x86<typename Params::base_field_type>(dst.data(), src.data());
 #else
         typename Params::limb_array cpy = src;
         add_limbs_mod<Params>(dst, src, src);    // 2x
@@ -209,7 +209,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void fp2_base_add_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
                                  const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_base_add_mod_x86<Params>(z, x, y);
+        fp2_base_add_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
 #else
         constexpr size_t N = Params::base_value_limb_count;
         add_low_limbs_mod_portable<Params>(z.data(), x.data(), y.data());
@@ -221,7 +221,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void fp2_sub_pre(std::array<typename Params::limb_array, 2> &data,
                             const std::array<typename Params::limb_array, 2> &other) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_sub_pre_x86<Params>(data, other);
+        fp2_sub_pre_x86<typename Params::base_field_type>((limb*)&data, (limb*)&other);
 #else
         constexpr size_t N = Params::storage_limb_count;
         subtract_limbs_mod<Params>(data[0], data[0], other[0]);
@@ -233,7 +233,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void fp2_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &x,
                             const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_mul_pre_x86<Params>(z, x, y);
+        fp2_mul_pre_x86<typename Params::base_field_type>((limb*)&z, x.data(), y.data());
 #else
         constexpr size_t N = Params::base_value_limb_count;
         constexpr size_t M = Params::storage_limb_count;
@@ -261,7 +261,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                                 const typename Params::limb_array &b, const typename Params::limb_array &c,
                                 const typename Params::limb_array &d) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        fp2_add_mul_pre_x86<Params>(z, a, b, c, d);
+        fp2_add_mul_pre_x86<typename Params::base_field_type>((limb*)&z, a.data(), b.data(), c.data(), d.data());
 #else
         constexpr size_t N = Params::base_value_limb_count;
         // Build the raw fp2 sums in the same packed layout expected by fp2_mul_pre.
