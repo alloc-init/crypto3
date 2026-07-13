@@ -75,16 +75,16 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
             static void add_mul_pre(fp2_dbl &result, const fp2_base &a, const fp2_base &b, const fp2_base &c,
                                     const fp2_base &d) {
-                Params::fp2_add_mul_pre(result.data, a.data, b.data, c.data, d.data);
+                fp2_add_mul_pre<Params>(result.data, a.data, b.data, c.data, d.data);
             }
 
             static void mul_pre(fp2_dbl &result, const fp2_base &x, const fp2_base &y) {
-                Params::fp2_mul_pre(result.data, x.data, y.data);
+                fp2_mul_pre<Params>(result.data, x.data, y.data);
             }
 
             // dst = src * xi + addend
             static void mul_xi_add(fp2_dbl &dst, const fp2_dbl &src, const fp2_dbl &addend) {
-                Params::fp2_mul_xi_add(dst.data, src.data, addend.data);
+                fp2_mul_xi_add<Params>(dst.data, src.data, addend.data);
             }
 
             void to_non_residue(Params::non_residue_type &ret) const {

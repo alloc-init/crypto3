@@ -111,33 +111,8 @@ namespace nil::crypto3::algebra::fields::detail {
 
             using limb_array = std::array<fp12_fast::limb, storage_limb_count>;
 
-            // Bn254 Fp12 uses xi = 9 + u and u^2 = -1
-            // so (a + bu)(9 + u)
-            //  = 9a + 9bu + au + bu^2
-            //  = (9a - b) + (a + 9b)u
-            static inline void fp2_mul_xi_add(std::array<limb_array, 2> &dst, const std::array<limb_array, 2> &src,
-                                              const std::array<limb_array, 2> &addend) {
-                using namespace fp12_fast;
-                limb_array buf[2];
-                mul_limbs_by_9<fast_params>(buf[0], src[0]);
-                subtract_limbs_mod<fast_params>(buf[0], buf[0], src[1]);
-                mul_limbs_by_9<fast_params>(buf[1], src[1]);
-                add_limbs_mod<fast_params>(buf[1], buf[1], src[0]);
-                add_limbs_mod<fast_params>(buf[0], buf[0], addend[0]);
-                add_limbs_mod<fast_params>(buf[1], buf[1], addend[1]);
-                dst[0] = buf[0];
-                dst[1] = buf[1];
-            }
-            static inline void fp2_mul_pre(std::array<limb_array, 2> &z, const limb_array &x, const limb_array &y) {
-                fp12_fast::fp2_mul_pre_u2neg1<fast_params>(z, x, y);
-            }
-            static inline void fp2_add_mul_pre(std::array<limb_array, 2> &z,
-                                               const limb_array &a,
-                                               const limb_array &b,
-                                               const limb_array &c,
-                                               const limb_array &d) {
-                fp12_fast::fp2_add_mul_pre_u2neg1<fast_params>(z, a, b, c, d);
-            }
+            static constexpr std::array<int, 2> xi = {9, 1};    // xi = 9 + u
+            static constexpr int u_squared = -1;    // u^2 = -1
         };
 
         // Make fast multiply path available to generic Fp12 element mul

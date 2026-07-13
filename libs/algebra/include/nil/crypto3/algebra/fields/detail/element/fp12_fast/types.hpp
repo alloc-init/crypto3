@@ -28,17 +28,18 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             typename Params::non_residue_type;    // Fp2
             typename Params::underlying_type;     // Fp6
             typename Params::limb_array;
+            Params::xi;
+            Params::u_squared;
 
             typename std::integral_constant<std::size_t, Params::base_value_limb_count>;
             typename std::integral_constant<std::size_t, Params::storage_limb_count>;
+
+            { Params::xi } -> std::convertible_to<std::array<int, 2>>;
+            { Params::u_squared } -> std::convertible_to<int>;
 
             requires Params::storage_limb_count == Params::base_value_limb_count * 2;
 
             requires std::derived_from<typename Params::base_field_type, field_base>;
             requires std::same_as<typename Params::limb_array, std::array<limb, Params::storage_limb_count>>;
-
-            { Params::fp2_mul_xi_add(dst, src, addend) } -> std::same_as<void>;
-            { Params::fp2_mul_pre(dst, a, b) } -> std::same_as<void>;
-            { Params::fp2_add_mul_pre(dst, a, b, c, d) } -> std::same_as<void>;
         };
 }    // namespace nil::crypto3::algebra::fields::detail::fp12_fast

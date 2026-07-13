@@ -229,10 +229,47 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #endif
     }
 
+    // xi = 9 + u, u^2 = -1
+    // so (a + bu)(9 + u)
+    //  = 9a + 9bu + au + bu^2
+    //  = (9a - b) + (a + 9b)u
+    template<Fp12FastParams Params>
+    requires (Params::xi == std::array{9, 1} && Params::u_squared == -1)
+    inline void fp2_mul_xi_add(std::array<typename Params::limb_array, 2> &dst,
+                               const std::array<typename Params::limb_array, 2> &src,
+                               const std::array<typename Params::limb_array, 2> &addend) {
+        using namespace fp12_fast;
+        typename Params::limb_array buf[2];
+        mul_limbs_by_9<Params>(buf[0], src[0]);
+        subtract_limbs_mod<Params>(buf[0], buf[0], src[1]);
+        mul_limbs_by_9<Params>(buf[1], src[1]);
+        add_limbs_mod<Params>(buf[1], buf[1], src[0]);
+        add_limbs_mod<Params>(buf[0], buf[0], addend[0]);
+        add_limbs_mod<Params>(buf[1], buf[1], addend[1]);
+        dst[0] = buf[0];
+        dst[1] = buf[1];
+    }
+
+    // xi = 1 + u, u^2 = -1
+    template<Fp12FastParams Params>
+    requires (Params::xi == std::array{1, 1} && Params::u_squared == -1)
+    inline void fp2_mul_xi_add(std::array<typename Params::limb_array, 2> &dst,
+                               const std::array<typename Params::limb_array, 2> &src,
+                               const std::array<typename Params::limb_array, 2> &addend) {
+        typename Params::limb_array buf[2];    // necessary since inputs might alias dst
+        subtract_limbs_mod<Params>(buf[0], src[0], src[1]);
+        add_limbs_mod<Params>(buf[1], src[0], src[1]);
+        add_limbs_mod<Params>(buf[0], buf[0], addend[0]);
+        add_limbs_mod<Params>(buf[1], buf[1], addend[1]);
+        dst[0] = buf[0];
+        dst[1] = buf[1];
+    }
+
     // fp2 mul pre for fields where u^2 = -1
     template<Fp12FastParams Params>
-    inline void fp2_mul_pre_u2neg1(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &x,
-                            const typename Params::limb_array &y) {
+    requires (Params::u_squared == -1)
+    inline void fp2_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &x,
+                                   const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         fp2_mul_pre_x86<typename Params::base_field_type>((limb *)&z, x.data(), y.data());
 #else
@@ -259,9 +296,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     // fp2 add mul pre for fields where u^2 = -1
     template<Fp12FastParams Params>
-    inline void fp2_add_mul_pre_u2neg1(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &a,
-                                const typename Params::limb_array &b, const typename Params::limb_array &c,
-                                const typename Params::limb_array &d) {
+    requires (Params::u_squared == -1)
+    inline void fp2_add_mul_pre(std::array<typename Params::limb_array, 2> &z,
+                                       const typename Params::limb_array &a, const typename Params::limb_array &b,
+                                       const typename Params::limb_array &c, const typename Params::limb_array &d) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         fp2_add_mul_pre_x86<typename Params::base_field_type>((limb *)&z, a.data(), b.data(), c.data(), d.data());
 #else
@@ -272,7 +310,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         add_limbs_portable<N>(x.data() + N, a.data() + N, b.data() + N);
         add_limbs_portable<N>(y.data(), c.data(), d.data());
         add_limbs_portable<N>(y.data() + N, c.data() + N, d.data() + N);
-        Params::fp2_mul_pre(z, x, y);
+        fp2_mul_pre<Params>(z, x, y);
 #endif
     }
 
