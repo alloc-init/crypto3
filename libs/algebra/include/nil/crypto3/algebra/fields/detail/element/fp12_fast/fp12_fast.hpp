@@ -13,18 +13,19 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     struct fp12_fast {
         using limb_array = Params::limb_array;
 
-        // Packed input-side Fp2 value: two canonical 4-limb Fp coefficients.
+        // Packed input-side Fp2 value: two canonical Fp coefficients.
         struct fp2_base {
-            limb_array data;    // c0 in data[0..3], c1 in data[4..7]
+            limb_array data;
 
             fp2_base() = default;
 
             fp2_base(const Params::non_residue_type &x) {
-                for (size_t i = 0; i < 4; i++) {
+                constexpr size_t N = Params::base_value_limb_count;
+                for (size_t i = 0; i < N; i++) {
                     data[i] = x.data[0].data.backend().base_data().limbs()[i];
                 }
-                for (size_t i = 0; i < 4; i++) {
-                    data[i + 4] = x.data[1].data.backend().base_data().limbs()[i];
+                for (size_t i = 0; i < N; i++) {
+                    data[i + N] = x.data[1].data.backend().base_data().limbs()[i];
                 }
             }
 

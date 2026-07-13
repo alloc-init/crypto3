@@ -111,6 +111,10 @@ namespace nil::crypto3::algebra::fields::detail {
 
             using limb_array = std::array<fp12_fast::limb, storage_limb_count>;
 
+            // Bn254 Fp12 uses xi = 9 + u and u^2 = -1
+            // so (a + bu)(9 + u)
+            //  = 9a + 9bu + au + bu^2
+            //  = (9a - b) + (a + 9b)u
             static inline void fp2_mul_xi_add(std::array<limb_array, 2> &dst, const std::array<limb_array, 2> &src,
                                               const std::array<limb_array, 2> &addend) {
                 using namespace fp12_fast;
