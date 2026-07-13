@@ -99,10 +99,12 @@ namespace nil::crypto3::algebra::fields::detail {
         constexpr static const non_residue_type non_residue = non_residue_type(0x09, 0x01);
 
         struct fast_params {
+            using parent = fp12_2over3over2_extension_params<fields::alt_bn128<Version>>;
+
         public:
-            using base_field_type = base_field_type;
-            using non_residue_type = non_residue_type;
-            using underlying_type = underlying_type;
+            using base_field_type = parent::base_field_type;
+            using non_residue_type = parent::non_residue_type;
+            using underlying_type = parent::underlying_type;
 
             static constexpr size_t base_value_limb_count = 4;
             static constexpr size_t storage_limb_count = 8;
