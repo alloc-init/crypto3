@@ -272,7 +272,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         add_limbs_portable<N>(x.data() + N, a.data() + N, b.data() + N);
         add_limbs_portable<N>(y.data(), c.data(), d.data());
         add_limbs_portable<N>(y.data() + N, c.data() + N, d.data() + N);
-        fp2_mul_pre<Params>(z, x, y);
+        Params::fp2_mul_pre(z, x, y);
 #endif
     }
 

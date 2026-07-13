@@ -128,6 +128,16 @@ namespace nil::crypto3::algebra::fields::detail {
                 dst[0] = buf[0];
                 dst[1] = buf[1];
             }
+            static inline void fp2_mul_pre(std::array<limb_array, 2> &z, const limb_array &x, const limb_array &y) {
+                fp12_fast::fp2_mul_pre_u2neg1<fast_params>(z, x, y);
+            }
+            static inline void fp2_add_mul_pre(std::array<limb_array, 2> &z,
+                                               const limb_array &a,
+                                               const limb_array &b,
+                                               const limb_array &c,
+                                               const limb_array &d) {
+                fp12_fast::fp2_add_mul_pre_u2neg1<fast_params>(z, a, b, c, d);
+            }
         };
 
         // Make fast multiply path available to generic Fp12 element mul

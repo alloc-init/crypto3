@@ -75,11 +75,11 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
             static void add_mul_pre(fp2_dbl &result, const fp2_base &a, const fp2_base &b, const fp2_base &c,
                                     const fp2_base &d) {
-                fp2_add_mul_pre<Params>(result.data, a.data, b.data, c.data, d.data);
+                Params::fp2_add_mul_pre(result.data, a.data, b.data, c.data, d.data);
             }
 
             static void mul_pre(fp2_dbl &result, const fp2_base &x, const fp2_base &y) {
-                fp2_mul_pre<Params>(result.data, x.data, y.data);
+                Params::fp2_mul_pre(result.data, x.data, y.data);
             }
 
             // dst = src * xi + addend
