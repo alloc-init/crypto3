@@ -523,17 +523,6 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    inline void subtract_8_limbs_x86(limb *result, const limb *other) {
-        limb scratch;
-        asm volatile(
-            SUB_LIMBS(result, 0, other, 0, scratch)
-            : [scratch]"=&r"(scratch)
-            : [result]"r"(result),
-              [other]"r"(other)
-            : "cc", "memory"
-        );
-    }
-
     template<class Field>
     inline void add_8_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
         GET_MODULUS_4_LIMBS();
