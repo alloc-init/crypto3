@@ -30,6 +30,7 @@ endmacro()
 set(TESTS_NAMES
         "hmac"
         "cmac"
+        "gmac"
         "poly1305"
 )
 
