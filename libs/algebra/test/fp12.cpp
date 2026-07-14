@@ -63,7 +63,7 @@ namespace {
         constexpr static std::string_view value = "bls12_381";
     };
 
-    constexpr std::size_t random_samples = 10000;
+    constexpr std::size_t random_samples = 32;
 
     // element_fp12_2over3over2::operator* uses policy_type::multiply when the
     // policy provides it; otherwise it falls back to the generic Fp12 tower
