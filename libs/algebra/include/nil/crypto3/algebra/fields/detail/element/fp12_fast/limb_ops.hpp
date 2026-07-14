@@ -88,8 +88,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         if constexpr (Params::storage_limb_count == 8) {
             return montgomery_reduce_8_limbs_x86<typename Params::base_field_type>(result, data.data());
-        // } else if constexpr (Params::storage_limb_count == 12) {
-        //     return montgomery_reduce_12_limbs_x86<typename Params::base_field_type>(result, data.data());
+        } else if constexpr (Params::storage_limb_count == 12) {
+            return montgomery_reduce_12_limbs_x86<typename Params::base_field_type>(result, data.data());
         }
 #endif
         constexpr size_t N = Params::storage_limb_count;

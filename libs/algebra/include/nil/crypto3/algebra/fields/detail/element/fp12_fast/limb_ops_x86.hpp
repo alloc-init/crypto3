@@ -114,7 +114,7 @@
     "movq %[t6], " PTR2(DST, DST_BASE, 6) "\n"         \
     "movq %[t7], " PTR2(DST, DST_BASE, 7) "\n"
 
-#define SET_STATIC_MODULUS_FROM_FIELD()                             \
+#define GET_MODULUS_4_LIMBS()                                       \
     constexpr auto mod_obj = Field::modulus_params.get_mod_obj();   \
     static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);  \
     static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);  \
@@ -122,37 +122,85 @@
     static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);  \
     static constexpr limb p_dash = limb(mod_obj.get_p_dash());
 
-// Get the (i + j) mod 5 t register in the REDC rotating window.
-#define T4(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
+#define GET_MODULUS_6_LIMBS()                                       \
+    constexpr auto mod_obj = Field::modulus_params.get_mod_obj();   \
+    static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);  \
+    static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);  \
+    static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);  \
+    static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);  \
+    static constexpr limb p4 = limb(mod_obj.get_mod().limbs()[4]);  \
+    static constexpr limb p5 = limb(mod_obj.get_mod().limbs()[5]);  \
+    static constexpr limb p_dash = limb(mod_obj.get_p_dash());
 
-#define MONTGOMERY_REDUCE_LOAD_NEXT_4_LIMBS(I)   \
+// Get the (i + j) mod 5 t register in the REDC rotating window for 8 limb values.
+#define T8(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 5)) "]"
+
+#define REDC_8_LIMBS_LOAD_NEXT(I)                \
     "setc %b[pending]\n"                         \
-    "movq " PTR2(data, I, 5) ", " T4(I, 5) "\n"
+    "movq " PTR2(data, I, 5) ", " T8(I, 5) "\n"
 
 // main body of loop in montgomery reduce
-#define MONTGOMERY_REDUCE_CANCEL_LOW_4_LIMBS(I)                            \
+#define REDC_8_LIMBS_CANCEL_LOW(I)                                         \
     /* m = data[i] * p_dash */                                             \
-    "movq " T4(I, 0) ", %%rdx\n"                                           \
+    "movq " T8(I, 0) ", %%rdx\n"                                           \
     "imulq %[p_dash], %%rdx\n"                                             \
     "xor %[zero], %[zero]\n"                                               \
     /* multiply m by each modulus limb and add into the rotating window */ \
     "mulxq %[p0], %[low], %[high]\n"                                       \
     /* use dual carry chains */                                            \
-    "adcx %[low], " T4(I, 0) "\n"                                          \
-    "adox %[high], " T4(I, 1) "\n"                                         \
+    "adcx %[low], " T8(I, 0) "\n"                                          \
+    "adox %[high], " T8(I, 1) "\n"                                         \
     "mulxq %[p1], %[low], %[high]\n"                                       \
-    "adcx %[low], " T4(I, 1) "\n"                                          \
-    "adox %[high], " T4(I, 2) "\n"                                         \
+    "adcx %[low], " T8(I, 1) "\n"                                          \
+    "adox %[high], " T8(I, 2) "\n"                                         \
     "mulxq %[p2], %[low], %[high]\n"                                       \
-    "adcx %[low], " T4(I, 2) "\n"                                          \
-    "adox %[high], " T4(I, 3) "\n"                                         \
+    "adcx %[low], " T8(I, 2) "\n"                                          \
+    "adox %[high], " T8(I, 3) "\n"                                         \
     "mulxq %[p3], %[low], %[high]\n"                                       \
-    "adcx %[low], " T4(I, 3) "\n"                                          \
+    "adcx %[low], " T8(I, 3) "\n"                                          \
     /* merge OF, prior pending carry, and CF into the next live limb */    \
     "adox %[zero], %[high]\n"                                              \
     "adox %[pending], %[high]\n"                                           \
-    "adcx %[high], " T4(I, 4) "\n"                                         \
-    BOOST_PP_IF(BOOST_PP_LESS(I, 3), MONTGOMERY_REDUCE_LOAD_NEXT_4_LIMBS(I), "")
+    "adcx %[high], " T8(I, 4) "\n"                                         \
+    BOOST_PP_IF(BOOST_PP_LESS(I, 3), REDC_8_LIMBS_LOAD_NEXT(I), "")
+
+// Get the (i + j) mod 7 t register in the REDC rotating window for 12 limb values.
+#define T12(I, J) "%[t" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 7)) "]"
+
+#define REDC_12_LIMBS_LOAD_NEXT(I)               \
+    "setc %b[pending]\n"                         \
+    "movq " PTR2(data, I, 7) ", " T12(I, 7) "\n"
+
+// main body of loop in montgomery reduce
+#define REDC_12_LIMBS_CANCEL_LOW(I)                                         \
+    /* m = data[i] * p_dash */                                              \
+    "movq " T12(I, 0) ", %%rdx\n"                                           \
+    "imulq %[p_dash], %%rdx\n"                                              \
+    "xor %[zero], %[zero]\n"                                                \
+    /* multiply m by each modulus limb and add into the rotating window */  \
+    "mulxq %[p0], %[low], %[high]\n"                                        \
+    /* use dual carry chains */                                             \
+    "adcx %[low], " T12(I, 0) "\n"                                          \
+    "adox %[high], " T12(I, 1) "\n"                                         \
+    "mulxq %[p1], %[low], %[high]\n"                                        \
+    "adcx %[low], " T12(I, 1) "\n"                                          \
+    "adox %[high], " T12(I, 2) "\n"                                         \
+    "mulxq %[p2], %[low], %[high]\n"                                        \
+    "adcx %[low], " T12(I, 2) "\n"                                          \
+    "adox %[high], " T12(I, 3) "\n"                                         \
+    "mulxq %[p3], %[low], %[high]\n"                                        \
+    "adcx %[low], " T12(I, 3) "\n"                                          \
+    "adox %[high], " T12(I, 4) "\n"                                         \
+    "mulxq %[p4], %[low], %[high]\n"                                        \
+    "adcx %[low], " T12(I, 4) "\n"                                          \
+    "adox %[high], " T12(I, 5) "\n"                                         \
+    "mulxq %[p5], %[low], %[high]\n"                                        \
+    "adcx %[low], " T12(I, 5) "\n"                                          \
+    /* merge OF, prior pending carry, and CF into the next live limb */     \
+    "adox %[zero], %[high]\n"                                               \
+    "adox %[pending], %[high]\n"                                            \
+    "adcx %[high], " T12(I, 6) "\n"                                         \
+    BOOST_PP_IF(BOOST_PP_LESS(I, 5), REDC_12_LIMBS_LOAD_NEXT(I), "")
 
 #define ADD_LOW_4_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
     "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"        \
@@ -333,7 +381,7 @@
 namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<class Field>
     inline void montgomery_reduce_8_limbs_x86(limb *result, const limb *data) {
-        SET_STATIC_MODULUS_FROM_FIELD();
+        GET_MODULUS_4_LIMBS();
         limb t0, t1, t2, t3, t4;
         limb low, high, pending, zero;
         asm volatile(
@@ -346,17 +394,17 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             // Unrolled REDC rounds. Each round cancels the current low limb and
             // rotates in one higher input limb.
             "xor %[pending], %[pending]\n"
-            MONTGOMERY_REDUCE_CANCEL_LOW_4_LIMBS(0)
-            MONTGOMERY_REDUCE_CANCEL_LOW_4_LIMBS(1)
-            MONTGOMERY_REDUCE_CANCEL_LOW_4_LIMBS(2)
-            MONTGOMERY_REDUCE_CANCEL_LOW_4_LIMBS(3)
+            REDC_8_LIMBS_CANCEL_LOW(0)
+            REDC_8_LIMBS_CANCEL_LOW(1)
+            REDC_8_LIMBS_CANCEL_LOW(2)
+            REDC_8_LIMBS_CANCEL_LOW(3)
 
             // Conditionally reduce the high limbs modulo p, reusing scratch registers.
             // q = t - p
-            "movq " T4(0, 4) ", %[low]\n"
-            "movq " T4(1, 4) ", %[high]\n"
-            "movq " T4(2, 4) ", %[zero]\n"
-            "movq " T4(3, 4) ", %%rdx\n"
+            "movq " T8(0, 4) ", %[low]\n"
+            "movq " T8(1, 4) ", %[high]\n"
+            "movq " T8(2, 4) ", %[zero]\n"
+            "movq " T8(3, 4) ", %%rdx\n"
 
             // Try q = t - p.
             "subq %[p0], %[low]\n"
@@ -365,15 +413,15 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             "sbbq %[p3], %%rdx\n"
 
             // If t - p did not borrow, keep q as the canonical result.
-            "cmovnc %[low], " T4(0, 4) "\n"
-            "cmovnc %[high], " T4(1, 4) "\n"
-            "cmovnc %[zero], " T4(2, 4) "\n"
-            "cmovnc %%rdx, " T4(3, 4) "\n"
+            "cmovnc %[low], " T8(0, 4) "\n"
+            "cmovnc %[high], " T8(1, 4) "\n"
+            "cmovnc %[zero], " T8(2, 4) "\n"
+            "cmovnc %%rdx, " T8(3, 4) "\n"
 
-            "movq " T4(0, 4) ", " PTR(result, 0) "\n"
-            "movq " T4(1, 4) ", " PTR(result, 1) "\n"
-            "movq " T4(2, 4) ", " PTR(result, 2) "\n"
-            "movq " T4(3, 4) ", " PTR(result, 3) "\n"
+            "movq " T8(0, 4) ", " PTR(result, 0) "\n"
+            "movq " T8(1, 4) ", " PTR(result, 1) "\n"
+            "movq " T8(2, 4) ", " PTR(result, 2) "\n"
+            "movq " T8(3, 4) ", " PTR(result, 3) "\n"
 
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
@@ -395,6 +443,86 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
+    template<class Field>
+    inline void montgomery_reduce_12_limbs_x86(limb *result, const limb *data) {
+        GET_MODULUS_6_LIMBS(); // sets p, p_dash
+        limb t0, t1, t2, t3, t4, t5, t6;
+        limb low, high, pending, zero;
+        asm volatile(
+            "movq " PTR(data, 0) ", %[t0]\n"
+            "movq " PTR(data, 1) ", %[t1]\n"
+            "movq " PTR(data, 2) ", %[t2]\n"
+            "movq " PTR(data, 3) ", %[t3]\n"
+            "movq " PTR(data, 4) ", %[t4]\n"
+            "movq " PTR(data, 5) ", %[t5]\n"
+            "movq " PTR(data, 6) ", %[t6]\n"
+
+            // Unrolled REDC rounds. Each round cancels the current low limb and
+            // rotates in one higher input limb.
+            "xor %[pending], %[pending]\n"
+            REDC_12_LIMBS_CANCEL_LOW(0)
+            REDC_12_LIMBS_CANCEL_LOW(1)
+            REDC_12_LIMBS_CANCEL_LOW(2)
+            REDC_12_LIMBS_CANCEL_LOW(3)
+            REDC_12_LIMBS_CANCEL_LOW(4)
+            REDC_12_LIMBS_CANCEL_LOW(5)
+
+            // Conditionally reduce the high limbs modulo p, reusing scratch registers.
+            // q = t - p
+            "movq " T12(0, 6) ", %[low]\n"
+            "movq " T12(1, 6) ", %[high]\n"
+            "movq " T12(2, 6) ", %[zero]\n"
+            "movq " T12(3, 6) ", %%rdx\n"
+            "movq " T12(4, 6) ", %[pending]\n"
+            "movq " T12(5, 6) ", %[data]\n"
+
+            // Try q = t - p.
+            "subq %[p0], %[low]\n"
+            "sbbq %[p1], %[high]\n"
+            "sbbq %[p2], %[zero]\n"
+            "sbbq %[p3], %%rdx\n"
+            "sbbq %[p4], %[pending]\n"
+            "sbbq %[p5], %[data]\n"
+
+            // If t - p did not borrow, keep q as the canonical result.
+            "cmovnc %[low], " T12(0, 6) "\n"
+            "cmovnc %[high], " T12(1, 6) "\n"
+            "cmovnc %[zero], " T12(2, 6) "\n"
+            "cmovnc %%rdx, " T12(3, 6) "\n"
+            "cmovnc %[pending], " T12(4, 6) "\n"
+            "cmovnc %[data], " T12(5, 6) "\n"
+
+            "movq " T12(0, 6) ", " PTR(result, 0) "\n"
+            "movq " T12(1, 6) ", " PTR(result, 1) "\n"
+            "movq " T12(2, 6) ", " PTR(result, 2) "\n"
+            "movq " T12(3, 6) ", " PTR(result, 3) "\n"
+            "movq " T12(4, 6) ", " PTR(result, 4) "\n"
+            "movq " T12(5, 6) ", " PTR(result, 5) "\n"
+
+            : [t0]"=&r"(t0),
+              [t1]"=&r"(t1),
+              [t2]"=&r"(t2),
+              [t3]"=&r"(t3),
+              [t4]"=&r"(t4),
+              [t5]"=&r"(t5),
+              [t6]"=&r"(t6),
+              [low]"=&r"(low),
+              [high]"=&r"(high),
+              [pending]"=&r"(pending),
+              [zero]"=&r"(zero)
+            : [data]"r"(data),
+              [result]"r"(result),
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3),
+              [p4]"m"(p4),
+              [p5]"m"(p5),
+              [p_dash]"m"(p_dash)
+            : "rdx", "cc", "memory"
+        );
+    }
+
     inline void subtract_8_limbs_x86(limb *result, const limb *other) {
         limb scratch;
         asm volatile(
@@ -408,7 +536,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<class Field>
     inline void add_8_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
-        SET_STATIC_MODULUS_FROM_FIELD();
+        GET_MODULUS_4_LIMBS();
         limb t0, t1, t2, t3, q0, q1, q2, q3;
         asm volatile(
             ADD_LIMBS_MOD(z, 0, x, 0, y, 0, t0, t1, t2, t3, q0, q1, q2, q3)
@@ -433,7 +561,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<class Field>
     inline void subtract_8_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
-        SET_STATIC_MODULUS_FROM_FIELD();
+        GET_MODULUS_4_LIMBS();
         limb t0, t1, t2, t3;
         asm volatile(
             SUB_LIMBS_MOD(z, 0, x, 0, y, 0, t0, t1, t2, t3)
@@ -454,7 +582,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<class Field>
     inline void mul_8_limbs_by_9_x86(limb *dst, const limb *src) {
-        SET_STATIC_MODULUS_FROM_FIELD();
+        GET_MODULUS_4_LIMBS();
         limb t0, t1, t2, t3, t4, t5, t6, t7;
         limb q0, q1, q2, q3;
         asm volatile(
@@ -483,7 +611,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template <class Field>
     inline void fp2_base_add_mod_x86(limb *z, const limb *x, const limb *y) {
-        SET_STATIC_MODULUS_FROM_FIELD();
+        GET_MODULUS_4_LIMBS();
         limb t0, t1, t2, t3;
         limb q0, q1, q2, q3;
         asm volatile(
@@ -510,7 +638,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<class Field>
     inline void fp2_sub_pre_x86(limb *data, const limb *other) {
-        SET_STATIC_MODULUS_FROM_FIELD();
+        GET_MODULUS_4_LIMBS();
         limb t0, t1, t2, t3;
         asm volatile(
             SUB_LIMBS_MOD(data, 0, data, 0, other, 0, t0, t1, t2, t3)
@@ -531,7 +659,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<class Field>
     inline void fp2_mul_pre_x86(limb *z, const limb *x, const limb *y) {
-        SET_STATIC_MODULUS_FROM_FIELD();
+        GET_MODULUS_4_LIMBS();
         // For x = a + bu and y = c + du:
         //   xy = (a + bu) * (c + du)
         //      = ac + adu + bcu + bdu^2
@@ -567,7 +695,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<class Field>
     inline void fp2_add_mul_pre_x86(limb *z, const limb  *a, const limb  *b, const limb  *c, const limb  *d) {
-        SET_STATIC_MODULUS_FROM_FIELD();
+        GET_MODULUS_4_LIMBS();
         limb low, high, zero, d0, d1, d2, d3;
         struct {
             limb x[8];
@@ -621,10 +749,14 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #undef SCHOOLBOOK_4x4
 #undef DOUBLE_MOD_P
 #undef MUL_8_LIMBS_BY_9
-#undef SET_STATIC_MODULUS_FROM_FIELD
-#undef T
-#undef MONTGOMERY_REDUCE_LOAD_NEXT
-#undef MONTGOMERY_REDUCE_CANCEL_LOW
+#undef GET_MODULUS_4_LIMBS
+#undef GET_MODULUS_6_LIMBS
+#undef T8
+#undef T12
+#undef REDC_8_LIMBS_LOAD_NEXT
+#undef REDC_8_LIMBS_CANCEL_LOW
+#undef REDC_12_LIMBS_LOAD_NEXT
+#undef REDC_12_LIMBS_CANCEL_LOW
 #undef ADD_LOW_4_LIMBS
 #undef ADD_LIMBS
 #undef ADD_LOW_4_LIMBS_MOD
