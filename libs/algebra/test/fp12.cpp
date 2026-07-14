@@ -24,6 +24,7 @@
 
 #define BOOST_TEST_MODULE algebra_fp12_test
 
+#include <array>
 #include <cstddef>
 #include <string_view>
 
@@ -62,7 +63,7 @@ namespace {
         constexpr static std::string_view value = "bls12_381";
     };
 
-    constexpr std::size_t random_samples = 32;
+    constexpr std::size_t random_samples = 10000;
 
     // element_fp12_2over3over2::operator* uses policy_type::multiply when the
     // policy provides it; otherwise it falls back to the generic Fp12 tower
@@ -106,6 +107,47 @@ namespace {
         return nil::crypto3::algebra::random_element<Fp12Field>(rng);
     }
 
+    template<typename Fp12Field>
+    typename Fp12Field::value_type boundary_fp12(std::size_t pattern) {
+        using base_value_type = typename Fp12Field::base_field_type::value_type;
+        using integral_type = typename Fp12Field::integral_type;
+
+        const integral_type p_minus_one = Fp12Field::modulus - 1;
+        const integral_type p_minus_two = Fp12Field::modulus - 2;
+        typename Fp12Field::value_type value;
+
+        for (std::size_t w = 0; w < 2; ++w) {
+            for (std::size_t v = 0; v < 3; ++v) {
+                for (std::size_t u = 0; u < 2; ++u) {
+                    const std::size_t i = (w * 3 + v) * 2 + u;
+                    base_value_type coefficient;
+                    switch (pattern) {
+                        case 0:
+                            coefficient = base_value_type(p_minus_one);
+                            break;
+                        case 1:
+                            coefficient = base_value_type(i % 2 == 0 ? p_minus_one : integral_type(0));
+                            break;
+                        case 2:
+                            coefficient = base_value_type(i % 2 == 0 ? integral_type(0) : p_minus_one);
+                            break;
+                        case 3:
+                            coefficient = base_value_type(u == 0 ? p_minus_two : p_minus_one);
+                            break;
+                        case 4:
+                            coefficient = base_value_type(i % 3 == 0 ? p_minus_one : integral_type(1));
+                            break;
+                        default:
+                            coefficient = base_value_type(i % 4 < 2 ? p_minus_two : integral_type(1));
+                            break;
+                    }
+                    value.data[w].data[v].data[u] = coefficient;
+                }
+            }
+        }
+        return value;
+    }
+
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(fp12_tests)
@@ -137,6 +179,22 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(square_matches_generic_implementation, Fp12Field, 
             const fp12_value_type x = random_fp12<Fp12Field>(rng);
 
             BOOST_CHECK_EQUAL(x.squared(), generic_fp12_mul<Fp12Field>(x, x));
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(adversarial_bls12_377_multiplication_matches_generic_implementation) {
+    using fp12_field_type = bls12_377_fp12;
+    using fp12_value_type = fp12_field_type::value_type;
+
+    std::array<fp12_value_type, 6> values;
+    for (std::size_t i = 0; i < values.size(); ++i) {
+        values[i] = boundary_fp12<fp12_field_type>(i);
+    }
+
+    for (const fp12_value_type &x : values) {
+        for (const fp12_value_type &y : values) {
+            BOOST_CHECK_EQUAL(x * y, generic_fp12_mul<fp12_field_type>(x, y));
         }
     }
 }

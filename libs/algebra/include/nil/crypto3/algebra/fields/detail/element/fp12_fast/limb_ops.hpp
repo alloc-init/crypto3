@@ -169,11 +169,19 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     }
 
     template<Fp12FastParams Params>
-    inline void mul_limbs_by_5(typename Params::limb_array &dst, const typename Params::limb_array &src) {
+    inline void mul_limbs_by_5_unreduced(typename Params::limb_array &dst, const typename Params::limb_array &src) {
+        constexpr size_t N = Params::storage_limb_count;
+        constexpr size_t M = Params::base_value_limb_count;
         typename Params::limb_array cpy = src;
-        add_limbs_mod<Params>(dst, src, src);    // 2x
-        add_limbs_mod<Params>(dst, dst, dst);    // 4x
-        add_limbs_mod<Params>(dst, dst, cpy);    // 5x
+        // shift by 2
+        limb overflow = 0;
+        for (size_t i = 0; i < N; i++) {
+            dst[i] = src[i] << 2 | overflow;
+            overflow = src[i] >> (CHAR_BIT * sizeof(limb) - 2); // overflow = top 2 bits
+        }
+        // add 1
+        add_limbs_portable<N>(dst.data(), dst.data(), cpy.data());
+        // note: we dont have to reduce for BLS12_377, this will always fit within bounds < pR, see fp12 test
     }
 
     template<Fp12FastParams Params>
@@ -280,7 +288,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         //   = au + bu^2
         //   = -5b + au
         typename Params::limb_array buf[2];    // necessary since inputs might alias dst
-        mul_limbs_by_5<Params>(buf[0], src[1]);
+        // src[1] is a nonnegative imaginary coefficient assembled from at most
+        // three Fp2 products, so src[1] < 6p^2. For BLS12-377, 30p < R
+        // (R / p is about 152), hence 5 * src[1] < p * R.
+        mul_limbs_by_5_unreduced<Params>(buf[0], src[1]);
         subtract_limbs_mod<Params>(buf[0], {}, buf[0]);
         add_limbs_mod<Params>(buf[0], buf[0], addend[0]);
         add_limbs_mod<Params>(buf[1], src[0], addend[1]);
@@ -334,7 +345,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         typename Params::limb_array ac, bd, bd5, a_plus_b, c_plus_d;
         multiply<N>(ac.data(), x.data(), y.data());
         multiply<N>(bd.data(), x.data() + N, y.data() + N);
-        mul_limbs_by_5<Params>(bd5, bd);
+        // x and y coefficients are each below 2p when this is reached through
+        // fp2_add_mul_pre, so bd < 4p^2. For BLS12-377, 20p < R, and therefore
+        // 5 * bd < p * R without normalization.
+        mul_limbs_by_5_unreduced<Params>(bd5, bd);
         subtract_limbs_mod<Params>(z[0], ac, bd5);
         add_limbs_portable<N>(a_plus_b.data(), x.data(), x.data() + N);
         add_limbs_portable<N>(c_plus_d.data(), y.data(), y.data() + N);
