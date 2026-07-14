@@ -67,14 +67,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     }
 
     template<size_t BaseLimbCount>
-    inline void multiply(limb *z, const limb *x, const limb *y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (BaseLimbCount == 4) {
-            return multiply_4x4_x86(z, x, y);
-        // } else if constexpr (BaseLimbCount == 6) {
-        //     return multiply_6x6_x86(z, x, y);
-        }
-#endif
+    inline void multiply_portable(limb *z, const limb *x, const limb *y) {
         for (size_t i = 0; i < 2 * BaseLimbCount; i++) {
             z[i] = 0;
         }
@@ -328,12 +321,12 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         // Karatsuba computes the cross term with one product:
         //   ad + bc = (a + b)(c + d) - ac - bd.
         typename Params::limb_array ac, bd, a_plus_b, c_plus_d;
-        multiply<N>(ac.data(), x.data(), y.data());
-        multiply<N>(bd.data(), x.data() + N, y.data() + N);
+        multiply_portable<N>(ac.data(), x.data(), y.data());
+        multiply_portable<N>(bd.data(), x.data() + N, y.data() + N);
         add_limbs_portable<N>(a_plus_b.data(), x.data(), x.data() + N);
         add_limbs_portable<N>(c_plus_d.data(), y.data(), y.data() + N);
         subtract_limbs_mod<Params>(z[0], ac, bd);
-        multiply<N>(z[1].data(), a_plus_b.data(), c_plus_d.data());
+        multiply_portable<N>(z[1].data(), a_plus_b.data(), c_plus_d.data());
         subtract_limbs_portable<M>(z[1].data(), z[1].data(), ac.data());
         subtract_limbs_portable<M>(z[1].data(), z[1].data(), bd.data());
     }
@@ -353,8 +346,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         // Karatsuba computes the cross term with one product:
         //   ad + bc = (a + b)(c + d) - ac - bd.
         typename Params::limb_array ac, bd, bd5, a_plus_b, c_plus_d;
-        multiply<N>(ac.data(), x.data(), y.data());
-        multiply<N>(bd.data(), x.data() + N, y.data() + N);
+        multiply_portable<N>(ac.data(), x.data(), y.data());
+        multiply_portable<N>(bd.data(), x.data() + N, y.data() + N);
         // x and y coefficients are each below 2p when this is reached through
         // fp2_add_mul_pre, so bd < 4p^2. For BLS12-377, 20p < R, and therefore
         // 5 * bd < p * R without normalization.
@@ -362,7 +355,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         subtract_limbs_mod<Params>(z[0], ac, bd5);
         add_limbs_portable<N>(a_plus_b.data(), x.data(), x.data() + N);
         add_limbs_portable<N>(c_plus_d.data(), y.data(), y.data() + N);
-        multiply<N>(z[1].data(), a_plus_b.data(), c_plus_d.data());
+        multiply_portable<N>(z[1].data(), a_plus_b.data(), c_plus_d.data());
         subtract_limbs_portable<M>(z[1].data(), z[1].data(), ac.data());
         subtract_limbs_portable<M>(z[1].data(), z[1].data(), bd.data());
     }

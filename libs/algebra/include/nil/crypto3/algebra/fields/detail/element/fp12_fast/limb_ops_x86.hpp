@@ -51,6 +51,46 @@
     "mov " D4(2, 4) ", " PTR2(Z, Z_BASE, 6) "\n"                    \
     "mov " D4(3, 4) ", " PTR2(Z, Z_BASE, 7) "\n"
 
+// Get the (i + j) mod 6 d register in the 6-live-limb schoolbook window.
+#define D4(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 4)) "]"
+
+#define SCHOOLBOOK_4x4_ROUND(ROUND, Z, Z_BASE, X, X_BASE, Y, Y_BASE) \
+    "mov " PTR2(Y, Y_BASE, ROUND) ", %%rdx\n"                        \
+    "mulx " PTR2(X, X_BASE, 0) ", %[low], %[high]\n"                 \
+    "adox %[low], " D4(0, ROUND) "\n"                                \
+    "mov " D4(0, ROUND) ", " PTR2(Z, Z_BASE, ROUND) "\n"             \
+    "adcx %[high], " D4(1, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[high]\n"                 \
+    "adox %[low], " D4(1, ROUND) "\n"                                \
+    "adcx %[high], " D4(2, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[high]\n"                 \
+    "adox %[low], " D4(2, ROUND) "\n"                                \
+    "adcx %[high], " D4(3, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 3) ", %[low], " D4(4, ROUND) "\n"        \
+    "adox %[low], " D4(3, ROUND) "\n"                                \
+    "adox %[zero], " D4(4, ROUND) "\n"                               \
+    "adcx %[zero], " D4(4, ROUND) "\n"
+
+#define SCHOOLBOOK_4x4(Z, Z_BASE, X, X_BASE, Y, Y_BASE)             \
+    "xor %[zero], %[zero]\n"                                        \
+    "mov " PTR2(Y, Y_BASE, 0) ", %%rdx\n"                           \
+    "mulx " PTR2(X, X_BASE, 0) ", %[d0], %[d1]\n"                   \
+    "mov %[d0], " PTR2(Z, Z_BASE, 0) "\n"                           \
+    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[d2]\n"                  \
+    "add %[low], %[d1]\n"                                           \
+    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[d3]\n"                  \
+    "adc %[low], %[d2]\n"                                           \
+    "mulx " PTR2(X, X_BASE, 3) ", %[low], %[d0]\n"                  \
+    "adc %[low], %[d3]\n"                                           \
+    "adc $0, %[d0]\n"                                               \
+    SCHOOLBOOK_4x4_ROUND(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    SCHOOLBOOK_4x4_ROUND(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    SCHOOLBOOK_4x4_ROUND(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    "mov " D4(0, 4) ", " PTR2(Z, Z_BASE, 4) "\n"                    \
+    "mov " D4(1, 4) ", " PTR2(Z, Z_BASE, 5) "\n"                    \
+    "mov " D4(2, 4) ", " PTR2(Z, Z_BASE, 6) "\n"                    \
+    "mov " D4(3, 4) ", " PTR2(Z, Z_BASE, 7) "\n"
+
 #define DOUBLE_MOD_P()      \
     "addq %[t0], %[t0]\n"   \
     "adcq %[t1], %[t1]\n"   \
@@ -331,44 +371,6 @@
     "adcq %[" #T3 "], " PTR2(Z, Z_BASE, 7) "\n"
 
 namespace nil::crypto3::algebra::fields::detail::fp12_fast {
-    inline void multiply_4x4_x86(limb *z, const limb *x, const limb *y) {
-        limb low, zero, high;
-        limb d0, d1, d2, d3;
-        asm volatile(
-            SCHOOLBOOK_4x4(z, 0, x, 0, y, 0)
-            : [low]"=&r"(low),
-              [high]"=&r"(high),
-              [zero]"=&r"(zero),
-              [d0]"=&r"(d0),
-              [d1]"=&r"(d1),
-              [d2]"=&r"(d2),
-              [d3]"=&r"(d3)
-            : [z]"r"(z),
-              [y]"r"(y),
-              [x]"r"(x)
-            : "rdx", "cc", "memory"
-        );
-    }
-
-    inline void multiply_6x6_x86(limb *z, const limb *x, const limb *y) {
-        limb low, zero, high;
-        limb d0, d1, d2, d3;
-        asm volatile(
-            SCHOOLBOOK_4x4(z, 0, x, 0, y, 0)
-            : [low]"=&r"(low),
-              [high]"=&r"(high),
-              [zero]"=&r"(zero),
-              [d0]"=&r"(d0),
-              [d1]"=&r"(d1),
-              [d2]"=&r"(d2),
-              [d3]"=&r"(d3)
-            : [z]"r"(z),
-              [y]"r"(y),
-              [x]"r"(x)
-            : "rdx", "cc", "memory"
-        );
-    }
-
     template<class Field>
     inline void montgomery_reduce_x86(limb *result, const limb *data) {
         SET_STATIC_MODULUS_FROM_FIELD();
