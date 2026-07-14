@@ -12,26 +12,26 @@
 #define PTR2(REGNAME, I, J) PTR(REGNAME, BOOST_PP_ADD(I, J))
 
 // Get the (i + j) mod 4 d register in the 4-live-limb schoolbook window.
-#define D(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 4)) "]"
+#define D4(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 4)) "]"
 
-#define SCHOOLBOOK_ROUND(ROUND, Z, Z_BASE, X, X_BASE, Y, Y_BASE)    \
-    "mov " PTR2(Y, Y_BASE, ROUND) ", %%rdx\n"                       \
-    "mulx " PTR2(X, X_BASE, 0) ", %[low], %[high]\n"                \
-    "adox %[low], " D(0, ROUND) "\n"                                \
-    "mov " D(0, ROUND) ", " PTR2(Z, Z_BASE, ROUND) "\n"             \
-    "adcx %[high], " D(1, ROUND) "\n"                               \
-    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[high]\n"                \
-    "adox %[low], " D(1, ROUND) "\n"                                \
-    "adcx %[high], " D(2, ROUND) "\n"                               \
-    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[high]\n"                \
-    "adox %[low], " D(2, ROUND) "\n"                                \
-    "adcx %[high], " D(3, ROUND) "\n"                               \
-    "mulx " PTR2(X, X_BASE, 3) ", %[low], " D(4, ROUND) "\n"        \
-    "adox %[low], " D(3, ROUND) "\n"                                \
-    "adox %[zero], " D(4, ROUND) "\n"                               \
-    "adcx %[zero], " D(4, ROUND) "\n"
+#define SCHOOLBOOK_4x4_ROUND(ROUND, Z, Z_BASE, X, X_BASE, Y, Y_BASE) \
+    "mov " PTR2(Y, Y_BASE, ROUND) ", %%rdx\n"                        \
+    "mulx " PTR2(X, X_BASE, 0) ", %[low], %[high]\n"                 \
+    "adox %[low], " D4(0, ROUND) "\n"                                \
+    "mov " D4(0, ROUND) ", " PTR2(Z, Z_BASE, ROUND) "\n"             \
+    "adcx %[high], " D4(1, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[high]\n"                 \
+    "adox %[low], " D4(1, ROUND) "\n"                                \
+    "adcx %[high], " D4(2, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[high]\n"                 \
+    "adox %[low], " D4(2, ROUND) "\n"                                \
+    "adcx %[high], " D4(3, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 3) ", %[low], " D4(4, ROUND) "\n"        \
+    "adox %[low], " D4(3, ROUND) "\n"                                \
+    "adox %[zero], " D4(4, ROUND) "\n"                               \
+    "adcx %[zero], " D4(4, ROUND) "\n"
 
-#define SCHOOLBOOK(Z, Z_BASE, X, X_BASE, Y, Y_BASE)                 \
+#define SCHOOLBOOK_4x4(Z, Z_BASE, X, X_BASE, Y, Y_BASE)             \
     "xor %[zero], %[zero]\n"                                        \
     "mov " PTR2(Y, Y_BASE, 0) ", %%rdx\n"                           \
     "mulx " PTR2(X, X_BASE, 0) ", %[d0], %[d1]\n"                   \
@@ -43,13 +43,13 @@
     "mulx " PTR2(X, X_BASE, 3) ", %[low], %[d0]\n"                  \
     "adc %[low], %[d3]\n"                                           \
     "adc $0, %[d0]\n"                                               \
-    SCHOOLBOOK_ROUND(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE)            \
-    SCHOOLBOOK_ROUND(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE)            \
-    SCHOOLBOOK_ROUND(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE)            \
-    "mov " D(0, 4) ", " PTR2(Z, Z_BASE, 4) "\n"                     \
-    "mov " D(1, 4) ", " PTR2(Z, Z_BASE, 5) "\n"                     \
-    "mov " D(2, 4) ", " PTR2(Z, Z_BASE, 6) "\n"                     \
-    "mov " D(3, 4) ", " PTR2(Z, Z_BASE, 7) "\n"
+    SCHOOLBOOK_4x4_ROUND(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    SCHOOLBOOK_4x4_ROUND(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    SCHOOLBOOK_4x4_ROUND(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    "mov " D4(0, 4) ", " PTR2(Z, Z_BASE, 4) "\n"                    \
+    "mov " D4(1, 4) ", " PTR2(Z, Z_BASE, 5) "\n"                    \
+    "mov " D4(2, 4) ", " PTR2(Z, Z_BASE, 6) "\n"                    \
+    "mov " D4(3, 4) ", " PTR2(Z, Z_BASE, 7) "\n"
 
 #define DOUBLE_MOD_P()      \
     "addq %[t0], %[t0]\n"   \
@@ -335,7 +335,26 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         limb low, zero, high;
         limb d0, d1, d2, d3;
         asm volatile(
-            SCHOOLBOOK(z, 0, x, 0, y, 0)
+            SCHOOLBOOK_4x4(z, 0, x, 0, y, 0)
+            : [low]"=&r"(low),
+              [high]"=&r"(high),
+              [zero]"=&r"(zero),
+              [d0]"=&r"(d0),
+              [d1]"=&r"(d1),
+              [d2]"=&r"(d2),
+              [d3]"=&r"(d3)
+            : [z]"r"(z),
+              [y]"r"(y),
+              [x]"r"(x)
+            : "rdx", "cc", "memory"
+        );
+    }
+
+    inline void multiply_6x6_x86(limb *z, const limb *x, const limb *y) {
+        limb low, zero, high;
+        limb d0, d1, d2, d3;
+        asm volatile(
+            SCHOOLBOOK_4x4(z, 0, x, 0, y, 0)
             : [low]"=&r"(low),
               [high]"=&r"(high),
               [zero]"=&r"(zero),
@@ -559,11 +578,11 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         limb low, high, zero, d0, d1, d2, d3;
         limb scratch[8];
         asm volatile(
-            SCHOOLBOOK(z, 0, x, 0, y, 0)
-            SCHOOLBOOK(scratch, 0, x, 4, y, 4)
+            SCHOOLBOOK_4x4(z, 0, x, 0, y, 0)
+            SCHOOLBOOK_4x4(scratch, 0, x, 4, y, 4)
             SUB_LIMBS_MOD(z, 0, z, 0, scratch, 0, d0, d1, d2, d3)
-            SCHOOLBOOK(z, 8, x, 0, y, 4)
-            SCHOOLBOOK(scratch, 0, x, 4, y, 0)
+            SCHOOLBOOK_4x4(z, 8, x, 0, y, 4)
+            SCHOOLBOOK_4x4(scratch, 0, x, 4, y, 0)
             ADD_LIMBS(z, 8, z, 8, scratch, 0, low)
             :   [low]"=&r"(low),
                 [high]"=&r"(high),
@@ -607,11 +626,11 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             : "cc", "memory"
         );
         asm volatile(
-            SCHOOLBOOK(z, 0, data, 0, data, 8) // z[0] = x[0] * y[0]
-            SCHOOLBOOK(data, 16, data, 4, data, 12) // tmp = x[1] * y[1]
+            SCHOOLBOOK_4x4(z, 0, data, 0, data, 8) // z[0] = x[0] * y[0]
+            SCHOOLBOOK_4x4(data, 16, data, 4, data, 12) // tmp = x[1] * y[1]
             SUB_LIMBS_MOD(z, 0, z, 0, data, 16, d0, d1, d2, d3)
-            SCHOOLBOOK(z, 8, data, 0, data, 12)
-            SCHOOLBOOK(data, 16, data, 4, data, 8)
+            SCHOOLBOOK_4x4(z, 8, data, 0, data, 12)
+            SCHOOLBOOK_4x4(data, 16, data, 4, data, 8)
             ADD_LIMBS(z, 8, z, 8, data, 16, low)
             :   [low]"=&r"(low),
                 [high]"=&r"(high),
@@ -635,9 +654,9 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #undef STR
 #undef PTR
 #undef PTR2
-#undef D
+#undef D4
 #undef SCHOOLBOOK_ROUND
-#undef SCHOOLBOOK
+#undef SCHOOLBOOK_4x4
 #undef DOUBLE_MOD_P
 #undef MUL_8_LIMBS_BY_9
 #undef SET_STATIC_MODULUS_FROM_FIELD

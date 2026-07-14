@@ -71,6 +71,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         if constexpr (BaseLimbCount == 4) {
             return multiply_4x4_x86(z, x, y);
+        // } else if constexpr (BaseLimbCount == 6) {
+        //     return multiply_6x6_x86(z, x, y);
         }
 #endif
         for (size_t i = 0; i < 2 * BaseLimbCount; i++) {
