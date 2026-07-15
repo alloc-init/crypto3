@@ -232,7 +232,9 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                                  const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         if constexpr (Params::base_value_limb_count == 4) {
-            return fp2_base_add_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
+            return fp2_base_4_limbs_add_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
+        } else if constexpr (Params::base_value_limb_count == 6) {
+            return fp2_base_6_limbs_add_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
         }
 #endif
         constexpr size_t N = Params::base_value_limb_count;
