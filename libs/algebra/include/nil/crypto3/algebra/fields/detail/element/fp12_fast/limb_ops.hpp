@@ -159,6 +159,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         if constexpr (Params::storage_limb_count == 8) {
             return subtract_8_limbs_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
+        } else if constexpr (Params::storage_limb_count == 12) {
+            return subtract_12_limbs_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
         }
 #endif
         constexpr size_t N = Params::base_value_limb_count;

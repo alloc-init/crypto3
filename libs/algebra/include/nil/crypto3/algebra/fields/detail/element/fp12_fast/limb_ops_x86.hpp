@@ -440,6 +440,62 @@
     "adcq %[" #T2 "], " PTR2(Z, Z_BASE, 6) "\n"                        \
     "adcq %[" #T3 "], " PTR2(Z, Z_BASE, 7) "\n"
 
+#define SUB_12_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE, T0, T1, T2, T3, T4, T5) \
+    "movq " PTR2(X, X_BASE, 0) ", %[" #T0 "]\n"         \
+    "subq " PTR2(Y, Y_BASE, 0) ", %[" #T0 "]\n"         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 0)"\n"          \
+    "movq " PTR2(X, X_BASE, 1) ", %[" #T0 "]\n"         \
+    "sbbq " PTR2(Y, Y_BASE, 1) ", %[" #T0 "]\n"         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 1)"\n"          \
+    "movq " PTR2(X, X_BASE, 2) ", %[" #T0 "]\n"         \
+    "sbbq " PTR2(Y, Y_BASE, 2) ", %[" #T0 "]\n"         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 2)"\n"          \
+    "movq " PTR2(X, X_BASE, 3) ", %[" #T0 "]\n"         \
+    "sbbq " PTR2(Y, Y_BASE, 3) ", %[" #T0 "]\n"         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 3) "\n"         \
+    "movq " PTR2(X, X_BASE, 4) ", %[" #T0 "]\n"         \
+    "sbbq " PTR2(Y, Y_BASE, 4) ", %[" #T0 "]\n"         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 4)"\n"          \
+    "movq " PTR2(X, X_BASE, 5) ", %[" #T0 "]\n"         \
+    "sbbq " PTR2(Y, Y_BASE, 5) ", %[" #T0 "]\n"         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 5)"\n"          \
+    "movq " PTR2(X, X_BASE, 6) ", %[" #T0 "]\n"         \
+    "sbbq " PTR2(Y, Y_BASE, 6) ", %[" #T0 "]\n"         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 6) "\n"         \
+    "movq " PTR2(X, X_BASE, 7) ", %[" #T0 "]\n"         \
+    "sbbq " PTR2(Y, Y_BASE, 7) ", %[" #T0 "]\n"         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 7)"\n"          \
+    "movq " PTR2(X, X_BASE, 8) ", %[" #T0 "]\n"         \
+    "sbbq " PTR2(Y, Y_BASE, 8) ", %[" #T0 "]\n"         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 8)"\n"          \
+    "movq " PTR2(X, X_BASE, 9) ", %[" #T0 "]\n"         \
+    "sbbq " PTR2(Y, Y_BASE, 9) ", %[" #T0 "]\n"         \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 9)"\n"          \
+    "movq " PTR2(X, X_BASE, 10) ", %[" #T0 "]\n"        \
+    "sbbq " PTR2(Y, Y_BASE, 10) ", %[" #T0 "]\n"        \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 10)"\n"         \
+    "movq " PTR2(X, X_BASE, 11) ", %[" #T0 "]\n"        \
+    "sbbq " PTR2(Y, Y_BASE, 11) ", %[" #T0 "]\n"        \
+    "movq %[" #T0 "], " PTR2(Z, Z_BASE, 11)"\n"         \
+    "mov $0, %[" #T0 "]\n"                              \
+    "mov $0, %[" #T1 "]\n"                              \
+    "mov $0, %[" #T2 "]\n"                              \
+    "mov $0, %[" #T3 "]\n"                              \
+    "mov $0, %[" #T4 "]\n"                              \
+    "mov $0, %[" #T5 "]\n"                              \
+    "cmovc %[p0], %[" #T0 "]\n"                         \
+    "cmovc %[p1], %[" #T1 "]\n"                         \
+    "cmovc %[p2], %[" #T2 "]\n"                         \
+    "cmovc %[p3], %[" #T3 "]\n"                         \
+    "cmovc %[p4], %[" #T4 "]\n"                         \
+    "cmovc %[p5], %[" #T5 "]\n"                         \
+    "addq %[" #T0 "], " PTR2(Z, Z_BASE, 6) "\n"         \
+    "adcq %[" #T1 "], " PTR2(Z, Z_BASE, 7) "\n"         \
+    "adcq %[" #T2 "], " PTR2(Z, Z_BASE, 8) "\n"         \
+    "adcq %[" #T3 "], " PTR2(Z, Z_BASE, 9) "\n"         \
+    "adcq %[" #T4 "], " PTR2(Z, Z_BASE, 10) "\n"        \
+    "adcq %[" #T5 "], " PTR2(Z, Z_BASE, 11) "\n"
+
 namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<class Field>
     inline void montgomery_reduce_8_limbs_x86(limb *result, const limb *data) {
@@ -665,6 +721,31 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     }
 
     template<class Field>
+    inline void subtract_12_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
+        GET_MODULUS_6_LIMBS();
+        limb t0, t1, t2, t3, t4, t5;
+        asm volatile(
+            SUB_12_LIMBS_MOD(z, 0, x, 0, y, 0, t0, t1, t2, t3, t4, t5)
+            : [t0]"=&r"(t0),
+              [t1]"=&r"(t1),
+              [t2]"=&r"(t2),
+              [t3]"=&r"(t3),
+              [t4]"=&r"(t4),
+              [t5]"=&r"(t5)
+            : [z]"r"(z),
+              [x]"r"(x),
+              [y]"r"(y),
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3),
+              [p4]"m"(p4),
+              [p5]"m"(p5)
+            : "cc", "memory"
+        );
+    }
+
+    template<class Field>
     inline void mul_8_limbs_by_9_x86(limb *dst, const limb *src) {
         GET_MODULUS_4_LIMBS();
         limb t0, t1, t2, t3, t4, t5, t6, t7;
@@ -842,10 +923,12 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #undef REDC_12_LIMBS_LOAD_NEXT
 #undef REDC_12_LIMBS_CANCEL_LOW
 #undef ADD_LOW_4_LIMBS
-#undef ADD_8_LIMBS
 #undef ADD_LOW_4_LIMBS_MOD
+#undef ADD_8_LIMBS
 #undef ADD_8_LIMBS_MOD
+#undef ADD_12_LIMBS_MOD
 #undef SUB_8_LIMBS
 #undef SUB_8_LIMBS_MOD
+#undef SUB_12_LIMBS_MOD
 
 // clang-format on
