@@ -247,7 +247,9 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                             const std::array<typename Params::limb_array, 2> &other) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
         if constexpr (Params::storage_limb_count == 8) {
-            return fp2_sub_pre_x86<typename Params::base_field_type>((limb *)&data, (limb *)&other);
+            return fp2_8_limbs_sub_pre_x86<typename Params::base_field_type>((limb *)&data, (limb *)&other);
+        } else if constexpr (Params::storage_limb_count == 12) {
+            return fp2_12_limbs_sub_pre_x86<typename Params::base_field_type>((limb *)&data, (limb *)&other);
         }
 #endif
         constexpr size_t N = Params::storage_limb_count;

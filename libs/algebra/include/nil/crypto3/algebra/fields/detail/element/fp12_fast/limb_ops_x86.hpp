@@ -442,6 +442,44 @@
     "sbbq " PTR2(OTHER, OTHER_BASE, 7) ", %[" #SCRATCH "]\n"       \
     "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 7) "\n"
 
+#define SUB_12_LIMBS(RESULT, RESULT_BASE, OTHER, OTHER_BASE, SCRATCH) \
+    "movq " PTR2(RESULT, RESULT_BASE, 0) ", %[" #SCRATCH "]\n"     \
+    "subq " PTR2(OTHER, OTHER_BASE, 0) ", %[" #SCRATCH "]\n"       \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 0) "\n"     \
+    "movq " PTR2(RESULT, RESULT_BASE, 1) ", %[" #SCRATCH "]\n"     \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 1) ", %[" #SCRATCH "]\n"       \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 1) "\n"     \
+    "movq " PTR2(RESULT, RESULT_BASE, 2) ", %[" #SCRATCH "]\n"     \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 2) ", %[" #SCRATCH "]\n"       \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 2) "\n"     \
+    "movq " PTR2(RESULT, RESULT_BASE, 3) ", %[" #SCRATCH "]\n"     \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 3) ", %[" #SCRATCH "]\n"       \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 3) "\n"     \
+    "movq " PTR2(RESULT, RESULT_BASE, 4) ", %[" #SCRATCH "]\n"     \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 4) ", %[" #SCRATCH "]\n"       \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 4) "\n"     \
+    "movq " PTR2(RESULT, RESULT_BASE, 5) ", %[" #SCRATCH "]\n"     \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 5) ", %[" #SCRATCH "]\n"       \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 5) "\n"     \
+    "movq " PTR2(RESULT, RESULT_BASE, 6) ", %[" #SCRATCH "]\n"     \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 6) ", %[" #SCRATCH "]\n"       \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 6) "\n"     \
+    "movq " PTR2(RESULT, RESULT_BASE, 7) ", %[" #SCRATCH "]\n"     \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 7) ", %[" #SCRATCH "]\n"       \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 7) "\n"     \
+    "movq " PTR2(RESULT, RESULT_BASE, 8) ", %[" #SCRATCH "]\n"     \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 8) ", %[" #SCRATCH "]\n"       \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 8) "\n"     \
+    "movq " PTR2(RESULT, RESULT_BASE, 9) ", %[" #SCRATCH "]\n"     \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 9) ", %[" #SCRATCH "]\n"       \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 9) "\n"     \
+    "movq " PTR2(RESULT, RESULT_BASE, 10) ", %[" #SCRATCH "]\n"    \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 10) ", %[" #SCRATCH "]\n"      \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 10) "\n"    \
+    "movq " PTR2(RESULT, RESULT_BASE, 11) ", %[" #SCRATCH "]\n"    \
+    "sbbq " PTR2(OTHER, OTHER_BASE, 11) ", %[" #SCRATCH "]\n"      \
+    "movq %[" #SCRATCH "], " PTR2(RESULT, RESULT_BASE, 11) "\n"
+
 #define SUB_8_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE, T0, T1, T2, T3) \
     "movq " PTR2(X, X_BASE, 0) ", %[" #T0 "]\n"                        \
     "subq " PTR2(Y, Y_BASE, 0) ", %[" #T0 "]\n"                        \
@@ -868,7 +906,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     }
 
     template<class Field>
-    inline void fp2_sub_pre_x86(limb *data, const limb *other) {
+    inline void fp2_8_limbs_sub_pre_x86(limb *data, const limb *other) {
         GET_MODULUS_4_LIMBS();
         limb t0, t1, t2, t3;
         asm volatile(
@@ -884,6 +922,31 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
               [p1]"m"(p1),
               [p2]"m"(p2),
               [p3]"m"(p3)
+            : "cc", "memory"
+        );
+    }
+
+    template<class Field>
+    inline void fp2_12_limbs_sub_pre_x86(limb *data, const limb *other) {
+        GET_MODULUS_6_LIMBS();
+        limb t0, t1, t2, t3, t4, t5;
+        asm volatile(
+            SUB_12_LIMBS_MOD(data, 0, data, 0, other, 0, t0, t1, t2, t3, t4, t5)
+            SUB_12_LIMBS(data, 12, other, 12, t0)
+            : [t0]"=&r"(t0),
+              [t1]"=&r"(t1),
+              [t2]"=&r"(t2),
+              [t3]"=&r"(t3),
+              [t4]"=&r"(t4),
+              [t5]"=&r"(t5)
+            : [data]"r"(data),
+              [other]"r"(other),
+              [p0]"m"(p0),
+              [p1]"m"(p1),
+              [p2]"m"(p2),
+              [p3]"m"(p3),
+              [p4]"m"(p4),
+              [p5]"m"(p5)
             : "cc", "memory"
         );
     }
