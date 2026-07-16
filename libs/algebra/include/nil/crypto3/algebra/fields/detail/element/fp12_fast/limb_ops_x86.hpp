@@ -168,44 +168,33 @@
     "movq %[t6], " PTR2(DST, DST_BASE, 6) "\n"         \
     "movq %[t7], " PTR2(DST, DST_BASE, 7) "\n"
 
+#define MUL_12_LIMBS_BY_5_LOOP(DST, I) \
+    "movq " PTR(DST, I) ", %[d0]\n" \
+    "movq $2, %%rcx\n" \
+    "shlxq %%rcx, %[d0], %[d2]\n" \
+    "leaq (%[d1], %[d2]), %[d2]\n" \
+    "movq $62, %%rcx\n" \
+    "shrxq %%rcx, %[d0], %[d1]\n" \
+    "adcx %[d2], %[d0]\n" \
+    "movq %[d0], " PTR(DST, I) "\n"
+
 #define MUL_12_LIMBS_BY_5(DST) \
-    "movq " PTR(DST, 11) ", %%rdx\n"      \
-    "movq %%rdx, " PTR(DST, 23) "\n"      \
-    "movq " PTR(DST, 10) ", %%rdx\n"      \
-    "movq %%rdx, " PTR(DST, 22) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 11) "\n" \
-    "movq " PTR(DST, 9) ", %%rdx\n"       \
-    "movq %%rdx, " PTR(DST, 21) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 10) "\n" \
-    "movq " PTR(DST, 8) ", %%rdx\n"       \
-    "movq %%rdx, " PTR(DST, 20) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 9) "\n"  \
-    "movq " PTR(DST, 7) ", %%rdx\n"       \
-    "movq %%rdx, " PTR(DST, 19) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 8) "\n"  \
-    "movq " PTR(DST, 6) ", %%rdx\n"       \
-    "movq %%rdx, " PTR(DST, 18) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 7) "\n"  \
-    "movq " PTR(DST, 5) ", %%rdx\n"       \
-    "movq %%rdx, " PTR(DST, 17) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 6) "\n"  \
-    "movq " PTR(DST, 4) ", %%rdx\n"       \
-    "movq %%rdx, " PTR(DST, 16) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 5) "\n"  \
-    "movq " PTR(DST, 3) ", %%rdx\n"       \
-    "movq %%rdx, " PTR(DST, 15) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 4) "\n"  \
-    "movq " PTR(DST, 2) ", %%rdx\n"       \
-    "movq %%rdx, " PTR(DST, 14) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 3) "\n"  \
-    "movq " PTR(DST, 1) ", %%rdx\n"       \
-    "movq %%rdx, " PTR(DST, 13) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 2) "\n"  \
-    "movq " PTR(DST, 0) ", %%rdx\n"       \
-    "movq %%rdx, " PTR(DST, 12) "\n"      \
-    "shldq $2, %%rdx, " PTR(DST, 1) "\n"  \
-    "shlq $2, " PTR(DST, 0) "\n"          \
-    ADD_12_LIMBS(DST, 0, DST, 0, DST, 12, d0)
+    "movq " PTR(DST, 0) ", %[d0]\n" \
+    "movq %[d0], %[d1]\n" \
+    "shlq $2, %[d0]\n" \
+    "shrq $62, %[d1]\n" \
+    "addq %[d0], " PTR(DST, 0) "\n" \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 1) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 2) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 3) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 4) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 5) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 6) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 7) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 8) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 9) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 10) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, 11)
 
 #define GET_MODULUS_4_LIMBS(FIELD)                                  \
     constexpr auto mod_obj = FIELD::modulus_params.get_mod_obj();   \
