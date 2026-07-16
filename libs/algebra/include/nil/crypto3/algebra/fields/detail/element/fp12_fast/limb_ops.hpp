@@ -362,7 +362,6 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     // fp2 add mul pre for fields where u^2 = -1
     template<Fp12FastParams Params>
-        requires(Params::u_squared == -1)
     inline void fp2_add_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &a,
                                 const typename Params::limb_array &b, const typename Params::limb_array &c,
                                 const typename Params::limb_array &d) {
@@ -371,22 +370,6 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             return fp2_add_mul_pre_x86<Params>((limb *)&z, a.data(), b.data(), c.data(), d.data());
         }
 #endif
-        constexpr size_t N = Params::base_value_limb_count;
-        // Build the raw fp2 sums in the same packed layout expected by fp2_mul_pre.
-        typename Params::limb_array x, y;
-        add_limbs_portable<N>(x.data(), a.data(), b.data());
-        add_limbs_portable<N>(x.data() + N, a.data() + N, b.data() + N);
-        add_limbs_portable<N>(y.data(), c.data(), d.data());
-        add_limbs_portable<N>(y.data() + N, c.data() + N, d.data() + N);
-        fp2_mul_pre<Params>(z, x, y);
-    }
-
-    // Generic fp2 add mul pre
-    template<Fp12FastParams Params>
-        requires(Params::u_squared != -1)
-    inline void fp2_add_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &a,
-                                const typename Params::limb_array &b, const typename Params::limb_array &c,
-                                const typename Params::limb_array &d) {
         constexpr size_t N = Params::base_value_limb_count;
         // Build the raw fp2 sums in the same packed layout expected by fp2_mul_pre.
         typename Params::limb_array x, y;
