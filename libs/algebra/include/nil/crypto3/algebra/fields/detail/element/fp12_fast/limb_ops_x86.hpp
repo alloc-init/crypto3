@@ -168,33 +168,35 @@
     "movq %[t6], " PTR2(DST, DST_BASE, 6) "\n"         \
     "movq %[t7], " PTR2(DST, DST_BASE, 7) "\n"
 
-#define MUL_12_LIMBS_BY_5_LOOP(DST, I) \
-    "movq " PTR(DST, I) ", %[d0]\n" \
-    "movq $2, %%rcx\n" \
-    "shlxq %%rcx, %[d0], %[d2]\n" \
-    "leaq (%[d1], %[d2]), %[d2]\n" \
-    "movq $62, %%rcx\n" \
-    "shrxq %%rcx, %[d0], %[d1]\n" \
-    "adcx %[d2], %[d0]\n" \
+#define MUL_12_LIMBS_BY_5_LOOP(DST, SRC, I) \
+    "movq " PTR(SRC, I) ", %[d0]\n"         \
+    "movq $2, %%rcx\n"                      \
+    "shlxq %%rcx, %[d0], %[d2]\n"           \
+    "leaq (%[d1], %[d2]), %[d2]\n"          \
+    "movq $62, %%rcx\n"                     \
+    "shrxq %%rcx, %[d0], %[d1]\n"           \
+    "adcx %[d2], %[d0]\n"                   \
     "movq %[d0], " PTR(DST, I) "\n"
 
-#define MUL_12_LIMBS_BY_5(DST) \
-    "movq " PTR(DST, 0) ", %[d0]\n" \
-    "movq %[d0], %[d1]\n" \
-    "shlq $2, %[d0]\n" \
-    "shrq $62, %[d1]\n" \
-    "addq %[d0], " PTR(DST, 0) "\n" \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 1) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 2) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 3) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 4) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 5) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 6) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 7) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 8) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 9) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 10) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, 11)
+#define MUL_12_LIMBS_BY_5(DST, SRC)      \
+    "movq " PTR(SRC, 0) ", %[d0]\n"      \
+    "movq $2, %%rcx\n"                   \
+    "shlxq %%rcx, %[d0], %[d2]\n"        \
+    "movq $62, %%rcx\n"                  \
+    "shrxq %%rcx, %[d0], %[d1]\n"        \
+    "addq %[d2], %[d0]\n"                \
+    "movq %[d0], " PTR(DST, 0) "\n"      \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 1)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 2)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 3)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 4)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 5)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 6)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 7)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 8)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 9)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 10) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 11)
 
 #define GET_MODULUS_4_LIMBS(FIELD)                                  \
     constexpr auto mod_obj = FIELD::modulus_params.get_mod_obj();   \
@@ -284,103 +286,53 @@
     "adcx %[high], " T12(I, 6) "\n"                                         \
     BOOST_PP_IF(BOOST_PP_LESS(I, 5), REDC_12_LIMBS_LOAD_NEXT(I), "")
 
-#define ADD_4_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+#define ADD_LIMBS_INIT(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
     "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"        \
     "addq " PTR2(Y, Y_BASE, 0) ", %[" #TMP "]\n"        \
     "movq %[" #TMP "], " PTR2(Z, Z_BASE, 0) "\n"        \
-    "movq " PTR2(X, X_BASE, 1) ", %[" #TMP "]\n"        \
-    "adcq " PTR2(Y, Y_BASE, 1) ", %[" #TMP "]\n"        \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 1) "\n"        \
-    "movq " PTR2(X, X_BASE, 2) ", %[" #TMP "]\n"        \
-    "adcq " PTR2(Y, Y_BASE, 2) ", %[" #TMP "]\n"        \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 2) "\n"        \
-    "movq " PTR2(X, X_BASE, 3) ", %[" #TMP "]\n"        \
-    "adcq " PTR2(Y, Y_BASE, 3) ", %[" #TMP "]\n"        \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 3) "\n"
+
+#define ADD_LIMBS_LOOP(I, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    "movq " PTR2(X, X_BASE, I) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, I) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, I) "\n"        \
+
+#define ADD_4_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    ADD_LIMBS_INIT(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    ADD_LIMBS_LOOP(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    ADD_LIMBS_LOOP(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    ADD_LIMBS_LOOP(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)
 
 #define ADD_6_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
-    "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"        \
-    "addq " PTR2(Y, Y_BASE, 0) ", %[" #TMP "]\n"        \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 0) "\n"        \
-    "movq " PTR2(X, X_BASE, 1) ", %[" #TMP "]\n"        \
-    "adcq " PTR2(Y, Y_BASE, 1) ", %[" #TMP "]\n"        \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 1) "\n"        \
-    "movq " PTR2(X, X_BASE, 2) ", %[" #TMP "]\n"        \
-    "adcq " PTR2(Y, Y_BASE, 2) ", %[" #TMP "]\n"        \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 2) "\n"        \
-    "movq " PTR2(X, X_BASE, 3) ", %[" #TMP "]\n"        \
-    "adcq " PTR2(Y, Y_BASE, 3) ", %[" #TMP "]\n"        \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 3) "\n"        \
-    "movq " PTR2(X, X_BASE, 4) ", %[" #TMP "]\n"        \
-    "adcq " PTR2(Y, Y_BASE, 4) ", %[" #TMP "]\n"        \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 4) "\n"        \
-    "movq " PTR2(X, X_BASE, 5) ", %[" #TMP "]\n"        \
-    "adcq " PTR2(Y, Y_BASE, 5) ", %[" #TMP "]\n"        \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 5) "\n"
+    ADD_LIMBS_INIT(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    ADD_LIMBS_LOOP(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    ADD_LIMBS_LOOP(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    ADD_LIMBS_LOOP(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    ADD_LIMBS_LOOP(4, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    ADD_LIMBS_LOOP(5, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)
 
-#define ADD_8_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)   \
-    "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"            \
-    "addq " PTR2(Y, Y_BASE, 0) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 0) "\n"            \
-    "movq " PTR2(X, X_BASE, 1) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 1) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 1) "\n"            \
-    "movq " PTR2(X, X_BASE, 2) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 2) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 2) "\n"            \
-    "movq " PTR2(X, X_BASE, 3) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 3) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 3) "\n"            \
-    "movq " PTR2(X, X_BASE, 4) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 4) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 4) "\n"            \
-    "movq " PTR2(X, X_BASE, 5) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 5) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 5) "\n"            \
-    "movq " PTR2(X, X_BASE, 6) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 6) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 6) "\n"            \
-    "movq " PTR2(X, X_BASE, 7) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 7) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 7) "\n"
+#define ADD_8_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)    \
+    ADD_LIMBS_INIT(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)     \
+    ADD_LIMBS_LOOP(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(4, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(5, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(6, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(7, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)
 
-#define ADD_12_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
-    "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"            \
-    "addq " PTR2(Y, Y_BASE, 0) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 0) "\n"            \
-    "movq " PTR2(X, X_BASE, 1) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 1) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 1) "\n"            \
-    "movq " PTR2(X, X_BASE, 2) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 2) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 2) "\n"            \
-    "movq " PTR2(X, X_BASE, 3) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 3) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 3) "\n"            \
-    "movq " PTR2(X, X_BASE, 4) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 4) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 4) "\n"            \
-    "movq " PTR2(X, X_BASE, 5) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 5) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 5) "\n"            \
-    "movq " PTR2(X, X_BASE, 6) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 6) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 6) "\n"            \
-    "movq " PTR2(X, X_BASE, 7) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 7) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 7) "\n"            \
-    "movq " PTR2(X, X_BASE, 8) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 8) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 8) "\n"            \
-    "movq " PTR2(X, X_BASE, 9) ", %[" #TMP "]\n"            \
-    "adcq " PTR2(Y, Y_BASE, 9) ", %[" #TMP "]\n"            \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 9) "\n"            \
-    "movq " PTR2(X, X_BASE, 10) ", %[" #TMP "]\n"           \
-    "adcq " PTR2(Y, Y_BASE, 10) ", %[" #TMP "]\n"           \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 10) "\n"           \
-    "movq " PTR2(X, X_BASE, 11) ", %[" #TMP "]\n"           \
-    "adcq " PTR2(Y, Y_BASE, 11) ", %[" #TMP "]\n"           \
-    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 11) "\n"
+#define ADD_12_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)   \
+    ADD_LIMBS_INIT(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)     \
+    ADD_LIMBS_LOOP(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(4, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(5, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(6, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(7, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(8, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(9, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    ADD_LIMBS_LOOP(10, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    ADD_LIMBS_LOOP(11, Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)
 
 #define ADD_4_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE)    \
     "movq " PTR2(X, X_BASE, 0) ", %[t0]\n"                  \
@@ -970,6 +922,19 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
+    inline void mul_12_limbs_by_5_unreduced_x86(limb *dst, const limb *src) {
+        limb d0, d1, d2;
+        asm volatile(
+            MUL_12_LIMBS_BY_5(dst, src)
+            : [d0]"=&r"(d0),
+              [d1]"=&r"(d1),
+              [d2]"=&r"(d2)
+            : [src]"r"(src),
+              [dst]"r"(dst)
+            : "rcx", "cc", "memory"
+        );
+    }
+
     template<class Field>
     inline void mul_8_limbs_by_9_x86(limb *dst, const limb *src) {
         GET_MODULUS_4_LIMBS(Field);
@@ -1192,11 +1157,11 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         //      = ac + (ad + bc)u - bd      # since u^2 = -1
         //      = (ac - bd) + (ad + bc)u
         limb low, high, zero, d0, d1, d2, d3, d4, d5;
-        limb scratch[24];
+        limb scratch[12];
         asm volatile(
             SCHOOLBOOK_6x6(z, 0, x, 0, y, 0) // z[0] = ac
             SCHOOLBOOK_6x6(scratch, 0, x, 6, y, 6) // scratch = bd
-            MUL_12_LIMBS_BY_5(scratch)
+            MUL_12_LIMBS_BY_5(scratch, scratch)
             SUB_12_LIMBS_MOD(z, 0, z, 0, scratch, 0, d0, d1, d2, d3, d4, d5) // z[0] -= bd == ac - bd
             SCHOOLBOOK_6x6(z, 12, x, 0, y, 6) // z[1] = ad
             SCHOOLBOOK_6x6(scratch, 0, x, 6, y, 0) // scratch = bc

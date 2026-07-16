@@ -169,6 +169,9 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<Fp12FastParams Params>
     inline void mul_limbs_by_5_unreduced(typename Params::limb_array &dst, const typename Params::limb_array &src) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        return mul_12_limbs_by_5_unreduced_x86(dst.data(), src.data());
+#endif
         constexpr size_t N = Params::storage_limb_count;
         constexpr size_t M = Params::base_value_limb_count;
         typename Params::limb_array cpy = src;
@@ -301,16 +304,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         dst[1] = buf[1];
     }
 
-    // fp2 mul pre for fields where u^2 = -1
     template<Fp12FastParams Params>
         requires(Params::u_squared == -1)
-    inline void fp2_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &x,
-                            const typename Params::limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (requires { fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data()); }) {
-            return fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data());
-        }
-#endif
+    inline void fp2_mul_pre_portable(std::array<typename Params::limb_array, 2> &z,
+                                     const typename Params::limb_array &x, const typename Params::limb_array &y) {
         constexpr size_t N = Params::base_value_limb_count;
         constexpr size_t M = Params::storage_limb_count;
         // For x = a + bu and y = c + du:
@@ -331,16 +328,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         subtract_limbs_portable<M>(z[1].data(), z[1].data(), bd.data());
     }
 
-    // fp2 mul pre for fields where u^2 = -5
     template<Fp12FastParams Params>
         requires(Params::u_squared == -5)
-    inline void fp2_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &x,
-                            const typename Params::limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (requires { fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data()); }) {
-            return fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data());
-        }
-#endif
+    inline void fp2_mul_pre_portable(std::array<typename Params::limb_array, 2> &z,
+                                     const typename Params::limb_array &x, const typename Params::limb_array &y) {
         constexpr size_t N = Params::base_value_limb_count;
         constexpr size_t M = Params::storage_limb_count;
         // For x = a + bu and y = c + du:
@@ -365,7 +356,17 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         subtract_limbs_portable<M>(z[1].data(), z[1].data(), bd.data());
     }
 
-    // fp2 add mul pre for fields where u^2 = -1
+    template<Fp12FastParams Params>
+    inline void fp2_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &x,
+                            const typename Params::limb_array &y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        if constexpr (requires { fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data()); }) {
+            return fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data());
+        }
+#endif
+        return fp2_mul_pre_portable<Params>(z, x, y);
+    }
+
     template<Fp12FastParams Params>
     inline void fp2_add_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &a,
                                 const typename Params::limb_array &b, const typename Params::limb_array &c,
