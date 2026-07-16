@@ -51,6 +51,60 @@
     "mov " D4(2, 4) ", " PTR2(Z, Z_BASE, 6) "\n"                    \
     "mov " D4(3, 4) ", " PTR2(Z, Z_BASE, 7) "\n"
 
+// Get the (i + j) mod 6 d register in the 6-live-limb schoolbook window.
+#define D6(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 6)) "]"
+
+#define SCHOOLBOOK_6x6_ROUND(ROUND, Z, Z_BASE, X, X_BASE, Y, Y_BASE) \
+    "mov " PTR2(Y, Y_BASE, ROUND) ", %%rdx\n"                        \
+    "mulx " PTR2(X, X_BASE, 0) ", %[low], %[high]\n"                 \
+    "adox %[low], " D6(0, ROUND) "\n"                                \
+    "mov " D6(0, ROUND) ", " PTR2(Z, Z_BASE, ROUND) "\n"             \
+    "adcx %[high], " D6(1, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[high]\n"                 \
+    "adox %[low], " D6(1, ROUND) "\n"                                \
+    "adcx %[high], " D6(2, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[high]\n"                 \
+    "adox %[low], " D6(2, ROUND) "\n"                                \
+    "adcx %[high], " D6(3, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 3) ", %[low], %[high]\n"                 \
+    "adox %[low], " D6(3, ROUND) "\n"                                \
+    "adcx %[high], " D6(4, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 4) ", %[low], %[high]\n"                 \
+    "adox %[low], " D6(4, ROUND) "\n"                                \
+    "adcx %[high], " D6(5, ROUND) "\n"                               \
+    "mulx " PTR2(X, X_BASE, 5) ", %[low], " D6(6, ROUND) "\n"        \
+    "adox %[low], " D6(5, ROUND) "\n"                                \
+    "adox %[zero], " D6(6, ROUND) "\n"                               \
+    "adcx %[zero], " D6(6, ROUND) "\n"
+
+#define SCHOOLBOOK_6x6(Z, Z_BASE, X, X_BASE, Y, Y_BASE)             \
+    "xor %[zero], %[zero]\n"                                        \
+    "mov " PTR2(Y, Y_BASE, 0) ", %%rdx\n"                           \
+    "mulx " PTR2(X, X_BASE, 0) ", %[d0], %[d1]\n"                   \
+    "mov %[d0], " PTR2(Z, Z_BASE, 0) "\n"                           \
+    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[d2]\n"                  \
+    "add %[low], %[d1]\n"                                           \
+    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[d3]\n"                  \
+    "adc %[low], %[d2]\n"                                           \
+    "mulx " PTR2(X, X_BASE, 3) ", %[low], %[d4]\n"                  \
+    "adc %[low], %[d3]\n"                                           \
+    "mulx " PTR2(X, X_BASE, 4) ", %[low], %[d5]\n"                  \
+    "adc %[low], %[d4]\n"                                           \
+    "mulx " PTR2(X, X_BASE, 5) ", %[low], %[d0]\n"                  \
+    "adc %[low], %[d5]\n"                                           \
+    "adc $0, %[d0]\n"                                               \
+    SCHOOLBOOK_6x6_ROUND(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    SCHOOLBOOK_6x6_ROUND(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    SCHOOLBOOK_6x6_ROUND(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    SCHOOLBOOK_6x6_ROUND(4, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    SCHOOLBOOK_6x6_ROUND(5, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
+    "mov " D6(0, 6) ", " PTR2(Z, Z_BASE, 6) "\n"                    \
+    "mov " D6(1, 6) ", " PTR2(Z, Z_BASE, 7) "\n"                    \
+    "mov " D6(2, 6) ", " PTR2(Z, Z_BASE, 8) "\n"                    \
+    "mov " D6(3, 6) ", " PTR2(Z, Z_BASE, 9) "\n"                    \
+    "mov " D6(4, 6) ", " PTR2(Z, Z_BASE, 10) "\n"                   \
+    "mov " D6(5, 6) ", " PTR2(Z, Z_BASE, 11) "\n"
+
 #define DOUBLE_MOD_P()      \
     "addq %[t0], %[t0]\n"   \
     "adcq %[t1], %[t1]\n"   \
@@ -241,6 +295,44 @@
     "movq " PTR2(X, X_BASE, 7) ", %[" #TMP "]\n"            \
     "adcq " PTR2(Y, Y_BASE, 7) ", %[" #TMP "]\n"            \
     "movq %[" #TMP "], " PTR2(Z, Z_BASE, 7) "\n"
+
+#define ADD_12_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)  \
+    "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"            \
+    "addq " PTR2(Y, Y_BASE, 0) ", %[" #TMP "]\n"            \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 0) "\n"            \
+    "movq " PTR2(X, X_BASE, 1) ", %[" #TMP "]\n"            \
+    "adcq " PTR2(Y, Y_BASE, 1) ", %[" #TMP "]\n"            \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 1) "\n"            \
+    "movq " PTR2(X, X_BASE, 2) ", %[" #TMP "]\n"            \
+    "adcq " PTR2(Y, Y_BASE, 2) ", %[" #TMP "]\n"            \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 2) "\n"            \
+    "movq " PTR2(X, X_BASE, 3) ", %[" #TMP "]\n"            \
+    "adcq " PTR2(Y, Y_BASE, 3) ", %[" #TMP "]\n"            \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 3) "\n"            \
+    "movq " PTR2(X, X_BASE, 4) ", %[" #TMP "]\n"            \
+    "adcq " PTR2(Y, Y_BASE, 4) ", %[" #TMP "]\n"            \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 4) "\n"            \
+    "movq " PTR2(X, X_BASE, 5) ", %[" #TMP "]\n"            \
+    "adcq " PTR2(Y, Y_BASE, 5) ", %[" #TMP "]\n"            \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 5) "\n"            \
+    "movq " PTR2(X, X_BASE, 6) ", %[" #TMP "]\n"            \
+    "adcq " PTR2(Y, Y_BASE, 6) ", %[" #TMP "]\n"            \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 6) "\n"            \
+    "movq " PTR2(X, X_BASE, 7) ", %[" #TMP "]\n"            \
+    "adcq " PTR2(Y, Y_BASE, 7) ", %[" #TMP "]\n"            \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 7) "\n"            \
+    "movq " PTR2(X, X_BASE, 8) ", %[" #TMP "]\n"            \
+    "adcq " PTR2(Y, Y_BASE, 8) ", %[" #TMP "]\n"            \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 8) "\n"            \
+    "movq " PTR2(X, X_BASE, 9) ", %[" #TMP "]\n"            \
+    "adcq " PTR2(Y, Y_BASE, 9) ", %[" #TMP "]\n"            \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 9) "\n"            \
+    "movq " PTR2(X, X_BASE, 10) ", %[" #TMP "]\n"           \
+    "adcq " PTR2(Y, Y_BASE, 10) ", %[" #TMP "]\n"           \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 10) "\n"           \
+    "movq " PTR2(X, X_BASE, 11) ", %[" #TMP "]\n"           \
+    "adcq " PTR2(Y, Y_BASE, 11) ", %[" #TMP "]\n"           \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 11) "\n"
 
 #define ADD_LOW_4_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE)    \
     "movq " PTR2(X, X_BASE, 0) ", %[t0]\n"                      \
@@ -1002,6 +1094,47 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     }
 
     template<Fp12FastParams Params>
+        requires(Params::u_squared == -1 && Params::storage_limb_count == 12)
+    inline void fp2_mul_pre_x86(limb *z, const limb *x, const limb *y) {
+        GET_MODULUS_6_LIMBS(Params::base_field_type);
+        // For x = a + bu and y = c + du:
+        //   xy = (a + bu) * (c + du)
+        //      = ac + adu + bcu + bdu^2
+        //      = ac + (ad + bc)u - bd      # since u^2 = -1
+        //      = (ac - bd) + (ad + bc)u
+        limb low, high, zero, d0, d1, d2, d3, d4, d5;
+        limb scratch[12];
+        asm volatile(
+            SCHOOLBOOK_6x6(z, 0, x, 0, y, 0) // z[0] = ac
+            SCHOOLBOOK_6x6(scratch, 0, x, 6, y, 6) // scratch = bd
+            SUB_12_LIMBS_MOD(z, 0, z, 0, scratch, 0, d0, d1, d2, d3, d4, d5) // z[0] -= bd == ac - bd
+            SCHOOLBOOK_6x6(z, 12, x, 0, y, 6) // z[1] = ad
+            SCHOOLBOOK_6x6(scratch, 0, x, 6, y, 0) // scratch = bc
+            ADD_12_LIMBS(z, 12, z, 12, scratch, 0, low) // z[1] += bc == ad + bc
+            :   [low]"=&r"(low),
+                [high]"=&r"(high),
+                [zero]"=&r"(zero),
+                [d0]"=&r"(d0),
+                [d1]"=&r"(d1),
+                [d2]"=&r"(d2),
+                [d3]"=&r"(d3),
+                [d4]"=&r"(d4),
+                [d5]"=&r"(d5)
+            :   [x]"r"(x),
+                [y]"r"(y),
+                [z]"r"(z),
+                [scratch]"r"(scratch),
+                [p0]"m"(p0),
+                [p1]"m"(p1),
+                [p2]"m"(p2),
+                [p3]"m"(p3),
+                [p4]"m"(p4),
+                [p5]"m"(p5)
+            : "rdx", "cc", "memory"
+        );
+    }
+
+    template<Fp12FastParams Params>
         requires(Params::u_squared == -1 && Params::storage_limb_count == 8)
     inline void fp2_add_mul_pre_x86(limb *z, const limb  *a, const limb  *b, const limb  *c, const limb  *d) {
         GET_MODULUS_4_LIMBS(Params::base_field_type);
@@ -1069,6 +1202,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #undef ADD_LOW_4_LIMBS
 #undef ADD_LOW_4_LIMBS_MOD
 #undef ADD_8_LIMBS
+#undef ADD_12_LIMBS
 #undef ADD_8_LIMBS_MOD
 #undef ADD_12_LIMBS_MOD
 #undef SUB_8_LIMBS
