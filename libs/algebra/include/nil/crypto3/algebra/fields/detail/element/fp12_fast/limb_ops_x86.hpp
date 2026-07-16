@@ -168,6 +168,45 @@
     "movq %[t6], " PTR2(DST, DST_BASE, 6) "\n"         \
     "movq %[t7], " PTR2(DST, DST_BASE, 7) "\n"
 
+#define MUL_12_LIMBS_BY_5(DST) \
+    "movq " PTR(DST, 11) ", %%rdx\n"      \
+    "movq %%rdx, " PTR(DST, 23) "\n"      \
+    "movq " PTR(DST, 10) ", %%rdx\n"      \
+    "movq %%rdx, " PTR(DST, 22) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 11) "\n" \
+    "movq " PTR(DST, 9) ", %%rdx\n"       \
+    "movq %%rdx, " PTR(DST, 21) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 10) "\n" \
+    "movq " PTR(DST, 8) ", %%rdx\n"       \
+    "movq %%rdx, " PTR(DST, 20) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 9) "\n"  \
+    "movq " PTR(DST, 7) ", %%rdx\n"       \
+    "movq %%rdx, " PTR(DST, 19) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 8) "\n"  \
+    "movq " PTR(DST, 6) ", %%rdx\n"       \
+    "movq %%rdx, " PTR(DST, 18) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 7) "\n"  \
+    "movq " PTR(DST, 5) ", %%rdx\n"       \
+    "movq %%rdx, " PTR(DST, 17) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 6) "\n"  \
+    "movq " PTR(DST, 4) ", %%rdx\n"       \
+    "movq %%rdx, " PTR(DST, 16) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 5) "\n"  \
+    "movq " PTR(DST, 3) ", %%rdx\n"       \
+    "movq %%rdx, " PTR(DST, 15) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 4) "\n"  \
+    "movq " PTR(DST, 2) ", %%rdx\n"       \
+    "movq %%rdx, " PTR(DST, 14) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 3) "\n"  \
+    "movq " PTR(DST, 1) ", %%rdx\n"       \
+    "movq %%rdx, " PTR(DST, 13) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 2) "\n"  \
+    "movq " PTR(DST, 0) ", %%rdx\n"       \
+    "movq %%rdx, " PTR(DST, 12) "\n"      \
+    "shldq $2, %%rdx, " PTR(DST, 1) "\n"  \
+    "shlq $2, " PTR(DST, 0) "\n"          \
+    ADD_12_LIMBS(DST, 0, DST, 0, DST, 12, d0)
+
 #define GET_MODULUS_4_LIMBS(FIELD)                                  \
     constexpr auto mod_obj = FIELD::modulus_params.get_mod_obj();   \
     static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);  \
@@ -1127,6 +1166,48 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         asm volatile(
             SCHOOLBOOK_6x6(z, 0, x, 0, y, 0) // z[0] = ac
             SCHOOLBOOK_6x6(scratch, 0, x, 6, y, 6) // scratch = bd
+            SUB_12_LIMBS_MOD(z, 0, z, 0, scratch, 0, d0, d1, d2, d3, d4, d5) // z[0] -= bd == ac - bd
+            SCHOOLBOOK_6x6(z, 12, x, 0, y, 6) // z[1] = ad
+            SCHOOLBOOK_6x6(scratch, 0, x, 6, y, 0) // scratch = bc
+            ADD_12_LIMBS(z, 12, z, 12, scratch, 0, low) // z[1] += bc == ad + bc
+            :   [low]"=&r"(low),
+                [high]"=&r"(high),
+                [zero]"=&r"(zero),
+                [d0]"=&r"(d0),
+                [d1]"=&r"(d1),
+                [d2]"=&r"(d2),
+                [d3]"=&r"(d3),
+                [d4]"=&r"(d4),
+                [d5]"=&r"(d5)
+            :   [x]"r"(x),
+                [y]"r"(y),
+                [z]"r"(z),
+                [scratch]"r"(scratch),
+                [p0]"m"(p0),
+                [p1]"m"(p1),
+                [p2]"m"(p2),
+                [p3]"m"(p3),
+                [p4]"m"(p4),
+                [p5]"m"(p5)
+            : "rdx", "cc", "memory"
+        );
+    }
+
+    template<Fp12FastParams Params>
+        requires(Params::u_squared == -5 && Params::storage_limb_count == 12)
+    inline void fp2_mul_pre_x86(limb *z, const limb *x, const limb *y) {
+        GET_MODULUS_6_LIMBS(Params::base_field_type);
+        // For x = a + bu and y = c + du:
+        //   xy = (a + bu) * (c + du)
+        //      = ac + adu + bcu + bdu^2
+        //      = ac + (ad + bc)u - bd      # since u^2 = -1
+        //      = (ac - bd) + (ad + bc)u
+        limb low, high, zero, d0, d1, d2, d3, d4, d5;
+        limb scratch[24];
+        asm volatile(
+            SCHOOLBOOK_6x6(z, 0, x, 0, y, 0) // z[0] = ac
+            SCHOOLBOOK_6x6(scratch, 0, x, 6, y, 6) // scratch = bd
+            MUL_12_LIMBS_BY_5(scratch)
             SUB_12_LIMBS_MOD(z, 0, z, 0, scratch, 0, d0, d1, d2, d3, d4, d5) // z[0] -= bd == ac - bd
             SCHOOLBOOK_6x6(z, 12, x, 0, y, 6) // z[1] = ad
             SCHOOLBOOK_6x6(scratch, 0, x, 6, y, 0) // scratch = bc

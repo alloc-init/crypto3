@@ -336,6 +336,11 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         requires(Params::u_squared == -5)
     inline void fp2_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &x,
                             const typename Params::limb_array &y) {
+#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+        if constexpr (requires { fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data()); }) {
+            return fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data());
+        }
+#endif
         constexpr size_t N = Params::base_value_limb_count;
         constexpr size_t M = Params::storage_limb_count;
         // For x = a + bu and y = c + du:
