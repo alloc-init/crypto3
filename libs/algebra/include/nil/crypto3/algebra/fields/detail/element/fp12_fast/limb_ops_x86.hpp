@@ -256,7 +256,7 @@
     "adcx %[high], " T12(I, 6) "\n"                                         \
     BOOST_PP_IF(BOOST_PP_LESS(I, 5), REDC_12_LIMBS_LOAD_NEXT(I), "")
 
-#define ADD_LOW_4_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+#define ADD_4_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
     "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"        \
     "addq " PTR2(Y, Y_BASE, 0) ", %[" #TMP "]\n"        \
     "movq %[" #TMP "], " PTR2(Z, Z_BASE, 0) "\n"        \
@@ -269,6 +269,26 @@
     "movq " PTR2(X, X_BASE, 3) ", %[" #TMP "]\n"        \
     "adcq " PTR2(Y, Y_BASE, 3) ", %[" #TMP "]\n"        \
     "movq %[" #TMP "], " PTR2(Z, Z_BASE, 3) "\n"
+
+#define ADD_6_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP) \
+    "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"        \
+    "addq " PTR2(Y, Y_BASE, 0) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 0) "\n"        \
+    "movq " PTR2(X, X_BASE, 1) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 1) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 1) "\n"        \
+    "movq " PTR2(X, X_BASE, 2) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 2) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 2) "\n"        \
+    "movq " PTR2(X, X_BASE, 3) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 3) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 3) "\n"        \
+    "movq " PTR2(X, X_BASE, 4) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 4) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 4) "\n"        \
+    "movq " PTR2(X, X_BASE, 5) ", %[" #TMP "]\n"        \
+    "adcq " PTR2(Y, Y_BASE, 5) ", %[" #TMP "]\n"        \
+    "movq %[" #TMP "], " PTR2(Z, Z_BASE, 5) "\n"
 
 #define ADD_8_LIMBS(Z, Z_BASE, X, X_BASE, Y, Y_BASE, TMP)   \
     "movq " PTR2(X, X_BASE, 0) ", %[" #TMP "]\n"            \
@@ -334,74 +354,74 @@
     "adcq " PTR2(Y, Y_BASE, 11) ", %[" #TMP "]\n"           \
     "movq %[" #TMP "], " PTR2(Z, Z_BASE, 11) "\n"
 
-#define ADD_LOW_4_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE)    \
-    "movq " PTR2(X, X_BASE, 0) ", %[t0]\n"                      \
-    "movq " PTR2(X, X_BASE, 1) ", %[t1]\n"                      \
-    "movq " PTR2(X, X_BASE, 2) ", %[t2]\n"                      \
-    "movq " PTR2(X, X_BASE, 3) ", %[t3]\n"                      \
-    "movq " PTR2(Y, Y_BASE, 0) ", %[q0]\n"                      \
-    "addq %[q0], %[t0]\n"                                       \
-    "movq " PTR2(Y, Y_BASE, 1) ", %[q0]\n"                      \
-    "adcq %[q0], %[t1]\n"                                       \
-    "movq " PTR2(Y, Y_BASE, 2) ", %[q0]\n"                      \
-    "adcq %[q0], %[t2]\n"                                       \
-    "movq " PTR2(Y, Y_BASE, 3) ", %[q0]\n"                      \
-    "adcq %[q0], %[t3]\n"                                       \
-    "movq %[t0], %[q0]\n"                                       \
-    "movq %[t1], %[q1]\n"                                       \
-    "movq %[t2], %[q2]\n"                                       \
-    "movq %[t3], %[q3]\n"                                       \
-    "subq %[p0], %[q0]\n"                                       \
-    "sbbq %[p1], %[q1]\n"                                       \
-    "sbbq %[p2], %[q2]\n"                                       \
-    "sbbq %[p3], %[q3]\n"                                       \
-    "cmovnc %[q0], %[t0]\n"                                     \
-    "cmovnc %[q1], %[t1]\n"                                     \
-    "cmovnc %[q2], %[t2]\n"                                     \
-    "cmovnc %[q3], %[t3]\n"                                     \
-    "movq %[t0], " PTR2(Z, Z_BASE, 0) "\n"                      \
-    "movq %[t1], " PTR2(Z, Z_BASE, 1) "\n"                      \
-    "movq %[t2], " PTR2(Z, Z_BASE, 2) "\n"                      \
+#define ADD_4_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE)    \
+    "movq " PTR2(X, X_BASE, 0) ", %[t0]\n"                  \
+    "movq " PTR2(X, X_BASE, 1) ", %[t1]\n"                  \
+    "movq " PTR2(X, X_BASE, 2) ", %[t2]\n"                  \
+    "movq " PTR2(X, X_BASE, 3) ", %[t3]\n"                  \
+    "movq " PTR2(Y, Y_BASE, 0) ", %[q0]\n"                  \
+    "addq %[q0], %[t0]\n"                                   \
+    "movq " PTR2(Y, Y_BASE, 1) ", %[q0]\n"                  \
+    "adcq %[q0], %[t1]\n"                                   \
+    "movq " PTR2(Y, Y_BASE, 2) ", %[q0]\n"                  \
+    "adcq %[q0], %[t2]\n"                                   \
+    "movq " PTR2(Y, Y_BASE, 3) ", %[q0]\n"                  \
+    "adcq %[q0], %[t3]\n"                                   \
+    "movq %[t0], %[q0]\n"                                   \
+    "movq %[t1], %[q1]\n"                                   \
+    "movq %[t2], %[q2]\n"                                   \
+    "movq %[t3], %[q3]\n"                                   \
+    "subq %[p0], %[q0]\n"                                   \
+    "sbbq %[p1], %[q1]\n"                                   \
+    "sbbq %[p2], %[q2]\n"                                   \
+    "sbbq %[p3], %[q3]\n"                                   \
+    "cmovnc %[q0], %[t0]\n"                                 \
+    "cmovnc %[q1], %[t1]\n"                                 \
+    "cmovnc %[q2], %[t2]\n"                                 \
+    "cmovnc %[q3], %[t3]\n"                                 \
+    "movq %[t0], " PTR2(Z, Z_BASE, 0) "\n"                  \
+    "movq %[t1], " PTR2(Z, Z_BASE, 1) "\n"                  \
+    "movq %[t2], " PTR2(Z, Z_BASE, 2) "\n"                  \
     "movq %[t3], " PTR2(Z, Z_BASE, 3) "\n"
 
-#define ADD_LOW_6_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE)    \
-    "movq " PTR2(X, X_BASE, 0) ", %%rdx\n"                      \
-    "addq " PTR2(Y, Y_BASE, 0) ", %%rdx\n"                      \
-    "movq %%rdx, " PTR2(Z, Z_BASE, 0) "\n"                      \
-    "movq " PTR2(X, X_BASE, 1) ", %%rdx\n"                      \
-    "adcq " PTR2(Y, Y_BASE, 1) ", %%rdx\n"                      \
-    "movq %%rdx, " PTR2(Z, Z_BASE, 1) "\n"                      \
-    "movq " PTR2(X, X_BASE, 2) ", %%rdx\n"                      \
-    "adcq " PTR2(Y, Y_BASE, 2) ", %%rdx\n"                      \
-    "movq %%rdx, " PTR2(Z, Z_BASE, 2) "\n"                      \
-    "movq " PTR2(X, X_BASE, 3) ", %%rdx\n"                      \
-    "adcq " PTR2(Y, Y_BASE, 3) ", %%rdx\n"                      \
-    "movq %%rdx, " PTR2(Z, Z_BASE, 3) "\n"                      \
-    "movq " PTR2(X, X_BASE, 4) ", %%rdx\n"                      \
-    "adcq " PTR2(Y, Y_BASE, 4) ", %%rdx\n"                      \
-    "movq %%rdx, " PTR2(Z, Z_BASE, 4) "\n"                      \
-    "movq " PTR2(X, X_BASE, 5) ", %%rdx\n"                      \
-    "adcq " PTR2(Y, Y_BASE, 5) ", %%rdx\n"                      \
-    "movq %%rdx, " PTR2(Z, Z_BASE, 5) "\n"                      \
-    "movq " PTR2(Z, Z_BASE, 0) ", %[t0]\n"                      \
-    "movq " PTR2(Z, Z_BASE, 1) ", %[t1]\n"                      \
-    "movq " PTR2(Z, Z_BASE, 2) ", %[t2]\n"                      \
-    "movq " PTR2(Z, Z_BASE, 3) ", %[t3]\n"                      \
-    "movq " PTR2(Z, Z_BASE, 4) ", %[t4]\n"                      \
-    "movq " PTR2(Z, Z_BASE, 5) ", %[t5]\n"                      \
-    "subq %[p0], %[t0]\n"                                       \
-    "sbbq %[p1], %[t1]\n"                                       \
-    "sbbq %[p2], %[t2]\n"                                       \
-    "sbbq %[p3], %[t3]\n"                                       \
-    "sbbq %[p4], %[t4]\n"                                       \
-    "sbbq %[p5], %[t5]\n"                                       \
-    "jc done" #Z_BASE "%=\n"                                    \
-    "movq %[t0], " PTR2(Z, Z_BASE, 0) "\n"                      \
-    "movq %[t1], " PTR2(Z, Z_BASE, 1) "\n"                      \
-    "movq %[t2], " PTR2(Z, Z_BASE, 2) "\n"                      \
-    "movq %[t3], " PTR2(Z, Z_BASE, 3) "\n"                      \
-    "movq %[t4], " PTR2(Z, Z_BASE, 4) "\n"                      \
-    "movq %[t5], " PTR2(Z, Z_BASE, 5) "\n"                      \
+#define ADD_6_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE) \
+    "movq " PTR2(X, X_BASE, 0) ", %%rdx\n"               \
+    "addq " PTR2(Y, Y_BASE, 0) ", %%rdx\n"               \
+    "movq %%rdx, " PTR2(Z, Z_BASE, 0) "\n"               \
+    "movq " PTR2(X, X_BASE, 1) ", %%rdx\n"               \
+    "adcq " PTR2(Y, Y_BASE, 1) ", %%rdx\n"               \
+    "movq %%rdx, " PTR2(Z, Z_BASE, 1) "\n"               \
+    "movq " PTR2(X, X_BASE, 2) ", %%rdx\n"               \
+    "adcq " PTR2(Y, Y_BASE, 2) ", %%rdx\n"               \
+    "movq %%rdx, " PTR2(Z, Z_BASE, 2) "\n"               \
+    "movq " PTR2(X, X_BASE, 3) ", %%rdx\n"               \
+    "adcq " PTR2(Y, Y_BASE, 3) ", %%rdx\n"               \
+    "movq %%rdx, " PTR2(Z, Z_BASE, 3) "\n"               \
+    "movq " PTR2(X, X_BASE, 4) ", %%rdx\n"               \
+    "adcq " PTR2(Y, Y_BASE, 4) ", %%rdx\n"               \
+    "movq %%rdx, " PTR2(Z, Z_BASE, 4) "\n"               \
+    "movq " PTR2(X, X_BASE, 5) ", %%rdx\n"               \
+    "adcq " PTR2(Y, Y_BASE, 5) ", %%rdx\n"               \
+    "movq %%rdx, " PTR2(Z, Z_BASE, 5) "\n"               \
+    "movq " PTR2(Z, Z_BASE, 0) ", %[t0]\n"               \
+    "movq " PTR2(Z, Z_BASE, 1) ", %[t1]\n"               \
+    "movq " PTR2(Z, Z_BASE, 2) ", %[t2]\n"               \
+    "movq " PTR2(Z, Z_BASE, 3) ", %[t3]\n"               \
+    "movq " PTR2(Z, Z_BASE, 4) ", %[t4]\n"               \
+    "movq " PTR2(Z, Z_BASE, 5) ", %[t5]\n"               \
+    "subq %[p0], %[t0]\n"                                \
+    "sbbq %[p1], %[t1]\n"                                \
+    "sbbq %[p2], %[t2]\n"                                \
+    "sbbq %[p3], %[t3]\n"                                \
+    "sbbq %[p4], %[t4]\n"                                \
+    "sbbq %[p5], %[t5]\n"                                \
+    "jc done" #Z_BASE "%=\n"                             \
+    "movq %[t0], " PTR2(Z, Z_BASE, 0) "\n"               \
+    "movq %[t1], " PTR2(Z, Z_BASE, 1) "\n"               \
+    "movq %[t2], " PTR2(Z, Z_BASE, 2) "\n"               \
+    "movq %[t3], " PTR2(Z, Z_BASE, 3) "\n"               \
+    "movq %[t4], " PTR2(Z, Z_BASE, 4) "\n"               \
+    "movq %[t5], " PTR2(Z, Z_BASE, 5) "\n"               \
     "done" #Z_BASE "%=:\n"
 
 #define ADD_8_LIMBS_MOD(Z, Z_BASE, X, X_BASE, Y, Y_BASE, T0, T1, T2, T3, Q0, Q1, Q2, Q3) \
@@ -958,8 +978,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         limb t0, t1, t2, t3;
         limb q0, q1, q2, q3;
         asm volatile(
-            ADD_LOW_4_LIMBS_MOD(z, 0, x, 0, y, 0)
-            ADD_LOW_4_LIMBS_MOD(z, 4, x, 4, y, 4)
+            ADD_4_LIMBS_MOD(z, 0, x, 0, y, 0)
+            ADD_4_LIMBS_MOD(z, 4, x, 4, y, 4)
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
@@ -986,8 +1006,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         GET_MODULUS_6_LIMBS(Params::base_field_type);
         limb t0, t1, t2, t3, t4, t5;
         asm volatile(
-            ADD_LOW_6_LIMBS_MOD(z, 0, x, 0, y, 0)
-            ADD_LOW_6_LIMBS_MOD(z, 6, x, 6, y, 6)
+            ADD_6_LIMBS_MOD(z, 0, x, 0, y, 0)
+            ADD_6_LIMBS_MOD(z, 6, x, 6, y, 6)
             : [t0]"=&r"(t0),
               [t1]"=&r"(t1),
               [t2]"=&r"(t2),
@@ -1145,10 +1165,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             limb tmp[8];
         } data;
         asm volatile(
-            ADD_LOW_4_LIMBS(data, 0, a, 0, b, 0, low)
-            ADD_LOW_4_LIMBS(data, 4, a, 4, b, 4, low)
-            ADD_LOW_4_LIMBS(data, 8, c, 0, d, 0, low)
-            ADD_LOW_4_LIMBS(data, 12, c, 4, d, 4, low)
+            ADD_4_LIMBS(data, 0, a, 0, b, 0, low)
+            ADD_4_LIMBS(data, 4, a, 4, b, 4, low)
+            ADD_4_LIMBS(data, 8, c, 0, d, 0, low)
+            ADD_4_LIMBS(data, 12, c, 4, d, 4, low)
             :   [low]"=&r"(low)
             :   [data]"r"(&data),
                 [a]"r"(a),
@@ -1180,6 +1200,57 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             : "rdx", "cc", "memory"
         );
     }
+
+    template<Fp12FastParams Params>
+        requires(Params::u_squared == -1 && Params::storage_limb_count == 12)
+    inline void fp2_add_mul_pre_x86(limb *z, const limb  *a, const limb  *b, const limb  *c, const limb  *d) {
+        GET_MODULUS_6_LIMBS(Params::base_field_type);
+        limb low, high, zero, d0, d1, d2, d3, d4, d5;
+        struct {
+            limb x[12];
+            limb y[12];
+            limb tmp[12];
+        } data;
+        asm volatile(
+            ADD_6_LIMBS(data, 0, a, 0, b, 0, low)
+            ADD_6_LIMBS(data, 6, a, 6, b, 6, low)
+            ADD_6_LIMBS(data, 12, c, 0, d, 0, low)
+            ADD_6_LIMBS(data, 18, c, 6, d, 6, low)
+            :   [low]"=&r"(low)
+            :   [data]"r"(&data),
+                [a]"r"(a),
+                [b]"r"(b),
+                [c]"r"(c),
+                [d]"r"(d)
+            : "cc", "memory"
+        );
+        asm volatile(
+            SCHOOLBOOK_6x6(z, 0, data, 0, data, 12) // z[0] = x[0] * y[0]
+            SCHOOLBOOK_6x6(data, 24, data, 6, data, 18) // tmp = x[1] * y[1]
+            SUB_12_LIMBS_MOD(z, 0, z, 0, data, 24, d0, d1, d2, d3, d4, d5)
+            SCHOOLBOOK_6x6(z, 12, data, 0, data, 18) // ad
+            SCHOOLBOOK_6x6(data, 24, data, 6, data, 12) // bc
+            ADD_12_LIMBS(z, 12, z, 12, data, 24, low)
+            :   [low]"=&r"(low),
+                [high]"=&r"(high),
+                [zero]"=&r"(zero),
+                [d0]"=&r"(d0),
+                [d1]"=&r"(d1),
+                [d2]"=&r"(d2),
+                [d3]"=&r"(d3),
+                [d4]"=&r"(d4),
+                [d5]"=&r"(d5)
+            :   [data]"r"(&data),
+                [z]"r"(z),
+                [p0]"m"(p0),
+                [p1]"m"(p1),
+                [p2]"m"(p2),
+                [p3]"m"(p3),
+                [p4]"m"(p4),
+                [p5]"m"(p5)
+            : "rdx", "cc", "memory"
+        );
+    }
 }
 
 #undef STR_IMPL
@@ -1187,8 +1258,11 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #undef PTR
 #undef PTR2
 #undef D4
+#undef D6
 #undef SCHOOLBOOK_4x4_ROUND
 #undef SCHOOLBOOK_4x4
+#undef SCHOOLBOOK_6x6_ROUND
+#undef SCHOOLBOOK_6x6
 #undef DOUBLE_MOD_P
 #undef MUL_8_LIMBS_BY_9
 #undef GET_MODULUS_4_LIMBS
@@ -1199,14 +1273,17 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #undef REDC_8_LIMBS_CANCEL_LOW
 #undef REDC_12_LIMBS_LOAD_NEXT
 #undef REDC_12_LIMBS_CANCEL_LOW
-#undef ADD_LOW_4_LIMBS
-#undef ADD_LOW_4_LIMBS_MOD
+#undef ADD_4_LIMBS
+#undef ADD_4_LIMBS_MOD
+#undef ADD_6_LIMBS
+#undef ADD_6_LIMBS_MOD
 #undef ADD_8_LIMBS
-#undef ADD_12_LIMBS
 #undef ADD_8_LIMBS_MOD
+#undef ADD_12_LIMBS
 #undef ADD_12_LIMBS_MOD
 #undef SUB_8_LIMBS
 #undef SUB_8_LIMBS_MOD
+#undef SUB_12_LIMBS
 #undef SUB_12_LIMBS_MOD
 
 // clang-format on
