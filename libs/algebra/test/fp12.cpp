@@ -42,8 +42,7 @@ namespace {
     using bls12_377_fp12 = fields::fp12_2over3over2<fields::bls12<377>>;
     using bls12_381_fp12 = fields::fp12_2over3over2<fields::bls12<381>>;
 
-    using fp12_field_types =
-        boost::mpl::list<alt_bn128_254_fp12, bls12_377_fp12, bls12_381_fp12>;
+    using fp12_field_types = boost::mpl::list<alt_bn128_254_fp12, bls12_377_fp12, bls12_381_fp12>;
 
     template<typename FieldType>
     struct fp12_field_name;
@@ -83,8 +82,7 @@ namespace {
     };
 
     template<typename Fp12Field>
-    using generic_fp12_value_type =
-        fields::detail::element_fp12_2over3over2<generic_fp12_policy<Fp12Field>>;
+    using generic_fp12_value_type = fields::detail::element_fp12_2over3over2<generic_fp12_policy<Fp12Field>>;
 
     template<typename Fp12Field>
     generic_fp12_value_type<Fp12Field> to_generic_fp12(const typename Fp12Field::value_type &x) {

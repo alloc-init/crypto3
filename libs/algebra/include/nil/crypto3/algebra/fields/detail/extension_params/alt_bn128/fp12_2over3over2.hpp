@@ -112,7 +112,7 @@ namespace nil::crypto3::algebra::fields::detail {
             using limb_array = std::array<fp12_fast::limb, storage_limb_count>;
 
             static constexpr std::array<int, 2> xi = {9, 1};    // xi = 9 + u
-            static constexpr int u_squared = -1;    // u^2 = -1
+            static constexpr int u_squared = -1;                // u^2 = -1
         };
 
         // Make fast multiply path available to generic Fp12 element mul
