@@ -114,16 +114,16 @@
     "movq %[t6], " PTR2(DST, DST_BASE, 6) "\n"         \
     "movq %[t7], " PTR2(DST, DST_BASE, 7) "\n"
 
-#define GET_MODULUS_4_LIMBS()                                       \
-    constexpr auto mod_obj = Field::modulus_params.get_mod_obj();   \
+#define GET_MODULUS_4_LIMBS(FIELD)                                  \
+    constexpr auto mod_obj = FIELD::modulus_params.get_mod_obj();   \
     static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);  \
     static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);  \
     static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);  \
     static constexpr limb p3 = limb(mod_obj.get_mod().limbs()[3]);  \
     static constexpr limb p_dash = limb(mod_obj.get_p_dash());
 
-#define GET_MODULUS_6_LIMBS()                                       \
-    constexpr auto mod_obj = Field::modulus_params.get_mod_obj();   \
+#define GET_MODULUS_6_LIMBS(FIELD)                                  \
+    constexpr auto mod_obj = FIELD::modulus_params.get_mod_obj();   \
     static constexpr limb p0 = limb(mod_obj.get_mod().limbs()[0]);  \
     static constexpr limb p1 = limb(mod_obj.get_mod().limbs()[1]);  \
     static constexpr limb p2 = limb(mod_obj.get_mod().limbs()[2]);  \
@@ -575,9 +575,10 @@
     "adcq %[" #T5 "], " PTR2(Z, Z_BASE, 11) "\n"
 
 namespace nil::crypto3::algebra::fields::detail::fp12_fast {
-    template<class Field>
-    inline void montgomery_reduce_8_limbs_x86(limb *result, const limb *data) {
-        GET_MODULUS_4_LIMBS();
+    template<Fp12FastParams Params>
+        requires(Params::storage_limb_count == 8)
+    inline void montgomery_reduce_x86(limb *result, const limb *data) {
+        GET_MODULUS_4_LIMBS(Params::base_field_type);
         limb t0, t1, t2, t3, t4;
         limb low, high, pending, zero;
         asm volatile(
@@ -639,9 +640,11 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template<class Field>
-    inline void montgomery_reduce_12_limbs_x86(limb *result, const limb *data) {
-        GET_MODULUS_6_LIMBS(); // sets p, p_dash
+
+    template<Fp12FastParams Params>
+        requires(Params::storage_limb_count == 12)
+    inline void montgomery_reduce_x86(limb *result, const limb *data) {
+        GET_MODULUS_6_LIMBS(Params::base_field_type); // sets p, p_dash
         limb t0, t1, t2, t3, t4, t5, t6;
         limb low, high, pending, zero;
         asm volatile(
@@ -719,9 +722,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template<class Field>
-    inline void add_8_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
-        GET_MODULUS_4_LIMBS();
+    template<Fp12FastParams Params>
+        requires(Params::storage_limb_count == 8)
+    inline void add_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
+        GET_MODULUS_4_LIMBS(Params::base_field_type);
         limb t0, t1, t2, t3, q0, q1, q2, q3;
         asm volatile(
             ADD_8_LIMBS_MOD(z, 0, x, 0, y, 0, t0, t1, t2, t3, q0, q1, q2, q3)
@@ -744,9 +748,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template<class Field>
-    inline void add_12_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
-        GET_MODULUS_6_LIMBS();
+    template<Fp12FastParams Params>
+        requires(Params::storage_limb_count == 12)
+    inline void add_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
+        GET_MODULUS_6_LIMBS(Params::base_field_type);
         limb t0, t1, t2, t3, t4, t5, q0, q1, q2, q3, q4, q5;
         asm volatile(
             ADD_12_LIMBS_MOD(z, 0, x, 0, y, 0,
@@ -777,9 +782,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template<class Field>
-    inline void subtract_8_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
-        GET_MODULUS_4_LIMBS();
+    template<Fp12FastParams Params>
+        requires(Params::storage_limb_count == 8)
+    inline void subtract_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
+        GET_MODULUS_4_LIMBS(Params::base_field_type);
         limb t0, t1, t2, t3;
         asm volatile(
             SUB_8_LIMBS_MOD(z, 0, x, 0, y, 0, t0, t1, t2, t3)
@@ -798,9 +804,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template<class Field>
-    inline void subtract_12_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
-        GET_MODULUS_6_LIMBS();
+    template<Fp12FastParams Params>
+        requires(Params::storage_limb_count == 12)
+    inline void subtract_limbs_mod_x86(limb *z, const limb *x, const limb *y) {
+        GET_MODULUS_6_LIMBS(Params::base_field_type);
         limb t0, t1, t2, t3, t4, t5;
         asm volatile(
             SUB_12_LIMBS_MOD(z, 0, x, 0, y, 0, t0, t1, t2, t3, t4, t5)
@@ -825,7 +832,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<class Field>
     inline void mul_8_limbs_by_9_x86(limb *dst, const limb *src) {
-        GET_MODULUS_4_LIMBS();
+        GET_MODULUS_4_LIMBS(Field);
         limb t0, t1, t2, t3, t4, t5, t6, t7;
         limb q0, q1, q2, q3;
         asm volatile(
@@ -852,9 +859,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template <class Field>
-    inline void fp2_base_4_limbs_add_mod_x86(limb *z, const limb *x, const limb *y) {
-        GET_MODULUS_4_LIMBS();
+    template<Fp12FastParams Params>
+        requires(Params::base_value_limb_count == 4)
+    inline void fp2_base_add_mod_x86(limb *z, const limb *x, const limb *y) {
+        GET_MODULUS_4_LIMBS(Params::base_field_type);
         limb t0, t1, t2, t3;
         limb q0, q1, q2, q3;
         asm volatile(
@@ -879,9 +887,11 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template <class Field>
-    inline void fp2_base_6_limbs_add_mod_x86(limb *z, const limb *x, const limb *y) {
-        GET_MODULUS_6_LIMBS();
+
+    template<Fp12FastParams Params>
+        requires(Params::base_value_limb_count == 6)
+    inline void fp2_base_add_mod_x86(limb *z, const limb *x, const limb *y) {
+        GET_MODULUS_6_LIMBS(Params::base_field_type);
         limb t0, t1, t2, t3, t4, t5;
         asm volatile(
             ADD_LOW_6_LIMBS_MOD(z, 0, x, 0, y, 0)
@@ -905,9 +915,11 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template<class Field>
-    inline void fp2_8_limbs_sub_pre_x86(limb *data, const limb *other) {
-        GET_MODULUS_4_LIMBS();
+
+    template<Fp12FastParams Params>
+        requires(Params::storage_limb_count == 8)
+    inline void fp2_sub_pre_x86(limb *data, const limb *other) {
+        GET_MODULUS_4_LIMBS(Params::base_field_type);
         limb t0, t1, t2, t3;
         asm volatile(
             SUB_8_LIMBS_MOD(data, 0, data, 0, other, 0, t0, t1, t2, t3)
@@ -926,9 +938,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template<class Field>
-    inline void fp2_12_limbs_sub_pre_x86(limb *data, const limb *other) {
-        GET_MODULUS_6_LIMBS();
+    template<Fp12FastParams Params>
+        requires(Params::storage_limb_count == 12)
+    inline void fp2_sub_pre_x86(limb *data, const limb *other) {
+        GET_MODULUS_6_LIMBS(Params::base_field_type);
         limb t0, t1, t2, t3, t4, t5;
         asm volatile(
             SUB_12_LIMBS_MOD(data, 0, data, 0, other, 0, t0, t1, t2, t3, t4, t5)
@@ -951,9 +964,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template<class Field>
+    template<Fp12FastParams Params>
+        requires(Params::u_squared == -1 && Params::storage_limb_count == 8)
     inline void fp2_mul_pre_x86(limb *z, const limb *x, const limb *y) {
-        GET_MODULUS_4_LIMBS();
+        GET_MODULUS_4_LIMBS(Params::base_field_type);
         // For x = a + bu and y = c + du:
         //   xy = (a + bu) * (c + du)
         //      = ac + adu + bcu + bdu^2
@@ -987,9 +1001,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         );
     }
 
-    template<class Field>
+    template<Fp12FastParams Params>
+        requires(Params::u_squared == -1 && Params::storage_limb_count == 8)
     inline void fp2_add_mul_pre_x86(limb *z, const limb  *a, const limb  *b, const limb  *c, const limb  *d) {
-        GET_MODULUS_4_LIMBS();
+        GET_MODULUS_4_LIMBS(Params::base_field_type);
         limb low, high, zero, d0, d1, d2, d3;
         struct {
             limb x[8];

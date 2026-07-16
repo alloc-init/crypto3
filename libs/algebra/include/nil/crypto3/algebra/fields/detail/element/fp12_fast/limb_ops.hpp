@@ -86,10 +86,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     inline void montgomery_reduce(limb *result, const typename Params::limb_array &data) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (Params::storage_limb_count == 8) {
-            return montgomery_reduce_8_limbs_x86<typename Params::base_field_type>(result, data.data());
-        } else if constexpr (Params::storage_limb_count == 12) {
-            return montgomery_reduce_12_limbs_x86<typename Params::base_field_type>(result, data.data());
+        if constexpr (requires { montgomery_reduce_8_limbs_x86<Params>(result, data.data()); }) {
+            return montgomery_reduce_8_limbs_x86<Params>(result, data.data());
         }
 #endif
         constexpr size_t N = Params::storage_limb_count;
@@ -139,10 +137,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void add_limbs_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
                               const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (Params::storage_limb_count == 8) {
-            return add_8_limbs_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
-        } else if constexpr (Params::storage_limb_count == 12) {
-            return add_12_limbs_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
+        if constexpr (requires { add_limbs_mod_x86<Params>(z.data(), x.data(), y.data()); }) {
+            return add_limbs_mod_x86<Params>(z.data(), x.data(), y.data());
         }
 #endif
         constexpr size_t N = Params::base_value_limb_count;
@@ -157,10 +153,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void subtract_limbs_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
                                    const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (Params::storage_limb_count == 8) {
-            return subtract_8_limbs_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
-        } else if constexpr (Params::storage_limb_count == 12) {
-            return subtract_12_limbs_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
+        if constexpr (requires { subtract_limbs_mod_x86<Params>(z.data(), x.data(), y.data()); }) {
+            return subtract_limbs_mod_x86<Params>(z.data(), x.data(), y.data());
         }
 #endif
         constexpr size_t N = Params::base_value_limb_count;
@@ -231,10 +225,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void fp2_base_add_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
                                  const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (Params::base_value_limb_count == 4) {
-            return fp2_base_4_limbs_add_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
-        } else if constexpr (Params::base_value_limb_count == 6) {
-            return fp2_base_6_limbs_add_mod_x86<typename Params::base_field_type>(z.data(), x.data(), y.data());
+        if constexpr (requires { fp2_base_add_mod_x86<Params>(z.data(), x.data(), y.data()); }) {
+            return fp2_base_add_mod_x86<Params>(z.data(), x.data(), y.data());
         }
 #endif
         constexpr size_t N = Params::base_value_limb_count;
@@ -246,10 +238,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void fp2_sub_pre(std::array<typename Params::limb_array, 2> &data,
                             const std::array<typename Params::limb_array, 2> &other) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (Params::storage_limb_count == 8) {
-            return fp2_8_limbs_sub_pre_x86<typename Params::base_field_type>((limb *)&data, (limb *)&other);
-        } else if constexpr (Params::storage_limb_count == 12) {
-            return fp2_12_limbs_sub_pre_x86<typename Params::base_field_type>((limb *)&data, (limb *)&other);
+        if constexpr (requires { fp2_8_limbs_sub_pre_x86<Params>((limb *)&data, (limb *)&other); }) {
+            return fp2_8_limbs_sub_pre_x86<Params>((limb *)&data, (limb *)&other);
         }
 #endif
         constexpr size_t N = Params::storage_limb_count;
@@ -317,8 +307,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void fp2_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &x,
                             const typename Params::limb_array &y) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (Params::storage_limb_count == 8) {
-            return fp2_mul_pre_x86<typename Params::base_field_type>((limb *)&z, x.data(), y.data());
+        if constexpr (requires { fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data()); }) {
+            return fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data());
         }
 #endif
         constexpr size_t N = Params::base_value_limb_count;
@@ -377,9 +367,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                                 const typename Params::limb_array &b, const typename Params::limb_array &c,
                                 const typename Params::limb_array &d) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (Params::storage_limb_count == 8) {
-            return fp2_add_mul_pre_x86<typename Params::base_field_type>((limb *)&z, a.data(), b.data(), c.data(),
-                                                                         d.data());
+        if constexpr (requires { fp2_add_mul_pre_x86<Params>((limb *)&z, a.data(), b.data(), c.data(), d.data()); }) {
+            return fp2_add_mul_pre_x86<Params>((limb *)&z, a.data(), b.data(), c.data(), d.data());
         }
 #endif
         constexpr size_t N = Params::base_value_limb_count;
