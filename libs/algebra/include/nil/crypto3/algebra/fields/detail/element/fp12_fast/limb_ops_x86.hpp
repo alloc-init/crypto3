@@ -168,35 +168,35 @@
     "movq %[t6], " PTR2(DST, DST_BASE, 6) "\n"         \
     "movq %[t7], " PTR2(DST, DST_BASE, 7) "\n"
 
-#define MUL_12_LIMBS_BY_5_LOOP(DST, SRC, I) \
-    "movq " PTR(SRC, I) ", %[d0]\n"         \
-    "movq $2, %%rcx\n"                      \
-    "shlxq %%rcx, %[d0], %[d2]\n"           \
-    "leaq (%[d1], %[d2]), %[d2]\n"          \
-    "movq $62, %%rcx\n"                     \
-    "shrxq %%rcx, %[d0], %[d1]\n"           \
-    "adcx %[d2], %[d0]\n"                   \
-    "movq %[d0], " PTR(DST, I) "\n"
+#define MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, I) \
+    "movq " PTR2(SRC, SRC_BASE, I) ", %[d0]\n"                  \
+    "movq $2, %%rcx\n"                                          \
+    "shlxq %%rcx, %[d0], %[d2]\n"                               \
+    "leaq (%[d1], %[d2]), %[d2]\n"                              \
+    "movq $62, %%rcx\n"                                         \
+    "shrxq %%rcx, %[d0], %[d1]\n"                               \
+    "adcx %[d2], %[d0]\n"                                       \
+    "movq %[d0], " PTR2(DST, DST_BASE, I) "\n"
 
-#define MUL_12_LIMBS_BY_5(DST, SRC)      \
-    "movq " PTR(SRC, 0) ", %[d0]\n"      \
-    "movq $2, %%rcx\n"                   \
-    "shlxq %%rcx, %[d0], %[d2]\n"        \
-    "movq $62, %%rcx\n"                  \
-    "shrxq %%rcx, %[d0], %[d1]\n"        \
-    "addq %[d2], %[d0]\n"                \
-    "movq %[d0], " PTR(DST, 0) "\n"      \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 1)  \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 2)  \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 3)  \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 4)  \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 5)  \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 6)  \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 7)  \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 8)  \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 9)  \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 10) \
-    MUL_12_LIMBS_BY_5_LOOP(DST, SRC, 11)
+#define MUL_12_LIMBS_BY_5(DST, DST_BASE, SRC, SRC_BASE)      \
+    "movq " PTR2(SRC, SRC_BASE, 0) ", %[d0]\n"               \
+    "movq $2, %%rcx\n"                                       \
+    "shlxq %%rcx, %[d0], %[d2]\n"                            \
+    "movq $62, %%rcx\n"                                      \
+    "shrxq %%rcx, %[d0], %[d1]\n"                            \
+    "addq %[d2], %[d0]\n"                                    \
+    "movq %[d0], " PTR2(DST, DST_BASE, 0) "\n"               \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 1)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 2)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 3)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 4)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 5)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 6)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 7)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 8)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 9)  \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 10) \
+    MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 11)
 
 #define GET_MODULUS_4_LIMBS(FIELD)                                  \
     constexpr auto mod_obj = FIELD::modulus_params.get_mod_obj();   \
@@ -925,7 +925,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void mul_12_limbs_by_5_unreduced_x86(limb *dst, const limb *src) {
         limb d0, d1, d2;
         asm volatile(
-            MUL_12_LIMBS_BY_5(dst, src)
+            MUL_12_LIMBS_BY_5(dst, 0, src, 0)
             : [d0]"=&r"(d0),
               [d1]"=&r"(d1),
               [d2]"=&r"(d2)
@@ -1151,17 +1151,12 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         requires(Params::u_squared == -5 && Params::storage_limb_count == 12)
     inline void fp2_mul_pre_x86(limb *z, const limb *x, const limb *y) {
         GET_MODULUS_6_LIMBS(Params::base_field_type);
-        // For x = a + bu and y = c + du:
-        //   xy = (a + bu) * (c + du)
-        //      = ac + adu + bcu + bdu^2
-        //      = ac + (ad + bc)u - bd      # since u^2 = -1
-        //      = (ac - bd) + (ad + bc)u
         limb low, high, zero, d0, d1, d2, d3, d4, d5;
         limb scratch[12];
         asm volatile(
             SCHOOLBOOK_6x6(z, 0, x, 0, y, 0) // z[0] = ac
             SCHOOLBOOK_6x6(scratch, 0, x, 6, y, 6) // scratch = bd
-            MUL_12_LIMBS_BY_5(scratch, scratch)
+            MUL_12_LIMBS_BY_5(scratch, 0, scratch, 0)
             SUB_12_LIMBS_MOD(z, 0, z, 0, scratch, 0, d0, d1, d2, d3, d4, d5) // z[0] -= bd == ac - bd
             SCHOOLBOOK_6x6(z, 12, x, 0, y, 6) // z[1] = ad
             SCHOOLBOOK_6x6(scratch, 0, x, 6, y, 0) // scratch = bc
@@ -1286,6 +1281,58 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             : "rdx", "cc", "memory"
         );
     }
+
+    template<Fp12FastParams Params>
+        requires(Params::u_squared == -5 && Params::storage_limb_count == 12)
+    inline void fp2_add_mul_pre_x86(limb *z, const limb  *a, const limb  *b, const limb  *c, const limb  *d) {
+        GET_MODULUS_6_LIMBS(Params::base_field_type);
+        limb low, high, zero, d0, d1, d2, d3, d4, d5;
+        struct {
+            limb x[12];
+            limb y[12];
+            limb tmp[12];
+        } data;
+        asm volatile(
+            ADD_6_LIMBS(data, 0, a, 0, b, 0, low)
+            ADD_6_LIMBS(data, 6, a, 6, b, 6, low)
+            ADD_6_LIMBS(data, 12, c, 0, d, 0, low)
+            ADD_6_LIMBS(data, 18, c, 6, d, 6, low)
+            :   [low]"=&r"(low)
+            :   [data]"r"(&data),
+                [a]"r"(a),
+                [b]"r"(b),
+                [c]"r"(c),
+                [d]"r"(d)
+            : "cc", "memory"
+        );
+        asm volatile(
+            SCHOOLBOOK_6x6(z, 0, data, 0, data, 12) // z[0] = x[0] * y[0]
+            SCHOOLBOOK_6x6(data, 24, data, 6, data, 18) // tmp = x[1] * y[1]
+            MUL_12_LIMBS_BY_5(data, 24, data, 24)
+            SUB_12_LIMBS_MOD(z, 0, z, 0, data, 24, d0, d1, d2, d3, d4, d5)
+            SCHOOLBOOK_6x6(z, 12, data, 0, data, 18) // ad
+            SCHOOLBOOK_6x6(data, 24, data, 6, data, 12) // bc
+            ADD_12_LIMBS(z, 12, z, 12, data, 24, low)
+            :   [low]"=&r"(low),
+                [high]"=&r"(high),
+                [zero]"=&r"(zero),
+                [d0]"=&r"(d0),
+                [d1]"=&r"(d1),
+                [d2]"=&r"(d2),
+                [d3]"=&r"(d3),
+                [d4]"=&r"(d4),
+                [d5]"=&r"(d5)
+            :   [data]"r"(&data),
+                [z]"r"(z),
+                [p0]"m"(p0),
+                [p1]"m"(p1),
+                [p2]"m"(p2),
+                [p3]"m"(p3),
+                [p4]"m"(p4),
+                [p5]"m"(p5)
+            : "rdx", "cc", "memory"
+        );
+    }
 }
 
 #undef STR_IMPL
@@ -1300,6 +1347,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #undef SCHOOLBOOK_6x6
 #undef DOUBLE_MOD_P
 #undef MUL_8_LIMBS_BY_9
+#undef MUL_12_LIMBS_BY_5_LOOP
+#undef MUL_12_LIMBS_BY_5
 #undef GET_MODULUS_4_LIMBS
 #undef GET_MODULUS_6_LIMBS
 #undef T8
