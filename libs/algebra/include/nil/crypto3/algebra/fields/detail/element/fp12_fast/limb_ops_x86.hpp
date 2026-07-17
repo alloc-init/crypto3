@@ -699,7 +699,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void montgomery_reduce_x86(limb *result, const limb *data) {
         GET_MODULUS_6_LIMBS(Params::base_field_type); // sets p, p_dash
         limb t0, t1, t2, t3, t4, t5, t6;
-        limb low, high, pending, zero;
+        limb low, high, pending, zero, tmp;
         asm volatile(
             "movq " PTR(data, 0) ", %[t0]\n"
             "movq " PTR(data, 1) ", %[t1]\n"
@@ -761,9 +761,9 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
               [low]"=&r"(low),
               [high]"=&r"(high),
               [pending]"=&r"(pending),
-              [zero]"=&r"(zero)
-            : [data]"r"(data),
-              [result]"r"(result),
+              [zero]"=&r"(zero),
+              [data]"+r"(data)
+            : [result]"r"(result),
               [p0]"m"(p0),
               [p1]"m"(p1),
               [p2]"m"(p2),
