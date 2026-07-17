@@ -86,8 +86,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     inline void montgomery_reduce(limb *result, const typename Params::limb_array &data) {
 #if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
-        if constexpr (requires { montgomery_reduce_8_limbs_x86<Params>(result, data.data()); }) {
-            return montgomery_reduce_8_limbs_x86<Params>(result, data.data());
+        if constexpr (requires { montgomery_reduce_x86<Params>(result, data.data()); }) {
+            return montgomery_reduce_x86<Params>(result, data.data());
         }
 #endif
         constexpr size_t N = Params::storage_limb_count;
