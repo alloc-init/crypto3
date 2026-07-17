@@ -170,20 +170,20 @@
 
 #define MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, I) \
     "movq " PTR2(SRC, SRC_BASE, I) ", %[d0]\n"                  \
-    "movq $2, %%rcx\n"                                          \
-    "shlxq %%rcx, %[d0], %[d2]\n"                               \
+    "movq $2, %[d3]\n"                                          \
+    "shlxq %[d3], %[d0], %[d2]\n"                               \
     "leaq (%[d1], %[d2]), %[d2]\n"                              \
-    "movq $62, %%rcx\n"                                         \
-    "shrxq %%rcx, %[d0], %[d1]\n"                               \
+    "movq $62, %[d3]\n"                                         \
+    "shrxq %[d3], %[d0], %[d1]\n"                               \
     "adcx %[d2], %[d0]\n"                                       \
     "movq %[d0], " PTR2(DST, DST_BASE, I) "\n"
 
 #define MUL_12_LIMBS_BY_5(DST, DST_BASE, SRC, SRC_BASE)      \
     "movq " PTR2(SRC, SRC_BASE, 0) ", %[d0]\n"               \
-    "movq $2, %%rcx\n"                                       \
-    "shlxq %%rcx, %[d0], %[d2]\n"                            \
-    "movq $62, %%rcx\n"                                      \
-    "shrxq %%rcx, %[d0], %[d1]\n"                            \
+    "movq $2, %[d3]\n"                                       \
+    "shlxq %[d3], %[d0], %[d2]\n"                            \
+    "movq $62, %[d3]\n"                                      \
+    "shrxq %[d3], %[d0], %[d1]\n"                            \
     "addq %[d2], %[d0]\n"                                    \
     "movq %[d0], " PTR2(DST, DST_BASE, 0) "\n"               \
     MUL_12_LIMBS_BY_5_LOOP(DST, DST_BASE, SRC, SRC_BASE, 1)  \
@@ -876,15 +876,16 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     }
 
     inline void mul_12_limbs_by_5_unreduced_x86(limb *dst, const limb *src) {
-        limb d0, d1, d2;
+        limb d0, d1, d2, d3;
         asm volatile(
             MUL_12_LIMBS_BY_5(dst, 0, src, 0)
             : [d0]"=&r"(d0),
               [d1]"=&r"(d1),
-              [d2]"=&r"(d2)
+              [d2]"=&r"(d2),
+              [d3]"=&r"(d3)
             : [src]"r"(src),
               [dst]"r"(dst)
-            : "rcx", "cc", "memory"
+            : "cc", "memory"
         );
     }
 

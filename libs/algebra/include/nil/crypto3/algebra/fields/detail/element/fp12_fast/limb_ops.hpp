@@ -215,7 +215,8 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         // Normalize the 5-limb scratch, then copy only this coefficient back.
         // z may point into the middle of a contiguous fp2_base value.
         if (ge_modulus_wide<N>(tmp, p.data())) {
-            subtract_limbs_portable<N + 1>(tmp, tmp, p.data());
+            const bool borrow = subtract_limbs_portable<N>(tmp, tmp, p.data());
+            tmp[N] -= (limb)borrow;
         }
         for (size_t i = 0; i < N; i++) {
             z[i] = tmp[i];
