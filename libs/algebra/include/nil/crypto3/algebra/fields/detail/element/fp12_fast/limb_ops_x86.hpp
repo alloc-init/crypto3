@@ -782,10 +782,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         limb t0, t1, t2, t3, q0, q1, q2, q3;
         asm volatile(
             ADD_8_LIMBS_MOD(z, 0, x, 0, y, 0, t0, t1, t2, t3, q0, q1, q2, q3)
-            : [t0]"+r"(t0),
-              [t1]"+r"(t1),
-              [t2]"+r"(t2),
-              [t3]"+r"(t3),
+            : [t0]"=&r"(t0),
+              [t1]"=&r"(t1),
+              [t2]"=&r"(t2),
+              [t3]"=&r"(t3),
               [q0]"=&r"(q0),
               [q1]"=&r"(q1),
               [q2]"=&r"(q2),
