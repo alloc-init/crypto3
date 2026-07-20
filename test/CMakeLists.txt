@@ -25,11 +25,14 @@ if(PROFILING_ENABLED)
     add_definitions(-DPROFILING_ENABLED)
 endif()
 
+add_custom_target(zk_tests)
+
 macro(define_zk_test test)
     get_filename_component(name ${test} NAME)
     string(REPLACE "/" "_" full_test_name ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_${test}_test)
 
     cm_test(NAME ${full_test_name} SOURCES ${test}.cpp)
+    add_dependencies(zk_tests ${full_test_name})
 
     target_include_directories(${full_test_name} PRIVATE
             "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
