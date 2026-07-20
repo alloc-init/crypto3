@@ -20,7 +20,9 @@ namespace nil {
     namespace crypto3 {
         namespace hashes {
 #ifdef __ZKLLVM__
-            class poseidon {
+            // Legacy Mina/Pasta-compatible Poseidon entry point used by the ZKLLVM assigner.
+            // New standard Poseidon1/Poseidon2 implementations should not reuse this name internally.
+            class legacy_poseidon {
             public:
                 typedef typename algebra::curves::pallas::base_field_type::value_type block_type;
 
@@ -30,9 +32,11 @@ namespace nil {
                     }
                 };
             };
+
+            using poseidon = legacy_poseidon;
 #else
             template<typename PolicyType>
-            class poseidon {
+            class legacy_poseidon {
             public:
                 typedef PolicyType policy_type;
 
@@ -54,11 +58,21 @@ namespace nil {
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::raw;
+                using accumulator_tag = accumulators::tag::algebraic_hash<legacy_poseidon<policy_type>>;
+            };
+
+            // Backward-compatible name for the current non-standard Poseidon wrapper.
+            // It uses detail::poseidon_sponge_construction_custom, which preserves only one state word
+            // after each permutation. New code should prefer an explicitly standard Poseidon1/Poseidon2 type.
+            template<typename PolicyType>
+            class poseidon : public legacy_poseidon<PolicyType> {
+            public:
+                typedef PolicyType policy_type;
                 using accumulator_tag = accumulators::tag::algebraic_hash<poseidon<policy_type>>;
             };
 
             template<typename PolicyType>
-            class original_poseidon {
+            class legacy_original_poseidon {
             public:
                 typedef PolicyType policy_type;
 
@@ -83,6 +97,15 @@ namespace nil {
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::raw;
+                using accumulator_tag = accumulators::tag::algebraic_hash<legacy_original_poseidon<PolicyType>>;
+            };
+
+            // Backward-compatible name for the existing dense, unoptimized Poseidon permutation
+            // with the algebraic sponge construction used by the historical implementation.
+            template<typename PolicyType>
+            class original_poseidon : public legacy_original_poseidon<PolicyType> {
+            public:
+                typedef PolicyType policy_type;
                 using accumulator_tag = accumulators::tag::algebraic_hash<original_poseidon<PolicyType>>;
             };
 #endif

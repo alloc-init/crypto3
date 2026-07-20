@@ -100,6 +100,38 @@ void test_poseidon_permutation(typename poseidon_policy<FieldType, 128, Rate>::s
 
 BOOST_AUTO_TEST_SUITE(poseidon_tests)
 
+BOOST_AUTO_TEST_CASE(legacy_poseidon_names_are_compatible) {
+    using field_type = fields::bls12_scalar_field<381>;
+    using policy = poseidon_policy<field_type, 128, /*Rate=*/4>;
+    using hash_t = hashes::poseidon<policy>;
+    using legacy_hash_t = hashes::legacy_poseidon<policy>;
+
+    BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<hash_t>::value, "poseidon should be recognized as Poseidon");
+    BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<legacy_hash_t>::value,
+                            "legacy_poseidon should be recognized as Poseidon");
+
+    std::vector<typename field_type::value_type> input = {
+        0x0_cppui_modular255, 0x1_cppui_modular255, 0x2_cppui_modular255, 0x3_cppui_modular255, 0x4_cppui_modular255};
+
+    typename policy::digest_type d = hash<hash_t>(input);
+    typename policy::digest_type legacy_d = hash<legacy_hash_t>(input);
+    BOOST_CHECK_EQUAL(d, legacy_d);
+}
+
+BOOST_AUTO_TEST_CASE(legacy_original_poseidon_names_are_compatible) {
+    using field_type = fields::pallas_base_field;
+    using policy = pasta_poseidon_policy<field_type>;
+    using hash_t = hashes::original_poseidon<policy>;
+    using legacy_hash_t = hashes::legacy_original_poseidon<policy>;
+
+    std::vector<typename field_type::value_type> input = {
+        0x0_cppui_modular255, 0x1_cppui_modular255, 0x2_cppui_modular255};
+
+    typename policy::digest_type d = hash<hash_t>(input);
+    typename policy::digest_type legacy_d = hash<legacy_hash_t>(input);
+    BOOST_CHECK_EQUAL(d, legacy_d);
+}
+
 BOOST_AUTO_TEST_CASE(poseidon_with_padding_test) {
     using field_type = fields::pallas_scalar_field;
     using policy = pasta_poseidon_policy<field_type>;

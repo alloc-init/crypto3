@@ -19,7 +19,8 @@ namespace nil {
                 template<typename PolicyType>
                 class poseidon_sponge_construction_custom {
                     typedef PolicyType policy_type;
-                    // This is a quite strange sponge. It has rate = 3 on first absorb, then rate = 2.
+                    // Legacy crypto3 Poseidon sponge. This is intentionally non-standard and kept for compatibility.
+                    // It has rate = 3 on first absorb, then rate = 2.
                     // E.g., we have ABCDEFG values as input. Rate is 3, Capacity is 1: (full state: 0|0|0|0). Values
                     // are consumed as: 0|0|0|0 -absorb-> A|B|C|0 -permute-> S1|S2|S3|S4 -> S4|0|0|0 -absorb-> S4|D|E|0
                     // -permute->
