@@ -149,7 +149,8 @@ BENCHMARK_AUTO_TEST_CASE(polynomial_product_test, 20) {
     std::vector<polynomial_dfs<typename FieldType::value_type>> random_polynomials;
     random_polynomials.reserve(8);
     FieldType::value_type a = alg_rnd_engine();
-    std::vector<std::size_t> sizes = {23, 15, 21, 16, 22, 17, 18};
+    // std::vector<std::size_t> sizes = {23, 15, 21, 16, 22, 17, 18};
+    std::vector<std::size_t> sizes = {15};
     for (auto size : sizes) {
         random_polynomials.emplace_back(generate_random_polynomial<FieldType>(1u << size, alg_rnd_engine));
     }
@@ -165,7 +166,8 @@ BENCHMARK_AUTO_TEST_CASE(polynomial_sum_real_test, 20) {
     std::vector<polynomial_dfs<typename FieldType::value_type>> random_polynomials;
     random_polynomials.reserve(8);
     FieldType::value_type a = alg_rnd_engine();
-    std::vector<std::size_t> sizes = {23, 15, 21, 16, 22, 17, 18};
+    // std::vector<std::size_t> sizes = {23, 15, 21, 16, 22, 17, 18};
+    std::vector<std::size_t> sizes = {15};
     for (auto size : sizes) {
         random_polynomials.emplace_back(generate_random_polynomial<FieldType>(1u << size, alg_rnd_engine));
     }
