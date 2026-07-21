@@ -31,6 +31,8 @@ macro(define_runtime_algebra_test name)
         Boost::timer
         Boost::random)
 
+    target_compile_options(${FULL_NAME} PRIVATE "-march=native")
+
     set_target_properties(${test_name} PROPERTIES CXX_STANDARD 23
         CXX_STANDARD_REQUIRED TRUE)
 
