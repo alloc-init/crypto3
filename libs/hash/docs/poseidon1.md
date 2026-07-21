@@ -20,6 +20,36 @@ The implementation is split across these headers:
 Tests for the policy, dense/optimized permutation equivalence, sponge modes, and digest output are in
 `libs/hash/test/poseidon.cpp`.
 
+## Public Hash API
+
+The public hash wrappers are declared in `nil/crypto3/hash/poseidon.hpp`.
+
+The default standard Poseidon1 hash is:
+
+```cpp
+using hash_type = nil::crypto3::hashes::poseidon1<policy>;
+```
+
+`poseidon1<Policy>` uses the optimized Poseidon1 permutation and Pad10 sponge construction.
+
+Additional wrappers are available for explicit behavior:
+
+|Wrapper|Permutation|Sponge mode|
+|-------|-----------|-----------|
+|`poseidon1<Policy>`|optimized|Pad10|
+|`poseidon1_dense<Policy>`|dense|Pad10|
+|`poseidon1_padding_free<Policy>`|optimized|padding-free|
+
+Example:
+
+```cpp
+using field_type = nil::crypto3::algebra::fields::alt_bn128_scalar_field<254>;
+using policy = nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>;
+using hash_type = nil::crypto3::hashes::poseidon1<policy>;
+
+auto digest = nil::crypto3::hash<hash_type>(input);
+```
+
 ## Poseidon1 Policy
 
 The standard Poseidon1 policy is defined by `nil::crypto3::hashes::detail::poseidon1_policy`.

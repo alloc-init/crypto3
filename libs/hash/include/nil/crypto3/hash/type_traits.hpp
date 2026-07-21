@@ -303,6 +303,15 @@ namespace nil {
 
             template<typename PolicyType>
             class poseidon;
+
+            template<typename PolicyType>
+            class poseidon1;
+
+            template<typename PolicyType>
+            class poseidon1_dense;
+
+            template<typename PolicyType>
+            class poseidon1_padding_free;
 #endif
 
             template<typename ParamsType, typename HashType, typename GroupType>
@@ -364,6 +373,12 @@ namespace nil {
                                    std::is_same<nil::crypto3::hashes::poseidon<typename HashType::policy_type>,
                                                 HashType>::value ||
                                    std::is_same<nil::crypto3::hashes::legacy_poseidon<typename HashType::policy_type>,
+                                                HashType>::value ||
+                                   std::is_same<nil::crypto3::hashes::poseidon1<typename HashType::policy_type>,
+                                                HashType>::value ||
+                                   std::is_same<nil::crypto3::hashes::poseidon1_dense<typename HashType::policy_type>,
+                                                HashType>::value ||
+                                   std::is_same<nil::crypto3::hashes::poseidon1_padding_free<typename HashType::policy_type>,
                                                 HashType>::value>> {
             public:
                 constexpr static const bool value = true;

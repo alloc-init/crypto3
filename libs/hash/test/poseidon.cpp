@@ -393,6 +393,33 @@ BOOST_AUTO_TEST_CASE(poseidon1_pad10_sponge_dense_and_optimized_permutations_mat
     BOOST_CHECK_EQUAL(dense_digest, optimized_digest);
 }
 
+BOOST_AUTO_TEST_CASE(poseidon1_public_wrapper_defaults_to_optimized_pad10) {
+    using field_type = fields::alt_bn128_scalar_field<254>;
+    using policy = poseidon1_policy<field_type, 128, /*Rate=*/2>;
+    using optimized_permutation = poseidon1_optimized_permutation<policy>;
+    using optimized_hash_type = poseidon_pad10_test_hash<policy, optimized_permutation>;
+    using public_hash_type = hashes::poseidon1<policy>;
+    using dense_public_hash_type = hashes::poseidon1_dense<policy>;
+    using word_type = typename policy::word_type;
+
+    BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<public_hash_type>::value,
+                            "poseidon1 public wrapper should be recognized as Poseidon");
+    BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<dense_public_hash_type>::value,
+                            "poseidon1 dense public wrapper should be recognized as Poseidon");
+
+    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u),
+                                    word_type(4u)};
+
+    const typename public_hash_type::digest_type public_digest = test_hash_field_elements<public_hash_type>(input);
+    const typename dense_public_hash_type::digest_type dense_public_digest =
+        test_hash_field_elements<dense_public_hash_type>(input);
+    const typename optimized_hash_type::digest_type optimized_digest =
+        test_hash_field_elements<optimized_hash_type>(input);
+
+    BOOST_CHECK_EQUAL(public_digest, optimized_digest);
+    BOOST_CHECK_EQUAL(public_digest, dense_public_digest);
+}
+
 BOOST_AUTO_TEST_CASE(poseidon1_padding_free_overwrite_handles_empty_input_without_permutation) {
     using field_type = fields::alt_bn128_scalar_field<254>;
     using policy = poseidon1_policy<field_type, 128, /*Rate=*/2>;
@@ -550,6 +577,27 @@ BOOST_AUTO_TEST_CASE(poseidon1_padding_free_overwrite_dense_and_optimized_permut
         test_hash_field_elements<optimized_hash_type>(input);
 
     BOOST_CHECK_EQUAL(dense_digest, optimized_digest);
+}
+
+BOOST_AUTO_TEST_CASE(poseidon1_padding_free_public_wrapper_matches_optimized_padding_free) {
+    using field_type = fields::alt_bn128_scalar_field<254>;
+    using policy = poseidon1_policy<field_type, 128, /*Rate=*/2>;
+    using optimized_permutation = poseidon1_optimized_permutation<policy>;
+    using optimized_hash_type = poseidon_padding_free_test_hash<policy, optimized_permutation>;
+    using public_hash_type = hashes::poseidon1_padding_free<policy>;
+    using word_type = typename policy::word_type;
+
+    BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<public_hash_type>::value,
+                            "poseidon1 padding-free public wrapper should be recognized as Poseidon");
+
+    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u),
+                                    word_type(4u)};
+
+    const typename public_hash_type::digest_type public_digest = test_hash_field_elements<public_hash_type>(input);
+    const typename optimized_hash_type::digest_type optimized_digest =
+        test_hash_field_elements<optimized_hash_type>(input);
+
+    BOOST_CHECK_EQUAL(public_digest, optimized_digest);
 }
 
 BOOST_AUTO_TEST_CASE(poseidon_with_padding_test) {
