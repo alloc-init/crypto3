@@ -63,8 +63,6 @@ set(BENCHMARK_NAMES
     "algebra/multiexp"
 
     "math/polynomial_dfs"
-
-    # "zk/lpc"
 )
 
 foreach(BENCHMARK_NAME ${BENCHMARK_NAMES})
