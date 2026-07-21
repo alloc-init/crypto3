@@ -12,12 +12,10 @@
 #include <cstddef>
 
 #include <nil/crypto3/algebra/matrix/matrix.hpp>
-#include <nil/crypto3/algebra/matrix/math.hpp>
-#include <nil/crypto3/algebra/vector/vector.hpp>
-#include <nil/crypto3/algebra/vector/math.hpp>
 
 #include <nil/crypto3/hash/detail/poseidon/original_constants.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>
+#include <nil/crypto3/hash/detail/poseidon1/poseidon1_round_functions.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -29,24 +27,25 @@ namespace nil {
                 public:
                     using policy_type = PolicyType;
                     using element_type = typename policy_type::word_type;
+                    using state_type = typename policy_type::state_type;
+                    using round_functions_type = poseidon1_round_functions<policy_type>;
 
                     constexpr static const std::size_t state_words = policy_type::state_words;
                     constexpr static const std::size_t full_rounds = policy_type::full_rounds;
                     constexpr static const std::size_t part_rounds = policy_type::part_rounds;
 
-                    using state_vector_type = algebra::vector<element_type, state_words>;
                     using mds_matrix_type = algebra::matrix<element_type, state_words, state_words>;
                     using round_constants_type = algebra::matrix<element_type, full_rounds + part_rounds, state_words>;
 
                     using constants_data_type = poseidon_original_constants_data<policy_type>;
 
                     poseidon1_constants() {
-                        // The legacy constants table is stored in the orientation expected by the old
-                        // row-vector vectmatmul path after this transpose. Keep that convention so the
-                        // new standard Poseidon1 permutation can be checked against the existing vectors.
+                        // Store the raw MDS table and use column-vector multiplication. This is the same
+                        // linear map as the old dense row-vector path with a transposed MDS, but it matches
+                        // the convention used by the optimized sparse derivation.
                         for (std::size_t i = 0; i < state_words; ++i) {
                             for (std::size_t j = 0; j < state_words; ++j) {
-                                mds_matrix[i][j] = constants_data_type::mds_matrix[j][i];
+                                mds_matrix[i][j] = constants_data_type::mds_matrix[i][j];
                             }
                         }
                     }
@@ -55,8 +54,12 @@ namespace nil {
                         return constants_data_type::round_constants[round][index];
                     }
 
-                    inline void product_with_mds_matrix(state_vector_type &state) const {
-                        state = algebra::vectmatmul(state, mds_matrix);
+                    inline void product_with_mds_matrix(state_type &state) const {
+                        round_functions_type::product_with_matrix(state, mds_matrix);
+                    }
+
+                    inline const mds_matrix_type &get_mds_matrix() const {
+                        return mds_matrix;
                     }
 
                 private:

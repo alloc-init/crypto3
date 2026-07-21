@@ -25,6 +25,7 @@
 #include <nil/crypto3/hash/algorithm/hash.hpp>
 #include <nil/crypto3/hash/block_to_field_elements_wrapper.hpp>
 #include <nil/crypto3/hash/detail/poseidon/poseidon_permutation.hpp>
+#include <nil/crypto3/hash/detail/poseidon1/poseidon1_optimized_permutation.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_permutation.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>
 #include <nil/crypto3/hash/hash_state.hpp>
@@ -100,6 +101,7 @@ void test_poseidon_permutation(typename poseidon_policy<FieldType, 128, Rate>::s
 
     typename legacy_policy::state_type legacy_input = input;
     typename poseidon1_policy_t::state_type poseidon1_input = input;
+    typename poseidon1_policy_t::state_type optimized_poseidon1_input = input;
 
     poseidon_permutation<legacy_policy>::permute(legacy_input);
     BOOST_CHECK_EQUAL(legacy_input, expected_result);
@@ -107,6 +109,10 @@ void test_poseidon_permutation(typename poseidon_policy<FieldType, 128, Rate>::s
     poseidon1_permutation<poseidon1_policy_t>::permute(poseidon1_input);
     BOOST_CHECK_EQUAL(poseidon1_input, expected_result);
     BOOST_CHECK_EQUAL(poseidon1_input, legacy_input);
+
+    poseidon1_optimized_permutation<poseidon1_policy_t>::permute(optimized_poseidon1_input);
+    BOOST_CHECK_EQUAL(optimized_poseidon1_input, expected_result);
+    BOOST_CHECK_EQUAL(optimized_poseidon1_input, poseidon1_input);
 }
 
 BOOST_AUTO_TEST_SUITE(poseidon_tests)
