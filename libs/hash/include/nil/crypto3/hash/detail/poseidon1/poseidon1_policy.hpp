@@ -27,12 +27,14 @@ namespace nil {
                  * with AddRoundConstants -> S-box -> MDS inside each round.
                  */
                 template<typename FieldType, std::size_t Security, std::size_t Rate, std::size_t Capacity,
-                         std::size_t SBoxPower, std::size_t FullRounds, std::size_t PartRounds>
+                         std::size_t SBoxPower, std::size_t FullRounds, std::size_t PartRounds,
+                         std::size_t DigestBits>
                 struct base_poseidon1_policy {
                     static_assert(FullRounds % 2 == 0, "Poseidon1 requires an even number of full rounds.");
                     static_assert(Rate > 0, "Poseidon1 rate must be positive.");
                     static_assert(Capacity > 0, "Poseidon1 capacity must be positive.");
                     static_assert(SBoxPower >= 3, "Poseidon1 S-box power must be at least 3.");
+                    static_assert(DigestBits > 0, "Poseidon1 digest must contain at least one bit.");
 
                     using field_type = FieldType;
 
@@ -47,9 +49,14 @@ namespace nil {
                     constexpr static const std::size_t state_bits = state_words * word_bits;
                     using state_type = std::array<word_type, state_words>;
 
-                    constexpr static const std::size_t digest_words = 1;
-                    constexpr static const std::size_t digest_bits = word_bits;
-                    using digest_type = word_type;
+                    constexpr static const std::size_t digest_bits = DigestBits;
+                    constexpr static const std::size_t digest_words =
+                        (digest_bits + word_bits - 1) / word_bits;
+                    static_assert(digest_words <= Rate,
+                                  "Poseidon1 intentionally supports only OUT <= RATE for now; "
+                                  "extend the sponge to squeeze multiple blocks before raising this limit.");
+                    using digest_type =
+                        std::conditional_t<digest_words == 1, word_type, std::array<word_type, digest_words>>;
 
                     constexpr static const std::size_t full_rounds = FullRounds;
                     constexpr static const std::size_t half_full_rounds = FullRounds / 2;
@@ -98,6 +105,11 @@ namespace nil {
                 } && (PolicyType::rate > 0) && (PolicyType::capacity > 0) &&
                     (PolicyType::state_words == PolicyType::rate + PolicyType::capacity) &&
                     (PolicyType::block_words == PolicyType::rate) &&
+                    (PolicyType::digest_bits > 0) &&
+                    (PolicyType::digest_words > 0) &&
+                    (PolicyType::digest_words <= PolicyType::block_words) &&
+                    (PolicyType::digest_words ==
+                     (PolicyType::digest_bits + PolicyType::word_bits - 1) / PolicyType::word_bits) &&
                     (PolicyType::full_rounds >= 6) &&
                     (PolicyType::full_rounds % 2 == 0) &&
                     (PolicyType::half_full_rounds == PolicyType::full_rounds / 2) &&
@@ -111,28 +123,30 @@ namespace nil {
                  * parameter sets. Add a new specialization when adding constants for another capacity.
                  */
                 template<typename FieldType, std::size_t Security, std::size_t Rate, std::size_t Capacity = 1,
-                         typename Enable = void>
+                         std::size_t DigestBits = FieldType::value_bits, typename Enable = void>
                 struct poseidon1_policy;
 
-                template<typename FieldType, std::size_t Rate>
-                struct poseidon1_policy<FieldType, 80, Rate, 1, std::enable_if_t<Rate == 1 || Rate == 2>>
-                    : base_poseidon1_policy<FieldType, 80, Rate, 1, 5, 8, 33> { };
+                template<typename FieldType, std::size_t Rate, std::size_t DigestBits>
+                struct poseidon1_policy<FieldType, 80, Rate, 1, DigestBits,
+                                        std::enable_if_t<Rate == 1 || Rate == 2>>
+                    : base_poseidon1_policy<FieldType, 80, Rate, 1, 5, 8, 33, DigestBits> { };
 
-                template<typename FieldType>
-                struct poseidon1_policy<FieldType, 80, 4, 1, void>
-                    : base_poseidon1_policy<FieldType, 80, 4, 1, 5, 8, 35> { };
+                template<typename FieldType, std::size_t DigestBits>
+                struct poseidon1_policy<FieldType, 80, 4, 1, DigestBits, void>
+                    : base_poseidon1_policy<FieldType, 80, 4, 1, 5, 8, 35, DigestBits> { };
 
-                template<typename FieldType, std::size_t Rate>
-                struct poseidon1_policy<FieldType, 128, Rate, 1, std::enable_if_t<Rate == 1 || Rate == 2>>
-                    : base_poseidon1_policy<FieldType, 128, Rate, 1, 5, 8, 57> { };
+                template<typename FieldType, std::size_t Rate, std::size_t DigestBits>
+                struct poseidon1_policy<FieldType, 128, Rate, 1, DigestBits,
+                                        std::enable_if_t<Rate == 1 || Rate == 2>>
+                    : base_poseidon1_policy<FieldType, 128, Rate, 1, 5, 8, 57, DigestBits> { };
 
-                template<typename FieldType>
-                struct poseidon1_policy<FieldType, 128, 4, 1, void>
-                    : base_poseidon1_policy<FieldType, 128, 4, 1, 5, 8, 60> { };
+                template<typename FieldType, std::size_t DigestBits>
+                struct poseidon1_policy<FieldType, 128, 4, 1, DigestBits, void>
+                    : base_poseidon1_policy<FieldType, 128, 4, 1, 5, 8, 60, DigestBits> { };
 
-                template<typename FieldType, std::size_t Rate>
-                struct poseidon1_policy<FieldType, 256, Rate, 1, std::enable_if_t<(Rate <= 4)>>
-                    : base_poseidon1_policy<FieldType, 256, Rate, 1, 5, 8, 120> { };
+                template<typename FieldType, std::size_t Rate, std::size_t DigestBits>
+                struct poseidon1_policy<FieldType, 256, Rate, 1, DigestBits, std::enable_if_t<(Rate <= 4)>>
+                    : base_poseidon1_policy<FieldType, 256, Rate, 1, 5, 8, 120, DigestBits> { };
 
             }    // namespace detail
         }    // namespace hashes
