@@ -57,11 +57,6 @@ macro(define_benchmark benchmark)
 endmacro()
 
 set(BENCHMARK_NAMES
-    "algebra/curves"
-    "algebra/fields"
-    "algebra/fp12"
-    "algebra/multiexp"
-
     "math/polynomial_dfs"
 )
 

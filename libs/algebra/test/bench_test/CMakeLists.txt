@@ -1,10 +1,10 @@
-#---------------------------------------------------------------------------#
+# ---------------------------------------------------------------------------#
 # Copyright (c) 2018-2021 Mikhail Komarov <nemo@nil.foundation>
 #
 # Distributed under the Boost Software License, Version 1.0
 # See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt
-#---------------------------------------------------------------------------#
+# ---------------------------------------------------------------------------#
 
 include(CMTest)
 
@@ -17,17 +17,26 @@ macro(define_runtime_algebra_test name)
     cm_test(NAME ${test_name} SOURCES ${name}.cpp)
 
     target_include_directories(${test_name} PRIVATE
-                               "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-                               "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+        "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
+        ${Boost_INCLUDE_DIRS})
 
-                               ${Boost_INCLUDE_DIRS})
+    target_link_libraries(${test_name}
+        ${CMAKE_WORKSPACE_NAME}::random
+        ${CMAKE_WORKSPACE_NAME}::math
+        ${CMAKE_WORKSPACE_NAME}::algebra
+        ${CMAKE_WORKSPACE_NAME}::multiprecision
+        ${CMAKE_WORKSPACE_NAME}::benchmark_tools
+        Boost::unit_test_framework
+        Boost::timer
+        Boost::random)
 
     set_target_properties(${test_name} PROPERTIES CXX_STANDARD 23
         CXX_STANDARD_REQUIRED TRUE)
 
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${test_name} PRIVATE "-fconstexpr-steps=2147483647")
-    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(${test_name} PRIVATE "-fconstexpr-ops-limit=4294967295")
     endif()
 
@@ -35,12 +44,12 @@ macro(define_runtime_algebra_test name)
 endmacro()
 
 set(RUNTIME_TESTS_NAMES
-    "bench_curves"
-    "bench_fields"
-    "bench_multiexp"
-    )
+    "curves"
+    "fields"
+    "multiexp"
+    "fp12"
+)
 
 foreach(TEST_NAME ${RUNTIME_TESTS_NAMES})
     define_runtime_algebra_test(${TEST_NAME})
 endforeach()
-
