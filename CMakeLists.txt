@@ -25,7 +25,7 @@ cm_workspace(crypto3)
 cm_setup_version(VERSION 0.3.0 PREFIX ${CMAKE_WORKSPACE_NAME})
 
 option(BUILD_TESTS "Enable tests" TRUE)# used by CMTest module; If set to false, tests are removed from crypto3::all target. User still can build individual ones.
-option(BUILD_CRYPTO3_BENCH_TESTS "Build performance benchmark tests" FALSE)
+option(BUILD_BENCH_TESTS "Build performance benchmark tests" FALSE)
 option(BUILD_DOCS "Build with configuring Doxygen documentation compiler" FALSE)
 
 # The file compile_commands.json is generated in build directory, so LSP could
@@ -63,10 +63,6 @@ endfunction(add_tests)
 
 add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs/")
 add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs/marshalling/")
-
-if(BUILD_CRYPTO3_BENCH_TESTS)
-    add_subdirectory(benchmarks)
-endif()
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/docs/doxygen/${CMAKE_WORKSPACE_NAME}.doxyfile.in
         ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_WORKSPACE_NAME}.doxyfile @ONLY)
