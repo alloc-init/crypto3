@@ -7,7 +7,6 @@ cm_project(crypto3_containers WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C
 
 cm_find_package(CM)
 include(CMDeploy)
-include(FindPkgConfig)
 
 include(CMSetupVersion)
 

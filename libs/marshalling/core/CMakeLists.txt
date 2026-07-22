@@ -5,7 +5,6 @@ cm_workspace(marshalling)
 cm_project(core WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
 include(CMDeploy)
-include(FindPkgConfig)
 
 include(CMSetupVersion)
 
