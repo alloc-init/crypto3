@@ -30,6 +30,8 @@
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_optimized_permutation.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_permutation.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>
+#include <nil/crypto3/hash/detail/poseidon2/poseidon2_permutation.hpp>
+#include <nil/crypto3/hash/detail/poseidon2/poseidon2_policy.hpp>
 #include <nil/crypto3/hash/hash_state.hpp>
 #include <nil/crypto3/hash/poseidon.hpp>
 
@@ -154,6 +156,8 @@ void test_poseidon_permutation(typename poseidon_policy<FieldType, 128, Rate>::s
     using poseidon1_policy_t = poseidon1_policy<FieldType, 128, Rate>;
     BOOST_STATIC_ASSERT_MSG(poseidon1_policy_type<poseidon1_policy_t>,
                             "poseidon1_policy must satisfy the Poseidon1 policy concept");
+    BOOST_STATIC_ASSERT_MSG(!poseidon2_policy_type<poseidon1_policy_t>,
+                            "poseidon1_policy must not satisfy the Poseidon2 policy concept");
 
     typename legacy_policy::state_type legacy_input = input;
     typename poseidon1_policy_t::state_type poseidon1_input = input;
@@ -601,6 +605,63 @@ BOOST_AUTO_TEST_CASE(poseidon1_padding_free_public_wrapper_matches_optimized_pad
         test_hash_field_elements<optimized_hash_type>(input);
 
     BOOST_CHECK_EQUAL(public_digest, optimized_digest);
+}
+
+BOOST_AUTO_TEST_CASE(poseidon2_external_linear_layer_supports_multiple_widths) {
+    using field_type = fields::alt_bn128_scalar_field<254>;
+    using word_type = typename field_type::value_type;
+
+    using width2_policy =
+        base_poseidon2_policy<field_type, 128, /*Rate=*/1, /*Capacity=*/1, 5, 8, 56, field_type::value_bits>;
+    using width3_policy =
+        base_poseidon2_policy<field_type, 128, /*Rate=*/2, /*Capacity=*/1, 5, 8, 56, field_type::value_bits>;
+    using width4_policy =
+        base_poseidon2_policy<field_type, 128, /*Rate=*/3, /*Capacity=*/1, 5, 8, 56, field_type::value_bits>;
+
+    BOOST_STATIC_ASSERT_MSG(poseidon2_policy_type<width2_policy>, "Poseidon2 round helpers should support width 2");
+    BOOST_STATIC_ASSERT_MSG(poseidon2_policy_type<width3_policy>, "Poseidon2 round helpers should support width 3");
+    BOOST_STATIC_ASSERT_MSG(poseidon2_policy_type<width4_policy>, "Poseidon2 round helpers should support width 4");
+
+    typename width2_policy::state_type width2_state = {word_type(0u), word_type(1u)};
+    poseidon2_round_functions<width2_policy>::external_linear_layer(width2_state);
+    BOOST_CHECK_EQUAL(width2_state, (typename width2_policy::state_type {word_type(1u), word_type(2u)}));
+
+    typename width3_policy::state_type width3_state = {word_type(0u), word_type(1u), word_type(2u)};
+    poseidon2_round_functions<width3_policy>::external_linear_layer(width3_state);
+    BOOST_CHECK_EQUAL(width3_state, (typename width3_policy::state_type {word_type(3u), word_type(4u), word_type(5u)}));
+
+    typename width4_policy::state_type width4_state = {word_type(0u), word_type(1u), word_type(2u), word_type(3u)};
+    poseidon2_round_functions<width4_policy>::external_linear_layer(width4_state);
+    BOOST_CHECK_EQUAL(
+        width4_state,
+        (typename width4_policy::state_type {word_type(36u), word_type(22u), word_type(68u), word_type(54u)}));
+}
+
+BOOST_AUTO_TEST_CASE(poseidon2_bn254_width3_permutation_matches_reference_vector) {
+    using field_type = fields::alt_bn128_scalar_field<254>;
+    using policy = poseidon2_policy<field_type, 128, /*Rate=*/2>;
+    using permutation = poseidon2_permutation<policy>;
+
+    BOOST_STATIC_ASSERT_MSG(poseidon2_policy_type<policy>, "poseidon2_policy must satisfy the Poseidon2 concept");
+    BOOST_STATIC_ASSERT_MSG(!poseidon1_policy_type<policy>,
+                            "poseidon2_policy must not satisfy the Poseidon1 policy concept");
+    BOOST_STATIC_ASSERT_MSG(policy::state_words == 3, "The checked-in BN254 Poseidon2 policy uses width 3");
+    BOOST_STATIC_ASSERT_MSG(policy::sbox_power == 5, "BN254 Poseidon2 uses x^5");
+    BOOST_STATIC_ASSERT_MSG(policy::full_rounds == 8, "BN254 Poseidon2 uses RF=8");
+    BOOST_STATIC_ASSERT_MSG(policy::part_rounds == 56, "BN254 Poseidon2 width 3 uses RP=56");
+
+    typename policy::state_type state = {
+        0x0000000000000000000000000000000000000000000000000000000000000000_cppui_modular254,
+        0x0000000000000000000000000000000000000000000000000000000000000001_cppui_modular254,
+        0x0000000000000000000000000000000000000000000000000000000000000002_cppui_modular254};
+    const typename policy::state_type expected_state = {
+        0x0bb61d24daca55eebcb1929a82650f328134334da98ea4f847f760054f4a3033_cppui_modular254,
+        0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570_cppui_modular254,
+        0x1ed25194542b12eef8617361c3ba7c52e660b145994427cc86296242cf766ec8_cppui_modular254};
+
+    permutation::permute(state);
+
+    BOOST_CHECK_EQUAL(state, expected_state);
 }
 
 BOOST_AUTO_TEST_CASE(poseidon_with_padding_test) {
