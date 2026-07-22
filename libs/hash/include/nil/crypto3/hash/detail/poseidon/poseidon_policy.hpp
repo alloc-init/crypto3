@@ -20,7 +20,11 @@ namespace nil {
         namespace hashes {
             namespace detail {
                 /*!
-                 * @brief Poseidon internal parameters
+                 * @brief Legacy Poseidon internal parameters.
+                 *
+                 * These parameters describe the historical crypto3 Poseidon implementation. They are kept for
+                 * compatibility with existing outputs; new standard Poseidon1/Poseidon2 implementations should use
+                 * separate policy types.
                  * @tparam FieldType type of field
                  * @tparam Rate Rate of input block for Poseidon permutation in field elements
                  * @tparam Capacity Capacity or inner part of Poseidon permutation in field elements
@@ -72,7 +76,7 @@ namespace nil {
                 };
 
                 /*!
-                 * @brief Policy class for the original implementation.
+                 * @brief Policy class for the legacy dense Poseidon1 implementation.
                  * @tparam FieldType Type of the field.
                  * @tparam Security The bit strength of hash, one of [80, 128, 256].
                  * @tparam Rate Rate of input block for Poseidon permutation in field elements. Values of 2 or 4 are
@@ -107,7 +111,7 @@ namespace nil {
                     : base_poseidon_policy<FieldType, 256, Rate, 1, 5, 8, 120, false> { };
 
                 /*!
-                 * @brief Policy class for special Poseidon implementation over Pasta curves
+                 * @brief Policy class for the legacy Mina/Kimchi-compatible Poseidon implementation over Pasta curves.
                  * This implementation uses X^7 S-boxes,
                  *      changes the order of arc, s-box and mds operations and
                  *      they don't use partial rounds.
