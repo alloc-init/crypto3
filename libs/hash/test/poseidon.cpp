@@ -664,6 +664,44 @@ BOOST_AUTO_TEST_CASE(poseidon2_bn254_width3_permutation_matches_reference_vector
     BOOST_CHECK_EQUAL(state, expected_state);
 }
 
+BOOST_AUTO_TEST_CASE(poseidon2_public_wrapper_defaults_to_pad10) {
+    using field_type = fields::alt_bn128_scalar_field<254>;
+    using policy = poseidon2_policy<field_type, 128, /*Rate=*/2>;
+    using permutation = poseidon2_permutation<policy>;
+    using sponge_hash_type = poseidon_pad10_test_hash<policy, permutation>;
+    using public_hash_type = hashes::poseidon2<policy>;
+    using word_type = typename policy::word_type;
+
+    BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<public_hash_type>::value,
+                            "poseidon2 public wrapper should be recognized as Poseidon");
+
+    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u), word_type(4u)};
+
+    const typename public_hash_type::digest_type public_digest = test_hash_field_elements<public_hash_type>(input);
+    const typename sponge_hash_type::digest_type sponge_digest = test_hash_field_elements<sponge_hash_type>(input);
+
+    BOOST_CHECK_EQUAL(public_digest, sponge_digest);
+}
+
+BOOST_AUTO_TEST_CASE(poseidon2_padding_free_public_wrapper_matches_padding_free_sponge) {
+    using field_type = fields::alt_bn128_scalar_field<254>;
+    using policy = poseidon2_policy<field_type, 128, /*Rate=*/2>;
+    using permutation = poseidon2_permutation<policy>;
+    using sponge_hash_type = poseidon_padding_free_test_hash<policy, permutation>;
+    using public_hash_type = hashes::poseidon2_padding_free<policy>;
+    using word_type = typename policy::word_type;
+
+    BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<public_hash_type>::value,
+                            "poseidon2 padding-free wrapper should be recognized as Poseidon");
+
+    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u)};
+
+    const typename public_hash_type::digest_type public_digest = test_hash_field_elements<public_hash_type>(input);
+    const typename sponge_hash_type::digest_type sponge_digest = test_hash_field_elements<sponge_hash_type>(input);
+
+    BOOST_CHECK_EQUAL(public_digest, sponge_digest);
+}
+
 BOOST_AUTO_TEST_CASE(poseidon_with_padding_test) {
     using field_type = fields::pallas_scalar_field;
     using policy = pasta_poseidon_policy<field_type>;
