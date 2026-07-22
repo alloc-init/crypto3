@@ -176,14 +176,14 @@ set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
                       EXPORT_NAME ${CURRENT_PROJECT_NAME})
 
 if(${CMAKE_TARGET_ARCHITECTURE} STREQUAL "x86_64" OR ${CMAKE_TARGET_ARCHITECTURE} STREQUAL "x86")
-    if(SSE2_FOUND)
+    if(AES_FOUND)
         target_compile_definitions(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
                                    "${CMAKE_UPPER_WORKSPACE_NAME}_HAS_RIJNDAEL_NI")
-        target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE "-maes;-mpclmul;-mssse3")
+        target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE ${CXX_AES_FLAGS})
     elseif(SSSE3_FOUND)
         target_compile_definitions(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
                                    "${CMAKE_UPPER_WORKSPACE_NAME}_HAS_RIJNDAEL_SSSE3")
-        target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE "-maes;-mpclmul;-mssse3")
+        target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE ${CXX_SSSE3_FLAGS})
     endif()
 elseif(${CMAKE_TARGET_ARCHITECTURE} STREQUAL "armv8" OR ${CMAKE_TARGET_ARCHITECTURE} STREQUAL "arm64")
     target_compile_definitions(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE

@@ -1,5 +1,6 @@
 include(CheckCSourceCompiles)
 include(CheckCXXSourceCompiles)
+include(CheckHostCPUFeature)
 
 set(AVX_CODE "
   #include <immintrin.h>
@@ -25,9 +26,21 @@ set(AVX2_CODE "
   }
 ")
 
+set(AVX512_CODE "
+  #include <immintrin.h>
+
+  int main()
+  {
+    __m512i a = _mm512_set1_epi32(1);
+    a = _mm512_add_epi32(a, a);
+    return _mm_cvtsi128_si32(_mm512_castsi512_si128(a));
+  }
+")
+
 macro(check_avx_lang lang type flags)
     set(__FLAG_I 1)
     set(CMAKE_REQUIRED_FLAGS_SAVE ${CMAKE_REQUIRED_FLAGS})
+    set(CMAKE_REQUIRED_QUIET_SAVE ${CMAKE_REQUIRED_QUIET})
     foreach(__FLAG ${flags})
         if(NOT ${lang}_${type}_FOUND)
             set(CMAKE_REQUIRED_QUIET TRUE)
@@ -45,6 +58,7 @@ macro(check_avx_lang lang type flags)
         endif()
     endforeach()
     set(CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS_SAVE})
+    set(CMAKE_REQUIRED_QUIET ${CMAKE_REQUIRED_QUIET_SAVE})
 
     if(NOT ${lang}_${type}_FOUND)
         set(${lang}_${type}_FOUND FALSE CACHE BOOL "${lang} ${type} support")
@@ -56,9 +70,31 @@ macro(check_avx_lang lang type flags)
 endmacro()
 
 macro(check_avx)
-    check_avx_lang(C "AVX" " ;-mavx;/arch:AVX")
-    check_avx_lang(C "AVX2" " ;-mavx2 -mfma;/arch:AVX2")
+    check_host_cpu_feature(AVX "avx")
+    check_host_cpu_feature(AVX2 "avx2")
+    check_host_cpu_feature(AVX512F "avx512f")
 
-    check_avx_lang(CXX "AVX" " ;-mavx;/arch:AVX")
-    check_avx_lang(CXX "AVX2" " ;-mavx2 -mfma;/arch:AVX2")
+    if(HOST_CPU_AVX_FOUND)
+        check_avx_lang(C "AVX" " ;-mavx;/arch:AVX")
+        check_avx_lang(CXX "AVX" " ;-mavx;/arch:AVX")
+    else()
+        set(C_AVX_FOUND FALSE CACHE BOOL "C AVX support" FORCE)
+        set(CXX_AVX_FOUND FALSE CACHE BOOL "CXX AVX support" FORCE)
+    endif()
+
+    if(HOST_CPU_AVX2_FOUND)
+        check_avx_lang(C "AVX2" " ;-mavx2;/arch:AVX2")
+        check_avx_lang(CXX "AVX2" " ;-mavx2;/arch:AVX2")
+    else()
+        set(C_AVX2_FOUND FALSE CACHE BOOL "C AVX2 support" FORCE)
+        set(CXX_AVX2_FOUND FALSE CACHE BOOL "CXX AVX2 support" FORCE)
+    endif()
+
+    if(HOST_CPU_AVX512F_FOUND)
+        check_avx_lang(C "AVX512" " ;-mavx512f;/arch:AVX512")
+        check_avx_lang(CXX "AVX512" " ;-mavx512f;/arch:AVX512")
+    else()
+        set(C_AVX512_FOUND FALSE CACHE BOOL "C AVX512 support" FORCE)
+        set(CXX_AVX512_FOUND FALSE CACHE BOOL "CXX AVX512 support" FORCE)
+    endif()
 endmacro()
