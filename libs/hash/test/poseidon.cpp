@@ -42,7 +42,9 @@ using namespace nil::crypto3::accumulators;
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::hashes::detail;
 
-template<typename PolicyType, typename PermutationType, poseidon_sponge_absorb_mode AbsorbMode,
+template<typename PolicyType,
+         typename PermutationType,
+         poseidon_sponge_absorb_mode AbsorbMode,
          poseidon_sponge_padding_mode PaddingMode>
 class poseidon_sponge_test_hash {
 public:
@@ -59,8 +61,7 @@ public:
     using digest_type = typename policy_type::digest_type;
 
     struct construction {
-        struct params_type {
-        };
+        struct params_type { };
 
         using type = poseidon_sponge_construction<policy_type, permutation_type, AbsorbMode, PaddingMode>;
     };
@@ -72,24 +73,28 @@ public:
 };
 
 template<typename PolicyType, typename PermutationType>
-using poseidon_pad10_test_hash =
-    poseidon_sponge_test_hash<PolicyType, PermutationType, poseidon_sponge_absorb_mode::overwrite,
-                              poseidon_sponge_padding_mode::pad10>;
+using poseidon_pad10_test_hash = poseidon_sponge_test_hash<PolicyType,
+                                                           PermutationType,
+                                                           poseidon_sponge_absorb_mode::overwrite,
+                                                           poseidon_sponge_padding_mode::pad10>;
 
 template<typename PolicyType, typename PermutationType>
-using poseidon_padding_free_test_hash =
-    poseidon_sponge_test_hash<PolicyType, PermutationType, poseidon_sponge_absorb_mode::overwrite,
-                              poseidon_sponge_padding_mode::padding_free>;
+using poseidon_padding_free_test_hash = poseidon_sponge_test_hash<PolicyType,
+                                                                  PermutationType,
+                                                                  poseidon_sponge_absorb_mode::overwrite,
+                                                                  poseidon_sponge_padding_mode::padding_free>;
 
 template<typename PolicyType, typename PermutationType>
-using poseidon_add_pad10_test_hash =
-    poseidon_sponge_test_hash<PolicyType, PermutationType, poseidon_sponge_absorb_mode::add,
-                              poseidon_sponge_padding_mode::pad10>;
+using poseidon_add_pad10_test_hash = poseidon_sponge_test_hash<PolicyType,
+                                                               PermutationType,
+                                                               poseidon_sponge_absorb_mode::add,
+                                                               poseidon_sponge_padding_mode::pad10>;
 
 template<typename PolicyType, typename PermutationType>
-using poseidon_add_padding_free_test_hash =
-    poseidon_sponge_test_hash<PolicyType, PermutationType, poseidon_sponge_absorb_mode::add,
-                              poseidon_sponge_padding_mode::padding_free>;
+using poseidon_add_padding_free_test_hash = poseidon_sponge_test_hash<PolicyType,
+                                                                      PermutationType,
+                                                                      poseidon_sponge_absorb_mode::add,
+                                                                      poseidon_sponge_padding_mode::padding_free>;
 
 namespace boost {
     namespace test_tools {
@@ -197,8 +202,8 @@ BOOST_AUTO_TEST_CASE(legacy_original_poseidon_names_are_compatible) {
     using hash_t = hashes::original_poseidon<policy>;
     using legacy_hash_t = hashes::legacy_original_poseidon<policy>;
 
-    std::vector<typename field_type::value_type> input = {
-        0x0_cppui_modular255, 0x1_cppui_modular255, 0x2_cppui_modular255};
+    std::vector<typename field_type::value_type> input = {0x0_cppui_modular255, 0x1_cppui_modular255,
+                                                          0x2_cppui_modular255};
 
     typename policy::digest_type d = hash<hash_t>(input);
     typename policy::digest_type legacy_d = hash<legacy_hash_t>(input);
@@ -329,9 +334,10 @@ BOOST_AUTO_TEST_CASE(poseidon1_pad10_add_mode_partial_final_block_adds_into_exis
     using field_type = fields::alt_bn128_scalar_field<254>;
     using policy = poseidon1_policy<field_type, 128, /*Rate=*/2>;
     using permutation = poseidon1_permutation<policy>;
-    using sponge_type =
-        poseidon_sponge_construction<policy, permutation, poseidon_sponge_absorb_mode::add,
-                                     poseidon_sponge_padding_mode::pad10>;
+    using sponge_type = poseidon_sponge_construction<policy,
+                                                     permutation,
+                                                     poseidon_sponge_absorb_mode::add,
+                                                     poseidon_sponge_padding_mode::pad10>;
     using hash_type = poseidon_add_pad10_test_hash<policy, permutation>;
     using word_type = typename policy::word_type;
 
@@ -383,8 +389,7 @@ BOOST_AUTO_TEST_CASE(poseidon1_pad10_sponge_dense_and_optimized_permutations_mat
     using optimized_hash_type = poseidon_pad10_test_hash<policy, optimized_permutation>;
     using word_type = typename policy::word_type;
 
-    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u),
-                                    word_type(4u)};
+    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u), word_type(4u)};
 
     const typename dense_hash_type::digest_type dense_digest = test_hash_field_elements<dense_hash_type>(input);
     const typename optimized_hash_type::digest_type optimized_digest =
@@ -407,8 +412,7 @@ BOOST_AUTO_TEST_CASE(poseidon1_public_wrapper_defaults_to_optimized_pad10) {
     BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<dense_public_hash_type>::value,
                             "poseidon1 dense public wrapper should be recognized as Poseidon");
 
-    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u),
-                                    word_type(4u)};
+    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u), word_type(4u)};
 
     const typename public_hash_type::digest_type public_digest = test_hash_field_elements<public_hash_type>(input);
     const typename dense_public_hash_type::digest_type dense_public_digest =
@@ -501,9 +505,10 @@ BOOST_AUTO_TEST_CASE(poseidon1_padding_free_add_mode_partial_final_block_adds_in
     using field_type = fields::alt_bn128_scalar_field<254>;
     using policy = poseidon1_policy<field_type, 128, /*Rate=*/2>;
     using permutation = poseidon1_permutation<policy>;
-    using sponge_type =
-        poseidon_sponge_construction<policy, permutation, poseidon_sponge_absorb_mode::add,
-                                     poseidon_sponge_padding_mode::padding_free>;
+    using sponge_type = poseidon_sponge_construction<policy,
+                                                     permutation,
+                                                     poseidon_sponge_absorb_mode::add,
+                                                     poseidon_sponge_padding_mode::padding_free>;
     using hash_type = poseidon_add_padding_free_test_hash<policy, permutation>;
     using word_type = typename policy::word_type;
 
@@ -569,8 +574,7 @@ BOOST_AUTO_TEST_CASE(poseidon1_padding_free_overwrite_dense_and_optimized_permut
     using optimized_hash_type = poseidon_padding_free_test_hash<policy, optimized_permutation>;
     using word_type = typename policy::word_type;
 
-    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u),
-                                    word_type(4u)};
+    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u), word_type(4u)};
 
     const typename dense_hash_type::digest_type dense_digest = test_hash_field_elements<dense_hash_type>(input);
     const typename optimized_hash_type::digest_type optimized_digest =
@@ -590,8 +594,7 @@ BOOST_AUTO_TEST_CASE(poseidon1_padding_free_public_wrapper_matches_optimized_pad
     BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<public_hash_type>::value,
                             "poseidon1 padding-free public wrapper should be recognized as Poseidon");
 
-    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u),
-                                    word_type(4u)};
+    std::vector<word_type> input = {word_type(0u), word_type(1u), word_type(2u), word_type(3u), word_type(4u)};
 
     const typename public_hash_type::digest_type public_digest = test_hash_field_elements<public_hash_type>(input);
     const typename optimized_hash_type::digest_type optimized_digest =

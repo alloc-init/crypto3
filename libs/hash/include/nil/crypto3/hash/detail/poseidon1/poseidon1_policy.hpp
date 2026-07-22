@@ -26,8 +26,13 @@ namespace nil {
                  * original Poseidon1 round structure: RF/2 full rounds, RP partial rounds, RF/2 full rounds,
                  * with AddRoundConstants -> S-box -> MDS inside each round.
                  */
-                template<typename FieldType, std::size_t Security, std::size_t Rate, std::size_t Capacity,
-                         std::size_t SBoxPower, std::size_t FullRounds, std::size_t PartRounds,
+                template<typename FieldType,
+                         std::size_t Security,
+                         std::size_t Rate,
+                         std::size_t Capacity,
+                         std::size_t SBoxPower,
+                         std::size_t FullRounds,
+                         std::size_t PartRounds,
                          std::size_t DigestBits>
                 struct base_poseidon1_policy {
                     static_assert(FullRounds % 2 == 0, "Poseidon1 requires an even number of full rounds.");
@@ -50,8 +55,7 @@ namespace nil {
                     using state_type = std::array<word_type, state_words>;
 
                     constexpr static const std::size_t digest_bits = DigestBits;
-                    constexpr static const std::size_t digest_words =
-                        (digest_bits + word_bits - 1) / word_bits;
+                    constexpr static const std::size_t digest_words = (digest_bits + word_bits - 1) / word_bits;
                     static_assert(digest_words <= Rate,
                                   "Poseidon1 intentionally supports only OUT <= RATE for now; "
                                   "extend the sponge to squeeze multiple blocks before raising this limit.");
@@ -77,43 +81,40 @@ namespace nil {
                 };
 
                 template<typename PolicyType>
-                concept poseidon1_policy_type = requires(typename PolicyType::word_type word) {
-                    typename PolicyType::field_type;
-                    typename PolicyType::word_type;
-                    typename PolicyType::block_type;
-                    typename PolicyType::state_type;
-                    typename PolicyType::digest_type;
-                    typename PolicyType::iv_generator;
+                concept poseidon1_policy_type =
+                    requires(typename PolicyType::word_type word) {
+                        typename PolicyType::field_type;
+                        typename PolicyType::word_type;
+                        typename PolicyType::block_type;
+                        typename PolicyType::state_type;
+                        typename PolicyType::digest_type;
+                        typename PolicyType::iv_generator;
 
-                    { PolicyType::word_bits } -> std::convertible_to<std::size_t>;
-                    { PolicyType::block_words } -> std::convertible_to<std::size_t>;
-                    { PolicyType::block_bits } -> std::convertible_to<std::size_t>;
-                    { PolicyType::state_words } -> std::convertible_to<std::size_t>;
-                    { PolicyType::state_bits } -> std::convertible_to<std::size_t>;
-                    { PolicyType::digest_words } -> std::convertible_to<std::size_t>;
-                    { PolicyType::digest_bits } -> std::convertible_to<std::size_t>;
-                    { PolicyType::full_rounds } -> std::convertible_to<std::size_t>;
-                    { PolicyType::half_full_rounds } -> std::convertible_to<std::size_t>;
-                    { PolicyType::part_rounds } -> std::convertible_to<std::size_t>;
-                    { PolicyType::security } -> std::convertible_to<std::size_t>;
-                    { PolicyType::rate } -> std::convertible_to<std::size_t>;
-                    { PolicyType::capacity } -> std::convertible_to<std::size_t>;
-                    { PolicyType::sbox_power } -> std::convertible_to<std::size_t>;
+                        { PolicyType::word_bits } -> std::convertible_to<std::size_t>;
+                        { PolicyType::block_words } -> std::convertible_to<std::size_t>;
+                        { PolicyType::block_bits } -> std::convertible_to<std::size_t>;
+                        { PolicyType::state_words } -> std::convertible_to<std::size_t>;
+                        { PolicyType::state_bits } -> std::convertible_to<std::size_t>;
+                        { PolicyType::digest_words } -> std::convertible_to<std::size_t>;
+                        { PolicyType::digest_bits } -> std::convertible_to<std::size_t>;
+                        { PolicyType::full_rounds } -> std::convertible_to<std::size_t>;
+                        { PolicyType::half_full_rounds } -> std::convertible_to<std::size_t>;
+                        { PolicyType::part_rounds } -> std::convertible_to<std::size_t>;
+                        { PolicyType::security } -> std::convertible_to<std::size_t>;
+                        { PolicyType::rate } -> std::convertible_to<std::size_t>;
+                        { PolicyType::capacity } -> std::convertible_to<std::size_t>;
+                        { PolicyType::sbox_power } -> std::convertible_to<std::size_t>;
 
-                    { word.pow(PolicyType::sbox_power) } -> std::same_as<typename PolicyType::word_type>;
-                    { PolicyType::iv_generator::generate() } -> std::same_as<typename PolicyType::state_type>;
-                } && (PolicyType::rate > 0) && (PolicyType::capacity > 0) &&
+                        { word.pow(PolicyType::sbox_power) } -> std::same_as<typename PolicyType::word_type>;
+                        { PolicyType::iv_generator::generate() } -> std::same_as<typename PolicyType::state_type>;
+                    } && (PolicyType::rate > 0) && (PolicyType::capacity > 0) &&
                     (PolicyType::state_words == PolicyType::rate + PolicyType::capacity) &&
-                    (PolicyType::block_words == PolicyType::rate) &&
-                    (PolicyType::digest_bits > 0) &&
-                    (PolicyType::digest_words > 0) &&
-                    (PolicyType::digest_words <= PolicyType::block_words) &&
+                    (PolicyType::block_words == PolicyType::rate) && (PolicyType::digest_bits > 0) &&
+                    (PolicyType::digest_words > 0) && (PolicyType::digest_words <= PolicyType::block_words) &&
                     (PolicyType::digest_words ==
                      (PolicyType::digest_bits + PolicyType::word_bits - 1) / PolicyType::word_bits) &&
-                    (PolicyType::full_rounds >= 6) &&
-                    (PolicyType::full_rounds % 2 == 0) &&
-                    (PolicyType::half_full_rounds == PolicyType::full_rounds / 2) &&
-                    (PolicyType::sbox_power >= 3);
+                    (PolicyType::full_rounds >= 6) && (PolicyType::full_rounds % 2 == 0) &&
+                    (PolicyType::half_full_rounds == PolicyType::full_rounds / 2) && (PolicyType::sbox_power >= 3);
 
                 /*!
                  * @brief Standard Poseidon1 policy with the round counts used by the original Poseidon paper
@@ -122,13 +123,16 @@ namespace nil {
                  * Only capacity=1 is modeled here because the existing checked-in constants are capacity-1
                  * parameter sets. Add a new specialization when adding constants for another capacity.
                  */
-                template<typename FieldType, std::size_t Security, std::size_t Rate, std::size_t Capacity = 1,
-                         std::size_t DigestBits = FieldType::value_bits, typename Enable = void>
+                template<typename FieldType,
+                         std::size_t Security,
+                         std::size_t Rate,
+                         std::size_t Capacity = 1,
+                         std::size_t DigestBits = FieldType::value_bits,
+                         typename Enable = void>
                 struct poseidon1_policy;
 
                 template<typename FieldType, std::size_t Rate, std::size_t DigestBits>
-                struct poseidon1_policy<FieldType, 80, Rate, 1, DigestBits,
-                                        std::enable_if_t<Rate == 1 || Rate == 2>>
+                struct poseidon1_policy<FieldType, 80, Rate, 1, DigestBits, std::enable_if_t<Rate == 1 || Rate == 2>>
                     : base_poseidon1_policy<FieldType, 80, Rate, 1, 5, 8, 33, DigestBits> { };
 
                 template<typename FieldType, std::size_t DigestBits>
@@ -136,8 +140,7 @@ namespace nil {
                     : base_poseidon1_policy<FieldType, 80, 4, 1, 5, 8, 35, DigestBits> { };
 
                 template<typename FieldType, std::size_t Rate, std::size_t DigestBits>
-                struct poseidon1_policy<FieldType, 128, Rate, 1, DigestBits,
-                                        std::enable_if_t<Rate == 1 || Rate == 2>>
+                struct poseidon1_policy<FieldType, 128, Rate, 1, DigestBits, std::enable_if_t<Rate == 1 || Rate == 2>>
                     : base_poseidon1_policy<FieldType, 128, Rate, 1, 5, 8, 57, DigestBits> { };
 
                 template<typename FieldType, std::size_t DigestBits>
@@ -150,7 +153,7 @@ namespace nil {
 
             }    // namespace detail
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_POSEIDON1_POLICY_HPP

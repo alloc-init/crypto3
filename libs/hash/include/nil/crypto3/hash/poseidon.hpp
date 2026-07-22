@@ -132,10 +132,8 @@ namespace nil {
                         // This is required by the hash concept.
                     };
 
-                    using type = detail::poseidon_sponge_construction<policy_type,
-                                                                       permutation_type,
-                                                                       detail::poseidon_sponge_absorb_mode::overwrite,
-                                                                       PaddingMode>;
+                    using type = detail::poseidon_sponge_construction<
+                        policy_type, permutation_type, detail::poseidon_sponge_absorb_mode::overwrite, PaddingMode>;
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::raw;
@@ -144,8 +142,7 @@ namespace nil {
             };
 
             template<typename PolicyType>
-            class poseidon1 : public basic_poseidon1<PolicyType,
-                                                     detail::poseidon1_optimized_permutation<PolicyType>,
+            class poseidon1 : public basic_poseidon1<PolicyType, detail::poseidon1_optimized_permutation<PolicyType>,
                                                      detail::poseidon_sponge_padding_mode::pad10> {
             public:
                 using policy_type = PolicyType;
@@ -153,8 +150,7 @@ namespace nil {
             };
 
             template<typename PolicyType>
-            class poseidon1_dense : public basic_poseidon1<PolicyType,
-                                                           detail::poseidon1_permutation<PolicyType>,
+            class poseidon1_dense : public basic_poseidon1<PolicyType, detail::poseidon1_permutation<PolicyType>,
                                                            detail::poseidon_sponge_padding_mode::pad10> {
             public:
                 using policy_type = PolicyType;
@@ -162,10 +158,9 @@ namespace nil {
             };
 
             template<typename PolicyType>
-            class poseidon1_padding_free : public basic_poseidon1<
-                                               PolicyType,
-                                               detail::poseidon1_optimized_permutation<PolicyType>,
-                                               detail::poseidon_sponge_padding_mode::padding_free> {
+            class poseidon1_padding_free
+                : public basic_poseidon1<PolicyType, detail::poseidon1_optimized_permutation<PolicyType>,
+                                         detail::poseidon_sponge_padding_mode::padding_free> {
             public:
                 using policy_type = PolicyType;
                 using accumulator_tag = accumulators::tag::algebraic_hash<poseidon1_padding_free<policy_type>>;
