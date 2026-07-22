@@ -6,7 +6,7 @@ function(check_host_cpu_feature feature builtin_name)
     string(TOUPPER "${feature}" feature_upper)
     set(result_var "HOST_CPU_${feature_upper}_FOUND")
 
-    if(CMAKE_CROSSCOMPILING)
+    if(CMAKE_CROSSCOMPILING OR NOT CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|i[3-6]86)$")
         set(${result_var} FALSE CACHE BOOL "${feature} available on host CPU" FORCE)
         set(${result_var} FALSE PARENT_SCOPE)
         return()
