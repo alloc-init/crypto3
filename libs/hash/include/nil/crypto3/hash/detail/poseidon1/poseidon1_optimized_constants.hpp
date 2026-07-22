@@ -51,8 +51,7 @@ namespace nil {
                     static_assert(part_rounds > 0, "Optimized Poseidon1 requires at least one partial round.");
 
                     using matrix_type = typename base_type::mds_matrix_type;
-                    using partial_matrix_type =
-                        algebra::matrix<element_type, state_words - 1, state_words - 1>;
+                    using partial_matrix_type = algebra::matrix<element_type, state_words - 1, state_words - 1>;
                     using partial_vector_type = std::array<element_type, state_words - 1>;
                     using partial_round_constants_type = std::array<element_type, part_rounds - 1>;
                     using sparse_vectors_type = std::array<partial_vector_type, part_rounds>;
@@ -148,8 +147,7 @@ namespace nil {
                         partial_round_constants_matrix_type result;
                         for (std::size_t round = 0; round < part_rounds; ++round) {
                             for (std::size_t i = 0; i < state_words; ++i) {
-                                result[round][i] =
-                                    constants_data_type::round_constants[half_full_rounds + round][i];
+                                result[round][i] = constants_data_type::round_constants[half_full_rounds + round][i];
                             }
                         }
                         return result;
@@ -254,10 +252,8 @@ namespace nil {
                                 column[i] = multiplied_matrix[i + 1][0];
                             }
 
-                            const partial_matrix_type submatrix_inverse_value =
-                                submatrix_inverse(multiplied_matrix);
-                            equivalent_sparse_rows[round] =
-                                partial_matrix_vector_mul(submatrix_inverse_value, column);
+                            const partial_matrix_type submatrix_inverse_value = submatrix_inverse(multiplied_matrix);
+                            equivalent_sparse_rows[round] = partial_matrix_vector_mul(submatrix_inverse_value, column);
 
                             // current_matrix is the dense transition left after extracting one sparse
                             // matrix. Its first row and first column are cleared except for [0][0], so
@@ -286,8 +282,7 @@ namespace nil {
                             // uses it for the one dense dot product that updates state[0].
                             sparse_first_rows[round][0] = mds[0][0];
                             for (std::size_t i = 1; i < state_words; ++i) {
-                                sparse_first_rows[round][i] =
-                                    equivalent_sparse_rows[reversed_round][i - 1];
+                                sparse_first_rows[round][i] = equivalent_sparse_rows[reversed_round][i - 1];
                             }
                         }
                     }
@@ -301,7 +296,7 @@ namespace nil {
 
             }    // namespace detail
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_POSEIDON1_OPTIMIZED_CONSTANTS_HPP

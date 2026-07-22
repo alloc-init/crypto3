@@ -77,7 +77,7 @@ namespace nil {
 
             }    // namespace detail
         }    // namespace hashes
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_HASH_POSEIDON1_PERMUTATION_HPP
