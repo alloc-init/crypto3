@@ -1,74 +1,44 @@
-# <span style='font-family: monospace'>=nil;</span> Crypto3 C++ Cryptography Suite {#mainpage}
+# Crypto3 C++ Cryptography Suite {#mainpage}
 
 @tableofcontents
 
-Crypto3 cryptography suite's purpose is:
-1. To provide a secure, fast and architecturally clean C++ generic cryptography schemes implementation.
-2. To provide a developer-friendly, modular suite, usable for novel schemes implementation and further
- extension.
-3. To provide a Standard Template Library-alike C++ interface and concept-based architecture implementation.
+Crypto3 is a modular, header-only C++ cryptography suite with generic,
+STL-style interfaces. It includes cryptographic primitives as well as the
+algebraic and mathematical structures used to construct them.
 
-Libraries are designed to be state of the art, highly performant and providing a one-stop solution for 
-all cryptographic operations. They are supported on all operating systems (*nix, windows, macOS) 
-and architectures(x86/ARM).
+Continuous integration currently covers Ubuntu x86-64 and macOS. Other
+operating systems and architectures are not continuously tested.
 
+See the [contribution guidelines](contributing.md) to contribute to the project.
 
-See [contribution](contributing.md) guidelines if you wish to contribute to the project.
+## Components
 
-## Modules
-Cryptography suite contains multiple modules from trivial encoding (e.g. base64), encryption, hashing
-to complex protocols (e.g. threshold schemes, zero-knowledge protocol or verifiable delay functions).
+The monorepo contains components for algebra, block and stream ciphers, codecs,
+containers, hashes, key derivation, message authentication, marshalling,
+polynomial arithmetic, multiprecision arithmetic, public-key padding,
+public-key schemes, randomization, and supporting utilities.
 
-Detailed list of modules with tutorials is available at [Modules page](modules.html).
+Source trees are maintained directly under `libs`; they are not Git submodules.
+The repository's only Git submodule is `cmake/modules`.
 
-## Project structure
-```
-root
-├── cmake: cmake sub-module with helper functions/macros to build crypto3 library umbrella-repository
-├── docs: documentation , tutorials and guides
-├── libs: all directories added as submodules which are independent projects.
-│   ├── algebra: algebraic operations and structures being used for elliptic-curve cryptography
-│   ├── block: block ciphers
-│   ├── codec: encoding/decoding algorithms
-│   ├── containers:containers and generic commitment schemes for accumulating data, includes Merkle Tree
-│   ├── hash: hashing algorithms
-│   ├── mac: message authentication codes
-│   ├── marshalling: marshalling libraries for types in crypto3 library
-│   ├── math: set of Fast Fourier Transforms evaluation algorithms and Polynomial Arithmetics
-│   ├── modes: cipher modes
-│   ├── multiprecision: integer, rational, floating-point, complex and interval number types. 
-│   ├── pbkdf: password based key derivation functions
-│   ├── pkmodes: threshold, aggregation modes for public key schemes
-│   ├── pkpad: padding module for public key schemes
-│   ├── pubkey: pubkey signing APIs
-│   ├── random: randomisation primitives 
-│   ├── stream: stream ciphers
-│   ├── zk: zk cryptography schemes
-```
-
+API groups are listed on the generated [Modules page](modules.html). Buildable
+examples are located in component-specific `libs/*/example` directories.
 
 ## Usage
 
-Cryptography suite can be used as follows:
+Crypto3 components are CMake `INTERFACE` libraries and do not produce static or
+shared library artifacts. A project that includes this repository can link the
+required component targets:
 
-1. Generic.
-2. Selective.
+```cmake
+add_subdirectory(path/to/crypto3)
+target_link_libraries(my_target PRIVATE crypto3::hash crypto3::algebra)
+```
 
-The suite is used as a header-only and is currently statically linked. Future versions will allow dynamic linking. 
+Dependencies between components are carried by their CMake targets.
 
-#### Generic
-Generic usage of cryptography suite consists of all modules available at 
-[GitHub =nil; Crypto3 Team Repositories](https://github.com/orgs/NilFoundation/teams/nil-crypto3/repositories). 
-An umbrella-repository of it is available at  [Crypto3 GitHub](https://github.com/alloc-init/crypto3.git). Modules
-are added as submodules emplaced in `libs` directory. A developer can thus add this  
-project as a submodule and would not need to resolve dependencies. See [crypto3-scaffold](https://github.com/alloc-init/crypto3-scaffold) as an example of usage. 
+## Next Steps
 
-### Selective
-Developer can select to include a one or more modules to reduce the sources of resulting project and dependencies tree height. This however
-does require the developer to manually resolve all required dependencies and stay upto date regarding
-compatibilities across modules.
-
-
-## Next steps
- <!--TODO Link generated via doxygen -->
-Navigate to quickstart guide to set up and configure the environment or [here](modules.html) for detailed explanations per module. 
+Follow the [Quickstart](quickstart.md) to build the project, run the tests, and
+compile an example. Continue with the [BLS signing guide](intermediate.md) for a
+small public-key example.

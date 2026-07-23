@@ -1,46 +1,33 @@
-### Contributing
+# Contributing
 
+Bug reports, fixes, documentation improvements, and proposals are welcome.
 
-We welcome contribution, bug reports, fixes and suggestions from the community.
+## Branches
 
-### Branching guide
+The default integration branch is `master`. Create a descriptively named
+feature or fix branch from the current `master` branch and open a pull request
+targeting `master`.
 
-These branches are partially compliant to GitFlow branching model:
-* `master` - contains tagged release versions.
-* `develop` - contains in-development library state, used for feature-branching.
-* `#version-branch` - contains changes related to particular version development.
-* `#issue-branch` - contains changes related to particular issue.
+## Issues And Discussions
 
-The above nomenclature is followed for both umbrella-repository and single module repositories.
+Open issues in the [Crypto3 issue tracker](https://github.com/alloc-init/crypto3/issues).
+Include the affected path, a minimal reproducer when possible, and details about
+your compiler, Boost version, and operating system.
 
-### Issues
+Use [GitHub Discussions](https://github.com/alloc-init/crypto3/discussions) for
+design proposals, questions, and tutorial requests.
 
-Preferred way to submit an issue is to submit that to the particular module you
-think the trouble is in. In case you are not sure, submit an issue to this (master)
-repository, so the development team could review the contents and create a necessary
-issues set in modules related.
+## Pull Requests
 
-### Creating a discussion
-Discussions should be created on GitHub for any proposed changes or suggestions to the library 
+Components in this checkout are maintained directly in the monorepo. Submit
+changes to [alloc-init/crypto3](https://github.com/alloc-init/crypto3), targeting
+`master`, and mention the affected path, such as `libs/hash`, `libs/pubkey`, or
+`libs/marshalling/core`, in the pull request description.
 
+Before opening a pull request, configure, build, and run the relevant tests:
 
-### Pull Requests
-
-Pull request submission is complicated because of the suite is highly modular and particular changes are required to be pulled in convenient repository.
-
-Depending on what you want to change, proceed your pull request to following repositories:
-
-* Algebra (curves and finite fields operations) (https://github.com/alloc-init/crypto3-algebra.git)
-* Block Ciphers (encrypt/decrypt with ```block``` namespace member policy) (https://github.com/alloc-init/crypto3-block.git)
-* Codecs (encoding/decoding) (https://github.com/alloc-init/crypto3-codec.git)
-* Hashes (https://github.com/alloc-init/crypto3-hash.git)
-* Message Authentication Codes (https://github.com/alloc-init/crypto3-mac.git)
-* Cipher Modes (encrypt/decrypt either with ```block``` or with ```stream``` namespace member policies) (https://github.com/alloc-init/crypto3-modes.git)
-* Multiprecision (https://github.com/alloc-init/crypto3-multiprecision.git)
-* Public Key Schemes (`pubkey` namespace) (https://github.com/alloc-init/crypto3-pubkey.git)
-* Public Key Schemes Modes (threshold enhancements to public key schemes)(https://github.com/alloc-init/crypto3-pubkey.git)
-* Stream Ciphers (https://github.com/alloc-init/crypto3-stream.git)
-* Random (https://github.com/alloc-init/crypto3-random.git)
-* Zero-Knowledge Proofs (https://github.com/alloc-init/crypto3-zk.git)
-
-In case you are not sure which repository to proceed to, create an issue in this repository and ask.
+```sh
+cmake -S . -B build -DBUILD_TESTS=ON
+cmake --build build --target tests --parallel
+ctest --test-dir build --output-on-failure
+```

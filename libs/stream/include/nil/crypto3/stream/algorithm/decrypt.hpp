@@ -167,7 +167,7 @@ namespace nil {
          *
          * @tparam StreamCipher
          * @tparam SinglePassRange
-         * @tpatam KeyRange
+         * @tparam KeyRange
          * @tparam OutputIterator
          *
          * @param rng

@@ -1,27 +1,10 @@
-# Marshalling utilities for [[alloc] init]'s Algebra 
+# Crypto3 Algebra Marshalling
 
-This module provides extension of [Marshalling](https://github.com/alloc-init/marshalling) utilities for [[[alloc] init] Algebra](https://github.com/alloc-init/crypto3-algebra)
+Marshalling fields and adapters for Crypto3 algebra types.
 
-## Building
+This header-only component is maintained as part of the Crypto3 monorepo. See
+the [root build instructions](../../../README.md#clone-and-build) to configure
+the project and run its tests. Link the component as
+`marshalling::crypto3_algebra` from CMake.
 
-This library uses Boost CMake build modules (https://github.com/BoostCMake/cmake_modules.git). To actually include this
-library in a project it is required to:
-
-1. Add [CMake Modules](https://github.com/BoostCMake/cmake_modules.git) as submodule to target project repository.
-2. Add all the internal dependencies using [CMake Modules](https://github.com/BoostCMake/cmake_modules.git) as
-   submodules to target project repository.
-3. Initialize parent project with [CMake Modules](https://github.com/BoostCMake/cmake_modules.git) (Look
-   at [crypto3](https://github.com/alloc-init/crypto3.git) for the example)
-
-## Dependencies
-
-### Internal
-
-* [Multiprecision](https://github.com/alloc-init/crypto3-multiprecision.git)
-* [Algebra](https://github.com/alloc-init/crypto3-algebra.git)
-* [=nil;Marshalling](https://github.com/alloc-init/marshalling)
-* [=nil;Crypto3 Multiprecision Marshalling](https://github.com/alloc-init/crypto3-multiprecision-marshalling)
-
-### External
-
-* [Boost](https://boost.org) (>= 1.74)
+Buildable examples are available under [`example`](example/).

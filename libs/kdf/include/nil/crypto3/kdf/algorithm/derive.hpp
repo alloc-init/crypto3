@@ -31,6 +31,11 @@
 
 namespace nil {
     namespace crypto3 {
+        /**
+         * @defgroup kdf Key Derivation Functions
+         * @defgroup kdf_algorithms Algorithms
+         * @ingroup kdf
+         */
         // This file is the public algorithm surface for KDFs. Different KDF families have genuinely different input
         // shapes, so future algorithms should add constrained derive<Kdf>(...) overloads instead of forcing every KDF
         // into the PBKDF2 password/salt/iterations/output-length signature.

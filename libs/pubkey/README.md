@@ -1,23 +1,11 @@
-# Public Key Cryptography Schemes for [[alloc] init]'s Cryptography Suite
+# Crypto3.Pubkey
 
-## Building
+Public-key signature, encryption, and secret-sharing schemes for the Crypto3
+suite.
 
-This library uses Boost CMake build modules (https://github.com/BoostCMake/cmake_modules.git). To actually include this
-library in a project it is required to:
+This header-only component is maintained as part of the Crypto3 monorepo. See
+the [root build instructions](../../README.md#clone-and-build) to configure the
+project and run its tests. Link the component as `crypto3::pubkey` from CMake.
 
-1. Add [CMake Modules](https://github.com/BoostCMake/cmake_modules.git) as submodule to target project repository.
-2. Add all the internal dependencies using [CMake Modules](https://github.com/BoostCMake/cmake_modules.git) as
-   submodules to target project repository.
-3. Initialize parent project with [CMake Modules](https://github.com/BoostCMake/cmake_modules.git) (Look
-   at [crypto3](https://github.com/alloc-init/crypto3.git) for the example)
-
-## Dependencies
-
-### Internal
-
-* [Multiprecision](https://github.com/alloc-init/crypto3-multiprecision.git)
-* [Algebra](https://github.com/alloc-init/crypto3-algebra.git)
-
-### External
-
-* [Boost](https://boost.org) (>= 1.74)
+API notes are available under [`docs`](docs/), and the maintained BLS example is
+under [`example`](example/).

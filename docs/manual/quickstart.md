@@ -1,88 +1,76 @@
 \page Quickstart Quickstart
 
-Quickstart
-========================
+# Quickstart
 
-By the end of this guide ,you will have set up a development environment for crypto3 projects 
-and be able to run an example.This will enable you to test ideas quickly and further explore the 
-API's of the suite.
+This guide builds Crypto3, runs its tests, and builds the in-tree BLS example.
 
-## Install dependencies
+## Requirements
 
-### Linux
+- CMake 3.22 or newer
+- A C++23-capable C++ compiler
+- Boost with the components listed in the [root README](../../README.md#requirements)
+- Git
 
-The following dependencies need to be installed.
+On Ubuntu, the required packages can be installed with:
 
-- [Boost](https://www.boost.org/) >= 1.74.0
-- [cmake](https://cmake.org/) >= 3.5
-- [clang](https://clang.llvm.org/) >= 14.0.6
-
-Please execute the below to fetch the packages required or adapt the command
-to your package manager.
-
-```sudo apt install build-essential libssl-dev libboost-all-dev cmake clang git```
-
-
-## Get crypto3 scaffold project
-
-```
-git clone https://github.com/alloc-init/crypto3-scaffold.git
-cd crypto3-scaffold
+```sh
+sudo apt update
+sudo apt install build-essential libboost-all-dev cmake git
 ```
 
-## Project structure
+On macOS, install Boost and LLVM with Homebrew:
 
-The project is an example of generic usage of the suite,adding the whole crypto3 suite as a submodule 
-dependency.
-
-```
-root
-├── libs : submodule including the mono-repository for crypto3 suite
-├── src  
-│   ├── bls 
-│   │  │──── src: source for bls signing example.
-
+```sh
+brew install boost llvm
 ```
 
-## Installing and testing scaffold
+## Get The Source
 
-- **Clone submodules recursively**
+```sh
+git clone https://github.com/alloc-init/crypto3.git
+cd crypto3
 ```
+
+`cmake/modules` is a Git submodule whose configured URL uses GitHub SSH. If you
+do not have GitHub SSH credentials, use an HTTPS rewrite for this checkout:
+
+```sh
+git config url."https://github.com/".insteadOf git@github.com:
 git submodule update --init --recursive
 ```
 
-- **Build** : The project is built using cmake system.
+## Build And Test
 
-``` 
-mkdir build && cd build
-cmake .. && make
+```sh
+cmake -S . -B build -DBUILD_TESTS=ON
+cmake --build build --target tests --parallel
+ctest --test-dir build --output-on-failure
 ```
 
-- Run executable
-``` 
-./src/bls/crypto3-scaffold
+To select a compiler explicitly, add a compiler path during configuration:
+
+```sh
+cmake -S . -B build \
+  -DBUILD_TESTS=ON \
+  -DCMAKE_CXX_COMPILER=/path/to/clang++
 ```
 
-You should see the output `Verified signature successfully` on your console.
+## Build The BLS Example
 
-## Conclusion
-Congratulations! You now have the environment to start experimenting with the crypto3 suite. You can now explore
-other [modules](modules.html) in the suite.Modules also have examples in their repositories' ex : [algebra example](https://github.com/alloc-init/crypto3-algebra/tree/master/example).
+Examples are disabled by default. Enable them and build the public-key BLS
+example with:
 
-
-## Common Issues
-### Compilation Errors
-If you have more than one compiler installed i.e g++ & clang++. The make system might pick up the former. You can explicitly force usage of
-clang++ by finding the path and passing it in the variable below.
-
-```
-`which clang++`  
-cmake .. -DCMAKE_CXX_COMPILER=<path to clang++ from above>
+```sh
+cmake -S . -B build -DBUILD_EXAMPLES=ON
+cmake --build build --target pubkey_bls_example --parallel
+./build/libs/pubkey/example/pubkey_bls_example
 ```
 
-### Submodule management
-Git maintains a few places where submodule details are cached. Sometimes updates do not come through. ex: deletion , updating
-a previously checked out submodule.It is advisable to check these locations for remains or try a new checkout.
-- .gitmodules
-- .git/config
-- .git/modules/*
+The example creates a key, signs `hello world`, and asserts that verification
+succeeds. It exits silently with status zero on success.
+
+## Next Steps
+
+- Read the [BLS signing guide](intermediate.md).
+- Browse generated API groups on the [Modules page](modules.html).
+- Explore component-specific examples under `libs/*/example`.

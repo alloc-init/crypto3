@@ -2,14 +2,13 @@
 
 @tableofcontents
 
-Crypto3.FFT library extends the =nil; Foundation's computer algebra system and provides a set of Fast Fourier Transforms
+Crypto3.Math extends the Crypto3 algebra library and provides Fast Fourier Transform
 evaluation algorithms implemented in way C++ standard library implies: concepts, algorithms, predictable behavior,
 latest standard features support and clean architecture without compromising security and performance.
 
-Crypto3.FFT consists of several parts to review:
+Crypto3.Math consists of several parts to review:
 
 * [Manual](@ref fft_manual).
-* [Implementation](@ref fft_impl).
 * [Concepts](@ref fft_concepts).
 
 ## Background
@@ -89,8 +88,11 @@ Newton evaluation and interpolation by choosing sample points that form a geomet
 
 Internal dependencies:
 
-1. [=nil; Algebra](https://github.com/alloc-init/algebra.git)
+1. Crypto3.Algebra
+2. Crypto3.Multiprecision
+3. Crypto3.ParallelizationUtils
+4. Crypto3.BenchmarkTools
 
 Outer dependencies:
 
-1. [Boost (optional)](https://boost.org) (>= 1.58)
+1. [Boost](https://boost.org)

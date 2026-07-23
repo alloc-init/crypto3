@@ -1,23 +1,11 @@
-# [[alloc] init] Marshalling Library
+# Crypto3 Marshalling Core
 
-This library is used throughout the project to transform data from one type to another.
-To define representation rules for custom type we use template-defined pseudo-DSL.
+Core fields, options, and protocol helpers for defining serialized
+representations with a template-based DSL.
 
-## Building
+This header-only component is maintained as part of the Crypto3 monorepo. See
+the [root build instructions](../../../README.md#clone-and-build) to configure
+the project and run its tests. Link the component as `marshalling::core` from
+CMake.
 
-This library uses Boost CMake build modules (https://github.com/BoostCMake/cmake_modules.git).
-To actually include this library in a project it is required to:
-
-1. Add [CMake Modules](https://github.com/BoostCMake/cmake_modules.git) as submodule to target project repository.
-2. Add all the internal dependencies using [CMake Modules](https://github.com/BoostCMake/cmake_modules.git) as
-   submodules to target project repository.
-3. Initialize parent project with [CMake Modules](https://github.com/BoostCMake/cmake_modules.git) (Look
-   at [crypto3](https://github.com/alloc-init/crypto3.git) for the example)
-
-## Dependencies
-
-### Internal
-
-### External
-
-* [Boost](https://boost.org) (>= 1.81)
+Buildable examples are available under [`example`](example/).

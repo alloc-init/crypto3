@@ -99,7 +99,7 @@ namespace nil {
             /*!
              * @brief CRC. Non-cryptographically secure checksum.
              *
-             * @ingroup hash
+             * @ingroup hashes
              *
              * @tparam DigestBits
              * @tparam TruncPoly

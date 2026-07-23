@@ -92,10 +92,7 @@ namespace nil {
 
             /*!
              * @defgroup mac_processing_policies Mac Modes
-             * @brief
-             *
-             * @defgroup mac_processing_policies
-             * @ingroup mac_processing_policies
+             * @brief Processing policies for message authentication codes.
              *
              * @tparam Mac
              */

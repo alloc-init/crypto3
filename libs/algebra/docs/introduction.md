@@ -14,7 +14,8 @@ Crypto3.Algebra consists of several parts to review:
 
 Internal dependencies:
 
-None
+1. Crypto3.Multiprecision
+2. Crypto3.Random
 
 Outer dependencies:
-1. [Boost (optional)](https://boost.org) (>= 1.58)
+1. [Boost](https://boost.org)

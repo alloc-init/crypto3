@@ -18,7 +18,8 @@ Crypto3.Codec consists of several parts to review:
 
 In-suite dependencies:
 
-Crypto3.Codec has no dependencies on other suite libraries and can be used standalone.
+Base58 support conditionally depends on Crypto3.Multiprecision. Other codecs do
+not link another Crypto3 component directly.
 
 Outer dependencies:
-1. Boost (>= 1.58)
+1. [Boost](https://boost.org)
