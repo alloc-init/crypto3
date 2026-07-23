@@ -7,7 +7,7 @@
 This document provides a detailed description of pack algorithms used in the current project. Briefly, pack algorithms
 are used throughout the project to transform data divided into chunks with one parameters into the data divided into
 chunks with another parameters. The dependence of algorithms on these parameters is discussed further in the
-Section [Algorithms](##pack_algorithms).
+section [Algorithms](#pack_algorithms).
 
 ## Basic notions and assumptions
 
@@ -70,7 +70,8 @@ std::array<uint32_t, 1> output = {0x34127856};
 
 input:
 
-@dot digraph bytes {
+@dot
+digraph bytes {
 bgcolor="#151515"
 node [shape=record color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica"];
 
@@ -78,17 +79,20 @@ struct1 [label="0x12 | 0x34 "];
 
 struct2 [label="0x56 | 0x78 "];
 
-} @enddot
+}
+@enddot
 
 output:
 
-@dot digraph bytes {
+@dot
+digraph bytes {
 bgcolor="#151515"
 node [shape=record color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica"];
 
 struct1 [label="0x34 | 0x12 | 0x78 | 0x56 "];
 
-} @enddot
+}
+@enddot
 
 In the example above we suppose that the unit of arrays is byte. It is easy to see, that the value written to the out
 array is obtained by combining each input chunk byte data in reverse byte order.
@@ -103,7 +107,8 @@ std::array<uint32_t, 2> output {0x78563412};
 
 input:
 
-@dot digraph bytes { 
+@dot
+digraph bytes {
 bgcolor="#151515"
 node [shape=record color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica"];
 
@@ -111,17 +116,20 @@ struct1 [label="0x12 | 0x34 "];
 
 struct2 [label="0x56 | 0x78 "];
 
-} @enddot
+}
+@enddot
 
 output:
 
-@dot digraph bytes { 
+@dot
+digraph bytes {
 bgcolor="#151515"
 node [shape=record color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica"];
 
 struct1 [label="0x78 | 0x56 | 0x34 | 0x12 "];
 
-} @enddot
+}
+@enddot
 
 In this example, `input` array units are ordered in `big_unit_big_bit` endianness and `output` array units are ordered
 in `little_unit_big_bit` endianness (supposing that the unit is byte). One can see that in addition to reverse byte
@@ -139,7 +147,8 @@ std::array<uint64_t, 1> output = {0x1234567890abcdef};
 
 input:
 
-@dot digraph bytes { 
+@dot
+digraph bytes {
 bgcolor="#151515"
 node [shape=record color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica"];
 
@@ -149,17 +158,21 @@ struct2 [label="0x56 | 0x78 "];
 
 struct3 [label="0x90 | 0xab "];
 
-struct4 [label="0xcd | 0xef "]; } @enddot
+struct4 [label="0xcd | 0xef "];
+}
+@enddot
 
 output:
 
-@dot digraph bytes { 
+@dot
+digraph bytes {
 bgcolor="#151515"
 node [shape=record color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica"];
 
 struct1 [label="0x12 | 0x34 | 0x56 | 0x78 | 0x90 | 0xab | 0xcd | 0xef"];
 
-} @enddot
+}
+@enddot
 
 Here it is easy to see that the data from `input` was just concatenated into the `output` data with no additional
 transformations. Now, notice that the first and the second example described in this section implicitly rely on the
@@ -175,7 +188,8 @@ std::array<uint16_t, 2> output = {0x482c, 0x6a1e};
 
 input:
 
-@dot digraph bytes { 
+@dot
+digraph bytes {
 bgcolor="#151515"
 node [shape=record color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica"];
 
@@ -185,11 +199,14 @@ struct2 [label="0x34"];
 
 struct3 [label="0x56"];
 
-struct4 [label="0x78"]; } @enddot
+struct4 [label="0x78"];
+}
+@enddot
 
 output:
 
-@dot digraph bytes { 
+@dot
+digraph bytes {
 bgcolor="#151515"
 node [shape=record color="#f5f2f1" fontcolor="#f5f2f1" fontname="helvetica"];
 
@@ -197,7 +214,8 @@ struct1 [label="0x48 | 0x2c"];
 
 struct2 [label="0x6a | 0x1e"];
 
-} @enddot
+}
+@enddot
 
 In this example, `input` array units are ordered in `big_unit_little_bit` endianness and `output` array units are
 ordered in `big_unit_big_bit` endianness (supposing that the unit is byte). Writing the byte ```0x12``` in binary form

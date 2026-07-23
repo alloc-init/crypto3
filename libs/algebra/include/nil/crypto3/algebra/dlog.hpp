@@ -35,7 +35,6 @@
 
 /**
  * \file
- * \ingroup internal
  * \brief Algorithms for computing discrete logarithms.
  *
  * FE schemes instantiated from the Discrete Diffie-Hellman assumption (DDH)

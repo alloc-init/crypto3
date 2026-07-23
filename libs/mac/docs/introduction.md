@@ -16,10 +16,9 @@ Crypto3.Mac consists of several parts to review:
 
 Internal dependencies:
 
-1. [Crypto3.Block](https://github.com/alloc-init/block.git)
-2. [Crypto3.Hash](https://github.com/alloc-init/hash.git)
-3. [Crypto3.Modes](https://github.com/alloc-init/modes.git)
+1. Crypto3.Block
+2. Crypto3.Hash
 
 External dependencies:
 
-1. [Boost](https://boost.org) (>= 1.58)
+1. [Boost](https://boost.org)

@@ -176,8 +176,8 @@ namespace nil {
                             return element_fp12_2over3over2(c0, c1);
                         }
 
-                        /** @brief Frobenius map: exponentiation by a degree of field characteristic
-                         * For $a\in F_{p^k}$ this returns $a^{p^pwr}$ */
+                        /** @brief Frobenius map: exponentiation by a degree of field characteristic.
+                         * For \f$a \in F_{p^k}\f$ this returns \f$a^{p^{pwr}}\f$. */
                         template<typename PowerType>
                         element_fp12_2over3over2 Frobenius_map(const PowerType &pwr) const {
                             return element_fp12_2over3over2(data[0].Frobenius_map(pwr),

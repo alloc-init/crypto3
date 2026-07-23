@@ -1,17 +1,8 @@
-# Marshalling utilities for =nil;Crypto3 math primitives - polynomials and terms
-This module provides extension of [=nil;Marshalling](https://github.com/NilFoundation/placeholder/tree/master/crypto3/libs/marshalling) utilities for [=nil;Crypto3 Math](https://github.com/NilFoundation/placeholder/tree/master/crypto3/libs/math)
+# Crypto3 Math Marshalling
 
-## Usage
+Marshalling fields and adapters for Crypto3 polynomials and polynomial terms.
 
-This library uses Boost CMake build modules (https://github.com/NilFoundation/placeholder/tree/master/crypto3/cmake).
-To actually include this library in a project it is required to:
-
-1. Add [CMake Modules](https://github.com/NilFoundation/placeholder/tree/master/crypto3/cmake) to target project repository.
-2. Add all the internal dependencies using [CMake Modules](https://github.com/NilFoundation/placeholder/tree/master/crypto3/cmake) to target project repository.
-3. Initialize parent project with [CMake Modules](https://github.com/NilFoundation/placeholder/tree/master/crypto3/cmake) (Look at [crypto3](https://github.com/NilFoundation/placeholder/tree/master/crypto3) for the example)
-
-## Dependencies
-### External
-
-* [Boost](https://boost.org) (>= 1.74)
-
+This header-only component is maintained as part of the Crypto3 monorepo. See
+the [root build instructions](../../../README.md#clone-and-build) to configure
+the project and run its tests. Link the component as
+`marshalling::crypto3_math` from CMake.

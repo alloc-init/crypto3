@@ -2,106 +2,45 @@
 
 @tableofcontents
 
-## Quick Start
+## BLS Signing
 
-The easiest way to use Crypto3.Pubkey library is to use an algorithm with implicit state usage. Following example pubkey
-with BLS:
+The range-based public-key algorithms accept byte containers directly:
 
 ```cpp
+#include <cassert>
+#include <cstdint>
+#include <string>
+#include <vector>
 
+#include <nil/crypto3/algebra/curves/bls12.hpp>
+#include <nil/crypto3/algebra/random_element.hpp>
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
-#include <nil/crypto3/pubkey/algorithm/aggregate.hpp>
-#include <nil/crypto3/algebra/random_element.hpp>
-
 #include <nil/crypto3/pubkey/bls.hpp>
 
+using namespace nil::crypto3;
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::pubkey;
-using namespace nil::crypto3::hashes;
-using namespace boost::multiprecision;
 
-    using curve_type = curves::bls12_381;
-    using scheme_type = bls<bls_default_public_params<>, bls_mps_ro_version, bls_basic_scheme, curve_type>;
+using curve_type = curves::bls12_381;
+using scheme_type = bls<bls_default_public_params<>, bls_mss_ro_version,
+                        bls_basic_scheme, curve_type>;
+using private_key_type = private_key<scheme_type>;
+using public_key_type = public_key<scheme_type>;
+using scalar_type = typename private_key_type::private_key_type;
+using signature_type = typename public_key_type::signature_type;
 
-    using privkey_type = private_key<scheme_type>;
-    using pubkey_type = public_key<scheme_type>;
-    using _privkey_type = typename privkey_type::private_key_type;
-    using _pubkey_type = typename pubkey_type::schedule_type;
-    using signature_type = typename pubkey_type::signature_type;
+int main() {
+    const std::string text = "hello world";
+    const std::vector<std::uint8_t> message(text.begin(), text.end());
 
-int main(int argc, const char * argv[]) {
-    std::string msg_str = "Hello, World!\n";
+    private_key_type private_key(
+        random_element<typename scalar_type::field_type>());
+    const signature_type signature = sign(message, private_key);
 
-    std::cout << msg_str;
-
-    std::vector<std::uint8_t> msg(msg_str.begin(), msg_str.end());
-    privkey_type sk = privkey_type(random_element<typename _privkey_type::field_type>());
-
-    signature_type sig = ::nil::crypto3::sign(msg, sk);
-    pubkey_type &pubkey = sk;
-
-    return !(nil::crypto3::verify(msg, sig, pubkey));
+    public_key_type &public_key = private_key;
+    assert(verify(message, signature, public_key));
 }
 ```
 
-## Stateful Processing
-
-In case of public-key scheme source data accumulation necessity is present, following example demonstrates
-[accumulator](@ref accumulator_set) usage:
-
-```cpp
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
-#include <nil/crypto3/pubkey/algorithm/aggregate.hpp>
-#include <nil/crypto3/algebra/random_element.hpp>
-
-#include <nil/crypto3/pubkey/bls.hpp>
-
-using namespace nil::crypto3::algebra;
-using namespace nil::crypto3::pubkey;
-using namespace nil::crypto3::hashes;
-using namespace boost::multiprecision;
-
-    using curve_type = curves::bls12_381;
-    using scheme_type = bls<bls_default_public_params<>, bls_mps_ro_version, bls_basic_scheme, curve_type>;
-
-    using privkey_type = private_key<scheme_type>;
-    using pubkey_type = public_key<scheme_type>;
-    using _privkey_type = typename privkey_type::private_key_type;
-    using _pubkey_type = typename pubkey_type::schedule_type;
-    using signature_type = typename pubkey_type::signature_type;
-    using modulus_type = typename _privkey_type::modulus_type;
-
-    using signing_isomorphic_mode =
-    typename ::nil::crypto3::pubkey::modes::isomorphic<scheme_type, ::nil::crypto3::pubkey::nop_padding>::
-        template bind<::nil::crypto3::pubkey::signing_policy<SchemeType>>::type;
-    using verification_isomorphic_mode =
-    typename ::nil::crypto3::pubkey::modes::isomorphic<scheme_type, ::nil::crypto3::pubkey::nop_padding>::
-        template bind<::nil::crypto3::pubkey::verification_policy<scheme_type>>::type;
-
-    using verification_acc_set = verification_accumulator_set<verification_isomorphic_mode>;
-    using verification_acc = typename boost::mpl::front<typename verification_acc_set::features_type>::type;
-
-    using signing_acc_set = signing_accumulator_set<signing_isomorphic_mode>;
-    using signing_acc = typename boost::mpl::front<typename signing_acc_set::features_type>::type;  
-
-int main(int argc, const char * argv[]) {
-    std::string msg_str = "Hello, World!\n";
-
-    std::cout << msg_str;
-
-    std::vector<std::uint8_t> msg(msg_str.begin(), msg_str.end());
-    
-    privkey_type sk = privkey_type(random_element<typename _privkey_type::field_type>());
-    pubkey_type &pubkey = sk;
-    signing_acc_set sign_acc(sk);
-    
-    nil::crypto3::sign<scheme_type>(msg, sign_acc);
-    
-    signature_type sig = boost::accumulators::extract_result<signing_acc>(sign_acc);
-    verification_acc_set verify_acc(pubkey, nil::crypto3::accumulators::signature = sig);
-    
-    return !(nil::crypto3::verify<scheme_type>(msg, verify_acc));
-}
-```
+The maintained buildable version is `libs/pubkey/example/bls.cpp`.

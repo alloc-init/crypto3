@@ -15,15 +15,15 @@ A small part of each topic is reviewed right at introduction, but the detailed i
    
 ## Algorithms ## {#stream_ciphers_algorithms}
 
-Crypto3.Stream library contains following block ciphers:
+Crypto3.Stream contains the following stream cipher:
 
-* [Chacha](@ref chacha)
+* `stream::chacha`
 
 ## Dependencies ## {#stream_dependencies}
 
 Internal dependencies:
 
-None
+1. Crypto3.Block
 
 Outer dependencies:
-1. [Boost](https://boost.org) (>= 1.58)
+1. [Boost](https://boost.org)

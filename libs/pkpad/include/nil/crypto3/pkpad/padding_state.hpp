@@ -34,6 +34,11 @@
 
 namespace nil {
     namespace crypto3 {
+        /**
+         * @defgroup pubkey_padding Public-Key Padding
+         * @defgroup pubkey_padding_algorithms Algorithms
+         * @ingroup pubkey_padding
+         */
         namespace pubkey {
             namespace padding {
                 /*!

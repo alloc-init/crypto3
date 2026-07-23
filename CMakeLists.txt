@@ -41,7 +41,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 set(BUILD_WITH_TARGET_ARCHITECTURE "" CACHE STRING "Target build architecture") # TODO: check if we can do cross-compilation
-set(DOXYGEN_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/docs" CACHE STRING "Specify doxygen output directory")
+set(DOXYGEN_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/docs" CACHE STRING "Specify doxygen output directory")
 
 include(TargetArchitecture)
 
@@ -65,3 +65,11 @@ add_subdirectories("${CMAKE_CURRENT_LIST_DIR}/libs/marshalling/")
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/docs/doxygen/${CMAKE_WORKSPACE_NAME}.doxyfile.in
         ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_WORKSPACE_NAME}.doxyfile @ONLY)
+
+if(BUILD_DOCS)
+    find_package(Doxygen REQUIRED)
+    add_custom_target(docs
+            COMMAND Doxygen::doxygen ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_WORKSPACE_NAME}.doxyfile
+            WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+            COMMENT "Generate Doxygen documentation")
+endif()

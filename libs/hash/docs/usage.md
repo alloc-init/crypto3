@@ -4,57 +4,32 @@
 
 ## Quick Start
 
-The easiest way to use Crypto3.Hash library is to use an algorithm with implicit state usage. Following example hash
-byte sequence with MD5 hashes:
+The range overload of `nil::crypto3::hash` hashes a container directly and
+returns a value convertible to a compatible output container:
 
 ```cpp
+#include <iostream>
+#include <string>
 
-#include <nil/crypto3/hash/md5.hpp>
 #include <nil/crypto3/hash/algorithm/hash.hpp>
+#include <nil/crypto3/hash/sha2.hpp>
 
-using namespace nil::crypto3;
+int main() {
+    const std::string input = "A quick brown fox jumps over the lazy dog";
+    const std::string digest =
+        nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>(input);
 
-int main(int argc, char *argv[]) {
-    std::string input = "abc";
-    std::string out = hash<hashes::md5>(input.begin(), input.end());
-    assert(out == "900150983cd24fb0d6963f7d28e17f72");
+    std::cout << digest << '\n';
 }
- 
 ```
 
-Similar technique is available for ranges:
+Iterator overloads are available when only part of a range should be hashed:
 
 ```cpp
-
-#include <nil/crypto3/hash/md5.hpp>
-#include <nil/crypto3/hash/algorithm/hash.hpp>
-
-using namespace nil::crypto3;
-
-int main(int argc, char *argv[]) {
-    std::string input = "abc";
-    std::string out = hashes<hash::md5>(input);
-    assert(out == "900150983cd24fb0d6963f7d28e17f72");
-}
- 
+const std::string digest =
+    nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>(
+        input.begin(), input.end());
 ```
 
-## Stateful hashing
-
-In case of accumulative hashes requirement is present, following example demonstrates
-[accumulator](@ref accumulator_set) usage:
-
-```cpp
-#include <nil/crypto3/hash/md5.hpp>
-#include <nil/crypto3/hash/algorithm/hash.hpp>
-
-using namespace nil::crypto3;
-
-int main(int argc, char *argv[]) {
-    accumulator_set<hashes::md5> acc;
-    std::string input = "abc";
-    hash<hashes::md5>(input.begin(), input.end(), acc);
-    std::string out = std::to_string(extract::hash<hashes::md5>(acc));
-    assert(out == "900150983cd24fb0d6963f7d28e17f72");
-}
-```
+See `libs/hash/example/hashes.cpp` for maintained SHA-2, SHA-3, Keccak, and
+Poseidon examples.

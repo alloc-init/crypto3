@@ -1,3 +1,3 @@
-# Fourier Fast Transform {#fft_index}
+# Crypto3.Math {#fft_index}
 
 @subpage fft_introduction @subpage fft_manual @subpage fft_concepts

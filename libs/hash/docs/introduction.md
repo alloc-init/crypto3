@@ -16,9 +16,11 @@ Crypto3.Hash consists of several parts to review:
 
 Internal dependencies:
 
-1. [Crypto3.Block](https://github.com/alloc-init/block.git)
-2. [Crypto3.Codec](https://github.com/alloc-init/codec.git)
+1. Crypto3.Multiprecision
+2. Crypto3.Algebra
+3. Crypto3.Block
+4. Crypto3.Random
 
 External dependencies:
 
-1. [Boost](https://boost.org) (>= 1.58)
+1. [Boost](https://boost.org)

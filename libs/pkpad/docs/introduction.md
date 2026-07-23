@@ -2,10 +2,11 @@
 
 @tableofcontents
 
-The Crypto3.Pbkdf library extends the Nil Foundation's cryptography suite and provides a set of password-based key
- derivation functions implemented in way C++ standard library implies: concepts, algorithms, predictable behavior, latest standard features support and clean architecture without compromising security and performance.
- 
-Crypto3.Pbkdf consists of several parts to review:
+Crypto3.Pkpad provides encoding and verification primitives used by public-key
+schemes. The current headers include EME encodings such as OAEP and PKCS #1,
+EMSA encodings, MGF1, and ISO/IEC 9796 support.
+
+Crypto3.Pkpad consists of several parts to review:
 * [Manual](@ref pkpad_manual).
 * [Implementation](@ref pkpad_impl).
 * [Concepts](@ref pkpad_concepts).
@@ -14,8 +15,10 @@ Crypto3.Pbkdf consists of several parts to review:
 
 Internal dependencies:
 
-1. [Crypto3.Mac](https://github.com/alloc-init/block.git)
-2. [Crypto3.Hash](https://github.com/alloc-init/hash.git)
+1. Crypto3.Codec
+2. Crypto3.Hash
+3. Crypto3.Algebra
+4. Crypto3 algebra marshalling
 
 Outer dependencies:
-1. [Boost](https://boost.org) (>= 1.58)
+1. [Boost](https://boost.org)

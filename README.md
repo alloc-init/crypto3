@@ -3,160 +3,123 @@
 [![Twitter](https://img.shields.io/twitter/follow/alloc_init_)](https://twitter.com/alloc_init_)
 [![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=flat-square&logo=telegram&logoColor=dark)](https://t.me/alloc_init)
 
-Crypto3 cryptography suite's purpose is:
+Crypto3 is a modular, header-only C++ cryptography suite. It provides generic,
+STL-style interfaces for cryptographic primitives and the algebraic and
+mathematical structures used to build them.
 
-1. To provide a secure, fast and architecturally clean C++ generic cryptography schemes implementation.
-2. To provide a developer-friendly, modular suite, usable for novel schemes implementation and further
-   extension.
-3. To provide a Standard Template Library-alike C++ interface and concept-based architecture implementation.
+Initially developed by [=nil; Crypto3](https://crypto3.nil.foundation), the
+project is now maintained by [[[alloc] init]](https://allocin.it). Guides are
+available under [`docs/manual`](docs/manual/).
 
-Libraries are designed to be state of the art, highly performant and providing a one-stop solution for
-all cryptographic operations. They are supported on all operating systems (*nix, windows, macOS)
-and architectures(x86/ARM).
-
-Initially developed by [=nil; Crypto3](https://crypto3.nil.foundation), part
-of [=nil; Foundation](https://nil.foundation) and now supported by [[[alloc] init]](https://allocin.it).
-
-Rationale, tutorials and references are available [here](https://docs.allocin.it/crypto3)
-
-## Contents
-
-1. [Repository Structure](#repository-structure)
-2. [Installation](#installation)
-3. [Usage](#usage)
-3. [Contributing](#contributing)
-4. [Community](#community)
+Continuous integration currently covers Ubuntu x86-64 and macOS. Other
+operating systems and architectures are not continuously tested.
 
 ## Repository Structure
 
-This repository is an umbrella-repository for the whole suite. Single-purposed libraries repositories (e.g. [block
-](https://github.com/alloc-init/block) or [hash](https://github.com/alloc-init/hash)) are not advised to be
-used outside this suite or properly constructed CMake project and should be handled with great care.
+Crypto3 is maintained as a monorepo. The source trees under `libs` are regular
+directories in this repository; `cmake/modules` is the only Git submodule.
 
-```
+```text
 root
-├── cmake: cmake sub-module with helper functions/macros to build crypto3 library umbrella-repository
-├── docs: documentation , tutorials and guides
-├── libs: all directories added as submodules which are independent projects.
-│   ├── algebra: algebraic operations and structures being used for elliptic-curve cryptography
-│   ├── block: block ciphers
-│   ├── blueprint: components and circuits for zk schemes
-│   ├── codec: encoding/decoding algorithms
-│   ├── containers: containers and generic commitment schemes for accumulating data, includes Merkle Tree
-│   ├── hash: hashing algorithms
-│   ├── mac: message authentication codes
-│   ├── marshalling: marshalling libraries for types in crypto3 library
-│   ├── math: set of Fast Fourier Transforms evaluation algorithms and Polynomial Arithmetics
-│   ├── modes: cipher modes
-│   ├── multiprecision: integer, rational, floating-point, complex and interval number types. 
-│   ├── pbkdf: password based key derivation functions
-│   ├── pkmodes: threshold, aggregation modes for public key schemes
-│   ├── pkpad: padding module for public key schemes
-│   ├── pubkey: pubkey signing APIs
-│   ├── random: randomisation primitives 
-│   ├── stream: stream ciphers
-│   ├── zk: zk cryptography schemes
+|-- cmake
+|   `-- modules              BoostCMake helper submodule
+|-- docs                     Doxygen configuration and guides
+`-- libs
+    |-- algebra              Finite fields, curves, and pairings
+    |-- benchmark_tools      Shared benchmark utilities
+    |-- block                Block ciphers
+    |-- codec                Encoding and decoding algorithms
+    |-- containers           Merkle trees and related containers
+    |-- hash                 Hash functions
+    |-- kdf                  Key derivation functions, including PBKDF2
+    |-- mac                  Message authentication codes
+    |-- marshalling          Algebra, container, math, and numeric marshalling
+    |-- math                 Polynomial arithmetic and FFT algorithms
+    |-- modes                Cipher mode headers and tests
+    |-- multiprecision       Extended multiprecision types and utilities
+    |-- parallelization-utils
+    |-- pkpad                Public-key padding schemes
+    |-- pubkey               Public-key schemes and secret sharing
+    |-- random               Randomization primitives
+    `-- stream               Stream ciphers
 ```
 
-## Installation
+## Requirements
 
-### Dependencies
+- CMake 3.22 or newer
+- A C++23-capable C++ compiler
+- Boost with the `container`, `random`, `filesystem`, `log`, `log_setup`,
+  `program_options`, `thread`, `unit_test_framework`, and `timer` components
+- Git
 
-- [clang](https://clang.llvm.org/) (>= 17.0)/GCC (>= 10.0)/MSVC (>= 14.20)
-- [cmake](https://cmake.org) (>= 3.6)
-- [boost](https://boost.org) (>= 1.87)
-- [cmake_modules](https://github.com/BoostCMake/cmake_modules) (57639741ecf018835deb97a04db2200241d7fbd3)
+The build does not enforce a specific Boost version. CI currently builds on
+Ubuntu 26.04 with its distribution compiler and on macOS 26 with Homebrew LLVM.
 
-### Apple Silicon (Note)
+## Clone And Build
 
-For apple silicone, some of the requirements differ:
+The submodule URL uses GitHub SSH. If you do not have GitHub SSH credentials,
+configure this checkout to fetch GitHub dependencies over HTTPS:
 
-Homebrew packages:
-* Required: you need to download the latest clang from homebrew `brew install llvm`
-* Optional: Doxygen (if you want to use it) `brew install doxygen`
-* Optional: GraphViz (needed for doxygens) `brew install graphviz`
+```sh
+git clone https://github.com/alloc-init/crypto3.git
+cd crypto3
+git config url."https://github.com/".insteadOf git@github.com:
+git submodule update --init --recursive
 
-#### Tested on the following systems:
-* Apple Silicon: it's tested on:Homebrew clang version 20.1.5
-
-Note, for recent mac homebrew builds use the following cmake flags to avoid using homebrew stdc++ headers while linking to old mac stdc++ lib:
-
-```
-cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=1 -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -Wno-deprecated-declarations" -DBUILD_CRYPTO3_BENCH_TESTS=1 -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS="-nostdinc++ -isystem $(xcrun --show-sdk-path)/usr/include/c++/v1"
-```
-
-### Clone & Build
-
-```
-git clone --recurse-submodules https://github.com/alloc-init/crypto3.git 
-cd crypto3 && mkdir build && cd build
-cmake ..
-make tests
+cmake -S . -B build -DBUILD_TESTS=ON
+cmake --build build --target tests --parallel
+ctest --test-dir build --output-on-failure
 ```
 
-> Note that you might need to set `-DCMAKE_CXX_COMPILER` to point to an up-to-date clang and `-DBOOST_ROOT` with  `-DBoost_NO_SYSTEM_PATHS=ON` to point to correct version of boost.
+Useful CMake options include:
+
+- `BUILD_TESTS`: configure tests; defaults to `ON`
+- `BUILD_BENCH_TESTS`: configure performance benchmarks; defaults to `OFF`
+- `BUILD_DOCS`: configure Doxygen documentation support; defaults to `OFF`
+- `BUILD_EXAMPLES`: build component examples; defaults to `OFF`
+- `BUILD_WITH_TARGET_ARCHITECTURE`: override automatic target architecture detection
+
+Generate the API documentation under `build/docs` with:
+
+```sh
+cmake -S . -B build -DBUILD_DOCS=ON
+cmake --build build --target docs
+```
+
+On Apple Silicon, install the dependencies with `brew install boost llvm` and
+select Homebrew Clang when configuring:
+
+```sh
+cmake -S . -B build \
+  -DBUILD_TESTS=ON \
+  -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++
+```
 
 ## Usage
 
-Cryptography suite can be used as follows:
+Crypto3 components are header-only CMake `INTERFACE` libraries. In a CMake
+project that includes Crypto3, link only the components you use:
 
-1. Generic.
-2. Selective.
+```cmake
+add_subdirectory(path/to/crypto3)
+target_link_libraries(my_target PRIVATE crypto3::hash crypto3::algebra)
+```
 
-The suite is used as a header-only and is currently statically linked. Future versions will allow dynamic linking.
-
-#### Generic
-
-Generic usage of cryptography suite consists of all modules available at
-[GitHub =nil; Crypto3 Team Repositories](https://github.com/orgs/NilFoundation/teams/nil-crypto3/repositories).
-This is an umbrella-repository where Modules
-are added as submodules emplaced in `libs` directory. A developer can thus add this  
-project as a submodule and would not need to resolve dependencies.
-See [crypto3-template](https://github.com/alloc-init/crypto3-template) as an example of usage.
-
-The generic module can be added to your c++ project as follows
-
-``` git submodule add https://github.com/alloc-init/crypto3.git <dir>```
-
-### Selective
-
-Developer can select to include a one or more modules to reduce the sources of resulting project and dependencies tree
-height. This however
-does require the developer to manually resolve all required dependencies and stay upto date regarding
-compatibilities across modules.
-
-Example of such embedding is =nil; Foundation's [Actor Library](https://github.com/alloc-init/actor). It uses only
-[hashes](https://github.com/alloc-init/hash) so the dependency graph requires
-for the project to submodule [block ciphers library](https://github.com/alloc-init/block) and optional
-[codec library](https://github.com/alloc-init/codec) for testing purposes. So,
-the root Actor repository has only related libraries submoduled:
-[block](https://github.com/alloc-init/mtl/libs/block),
-[codec](https://github.com/alloc-init/mtl/libs/codec) and
-[hash](https://github.com/alloc-init/mtl/hash).
-
-Selective modules can be added to your project as follows:
-
-``` git submodule add https://github.com/alloc-init/crypto3-<lib>.git <dir>```
+Component dependencies are expressed by their CMake targets. Buildable examples
+are located in component-specific `libs/*/example` directories. See the
+[quickstart](docs/manual/quickstart.md) for an in-tree example.
 
 ## Contributing
 
-See [contributing](./docs/manual/contributing.md) for contribution guidelines.
+See the [contribution guidelines](docs/manual/contributing.md).
 
 ## Support
 
-This cryptography suite is maintained by [[alloc] init], which can be contacted in several ways:
+- Email: [nemo@allocin.it](mailto:nemo@allocin.it)
+- Telegram: [@alloc-init](https://t.me/alloc-init)
+- [GitHub issues](https://github.com/alloc-init/crypto3/issues)
+- [GitHub Discussions](https://github.com/alloc-init/crypto3/discussions)
 
-* E-Mail. Just drop a line to [nemo@allocin.it](mailto:nemo@allocin.it).
-* Telegram Group. Join our Telegram group [@alloc-init](https://t.me/alloc-init) and ask any question in there.
+## License
 
-[//]: # ( * Discord [channel]&#40;https://discord.gg/KmTAEjbmM3&#41; for discussions.)
-
-* Issue. Issue which does not belong to any particular module (or you just don't know where to put it) can be
-  created in this repository. The team will answer that.
-* Discussion Topic (proposal, tutorial request, suggestion, etc). Would be happy to discuss that in the repository's
-  GitHub [Discussions](https://github.com/alloc-init/crypto3/discussions)
-
-## Licence
-
-The software is provided under [MIT](LICENSE) Licence.
-
+The software is provided under the [MIT License](LICENSE).
