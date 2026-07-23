@@ -34,9 +34,8 @@
 #include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
 #include <type_traits>
 
-#include <nil/crypto3/hash/detail/poseidon/poseidon_policy.hpp>
+#include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>
 #include <nil/crypto3/hash/block_to_field_elements_wrapper.hpp>
-#include "nil/crypto3/algebra/fields/pallas/scalar_field.hpp"
 
 using namespace nil::crypto3::hashes;
 
@@ -119,7 +118,7 @@ int main() {
     using field_type = nil::crypto3::algebra::fields::bls12_scalar_field<381>;
     constexpr size_t security_bits = 128;
     constexpr size_t rate = 4;
-    using policy = detail::poseidon_policy<field_type, security_bits, rate>;
+    using policy = detail::poseidon1_policy<field_type, security_bits, rate>;
     using hash_type = poseidon<policy>;
 
     hash_usage_example<hash_type>::run();

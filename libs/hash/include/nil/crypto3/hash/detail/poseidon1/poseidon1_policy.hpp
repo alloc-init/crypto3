@@ -22,7 +22,7 @@ namespace nil {
                 /*!
                  * @brief Standard Poseidon1 permutation parameters.
                  *
-                 * This policy family is separate from the legacy crypto3 Poseidon policies. It models the
+                 * This policy family models the
                  * original Poseidon1 round structure: RF/2 full rounds, RP partial rounds, RF/2 full rounds,
                  * with AddRoundConstants -> S-box -> MDS inside each round.
                  */

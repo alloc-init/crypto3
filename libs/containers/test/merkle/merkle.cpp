@@ -27,6 +27,8 @@
 #define BOOST_TEST_MODULE parallel_containter_merkletree_test
 
 #include <nil/crypto3/algebra/random_element.hpp>
+#include <nil/crypto3/algebra/fields/alt_bn128/scalar_field.hpp>
+#include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
 #include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/hash/block_to_field_elements_wrapper.hpp>
 #include <nil/crypto3/hash/sha2.hpp>
@@ -279,11 +281,10 @@ void testing_hash_template(std::vector<Element> data, std::string result) {
 
 BOOST_AUTO_TEST_SUITE(containers_merkltree_test)
 
-using curve_type = algebra::curves::pallas;
-using field_type = typename curve_type::base_field_type;
-using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
-using original_poseidon_type =
-    hashes::original_poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
+using field_type = algebra::fields::bls12_scalar_field<381>;
+using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>>;
+using poseidon2_field_type = algebra::fields::alt_bn128_scalar_field<254>;
+using poseidon2_type = hashes::poseidon2<nil::crypto3::hashes::detail::poseidon2_policy<poseidon2_field_type, 128, 2>>;
 
 BOOST_AUTO_TEST_CASE(merkletree_construct_test_1) {
     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
@@ -307,13 +308,20 @@ BOOST_AUTO_TEST_CASE(merkletree_validate_test_1) {
     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
     testing_validate_template<hashes::sha2<256>, 2>(v);
 
-    BOOST_STATIC_ASSERT_MSG(algebra::is_field_element<original_poseidon_type::word_type>::value,
+    BOOST_STATIC_ASSERT_MSG(algebra::is_field_element<poseidon_type::word_type>::value,
                             "Expecting Poseidon to consume field elements");
-    std::vector<std::array<original_poseidon_type::word_type, 1>> v_field = {
+    std::vector<std::array<poseidon_type::word_type, 1>> v_field = {
         {0x0_cppui_modular255}, {0x1_cppui_modular255}, {0x2_cppui_modular255}, {0x3_cppui_modular255},
         {0x4_cppui_modular255}, {0x5_cppui_modular255}, {0x6_cppui_modular255}, {0x7_cppui_modular255}};
-    testing_validate_template<original_poseidon_type, 2>(v_field);
     testing_validate_template<poseidon_type, 2>(v_field);
+
+    BOOST_STATIC_ASSERT_MSG(algebra::is_field_element<poseidon2_type::word_type>::value,
+                            "Expecting Poseidon2 to consume field elements");
+    std::vector<std::array<poseidon2_type::word_type, 1>> poseidon2_v_field = {
+        {0x0_cppui_modular254}, {0x1_cppui_modular254}, {0x2_cppui_modular254}, {0x3_cppui_modular254},
+        {0x4_cppui_modular254}, {0x5_cppui_modular254}, {0x6_cppui_modular254}, {0x7_cppui_modular254}};
+    testing_validate_template<poseidon2_type, 2>(poseidon2_v_field);
+
     // When you have bytes input, use wrapper to lazy convert it to field elements:
     std::vector<nil::crypto3::hashes::block_to_field_elements_wrapper<typename poseidon_type::word_type::field_type,
                                                                       std::array<char, 1>>>
@@ -321,12 +329,10 @@ BOOST_AUTO_TEST_CASE(merkletree_validate_test_1) {
     for (const auto& inner_containers : v) {
         wrappers.emplace_back(inner_containers);
     }
-    testing_validate_template<original_poseidon_type, 2>(wrappers);
     testing_validate_template<poseidon_type, 2>(wrappers);
 
     std::size_t leaf_number = 8;
     testing_validate_template_random_data<hashes::sha2<256>, 2, std::uint8_t, 1>(leaf_number);
-    testing_validate_template_random_data<original_poseidon_type, 2, original_poseidon_type::word_type, 1>(leaf_number);
     testing_validate_template_random_data<poseidon_type, 2, poseidon_type::word_type, 1>(leaf_number);
 }
 
@@ -368,7 +374,7 @@ BOOST_AUTO_TEST_CASE(merkletree_hash_test_1) {
         wrappers.emplace_back(inner_containers);
     }
     merkle_tree<poseidon_type, 2> tree = make_merkle_tree<poseidon_type, 2>(wrappers.begin(), wrappers.end());
-    BOOST_CHECK(tree.root() == 0x6E7641F1EAE17C0DA8227840EFEA6E1D17FB5EBA600D9DC34F314D5400E5BF3_cppui_modular255);
+    BOOST_CHECK_EQUAL(tree.root(), 0x2F3E53DC1CCB37ADCFB82392E04E547CFBC4C24311970B42F856B9AED632283C_cppui_modular255);
 }
 
 BOOST_AUTO_TEST_CASE(merkletree_hash_test_2) {

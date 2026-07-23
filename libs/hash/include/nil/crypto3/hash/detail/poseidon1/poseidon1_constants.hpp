@@ -13,7 +13,7 @@
 
 #include <nil/crypto3/algebra/matrix/matrix.hpp>
 
-#include <nil/crypto3/hash/detail/poseidon/original_constants.hpp>
+#include <nil/crypto3/hash/detail/poseidon1/poseidon1_constants_data.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_round_functions.hpp>
 
@@ -37,7 +37,7 @@ namespace nil {
                     using mds_matrix_type = algebra::matrix<element_type, state_words, state_words>;
                     using round_constants_type = algebra::matrix<element_type, full_rounds + part_rounds, state_words>;
 
-                    using constants_data_type = poseidon_original_constants_data<policy_type>;
+                    using constants_data_type = poseidon1_constants_data<policy_type>;
 
                     poseidon1_constants() {
                         // Store the raw MDS table and use column-vector multiplication. This is the same

@@ -7,10 +7,11 @@
 // http://www.boost.org/LICENSE_1_0.txt
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_HASH_POSEIDON_ORIGINAL_CONSTANTS_HPP
-#define CRYPTO3_HASH_POSEIDON_ORIGINAL_CONSTANTS_HPP
+#ifndef CRYPTO3_HASH_POSEIDON1_CONSTANTS_DATA_HPP
+#define CRYPTO3_HASH_POSEIDON1_CONSTANTS_DATA_HPP
 
-#include <nil/crypto3/hash/detail/poseidon/poseidon_policy.hpp>
+#include <array>
+#include <cstddef>
 
 #include <nil/crypto3/algebra/fields/alt_bn128/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
@@ -20,16 +21,15 @@ namespace nil {
         namespace hashes {
             namespace detail {
                 template<typename PolicyType>
-                struct poseidon_original_constants_data;
+                struct poseidon1_constants_data;
 
                 template<typename FieldType, std::size_t Security, std::size_t Rate, std::size_t Capacity,
                          std::size_t FullRounds, std::size_t PartRounds>
-                struct poseidon_original_constants_data_base;
+                struct poseidon1_constants_data_base;
 
                 // All constants taken from https://extgit.iaik.tugraz.at/krypto/hadeshash/-/blob/master/code.
                 template<>
-                struct poseidon_original_constants_data_base<algebra::fields::alt_bn128_scalar_field<254>, 128, 2, 1, 8,
-                                                             57> {
+                struct poseidon1_constants_data_base<algebra::fields::alt_bn128_scalar_field<254>, 128, 2, 1, 8, 57> {
                     using FieldType = nil::crypto3::algebra::fields::alt_bn128_scalar_field<254>;
 
                     constexpr static const std::size_t security = 128;
@@ -261,8 +261,8 @@ namespace nil {
                 };
 
                 template<>
-                struct poseidon_original_constants_data_base<nil::crypto3::algebra::fields::alt_bn128_scalar_field<254>,
-                                                             128, 4, 1, 8, 60> {
+                struct poseidon1_constants_data_base<nil::crypto3::algebra::fields::alt_bn128_scalar_field<254>, 128, 4,
+                                                     1, 8, 60> {
                     using FieldType = nil::crypto3::algebra::fields::alt_bn128_scalar_field<254>;
 
                     constexpr static const std::size_t state_words = 5;
@@ -763,8 +763,8 @@ namespace nil {
                 };
 
                 template<>
-                struct poseidon_original_constants_data_base<nil::crypto3::algebra::fields::bls12_scalar_field<381>,
-                                                             128, 2, 1, 8, 57> {
+                struct poseidon1_constants_data_base<nil::crypto3::algebra::fields::bls12_scalar_field<381>, 128, 2, 1,
+                                                     8, 57> {
                     using FieldType = nil::crypto3::algebra::fields::bls12_scalar_field<381>;
 
                     constexpr static const std::size_t state_words = 3;
@@ -984,8 +984,8 @@ namespace nil {
                 };
 
                 template<>
-                struct poseidon_original_constants_data_base<nil::crypto3::algebra::fields::bls12_scalar_field<381>,
-                                                             128, 4, 1, 8, 60> {
+                struct poseidon1_constants_data_base<nil::crypto3::algebra::fields::bls12_scalar_field<381>, 128, 4, 1,
+                                                     8, 60> {
                     using FieldType = nil::crypto3::algebra::fields::bls12_scalar_field<381>;
 
                     constexpr static const std::size_t state_words = 5;
@@ -1368,13 +1368,13 @@ namespace nil {
                 /// TODO(martun): Continue here.... Copy the values of other fields as well.
 
                 template<typename PolicyType>
-                struct poseidon_original_constants_data
-                    : poseidon_original_constants_data_base<typename PolicyType::field_type, PolicyType::security,
-                                                            PolicyType::block_words, PolicyType::capacity,
-                                                            PolicyType::full_rounds, PolicyType::part_rounds> { };
+                struct poseidon1_constants_data
+                    : poseidon1_constants_data_base<typename PolicyType::field_type, PolicyType::security,
+                                                    PolicyType::block_words, PolicyType::capacity,
+                                                    PolicyType::full_rounds, PolicyType::part_rounds> { };
             }    // namespace detail
         }    // namespace hashes
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_HASH_POSEIDON_ORIGINAL_CONSTANTS_HPP
+#endif    // CRYPTO3_HASH_POSEIDON1_CONSTANTS_DATA_HPP
