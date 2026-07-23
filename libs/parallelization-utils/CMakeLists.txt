@@ -20,7 +20,6 @@ if(NOT Boost_FOUND AND NOT CMAKE_CROSSCOMPILING)
 endif()
 
 cm_find_package(CM)
-include(FindPkgConfig)
 
 option(BUILD_WITH_CCACHE "Build with ccache usage" TRUE)
 

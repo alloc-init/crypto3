@@ -2,7 +2,7 @@
 
 #include <nil/crypto3/algebra/fields/detail/element/fp12_fast/types.hpp>
 
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
 #include <nil/crypto3/algebra/fields/detail/element/fp12_fast/limb_ops_x86.hpp>
 #endif
 
@@ -85,7 +85,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<Fp12FastParams Params>
     inline void montgomery_reduce(limb *result, const typename Params::limb_array &data) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
         if constexpr (requires { montgomery_reduce_x86<Params>(result, data.data()); }) {
             return montgomery_reduce_x86<Params>(result, data.data());
         }
@@ -136,7 +136,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     inline void add_limbs_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
                               const typename Params::limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
         if constexpr (requires { add_limbs_mod_x86<Params>(z.data(), x.data(), y.data()); }) {
             return add_limbs_mod_x86<Params>(z.data(), x.data(), y.data());
         }
@@ -152,7 +152,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     inline void subtract_limbs_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
                                    const typename Params::limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
         if constexpr (requires { subtract_limbs_mod_x86<Params>(z.data(), x.data(), y.data()); }) {
             return subtract_limbs_mod_x86<Params>(z.data(), x.data(), y.data());
         }
@@ -169,7 +169,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<Fp12FastParams Params>
     inline void mul_limbs_by_5_unreduced(typename Params::limb_array &dst, const typename Params::limb_array &src) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
         return mul_12_limbs_by_5_unreduced_x86(dst.data(), src.data());
 #endif
         constexpr size_t N = Params::storage_limb_count;
@@ -188,7 +188,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 
     template<Fp12FastParams Params>
     inline void mul_limbs_by_9(typename Params::limb_array &dst, const typename Params::limb_array &src) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
         if constexpr (Params::storage_limb_count == 8) {
             return mul_8_limbs_by_9_x86<typename Params::base_field_type>(dst.data(), src.data());
         }
@@ -228,7 +228,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     inline void fp2_base_add_mod(typename Params::limb_array &z, const typename Params::limb_array &x,
                                  const typename Params::limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
         if constexpr (requires { fp2_base_add_mod_x86<Params>(z.data(), x.data(), y.data()); }) {
             return fp2_base_add_mod_x86<Params>(z.data(), x.data(), y.data());
         }
@@ -241,7 +241,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     inline void fp2_sub_pre(std::array<typename Params::limb_array, 2> &data,
                             const std::array<typename Params::limb_array, 2> &other) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
         if constexpr (requires { fp2_8_limbs_sub_pre_x86<Params>((limb *)&data, (limb *)&other); }) {
             return fp2_8_limbs_sub_pre_x86<Params>((limb *)&data, (limb *)&other);
         }
@@ -360,7 +360,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     inline void fp2_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &x,
                             const typename Params::limb_array &y) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
         if constexpr (requires { fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data()); }) {
             return fp2_mul_pre_x86<Params>((limb *)&z, x.data(), y.data());
         }
@@ -372,7 +372,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     inline void fp2_add_mul_pre(std::array<typename Params::limb_array, 2> &z, const typename Params::limb_array &a,
                                 const typename Params::limb_array &b, const typename Params::limb_array &c,
                                 const typename Params::limb_array &d) {
-#if defined(__x86_64__) && defined(__BMI2__) && defined(__ADX__)
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
         if constexpr (requires { fp2_add_mul_pre_x86<Params>((limb *)&z, a.data(), b.data(), c.data(), d.data()); }) {
             return fp2_add_mul_pre_x86<Params>((limb *)&z, a.data(), b.data(), c.data(), d.data());
         }

@@ -7,7 +7,6 @@ cm_project(crypto3_multiprecision WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAG
 
 cm_find_package(CM)
 include(CMDeploy)
-include(FindPkgConfig)
 
 include(CMSetupVersion)
 

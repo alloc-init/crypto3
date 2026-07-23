@@ -17,7 +17,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake"
 
 set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/modules")
 
-find_package(CM)
 include(CMConfig)
 include(CMSetupVersion)
 

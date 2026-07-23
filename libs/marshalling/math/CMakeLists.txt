@@ -7,7 +7,6 @@ cm_project(crypto3_math WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
 cm_find_package(CM)
 include(CMDeploy)
-include(FindPkgConfig)
 
 include(CMSetupVersion)
 
