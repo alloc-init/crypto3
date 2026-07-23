@@ -51,6 +51,7 @@ root
 - Boost with the `container`, `random`, `filesystem`, `log`, `log_setup`,
   `program_options`, `thread`, `unit_test_framework`, and `timer` components
 - Git
+- Doxygen and Graphviz when building the API documentation
 
 The build does not enforce a specific Boost version. CI currently builds on
 Ubuntu 26.04 with its distribution compiler and on macOS 26 with Homebrew LLVM.

@@ -19,7 +19,6 @@ Internal dependencies:
 1. Crypto3.Multiprecision
 2. Crypto3.Algebra
 3. Crypto3.Block
-4. Crypto3.Random
 
 External dependencies:
 

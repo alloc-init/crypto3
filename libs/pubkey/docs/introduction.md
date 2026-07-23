@@ -15,7 +15,9 @@ Crypto3.Pubkey consists of several parts to review:
 Internal dependencies:
 
 1. Crypto3.Algebra
-2. Crypto3.Random
+2. Crypto3.Hash
+3. Crypto3.Pkpad
+4. Crypto3.Random
 
 Outer dependencies:
 
