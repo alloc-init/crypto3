@@ -1,8 +1,9 @@
-# Poseidon1 and Sponge Construction {#hashes_poseidon1}
+# Poseidon1, Poseidon2, and Sponge Construction {#hashes_poseidon1}
 
 @tableofcontents
 
-This page describes the standard Poseidon1 implementation and the shared sponge construction used by it.
+This page describes the standard Poseidon1 implementation, the currently supported Poseidon2 instance, and the shared
+sponge construction used by both.
 
 ## Implementation Map
 
@@ -13,39 +14,49 @@ The implementation is split across these headers:
 |`detail/poseidon1/poseidon1_policy.hpp`|Poseidon1 policy, field/state/rate/digest definitions, and policy concept.|
 |`detail/poseidon1/poseidon1_permutation.hpp`|Dense Poseidon1 permutation.|
 |`detail/poseidon1/poseidon1_optimized_permutation.hpp`|Optimized Poseidon1 permutation equivalent to the dense one.|
+|`detail/poseidon1/poseidon1_constants_data.hpp`|Checked-in dense MDS matrices and round constants.|
 |`detail/poseidon1/poseidon1_constants.hpp`|Dense constants adapter.|
 |`detail/poseidon1/poseidon1_optimized_constants.hpp`|Optimized constants derived from dense constants.|
+|`detail/poseidon2/poseidon2_policy.hpp`|Poseidon2 policy and policy concept.|
+|`detail/poseidon2/poseidon2_permutation.hpp`|Poseidon2 permutation.|
+|`detail/poseidon2/poseidon2_round_functions.hpp`|Poseidon2 round operations and linear layers.|
+|`detail/poseidon2/poseidon2_constants.hpp`|Poseidon2 constants for the supported BN254 width-3 instance.|
+|`detail/poseidon_common/poseidon_policy.hpp`|Shared Poseidon policy base and algorithm tags.|
 |`detail/poseidon_common/poseidon_sponge.hpp`|Shared sponge construction and sponge mode aliases.|
 
-Tests for the policy, dense/optimized permutation equivalence, sponge modes, and digest output are in
-`libs/hash/test/poseidon.cpp`.
+Tests for the policies, Poseidon1 dense/optimized permutation equivalence, Poseidon2 reference vector, sponge modes,
+digest output, and public wrappers are in `libs/hash/test/poseidon.cpp`.
 
 ## Public Hash API
 
 The public hash wrappers are declared in `nil/crypto3/hash/poseidon.hpp`.
 
-The default standard Poseidon1 hash is:
+The default public Poseidon hash is standard Poseidon1:
 
 ```cpp
-using hash_type = nil::crypto3::hashes::poseidon1<policy>;
+using hash_type = nil::crypto3::hashes::poseidon<policy>;
 ```
 
-`poseidon1<Policy>` uses the optimized Poseidon1 permutation and Pad10 sponge construction.
+`poseidon<Policy>` and the explicit `poseidon1<Policy>` wrapper both use the optimized Poseidon1 permutation and
+Pad10 sponge construction.
 
 Additional wrappers are available for explicit behavior:
 
 |Wrapper|Permutation|Sponge mode|
 |-------|-----------|-----------|
+|`poseidon<Policy>`|optimized|Pad10|
 |`poseidon1<Policy>`|optimized|Pad10|
 |`poseidon1_dense<Policy>`|dense|Pad10|
 |`poseidon1_padding_free<Policy>`|optimized|padding-free|
+|`poseidon2<Policy>`|Poseidon2|Pad10|
+|`poseidon2_padding_free<Policy>`|Poseidon2|padding-free|
 
 Example:
 
 ```cpp
 using field_type = nil::crypto3::algebra::fields::alt_bn128_scalar_field<254>;
 using policy = nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>;
-using hash_type = nil::crypto3::hashes::poseidon1<policy>;
+using hash_type = nil::crypto3::hashes::poseidon<policy>;
 
 auto digest = nil::crypto3::hash<hash_type>(input);
 ```
@@ -131,6 +142,26 @@ The optimized permutation is `poseidon1_optimized_permutation<Policy>`. It is al
 permutation, but rewrites the partial-round section so most partial rounds use sparse linear layers and scalar round
 constants on state element `0`. The optimized constants are derived from the same dense MDS matrix and round constants.
 
+## Poseidon2 Permutation
+
+The standard Poseidon2 permutation is `poseidon2_permutation<Policy>`.
+
+The currently checked-in public policy is:
+
+```cpp
+poseidon2_policy<nil::crypto3::algebra::fields::alt_bn128_scalar_field<254>, 128, 2>
+```
+
+This is the BN254 width-3 instance with rate `2`, capacity `1`, S-box power `5`, `8` external full rounds, and `56`
+internal partial rounds. The permutation schedule is:
+
+```text
+initial external linear layer
+RF / 2 initial external rounds
+RP internal rounds
+RF / 2 terminal external rounds
+```
+
 ## Shared Sponge Construction
 
 The shared sponge is defined by `nil::crypto3::hashes::detail::poseidon_sponge_construction`.
@@ -152,8 +183,8 @@ class poseidon_sponge_construction;
 PermutationType::permute(state)
 ```
 
-This keeps the sponge independent from the concrete permutation. The same construction can be used with dense
-Poseidon1, optimized Poseidon1, and future Poseidon2 permutations.
+This keeps the sponge independent from the concrete permutation. The same construction is used with dense Poseidon1,
+optimized Poseidon1, and Poseidon2 permutations.
 
 ## Absorb Modes
 

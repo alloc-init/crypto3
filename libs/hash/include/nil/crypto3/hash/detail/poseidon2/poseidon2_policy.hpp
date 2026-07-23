@@ -23,9 +23,8 @@ namespace nil {
                 /*!
                  * @brief Standard Poseidon2 permutation parameters.
                  *
-                 * This policy family is separate from the legacy crypto3 Poseidon policies and from
-                 * the Poseidon1 policies because Poseidon2 has a different linear-layer structure:
-                 * external full rounds around internal partial rounds.
+                 * This policy family is separate from the Poseidon1 policies because Poseidon2 has a different
+                 * linear-layer structure: external full rounds around internal partial rounds.
                  */
                 template<typename FieldType, std::size_t Security, std::size_t Rate, std::size_t Capacity,
                          std::size_t SBoxPower, std::size_t FullRounds, std::size_t PartRounds, std::size_t DigestBits>

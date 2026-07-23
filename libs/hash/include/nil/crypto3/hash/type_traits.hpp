@@ -297,10 +297,6 @@ namespace nil {
 
             GENERATE_HAS_MEMBER_RETURN_FUNCTION(squeeze, block_type)
 
-#ifndef __ZKLLVM__
-            template<typename PolicyType>
-            class legacy_poseidon;
-
             template<typename PolicyType>
             class poseidon;
 
@@ -318,7 +314,6 @@ namespace nil {
 
             template<typename PolicyType>
             class poseidon2_padding_free;
-#endif
 
             template<typename ParamsType, typename HashType, typename GroupType>
             struct find_group_hash;
@@ -372,14 +367,11 @@ namespace nil {
                 constexpr static const bool value = false;
             };
 
-#ifndef __ZKLLVM__
             template<typename HashType>
             struct is_poseidon<
                 HashType,
                 typename std::enable_if_t<
                     std::is_same<nil::crypto3::hashes::poseidon<typename HashType::policy_type>, HashType>::value ||
-                    std::is_same<nil::crypto3::hashes::legacy_poseidon<typename HashType::policy_type>,
-                                 HashType>::value ||
                     std::is_same<nil::crypto3::hashes::poseidon1<typename HashType::policy_type>, HashType>::value ||
                     std::is_same<nil::crypto3::hashes::poseidon1_dense<typename HashType::policy_type>,
                                  HashType>::value ||
@@ -392,7 +384,6 @@ namespace nil {
                 constexpr static const bool value = true;
                 typedef HashType type;
             };
-#endif
 
             template<template<typename...> class PrimaryTemplate, typename T>
             struct is_specialization_of : std::false_type { };
