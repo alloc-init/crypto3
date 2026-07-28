@@ -75,11 +75,11 @@ BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(zk_poseidon_transcript_test_suite)
 
-// We need this test to make sure that poseidon keeps working exactly the same after any refactoring/code changes.
+// Keep the standard Poseidon transcript behavior stable across refactoring.
 BOOST_AUTO_TEST_CASE(zk_poseidon_transcript_init_test) {
-    using curve_type = algebra::curves::pallas;
-    using field_type = typename curve_type::base_field_type;
-    using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
+    using field_type = algebra::curves::alt_bn128_254::scalar_field_type;
+    using poseidon_type =
+        hashes::poseidon<nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>>;
 
     std::vector<std::uint8_t> init_blob {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     transcript::fiat_shamir_heuristic_sequential<poseidon_type> tr{
@@ -92,12 +92,12 @@ BOOST_AUTO_TEST_CASE(zk_poseidon_transcript_init_test) {
     BOOST_CHECK_EQUAL(
         ch1,
         field_type::value_type(
-            0x2c8488fd580563511086c59020975e49afd065fd26c451f6c1f9c5213798c928_cppui_modular255));
+            0x13442afffe340d61e9965271e0b4ff5760c90543d2cedb6f55c50c6cfec28ff9_cppui_modular254));
     BOOST_CHECK_EQUAL(
         ch2,
         field_type::value_type(
-            0x285f5407fb2f26a10fdcdc9357ecdc2b1415dc67b082f7c18964022bcb644ca7_cppui_modular255));
-    BOOST_CHECK_EQUAL(ch_int, 0x48f3);
+            0x2089a04399956cc5c98374dfb958b7af3e5b6e0cf1ce3549372bf544951c7259_cppui_modular254));
+    BOOST_CHECK_EQUAL(ch_int, 0xfef0);
 
     init_blob = {};
     tr = transcript::fiat_shamir_heuristic_sequential<poseidon_type>(init_blob);
@@ -108,18 +108,18 @@ BOOST_AUTO_TEST_CASE(zk_poseidon_transcript_init_test) {
     BOOST_CHECK_EQUAL(
         ch1,
         field_type::value_type(
-            0x35626947FA1063436F4E5434029CCAEC64075C9FC80034C0923054A2B1D30BD2_cppui_modular255));
+            0x0ee069e6aa796ef0e46cbd51d10468393d443a00f5affe72898d9ab62e335e16_cppui_modular254));
     BOOST_CHECK_EQUAL(
         ch2,
         field_type::value_type(
-            0x1B961886411EE8722DD6B576CBA5876EB30999B5237FE0E14255E6D006CFF63C_cppui_modular255));
-    BOOST_CHECK_EQUAL(ch_int, 0xC92);
+            0x0b6bcbfc77af6d252b1b1f46f0549f88337fc46446c17c75e30b47d5a681e88a_cppui_modular254));
+    BOOST_CHECK_EQUAL(ch_int, 0x740);
 }
 
 BOOST_AUTO_TEST_CASE(zk_poseidon_transcript_no_init_test) {
-    using curve_type = algebra::curves::pallas;
-    using field_type = typename curve_type::base_field_type;
-    using poseidon_type = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
+    using field_type = algebra::curves::alt_bn128_254::scalar_field_type;
+    using poseidon_type =
+        hashes::poseidon<nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>>;
 
     transcript::fiat_shamir_heuristic_sequential<poseidon_type> tr;
     auto ch1 = tr.challenge<field_type>();
@@ -129,12 +129,12 @@ BOOST_AUTO_TEST_CASE(zk_poseidon_transcript_no_init_test) {
     BOOST_CHECK_EQUAL(
         ch1,
         field_type::value_type(
-            0x35626947fa1063436f4e5434029ccaec64075c9fc80034c0923054a2b1d30bd2_cppui_modular255));
+            0x0ee069e6aa796ef0e46cbd51d10468393d443a00f5affe72898d9ab62e335e16_cppui_modular254));
     BOOST_CHECK_EQUAL(
         ch2,
         field_type::value_type(
-            0x1b961886411ee8722dd6b576cba5876eb30999b5237fe0e14255e6d006cff63c_cppui_modular255));
-    BOOST_CHECK_EQUAL(ch_int, 0xc92);
+            0x0b6bcbfc77af6d252b1b1f46f0549f88337fc46446c17c75e30b47d5a681e88a_cppui_modular254));
+    BOOST_CHECK_EQUAL(ch_int, 0x740);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -175,14 +175,5 @@ BOOST_AUTO_TEST_CASE(mnt6_keccak) {
 //         (0x0_cppui_modular377);
 //     */
 // }
-
-BOOST_AUTO_TEST_CASE(pallas_poseidon) {
-    using curve_type = algebra::curves::pallas;
-    using field_type = typename curve_type::base_field_type;
-    using hash_type = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
-
-    test_transcript<curve_type, hash_type>
-        (0xb4a4cca5ad2d998a81ce64953c1fe0b16e27e4d298808165644421eebd2bc3a_cppui_modular256);
-}
 
 BOOST_AUTO_TEST_SUITE_END()

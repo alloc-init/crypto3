@@ -260,25 +260,13 @@ namespace nil {
                 // Specialize for Nil Poseidon.
                 template<typename HashType>
                 struct fiat_shamir_heuristic_sequential<
-                            HashType,
-                            typename std::enable_if<
-                                nil::crypto3::hashes::is_specialization_of<nil::crypto3::hashes::poseidon,
-                                    HashType>::value>::type> {
-                    //   After refactoring an attempt to remove this Nil Poseidon specialization was made.
-                    // The difference between challenge() for other hashes and for Nil Poseidon is
-                    // how the second challenge is produced. For the first call things are the same:
-                    // we feed the result A (aka state in current code) of hash from operator() to hash, it
-                    // puts A to sponge_state[1] (read about nil_poseidon_sponge, if you're wondered why not
-                    // sponge_state[0]), then calls squeeze(). But for the second challenge thigs are
-                    // different: other hashes feed state B to hash again (in case of Nil Poseidon state will
-                    // be put to sponge_state[1]), but here we just run squeeze() (B is located in sponge_state[0]).
-                    // Not to replace current hacks with new bigger ones, we'll just keep it.
-
+                             HashType,
+                             typename std::enable_if<
+                                nil::crypto3::hashes::is_poseidon<HashType>::value>::type> {
                     typedef HashType hash_type;
                     using field_type = typename HashType::policy_type::field_type;
-                    using poseidon_policy = typename HashType::policy_type;
-                    using permutation_type = nil::crypto3::hashes::detail::poseidon_permutation<poseidon_policy>;
-                    using state_type = typename permutation_type::state_type;
+                    using sponge_type = typename HashType::construction::type;
+                    using block_type = typename sponge_type::block_type;
 
                     fiat_shamir_heuristic_sequential() {
                     }
@@ -286,17 +274,17 @@ namespace nil {
                     template<typename InputRange>
                     fiat_shamir_heuristic_sequential(const InputRange &r) {
                         if (r.size() != 0) {
-                            sponge.absorb(static_cast<typename hash_type::digest_type>(hash<hash_type>(r)));
+                            absorb(static_cast<typename hash_type::digest_type>(hash<hash_type>(r)));
                         }
                     }
 
                     template<typename InputIterator>
                     fiat_shamir_heuristic_sequential(InputIterator first, InputIterator last) {
-                        sponge.absorb(hash<hash_type>(first, last));
+                        absorb(hash<hash_type>(first, last));
                     }
 
                     void operator()(const typename hash_type::digest_type &input) {
-                        sponge.absorb(input);
+                        absorb(input);
                     }
 
                     template<typename InputRange>
@@ -304,7 +292,7 @@ namespace nil {
                         !algebra::is_curve_element<InputRange>::value
                         >
                     operator()(const InputRange &r) {
-                        sponge.absorb(static_cast<typename hash_type::digest_type>(hash<hash_type>(r)));
+                        absorb(static_cast<typename hash_type::digest_type>(hash<hash_type>(r)));
                     }
 
                     template<typename element>
@@ -313,19 +301,24 @@ namespace nil {
                         >
                     operator()(element const& data) {
                         auto affine = data.to_affine();
-                        sponge.absorb(affine.X);
-                        sponge.absorb(affine.Y);
+                        absorb(affine.X);
+                        absorb(affine.Y);
                     }
 
                     template<typename InputIterator>
                     void operator()(InputIterator first, InputIterator last) {
-                        sponge.absorb(hash<hash_type>(first, last));
+                        absorb(hash<hash_type>(first, last));
                     }
 
                     template<typename FieldType>
                     typename FieldType::value_type challenge() {
-                        typename FieldType::value_type result = sponge.squeeze();
-                        return result;
+                        static_assert(std::is_same<FieldType, field_type>::value,
+                                      "Poseidon transcript challenges must use the Poseidon field");
+                        static_assert(sponge_type::digest_words == 1,
+                                      "Poseidon transcript challenges require a one-field-element digest");
+                        last_squeezed_block = sponge.squeeze();
+                        has_squeezed = true;
+                        return last_squeezed_block[0];
                     }
 
                     template<typename Integral>
@@ -371,8 +364,31 @@ namespace nil {
                         return result;
                     }
 
+                private:
+                    template<typename InputType>
+                    void absorb(const InputType &input) {
+                        if (has_squeezed) {
+                            sponge.reset();
+                            sponge.absorb(last_squeezed_block);
+                            has_squeezed = false;
+                        }
+
+                        block_type block{};
+                        if constexpr (std::is_same<typename std::decay<InputType>::type,
+                                                   typename hash_type::word_type>::value) {
+                            block[0] = input;
+                        } else {
+                            std::copy(input.begin(), input.end(), block.begin());
+                        }
+                        sponge.absorb(block);
+                    }
+
                 public:
-                    hashes::detail::poseidon_sponge_construction_custom<typename HashType::policy_type> sponge;
+                    sponge_type sponge;
+
+                private:
+                    block_type last_squeezed_block{};
+                    bool has_squeezed = false;
                 };
             } // namespace transcript
         } // namespace zk
