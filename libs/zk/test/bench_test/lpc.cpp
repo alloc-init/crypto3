@@ -120,9 +120,8 @@ void lpc_test_case(std::size_t steps) {
                                               12       // grinding_parameter
     );
 
-    using lpc_scheme_type =
-        nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type,
-                                                             math::polynomial<typename FieldType::value_type>>;
+    using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type>;
+    using polynomial_type = typename lpc_scheme_type::polynomial_type;
     lpc_scheme_type lpc_scheme_prover(fri_params);
     lpc_scheme_type lpc_scheme_verifier(fri_params);
 
@@ -131,8 +130,6 @@ void lpc_test_case(std::size_t steps) {
                                                    typename FieldType::value_type::integral_type>
         random_polynomial_generator_type;
 
-    std::vector<math::polynomial<typename FieldType::value_type>> res;
-
     // Generate polys
     boost::random::random_device rd;     // Will be used to obtain a seed for the random number engine
     boost::random::mt19937 gen(rd());    // Standard mersenne_twister_engine seeded with rd()
@@ -140,12 +137,10 @@ void lpc_test_case(std::size_t steps) {
 
     random_polynomial_generator_type polynomial_element_gen;
     std::size_t height = 1;
-    res.reserve(height);
-
     for (int i = 0; i < height; i++) {
-        math::polynomial<typename FieldType::value_type> poly(fri_params.max_degree + 1);
+        polynomial_type poly(fri_params.max_degree, fri_params.max_degree + 1);
         for (int j = 0; j < fri_params.max_degree + 1; j++) {
-            poly[i] = typename FieldType::value_type(polynomial_element_gen());
+            poly[j] = typename FieldType::value_type(polynomial_element_gen());
         }
 
         std::map<std::size_t, typename lpc_scheme_type::commitment_type> commitments;
