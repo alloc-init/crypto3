@@ -187,10 +187,10 @@ namespace nil {
                     challenge() {
                         state = hash<hash_type>(state);
                         nil::marshalling::status_type status;
-                        typename FieldType::value_type raw_result =
-                                nil::marshalling::pack(state, status);
+                        boost::multiprecision::number<modular_backend_of_hash_size> raw_result =
+                            nil::marshalling::pack(state, status);
                         BOOST_ASSERT(status == nil::marshalling::status_type::success);
-                        return raw_result;
+                        return typename FieldType::value_type(raw_result);
                     }
 
                     template<typename FieldType>

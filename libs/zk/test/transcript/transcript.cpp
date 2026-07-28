@@ -62,12 +62,12 @@ BOOST_AUTO_TEST_CASE(zk_transcript_manual_test) {
     auto ch2 = tr.challenge<field_type>();
     auto ch_n = tr.challenges<field_type, 3>();
 
-    BOOST_CHECK_EQUAL(ch1.data, field_type::value_type(0xe858ba005424eabd6d97de7e930779def59a85c1a9ff7e8a5d001cdb07f6e4_cppui_modular254).data);
-    BOOST_CHECK_EQUAL(ch2.data, field_type::value_type(0xf61f38f58a55b3bbee0480fc5ec3cf8df81603579f4f7134f764bfd3ca5938b_cppui_modular254).data);
+    BOOST_CHECK_EQUAL(ch1, field_type::value_type(0xe858ba005424eabd6d97de7e930779def59a85c1a9ff7e8a5d001cdb07f6e4_cppui_modular254));
+    BOOST_CHECK_EQUAL(ch2, field_type::value_type(0xf61f38f58a55b3bbee0480fc5ec3cf8df81603579f4f7134f764bfd3ca5938b_cppui_modular254));
 
-    BOOST_CHECK_EQUAL(ch_n[0].data, field_type::value_type(0x4f6b97a9bc99d6996fab5e03d1cd0b418a9b3c97ed64cca070e15777e7cc99a_cppui_modular254).data);
-    BOOST_CHECK_EQUAL(ch_n[1].data, field_type::value_type(0x2414ddf7ecff246500beb2c01b0c5912a400bc3cdca6d7f24bd2bd4987b21e04_cppui_modular254).data);
-    BOOST_CHECK_EQUAL(ch_n[2].data, field_type::value_type(0x10bfe2f4a414eec551dda5fd9899e9b46e327648b4fa564ed0517b6a99396aec_cppui_modular254).data);
+    BOOST_CHECK_EQUAL(ch_n[0], field_type::value_type(0x4f6b97a9bc99d6996fab5e03d1cd0b418a9b3c97ed64cca070e15777e7cc99a_cppui_modular254));
+    BOOST_CHECK_EQUAL(ch_n[1], field_type::value_type(0x2414ddf7ecff246500beb2c01b0c5912a400bc3cdca6d7f24bd2bd4987b21e04_cppui_modular254));
+    BOOST_CHECK_EQUAL(ch_n[2], field_type::value_type(0x10bfe2f4a414eec551dda5fd9899e9b46e327648b4fa564ed0517b6a99396aec_cppui_modular254));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -158,12 +158,12 @@ void test_transcript(typename curve_type::base_field_type::value_type const& exp
 
 BOOST_AUTO_TEST_CASE(mnt4_keccak) {
     test_transcript<algebra::curves::mnt4_298, hashes::keccak_1600<256>>
-        (0xb985b0419fda7e26db3867b38cbb55465717e8d3ff208768cac6949bd68c2b7_cppui_modular298);
+        (0x2b4e9c317f18745b6b89cbb97728923a2d797e261f8320d90f204192c7aabd2b397a0cc155c_cppui_modular298);
 }
 
 BOOST_AUTO_TEST_CASE(mnt6_keccak) {
     test_transcript<algebra::curves::mnt6_298, hashes::keccak_1600<256>>
-        (0x56d23a0a6f75fe3a7670906b341b29cdde80696fc418771e3c84910217546ef1_cppui_modular298);
+        (0x25a45c6b7d107961d135e640abfb1840cefd9c8ea318f7f33cd327cd55dabdd18c125d6c6b_cppui_modular298);
 }
 
 // bc: no bls12_381 keccak h2f suite
