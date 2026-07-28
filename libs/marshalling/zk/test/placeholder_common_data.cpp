@@ -116,7 +116,7 @@ struct placeholder_common_data_test_runner {
 
         nil::crypto3::marshalling::types::placeholder_common_data<TTypeBase, common_data_type> test_val_read;
         auto read_iter = cv.begin();
-        test_val_read.read(read_iter, cv.size());
+        status = test_val_read.read(read_iter, cv.size());
         BOOST_CHECK(status == nil::marshalling::status_type::success);
         auto constructed_val_read = nil::crypto3::marshalling::types::make_placeholder_common_data<Endianness, common_data_type>(
                 test_val_read
@@ -165,11 +165,15 @@ using pallas_base_field = typename curves::pallas::base_field_type;
 using keccak_256 = hashes::keccak_1600<256>;
 using keccak_512 = hashes::keccak_1600<512>;
 using sha2_256 = hashes::sha2<256>;
-using poseidon_over_pallas = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<pallas_base_field>>;
+using alt_bn_scalar_field = typename curves::alt_bn128_254::scalar_field_type;
+using poseidon_over_alt_bn =
+    hashes::poseidon<nil::crypto3::hashes::detail::poseidon1_policy<alt_bn_scalar_field, 128, 2>>;
 
 using TestRunners = boost::mpl::list<
+    /* Test algebraic hashes over a supported field */
+    placeholder_common_data_test_runner<alt_bn_scalar_field, poseidon_over_alt_bn, poseidon_over_alt_bn>,
+
     /* Test pallas with different hashes */
-    placeholder_common_data_test_runner<pallas_base_field, poseidon_over_pallas, poseidon_over_pallas>,
     placeholder_common_data_test_runner<pallas_base_field, keccak_256, keccak_256>,
     placeholder_common_data_test_runner<pallas_base_field, keccak_512, keccak_512>,
 
