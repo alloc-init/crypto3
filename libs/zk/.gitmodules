@@ -1,0 +1,3 @@
+[submodule "crypto3"]
+	path = crypto3
+	url = git@github.com:alloc-init/crypto3.git
