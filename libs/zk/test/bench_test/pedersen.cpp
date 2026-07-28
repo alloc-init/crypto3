@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(pedersen_long_test) {
     params_type params;
 
     params.n = n;
-    params.K = K;
+    params.k = K;
     params.g = g;
     params.h = h;
 
