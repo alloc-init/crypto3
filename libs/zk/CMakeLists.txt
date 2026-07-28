@@ -31,9 +31,6 @@ include(FindPkgConfig)
 find_package(Boost REQUIRED COMPONENTS
         container random filesystem log log_setup program_options thread unit_test_framework timer)
 
-add_subdirectory(crypto3)
-add_subdirectory(marshalling/zk)
-
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
 
 add_library(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE)
@@ -45,14 +42,11 @@ set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
 target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
-
         $<$<BOOL:${Boost_FOUND}>:${Boost_INCLUDE_DIRS}>)
 
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
-
         Boost::container
         Boost::log
-
         # Containers and math implementation could be replaced with namespace change
         crypto3::containers
         crypto3::math
