@@ -97,7 +97,7 @@ void lpc_test_case(std::size_t steps) {
     constexpr static const std::size_t k = 1;
 
     // It's important parameter
-    constexpr static const std::size_t d = 1 << 24;
+    constexpr static const std::size_t d = 1 << 20;
     constexpr static const std::size_t r = boost::static_log2<(d - k)>::value;
 
     constexpr static const std::size_t m = 2;
@@ -106,11 +106,6 @@ void lpc_test_case(std::size_t steps) {
     typedef zk::commitments::list_polynomial_commitment_params<merkle_hash_type, transcript_hash_type, m>
         lpc_params_type;
     typedef zk::commitments::list_polynomial_commitment<FieldType, lpc_params_type> lpc_type;
-
-    constexpr static const std::size_t d_extended = d;
-    std::size_t extended_log = boost::static_log2<d_extended>::value;
-    std::vector<std::shared_ptr<math::evaluation_domain<FieldType>>> D =
-        math::calculate_domain_set<FieldType>(extended_log, r);
 
     typename fri_type::params_type fri_params(steps,
                                               r,
@@ -131,10 +126,6 @@ void lpc_test_case(std::size_t steps) {
         random_polynomial_generator_type;
 
     // Generate polys
-    boost::random::random_device rd;     // Will be used to obtain a seed for the random number engine
-    boost::random::mt19937 gen(rd());    // Standard mersenne_twister_engine seeded with rd()
-    boost::random::uniform_int_distribution<> distrib(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
-
     random_polynomial_generator_type polynomial_element_gen;
     std::size_t height = 1;
     for (int i = 0; i < height; i++) {

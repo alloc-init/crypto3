@@ -98,8 +98,8 @@ long long get_nsec_time() {
 
 // clang-format off
 template<typename GroupType, typename FieldType, typename MultiexpMethod>
-run_result_t<GroupType> profile_multiexp(test_instances_t<GroupType> group_elements,
-                                         test_instances_t<FieldType> scalars) {
+run_result_t<GroupType> profile_multiexp(const test_instances_t<GroupType>& group_elements,
+                                         const test_instances_t<FieldType>& scalars) {
 
     long long start_time = get_nsec_time();
 
@@ -118,12 +118,13 @@ run_result_t<GroupType> profile_multiexp(test_instances_t<GroupType> group_eleme
 template<typename GroupType, typename FieldType>
 void print_performance_csv(size_t expn_start, std::size_t expn_end_fast, std::size_t expn_end_naive,
                            bool compare_answers) {
+    constexpr std::size_t instance_count = 3;
     for (size_t expn = expn_start; expn <= expn_end_fast; expn++) {
         printf("%ld", expn);
         fflush(stdout);
 
-        test_instances_t<GroupType> group_elements = generate_group_elements<GroupType>(10, 1 << expn);
-        test_instances_t<FieldType> scalars = generate_scalars<FieldType>(10, 1 << expn);
+        test_instances_t<GroupType> group_elements = generate_group_elements<GroupType>(instance_count, 1 << expn);
+        test_instances_t<FieldType> scalars = generate_scalars<FieldType>(instance_count, 1 << expn);
 
         run_result_t<GroupType> result_bos_coster =
             profile_multiexp<GroupType, FieldType, policies::multiexp_method_bos_coster>(group_elements, scalars);
@@ -159,10 +160,10 @@ BOOST_AUTO_TEST_SUITE(multiexp_test_suite)
 BOOST_AUTO_TEST_CASE(multiexp_test_case) {
 
     std::cout << "Testing BLS12-381 G1" << std::endl;
-    print_performance_csv<curves::bls12<381>::g1_type<>, curves::bls12<381>::scalar_field_type>(2, 12, 14, true);
+    print_performance_csv<curves::bls12<381>::g1_type<>, curves::bls12<381>::scalar_field_type>(2, 12, 8, true);
 
     std::cout << "Testing BLS12-381 G2" << std::endl;
-    print_performance_csv<curves::bls12<381>::g2_type<>, curves::bls12<381>::scalar_field_type>(2, 12, 14, true);
+    print_performance_csv<curves::bls12<381>::g2_type<>, curves::bls12<381>::scalar_field_type>(2, 12, 8, true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
