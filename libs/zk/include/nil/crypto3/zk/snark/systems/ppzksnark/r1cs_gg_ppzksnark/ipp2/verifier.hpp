@@ -580,8 +580,8 @@ namespace nil {
                     }
 
                     // Random linear combination of proofs
-                    constexpr std::array<std::uint8_t, 9> application_tag = {'s', 'n', 'a', 'r', 'K',
-                                                                             'p', 'a', 'c', 'K'};
+                    constexpr std::array<std::uint8_t, 9> application_tag = {'s', 'n', 'a', 'r', 'k',
+                                                                             'p', 'a', 'c', 'k'};
                     constexpr std::array<std::uint8_t, 8> domain_separator{'r', 'a', 'n', 'd', 'o', 'm', '-', 'r'};
                     transcript<CurveType, HashType> tr(application_tag.begin(), application_tag.end());
                     tr.write_domain_separator(domain_separator.begin(), domain_separator.end());
