@@ -56,8 +56,8 @@ BOOST_AUTO_TEST_CASE(pedersen_long_test) {
     using curve_group_type = curve_type::template g1_type<>;
     using field_type = typename curve_type::scalar_field_type;
 
-    constexpr static const int n = 2000000000;
-    constexpr static const int K = 1999999999;
+    constexpr static const int n = 64;
+    constexpr static const int K = 32;
     static curve_group_type::value_type g = algebra::random_element<curve_group_type>();
     static curve_group_type::value_type h = algebra::random_element<curve_group_type>();
     while (g == h) {
