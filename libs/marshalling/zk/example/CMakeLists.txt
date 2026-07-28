@@ -39,7 +39,7 @@ macro(define_marshalling_example name)
 endmacro()
 
 set(EXAMPLES_NAMES
-        "r1cs_gg_ppzksnark")
+        "r1cs")
 
 foreach(EXAMPLE_NAME ${EXAMPLES_NAMES})
     define_marshalling_example(${EXAMPLE_NAME})
