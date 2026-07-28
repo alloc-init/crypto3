@@ -42,10 +42,11 @@
 #include <nil/crypto3/zk/math/dag_expression.hpp>
 #include <nil/crypto3/zk/math/dag_expression_evaluator.hpp>
 
-#include <nil/crypto3/test_tools/random_test_initializer.hpp>
+#include <nil/crypto3/zk/test_tools/random_test_initializer.hpp>
 
 using namespace nil::crypto3;
 using namespace nil::crypto3::math;
+using namespace nil::crypto3::zk;
 using namespace nil::crypto3::zk::snark;
 
 BOOST_AUTO_TEST_SUITE(dag_expression_evaluator_test_suite)
