@@ -29,8 +29,6 @@
 
 #include <iostream>
 
-#include <nil/crypto3/multiprecision/literals.hpp>
-
 #include <nil/crypto3/algebra/curves/alt_bn128.hpp>
 #include <nil/crypto3/algebra/curves/bls12.hpp>
 

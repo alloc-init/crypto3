@@ -25,8 +25,6 @@
 
 #include <iostream>
 
-#include <nil/crypto3/multiprecision/literals.hpp>
-
 #include <nil/crypto3/algebra/curves/pallas.hpp>
 
 using namespace nil::crypto3::algebra;

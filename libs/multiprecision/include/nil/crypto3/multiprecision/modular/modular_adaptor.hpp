@@ -14,6 +14,7 @@
 #include <boost/cstdint.hpp>
 #include <boost/functional/hash_fwd.hpp>
 #include <boost/predef.h>
+#include <boost/type_traits/is_arithmetic.hpp>
 
 #include <nil/crypto3/multiprecision/modular/modular_adaptor_fixed.hpp>
 

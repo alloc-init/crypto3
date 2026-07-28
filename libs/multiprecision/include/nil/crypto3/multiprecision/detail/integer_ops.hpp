@@ -11,6 +11,7 @@
 #define CRYPTO3_MP_DETAIL_INTEGER_OPS_HPP
 
 #include <boost/multiprecision/number.hpp>
+#include <boost/type_traits/is_integral.hpp>
 
 namespace boost {
     namespace multiprecision {
