@@ -15,6 +15,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../include"
 macro(define_random_example name)
     add_executable(random_${name}_example ${name}.cpp)
     target_link_libraries(random_${name}_example PRIVATE
+            ${CMAKE_WORKSPACE_NAME}::random
             ${CMAKE_WORKSPACE_NAME}::algebra
             ${CMAKE_WORKSPACE_NAME}::hash
             ${CMAKE_WORKSPACE_NAME}::mac

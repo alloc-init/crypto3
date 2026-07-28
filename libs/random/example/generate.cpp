@@ -24,6 +24,8 @@
 // This example demonstrates usage of random engines to generate algebraic
 // structures: field elements and elliptic curve points
 
+#include <iostream>
+
 #include <nil/crypto3/algebra/curves/mnt4.hpp>
 
 #include <nil/crypto3/random/algebraic_engine.hpp>
