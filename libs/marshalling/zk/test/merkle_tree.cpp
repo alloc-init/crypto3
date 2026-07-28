@@ -39,6 +39,7 @@
 #include <nil/marshalling/endianness.hpp>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
+#include <nil/crypto3/algebra/curves/alt_bn128.hpp>
 
 #include <nil/crypto3/hash/block_to_field_elements_wrapper.hpp>
 #include <nil/crypto3/hash/sha2.hpp>
@@ -110,13 +111,13 @@ void test_merkle_tree_marshalling(std::size_t tree_depth) {
 
 BOOST_AUTO_TEST_SUITE(marshalling_merkle_tree_test_suite)
 
-using curve_type = nil::crypto3::algebra::curves::pallas;
-using field_type = typename curve_type::base_field_type;
+using field_type = typename nil::crypto3::algebra::curves::alt_bn128_254::scalar_field_type;
 
 using HashTypes = boost::mpl::list<
         nil::crypto3::hashes::sha2<256>,
         nil::crypto3::hashes::keccak_1600<512>,
-        nil::crypto3::hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>
+        nil::crypto3::hashes::poseidon<
+            nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>>
     >;
 
 
