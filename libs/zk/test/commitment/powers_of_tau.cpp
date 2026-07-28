@@ -145,14 +145,15 @@ BOOST_AUTO_TEST_SUITE(powers_of_tau_test_suite)
         BOOST_CHECK(scheme_type::verify_eval(pubkey, acc1, acc2));
         auto acc3 = acc2;
         std::vector<std::uint8_t> beacon{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-        auto rng = scheme_type::rng_from_beacon(beacon);
+        constexpr std::size_t test_hash_power = 4;
+        auto rng = scheme_type::rng_from_beacon(beacon, test_hash_power);
         auto beacon_sk = scheme_type::generate_private_key(rng);
         auto beacon_pubkey = scheme_type::proof_eval(beacon_sk, acc2, rng);
         acc3.transform(beacon_sk);
         BOOST_CHECK(scheme_type::verify_eval(beacon_pubkey, acc2, acc3));
 
         // Check reproducibility
-        auto rng_reproduced = scheme_type::rng_from_beacon(beacon);
+        auto rng_reproduced = scheme_type::rng_from_beacon(beacon, test_hash_power);
         auto beacon_sk_reproduced = scheme_type::generate_private_key(rng_reproduced);
         BOOST_CHECK(beacon_sk.tau == beacon_sk_reproduced.tau);
         BOOST_CHECK(beacon_sk.alpha == beacon_sk_reproduced.alpha);

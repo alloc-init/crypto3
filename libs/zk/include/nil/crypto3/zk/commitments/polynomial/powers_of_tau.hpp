@@ -35,7 +35,13 @@
 #include <nil/crypto3/algebra/random_element.hpp>
 #include <nil/crypto3/algebra/algorithms/pair.hpp>
 #include <nil/crypto3/hash/blake2b.hpp>
+#include <nil/crypto3/hash/sha2.hpp>
 #include <nil/crypto3/marshalling/zk/types/commitments/powers_of_tau/accumulator.hpp>
+
+#include <boost/random/seed_seq.hpp>
+
+#include <limits>
+#include <stdexcept>
 
 namespace nil {
     namespace crypto3 {
@@ -74,17 +80,22 @@ namespace nil {
                         return private_key_type{std::move(tau), std::move(alpha), std::move(beta)};
                     }
 
-                    static auto rng_from_beacon(const std::vector<std::uint8_t> &beacon) {
-                        std::size_t n = 42;
+                    static auto rng_from_beacon(const std::vector<std::uint8_t> &beacon,
+                                                std::size_t hash_power = 42) {
+                        if (hash_power >= std::numeric_limits<std::size_t>::digits) {
+                            throw std::invalid_argument("beacon hash power exceeds platform limits");
+                        }
+
                         std::vector<std::uint8_t> cur_hash = beacon;
-                        for (std::size_t i = 0; i < std::size_t(1 << n); ++i) {
+                        const std::size_t hash_iterations = std::size_t{1} << hash_power;
+                        for (std::size_t i = 0; i < hash_iterations; ++i) {
                             std::vector<std::uint8_t> hash = nil::crypto3::hash<hashes::sha2<256>>(cur_hash);
                             cur_hash = hash;
                         }
-                        // random::chacha gen;
+
                         boost::random::mt19937 gen;
-                        // gen.seed(cur_hash);
-                        gen.seed(cur_hash[0]);
+                        boost::random::seed_seq seed(cur_hash.begin(), cur_hash.end());
+                        gen.seed(seed);
 
                         return gen;
                     }
