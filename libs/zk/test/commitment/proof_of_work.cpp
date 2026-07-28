@@ -26,14 +26,12 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <nil/crypto3/algebra/curves/pallas.hpp>
-#include <nil/crypto3/algebra/fields/pallas/scalar_field.hpp>
-#include <nil/crypto3/algebra/fields/pallas/base_field.hpp>
+#include <nil/crypto3/algebra/curves/alt_bn128.hpp>
 
 #include <nil/crypto3/zk/commitments/detail/polynomial/proof_of_work.hpp>
 
 #include <nil/crypto3/hash/poseidon.hpp>
-#include <nil/crypto3/hash/detail/poseidon/poseidon_policy.hpp>
+#include <nil/crypto3/hash/detail/poseidon_common/poseidon_policy.hpp>
 #include <nil/crypto3/hash/keccak.hpp>
 
 #include <nil/crypto3/zk/transcript/fiat_shamir.hpp>
@@ -44,10 +42,9 @@ using namespace nil::crypto3::zk::commitments;
 BOOST_AUTO_TEST_SUITE(proof_of_knowledge_test_suite)
 
     BOOST_AUTO_TEST_CASE(pow_poseidon_basic_test) {
-        using curve_type = curves::pallas;
-        using field_type = curve_type::base_field_type;
+        using field_type = curves::alt_bn128_254::scalar_field_type;
         using integral_type = typename field_type::integral_type;
-        using policy = nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>;
+        using policy = nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>;
         using poseidon = nil::crypto3::hashes::poseidon<policy>;
         using pow_type = nil::crypto3::zk::commitments::field_proof_of_work<poseidon, field_type>;
 
@@ -56,18 +53,18 @@ BOOST_AUTO_TEST_SUITE(proof_of_knowledge_test_suite)
         auto old_transcript_1 = transcript, old_transcript_2 = transcript;
 
         auto result = pow_type::generate(transcript, grinding_bits);
-        BOOST_ASSERT(pow_type::verify(old_transcript_1, result, grinding_bits));
+        BOOST_CHECK(pow_type::verify(old_transcript_1, result, grinding_bits));
 
         // manually reimplement verify to ensure that changes in implementation didn't break it
         old_transcript_2(result);
         auto chal = old_transcript_2.template challenge<field_type>();
         const integral_type expected_mask = integral_type( (1 << grinding_bits) - 1 ) << (field_type::modulus_bits - grinding_bits);
 
-        BOOST_ASSERT((integral_type(chal.to_integral()) & expected_mask) == 0);
+        BOOST_CHECK((integral_type(chal.to_integral()) & expected_mask) == 0);
 
         using hard_pow_type = nil::crypto3::zk::commitments::field_proof_of_work<poseidon, field_type>;
         // check that random stuff doesn't pass verify
-        BOOST_ASSERT(!hard_pow_type::verify(old_transcript_1, result, 9));
+        BOOST_CHECK(!hard_pow_type::verify(old_transcript_1, result, 9));
     }
 
     BOOST_AUTO_TEST_CASE(pow_basic_test) {
@@ -82,17 +79,17 @@ BOOST_AUTO_TEST_SUITE(proof_of_knowledge_test_suite)
         auto old_transcript_1 = transcript, old_transcript_2 = transcript;
 
         auto result = pow_type::generate(transcript, grinding_bits);
-        BOOST_ASSERT(pow_type::verify(old_transcript_1, result, grinding_bits));
+        BOOST_CHECK(pow_type::verify(old_transcript_1, result, grinding_bits));
 
         // manually reimplement verify to ensure that changes in implementation didn't break it
         auto bytes = pow_type::to_byte_array(result);
         old_transcript_2(bytes);
         auto chal = old_transcript_2.template int_challenge<std::uint32_t>();
-        BOOST_ASSERT( (chal & expected_mask) == 0);
+        BOOST_CHECK((chal & expected_mask) == 0);
 
         // check that random stuff doesn't pass verify
         using hard_pow_type = nil::crypto3::zk::commitments::proof_of_work<keccak, std::uint32_t>;
-        BOOST_ASSERT(!hard_pow_type::verify(old_transcript_1, result, grinding_bits));
+        BOOST_CHECK(!hard_pow_type::verify(old_transcript_1, result, grinding_bits));
     }
 
 BOOST_AUTO_TEST_SUITE_END()
