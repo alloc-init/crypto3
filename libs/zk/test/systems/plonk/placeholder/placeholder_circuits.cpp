@@ -27,7 +27,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //---------------------------------------------------------------------------//
-// Test all circuits on one set of parameters (pallas and poseidon)
+// Test all circuits on one set of parameters (BN254 and Poseidon1).
 //
 
 #define BOOST_TEST_MODULE placeholder_circuits_test
@@ -35,6 +35,8 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/test_case.hpp>
 
+#include <nil/crypto3/algebra/curves/alt_bn128.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/hash/algorithm/hash.hpp>
 #include <nil/crypto3/hash/poseidon.hpp>
 
@@ -45,9 +47,9 @@
 
 BOOST_AUTO_TEST_SUITE(placeholder_circuits)
 
-    using curve_type = algebra::curves::pallas;
-    using field_type = typename curve_type::base_field_type;
-    using hash_type = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<field_type>>;
+    using field_type = typename algebra::curves::alt_bn128_254::scalar_field_type;
+    using hash_type =
+        hashes::poseidon<nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>>;
     using test_runner_type = placeholder_test_runner<field_type, hash_type, hash_type>;
 
     BOOST_AUTO_TEST_CASE(circuit1)
