@@ -160,11 +160,15 @@ using pallas_base_field = typename curves::pallas::base_field_type;
 using keccak_256 = hashes::keccak_1600<256>;
 using keccak_512 = hashes::keccak_1600<512>;
 using sha2_256 = hashes::sha2<256>;
-using poseidon_over_pallas = hashes::poseidon<nil::crypto3::hashes::detail::pasta_poseidon_policy<pallas_base_field>>;
+using alt_bn_scalar_field = typename curves::alt_bn128_254::scalar_field_type;
+using poseidon_over_alt_bn =
+    hashes::poseidon<nil::crypto3::hashes::detail::poseidon1_policy<alt_bn_scalar_field, 128, 2>>;
 
 using TestRunners = boost::mpl::list<
+    /* Test algebraic hashes over a supported field */
+    plonk_assignment_table_test_runner<alt_bn_scalar_field, poseidon_over_alt_bn, poseidon_over_alt_bn>,
+
     /* Test pallas with different hashes */
-    plonk_assignment_table_test_runner<pallas_base_field, poseidon_over_pallas, poseidon_over_pallas>,
     plonk_assignment_table_test_runner<pallas_base_field, keccak_256, keccak_256>,
     plonk_assignment_table_test_runner<pallas_base_field, keccak_512, keccak_512>,
 
