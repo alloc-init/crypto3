@@ -37,6 +37,7 @@
 #include <fstream>
 #include <filesystem>
 #include <algorithm>
+#include <type_traits>
 
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/field_type.hpp>
@@ -321,22 +322,29 @@ using alt_bn_scalar_field = typename curves::alt_bn128_254::scalar_field_type;
 using poseidon_over_alt_bn =
     hashes::poseidon<nil::crypto3::hashes::detail::poseidon1_policy<alt_bn_scalar_field, 128, 2>>;
 
-using TestRunners = boost::mpl::list<
-    /* Test algebraic hashes over a supported field */
-    placeholder_lpc_proof_test_runner<alt_bn_scalar_field, poseidon_over_alt_bn, poseidon_over_alt_bn>,
+using TestRunners =
+    boost::mpl::list<placeholder_lpc_proof_test_runner<pallas_base_field, keccak_256, keccak_256>,
+                     placeholder_lpc_proof_test_runner<alt_bn_scalar_field, poseidon_over_alt_bn, poseidon_over_alt_bn>,
+                     placeholder_lpc_proof_test_runner<pallas_base_field, keccak_256, sha2_256>>;
 
-    /* Test pallas with different hashes */
-    placeholder_lpc_proof_test_runner<pallas_base_field, keccak_256, keccak_256>,
-    placeholder_lpc_proof_test_runner<pallas_base_field, keccak_512, keccak_512>,
+template<typename TestRunner>
+using proof_marshalling_type = nil::crypto3::marshalling::types::placeholder_proof<
+    nil::marshalling::field_type<nil::marshalling::option::big_endian>, typename TestRunner::ProofType>;
 
-    /* Test case for different hashes of transcript and merkle tree */
-    placeholder_lpc_proof_test_runner<pallas_base_field, keccak_256, sha2_256>,
-
-    /* Test other curves with keccak_256 */
-    placeholder_lpc_proof_test_runner<typename curves::bls12_381::scalar_field_type, keccak_256, keccak_256>,
-    placeholder_lpc_proof_test_runner<typename curves::alt_bn128_254::scalar_field_type, keccak_256, keccak_256>,
-    placeholder_lpc_proof_test_runner<typename curves::mnt4_298::scalar_field_type, keccak_256, keccak_256>,
-    placeholder_lpc_proof_test_runner<typename curves::mnt6_298::scalar_field_type, keccak_256, keccak_256>>;
+static_assert(std::is_default_constructible_v<
+              proof_marshalling_type<placeholder_lpc_proof_test_runner<pallas_base_field, keccak_512, keccak_512>>>);
+static_assert(
+    std::is_default_constructible_v<proof_marshalling_type<
+        placeholder_lpc_proof_test_runner<typename curves::bls12_381::scalar_field_type, keccak_256, keccak_256>>>);
+static_assert(
+    std::is_default_constructible_v<proof_marshalling_type<
+        placeholder_lpc_proof_test_runner<typename curves::alt_bn128_254::scalar_field_type, keccak_256, keccak_256>>>);
+static_assert(
+    std::is_default_constructible_v<proof_marshalling_type<
+        placeholder_lpc_proof_test_runner<typename curves::mnt4_298::scalar_field_type, keccak_256, keccak_256>>>);
+static_assert(
+    std::is_default_constructible_v<proof_marshalling_type<
+        placeholder_lpc_proof_test_runner<typename curves::mnt6_298::scalar_field_type, keccak_256, keccak_256>>>);
 
 using canonical_lpc_test_runner = placeholder_lpc_proof_test_runner<pallas_base_field, keccak_256, keccak_256>;
 

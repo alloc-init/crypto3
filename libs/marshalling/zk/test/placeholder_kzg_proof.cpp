@@ -33,6 +33,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -171,12 +172,19 @@ BOOST_AUTO_TEST_SUITE(placeholder_kzg_v2_proof)
 
 using keccak_256 = hashes::keccak_1600<256>;
 
-/* KZG v2 only for pairing-friendly curves */
 using TestRunners =
-    boost::mpl::list<placeholder_kzg_v2_proof_test_runner<curves::bls12_381, keccak_256, keccak_256>,
-                     placeholder_kzg_v2_proof_test_runner<curves::alt_bn128_254, keccak_256, keccak_256>,
-                     placeholder_kzg_v2_proof_test_runner<curves::mnt4_298, keccak_256, keccak_256>,
-                     placeholder_kzg_v2_proof_test_runner<curves::mnt6_298, keccak_256, keccak_256>>;
+    boost::mpl::list<placeholder_kzg_v2_proof_test_runner<curves::alt_bn128_254, keccak_256, keccak_256>>;
+
+template<typename TestRunner>
+using proof_marshalling_type = nil::crypto3::marshalling::types::placeholder_proof<
+    nil::marshalling::field_type<nil::marshalling::option::big_endian>, typename TestRunner::ProofType>;
+
+static_assert(std::is_default_constructible_v<
+              proof_marshalling_type<placeholder_kzg_v2_proof_test_runner<curves::bls12_381, keccak_256, keccak_256>>>);
+static_assert(std::is_default_constructible_v<
+              proof_marshalling_type<placeholder_kzg_v2_proof_test_runner<curves::mnt4_298, keccak_256, keccak_256>>>);
+static_assert(std::is_default_constructible_v<
+              proof_marshalling_type<placeholder_kzg_v2_proof_test_runner<curves::mnt6_298, keccak_256, keccak_256>>>);
 
 using canonical_kzg_test_runner = placeholder_kzg_v2_proof_test_runner<curves::alt_bn128_254, keccak_256, keccak_256>;
 
