@@ -76,5 +76,9 @@ foreach(TEST_NAME ${TESTS_NAMES})
     define_marshalling_test(${TEST_NAME})
 endforeach()
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(marshalling_zk_placeholder_proof_test PRIVATE -O1)
+endif()
+
 target_compile_definitions(marshalling_zk_merkle_proof_test PRIVATE
     CRYPTO3_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
