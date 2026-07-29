@@ -39,22 +39,19 @@ namespace nil {
                 template<typename FieldType>
                 struct plonk_copy_constraint {
                     plonk_copy_constraint() = default;
-                    plonk_copy_constraint(const plonk_copy_constraint<FieldType> &other){
+                    plonk_copy_constraint(const plonk_copy_constraint<FieldType> &other) {
                         initialize(other.first, other.second);
                     }
-                    plonk_copy_constraint(
-                        const plonk_variable<typename FieldType::value_type> &_first,
-                        const plonk_variable<typename FieldType::value_type> &_second
-                    ){
+                    plonk_copy_constraint(const plonk_variable<typename FieldType::value_type> &_first,
+                                          const plonk_variable<typename FieldType::value_type> &_second) {
                         initialize(_first, _second);
                     }
                     plonk_variable<typename FieldType::value_type> first;
                     plonk_variable<typename FieldType::value_type> second;
+
                 protected:
-                    void initialize(
-                        const plonk_variable<typename FieldType::value_type> &_first,
-                        const plonk_variable<typename FieldType::value_type> &_second
-                    ){
+                    void initialize(const plonk_variable<typename FieldType::value_type> &_first,
+                                    const plonk_variable<typename FieldType::value_type> &_second) {
                         BOOST_ASSERT(_first.relative == false);
                         BOOST_ASSERT(_second.relative == false);
                         first = _first;
@@ -63,26 +60,26 @@ namespace nil {
                         if (_first > _second) {
                             std::swap(first, second);
                         }
-                   }
+                    }
                 };
 
-                template <typename FieldType>
+                template<typename FieldType>
                 bool operator==(const plonk_copy_constraint<FieldType> &a, const plonk_copy_constraint<FieldType> &b) {
                     return a.first == b.first && a.second == b.second;
                 }
 
-                template <typename FieldType>
+                template<typename FieldType>
                 bool operator!=(const plonk_copy_constraint<FieldType> &a, const plonk_copy_constraint<FieldType> &b) {
                     return !(a == b);
                 }
 
-                template <typename FieldType>
+                template<typename FieldType>
                 bool operator<(const plonk_copy_constraint<FieldType> &a, const plonk_copy_constraint<FieldType> &b) {
                     return a.first < b.first || (a.first == b.first && a.second < b.second);
                 }
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_PLONK_COPY_CONSTRAINT_HPP

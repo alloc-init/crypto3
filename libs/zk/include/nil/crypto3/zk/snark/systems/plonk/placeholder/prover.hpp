@@ -49,8 +49,7 @@ namespace nil::crypto3::zk::snark {
     namespace detail {
         template<typename FieldType>
         static inline std::vector<math::polynomial<typename FieldType::value_type>>
-            split_polynomial(const math::polynomial<typename FieldType::value_type> &f,
-                             std::size_t max_degree) {
+            split_polynomial(const math::polynomial<typename FieldType::value_type>& f, std::size_t max_degree) {
             std::vector<math::polynomial<typename FieldType::value_type>> f_splitted;
 
             std::size_t chunk_size = max_degree + 1;    // polynomial contains max_degree + 1 coeffs
@@ -72,10 +71,8 @@ namespace nil::crypto3::zk::snark {
 
         using policy_type = detail::placeholder_policy<FieldType, ParamsType>;
 
-        typedef typename math::polynomial<small_field_value_type>
-            small_field_polynomial_type;
-        typedef typename math::polynomial_dfs<small_field_value_type>
-            small_field_polynomial_dfs_type;
+        typedef typename math::polynomial<small_field_value_type> small_field_polynomial_type;
+        typedef typename math::polynomial_dfs<small_field_value_type> small_field_polynomial_dfs_type;
 
         typedef typename math::polynomial<value_type> polynomial_type;
         typedef typename math::polynomial_dfs<value_type> polynomial_dfs_type;
@@ -83,13 +80,10 @@ namespace nil::crypto3::zk::snark {
         using commitment_scheme_type = typename ParamsType::commitment_scheme_type;
         using commitment_type = typename commitment_scheme_type::commitment_type;
 
-        using public_preprocessor_type =
-            placeholder_public_preprocessor<SmallFieldType, ParamsType>;
-        using private_preprocessor_type =
-            placeholder_private_preprocessor<SmallFieldType, ParamsType>;
+        using public_preprocessor_type = placeholder_public_preprocessor<SmallFieldType, ParamsType>;
+        using private_preprocessor_type = placeholder_private_preprocessor<SmallFieldType, ParamsType>;
 
-        using central_evaluator_type =
-            CentralAssignmentTableExpressionEvaluator<SmallFieldType>;
+        using central_evaluator_type = CentralAssignmentTableExpressionEvaluator<SmallFieldType>;
         using lookup_argument_type = placeholder_lookup_argument_prover<FieldType, commitment_scheme_type, ParamsType>;
 
         constexpr static const std::size_t gate_parts = 1;
@@ -97,71 +91,54 @@ namespace nil::crypto3::zk::snark {
         constexpr static const std::size_t lookup_parts = 6;
         constexpr static const std::size_t f_parts = 8;
 
-                public:
-                public:
-
-      public:
-
-        static inline placeholder_proof<FieldType, ParamsType> process(
-            const typename public_preprocessor_type::preprocessed_data_type&
-                preprocessed_public_data,
-            typename private_preprocessor_type::preprocessed_data_type
-                preprocessed_private_data,
-            const plonk_table_description<SmallFieldType>& table_description,
-            const plonk_constraint_system<SmallFieldType>& constraint_system,
-            commitment_scheme_type& commitment_scheme,
-            bool skip_commitment_scheme_eval_proofs = false) {
+    public:
+    public:
+    public:
+        static inline placeholder_proof<FieldType, ParamsType>
+            process(const typename public_preprocessor_type::preprocessed_data_type& preprocessed_public_data,
+                    typename private_preprocessor_type::preprocessed_data_type preprocessed_private_data,
+                    const plonk_table_description<SmallFieldType>& table_description,
+                    const plonk_constraint_system<SmallFieldType>& constraint_system,
+                    commitment_scheme_type& commitment_scheme,
+                    bool skip_commitment_scheme_eval_proofs = false) {
             auto prover = placeholder_prover<FieldType, ParamsType>(
-                preprocessed_public_data, std::move(preprocessed_private_data),
-                table_description, constraint_system, commitment_scheme,
-                skip_commitment_scheme_eval_proofs);
+                preprocessed_public_data, std::move(preprocessed_private_data), table_description, constraint_system,
+                commitment_scheme, skip_commitment_scheme_eval_proofs);
             return prover.process();
         }
 
-        placeholder_prover(
-            const typename public_preprocessor_type::preprocessed_data_type&
-                preprocessed_public_data,
-            const typename private_preprocessor_type::preprocessed_data_type&
-                preprocessed_private_data,
-            const plonk_table_description<SmallFieldType>& table_description,
-            const plonk_constraint_system<SmallFieldType>& constraint_system,
-            commitment_scheme_type& commitment_scheme,
-            bool skip_commitment_scheme_eval_proofs = false)
-            : preprocessed_public_data(preprocessed_public_data),
-              table_description(table_description),
-              constraint_system(constraint_system),
-              _polynomial_table(
-                  std::make_shared<plonk_polynomial_dfs_table<SmallFieldType>>(
-                      preprocessed_private_data.private_polynomial_table,
-                      preprocessed_public_data.public_polynomial_table)),
-              transcript(std::vector<std::uint8_t>({})),
-              _is_lookup_enabled(constraint_system.lookup_gates().size() > 0),
-              _commitment_scheme(commitment_scheme),
-              _skip_commitment_scheme_eval_proofs(skip_commitment_scheme_eval_proofs) {
+        placeholder_prover(const typename public_preprocessor_type::preprocessed_data_type& preprocessed_public_data,
+                           const typename private_preprocessor_type::preprocessed_data_type& preprocessed_private_data,
+                           const plonk_table_description<SmallFieldType>& table_description,
+                           const plonk_constraint_system<SmallFieldType>& constraint_system,
+                           commitment_scheme_type& commitment_scheme,
+                           bool skip_commitment_scheme_eval_proofs = false) :
+            preprocessed_public_data(preprocessed_public_data), table_description(table_description),
+            constraint_system(constraint_system),
+            _polynomial_table(std::make_shared<plonk_polynomial_dfs_table<SmallFieldType>>(
+                preprocessed_private_data.private_polynomial_table,
+                preprocessed_public_data.public_polynomial_table)),
+            transcript(std::vector<std::uint8_t>({})), _is_lookup_enabled(constraint_system.lookup_gates().size() > 0),
+            _commitment_scheme(commitment_scheme),
+            _skip_commitment_scheme_eval_proofs(skip_commitment_scheme_eval_proofs) {
             // Initialize transcript.
-            transcript(preprocessed_public_data.common_data->vk
-                           .constraint_system_with_params_hash);
+            transcript(preprocessed_public_data.common_data->vk.constraint_system_with_params_hash);
             transcript(preprocessed_public_data.common_data->vk.fixed_values_commitment);
 
             // Setup commitment scheme. LPC adds an additional point here.
-            _commitment_scheme.setup(
-                transcript, preprocessed_public_data.common_data->commitment_scheme_data);
+            _commitment_scheme.setup(transcript, preprocessed_public_data.common_data->commitment_scheme_data);
         }
 
         placeholder_proof<FieldType, ParamsType> process() {
             PROFILE_SCOPE("Placeholder prover");
 
-            small_field_polynomial_dfs_type mask_polynomial(
-                0, preprocessed_public_data.common_data->basic_domain->m,
-                small_field_value_type(1u));
+            small_field_polynomial_dfs_type mask_polynomial(0, preprocessed_public_data.common_data->basic_domain->m,
+                                                            small_field_value_type(1u));
             mask_polynomial -= preprocessed_public_data.q_last;
             mask_polynomial -= preprocessed_public_data.q_blind;
 
             std::unique_ptr<central_evaluator_type> central_evaluator = std::make_unique<central_evaluator_type>(
-                _polynomial_table,
-                mask_polynomial,
-                preprocessed_public_data.common_data->lagrange_0
-            );
+                _polynomial_table, mask_polynomial, preprocessed_public_data.common_data->lagrange_0);
 
             SCOPED_LOG(
                 "Assignment table statistics: total columns: {}, witnesses: "
@@ -176,26 +153,25 @@ namespace nil::crypto3::zk::snark {
             _commitment_scheme.append_many_to_batch(VARIABLE_VALUES_BATCH, _polynomial_table->witnesses());
             _commitment_scheme.append_many_to_batch(VARIABLE_VALUES_BATCH, _polynomial_table->public_inputs());
             TAGGED_PROFILE_SCOPE("{high level} FRI", "Variable values precommit");
-            _proof.commitments[VARIABLE_VALUES_BATCH] =
-                _commitment_scheme.commit(VARIABLE_VALUES_BATCH);
+            _proof.commitments[VARIABLE_VALUES_BATCH] = _commitment_scheme.commit(VARIABLE_VALUES_BATCH);
             PROFILE_SCOPE_END();
             transcript(_proof.commitments[VARIABLE_VALUES_BATCH]);
 
             // 4. permutation_argument
             if (constraint_system.copy_constraints().size() > 0) {
-                auto permutation_argument = placeholder_permutation_argument<FieldType, ParamsType>::prove_eval(
-                    constraint_system,
-                    preprocessed_public_data,
-                    table_description,
-                    *_polynomial_table,
-                    _commitment_scheme,
-                    transcript);
+                auto permutation_argument =
+                    placeholder_permutation_argument<FieldType, ParamsType>::prove_eval(constraint_system,
+                                                                                        preprocessed_public_data,
+                                                                                        table_description,
+                                                                                        *_polynomial_table,
+                                                                                        _commitment_scheme,
+                                                                                        transcript);
 
                 _F_dfs[0] = std::move(permutation_argument.F_dfs[0]);
                 _F_dfs[1] = std::move(permutation_argument.F_dfs[1]);
                 _F_dfs[2] = std::move(permutation_argument.F_dfs[2]);
             }
-            _polynomial_table.reset(); // We don't need it anymore, release memory
+            _polynomial_table.reset();    // We don't need it anymore, release memory
 
             // 5. lookup_argument
             auto lookup_argument_result = lookup_argument(*central_evaluator);
@@ -207,8 +183,7 @@ namespace nil::crypto3::zk::snark {
             central_evaluator->reset_expressions();
 
             if (constraint_system.copy_constraints().size() > 0 || constraint_system.lookup_gates().size() > 0) {
-                TAGGED_PROFILE_SCOPE("{high level} lookup",
-                                     "Permutation batch precommit");
+                TAGGED_PROFILE_SCOPE("{high level} lookup", "Permutation batch precommit");
                 _proof.commitments[PERMUTATION_BATCH] = _commitment_scheme.commit(PERMUTATION_BATCH);
                 transcript(_proof.commitments[PERMUTATION_BATCH]);
             }
@@ -216,9 +191,8 @@ namespace nil::crypto3::zk::snark {
             // 6. circuit-satisfability
 
             value_type theta = transcript.template challenge<FieldType>();
-            _F_dfs[7] = placeholder_gates_argument<FieldType, ParamsType>::prove_eval(
-                constraint_system, *central_evaluator, theta
-            )[0];
+            _F_dfs[7] = placeholder_gates_argument<FieldType, ParamsType>::prove_eval(constraint_system,
+                                                                                      *central_evaluator, theta)[0];
 
             central_evaluator.reset();
 
@@ -228,8 +202,7 @@ namespace nil::crypto3::zk::snark {
 
             // 7. Aggregate quotient polynomial
             {
-                std::vector<polynomial_dfs_type> T_splitted_dfs =
-                    quotient_polynomial_split_dfs();
+                std::vector<polynomial_dfs_type> T_splitted_dfs = quotient_polynomial_split_dfs();
 
                 _proof.commitments[QUOTIENT_BATCH] = T_commit(T_splitted_dfs);
             }
@@ -264,21 +237,18 @@ namespace nil::crypto3::zk::snark {
             const auto& assignment_desc = preprocessed_public_data.common_data->desc;
 
             // TODO: pass max_degree parameter placeholder
-            std::vector<polynomial_type> T_splitted = detail::split_polynomial<FieldType>(
-                quotient_polynomial(), table_description.rows_amount - 1
-            );
+            std::vector<polynomial_type> T_splitted =
+                detail::split_polynomial<FieldType>(quotient_polynomial(), table_description.rows_amount - 1);
 
-            std::size_t split_polynomial_size = std::max(
-                (preprocessed_public_data.identity_polynomials.size() + 2) * (assignment_desc.rows_amount - 1),
-                (constraint_system.lookup_poly_degree_bound() + 1) * (assignment_desc.rows_amount -1)
-            );
-            split_polynomial_size = std::max(
-                split_polynomial_size,
-                (preprocessed_public_data.common_data->max_gates_degree + 1) * (assignment_desc.rows_amount - 1)
-            );
-            split_polynomial_size = (split_polynomial_size % assignment_desc.rows_amount != 0)?
-                (split_polynomial_size / assignment_desc.rows_amount + 1):
-                (split_polynomial_size / assignment_desc.rows_amount);
+            std::size_t split_polynomial_size =
+                std::max((preprocessed_public_data.identity_polynomials.size() + 2) * (assignment_desc.rows_amount - 1),
+                         (constraint_system.lookup_poly_degree_bound() + 1) * (assignment_desc.rows_amount - 1));
+            split_polynomial_size = std::max(split_polynomial_size,
+                                             (preprocessed_public_data.common_data->max_gates_degree + 1) *
+                                                 (assignment_desc.rows_amount - 1));
+            split_polynomial_size = (split_polynomial_size % assignment_desc.rows_amount != 0) ?
+                                        (split_polynomial_size / assignment_desc.rows_amount + 1) :
+                                        (split_polynomial_size / assignment_desc.rows_amount);
 
             if (preprocessed_public_data.common_data->max_quotient_chunks != 0 &&
                 split_polynomial_size > preprocessed_public_data.common_data->max_quotient_chunks) {
@@ -294,9 +264,10 @@ namespace nil::crypto3::zk::snark {
             //      may be less than split_polynomial_size.
             std::vector<polynomial_dfs_type> T_splitted_dfs(T_splitted.size());
 
-            parallel_for(0, T_splitted.size(), [&T_splitted, &T_splitted_dfs](std::size_t k) {
-                T_splitted_dfs[k].from_coefficients(T_splitted[k]);
-            }, thread_pool::pool_level::HIGH);
+            parallel_for(
+                0, T_splitted.size(),
+                [&T_splitted, &T_splitted_dfs](std::size_t k) { T_splitted_dfs[k].from_coefficients(T_splitted[k]); },
+                thread_pool::pool_level::HIGH);
 
             // DO NOT CHANGE, sizes are different by design
             T_splitted_dfs.resize(split_polynomial_size);
@@ -308,54 +279,52 @@ namespace nil::crypto3::zk::snark {
             PROFILE_SCOPE("Quotient polynomial");
 
             // 7.1. Get $\alpha_0, \dots, \alpha_8 \in \mathbb{F}$ from $hash(\text{transcript})$
-            std::array<value_type, f_parts> alphas =
-                transcript.template challenges<FieldType, f_parts>();
+            std::array<value_type, f_parts> alphas = transcript.template challenges<FieldType, f_parts>();
 
             // 7.2. Compute F_consolidated
             std::vector<polynomial_dfs_type> F_consolidated_dfs_parts(_F_dfs.size(), polynomial_dfs_type());
-            parallel_for(0, F_consolidated_dfs_parts.size(),
+            parallel_for(
+                0, F_consolidated_dfs_parts.size(),
                 [this, &F_consolidated_dfs_parts, &alphas](std::size_t i) {
                     F_consolidated_dfs_parts[i] = _F_dfs[i];
                     if (_F_dfs[i].is_zero()) {
                         return;
                     }
                     F_consolidated_dfs_parts[i] *= alphas[i];
-            }, thread_pool::pool_level::HIGH);
+                },
+                thread_pool::pool_level::HIGH);
 
             polynomial_dfs_type F_consolidated_dfs = polynomial_sum<FieldType>(std::move(F_consolidated_dfs_parts));
 
             polynomial_type F_consolidated_normal(F_consolidated_dfs.coefficients());
 
             polynomial_type T_consolidated =
-                F_consolidated_normal /
-                polynomial_type(preprocessed_public_data.common_data->Z);
+                F_consolidated_normal / polynomial_type(preprocessed_public_data.common_data->Z);
 
             // We can remove this check later, it's fairly fast and makes sure that prover succeeded.
             if (T_consolidated * preprocessed_public_data.common_data->Z != F_consolidated_normal) {
-                //BOOST_LOG_TRIVIAL(info) << "F_consolidated_normal = " << F_consolidated_normal << std::endl;
-                //BOOST_LOG_TRIVIAL(info) << "Z = " << preprocessed_public_data.common_data->Z << std::endl;
+                // BOOST_LOG_TRIVIAL(info) << "F_consolidated_normal = " << F_consolidated_normal << std::endl;
+                // BOOST_LOG_TRIVIAL(info) << "Z = " << preprocessed_public_data.common_data->Z << std::endl;
                 throw std::logic_error("Can't divide F Consolidated on Z. Prover failed.");
             }
 
             return T_consolidated;
         }
 
-        typename lookup_argument_type::prover_lookup_result lookup_argument(
-            central_evaluator_type& central_evaluator) {
+        typename lookup_argument_type::prover_lookup_result lookup_argument(central_evaluator_type& central_evaluator) {
             typename lookup_argument_type::prover_lookup_result lookup_argument_result;
 
             lookup_argument_result.F_dfs[0] = lookup_argument_result.F_dfs[1] = lookup_argument_result.F_dfs[2] =
-            lookup_argument_result.F_dfs[3] = polynomial_dfs_type(0, table_description.rows_amount, value_type::zero());
+                lookup_argument_result.F_dfs[3] =
+                    polynomial_dfs_type(0, table_description.rows_amount, value_type::zero());
 
             if (_is_lookup_enabled) {
-                lookup_argument_type lookup_argument_prover(
-                    constraint_system,
-                    preprocessed_public_data,
-                    central_evaluator,
-                    *_polynomial_table,
-                    _commitment_scheme,
-                    transcript
-                );
+                lookup_argument_type lookup_argument_prover(constraint_system,
+                                                            preprocessed_public_data,
+                                                            central_evaluator,
+                                                            *_polynomial_table,
+                                                            _commitment_scheme,
+                                                            transcript);
 
                 lookup_argument_result = lookup_argument_prover.prove_eval();
                 _proof.commitments[LOOKUP_BATCH] = lookup_argument_result.lookup_commitment;
@@ -372,8 +341,12 @@ namespace nil::crypto3::zk::snark {
         void placeholder_debug_output() {
             for (std::size_t i = 0; i < f_parts; i++) {
                 for (std::size_t j = 0; j < table_description.rows_amount; j++) {
-                    if (_F_dfs[i].evaluate(preprocessed_public_data.common_data->basic_domain->get_domain_element(j)) != value_type::zero()) {
-                        std::cout << "_F_dfs[" << i << "] on row " << j << " = " << _F_dfs[i].evaluate(preprocessed_public_data.common_data->basic_domain->get_domain_element(j)) << std::endl;
+                    if (_F_dfs[i].evaluate(preprocessed_public_data.common_data->basic_domain->get_domain_element(j)) !=
+                        value_type::zero()) {
+                        std::cout << "_F_dfs[" << i << "] on row " << j << " = "
+                                  << _F_dfs[i].evaluate(
+                                         preprocessed_public_data.common_data->basic_domain->get_domain_element(j))
+                                  << std::endl;
                     }
                 }
             }
@@ -383,8 +356,8 @@ namespace nil::crypto3::zk::snark {
             for (std::size_t i = 0; i < gates.size(); i++) {
                 for (std::size_t j = 0; j < gates[i].constraints.size(); j++) {
                     polynomial_dfs_type constraint_result =
-                        gates[i].constraints[j].evaluate(
-                            _polynomial_table, preprocessed_public_data.common_data->basic_domain) *
+                        gates[i].constraints[j].evaluate(_polynomial_table,
+                                                         preprocessed_public_data.common_data->basic_domain) *
                         _polynomial_table.selector(gates[i].selector_index);
                     // for (std::size_t k = 0; k < table_description.rows_amount; k++) {
                     if (constraint_result.evaluate(
@@ -405,19 +378,14 @@ namespace nil::crypto3::zk::snark {
             const std::size_t constant_columns = table_description.constant_columns;
 
             // variable_values' rotations
-            for (std::size_t variable_values_index = 0;
-                 variable_values_index < witness_columns + public_input_columns;
-                 variable_values_index++
-            ) {
+            for (std::size_t variable_values_index = 0; variable_values_index < witness_columns + public_input_columns;
+                 variable_values_index++) {
                 const std::set<int>& variable_values_rotation =
                     preprocessed_public_data.common_data->columns_rotations[variable_values_index];
 
-                for (int rotation: variable_values_rotation) {
+                for (int rotation : variable_values_rotation) {
                     _commitment_scheme.append_eval_point(
-                        VARIABLE_VALUES_BATCH,
-                        variable_values_index,
-                        evaluation_challenge * _omega.pow(rotation)
-                    );
+                        VARIABLE_VALUES_BATCH, variable_values_index, evaluation_challenge * _omega.pow(rotation));
                 }
             }
 
@@ -430,8 +398,9 @@ namespace nil::crypto3::zk::snark {
 
             if (_is_lookup_enabled) {
                 // For polynomial U, we need the shifted value as well.
-                _commitment_scheme.append_eval_point(PERMUTATION_BATCH, preprocessed_public_data.common_data->permutation_parts,
-                    evaluation_challenge * _omega);
+                _commitment_scheme.append_eval_point(PERMUTATION_BATCH,
+                                                     preprocessed_public_data.common_data->permutation_parts,
+                                                     evaluation_challenge * _omega);
                 _commitment_scheme.append_eval_point(LOOKUP_BATCH, evaluation_challenge);
             }
 
@@ -440,7 +409,7 @@ namespace nil::crypto3::zk::snark {
             // fixed values' rotations (table columns)
             std::size_t i = 0;
             std::size_t start_index = preprocessed_public_data.identity_polynomials.size() +
-                preprocessed_public_data.permutation_polynomials.size() + 2;
+                                      preprocessed_public_data.permutation_polynomials.size() + 2;
 
             for (i = 0; i < start_index; i++) {
                 _commitment_scheme.append_eval_point(FIXED_VALUES_BATCH, i, evaluation_challenge);
@@ -451,18 +420,15 @@ namespace nil::crypto3::zk::snark {
             _commitment_scheme.append_eval_point(FIXED_VALUES_BATCH, start_index - 1, evaluation_challenge * _omega);
 
             for (std::size_t ind = 0;
-                ind < constant_columns + preprocessed_public_data.public_polynomial_table->selectors().size();
-                ind++, i++
-            ) {
+                 ind < constant_columns + preprocessed_public_data.public_polynomial_table->selectors().size();
+                 ind++, i++) {
                 const std::set<int>& fixed_values_rotation =
-                    preprocessed_public_data.common_data->columns_rotations[witness_columns + public_input_columns + ind];
+                    preprocessed_public_data.common_data
+                        ->columns_rotations[witness_columns + public_input_columns + ind];
 
-                for (int rotation: fixed_values_rotation) {
+                for (int rotation : fixed_values_rotation) {
                     _commitment_scheme.append_eval_point(
-                        FIXED_VALUES_BATCH,
-                        start_index + ind,
-                        evaluation_challenge * _omega.pow(rotation)
-                    );
+                        FIXED_VALUES_BATCH, start_index + ind, evaluation_challenge * _omega.pow(rotation));
                 }
             }
         }
@@ -473,7 +439,7 @@ namespace nil::crypto3::zk::snark {
 
     private:
         // Structures passed from outside by reference.
-        const typename public_preprocessor_type::preprocessed_data_type &preprocessed_public_data;
+        const typename public_preprocessor_type::preprocessed_data_type& preprocessed_public_data;
         const plonk_table_description<SmallFieldType>& table_description;
         const plonk_constraint_system<SmallFieldType>& constraint_system;
 
@@ -488,6 +454,6 @@ namespace nil::crypto3::zk::snark {
         commitment_scheme_type& _commitment_scheme;
         bool _skip_commitment_scheme_eval_proofs;
     };
-}    // namespace snark
+}    // namespace nil::crypto3::zk::snark
 
 #endif    // CRYPTO3_ZK_PLONK_PLACEHOLDER_PROVER_HPP

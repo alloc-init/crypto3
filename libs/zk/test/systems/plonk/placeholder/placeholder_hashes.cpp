@@ -58,22 +58,19 @@ using pallas_curve_type = algebra::curves::pallas;
 using pallas_field_type = typename pallas_curve_type::base_field_type;
 using alt_bn_curve_type = algebra::curves::alt_bn128<254>;
 using alt_bn_field_type = typename alt_bn_curve_type::scalar_field_type;
-using poseidon1_type =
-    hashes::poseidon<nil::crypto3::hashes::detail::poseidon1_policy<alt_bn_field_type, 128, 2>>;
+using poseidon1_type = hashes::poseidon<nil::crypto3::hashes::detail::poseidon1_policy<alt_bn_field_type, 128, 2>>;
 using keccak_256_type = hashes::keccak_1600<256>;
 using keccak_512_type = hashes::keccak_1600<512>;
 using sha2_256_type = hashes::sha2<256>;
 
-using PallasTestRunners = boost::mpl::list<
-    placeholder_test_runner<pallas_field_type, keccak_256_type, keccak_256_type>,
-    placeholder_test_runner<pallas_field_type, keccak_512_type, keccak_512_type>,
-    placeholder_test_runner<pallas_field_type, sha2_256_type, sha2_256_type>>;
+using PallasTestRunners = boost::mpl::list<placeholder_test_runner<pallas_field_type, keccak_256_type, keccak_256_type>,
+                                           placeholder_test_runner<pallas_field_type, keccak_512_type, keccak_512_type>,
+                                           placeholder_test_runner<pallas_field_type, sha2_256_type, sha2_256_type>>;
 
-using AltBnTestRunners = boost::mpl::list<
-    placeholder_test_runner<alt_bn_field_type, poseidon1_type, poseidon1_type>,
-    placeholder_test_runner<alt_bn_field_type, keccak_256_type, keccak_256_type>,
-    placeholder_test_runner<alt_bn_field_type, keccak_512_type, keccak_512_type>,
-    placeholder_test_runner<alt_bn_field_type, sha2_256_type, sha2_256_type>>;
+using AltBnTestRunners = boost::mpl::list<placeholder_test_runner<alt_bn_field_type, poseidon1_type, poseidon1_type>,
+                                          placeholder_test_runner<alt_bn_field_type, keccak_256_type, keccak_256_type>,
+                                          placeholder_test_runner<alt_bn_field_type, keccak_512_type, keccak_512_type>,
+                                          placeholder_test_runner<alt_bn_field_type, sha2_256_type, sha2_256_type>>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(hash_test_pallas, TestRunner, PallasTestRunners) {
     test_tools::random_test_initializer<pallas_field_type> random_test_initializer;

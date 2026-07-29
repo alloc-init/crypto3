@@ -59,8 +59,8 @@ namespace nil {
                         const typename CurveType::template g2_type<>::value_type &gamma_g2,
                         const typename CurveType::template g2_type<>::value_type &delta_g2,
                         const container::accumulation_vector<typename CurveType::template g1_type<>> &gamma_ABC_g1) :
-                        alpha_g1_beta_g2(alpha_g1_beta_g2),
-                        gamma_g2(gamma_g2), delta_g2(delta_g2), gamma_ABC_g1(gamma_ABC_g1) {
+                        alpha_g1_beta_g2(alpha_g1_beta_g2), gamma_g2(gamma_g2), delta_g2(delta_g2),
+                        gamma_ABC_g1(gamma_ABC_g1) {
                     }
 
                     std::size_t G1_size() const {
@@ -140,9 +140,8 @@ namespace nil {
                         const typename g1_type::value_type &delta_g1,
                         const container::accumulation_vector<g1_type> &gamma_ABC_g1,
                         const typename g1_type::value_type &gamma_g1) :
-                        alpha_g1_beta_g2(alpha_g1_beta_g2),
-                        gamma_g2(gamma_g2), delta_g2(delta_g2), delta_g1(delta_g1), gamma_ABC_g1(gamma_ABC_g1),
-                        gamma_g1(gamma_g1) {
+                        alpha_g1_beta_g2(alpha_g1_beta_g2), gamma_g2(gamma_g2), delta_g2(delta_g2), delta_g1(delta_g1),
+                        gamma_ABC_g1(gamma_ABC_g1), gamma_g1(gamma_g1) {
                     }
 
                     std::size_t G1_size() const {
@@ -169,8 +168,8 @@ namespace nil {
                     }
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_R1CS_GG_PPZKSNARK_TYPES_POLICY_HPP

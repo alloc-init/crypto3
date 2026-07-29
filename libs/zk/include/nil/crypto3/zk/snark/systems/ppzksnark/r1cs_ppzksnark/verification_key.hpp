@@ -64,9 +64,9 @@ namespace nil {
                                                     const typename g2_type::value_type &gamma_beta_g2,
                                                     const typename g2_type::value_type &rC_Z_g2,
                                                     const container::accumulation_vector<g1_type> &eIC) :
-                        alphaA_g2(alphaA_g2),
-                        alphaB_g1(alphaB_g1), alphaC_g2(alphaC_g2), gamma_g2(gamma_g2), gamma_beta_g1(gamma_beta_g1),
-                        gamma_beta_g2(gamma_beta_g2), rC_Z_g2(rC_Z_g2), encoded_IC_query(eIC) {};
+                        alphaA_g2(alphaA_g2), alphaB_g1(alphaB_g1), alphaC_g2(alphaC_g2), gamma_g2(gamma_g2),
+                        gamma_beta_g1(gamma_beta_g1), gamma_beta_g2(gamma_beta_g2), rC_Z_g2(rC_Z_g2),
+                        encoded_IC_query(eIC) { };
 
                     std::size_t G1_size() const {
                         return 2 + encoded_IC_query.size();
@@ -126,8 +126,8 @@ namespace nil {
                     }
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_R1CS_PPZKSNARK_BASIC_PROVER_HPP

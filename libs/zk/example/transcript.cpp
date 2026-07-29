@@ -41,8 +41,7 @@ using namespace nil::crypto3;
 using namespace nil::crypto3::zk;
 using namespace nil::crypto3::hashes;
 
-void keccak_transcript_example()
-{
+void keccak_transcript_example() {
     std::cout << "Setting up transcript with keccak_1600<256> hash" << std::endl;
     std::vector<std::uint8_t> init_blob {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     transcript::fiat_shamir_heuristic_sequential<hashes::keccak_1600<256>> tr(init_blob);
@@ -50,7 +49,6 @@ void keccak_transcript_example()
     using g1_curve = nil::crypto3::algebra::curves::bls12_381::template g1_type<>;
     using g2_curve = nil::crypto3::algebra::curves::bls12_381::template g2_type<>;
     using g2_field_type = typename g2_curve::field_type;
-
 
     std::cout << "Updating transcript with Fp element.." << std::endl;
     typename field_type::value_type b = 0x123;
@@ -71,11 +69,9 @@ void keccak_transcript_example()
     std::cout << "Sourcing element from transcript.." << std::endl;
     typename field_type::value_type a = tr.challenge<field_type>();
     std::cout << a << std::endl;
-
 }
 
-void poseidon_transcript_example()
-{
+void poseidon_transcript_example() {
     std::cout << "Setting up transcript with poseidon over bls12_381 scalar field" << std::endl;
     using field_type = nil::crypto3::algebra::fields::bls12_scalar_field<381>;
     constexpr size_t security_bits = 128;
@@ -84,13 +80,11 @@ void poseidon_transcript_example()
     using hash_type = poseidon<policy>;
     std::vector<std::uint8_t> init_blob {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     transcript::fiat_shamir_heuristic_sequential<hash_type> tr {
-        hashes::block_to_field_elements_wrapper<field_type, std::vector<std::uint8_t>>(init_blob)
-    };
+        hashes::block_to_field_elements_wrapper<field_type, std::vector<std::uint8_t>>(init_blob)};
 
     using g1_curve = nil::crypto3::algebra::curves::bls12_381::template g1_type<>;
     using g2_curve = nil::crypto3::algebra::curves::bls12_381::template g2_type<>;
     using g2_field_type = typename g2_curve::field_type;
-
 
     std::cout << "Updating transcript with element.." << std::endl;
     typename field_type::value_type b = 0x123;
@@ -101,8 +95,7 @@ void poseidon_transcript_example()
     std::cout << a << std::endl;
 }
 
-int main()
-{
+int main() {
     keccak_transcript_example();
     poseidon_transcript_example();
     return 0;

@@ -49,19 +49,20 @@ namespace nil {
     namespace crypto3 {
         namespace marshalling {
             namespace types {
-                template<
-                    typename TTypeBase,
-                    typename AccumulationVector,
-                    typename = typename std::enable_if<
-                        std::is_same<AccumulationVector,
-                                     nil::crypto3::container::accumulation_vector<typename AccumulationVector::group_type>>::value,
-                        bool>::type,
-                    typename... TOptions>
+                template<typename TTypeBase,
+                         typename AccumulationVector,
+                         typename =
+                             typename std::enable_if<std::is_same<AccumulationVector,
+                                                                  nil::crypto3::container::accumulation_vector<
+                                                                      typename AccumulationVector::group_type>>::value,
+                                                     bool>::type,
+                         typename... TOptions>
                 using accumulation_vector = nil::marshalling::types::bundle<
                     TTypeBase,
-                    std::tuple<
-                        curve_element<TTypeBase, typename AccumulationVector::group_type>,
-                        sparse_vector<TTypeBase, nil::crypto3::container::sparse_vector<typename AccumulationVector::group_type>>>>;
+                    std::tuple<curve_element<TTypeBase, typename AccumulationVector::group_type>,
+                               sparse_vector<
+                                   TTypeBase,
+                                   nil::crypto3::container::sparse_vector<typename AccumulationVector::group_type>>>>;
 
                 template<typename AccumulationVector, typename Endianness>
                 accumulation_vector<nil::marshalling::field_type<Endianness>, AccumulationVector>
@@ -76,8 +77,9 @@ namespace nil {
                     return accumulation_vector<nil::marshalling::field_type<Endianness>, AccumulationVector>(
                         std::make_tuple(
                             filled_first,
-                            fill_sparse_vector<nil::crypto3::container::sparse_vector<typename AccumulationVector::group_type>,
-                                               Endianness>(accumulation_vector_inp.rest)));
+                            fill_sparse_vector<
+                                nil::crypto3::container::sparse_vector<typename AccumulationVector::group_type>,
+                                Endianness>(accumulation_vector_inp.rest)));
                 }
 
                 template<typename AccumulationVector, typename Endianness>
@@ -87,11 +89,12 @@ namespace nil {
 
                     return AccumulationVector(
                         std::move(std::get<0>(filled_accumulation_vector.value()).value()),
-                        std::move(make_sparse_vector<nil::crypto3::container::sparse_vector<typename AccumulationVector::group_type>,
-                                                     Endianness>(std::get<1>(filled_accumulation_vector.value()))));
+                        std::move(make_sparse_vector<
+                                  nil::crypto3::container::sparse_vector<typename AccumulationVector::group_type>,
+                                  Endianness>(std::get<1>(filled_accumulation_vector.value()))));
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_ACCUMULATION_VECTOR_HPP

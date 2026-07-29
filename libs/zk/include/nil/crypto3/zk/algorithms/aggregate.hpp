@@ -36,8 +36,8 @@ namespace nil {
 
                 return ProofSystemType::verify(pvk, primary_input, proof);
             }
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_SNARK_ALGORITHMS_AGGREGATE_HPP

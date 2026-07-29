@@ -138,8 +138,8 @@ namespace nil {
                     return ans;
                 }
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_RUN_R1CS_GG_PPZKSNARK_HPP

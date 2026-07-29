@@ -52,8 +52,8 @@ namespace nil {
                         const typename curve_type::template g2_type<>::value_type &gamma_g2,
                         const typename curve_type::template g2_type<>::value_type &delta_g2,
                         const container::accumulation_vector<typename curve_type::template g1_type<>> &gamma_ABC_g1) :
-                        alpha_g1(alpha_g1),
-                        beta_g2(beta_g2), gamma_g2(gamma_g2), delta_g2(delta_g2), gamma_ABC_g1(gamma_ABC_g1) {
+                        alpha_g1(alpha_g1), beta_g2(beta_g2), gamma_g2(gamma_g2), delta_g2(delta_g2),
+                        gamma_ABC_g1(gamma_ABC_g1) {
                     }
 
                     bool operator==(const r1cs_gg_ppzksnark_aggregate_verification_key &other) const {
@@ -68,8 +68,8 @@ namespace nil {
                     }
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_R1CS_GG_PPZKSNARK_IPP2_VERIFICATION_KEY_HPP

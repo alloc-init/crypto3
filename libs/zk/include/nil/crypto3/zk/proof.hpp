@@ -35,7 +35,7 @@ namespace nil {
                 typedef ZkScheme scheme_type;
             };
         }    // namespace zk
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

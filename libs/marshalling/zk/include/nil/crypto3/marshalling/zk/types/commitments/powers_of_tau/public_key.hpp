@@ -47,20 +47,21 @@ namespace nil {
 
                 template<typename TTypeBase,
                          typename PublicKey,
-                         typename = typename std::enable_if<
-                             std::is_same<PublicKey,
-                                          zk::commitments::detail::powers_of_tau_public_key <typename PublicKey::curve_type>>::value,
-                             bool>::type,
+                         typename =
+                             typename std::enable_if<std::is_same<PublicKey,
+                                                                  zk::commitments::detail::powers_of_tau_public_key<
+                                                                      typename PublicKey::curve_type>>::value,
+                                                     bool>::type,
                          typename... TOptions>
-                using powers_of_tau_public_key = nil::marshalling::types::bundle<
-                    TTypeBase,
-                    std::tuple<
-                        // tau_pok
-                        element_pok<TTypeBase, typename PublicKey::pok_type>,
-                        // alpha_pok
-                        element_pok<TTypeBase, typename PublicKey::pok_type>,
-                        // beta_pok
-                        element_pok<TTypeBase, typename PublicKey::pok_type>>>;
+                using powers_of_tau_public_key =
+                    nil::marshalling::types::bundle<TTypeBase,
+                                                    std::tuple<
+                                                        // tau_pok
+                                                        element_pok<TTypeBase, typename PublicKey::pok_type>,
+                                                        // alpha_pok
+                                                        element_pok<TTypeBase, typename PublicKey::pok_type>,
+                                                        // beta_pok
+                                                        element_pok<TTypeBase, typename PublicKey::pok_type>>>;
 
                 template<typename PublicKey, typename Endianness>
                 powers_of_tau_public_key<nil::marshalling::field_type<Endianness>, PublicKey>
@@ -68,18 +69,10 @@ namespace nil {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    return powers_of_tau_public_key<TTypeBase, PublicKey>(
-                        std::make_tuple(
-                            std::move(
-                                fill_element_pok<typename PublicKey::pok_type, Endianness>(
-                                    public_key.tau_pok)),
-                            std::move(
-                                fill_element_pok<typename PublicKey::pok_type, Endianness>(
-                                    public_key.alpha_pok)),
-                            std::move(
-                                fill_element_pok<typename PublicKey::pok_type, Endianness>(
-                                    public_key.beta_pok))
-                    ));
+                    return powers_of_tau_public_key<TTypeBase, PublicKey>(std::make_tuple(
+                        std::move(fill_element_pok<typename PublicKey::pok_type, Endianness>(public_key.tau_pok)),
+                        std::move(fill_element_pok<typename PublicKey::pok_type, Endianness>(public_key.alpha_pok)),
+                        std::move(fill_element_pok<typename PublicKey::pok_type, Endianness>(public_key.beta_pok))));
                 }
 
                 template<typename PublicKey, typename Endianness>
@@ -87,21 +80,16 @@ namespace nil {
                     const powers_of_tau_public_key<nil::marshalling::field_type<Endianness>, PublicKey>
                         &filled_public_key) {
 
-                    return PublicKey(
-                        std::move(
-                            make_element_pok<typename PublicKey::pok_type, Endianness>(
-                                std::get<0>(filled_public_key.value()))),
-                        std::move(
-                            make_element_pok<typename PublicKey::pok_type, Endianness>(
-                                std::get<1>(filled_public_key.value()))),
-                        std::move(
-                            make_element_pok<typename PublicKey::pok_type, Endianness>(
-                                std::get<2>(filled_public_key.value())))
-                    );
+                    return PublicKey(std::move(make_element_pok<typename PublicKey::pok_type, Endianness>(
+                                         std::get<0>(filled_public_key.value()))),
+                                     std::move(make_element_pok<typename PublicKey::pok_type, Endianness>(
+                                         std::get<1>(filled_public_key.value()))),
+                                     std::move(make_element_pok<typename PublicKey::pok_type, Endianness>(
+                                         std::get<2>(filled_public_key.value()))));
                 }
 
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_POWERS_OF_TAU_PUBLIC_KEY_HPP

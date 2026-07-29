@@ -57,7 +57,7 @@ namespace nil::crypto3::zk::snark {
         std::size_t index;
         field_value_type coeff;
 
-        linear_term() {};
+        linear_term() { };
         linear_term(const VariableType &var) : index(var.index), coeff(field_value_type::one()) {
         }
 
@@ -88,7 +88,7 @@ namespace nil::crypto3::zk::snark {
 
     template<typename VariableType>
     linear_term<VariableType> operator*(const typename VariableType::value_type &field_coeff,
-                                                      const linear_term<VariableType> &lt) {
+                                        const linear_term<VariableType> &lt) {
         return lt * field_coeff;
     }
 
@@ -121,7 +121,7 @@ namespace nil::crypto3::zk::snark {
         typedef typename VariableType::field_type field_type;
         std::vector<linear_term<VariableType>> terms;
 
-        linear_combination() {};
+        linear_combination() { };
         linear_combination(const field_value_type &field_coeff) {
             this->add_term(linear_term<VariableType>(0) * field_coeff);
         }
@@ -137,11 +137,8 @@ namespace nil::crypto3::zk::snark {
             }
 
             terms = all_terms;
-            std::sort(
-                terms.begin(), terms.end(),
-                [](linear_term<VariableType> a, linear_term<VariableType> b) {
-                    return a.index < b.index;
-                });
+            std::sort(terms.begin(), terms.end(),
+                      [](linear_term<VariableType> a, linear_term<VariableType> b) { return a.index < b.index; });
 
             auto result_it = terms.begin();
             for (auto it = ++terms.begin(); it != terms.end(); ++it) {
@@ -166,8 +163,7 @@ namespace nil::crypto3::zk::snark {
         void add_term(const VariableType &var) {
             this->terms.emplace_back(linear_term<VariableType>(var));
         }
-        void add_term(const VariableType &var,
-                      const field_value_type &field_coeff) {
+        void add_term(const VariableType &var, const field_value_type &field_coeff) {
             this->terms.emplace_back(linear_term<VariableType>(var) * field_coeff);
         }
         void add_term(const linear_term<VariableType> &lt) {
@@ -207,8 +203,7 @@ namespace nil::crypto3::zk::snark {
                     ++it2;
                 } else {
                     /* it1->index == it2->index */
-                    result.terms.emplace_back(linear_term<VariableType>(
-                                                  VariableType(it1->index)) *
+                    result.terms.emplace_back(linear_term<VariableType>(VariableType(it1->index)) *
                                               (it1->coeff + it2->coeff));
                     ++it1;
                     ++it2;
@@ -233,18 +228,12 @@ namespace nil::crypto3::zk::snark {
         bool operator==(const linear_combination &other) const {
 
             std::vector<linear_term<VariableType>> thisterms = this->terms;
-            std::sort(
-                thisterms.begin(), thisterms.end(),
-                [](linear_term<VariableType> a, linear_term<VariableType> b) {
-                    return a.index < b.index;
-                });
+            std::sort(thisterms.begin(), thisterms.end(),
+                      [](linear_term<VariableType> a, linear_term<VariableType> b) { return a.index < b.index; });
 
             std::vector<linear_term<VariableType>> otherterms = other.terms;
-            std::sort(
-                otherterms.begin(), otherterms.end(),
-                [](linear_term<VariableType> a, linear_term<VariableType> b) {
-                    return a.index < b.index;
-                });
+            std::sort(otherterms.begin(), otherterms.end(),
+                      [](linear_term<VariableType> a, linear_term<VariableType> b) { return a.index < b.index; });
 
             return (thisterms == otherterms);
         }
@@ -268,26 +257,23 @@ namespace nil::crypto3::zk::snark {
     };
 
     template<typename VariableType>
-    linear_combination<VariableType>
-        operator*(const typename VariableType::value_type &field_coeff,
-                  const linear_combination<VariableType> &lc) {
+    linear_combination<VariableType> operator*(const typename VariableType::value_type &field_coeff,
+                                               const linear_combination<VariableType> &lc) {
         return lc * field_coeff;
     }
 
     template<typename VariableType>
-    linear_combination<VariableType>
-        operator+(const typename VariableType::value_type &field_coeff,
-                  const linear_combination<VariableType> &lc) {
+    linear_combination<VariableType> operator+(const typename VariableType::value_type &field_coeff,
+                                               const linear_combination<VariableType> &lc) {
         return linear_combination<VariableType>(field_coeff) + lc;
     }
 
     template<typename VariableType>
-    linear_combination<VariableType>
-        operator-(const typename VariableType::value_type &field_coeff,
-                  const linear_combination<VariableType> &lc) {
+    linear_combination<VariableType> operator-(const typename VariableType::value_type &field_coeff,
+                                               const linear_combination<VariableType> &lc) {
         return linear_combination<VariableType>(field_coeff) - lc;
     }
 
-} // namespace nil::crypto3::zk::snark
+}    // namespace nil::crypto3::zk::snark
 
 #endif    // CRYPTO3_ZK_MATH_LINEAR_COMBINATION_HPP

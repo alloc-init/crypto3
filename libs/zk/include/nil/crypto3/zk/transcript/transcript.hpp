@@ -127,8 +127,7 @@ namespace nil {
                  *
                  */
                 template<typename TManifest::challenges_ids ChallengeId>
-                std::tuple_element<ChallengeId, typename TManifest::processors>::result_type
-                    get_challenge_result() {
+                std::tuple_element<ChallengeId, typename TManifest::processors>::result_type get_challenge_result() {
                     return std::tuple_element<ChallengeId, typename TManifest::processors>(
                         get_challenge<ChallengeId>());
                 }
@@ -140,16 +139,14 @@ namespace nil {
                  *
                  */
                 template<typename TManifest::challenges_ids ChallengeId, std::size_t Index>
-                std::tuple_element<Index,
-                                   std::tuple_element<ChallengeId, typename TManifest::processors>>::result_type
+                std::tuple_element<Index, std::tuple_element<ChallengeId, typename TManifest::processors>>::result_type
                     get_challenge_result() {
-                    return std::tuple_element<Index,
-                                              std::tuple_element<ChallengeId, typename TManifest::processors>>(
+                    return std::tuple_element<Index, std::tuple_element<ChallengeId, typename TManifest::processors>>(
                         get_challenge<ChallengeId, Index>());
                 }
             };
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_TRANSCRIPT_HPP

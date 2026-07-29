@@ -18,7 +18,6 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
 
-
 #include <nil/crypto3/algebra/curves/alt_bn128.hpp>
 #include <nil/crypto3/algebra/pairing/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
@@ -34,7 +33,6 @@
 #include <nil/crypto3/algebra/curves/bls12.hpp>
 #include <nil/crypto3/algebra/pairing/bls12.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/bls12.hpp>
-
 
 #include <nil/crypto3/hash/type_traits.hpp>
 #include <nil/crypto3/hash/sha2.hpp>
@@ -61,15 +59,11 @@
 #include "./detail/circuits.hpp"
 #include "./detail/random_test_initializer.hpp"
 
-
 using namespace nil::crypto3;
 using namespace nil::crypto3::zk;
 using namespace nil::crypto3::zk::snark;
 
-
-template<typename FieldType,
-        typename merkle_hash_type,
-        typename transcript_hash_type>
+template<typename FieldType, typename merkle_hash_type, typename transcript_hash_type>
 struct placeholder_preprocessed_public_data_test_runner {
     using field_type = FieldType;
 
@@ -79,11 +73,7 @@ struct placeholder_preprocessed_public_data_test_runner {
     constexpr static std::size_t m = 2;
     constexpr static std::size_t lambda = 40;
 
-    using lpc_params_type = commitments::list_polynomial_commitment_params<
-        merkle_hash_type,
-        transcript_hash_type,
-        m
-    >;
+    using lpc_params_type = commitments::list_polynomial_commitment_params<merkle_hash_type, transcript_hash_type, m>;
 
     using lpc_type = commitments::list_polynomial_commitment<field_type, lpc_params_type>;
     using lpc_scheme_type = typename commitments::lpc_commitment_scheme<lpc_type>;
@@ -93,22 +83,22 @@ struct placeholder_preprocessed_public_data_test_runner {
     using constraint_system = typename policy_type::constraint_system_type;
     using circuit_type = circuit_description<field_type, placeholder_circuit_params<field_type>>;
 
-    using public_data_type = typename placeholder_public_preprocessor<field_type, lpc_placeholder_params_type>::preprocessed_data_type;
+    using public_data_type =
+        typename placeholder_public_preprocessor<field_type, lpc_placeholder_params_type>::preprocessed_data_type;
 
-    placeholder_preprocessed_public_data_test_runner(circuit_type const& circuit)
-        : circuit(circuit)
-    {
+    placeholder_preprocessed_public_data_test_runner(circuit_type const& circuit) : circuit(circuit) {
     }
 
-    void test_placeholder_preprocessed_public_data(public_data_type const& data)
-    {
+    void test_placeholder_preprocessed_public_data(public_data_type const& data) {
         using Endianness = nil::marshalling::option::big_endian;
         using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-        auto filled_public_data = nil::crypto3::marshalling::types::
-            fill_placeholder_preprocessed_public_data<Endianness, public_data_type>(data);
-        auto _public_data = nil::crypto3::marshalling::types::
-            make_placeholder_preprocessed_public_data<Endianness, public_data_type>(filled_public_data);
+        auto filled_public_data =
+            nil::crypto3::marshalling::types::fill_placeholder_preprocessed_public_data<Endianness, public_data_type>(
+                data);
+        auto _public_data =
+            nil::crypto3::marshalling::types::make_placeholder_preprocessed_public_data<Endianness, public_data_type>(
+                filled_public_data);
         BOOST_CHECK(data == _public_data);
 
         std::vector<std::uint8_t> cv;
@@ -117,28 +107,27 @@ struct placeholder_preprocessed_public_data_test_runner {
         auto status = filled_public_data.write(write_iter, cv.size());
         BOOST_CHECK(status == nil::marshalling::status_type::success);
 
-        nil::crypto3::marshalling::types::placeholder_preprocessed_public_data<TTypeBase, public_data_type> test_val_read;
+        nil::crypto3::marshalling::types::placeholder_preprocessed_public_data<TTypeBase, public_data_type>
+            test_val_read;
         auto read_iter = cv.begin();
         status = test_val_read.read(read_iter, cv.size());
         BOOST_CHECK(status == nil::marshalling::status_type::success);
-        auto constructed_val_read = nil::crypto3::marshalling::types::
-            make_placeholder_preprocessed_public_data<Endianness, public_data_type>(test_val_read);
+        auto constructed_val_read =
+            nil::crypto3::marshalling::types::make_placeholder_preprocessed_public_data<Endianness, public_data_type>(
+                test_val_read);
         BOOST_CHECK(data == constructed_val_read);
     }
 
-    bool run_test()
-    {
+    bool run_test() {
         using preprocessor = placeholder_public_preprocessor<field_type, lpc_placeholder_params_type>;
 
         std::size_t table_rows_log = std::ceil(std::log2(circuit.table_rows));
 
-        typename policy_type::constraint_system_type constraint_system(
-                circuit.gates, circuit.copy_constraints, circuit.lookup_gates);
+        typename policy_type::constraint_system_type constraint_system(circuit.gates, circuit.copy_constraints,
+                                                                       circuit.lookup_gates);
         typename policy_type::variable_assignment_type assignments = circuit.table;
 
-        typename lpc_type::fri_type::params_type fri_params(
-                1, table_rows_log, lambda, 4, true
-                );
+        typename lpc_type::fri_type::params_type fri_params(1, table_rows_log, lambda, 4, true);
         lpc_scheme_type lpc_scheme(fri_params);
 
         std::size_t max_quotient_chunks = 10;
@@ -146,13 +135,8 @@ struct placeholder_preprocessed_public_data_test_runner {
         plonk_table_description<field_type> desc = circuit.table.get_description();
         desc.usable_rows_amount = circuit.usable_rows;
 
-        typename preprocessor::preprocessed_data_type
-            preprocessed_public_data = preprocessor::process(
-                constraint_system,
-                assignments.public_table(),
-                desc,
-                lpc_scheme,
-                max_quotient_chunks);
+        typename preprocessor::preprocessed_data_type preprocessed_public_data =
+            preprocessor::process(constraint_system, assignments.public_table(), desc, lpc_scheme, max_quotient_chunks);
 
         test_placeholder_preprocessed_public_data(preprocessed_public_data);
 
@@ -173,8 +157,7 @@ using poseidon_over_alt_bn =
 
 using TestRunners = boost::mpl::list<
     /* Test algebraic hashes over a supported field */
-    placeholder_preprocessed_public_data_test_runner<alt_bn_scalar_field, poseidon_over_alt_bn,
-                                                     poseidon_over_alt_bn>,
+    placeholder_preprocessed_public_data_test_runner<alt_bn_scalar_field, poseidon_over_alt_bn, poseidon_over_alt_bn>,
 
     /* Test pallas with different hashes */
     placeholder_preprocessed_public_data_test_runner<pallas_base_field, keccak_256, keccak_256>,
@@ -184,138 +167,122 @@ using TestRunners = boost::mpl::list<
     placeholder_preprocessed_public_data_test_runner<pallas_base_field, keccak_256, sha2_256>,
 
     /* Test other curves with keccak_256 */
-    placeholder_preprocessed_public_data_test_runner<typename curves::bls12_381::scalar_field_type, keccak_256, keccak_256>,
-    placeholder_preprocessed_public_data_test_runner<typename curves::alt_bn128_254::scalar_field_type, keccak_256, keccak_256>,
-    placeholder_preprocessed_public_data_test_runner<typename curves::mnt4_298::scalar_field_type, keccak_256, keccak_256>,
-    placeholder_preprocessed_public_data_test_runner<typename curves::mnt6_298::scalar_field_type, keccak_256, keccak_256>
->;
+    placeholder_preprocessed_public_data_test_runner<typename curves::bls12_381::scalar_field_type, keccak_256,
+                                                     keccak_256>,
+    placeholder_preprocessed_public_data_test_runner<typename curves::alt_bn128_254::scalar_field_type, keccak_256,
+                                                     keccak_256>,
+    placeholder_preprocessed_public_data_test_runner<typename curves::mnt4_298::scalar_field_type, keccak_256,
+                                                     keccak_256>,
+    placeholder_preprocessed_public_data_test_runner<typename curves::mnt6_298::scalar_field_type, keccak_256,
+                                                     keccak_256>>;
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_1, TestRunner, TestRunners)
-{
+BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_1, TestRunner, TestRunners) {
     using field_type = typename TestRunner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
-    auto circuit = circuit_test_1<field_type>(
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-            random_test_initializer.generic_random_engine
-            );
+    auto circuit =
+        circuit_test_1<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                                   random_test_initializer.generic_random_engine);
 
     TestRunner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_2, TestRunner, TestRunners)
-{
+BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_2, TestRunner, TestRunners) {
     using field_type = typename TestRunner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     auto pi0 = random_test_initializer.alg_random_engines.template get_alg_engine<field_type>()();
-    auto circuit = circuit_test_t<field_type>(
-            pi0,
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-            random_test_initializer.generic_random_engine
-            );
+    auto circuit =
+        circuit_test_t<field_type>(pi0,
+                                   random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                                   random_test_initializer.generic_random_engine);
 
     TestRunner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_3, TestRunner, TestRunners)
-{
+BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_3, TestRunner, TestRunners) {
     using field_type = typename TestRunner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
-    auto circuit = circuit_test_3<field_type>(
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-            random_test_initializer.generic_random_engine
-            );
+    auto circuit =
+        circuit_test_3<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                                   random_test_initializer.generic_random_engine);
 
     TestRunner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_4, TestRunner, TestRunners)
-{
+BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_4, TestRunner, TestRunners) {
     using field_type = typename TestRunner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
-    auto circuit = circuit_test_4<field_type>(
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-            random_test_initializer.generic_random_engine
-            );
+    auto circuit =
+        circuit_test_4<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                                   random_test_initializer.generic_random_engine);
 
     TestRunner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_5, TestRunner, TestRunners)
-{
+BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_5, TestRunner, TestRunners) {
     using field_type = typename TestRunner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
-    auto circuit = circuit_test_5<field_type>(
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-            random_test_initializer.generic_random_engine
-            );
+    auto circuit =
+        circuit_test_5<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                                   random_test_initializer.generic_random_engine);
 
     TestRunner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_6, TestRunner, TestRunners)
-{
+BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_6, TestRunner, TestRunners) {
     using field_type = typename TestRunner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
-    auto circuit = circuit_test_6<field_type>(
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-            random_test_initializer.generic_random_engine
-            );
+    auto circuit =
+        circuit_test_6<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                                   random_test_initializer.generic_random_engine);
 
     TestRunner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_7, TestRunner, TestRunners)
-{
+BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_7, TestRunner, TestRunners) {
     using field_type = typename TestRunner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
-    auto circuit = circuit_test_7<field_type>(
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-            random_test_initializer.generic_random_engine
-            );
+    auto circuit =
+        circuit_test_7<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                                   random_test_initializer.generic_random_engine);
 
     TestRunner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_8, TestRunner, TestRunners)
-{
+BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_8, TestRunner, TestRunners) {
     using field_type = typename TestRunner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
-    auto circuit = circuit_test_8<field_type>(
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-            random_test_initializer.generic_random_engine
-            );
+    auto circuit =
+        circuit_test_8<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                                   random_test_initializer.generic_random_engine);
 
     TestRunner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_fib, TestRunner, TestRunners)
-{
+BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_fib, TestRunner, TestRunners) {
     using field_type = typename TestRunner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     auto circuit = circuit_test_fib<field_type, 100>(
-            random_test_initializer.alg_random_engines.template get_alg_engine<field_type>()
-            );
+        random_test_initializer.alg_random_engines.template get_alg_engine<field_type>());
 
     TestRunner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
-
 
 BOOST_AUTO_TEST_SUITE_END()

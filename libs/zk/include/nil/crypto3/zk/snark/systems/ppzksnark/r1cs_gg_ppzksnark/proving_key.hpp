@@ -56,7 +56,7 @@ namespace nil {
 
                     constraint_system_type constraint_system;
 
-                    r1cs_gg_ppzksnark_proving_key() {};
+                    r1cs_gg_ppzksnark_proving_key() { };
                     r1cs_gg_ppzksnark_proving_key &operator=(const r1cs_gg_ppzksnark_proving_key &other) = default;
                     r1cs_gg_ppzksnark_proving_key(const r1cs_gg_ppzksnark_proving_key &other) = default;
                     r1cs_gg_ppzksnark_proving_key(r1cs_gg_ppzksnark_proving_key &&other) = default;
@@ -73,9 +73,9 @@ namespace nil {
                         const std::vector<typename CurveType::template g1_type<>::value_type> &H_query,
                         const std::vector<typename CurveType::template g1_type<>::value_type> &L_query,
                         const constraint_system_type &constraint_system) :
-                        alpha_g1(alpha_g1),
-                        beta_g1(beta_g1), beta_g2(beta_g2), delta_g1(delta_g1), delta_g2(delta_g2), A_query(A_query),
-                        B_query(B_query), H_query(H_query), L_query(L_query), constraint_system(constraint_system) {};
+                        alpha_g1(alpha_g1), beta_g1(beta_g1), beta_g2(beta_g2), delta_g1(delta_g1), delta_g2(delta_g2),
+                        A_query(A_query), B_query(B_query), H_query(H_query), L_query(L_query),
+                        constraint_system(constraint_system) { };
 
                     r1cs_gg_ppzksnark_proving_key(
                         typename CurveType::template g1_type<>::value_type &&alpha_g1,
@@ -89,11 +89,10 @@ namespace nil {
                         std::vector<typename CurveType::template g1_type<>::value_type> &&H_query,
                         std::vector<typename CurveType::template g1_type<>::value_type> &&L_query,
                         constraint_system_type &&constraint_system) :
-                        alpha_g1(std::move(alpha_g1)),
-                        beta_g1(std::move(beta_g1)), beta_g2(std::move(beta_g2)), delta_g1(std::move(delta_g1)),
-                        delta_g2(std::move(delta_g2)), A_query(std::move(A_query)), B_query(std::move(B_query)),
-                        H_query(std::move(H_query)), L_query(std::move(L_query)),
-                        constraint_system(std::move(constraint_system)) {};
+                        alpha_g1(std::move(alpha_g1)), beta_g1(std::move(beta_g1)), beta_g2(std::move(beta_g2)),
+                        delta_g1(std::move(delta_g1)), delta_g2(std::move(delta_g2)), A_query(std::move(A_query)),
+                        B_query(std::move(B_query)), H_query(std::move(H_query)), L_query(std::move(L_query)),
+                        constraint_system(std::move(constraint_system)) { };
 
                     std::size_t G1_size() const {
                         return 1 + A_query.size() + B_query.domain_size() + H_query.size() + L_query.size();
@@ -129,8 +128,8 @@ namespace nil {
                     }
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_R1CS_GG_PPZKSNARK_TYPES_POLICY_HPP

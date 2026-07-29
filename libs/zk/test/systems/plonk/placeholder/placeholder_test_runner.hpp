@@ -49,11 +49,8 @@ using namespace nil::crypto3;
 using namespace nil::crypto3::zk;
 using namespace nil::crypto3::zk::snark;
 
-template<typename FieldType,
-        typename merkle_hash_type,
-        typename transcript_hash_type,
-        bool UseGrinding = false,
-        std::size_t max_quotient_poly_chunks = 0>
+template<typename FieldType, typename merkle_hash_type, typename transcript_hash_type, bool UseGrinding = false,
+         std::size_t max_quotient_poly_chunks = 0>
 struct placeholder_test_runner {
     using field_type = FieldType;
 
@@ -65,11 +62,8 @@ struct placeholder_test_runner {
     typedef placeholder_circuit_params<field_type> circuit_params;
     using transcript_type = typename transcript::fiat_shamir_heuristic_sequential<transcript_hash_type>;
 
-    using lpc_params_type = commitments::list_polynomial_commitment_params<
-            merkle_hash_type,
-            transcript_hash_type,
-            placeholder_test_params::m
-    >;
+    using lpc_params_type = commitments::list_polynomial_commitment_params<merkle_hash_type, transcript_hash_type,
+                                                                           placeholder_test_params::m>;
 
     using lpc_type = commitments::list_polynomial_commitment<field_type, lpc_params_type>;
     using lpc_scheme_type = typename commitments::lpc_commitment_scheme<lpc_type>;
@@ -77,38 +71,40 @@ struct placeholder_test_runner {
     using policy_type = zk::snark::detail::placeholder_policy<field_type, lpc_placeholder_params_type>;
     using circuit_type = circuit_description<field_type, placeholder_circuit_params<field_type>>;
 
-    placeholder_test_runner(const circuit_type &circuit_in)
-            : circuit(circuit_in), desc(circuit_in.table.witnesses().size(),
-                                        circuit_in.table.public_inputs().size(),
-                                        circuit_in.table.constants().size(),
-                                        circuit_in.table.selectors().size(),
-                                        circuit_in.usable_rows,
-                                        circuit_in.table_rows),
-              constraint_system(circuit.gates, circuit.copy_constraints, circuit.lookup_gates, circuit.lookup_tables),
-              assignments(circuit.table), table_rows_log(std::log2(circuit_in.table_rows)),
-              fri_params(1, table_rows_log, placeholder_test_params::lambda, 4) {
+    placeholder_test_runner(const circuit_type &circuit_in) :
+        circuit(circuit_in), desc(circuit_in.table.witnesses().size(),
+                                  circuit_in.table.public_inputs().size(),
+                                  circuit_in.table.constants().size(),
+                                  circuit_in.table.selectors().size(),
+                                  circuit_in.usable_rows,
+                                  circuit_in.table_rows),
+        constraint_system(circuit.gates, circuit.copy_constraints, circuit.lookup_gates, circuit.lookup_tables),
+        assignments(circuit.table), table_rows_log(std::log2(circuit_in.table_rows)),
+        fri_params(1, table_rows_log, placeholder_test_params::lambda, 4) {
     }
 
     bool run_test() {
         lpc_scheme_type lpc_scheme(fri_params);
 
         typename placeholder_public_preprocessor<field_type, lpc_placeholder_params_type>::preprocessed_data_type
-                lpc_preprocessed_public_data = placeholder_public_preprocessor<field_type, lpc_placeholder_params_type>::process(
-                constraint_system, assignments.public_table(), desc, lpc_scheme, max_quotient_poly_chunks);
+            lpc_preprocessed_public_data =
+                placeholder_public_preprocessor<field_type, lpc_placeholder_params_type>::process(
+                    constraint_system, assignments.public_table(), desc, lpc_scheme, max_quotient_poly_chunks);
 
         typename placeholder_private_preprocessor<field_type, lpc_placeholder_params_type>::preprocessed_data_type
-                lpc_preprocessed_private_data = placeholder_private_preprocessor<field_type, lpc_placeholder_params_type>::process(
-                constraint_system, assignments.private_table(), desc);
+            lpc_preprocessed_private_data =
+                placeholder_private_preprocessor<field_type, lpc_placeholder_params_type>::process(
+                    constraint_system, assignments.private_table(), desc);
 
         auto lpc_proof = placeholder_prover<field_type, lpc_placeholder_params_type>::process(
-                lpc_preprocessed_public_data, std::move(lpc_preprocessed_private_data), desc, constraint_system,
-                lpc_scheme);
+            lpc_preprocessed_public_data, std::move(lpc_preprocessed_private_data), desc, constraint_system,
+            lpc_scheme);
 
         // We must not use the same instance of lpc_scheme.
         lpc_scheme_type verifier_lpc_scheme(fri_params);
 
         bool verifier_res = placeholder_verifier<field_type, lpc_placeholder_params_type>::process(
-                *lpc_preprocessed_public_data.common_data, lpc_proof, desc, constraint_system, verifier_lpc_scheme);
+            *lpc_preprocessed_public_data.common_data, lpc_proof, desc, constraint_system, verifier_lpc_scheme);
         return verifier_res;
     }
 
@@ -120,9 +116,7 @@ struct placeholder_test_runner {
     typename lpc_type::fri_type::params_type fri_params;
 };
 
-template<typename curve_type,
-        typename transcript_hash_type,
-        bool UseGrinding = false>
+template<typename curve_type, typename transcript_hash_type, bool UseGrinding = false>
 struct placeholder_kzg_test_runner {
     using field_type = typename curve_type::scalar_field_type;
 
@@ -136,26 +130,22 @@ struct placeholder_kzg_test_runner {
 
     using policy_type = zk::snark::detail::placeholder_policy<field_type, kzg_placeholder_params_type>;
 
-    using circuit_type =
-            circuit_description<field_type,
-                    placeholder_circuit_params<field_type> >;
+    using circuit_type = circuit_description<field_type, placeholder_circuit_params<field_type>>;
 
-    placeholder_kzg_test_runner(const circuit_type &circuit_in)
-            : circuit(circuit_in),
-              desc(circuit_in.table.witnesses().size(),
-                   circuit_in.table.public_inputs().size(),
-                   circuit_in.table.constants().size(),
-                   circuit_in.table.selectors().size(),
-                   circuit_in.usable_rows,
-                   circuit_in.table_rows) {
+    placeholder_kzg_test_runner(const circuit_type &circuit_in) :
+        circuit(circuit_in), desc(circuit_in.table.witnesses().size(),
+                                  circuit_in.table.public_inputs().size(),
+                                  circuit_in.table.constants().size(),
+                                  circuit_in.table.selectors().size(),
+                                  circuit_in.usable_rows,
+                                  circuit_in.table_rows) {
     }
 
     bool run_test() {
 
-        typename policy_type::constraint_system_type
-                constraint_system(circuit.gates, circuit.copy_constraints, circuit.lookup_gates);
-        typename policy_type::variable_assignment_type
-                assignments = circuit.table;
+        typename policy_type::constraint_system_type constraint_system(circuit.gates, circuit.copy_constraints,
+                                                                       circuit.lookup_gates);
+        typename policy_type::variable_assignment_type assignments = circuit.table;
 
         bool verifier_res;
 
@@ -165,22 +155,23 @@ struct placeholder_kzg_test_runner {
         kzg_scheme_type kzg_scheme(kzg_params);
 
         typename placeholder_public_preprocessor<field_type, kzg_placeholder_params_type>::preprocessed_data_type
-                kzg_preprocessed_public_data =
+            kzg_preprocessed_public_data =
                 placeholder_public_preprocessor<field_type, kzg_placeholder_params_type>::process(
-                        constraint_system, assignments.public_table(), desc, kzg_scheme);
+                    constraint_system, assignments.public_table(), desc, kzg_scheme);
 
         typename placeholder_private_preprocessor<field_type, kzg_placeholder_params_type>::preprocessed_data_type
-                kzg_preprocessed_private_data = placeholder_private_preprocessor<field_type, kzg_placeholder_params_type>::process(
-                constraint_system, assignments.private_table(), desc);
+            kzg_preprocessed_private_data =
+                placeholder_private_preprocessor<field_type, kzg_placeholder_params_type>::process(
+                    constraint_system, assignments.private_table(), desc);
 
         auto kzg_proof = placeholder_prover<field_type, kzg_placeholder_params_type>::process(
-                kzg_preprocessed_public_data, std::move(kzg_preprocessed_private_data), desc, constraint_system,
-                kzg_scheme);
+            kzg_preprocessed_public_data, std::move(kzg_preprocessed_private_data), desc, constraint_system,
+            kzg_scheme);
 
         kzg_scheme = kzg_scheme_type(kzg_params);
 
         verifier_res = placeholder_verifier<field_type, kzg_placeholder_params_type>::process(
-                *kzg_preprocessed_public_data.common_data, kzg_proof, desc, constraint_system, kzg_scheme);
+            *kzg_preprocessed_public_data.common_data, kzg_proof, desc, constraint_system, kzg_scheme);
         return verifier_res;
     }
 
@@ -188,9 +179,7 @@ struct placeholder_kzg_test_runner {
     plonk_table_description<field_type> desc;
 };
 
-template<typename curve_type,
-        typename transcript_hash_type,
-        bool UseGrinding = false>
+template<typename curve_type, typename transcript_hash_type, bool UseGrinding = false>
 struct placeholder_kzg_test_runner_v2 {
     using field_type = typename curve_type::scalar_field_type;
 
@@ -204,26 +193,22 @@ struct placeholder_kzg_test_runner_v2 {
 
     using policy_type = zk::snark::detail::placeholder_policy<field_type, kzg_placeholder_params_type>;
 
-    using circuit_type =
-            circuit_description<field_type,
-                    placeholder_circuit_params<field_type>>;
+    using circuit_type = circuit_description<field_type, placeholder_circuit_params<field_type>>;
 
-    placeholder_kzg_test_runner_v2(const circuit_type &circuit_in)
-            : circuit(circuit_in),
-              desc(circuit_in.table.witnesses().size(),
-                   circuit_in.table.public_inputs().size(),
-                   circuit_in.table.constants().size(),
-                   circuit_in.table.selectors().size(),
-                   circuit_in.usable_rows,
-                   circuit_in.table_rows) {
+    placeholder_kzg_test_runner_v2(const circuit_type &circuit_in) :
+        circuit(circuit_in), desc(circuit_in.table.witnesses().size(),
+                                  circuit_in.table.public_inputs().size(),
+                                  circuit_in.table.constants().size(),
+                                  circuit_in.table.selectors().size(),
+                                  circuit_in.usable_rows,
+                                  circuit_in.table_rows) {
     }
 
     bool run_test() {
 
-        typename policy_type::constraint_system_type
-                constraint_system(circuit.gates, circuit.copy_constraints, circuit.lookup_gates);
-        typename policy_type::variable_assignment_type
-                assignments = circuit.table;
+        typename policy_type::constraint_system_type constraint_system(circuit.gates, circuit.copy_constraints,
+                                                                       circuit.lookup_gates);
+        typename policy_type::variable_assignment_type assignments = circuit.table;
 
         bool verifier_res;
 
@@ -232,22 +217,23 @@ struct placeholder_kzg_test_runner_v2 {
         kzg_scheme_type kzg_scheme(kzg_params);
 
         typename placeholder_public_preprocessor<field_type, kzg_placeholder_params_type>::preprocessed_data_type
-                kzg_preprocessed_public_data =
+            kzg_preprocessed_public_data =
                 placeholder_public_preprocessor<field_type, kzg_placeholder_params_type>::process(
-                        constraint_system, assignments.public_table(), desc, kzg_scheme);
+                    constraint_system, assignments.public_table(), desc, kzg_scheme);
 
         typename placeholder_private_preprocessor<field_type, kzg_placeholder_params_type>::preprocessed_data_type
-                kzg_preprocessed_private_data = placeholder_private_preprocessor<field_type, kzg_placeholder_params_type>::process(
-                constraint_system, assignments.private_table(), desc);
+            kzg_preprocessed_private_data =
+                placeholder_private_preprocessor<field_type, kzg_placeholder_params_type>::process(
+                    constraint_system, assignments.private_table(), desc);
 
         auto kzg_proof = placeholder_prover<field_type, kzg_placeholder_params_type>::process(
-                kzg_preprocessed_public_data, std::move(kzg_preprocessed_private_data), desc, constraint_system,
-                kzg_scheme);
+            kzg_preprocessed_public_data, std::move(kzg_preprocessed_private_data), desc, constraint_system,
+            kzg_scheme);
 
         kzg_scheme = kzg_scheme_type(kzg_params);
 
         verifier_res = placeholder_verifier<field_type, kzg_placeholder_params_type>::process(
-                *kzg_preprocessed_public_data.common_data, kzg_proof, desc, constraint_system, kzg_scheme);
+            *kzg_preprocessed_public_data.common_data, kzg_proof, desc, constraint_system, kzg_scheme);
         return verifier_res;
     }
 
@@ -255,4 +241,4 @@ struct placeholder_kzg_test_runner_v2 {
     plonk_table_description<field_type> desc;
 };
 
-#endif // CRYPTO3_ZK_TEST_PLACEHOLDER_TEST_RUNNER_HPP
+#endif    // CRYPTO3_ZK_TEST_PLACEHOLDER_TEST_RUNNER_HPP

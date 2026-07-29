@@ -44,8 +44,7 @@
 using namespace nil::crypto3;
 
 template<typename FieldType, typename PolynomialType>
-void fri_basic_test()
-{
+void fri_basic_test() {
     // setup
     typedef hashes::sha2<256> merkle_hash_type;
     typedef hashes::sha2<256> transcript_hash_type;
@@ -61,29 +60,26 @@ void fri_basic_test()
     typedef typename fri_type::proof_type proof_type;
     typedef typename fri_type::params_type params_type;
 
-
     constexpr static const std::size_t d_extended = d;
     std::size_t extended_log = boost::static_log2<d_extended>::value;
     std::vector<std::shared_ptr<math::evaluation_domain<FieldType>>> D =
         math::calculate_domain_set<FieldType>(extended_log, r);
 
     std::size_t degree_log = std::ceil(std::log2(d - 1));
-    params_type params(
-            1, /*max_step*/
-            degree_log,
-            lambda,
-            2, //expand_factor
-            true, // use_grinding
-            16 // grinding_parameter
-            );
+    params_type params(1, /*max_step*/
+                       degree_log,
+                       lambda,
+                       2,       // expand_factor
+                       true,    // use_grinding
+                       16       // grinding_parameter
+    );
 
     // Polynomial to commit
-    std::vector<typename FieldType::value_type> coefficients =
-        {1u, 3u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u};
+    std::vector<typename FieldType::value_type> coefficients = {1u, 3u, 4u, 1u, 5u, 6u, 7u, 2u,
+                                                                8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u};
 
     PolynomialType f;
-    if constexpr (std::is_same<math::polynomial_dfs<typename FieldType::value_type>,
-            PolynomialType>::value) {
+    if constexpr (std::is_same<math::polynomial_dfs<typename FieldType::value_type>, PolynomialType>::value) {
         f.from_coefficients(coefficients);
         if (f.size() != params.D[0]->size()) {
             f.resize(params.D[0]->size(), nullptr, params.D[0]);
@@ -93,13 +89,12 @@ void fri_basic_test()
     }
 
     // Construction of Merkle tree for polynomial coefficients
-    typename fri_type::merkle_tree_type tree =
-        zk::algorithms::precommit<fri_type>(f, params.D[0], params.step_list[0]);
+    typename fri_type::merkle_tree_type tree = zk::algorithms::precommit<fri_type>(f, params.D[0], params.step_list[0]);
     // Commitment to Merkle tree of polynomial coefficients
     auto root = zk::algorithms::commit<fri_type>(tree);
 
     // Random initialization vector for transcript
-    std::vector<std::uint8_t> init_blob{0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u};
+    std::vector<std::uint8_t> init_blob {0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u};
     zk::transcript::fiat_shamir_heuristic_sequential<transcript_hash_type> transcript(init_blob);
 
     // Polynomial is evaluated using random point sourced from transcript
@@ -127,8 +122,7 @@ void fri_basic_test()
     }
 }
 
-int main()
-{
+int main() {
     using curve_type = algebra::curves::pallas;
     using FieldType = typename curve_type::base_field_type;
     using PolynomialType = math::polynomial<FieldType::value_type>;
@@ -139,4 +133,3 @@ int main()
 
     return 0;
 }
-

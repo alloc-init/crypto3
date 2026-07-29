@@ -226,7 +226,7 @@ namespace nil {
                         typename g1_type::value_type gamma_g1 = gamma * g1_generator;
 
                         container::accumulation_vector<g1_type> gamma_ABC_g1(std::move(gamma_ABC_g1_0),
-                                                                               std::move(gamma_ABC_g1_values));
+                                                                             std::move(gamma_ABC_g1_values));
 
                         return std::make_tuple(std::move(alpha_g1), std::move(beta_g1), std::move(beta_g2),
                                                std::move(delta_g1), std::move(delta_g2), std::move(gamma_g2),
@@ -235,17 +235,16 @@ namespace nil {
                                                std::move(gamma_ABC_g1), std::move(gamma_g1));
                     }
 
-                    // Generate *unsafe* CRS for specific toxic waste 
+                    // Generate *unsafe* CRS for specific toxic waste
                     // For testing purposes only
                     static inline auto deterministic_basic_process(const constraint_system_type &constraint_system,
-                                                                    const typename scalar_field_type::value_type &t,
-                                                                    const typename scalar_field_type::value_type &alpha,
-                                                                    const typename scalar_field_type::value_type &beta,
-                                                                    const typename scalar_field_type::value_type &gamma,
-                                                                    const typename scalar_field_type::value_type &delta,
-                                                                    const typename g1_type::value_type &g1_generator,
-                                                                    const typename g2_type::value_type &g2_generator
-                                                                    ) {
+                                                                   const typename scalar_field_type::value_type &t,
+                                                                   const typename scalar_field_type::value_type &alpha,
+                                                                   const typename scalar_field_type::value_type &beta,
+                                                                   const typename scalar_field_type::value_type &gamma,
+                                                                   const typename scalar_field_type::value_type &delta,
+                                                                   const typename g1_type::value_type &g1_generator,
+                                                                   const typename g2_type::value_type &g2_generator) {
 
                         /* Make the B_query "lighter" if possible */
                         constraint_system_type r1cs_copy(constraint_system);
@@ -375,7 +374,7 @@ namespace nil {
                         typename g1_type::value_type gamma_g1 = gamma * g1_generator;
 
                         container::accumulation_vector<g1_type> gamma_ABC_g1(std::move(gamma_ABC_g1_0),
-                                                                               std::move(gamma_ABC_g1_values));
+                                                                             std::move(gamma_ABC_g1_values));
 
                         return std::make_tuple(std::move(alpha_g1), std::move(beta_g1), std::move(beta_g2),
                                                std::move(delta_g1), std::move(delta_g2), std::move(gamma_g2),
@@ -443,8 +442,8 @@ namespace nil {
                     }
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_R1CS_GG_PPZKSNARK_BASIC_GENERATOR_HPP

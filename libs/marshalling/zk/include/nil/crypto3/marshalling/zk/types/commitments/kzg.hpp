@@ -51,85 +51,95 @@ namespace nil {
                 /* CommitmentSchemeType is like batched_kzg,
                  * commitment is a std::vector<uint8_t>, holding serialized g1 points
                  * */
-                template <typename TTypeBase, typename KZGScheme>
+                template<typename TTypeBase, typename KZGScheme>
                 struct commitment<TTypeBase, KZGScheme, std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>> {
                     using type = nil::marshalling::types::array_list<
                         TTypeBase,
                         nil::marshalling::types::integral<TTypeBase, uint8_t>,
-                        nil::marshalling::option::sequence_size_field_prefix<nil::marshalling::types::integral<TTypeBase, std::uint16_t>>
-                    >;
+                        nil::marshalling::option::sequence_size_field_prefix<
+                            nil::marshalling::types::integral<TTypeBase, std::uint16_t>>>;
                 };
 
-                template <typename Endianness, typename KZGScheme>
-                typename commitment<nil::marshalling::field_type<Endianness>, KZGScheme, std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>>::type
-                fill_commitment(typename KZGScheme::commitment_type commitment) {
+                template<typename Endianness, typename KZGScheme>
+                typename commitment<nil::marshalling::field_type<Endianness>,
+                                    KZGScheme,
+                                    std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>>::type
+                    fill_commitment(typename KZGScheme::commitment_type commitment) {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
-                    using result_type = typename nil::crypto3::marshalling::types::commitment<TTypeBase, KZGScheme>::type;
+                    using result_type =
+                        typename nil::crypto3::marshalling::types::commitment<TTypeBase, KZGScheme>::type;
                     result_type result;
-                    for( auto it = commitment.begin(); it != commitment.end(); it++ ){
-                        result.value().push_back(nil::marshalling::types::integral<TTypeBase,uint8_t>(*it));
+                    for (auto it = commitment.begin(); it != commitment.end(); it++) {
+                        result.value().push_back(nil::marshalling::types::integral<TTypeBase, uint8_t>(*it));
                     }
                     return result;
                 }
 
-                template <typename Endianness, typename KZGScheme>
-                typename KZGScheme::commitment_type
-                make_commitment(typename commitment<nil::marshalling::field_type<Endianness>, KZGScheme, std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>>::type const& filled_commitment) {
+                template<typename Endianness, typename KZGScheme>
+                typename KZGScheme::commitment_type make_commitment(
+                    typename commitment<nil::marshalling::field_type<Endianness>,
+                                        KZGScheme,
+                                        std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>>::type const
+                        &filled_commitment) {
                     typename KZGScheme::commitment_type result;
-                    for( std::size_t i = 0; i < filled_commitment.value().size(); i++ ){
+                    for (std::size_t i = 0; i < filled_commitment.value().size(); i++) {
                         result.push_back(filled_commitment.value()[i].value());
                     }
                     return result;
                 }
 
                 /* CommitmentSchemeType is like kzg_batched_commitment_v2 */
-                template <typename TTypeBase, typename KZGScheme>
-                struct eval_proof<TTypeBase, KZGScheme, std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme> > > {
+                template<typename TTypeBase, typename KZGScheme>
+                struct eval_proof<TTypeBase, KZGScheme, std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>> {
 
                     using type = nil::marshalling::types::bundle<
                         TTypeBase,
-                        std::tuple<
-                            eval_storage<TTypeBase, typename KZGScheme::eval_storage_type>,
-                            curve_element<TTypeBase, typename KZGScheme::single_commitment_type::group_type>,
-                            curve_element<TTypeBase, typename KZGScheme::single_commitment_type::group_type>
-                        >
-                    >;
+                        std::tuple<eval_storage<TTypeBase, typename KZGScheme::eval_storage_type>,
+                                   curve_element<TTypeBase, typename KZGScheme::single_commitment_type::group_type>,
+                                   curve_element<TTypeBase, typename KZGScheme::single_commitment_type::group_type>>>;
                 };
 
                 template<typename Endianness, typename KZGScheme>
-                typename eval_proof<nil::marshalling::field_type<Endianness>, KZGScheme, std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>>::type
-                fill_eval_proof( const typename KZGScheme::proof_type &proof, typename KZGScheme::params_type const& params) {
+                typename eval_proof<nil::marshalling::field_type<Endianness>,
+                                    KZGScheme,
+                                    std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>>::type
+                    fill_eval_proof(const typename KZGScheme::proof_type &proof,
+                                    typename KZGScheme::params_type const &params) {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
                     nil::crypto3::marshalling::types::batch_info_type batch_info = proof.z.get_batch_info();
 
-                    using curve_marhsalling_type = curve_element<TTypeBase, typename KZGScheme::single_commitment_type::group_type>;
+                    using curve_marhsalling_type =
+                        curve_element<TTypeBase, typename KZGScheme::single_commitment_type::group_type>;
 
                     auto filled_z = fill_eval_storage<Endianness, typename KZGScheme::eval_storage_type>(proof.z);
 
                     curve_marhsalling_type filled_pi_1 = curve_marhsalling_type(proof.pi_1);
                     curve_marhsalling_type filled_pi_2 = curve_marhsalling_type(proof.pi_2);
 
-                    return typename eval_proof<TTypeBase, KZGScheme>::type(
-                        std::tuple( filled_z, filled_pi_1, filled_pi_2 )
-                    );
+                    return
+                        typename eval_proof<TTypeBase, KZGScheme>::type(std::tuple(filled_z, filled_pi_1, filled_pi_2));
                 }
 
                 template<typename Endianness, typename KZGScheme>
-                typename KZGScheme::proof_type
-                make_eval_proof(const typename eval_proof<nil::marshalling::field_type<Endianness>, KZGScheme, std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>>::type &filled_proof) {
+                typename KZGScheme::proof_type make_eval_proof(
+                    const typename eval_proof<nil::marshalling::field_type<Endianness>,
+                                              KZGScheme,
+                                              std::enable_if_t<nil::crypto3::zk::is_kzg<KZGScheme>>>::type
+                        &filled_proof) {
                     typename KZGScheme::proof_type proof;
 
-                    proof.z = make_eval_storage<Endianness, typename KZGScheme::eval_storage_type>(std::get<0>(filled_proof.value()));
+                    proof.z = make_eval_storage<Endianness, typename KZGScheme::eval_storage_type>(
+                        std::get<0>(filled_proof.value()));
                     auto batch_info = proof.z.get_batch_info();
-                    proof.pi_1= std::get<1>(filled_proof.value()).value();
-                    proof.pi_2= std::get<2>(filled_proof.value()).value();
+                    proof.pi_1 = std::get<1>(filled_proof.value()).value();
+                    proof.pi_2 = std::get<2>(filled_proof.value()).value();
 
                     return proof;
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MARSHALLING_KZG_COMMITMENT_HPP

@@ -51,8 +51,7 @@ namespace nil::crypto3::zk::snark {
             _permutation_map[cell] = _permutation_map[equal_to];
         }
 
-        void cells_equal(std::size_t cell_x, std::size_t cell_y, std::size_t equal_to_x,
-                         std::size_t equal_to_y) {
+        void cells_equal(std::size_t cell_x, std::size_t cell_y, std::size_t equal_to_x, std::size_t equal_to_y) {
             _permutation_map[key_type(cell_x, cell_y)] = _permutation_map[key_type(equal_to_x, equal_to_y)];
         }
 
@@ -61,6 +60,6 @@ namespace nil::crypto3::zk::snark {
         }
     };
 
-} // namespace nil::crypto3::zk::snark
+}    // namespace nil::crypto3::zk::snark
 
 #endif    // CRYPTO3_ZK_MATH_PLONK_PERMUTATION_HPP

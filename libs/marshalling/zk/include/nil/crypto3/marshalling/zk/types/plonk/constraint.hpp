@@ -49,27 +49,24 @@ namespace nil {
 
                 template<typename Endianness, typename PlonkConstraint>
                 plonk_constraint<nil::marshalling::field_type<Endianness>, PlonkConstraint>
-                fill_plonk_constraint(const PlonkConstraint &constr) {
+                    fill_plonk_constraint(const PlonkConstraint &constr) {
                     return fill_expression<typename PlonkConstraint::base_type, Endianness>(constr);
                 }
 
                 template<typename Endianness, typename PlonkConstraint>
                 PlonkConstraint make_plonk_constraint(
-                    const plonk_constraint<nil::marshalling::field_type<Endianness>, PlonkConstraint> &filled_constr)
-                {
+                    const plonk_constraint<nil::marshalling::field_type<Endianness>, PlonkConstraint> &filled_constr) {
                     return make_expression<typename PlonkConstraint::base_type, Endianness>(filled_constr);
                 }
 
                 /*********************** Vector of plonk constraints as an input to gate ****************************/
                 template<typename TTypeBase, typename Constraint>
-                using plonk_constraints = nil::marshalling::types::standard_array_list<
-                    TTypeBase,
-                    plonk_constraint<TTypeBase, Constraint>
-                >;
+                using plonk_constraints =
+                    nil::marshalling::types::standard_array_list<TTypeBase, plonk_constraint<TTypeBase, Constraint>>;
 
                 template<typename Endianness, typename Constraint>
                 plonk_constraints<nil::marshalling::field_type<Endianness>, Constraint>
-                fill_plonk_constraints(const std::vector<Constraint> &constraints) {
+                    fill_plonk_constraints(const std::vector<Constraint> &constraints) {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
                     plonk_constraints<TTypeBase, Constraint> filled_constraints;
@@ -81,18 +78,18 @@ namespace nil {
                 }
 
                 template<typename Endianness, typename Constraint>
-                std::vector<Constraint>
-                make_plonk_constraints(const plonk_constraints<nil::marshalling::field_type<Endianness>, Constraint> &filled_constraints)
-                {
+                std::vector<Constraint> make_plonk_constraints(
+                    const plonk_constraints<nil::marshalling::field_type<Endianness>, Constraint> &filled_constraints) {
                     std::vector<Constraint> constraints;
                     for (std::size_t i = 0; i < filled_constraints.value().size(); i++) {
-                        constraints.emplace_back(make_plonk_constraint<Endianness, Constraint>(filled_constraints.value().at(i)));
+                        constraints.emplace_back(
+                            make_plonk_constraint<Endianness, Constraint>(filled_constraints.value().at(i)));
                     }
                     return constraints;
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MARSHALLING_ZK_PLONK_CONSTRAINT_HPP

@@ -44,32 +44,31 @@ namespace nil {
             namespace types {
                 template<typename TTypeBase, typename PlonkGate>
                 using plonk_lookup_gate = nil::marshalling::types::bundle<
-                    TTypeBase, std::tuple<
+                    TTypeBase,
+                    std::tuple<
                         // std::size_t selector_index
                         nil::marshalling::types::integral<TTypeBase, std::size_t>,
                         // std::vector<plonk_lookup_constraint<FieldType>> constraints
                         nil::marshalling::types::standard_array_list<
                             TTypeBase,
-                            plonk_lookup_constraint<TTypeBase, typename PlonkGate::constraint_type>
-                        >
-                    >
-                >;
+                            plonk_lookup_constraint<TTypeBase, typename PlonkGate::constraint_type>>>>;
 
                 template<typename Endianness, typename PlonkGate>
-                plonk_lookup_gate<nil::marshalling::field_type<Endianness>, PlonkGate> fill_plonk_lookup_gate(const PlonkGate &gate) {
+                plonk_lookup_gate<nil::marshalling::field_type<Endianness>, PlonkGate>
+                    fill_plonk_lookup_gate(const PlonkGate &gate) {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
                     using result_type = plonk_lookup_gate<TTypeBase, PlonkGate>;
                     using size_t_marshalling_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
 
-                    using constraint_marshalling_type = plonk_lookup_constraint<TTypeBase, typename PlonkGate::constraint_type>;
-                    using constraint_vector_marshalling_type = nil::marshalling::types::standard_array_list<
-                        TTypeBase, constraint_marshalling_type>;
+                    using constraint_marshalling_type =
+                        plonk_lookup_constraint<TTypeBase, typename PlonkGate::constraint_type>;
+                    using constraint_vector_marshalling_type =
+                        nil::marshalling::types::standard_array_list<TTypeBase, constraint_marshalling_type>;
 
                     constraint_vector_marshalling_type filled_constraints;
                     for (const auto &constr : gate.constraints) {
                         filled_constraints.value().push_back(
-                            fill_plonk_lookup_constraint<Endianness, typename PlonkGate::constraint_type>(constr)
-                        );
+                            fill_plonk_lookup_constraint<Endianness, typename PlonkGate::constraint_type>(constr));
                     }
 
                     return result_type(std::make_tuple(size_t_marshalling_type(gate.tag_index), filled_constraints));
@@ -77,14 +76,14 @@ namespace nil {
 
                 template<typename Endianness, typename PlonkGate>
                 PlonkGate make_plonk_lookup_gate(
-                    const plonk_lookup_gate<nil::marshalling::field_type<Endianness>, PlonkGate> &filled_gate)
-                {
+                    const plonk_lookup_gate<nil::marshalling::field_type<Endianness>, PlonkGate> &filled_gate) {
                     std::size_t selector_index = std::get<0>(filled_gate.value()).value();
                     std::vector<typename PlonkGate::constraint_type> constraints;
 
                     for (std::size_t i = 0; i < std::get<1>(filled_gate.value()).value().size(); i++) {
-                        constraints.emplace_back(make_plonk_lookup_constraint<Endianness, typename PlonkGate::constraint_type>(
-                            std::get<1>(filled_gate.value()).value().at(i)));
+                        constraints.emplace_back(
+                            make_plonk_lookup_constraint<Endianness, typename PlonkGate::constraint_type>(
+                                std::get<1>(filled_gate.value()).value().at(i)));
                     }
 
                     return {selector_index, constraints};
@@ -92,16 +91,15 @@ namespace nil {
 
                 template<typename TTypeBase, typename PlonkGate>
                 using plonk_lookup_gates =
-                    nil::marshalling::types::standard_array_list<
-                        TTypeBase, plonk_lookup_gate<TTypeBase, PlonkGate>
-                    >;
+                    nil::marshalling::types::standard_array_list<TTypeBase, plonk_lookup_gate<TTypeBase, PlonkGate>>;
 
                 template<typename Endianness, typename PlonkGate, typename InputRange>
                 plonk_lookup_gates<nil::marshalling::field_type<Endianness>, PlonkGate>
                     fill_plonk_lookup_gates(const InputRange &gates) {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
-                    using result_type = nil::marshalling::types::standard_array_list<
-                        TTypeBase, plonk_lookup_gate<TTypeBase, PlonkGate>>;
+                    using result_type =
+                        nil::marshalling::types::standard_array_list<TTypeBase,
+                                                                     plonk_lookup_gate<TTypeBase, PlonkGate>>;
 
                     result_type filled_gates;
                     for (const auto &gate : gates) {
@@ -113,8 +111,7 @@ namespace nil {
 
                 template<typename Endianness, typename PlonkGate>
                 std::vector<PlonkGate> make_plonk_lookup_gates(
-                    const plonk_lookup_gates<nil::marshalling::field_type<Endianness>, PlonkGate> &filled_gates)
-                {
+                    const plonk_lookup_gates<nil::marshalling::field_type<Endianness>, PlonkGate> &filled_gates) {
                     std::vector<PlonkGate> gates;
                     gates.reserve(filled_gates.value().size());
                     for (std::size_t i = 0; i < filled_gates.value().size(); i++) {
@@ -123,8 +120,8 @@ namespace nil {
                     return gates;
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MARSHALLING_ZK_PLONK_LOOKUP_GATE_HPP

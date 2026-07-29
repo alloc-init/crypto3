@@ -41,7 +41,7 @@ namespace nil {
     namespace blueprint {
         template<typename ArithmetizationType>
         class assignment;
-    } // namespace blueprint
+    }    // namespace blueprint
 
     namespace crypto3 {
         namespace zk {
@@ -64,17 +64,14 @@ namespace nil {
                     using variable_type = plonk_variable<ColumnType>;
 
                 protected:
-
                     witnesses_container_type _witnesses;
 
                 public:
-                    plonk_private_table(
-                        witnesses_container_type witness_columns = {}) :
+                    plonk_private_table(witnesses_container_type witness_columns = {}) :
                         _witnesses(std::move(witness_columns)) {
                     }
 
-                    plonk_private_table(std::size_t witnesses_amount) :
-                        _witnesses(witnesses_amount) {
+                    plonk_private_table(std::size_t witnesses_amount) : _witnesses(witnesses_amount) {
                     }
 
                     void resize_witnesses(std::uint32_t new_size) {
@@ -106,13 +103,13 @@ namespace nil {
                     }
 
                     ColumnType get_variable_value(const variable_type& var,
-                            std::shared_ptr<math::evaluation_domain<FieldType>> domain) const {
-                         if (var.rotation == 0) {
-                             return get_variable_value_without_rotation(var);
-                         }
-                         return math::polynomial_shift(
-                            this->get_variable_value_without_rotation(var),
-                            var.rotation, domain->m);
+                                                  std::shared_ptr<math::evaluation_domain<FieldType>>
+                                                      domain) const {
+                        if (var.rotation == 0) {
+                            return get_variable_value_without_rotation(var);
+                        }
+                        return math::polynomial_shift(this->get_variable_value_without_rotation(var), var.rotation,
+                                                      domain->m);
                     }
 
                     const ColumnType& witness(std::uint32_t index) const {
@@ -134,17 +131,17 @@ namespace nil {
                         return witnesses_amount();
                     }
 
-                    bool operator==(plonk_private_table<FieldType, ColumnType> const &other) const {
+                    bool operator==(plonk_private_table<FieldType, ColumnType> const& other) const {
                         return _witnesses == other._witnesses;
                     }
 
-                    friend std::uint32_t basic_padding<FieldType, ColumnType>(
-                        plonk_table<FieldType, ColumnType> &table);
+                    friend std::uint32_t
+                        basic_padding<FieldType, ColumnType>(plonk_table<FieldType, ColumnType>& table);
 
-                    friend std::uint32_t zk_padding<FieldType, ColumnType>(
-                        plonk_table<FieldType, ColumnType> &table,
-                        typename nil::crypto3::random::algebraic_engine<FieldType> alg_rnd
-                    );
+                    friend std::uint32_t
+                        zk_padding<FieldType, ColumnType>(plonk_table<FieldType, ColumnType>& table,
+                                                          typename nil::crypto3::random::algebraic_engine<FieldType>
+                                                              alg_rnd);
 
                     friend class nil::blueprint::assignment<plonk_constraint_system<FieldType>>;
                     friend class plonk_table<FieldType, ColumnType>;
@@ -160,27 +157,23 @@ namespace nil {
                     using variable_type = plonk_variable<ColumnType>;
 
                 protected:
-
                     public_input_container_type _public_inputs;
                     constant_container_type _constants;
                     selector_container_type _selectors;
 
                 public:
-                    plonk_public_table(
-                        public_input_container_type public_input_columns = {},
-                        constant_container_type constant_columns = {},
-                        selector_container_type selector_columns = {})
-                            : _public_inputs(std::move(public_input_columns))
-                            , _constants(std::move(constant_columns))
-                            , _selectors(std::move(selector_columns)) {
+                    plonk_public_table(public_input_container_type public_input_columns = {},
+                                       constant_container_type constant_columns = {},
+                                       selector_container_type selector_columns = {}) :
+                        _public_inputs(std::move(public_input_columns)), _constants(std::move(constant_columns)),
+                        _selectors(std::move(selector_columns)) {
                     }
 
                     plonk_public_table(std::size_t public_inputs_amount,
                                        std::size_t constants_amount,
-                                       std::size_t selectors_amount)
-                        : _public_inputs(public_inputs_amount)
-                        , _constants(constants_amount)
-                        , _selectors(selectors_amount) {
+                                       std::size_t selectors_amount) :
+                        _public_inputs(public_inputs_amount), _constants(constants_amount),
+                        _selectors(selectors_amount) {
                     }
 
                     std::uint32_t public_inputs_amount() const {
@@ -277,19 +270,18 @@ namespace nil {
                         return public_inputs_amount() + constants_amount() + selectors_amount();
                     }
 
-                    bool operator==(plonk_public_table<FieldType, ColumnType> const &other) const {
-                        return _public_inputs == other._public_inputs &&
-                               _constants == other._constants &&
+                    bool operator==(plonk_public_table<FieldType, ColumnType> const& other) const {
+                        return _public_inputs == other._public_inputs && _constants == other._constants &&
                                _selectors == other._selectors;
                     }
 
-                    friend std::uint32_t basic_padding<FieldType, ColumnType>(
-                        plonk_table<FieldType, ColumnType> &table);
+                    friend std::uint32_t
+                        basic_padding<FieldType, ColumnType>(plonk_table<FieldType, ColumnType>& table);
 
-                    friend std::uint32_t zk_padding<FieldType, ColumnType>(
-                        plonk_table<FieldType, ColumnType> &table,
-                        typename nil::crypto3::random::algebraic_engine<FieldType> alg_rnd
-                    );
+                    friend std::uint32_t
+                        zk_padding<FieldType, ColumnType>(plonk_table<FieldType, ColumnType>& table,
+                                                          typename nil::crypto3::random::algebraic_engine<FieldType>
+                                                              alg_rnd);
 
                     friend class nil::blueprint::assignment<plonk_constraint_system<FieldType>>;
                     friend class plonk_table<FieldType, ColumnType>;
@@ -316,23 +308,23 @@ namespace nil {
                 public:
                     virtual ~plonk_table() = default;
 
-                    plonk_table():
+                    plonk_table() :
                         _private_table(std::make_shared<plonk_private_table<FieldType, ColumnType>>()),
                         _public_table(std::make_shared<plonk_public_table<FieldType, ColumnType>>()) {
                     }
 
                     plonk_table(std::shared_ptr<private_table_type> private_table,
-                                std::shared_ptr<public_table_type> public_table)
-                        : _private_table(private_table)
-                        , _public_table(public_table) {
+                                std::shared_ptr<public_table_type>
+                                    public_table) : _private_table(private_table), _public_table(public_table) {
                     }
 
                     plonk_table(std::size_t witnesses_amount,
                                 std::size_t public_inputs_amount,
                                 std::size_t constants_amount,
-                                std::size_t selectors_amount)
-                        : _private_table(std::make_shared<private_table_type>(witnesses_amount))
-                        , _public_table(std::make_shared<public_table_type>(public_inputs_amount, constants_amount, selectors_amount)) {
+                                std::size_t selectors_amount) :
+                        _private_table(std::make_shared<private_table_type>(witnesses_amount)),
+                        _public_table(std::make_shared<public_table_type>(public_inputs_amount, constants_amount,
+                                                                          selectors_amount)) {
                     }
                     plonk_table(const plonk_table<FieldType, ColumnType>&) = default;
 
@@ -342,7 +334,7 @@ namespace nil {
                             rows_amount(), std::pow(2, std::ceil(std::log2(rows_amount()))));
                     }
 
-                    template <typename InputVariableType>
+                    template<typename InputVariableType>
                     const ColumnType& get_variable_value_without_rotation(const InputVariableType& var) const {
                         switch (var.type) {
                             case InputVariableType::column_type::witness:
@@ -359,21 +351,20 @@ namespace nil {
                         }
                     }
 
-                    ColumnType get_variable_value(const variable_type& var, std::shared_ptr<math::evaluation_domain<FieldType>> domain) const {
-                         if (var.rotation == 0) {
-                             return get_variable_value_without_rotation(var);
-                         }
-                         return math::polynomial_shift(
-                            this->get_variable_value_without_rotation(var),
-                            var.rotation, domain->m);
+                    ColumnType get_variable_value(const variable_type& var,
+                                                  std::shared_ptr<math::evaluation_domain<FieldType>> domain) const {
+                        if (var.rotation == 0) {
+                            return get_variable_value_without_rotation(var);
+                        }
+                        return math::polynomial_shift(this->get_variable_value_without_rotation(var), var.rotation,
+                                                      domain->m);
                     }
 
                     const ColumnType& witness(std::uint32_t index) const {
                         return _private_table->witness(index);
                     }
 
-                    typename field_type::value_type &witness(
-                        std::uint32_t witness_index, std::uint32_t row_index) {
+                    typename field_type::value_type& witness(std::uint32_t witness_index, std::uint32_t row_index) {
 
                         if (witness_column_size(witness_index) <= row_index)
                             this->_private_table->_witnesses[witness_index].resize(row_index + 1);
@@ -385,8 +376,8 @@ namespace nil {
                         return _public_table->public_input(index);
                     }
 
-                    typename field_type::value_type &public_input(
-                        std::uint32_t public_input_index, std::uint32_t row_index) {
+                    typename field_type::value_type& public_input(std::uint32_t public_input_index,
+                                                                  std::uint32_t row_index) {
 
                         if (public_input_column_size(public_input_index) <= row_index)
                             this->_public_table->_public_inputs[public_input_index].resize(row_index + 1);
@@ -398,8 +389,7 @@ namespace nil {
                         return _public_table->constant(index);
                     }
 
-                    typename field_type::value_type &constant(
-                        std::uint32_t constant_index, std::uint32_t row_index) {
+                    typename field_type::value_type& constant(std::uint32_t constant_index, std::uint32_t row_index) {
 
                         if (constant_column_size(constant_index) <= row_index)
                             this->_public_table->_constants[constant_index].resize(row_index + 1);
@@ -411,8 +401,7 @@ namespace nil {
                         return _public_table->selector(index);
                     }
 
-                    typename field_type::value_type &selector(
-                        std::uint32_t selector_index, std::uint32_t row_index) {
+                    typename field_type::value_type& selector(std::uint32_t selector_index, std::uint32_t row_index) {
 
                         if (selector_column_size(selector_index) <= row_index)
                             this->_public_table->_selectors[selector_index].resize(row_index + 1);
@@ -529,88 +518,76 @@ namespace nil {
                     std::uint32_t rows_amount() const {
                         std::uint32_t rows_amount = 0;
 
-                        for (std::uint32_t w_index = 0; w_index <
-                                                       witnesses_amount(); w_index++) {
+                        for (std::uint32_t w_index = 0; w_index < witnesses_amount(); w_index++) {
                             rows_amount = std::max(rows_amount, witness_column_size(w_index));
                         }
 
-                        for (std::uint32_t pi_index = 0; pi_index <
-                                                       public_inputs_amount(); pi_index++) {
+                        for (std::uint32_t pi_index = 0; pi_index < public_inputs_amount(); pi_index++) {
                             rows_amount = std::max(rows_amount, public_input_column_size(pi_index));
                         }
 
-                        for (std::uint32_t c_index = 0; c_index <
-                                                      constants_amount(); c_index++) {
+                        for (std::uint32_t c_index = 0; c_index < constants_amount(); c_index++) {
                             rows_amount = std::max(rows_amount, constant_column_size(c_index));
                         }
 
-                        for (std::uint32_t s_index = 0; s_index <
-                                                      selectors_amount(); s_index++) {
+                        for (std::uint32_t s_index = 0; s_index < selectors_amount(); s_index++) {
                             rows_amount = std::max(rows_amount, selector_column_size(s_index));
                         }
 
                         return rows_amount;
                     }
 
-                    bool operator==(plonk_table<FieldType, ColumnType> const &other) const {
+                    bool operator==(plonk_table<FieldType, ColumnType> const& other) const {
                         return *_private_table == *other._private_table && *_public_table == *other._public_table;
                     }
 
-                    friend std::uint32_t basic_padding<FieldType, ColumnType>(
-                        plonk_table &table);
+                    friend std::uint32_t basic_padding<FieldType, ColumnType>(plonk_table& table);
 
-                    friend std::uint32_t zk_padding<FieldType, ColumnType>(
-                        plonk_table &table,
-                        typename nil::crypto3::random::algebraic_engine<FieldType> alg_rnd
-                    );
+                    friend std::uint32_t
+                        zk_padding<FieldType, ColumnType>(plonk_table& table,
+                                                          typename nil::crypto3::random::algebraic_engine<FieldType>
+                                                              alg_rnd);
                 };
 
                 template<typename FieldType>
-                using plonk_private_assignment_table =
-                    plonk_private_table<FieldType, plonk_column<FieldType>>;
+                using plonk_private_assignment_table = plonk_private_table<FieldType, plonk_column<FieldType>>;
 
                 template<typename FieldType>
-                using plonk_public_assignment_table =
-                    plonk_public_table<FieldType, plonk_column<FieldType>>;
+                using plonk_public_assignment_table = plonk_public_table<FieldType, plonk_column<FieldType>>;
 
                 template<typename FieldType>
                 using plonk_assignment_table = plonk_table<FieldType, plonk_column<FieldType>>;
 
                 template<typename FieldType>
                 using plonk_private_polynomial_table =
-                    plonk_private_table<FieldType,
-                                        math::polynomial<typename FieldType::value_type>>;
+                    plonk_private_table<FieldType, math::polynomial<typename FieldType::value_type>>;
 
                 template<typename FieldType>
                 using plonk_public_polynomial_table =
-                    plonk_public_table<FieldType,
-                                       math::polynomial<typename FieldType::value_type>>;
+                    plonk_public_table<FieldType, math::polynomial<typename FieldType::value_type>>;
 
                 template<typename FieldType>
-                using plonk_polynomial_table =
-                    plonk_table<FieldType, math::polynomial<typename FieldType::value_type>>;
+                using plonk_polynomial_table = plonk_table<FieldType, math::polynomial<typename FieldType::value_type>>;
 
                 template<typename FieldType>
                 using plonk_private_polynomial_dfs_table =
-                    plonk_private_table<FieldType,
-                                        math::polynomial_dfs<typename FieldType::value_type>>;
+                    plonk_private_table<FieldType, math::polynomial_dfs<typename FieldType::value_type>>;
 
                 template<typename FieldType>
                 using plonk_public_polynomial_dfs_table =
-                    plonk_public_table<FieldType,
-                                       math::polynomial_dfs<typename FieldType::value_type>>;
+                    plonk_public_table<FieldType, math::polynomial_dfs<typename FieldType::value_type>>;
 
                 template<typename FieldType>
                 using plonk_polynomial_dfs_table =
                     plonk_table<FieldType, math::polynomial_dfs<typename FieldType::value_type>>;
 
                 template<typename FieldType>
-                typename FieldType::value_type var_value(
-                        const plonk_assignment_table<FieldType> &input_assignment,
-                        const crypto3::zk::snark::plonk_variable<typename FieldType::value_type> &input_var) {
+                typename FieldType::value_type
+                    var_value(const plonk_assignment_table<FieldType>& input_assignment,
+                              const crypto3::zk::snark::plonk_variable<typename FieldType::value_type>& input_var) {
                     using var_column_type =
                         typename crypto3::zk::snark::plonk_variable<typename FieldType::value_type>::column_type;
-                    switch(input_var.type){
+                    switch (input_var.type) {
                         case var_column_type::witness:
                             return input_assignment.witness(input_var.index)[input_var.rotation];
                         case var_column_type::public_input:
@@ -621,8 +598,8 @@ namespace nil {
                 }
 
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_PLONK_PLACEHOLDER_TABLE_HPP

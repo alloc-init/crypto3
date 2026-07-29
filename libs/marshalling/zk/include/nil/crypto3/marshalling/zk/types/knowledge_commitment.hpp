@@ -83,12 +83,10 @@ namespace nil {
 
                 template<typename KnowledgeCommitment, typename Endianness>
                 typename KnowledgeCommitment::value_type
-                make_knowledge_commitment(
-                    const knowledge_commitment<nil::marshalling::field_type<Endianness>, KnowledgeCommitment> &filled_kc)
-                {
-                    return typename KnowledgeCommitment::value_type(
-                        std::move(std::get<0>(filled_kc.value()).value()),
-                        std::move(std::get<1>(filled_kc.value()).value()));
+                    make_knowledge_commitment(const knowledge_commitment<nil::marshalling::field_type<Endianness>,
+                                                                         KnowledgeCommitment> &filled_kc) {
+                    return typename KnowledgeCommitment::value_type(std::move(std::get<0>(filled_kc.value()).value()),
+                                                                    std::move(std::get<1>(filled_kc.value()).value()));
                 }
 
                 template<typename KnowledgeCommitment, typename Endianness>
@@ -102,9 +100,8 @@ namespace nil {
 
                     using kc_element_type = knowledge_commitment<TTypeBase, KnowledgeCommitment>;
 
-                    using kc_element_vector_type = nil::marshalling::types::standard_array_list<
-                        TTypeBase,
-                        kc_element_type>;
+                    using kc_element_vector_type =
+                        nil::marshalling::types::standard_array_list<TTypeBase, kc_element_type>;
 
                     kc_element_vector_type result;
 
@@ -120,8 +117,7 @@ namespace nil {
                     const nil::marshalling::types::standard_array_list<
                         nil::marshalling::field_type<Endianness>,
                         knowledge_commitment<nil::marshalling::field_type<Endianness>, KnowledgeCommitment>>
-                        &filled_kc_vector)
-                {
+                        &filled_kc_vector) {
                     const std::vector<
                         knowledge_commitment<nil::marshalling::field_type<Endianness>, KnowledgeCommitment>> &values =
                         filled_kc_vector.value();
@@ -135,7 +131,7 @@ namespace nil {
                     return result;
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_KNOWLEDGE_COMMITMENT_HPP

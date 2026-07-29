@@ -94,7 +94,7 @@ void test_lpc_proof(typename LPC::proof_type &proof, typename LPC::fri_type::par
     test_val_read.read(read_iter, cv.size());
     BOOST_CHECK(status == nil::marshalling::status_type::success);
     typename LPC::proof_type constructed_val_read =
-            nil::crypto3::marshalling::types::make_eval_proof<Endianness, LPC>(test_val_read);
+        nil::crypto3::marshalling::types::make_eval_proof<Endianness, LPC>(test_val_read);
     BOOST_CHECK(proof == constructed_val_read);
 }
 
@@ -102,8 +102,7 @@ template<typename Endianness, typename LPC>
 void test_lpc_aggregated_proof(typename LPC::aggregated_proof_type &proof) {
     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-    auto filled_proof =
-        nil::crypto3::marshalling::types::fill_aggregated_proof<Endianness, LPC>(proof);
+    auto filled_proof = nil::crypto3::marshalling::types::fill_aggregated_proof<Endianness, LPC>(proof);
     auto _proof = nil::crypto3::marshalling::types::make_aggregated_proof<Endianness, LPC>(filled_proof);
     BOOST_CHECK(proof == _proof);
 
@@ -118,17 +117,19 @@ void test_lpc_aggregated_proof(typename LPC::aggregated_proof_type &proof) {
     test_val_read.read(read_iter, cv.size());
     BOOST_CHECK(status == nil::marshalling::status_type::success);
     typename LPC::aggregated_proof_type constructed_val_read =
-            nil::crypto3::marshalling::types::make_aggregated_proof<Endianness, LPC>(test_val_read);
+        nil::crypto3::marshalling::types::make_aggregated_proof<Endianness, LPC>(test_val_read);
     BOOST_CHECK(proof == constructed_val_read);
 }
 
 // This function will test saving and restoring LPC commitment scheme state to a file/buffer.
 template<typename Endianness, typename LPC>
-void test_lpc_state_recovery(const LPC& lpc_commitment_scheme) {
+void test_lpc_state_recovery(const LPC &lpc_commitment_scheme) {
     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-    auto filled_lpc_scheme = nil::crypto3::marshalling::types::fill_commitment_scheme<Endianness, LPC>(lpc_commitment_scheme);
-    auto _lpc_commitment_scheme = nil::crypto3::marshalling::types::make_commitment_scheme<Endianness, LPC>(filled_lpc_scheme);
+    auto filled_lpc_scheme =
+        nil::crypto3::marshalling::types::fill_commitment_scheme<Endianness, LPC>(lpc_commitment_scheme);
+    auto _lpc_commitment_scheme =
+        nil::crypto3::marshalling::types::make_commitment_scheme<Endianness, LPC>(filled_lpc_scheme);
     BOOST_CHECK(_lpc_commitment_scheme.has_value());
     BOOST_CHECK(lpc_commitment_scheme == _lpc_commitment_scheme.value());
 
@@ -143,47 +144,41 @@ void test_lpc_state_recovery(const LPC& lpc_commitment_scheme) {
     test_val_read.read(read_iter, cv.size());
     BOOST_CHECK(status == nil::marshalling::status_type::success);
     auto constructed_val_read =
-            nil::crypto3::marshalling::types::make_commitment_scheme<Endianness, LPC>(test_val_read);
+        nil::crypto3::marshalling::types::make_commitment_scheme<Endianness, LPC>(test_val_read);
     BOOST_CHECK(constructed_val_read.has_value());
     BOOST_CHECK(lpc_commitment_scheme == constructed_val_read.value());
 }
 
 BOOST_AUTO_TEST_SUITE(marshalling_random)
-    // setup
-    static constexpr std::size_t lambda = 40;
-    static constexpr std::size_t m = 2;
+// setup
+static constexpr std::size_t lambda = 40;
+static constexpr std::size_t m = 2;
 
-    constexpr static const std::size_t d = 15;
-    constexpr static const std::size_t final_polynomial_degree = 1; // final polynomial degree
-    constexpr static const std::size_t r = boost::static_log2<(d - final_polynomial_degree)>::value;
+constexpr static const std::size_t d = 15;
+constexpr static const std::size_t final_polynomial_degree = 1;    // final polynomial degree
+constexpr static const std::size_t r = boost::static_log2<(d - final_polynomial_degree)>::value;
 
-    using curve_type = nil::crypto3::algebra::curves::bls12<381>;
-    using field_type = typename curve_type::scalar_field_type;
-    using value_type = typename field_type::value_type;
-    using hash_type = nil::crypto3::hashes::keccak_1600<256>;
+using curve_type = nil::crypto3::algebra::curves::bls12<381>;
+using field_type = typename curve_type::scalar_field_type;
+using value_type = typename field_type::value_type;
+using hash_type = nil::crypto3::hashes::keccak_1600<256>;
 
-    using Endianness = nil::marshalling::option::big_endian;
-    using TTypeBase = nil::marshalling::field_type<Endianness>;
-    using FRI = typename nil::crypto3::zk::commitments::detail::basic_batched_fri<field_type, hash_type, hash_type, m>;
-    using lpc_params_type = typename nil::crypto3::zk::commitments::list_polynomial_commitment_params<
-            hash_type, hash_type, m
-    >;
-    using LPC = typename nil::crypto3::zk::commitments::batched_list_polynomial_commitment<field_type, lpc_params_type>;
-    using poly_type = math::polynomial_dfs<typename field_type::value_type>;
-    using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<LPC, poly_type>;
+using Endianness = nil::marshalling::option::big_endian;
+using TTypeBase = nil::marshalling::field_type<Endianness>;
+using FRI = typename nil::crypto3::zk::commitments::detail::basic_batched_fri<field_type, hash_type, hash_type, m>;
+using lpc_params_type =
+    typename nil::crypto3::zk::commitments::list_polynomial_commitment_params<hash_type, hash_type, m>;
+using LPC = typename nil::crypto3::zk::commitments::batched_list_polynomial_commitment<field_type, lpc_params_type>;
+using poly_type = math::polynomial_dfs<typename field_type::value_type>;
+using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<LPC, poly_type>;
 
 BOOST_FIXTURE_TEST_CASE(lpc_proof_test, test_tools::random_test_initializer<field_type>) {
 
     typename FRI::params_type fri_params(1, r + 1, lambda, 4);
 
-    auto proof = generate_random_lpc_proof<LPC>(
-            final_polynomial_degree, 5,
-            fri_params.step_list,
-            lambda,
-            false,
-            alg_random_engines.template get_alg_engine<field_type>(),
-            generic_random_engine
-    );
+    auto proof =
+        generate_random_lpc_proof<LPC>(final_polynomial_degree, 5, fri_params.step_list, lambda, false,
+                                       alg_random_engines.template get_alg_engine<field_type>(), generic_random_engine);
     test_lpc_proof<Endianness, lpc_scheme_type>(proof, fri_params);
 }
 
@@ -191,30 +186,25 @@ BOOST_FIXTURE_TEST_CASE(lpc_aggregated_proof_test, test_tools::random_test_initi
     typename FRI::params_type fri_params(1, r + 1, lambda, 4);
 
     auto proof = generate_random_lpc_aggregated_proof<LPC>(
-            final_polynomial_degree, 5,
-            fri_params.step_list,
-            lambda,
-            false,
-            alg_random_engines.template get_alg_engine<field_type>(),
-            generic_random_engine
-    );
+        final_polynomial_degree, 5, fri_params.step_list, lambda, false,
+        alg_random_engines.template get_alg_engine<field_type>(), generic_random_engine);
     test_lpc_aggregated_proof<Endianness, lpc_scheme_type>(proof);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(marshalling_real)
-    // Setup common types.
-    using Endianness = nil::marshalling::option::big_endian;
-    using curve_type = nil::crypto3::algebra::curves::vesta;
-    using field_type = curve_type::scalar_field_type;
-    using value_type = field_type::value_type;
+// Setup common types.
+using Endianness = nil::marshalling::option::big_endian;
+using curve_type = nil::crypto3::algebra::curves::vesta;
+using field_type = curve_type::scalar_field_type;
+using value_type = field_type::value_type;
 
-    using merkle_hash_type = nil::crypto3::hashes::keccak_1600<256>;
-    using transcript_hash_type = nil::crypto3::hashes::keccak_1600<256>;
-    using merkle_tree_type = typename containers::merkle_tree<merkle_hash_type, 2>;
+using merkle_hash_type = nil::crypto3::hashes::keccak_1600<256>;
+using transcript_hash_type = nil::crypto3::hashes::keccak_1600<256>;
+using merkle_tree_type = typename containers::merkle_tree<merkle_hash_type, 2>;
 
-BOOST_FIXTURE_TEST_CASE(batches_num_3_test, test_tools::random_test_initializer<field_type>){
+BOOST_FIXTURE_TEST_CASE(batches_num_3_test, test_tools::random_test_initializer<field_type>) {
     // Setup types.
     constexpr static const std::size_t lambda = 40;
     constexpr static const std::size_t k = 1;
@@ -226,9 +216,8 @@ BOOST_FIXTURE_TEST_CASE(batches_num_3_test, test_tools::random_test_initializer<
 
     typedef zk::commitments::fri<field_type, merkle_hash_type, transcript_hash_type, m> fri_type;
 
-    typedef zk::commitments::
-        list_polynomial_commitment_params<merkle_hash_type, transcript_hash_type, m>
-            lpc_params_type;
+    typedef zk::commitments::list_polynomial_commitment_params<merkle_hash_type, transcript_hash_type, m>
+        lpc_params_type;
     typedef zk::commitments::list_polynomial_commitment<field_type, lpc_params_type> lpc_type;
     typedef math::polynomial_dfs<value_type> poly_type;
 
@@ -241,22 +230,22 @@ BOOST_FIXTURE_TEST_CASE(batches_num_3_test, test_tools::random_test_initializer<
     std::size_t degree_log = boost::static_log2<d>::value;
 
     // Setup params
-    typename fri_type::params_type fri_params(
-        1, /*max_step*/
-        degree_log,
-        lambda,
-        2 /*expand_factor*/
+    typename fri_type::params_type fri_params(1, /*max_step*/
+                                              degree_log,
+                                              lambda,
+                                              2 /*expand_factor*/
     );
 
     using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type, poly_type>;
     lpc_scheme_type lpc_scheme_prover(fri_params);
 
     // Generate polynomials
-    lpc_scheme_prover.append_to_batch(0, poly_type(15, {1u, 13u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u}));
+    lpc_scheme_prover.append_to_batch(0,
+                                      poly_type(15, {1u, 13u, 4u, 1u, 5u, 6u, 7u, 2u, 8u, 7u, 5u, 6u, 1u, 2u, 1u, 1u}));
     lpc_scheme_prover.append_to_batch(2, poly_type(1, {0u, 1u}));
     lpc_scheme_prover.append_to_batch(2, poly_type(2, {0u, 1u, 2u, 3u}));
     lpc_scheme_prover.append_to_batch(3, poly_type(2, {0u, 1u, 3u, 4u}));
-    lpc_scheme_prover.append_to_batch(3, poly_type(0, std::initializer_list<value_type>{0u}));
+    lpc_scheme_prover.append_to_batch(3, poly_type(0, std::initializer_list<value_type> {0u}));
 
     // Commit
     std::map<std::size_t, typename lpc_type::commitment_type> commitments;
@@ -264,9 +253,10 @@ BOOST_FIXTURE_TEST_CASE(batches_num_3_test, test_tools::random_test_initializer<
     commitments[2] = lpc_scheme_prover.commit(2);
     commitments[3] = lpc_scheme_prover.commit(3);
 
-    auto filled_commitment = nil::crypto3::marshalling::types::fill_commitment<Endianness, lpc_scheme_type>(commitments[0]);
-    auto _commitment = nil::crypto3::marshalling::types::make_commitment<Endianness, lpc_scheme_type>(filled_commitment);
-
+    auto filled_commitment =
+        nil::crypto3::marshalling::types::fill_commitment<Endianness, lpc_scheme_type>(commitments[0]);
+    auto _commitment =
+        nil::crypto3::marshalling::types::make_commitment<Endianness, lpc_scheme_type>(filled_commitment);
 
     // Generate evaluation points. Generate points outside of the basic domain
     // Generate evaluation points. Choose poin1ts outside the domain

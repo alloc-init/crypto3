@@ -57,22 +57,19 @@ namespace nil {
 
                         transcript_initialization_context() = default;
                         transcript_initialization_context(
-                                std::size_t rows_amount,
-                                std::size_t usable_rows_amount,
-                                const typename commitment_scheme_type::params_type& commitment_params,
-                                const plonk_table_description<field_type>& table_description,
-                                const std::string& application_id,
-                                const typename field_type::value_type& delta)
-                            : witness_columns(table_description.witness_columns)
-                            , public_input_columns(table_description.public_input_columns)
-                            , constant_columns(table_description.constant_columns)
-                            , selector_columns(table_description.selector_columns)
-                            , rows_amount(rows_amount)
-                            , usable_rows_amount(usable_rows_amount)
-                            , delta(delta)
-                            , commitment_params(commitment_params)
-                            , application_id(application_id)
-                        { }
+                            std::size_t rows_amount,
+                            std::size_t usable_rows_amount,
+                            const typename commitment_scheme_type::params_type& commitment_params,
+                            const plonk_table_description<field_type>& table_description,
+                            const std::string& application_id,
+                            const typename field_type::value_type& delta) :
+                            witness_columns(table_description.witness_columns),
+                            public_input_columns(table_description.public_input_columns),
+                            constant_columns(table_description.constant_columns),
+                            selector_columns(table_description.selector_columns), rows_amount(rows_amount),
+                            usable_rows_amount(usable_rows_amount), delta(delta), commitment_params(commitment_params),
+                            application_id(application_id) {
+                        }
 
                         // All fields below this line must be included in the transcript initilization, including
                         // static const fields.
@@ -96,59 +93,60 @@ namespace nil {
                         std::string application_id;
                     };
 
-                    template <typename PlaceholderParamsType, typename transcript_hash_type>
+                    template<typename PlaceholderParamsType, typename transcript_hash_type>
                     typename transcript_hash_type::digest_type compute_constraint_system_with_params_hash(
-                            const plonk_constraint_system<typename PlaceholderParamsType::field_type>
-                                &constraint_system,
-                            const plonk_table_description<typename PlaceholderParamsType::field_type>
-                                &table_description,
-                            std::size_t rows_amount,
-                            std::size_t usable_rows_amount,
-                            const typename PlaceholderParamsType::commitment_scheme_type::params_type& commitment_params,
-                            const std::string& application_id,
-                            const typename PlaceholderParamsType::field_type::value_type& delta) {
-                        nil::crypto3::zk::snark::detail::transcript_initialization_context<PlaceholderParamsType> context(
-                            rows_amount,
-                            usable_rows_amount,
-                            commitment_params,
-                            table_description,
-                            application_id,
-                            delta
-                        );
+                        const plonk_constraint_system<typename PlaceholderParamsType::field_type>& constraint_system,
+                        const plonk_table_description<typename PlaceholderParamsType::field_type>& table_description,
+                        std::size_t rows_amount,
+                        std::size_t usable_rows_amount,
+                        const typename PlaceholderParamsType::commitment_scheme_type::params_type& commitment_params,
+                        const std::string& application_id,
+                        const typename PlaceholderParamsType::field_type::value_type& delta) {
+                        nil::crypto3::zk::snark::detail::transcript_initialization_context<PlaceholderParamsType>
+                            context(rows_amount,
+                                    usable_rows_amount,
+                                    commitment_params,
+                                    table_description,
+                                    application_id,
+                                    delta);
 
                         // Marshall the initialization context and push it to the transcript.
                         using Endianness = nil::marshalling::option::big_endian;
                         auto filled_context = nil::crypto3::marshalling::types::fill_transcript_initialization_context<
-                            Endianness, nil::crypto3::zk::snark::detail::transcript_initialization_context<PlaceholderParamsType>>(context);
+                            Endianness,
+                            nil::crypto3::zk::snark::detail::transcript_initialization_context<PlaceholderParamsType>>(
+                            context);
 
                         std::vector<std::uint8_t> cv(filled_context.length(), 0x00);
                         auto write_iter = cv.begin();
                         nil::marshalling::status_type status = filled_context.write(write_iter, cv.size());
-                        THROW_IF_ERROR_STATUS(status, "transcript_initialization_context::compute_constraint_system_with_params_hash");
+                        THROW_IF_ERROR_STATUS(
+                            status, "transcript_initialization_context::compute_constraint_system_with_params_hash");
 
                         // Append constraint_system to the buffer "cv".
                         using FieldType = typename PlaceholderParamsType::field_type;
                         using ConstraintSystem = plonk_constraint_system<FieldType>;
 
-                        auto filled_constraint_system = nil::crypto3::marshalling::types::fill_plonk_constraint_system<Endianness, ConstraintSystem>(constraint_system);
+                        auto filled_constraint_system =
+                            nil::crypto3::marshalling::types::fill_plonk_constraint_system<Endianness,
+                                                                                           ConstraintSystem>(
+                                constraint_system);
                         cv.resize(filled_context.length() + filled_constraint_system.length(), 0x00);
 
                         // Function write wants an lvalue as 1st parameter.
                         write_iter = cv.begin() + filled_context.length();
                         filled_constraint_system.write(write_iter, filled_constraint_system.length());
 
-                        // Return hash of "cv", which contains concatenated constraint system and other initialization parameters.
-                        return hash<transcript_hash_type>(
-                            hashes::conditional_block_to_field_elements_wrapper<
-                                typename transcript_hash_type::word_type,
-                                decltype(cv)
-                            >(cv)
-                        );
+                        // Return hash of "cv", which contains concatenated constraint system and other initialization
+                        // parameters.
+                        return hash<transcript_hash_type>(hashes::conditional_block_to_field_elements_wrapper<
+                                                          typename transcript_hash_type::word_type,
+                                                          decltype(cv)>(cv));
                     }
                 }    // namespace detail
-            }        // namespace snark
-        }            // namespace zk
-    }                // namespace crypto3
+            }    // namespace snark
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_PLONK_PLACEHOLDER_TRANSCRIPT_INITIALIZATION_CONTEXT_HPP

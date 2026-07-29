@@ -50,13 +50,7 @@ namespace nil::crypto3::zk::snark {
     template<typename VariableType>
     class expression;
 
-    enum plonk_column_type : std::uint8_t {
-        witness,
-        public_input,
-        constant,
-        selector,
-        uninitialized
-    };
+    enum plonk_column_type : std::uint8_t { witness, public_input, constant, selector, uninitialized };
 
     /********************************* Variable **********************************/
 
@@ -79,29 +73,28 @@ namespace nil::crypto3::zk::snark {
         bool relative;
         column_type type;
 
-        constexpr plonk_variable() : index(0), rotation(0), relative(false), type(column_type::uninitialized) {}
+        constexpr plonk_variable() : index(0), rotation(0), relative(false), type(column_type::uninitialized) {
+        }
 
         constexpr plonk_variable(const std::size_t index,
                                  std::int32_t rotation,
                                  bool relative = true,
                                  column_type type = column_type::witness) :
-                index(index),
-                rotation(rotation), relative(relative), type(type) {}
+            index(index), rotation(rotation), relative(relative), type(type) {
+        }
 
         // Allow conversions from any other variable type.
         template<typename AnotherAssignmentType>
-        constexpr plonk_variable(const plonk_variable<AnotherAssignmentType>& other)
-                : index(other.index)
-                , rotation(other.rotation)
-                , relative(other.relative)
-                , type(static_cast<column_type>(other.type)) {}
+        constexpr plonk_variable(const plonk_variable<AnotherAssignmentType> &other) :
+            index(other.index), rotation(other.rotation), relative(other.relative),
+            type(static_cast<column_type>(other.type)) {
+        }
 
         expression<plonk_variable<AssignmentType>> pow(const std::size_t power) const {
             return term<plonk_variable<AssignmentType>>(*this).pow(power);
         }
 
-        term<plonk_variable<AssignmentType>>
-        operator*(const assignment_type &field_coeff) const {
+        term<plonk_variable<AssignmentType>> operator*(const assignment_type &field_coeff) const {
             return term<plonk_variable<AssignmentType>>(*this) * field_coeff;
         }
 
@@ -110,14 +103,14 @@ namespace nil::crypto3::zk::snark {
         }
 
         expression<plonk_variable<AssignmentType>>
-        operator+(const expression<plonk_variable<AssignmentType>> &other) const {
+            operator+(const expression<plonk_variable<AssignmentType>> &other) const {
             expression<plonk_variable<AssignmentType>> result(*this);
             result += other;
             return result;
         }
 
         expression<plonk_variable<AssignmentType>>
-        operator-(const expression<plonk_variable<AssignmentType>> &other) const {
+            operator-(const expression<plonk_variable<AssignmentType>> &other) const {
             expression<plonk_variable<AssignmentType>> result(*this);
             result -= other;
             return result;
@@ -128,8 +121,8 @@ namespace nil::crypto3::zk::snark {
         }
 
         bool operator==(const plonk_variable &other) const {
-            return ((this->index == other.index) && (this->rotation == other.rotation) &&
-                    this->type == other.type && this->relative == other.relative);
+            return ((this->index == other.index) && (this->rotation == other.rotation) && this->type == other.type &&
+                    this->relative == other.relative);
         }
 
         bool operator!=(const plonk_variable &other) const {
@@ -151,27 +144,30 @@ namespace nil::crypto3::zk::snark {
         }
     };
 
-    template<typename AssignmentType, typename LeftType,
-            typename = std::enable_if_t<
-                    std::is_same<LeftType, AssignmentType>::value || std::is_integral<LeftType>::value>>
-    term<plonk_variable<AssignmentType>>
-    operator*(const LeftType &field_coeff, const plonk_variable<AssignmentType> &var) {
+    template<
+        typename AssignmentType,
+        typename LeftType,
+        typename = std::enable_if_t<std::is_same<LeftType, AssignmentType>::value || std::is_integral<LeftType>::value>>
+    term<plonk_variable<AssignmentType>> operator*(const LeftType &field_coeff,
+                                                   const plonk_variable<AssignmentType> &var) {
         return var * field_coeff;
     }
 
-    template<typename AssignmentType, typename LeftType,
-            typename = std::enable_if_t<
-                    std::is_same<LeftType, AssignmentType>::value || std::is_integral<LeftType>::value>>
-    expression<plonk_variable<AssignmentType>>
-    operator+(const LeftType &field_val, const plonk_variable<AssignmentType> &var) {
+    template<
+        typename AssignmentType,
+        typename LeftType,
+        typename = std::enable_if_t<std::is_same<LeftType, AssignmentType>::value || std::is_integral<LeftType>::value>>
+    expression<plonk_variable<AssignmentType>> operator+(const LeftType &field_val,
+                                                         const plonk_variable<AssignmentType> &var) {
         return var + field_val;
     }
 
-    template<typename AssignmentType, typename LeftType,
-            typename = std::enable_if_t<
-                    std::is_same<LeftType, AssignmentType>::value || std::is_integral<LeftType>::value>>
-    expression<plonk_variable<AssignmentType>>
-    operator-(const LeftType &field_val, const plonk_variable<AssignmentType> &var) {
+    template<
+        typename AssignmentType,
+        typename LeftType,
+        typename = std::enable_if_t<std::is_same<LeftType, AssignmentType>::value || std::is_integral<LeftType>::value>>
+    expression<plonk_variable<AssignmentType>> operator-(const LeftType &field_val,
+                                                         const plonk_variable<AssignmentType> &var) {
         return -(var - field_val);
     }
 
@@ -180,12 +176,11 @@ namespace nil::crypto3::zk::snark {
     template<typename AssignmentType>
     std::ostream &operator<<(std::ostream &os, const plonk_variable<AssignmentType> &var) {
         std::map<typename plonk_variable<AssignmentType>::column_type, std::string> type_map = {
-                {plonk_variable<AssignmentType>::column_type::witness,      "w"},
-                {plonk_variable<AssignmentType>::column_type::public_input, "pub"},
-                {plonk_variable<AssignmentType>::column_type::constant,     "c"},
-                {plonk_variable<AssignmentType>::column_type::selector,     "sel"},
-                {plonk_variable<AssignmentType>::column_type::uninitialized,"NaN"}
-        };
+            {plonk_variable<AssignmentType>::column_type::witness, "w"},
+            {plonk_variable<AssignmentType>::column_type::public_input, "pub"},
+            {plonk_variable<AssignmentType>::column_type::constant, "c"},
+            {plonk_variable<AssignmentType>::column_type::selector, "sel"},
+            {plonk_variable<AssignmentType>::column_type::uninitialized, "NaN"}};
         os << type_map[var.type] << "_" << var.index;
         if (!var.relative) {
             os << "_abs";
@@ -210,25 +205,22 @@ namespace nil::crypto3::zk::snark {
         std::size_t index;
         column_type type;
 
-        constexpr plonk_variable_without_rotation()
-            : index(0)
-            , type(column_type::uninitialized) {}
+        constexpr plonk_variable_without_rotation() : index(0), type(column_type::uninitialized) {
+        }
 
-        constexpr plonk_variable_without_rotation(std::size_t index, column_type type)
-            : index(index)
-            , type(type) {}
+        constexpr plonk_variable_without_rotation(std::size_t index, column_type type) : index(index), type(type) {
+        }
 
-        plonk_variable_without_rotation(const plonk_variable_without_rotation&) = default;
-        plonk_variable_without_rotation(const plonk_variable<AssignmentType>& var)
-            : index(var.index)
-            , type(static_cast<column_type>(var.type)) {}
+        plonk_variable_without_rotation(const plonk_variable_without_rotation &) = default;
+        plonk_variable_without_rotation(const plonk_variable<AssignmentType> &var) :
+            index(var.index), type(static_cast<column_type>(var.type)) {
+        }
 
         // Allow conversions from any other variable type.
         template<typename AnotherAssignmentType>
-        constexpr plonk_variable_without_rotation(
-            const plonk_variable_without_rotation<AnotherAssignmentType>& other)
-                : index(other.index)
-                , type(other.type) {}
+        constexpr plonk_variable_without_rotation(const plonk_variable_without_rotation<AnotherAssignmentType> &other) :
+            index(other.index), type(other.type) {
+        }
 
         auto operator<=>(plonk_variable_without_rotation const &) const = default;
     };
@@ -238,16 +230,15 @@ namespace nil::crypto3::zk::snark {
     template<typename AssignmentType>
     std::ostream &operator<<(std::ostream &os, const plonk_variable_without_rotation<AssignmentType> &var) {
         std::map<typename plonk_variable_without_rotation<AssignmentType>::column_type, std::string> type_map = {
-                {plonk_variable_without_rotation<AssignmentType>::column_type::witness,      "w"},
-                {plonk_variable_without_rotation<AssignmentType>::column_type::public_input, "pub"},
-                {plonk_variable_without_rotation<AssignmentType>::column_type::constant,     "c"},
-                {plonk_variable_without_rotation<AssignmentType>::column_type::selector,     "sel"},
-                {plonk_variable_without_rotation<AssignmentType>::column_type::uninitialized,"NaN"}
-        };
+            {plonk_variable_without_rotation<AssignmentType>::column_type::witness, "w"},
+            {plonk_variable_without_rotation<AssignmentType>::column_type::public_input, "pub"},
+            {plonk_variable_without_rotation<AssignmentType>::column_type::constant, "c"},
+            {plonk_variable_without_rotation<AssignmentType>::column_type::selector, "sel"},
+            {plonk_variable_without_rotation<AssignmentType>::column_type::uninitialized, "NaN"}};
         os << type_map[var.type] << "_" << var.index;
         return os;
     }
-} // namespace nil::crypto3::zk::snark
+}    // namespace nil::crypto3::zk::snark
 
 template<typename AssignmentType>
 struct std::hash<nil::crypto3::zk::snark::plonk_variable<AssignmentType>> {

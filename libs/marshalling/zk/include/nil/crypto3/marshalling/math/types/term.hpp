@@ -56,14 +56,11 @@ namespace nil {
                             nil::marshalling::types::array_list<
                                 TTypeBase, typename variable<TTypeBase, typename NonLinearTerm::variable_type>::type,
                                 nil::marshalling::option::sequence_size_field_prefix<
-                                    nil::marshalling::types::integral<TTypeBase, std::size_t>>
-                                >
-                            >
-                        >;
+                                    nil::marshalling::types::integral<TTypeBase, std::size_t>>>>>;
                 };
 
                 template<typename Endianness, typename NonLinearTerm>
-                    typename term<nil::marshalling::field_type<Endianness>, NonLinearTerm>::type
+                typename term<nil::marshalling::field_type<Endianness>, NonLinearTerm>::type
                     fill_term(const NonLinearTerm &t) {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
@@ -87,9 +84,8 @@ namespace nil {
                 }
 
                 template<typename Endianness, typename NonLinearTerm>
-                    NonLinearTerm
-                    make_term(const typename term<nil::marshalling::field_type<Endianness>,
-                                                                        NonLinearTerm>::type &filled_term) {
+                NonLinearTerm make_term(
+                    const typename term<nil::marshalling::field_type<Endianness>, NonLinearTerm>::type &filled_term) {
                     std::vector<typename NonLinearTerm::variable_type> vars;
                     auto coeff = std::get<0>(filled_term.value()).value();
                     vars.reserve(std::get<1>(filled_term.value()).value().size());
@@ -100,8 +96,8 @@ namespace nil {
                     return NonLinearTerm(vars, coeff);
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MARSHALLING_ZK_MATH_TERM_HPP

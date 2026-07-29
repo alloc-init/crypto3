@@ -48,8 +48,7 @@ namespace nil {
                 template<typename TTypeBase,
                          typename POK,
                          typename = typename std::enable_if<
-                             std::is_same<POK,
-                                          zk::commitments::detail::element_pok <typename POK::curve_type>>::value,
+                             std::is_same<POK, zk::commitments::detail::element_pok<typename POK::curve_type>>::value,
                              bool>::type,
                          typename... TOptions>
                 using element_pok = nil::marshalling::types::bundle<
@@ -63,43 +62,31 @@ namespace nil {
                         fast_curve_element<TTypeBase, typename POK::curve_type::template g2_type<>>>>;
 
                 template<typename POK, typename Endianness>
-                element_pok<nil::marshalling::field_type<Endianness>, POK>
-                    fill_element_pok(const POK &pok) {
+                element_pok<nil::marshalling::field_type<Endianness>, POK> fill_element_pok(const POK &pok) {
 
-                    return element_pok<nil::marshalling::field_type<Endianness>, POK>(
-                        std::make_tuple(
-                            std::move(
-                                fill_fast_curve_element<typename POK::curve_type::template g1_type<>, Endianness>(
-                                    pok.g1_s)),
-                            std::move(
-                                fill_fast_curve_element<typename POK::curve_type::template g1_type<>, Endianness>(
-                                    pok.g1_s_x)),
-                            std::move(
-                                fill_fast_curve_element<typename POK::curve_type::template g2_type<>, Endianness>(
-                                    pok.g2_s_x))
-                        ));
+                    return element_pok<nil::marshalling::field_type<Endianness>, POK>(std::make_tuple(
+                        std::move(fill_fast_curve_element<typename POK::curve_type::template g1_type<>, Endianness>(
+                            pok.g1_s)),
+                        std::move(fill_fast_curve_element<typename POK::curve_type::template g1_type<>, Endianness>(
+                            pok.g1_s_x)),
+                        std::move(fill_fast_curve_element<typename POK::curve_type::template g2_type<>, Endianness>(
+                            pok.g2_s_x))));
                 }
 
                 template<typename POK, typename Endianness>
-                POK make_element_pok(
-                    const element_pok<nil::marshalling::field_type<Endianness>, POK>
-                        &filled_pok) {
+                POK make_element_pok(const element_pok<nil::marshalling::field_type<Endianness>, POK> &filled_pok) {
 
                     return POK(
-                        std::move(
-                            make_fast_curve_element<typename POK::curve_type::template g1_type<>, Endianness>(
-                                std::get<0>(filled_pok.value()))),
-                        std::move(
-                            make_fast_curve_element<typename POK::curve_type::template g1_type<>, Endianness>(
-                                std::get<1>(filled_pok.value()))),
-                        std::move(
-                            make_fast_curve_element<typename POK::curve_type::template g2_type<>, Endianness>(
-                                std::get<2>(filled_pok.value())))
-                    );
+                        std::move(make_fast_curve_element<typename POK::curve_type::template g1_type<>, Endianness>(
+                            std::get<0>(filled_pok.value()))),
+                        std::move(make_fast_curve_element<typename POK::curve_type::template g1_type<>, Endianness>(
+                            std::get<1>(filled_pok.value()))),
+                        std::move(make_fast_curve_element<typename POK::curve_type::template g2_type<>, Endianness>(
+                            std::get<2>(filled_pok.value()))));
                 }
 
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_PROOF_OF_KNOWLEDGE_HPP

@@ -46,9 +46,11 @@ namespace nil {
                 // but it is not convenient to place it inside any of these classes.
                 //
                 // This piece of code is used in different projects with verifiers, and it's not good ot repeat it.
-                template <typename PlaceholderParams>
-                struct placeholder_info{
-                    using variable_indices_type = std::map<nil::crypto3::zk::snark::plonk_variable<typename PlaceholderParams::field_type::value_type>, std::size_t>;
+                template<typename PlaceholderParams>
+                struct placeholder_info {
+                    using variable_indices_type = std::map<
+                        nil::crypto3::zk::snark::plonk_variable<typename PlaceholderParams::field_type::value_type>,
+                        std::size_t>;
 
                     std::size_t batches_num;
                     std::vector<std::size_t> batches_sizes;
@@ -61,10 +63,10 @@ namespace nil {
                     std::size_t table_values_num;
 
                     // Commitments order in placeholder proof
-                    int  variable_value_batch_order;
-                    int  permutation_batch_order;
-                    int  quotient_batch_order;
-                    int  lookup_batch_order;
+                    int variable_value_batch_order;
+                    int permutation_batch_order;
+                    int quotient_batch_order;
+                    int lookup_batch_order;
 
                     // Polynomial_amount
                     std::size_t permutation_poly_amount;
@@ -79,16 +81,18 @@ namespace nil {
                     std::vector<std::size_t> permuted_zero_indices;
                 };
 
-
                 template<typename PlaceholderParams, typename enable = void>
                 placeholder_info<PlaceholderParams> prepare_placeholder_info();
 
                 // TODO remove permutation size
-                template<typename PlaceholderParams, std::enable_if_t<nil::crypto3::zk::is_lpc<typename PlaceholderParams::commitment_scheme_type>, bool> = true>
+                template<typename PlaceholderParams,
+                         std::enable_if_t<nil::crypto3::zk::is_lpc<typename PlaceholderParams::commitment_scheme_type>,
+                                          bool> = true>
                 placeholder_info<PlaceholderParams> prepare_placeholder_info(
                     const typename PlaceholderParams::constraint_system_type &constraint_system,
-                    const typename nil::crypto3::zk::snark::placeholder_public_preprocessor<typename PlaceholderParams::field_type, PlaceholderParams>::preprocessed_data_type::common_data_type &common_data
-                ) {
+                    const typename nil::crypto3::zk::snark::placeholder_public_preprocessor<
+                        typename PlaceholderParams::field_type,
+                        PlaceholderParams>::preprocessed_data_type::common_data_type &common_data) {
                     placeholder_info<PlaceholderParams> res;
                     auto &desc = common_data.desc;
                     auto &fri_params = common_data.commitment_params;
@@ -99,58 +103,74 @@ namespace nil {
 
                     res.variable_value_batch_order = 0;
                     res.permutation_batch_order = res.use_lookups || res.use_permutations ? 1 : -1;
-                    res.quotient_batch_order = res.use_lookups || res.use_permutations ? 2: 1;
-                    res.lookup_batch_order = res.use_lookups? 3: -1;
+                    res.quotient_batch_order = res.use_lookups || res.use_permutations ? 2 : 1;
+                    res.lookup_batch_order = res.use_lookups ? 3 : -1;
 
                     res.batches_num = 3;
-                    if( res.use_lookups || res.use_permutations ) res.batches_num++;
-                    if( res.use_lookups ) res.batches_num++;
+                    if (res.use_lookups || res.use_permutations)
+                        res.batches_num++;
+                    if (res.use_lookups)
+                        res.batches_num++;
 
                     std::size_t cur = 0;
                     res.batches_sizes.resize(res.batches_num);
-                    res.batches_sizes[cur++] = res.permutation_size * 2 + 2 + desc.constant_columns + desc.selector_columns;
+                    res.batches_sizes[cur++] =
+                        res.permutation_size * 2 + 2 + desc.constant_columns + desc.selector_columns;
                     res.batches_sizes[cur++] = desc.witness_columns + desc.public_input_columns;
 
-                    std::size_t full_permutation_polynomial_size = res.use_permutations? (res.permutation_size + 2) : 0;
-                    std::size_t full_lookup_polynomial_size = res.use_lookups? (constraint_system.lookup_poly_degree_bound() + 1) : 0;
+                    std::size_t full_permutation_polynomial_size =
+                        res.use_permutations ? (res.permutation_size + 2) : 0;
+                    std::size_t full_lookup_polynomial_size =
+                        res.use_lookups ? (constraint_system.lookup_poly_degree_bound() + 1) : 0;
                     std::size_t full_gate_polynomial_size = (common_data.max_gates_degree + 1);
-                    std::size_t max_quotient_size = std::max(full_permutation_polynomial_size, full_lookup_polynomial_size);
+                    std::size_t max_quotient_size =
+                        std::max(full_permutation_polynomial_size, full_lookup_polynomial_size);
                     max_quotient_size = std::max(max_quotient_size, full_gate_polynomial_size);
 
                     res.permutation_batch_size = 0;
-                    res.permutation_poly_amount = res.use_permutations? 1: 0;
-                    res.lookup_poly_amount = res.use_lookups? 1: 0;
+                    res.permutation_poly_amount = res.use_permutations ? 1 : 0;
+                    res.lookup_poly_amount = res.use_lookups ? 1 : 0;
 
-                    if( res.use_lookups || res.use_permutations ){
-                        if( res.use_lookups ) res.permutation_batch_size++;
-                        if( res.use_permutations ) res.permutation_batch_size++;
+                    if (res.use_lookups || res.use_permutations) {
+                        if (res.use_lookups)
+                            res.permutation_batch_size++;
+                        if (res.use_permutations)
+                            res.permutation_batch_size++;
 
-                        if( common_data.max_quotient_chunks > 0 ){
-                            res.permutation_batch_size += full_permutation_polynomial_size/common_data.max_quotient_chunks;
-                            res.permutation_batch_size += full_lookup_polynomial_size/common_data.max_quotient_chunks;
-                            res.permutation_poly_amount += full_permutation_polynomial_size/common_data.max_quotient_chunks;
-                            res.lookup_poly_amount += full_lookup_polynomial_size/common_data.max_quotient_chunks;
+                        if (common_data.max_quotient_chunks > 0) {
+                            res.permutation_batch_size +=
+                                full_permutation_polynomial_size / common_data.max_quotient_chunks;
+                            res.permutation_batch_size += full_lookup_polynomial_size / common_data.max_quotient_chunks;
+                            res.permutation_poly_amount +=
+                                full_permutation_polynomial_size / common_data.max_quotient_chunks;
+                            res.lookup_poly_amount += full_lookup_polynomial_size / common_data.max_quotient_chunks;
                         }
                         res.batches_sizes[cur++] = res.permutation_batch_size;
                     }
 
                     max_quotient_size *= (desc.rows_amount - 1);
-                    max_quotient_size = max_quotient_size  % desc.rows_amount == 0 ? max_quotient_size / desc.rows_amount : max_quotient_size / desc.rows_amount + 1 ;
-                    if( common_data.max_quotient_chunks == 0 ){
+                    max_quotient_size = max_quotient_size % desc.rows_amount == 0 ?
+                                            max_quotient_size / desc.rows_amount :
+                                            max_quotient_size / desc.rows_amount + 1;
+                    if (common_data.max_quotient_chunks == 0) {
                         res.quotient_size = res.batches_sizes[cur++] = max_quotient_size;
                     } else {
-                        res.quotient_size = res.batches_sizes[cur++] = max_quotient_size < common_data.max_quotient_chunks? max_quotient_size: common_data.max_quotient_chunks;
+                        res.quotient_size = res.batches_sizes[cur++] =
+                            max_quotient_size < common_data.max_quotient_chunks ? max_quotient_size :
+                                                                                  common_data.max_quotient_chunks;
                     }
 
-                    if(res.use_lookups) res.batches_sizes[cur++] = constraint_system.sorted_lookup_columns_number();
+                    if (res.use_lookups)
+                        res.batches_sizes[cur++] = constraint_system.sorted_lookup_columns_number();
                     res.round_proof_layers_num = 0;
-                    for(std::size_t i = 0; i < fri_params.r; i++ ){
-                        res.round_proof_layers_num += log2(fri_params.D[i]->m) -1;
+                    for (std::size_t i = 0; i < fri_params.r; i++) {
+                        res.round_proof_layers_num += log2(fri_params.D[i]->m) - 1;
                     }
                     res.poly_num = std::accumulate(res.batches_sizes.begin(), res.batches_sizes.end(), 0);
 
                     // variable indices
-                    using variable_type = nil::crypto3::zk::snark::plonk_variable<typename PlaceholderParams::field_type::value_type>;
+                    using variable_type =
+                        nil::crypto3::zk::snark::plonk_variable<typename PlaceholderParams::field_type::value_type>;
                     auto &col_rotations = common_data.columns_rotations;
                     std::size_t j = 0;
 
@@ -158,53 +178,63 @@ namespace nil {
 
                     res.points_num = 2 * res.permutation_size + 4;
                     res.table_values_num = 0;
-                    for(std::size_t i = 0; i < common_data.desc.constant_columns; i++){
-                        for(auto& rot: col_rotations[i + common_data.desc.witness_columns + common_data.desc.public_input_columns]){
+                    for (std::size_t i = 0; i < common_data.desc.constant_columns; i++) {
+                        for (auto &rot : col_rotations[i + common_data.desc.witness_columns +
+                                                       common_data.desc.public_input_columns]) {
                             variable_type v(i, rot, true, variable_type::column_type::constant);
                             res.var_indices[v] = j;
-                            if( rot == 0 ) zero_indices[i + common_data.desc.witness_columns + common_data.desc.public_input_columns] = j;
+                            if (rot == 0)
+                                zero_indices[i + common_data.desc.witness_columns +
+                                             common_data.desc.public_input_columns] = j;
                             j++;
                             res.table_values_num++;
                         }
                     }
-                    for(std::size_t i = 0; i < common_data.desc.selector_columns; i++){
-                        for(auto& rot: col_rotations[i + common_data.desc.witness_columns + common_data.desc.public_input_columns + common_data.desc.constant_columns]){
+                    for (std::size_t i = 0; i < common_data.desc.selector_columns; i++) {
+                        for (auto &rot :
+                             col_rotations[i + common_data.desc.witness_columns +
+                                           common_data.desc.public_input_columns + common_data.desc.constant_columns]) {
                             variable_type v(i, rot, true, variable_type::column_type::selector);
                             res.var_indices[v] = j;
-                            if( rot == 0) zero_indices[i + common_data.desc.witness_columns + common_data.desc.public_input_columns + common_data.desc.constant_columns] = j;
+                            if (rot == 0)
+                                zero_indices[i + common_data.desc.witness_columns +
+                                             common_data.desc.public_input_columns +
+                                             common_data.desc.constant_columns] = j;
                             j++;
                             res.table_values_num++;
                         }
                     }
-                    for(std::size_t i = 0; i < common_data.desc.witness_columns; i++){
-                        for(auto& rot: col_rotations[i]){
+                    for (std::size_t i = 0; i < common_data.desc.witness_columns; i++) {
+                        for (auto &rot : col_rotations[i]) {
                             variable_type v(i, rot, true, variable_type::column_type::witness);
                             res.var_indices[v] = j;
-                            if(rot == 0) zero_indices[i] = j;
+                            if (rot == 0)
+                                zero_indices[i] = j;
                             j++;
                             res.table_values_num++;
                         }
                     }
-                    for(std::size_t i = 0; i < common_data.desc.public_input_columns; i++){
-                        for(auto& rot: col_rotations[i + common_data.desc.witness_columns]){
+                    for (std::size_t i = 0; i < common_data.desc.public_input_columns; i++) {
+                        for (auto &rot : col_rotations[i + common_data.desc.witness_columns]) {
                             variable_type v(i, rot, true, variable_type::column_type::public_input);
                             res.var_indices[v] = j;
-                            if(rot == 0) zero_indices[i + common_data.desc.witness_columns] = j;
+                            if (rot == 0)
+                                zero_indices[i + common_data.desc.witness_columns] = j;
                             j++;
                             res.table_values_num++;
                         }
                     }
                     res.points_num += res.table_values_num;
 
-                    for( std::size_t i = 0; i < common_data.permuted_columns.size(); i++ ){
+                    for (std::size_t i = 0; i < common_data.permuted_columns.size(); i++) {
                         std::size_t ind = common_data.permuted_columns[i];
                         res.permuted_zero_indices.push_back(zero_indices[ind]);
                     }
 
-                    if( res.use_permutations ){
+                    if (res.use_permutations) {
                         res.points_num += res.permutation_poly_amount + 1;
                     }
-                    if( res.use_lookups ){
+                    if (res.use_lookups) {
                         res.points_num += res.lookup_poly_amount + 1;
                     }
                     res.points_num += res.quotient_size;
@@ -213,24 +243,23 @@ namespace nil {
                     res.sorted_poly_amount = constraint_system.sorted_lookup_columns_number();
 
                     res.quotient_poly_first_index = 2 * res.permutation_size + 4 + res.table_values_num;
-                    if( res.use_permutations ) res.quotient_poly_first_index += res.permutation_poly_amount + 1;
-                    if( res.use_lookups ) res.quotient_poly_first_index += res.lookup_poly_amount + 1;
+                    if (res.use_permutations)
+                        res.quotient_poly_first_index += res.permutation_poly_amount + 1;
+                    if (res.use_lookups)
+                        res.quotient_poly_first_index += res.lookup_poly_amount + 1;
 
                     return res;
                 }
 
-
                 template<typename PlaceholderParams>
                 void print_placeholder_params(
-                    const typename placeholder_public_preprocessor<
-                        typename PlaceholderParams::field_type,
-                        PlaceholderParams
-                    >::preprocessed_data_type &preprocessed_data,
+                    const typename placeholder_public_preprocessor<typename PlaceholderParams::field_type,
+                                                                   PlaceholderParams>::preprocessed_data_type
+                        &preprocessed_data,
                     const typename PlaceholderParams::commitment_scheme_type &commitment_scheme,
                     const plonk_table_description<typename PlaceholderParams::field_type> &table_description,
                     std::string filename,
-                    std::string circuit_name = "Sample proof"
-                ){
+                    std::string circuit_name = "Sample proof") {
                     boost::property_tree::ptree root;
                     root.put("test_name", circuit_name);
                     root.put("modulus", PlaceholderParams::field_type::modulus);
@@ -255,9 +284,9 @@ namespace nil {
                     root.add_child("ar_params", ar_params_node);
 
                     boost::property_tree::ptree c_rotations_node;
-                    for( std::size_t i = 0; i < preprocessed_data.common_data->columns_rotations.size(); i++ ){
+                    for (std::size_t i = 0; i < preprocessed_data.common_data->columns_rotations.size(); i++) {
                         boost::property_tree::ptree column_node;
-                        for( int r: preprocessed_data.common_data->columns_rotations[i]){
+                        for (int r : preprocessed_data.common_data->columns_rotations[i]) {
                             boost::property_tree::ptree rotation_node;
                             rotation_node.put("", r);
                             column_node.push_back(std::make_pair("", rotation_node));
@@ -275,8 +304,8 @@ namespace nil {
                     out.close();
                 }
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_PLONK_PLACEHOLDER_PROFILING_HPP

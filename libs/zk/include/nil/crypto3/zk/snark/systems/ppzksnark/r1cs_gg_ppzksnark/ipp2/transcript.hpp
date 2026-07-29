@@ -52,7 +52,8 @@ namespace nil {
                     std::vector<std::uint8_t> buffer;
                     ::nil::crypto3::accumulator_set<hash_type> hasher_acc;
 
-                    template<typename InputIterator,
+                    template<
+                        typename InputIterator,
                         typename std::enable_if<
                             std::is_same<std::uint8_t, typename std::iterator_traits<InputIterator>::value_type>::value,
                             bool>::type = true>
@@ -62,8 +63,10 @@ namespace nil {
                         buffer.clear();
                     }
 
-                    template<typename InputIterator,
-                        typename std::enable_if<std::is_same<std::uint8_t, typename std::iterator_traits<InputIterator>::value_type>::value,
+                    template<
+                        typename InputIterator,
+                        typename std::enable_if<
+                            std::is_same<std::uint8_t, typename std::iterator_traits<InputIterator>::value_type>::value,
                             bool>::type = true>
                     inline void write_domain_separator(InputIterator first, InputIterator last) {
                         buffer.insert(buffer.end(), first, last);

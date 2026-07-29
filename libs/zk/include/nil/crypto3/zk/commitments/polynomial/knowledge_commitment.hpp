@@ -64,8 +64,8 @@ namespace nil {
                 using knowledge_commitment_vector = container::sparse_vector<knowledge_commitment<Type1, Type2>>;
 
             }    // namespace commitments
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_KNOWLEDGE_COMMITMENT_HPP

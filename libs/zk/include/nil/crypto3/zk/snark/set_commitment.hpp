@@ -106,8 +106,8 @@ namespace nil {
                 };
 
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_SNARK_SET_COMMITMENT_HPP

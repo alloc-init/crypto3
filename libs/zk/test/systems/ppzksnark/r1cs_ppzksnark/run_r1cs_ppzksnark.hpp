@@ -79,10 +79,9 @@ namespace nil {
                 bool run_r1cs_ppzksnark(const r1cs_example<typename CurveType::scalar_field_type> &example) {
 
                     using basic_proof_system = r1cs_ppzksnark<CurveType>;
-                    using weak_proof_system = r1cs_ppzksnark<CurveType,
-                                          r1cs_ppzksnark_generator<CurveType>,
-                                          r1cs_ppzksnark_prover<CurveType>,
-                                          r1cs_ppzksnark_verifier_weak_input_consistency<CurveType>>;
+                    using weak_proof_system =
+                        r1cs_ppzksnark<CurveType, r1cs_ppzksnark_generator<CurveType>, r1cs_ppzksnark_prover<CurveType>,
+                                       r1cs_ppzksnark_verifier_weak_input_consistency<CurveType>>;
 
                     std::cout << "Starting generator" << std::endl;
                     typename basic_proof_system::keypair_type keypair =
@@ -106,8 +105,7 @@ namespace nil {
 
                     std::cout << "Starting online verifier" << std::endl;
 
-                    const bool ans2 =
-                        verify<basic_proof_system>(pvk, example.primary_input, proof);
+                    const bool ans2 = verify<basic_proof_system>(pvk, example.primary_input, proof);
 
                     std::cout << "Online verifier finished, result: " << ans2 << std::endl;
 
@@ -115,8 +113,7 @@ namespace nil {
 
                     std::cout << "Starting weak verifier" << std::endl;
 
-                    const bool ans3 = verify<weak_proof_system>(keypair.second,
-                    example.primary_input, proof);
+                    const bool ans3 = verify<weak_proof_system>(keypair.second, example.primary_input, proof);
 
                     std::cout << "Weak verifier finished, result: " << ans3 << std::endl;
 
@@ -135,8 +132,8 @@ namespace nil {
                     return ans;
                 }
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_RUN_R1CS_PPZKSNARK_HPP

@@ -36,20 +36,21 @@ namespace nil {
                 class eval_storage {
                 private:
                     std::map<std::size_t, std::vector<std::vector<typename FieldType::value_type>>> z;
+
                 public:
                     using field_type = FieldType;
 
-                    bool operator==(const eval_storage& other) const {
+                    bool operator==(const eval_storage &other) const {
                         return this->z == other.z;
                     }
-                    eval_storage &operator=(const eval_storage& other){
+                    eval_storage &operator=(const eval_storage &other) {
                         this->z = other.z;
                         return *this;
                     }
                     std::vector<std::size_t> get_batches() const {
                         std::vector<std::size_t> batches;
 
-                        for(auto it = z.begin(); it != z.end(); ++it){
+                        for (auto it = z.begin(); it != z.end(); ++it) {
                             batches.push_back(it->first);
                         }
                         return batches;
@@ -57,7 +58,7 @@ namespace nil {
                     std::map<std::size_t, std::size_t> get_batch_info() const {
                         std::map<std::size_t, std::size_t> batch_info;
 
-                        for(auto it = z.begin(); it != z.end(); ++it){
+                        for (auto it = z.begin(); it != z.end(); ++it) {
                             batch_info[it->first] = it->second.size();
                         }
                         return batch_info;
@@ -74,27 +75,30 @@ namespace nil {
                     const std::vector<std::vector<typename FieldType::value_type>> &get(std::size_t batch_id) const {
                         return z.at(batch_id);
                     }
-                    const std::vector<typename FieldType::value_type> &get(std::size_t batch_id, std::size_t poly_id) const {
+                    const std::vector<typename FieldType::value_type> &get(std::size_t batch_id,
+                                                                           std::size_t poly_id) const {
                         return z.at(batch_id).at(poly_id);
                     }
-                    const typename FieldType::value_type &get(std::size_t batch_id, std::size_t poly_id, size_t point_id) const {
+                    const typename FieldType::value_type &get(std::size_t batch_id, std::size_t poly_id,
+                                                              size_t point_id) const {
                         return z.at(batch_id).at(poly_id).at(point_id);
                     }
 
-                    void set_batch_size(std::size_t batch_id, std::size_t batch_size){
+                    void set_batch_size(std::size_t batch_id, std::size_t batch_size) {
                         z[batch_id] = {};
                         z[batch_id].resize(batch_size);
                     }
-                    void set_poly_points_number(std::size_t batch_id, std::size_t poly_id, std::size_t points_number){
+                    void set_poly_points_number(std::size_t batch_id, std::size_t poly_id, std::size_t points_number) {
                         z[batch_id][poly_id] = {};
                         z[batch_id][poly_id].resize(points_number);
                     }
-                    void set(std::size_t batch_id, std::size_t poly_id, size_t point_id, const typename FieldType::value_type &value){
+                    void set(std::size_t batch_id, std::size_t poly_id, size_t point_id,
+                             const typename FieldType::value_type &value) {
                         z[batch_id][poly_id][point_id] = value;
                     }
                 };
-            }
-        }
-    }
-}
+            }    // namespace commitments
+        }    // namespace zk
+    }    // namespace crypto3
+}    // namespace nil
 #endif

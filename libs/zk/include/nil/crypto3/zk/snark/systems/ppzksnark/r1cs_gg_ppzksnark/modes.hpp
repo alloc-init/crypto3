@@ -36,8 +36,8 @@ namespace nil {
                     encrypted_input,
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_R1CS_GG_PPZKSNARK_MODES_HPP

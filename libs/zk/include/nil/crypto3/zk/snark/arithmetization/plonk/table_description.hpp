@@ -55,8 +55,8 @@ namespace nil {
                                             const std::size_t constant_columns,
                                             const std::size_t selector_columns) :
                         witness_columns(witness_columns), public_input_columns(public_input_columns),
-                        constant_columns(constant_columns), selector_columns(selector_columns)
-                    {}
+                        constant_columns(constant_columns), selector_columns(selector_columns) {
+                    }
 
                     plonk_table_description(const std::size_t witness_columns,
                                             const std::size_t public_input_columns,
@@ -66,8 +66,8 @@ namespace nil {
                                             const std::size_t rows_amount) :
                         witness_columns(witness_columns), public_input_columns(public_input_columns),
                         constant_columns(constant_columns), selector_columns(selector_columns),
-                        usable_rows_amount(usable_rows_amount), rows_amount(rows_amount)
-                    {}
+                        usable_rows_amount(usable_rows_amount), rows_amount(rows_amount) {
+                    }
 
                     std::size_t global_index(const plonk_variable<typename FieldType::value_type> &a) const {
                         switch (a.type) {
@@ -93,21 +93,18 @@ namespace nil {
                     }
 
                     bool operator==(const plonk_table_description &rhs) const {
-                        return
-                            rows_amount == rhs.rows_amount &&
-                            usable_rows_amount == rhs.usable_rows_amount &&
-                            witness_columns == rhs.witness_columns &&
-                            public_input_columns == rhs.public_input_columns &&
-                            constant_columns == rhs.constant_columns &&
-                            selector_columns == rhs.selector_columns;
+                        return rows_amount == rhs.rows_amount && usable_rows_amount == rhs.usable_rows_amount &&
+                               witness_columns == rhs.witness_columns &&
+                               public_input_columns == rhs.public_input_columns &&
+                               constant_columns == rhs.constant_columns && selector_columns == rhs.selector_columns;
                     }
                     bool operator!=(const plonk_table_description &rhs) const {
                         return !(rhs == *this);
                     }
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_PLONK_PLACEHOLDER_TABLE_DESCRIPTION_HPP

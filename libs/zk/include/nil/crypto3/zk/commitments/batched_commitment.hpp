@@ -80,7 +80,8 @@ namespace nil {
                     // _locked[batch] is true after it is commited
                     std::map<std::size_t, bool> _locked;
 
-                    // _points[batch_id][poly_id] contains all the points for the given batch and polynomial in the batch. It may have repetitions.
+                    // _points[batch_id][poly_id] contains all the points for the given batch and polynomial in the
+                    // batch. It may have repetitions.
                     std::map<std::size_t, std::vector<std::vector<value_type>>> _points;
 
                     bool operator==(const polys_evaluator &other) const = default;
@@ -94,7 +95,7 @@ namespace nil {
                     // Creates '_points_map'. We need to think about re-designing this class later. Currently this is
                     // used from LPC.
                     void build_points_map() {
-                        for (const auto& [batch_id, V]: this->_points) {
+                        for (const auto &[batch_id, V] : this->_points) {
                             _points_map[batch_id].resize(V.size());
                             for (std::size_t j = 0; j < V.size(); ++j) {
                                 const auto &batch = V[j];
@@ -173,11 +174,11 @@ namespace nil {
                     std::vector<std::vector<typename field_type::value_type>> get_unique_point_sets_list() const {
                         std::vector<std::vector<typename field_type::value_type>> unique_points;
 
-                        for (auto const &[k, point]:_points) {
+                        for (auto const &[k, point] : _points) {
                             for (std::size_t i = 0; i < point.size(); i++) {
                                 bool found = false;
                                 for (std::size_t j = 0; j < unique_points.size(); j++) {
-                                    if( unique_points[j] == point[i] ){
+                                    if (unique_points[j] == point[i]) {
                                         found = true;
                                         break;
                                     }
@@ -211,18 +212,18 @@ namespace nil {
                         return eval_map;
                     }
 
-                    void eval_polys() { eval_polys_impl(_polys); }
+                    void eval_polys() {
+                        eval_polys_impl(_polys);
+                    }
 
                     template<typename T>
-                    void eval_polys_impl(
-                        const std::map<std::size_t, std::vector<T>> &polys) {
+                    void eval_polys_impl(const std::map<std::size_t, std::vector<T>> &polys) {
                         TAGGED_PROFILE_SCOPE("{low level} poly eval", "LPC eval polys");
                         for (auto const &[batch_id, batch_polys] : polys) {
                             _z.set_batch_size(batch_id, batch_polys.size());
                             auto const &batch_points = _points.at(batch_id);
 
-                            BOOST_ASSERT(batch_polys.size() == batch_points.size() ||
-                                         batch_points.size() == 1);
+                            BOOST_ASSERT(batch_polys.size() == batch_points.size() || batch_points.size() == 1);
 
                             for (std::size_t i = 0; i < batch_polys.size(); ++i) {
                                 _z.set_poly_points_number(batch_id, i, batch_points[i].size());
@@ -232,8 +233,7 @@ namespace nil {
                             parallel_for(
                                 0, batch_polys.size(),
                                 [this, &batch_points, batch_id, &batch_polys](std::size_t i) {
-                                    for (std::size_t j = 0; j < batch_points[i].size();
-                                         j++) {
+                                    for (std::size_t j = 0; j < batch_points[i].size(); j++) {
                                         const auto &point = batch_points[i][j];
                                         _z.set(batch_id, i, j, batch_polys[i].evaluate(point));
                                     }
@@ -248,7 +248,8 @@ namespace nil {
                         return root;
                     }
 
-                    void append_to_batch(std::size_t index, std::initializer_list<typename polynomial_type::value_type> il) {
+                    void append_to_batch(std::size_t index,
+                                         std::initializer_list<typename polynomial_type::value_type> il) {
                         append_to_batch(index, polynomial_type(il));
                     }
 
@@ -266,13 +267,12 @@ namespace nil {
                     }
 
                     template<std::ranges::range Range>
-                        requires std::constructible_from<
-                            polynomial_type, std::ranges::range_value_t<Range>>
+                        requires std::constructible_from<polynomial_type, std::ranges::range_value_t<Range>>
                     void append_many_to_batch(std::size_t index, Range &&polys) {
                         if (_locked.find(index) == _locked.end())
                             _locked[index] = false;
 
-                        BOOST_ASSERT(!_locked[index]); // We cannot modify batch after commitment
+                        BOOST_ASSERT(!_locked[index]);    // We cannot modify batch after commitment
                         auto &target = _polys[index];
                         for (const auto &poly : polys) {
                             target.emplace_back(poly);
@@ -288,9 +288,8 @@ namespace nil {
                         }
                     }
 
-                    void append_eval_point(
-                            std::size_t batch_id, std::size_t poly_id,
-                            const typename field_type::value_type& point) {
+                    void append_eval_point(std::size_t batch_id, std::size_t poly_id,
+                                           const typename field_type::value_type &point) {
                         // We can add points only after polynomails are commited.
                         BOOST_ASSERT(_locked[batch_id]);
 
@@ -307,11 +306,12 @@ namespace nil {
 
                     // This function don't check evaluation points repeats
                     void append_eval_points(std::size_t batch_id, std::size_t poly_id,
-                            std::set<typename field_type::value_type> points) {
+                                            std::set<typename field_type::value_type> points) {
                         // We can add points only after polynomails are commited.
                         BOOST_ASSERT(_locked[batch_id]);
 
-                        _points[batch_id][poly_id].insert(_points[batch_id][poly_id].end(), points.begin(), points.end());
+                        _points[batch_id][poly_id].insert(_points[batch_id][poly_id].end(), points.begin(),
+                                                          points.end());
                     }
 
                     void set_batch_size(std::size_t batch_id, std::size_t batch_size) {

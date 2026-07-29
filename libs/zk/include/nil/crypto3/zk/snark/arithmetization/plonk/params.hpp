@@ -38,8 +38,7 @@ namespace nil {
                     std::size_t selector_columns;
 
                     std::size_t private_columns = witness_columns;
-                    std::size_t public_columns =
-                        public_input_columns + constant_columns + selector_columns;
+                    std::size_t public_columns = public_input_columns + constant_columns + selector_columns;
 
                     std::size_t total_columns = private_columns + public_columns;
                 };
@@ -49,8 +48,8 @@ namespace nil {
                 struct plonk_arithmetization_params { };
 #endif
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_PLONK_ARITHMETIZATION_PARAMS_HPP

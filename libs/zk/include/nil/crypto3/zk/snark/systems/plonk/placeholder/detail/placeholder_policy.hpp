@@ -55,14 +55,12 @@ namespace nil {
 
                         using SmallFieldType = typename FieldType::small_subfield;
 
-                        typedef plonk_constraint_system<SmallFieldType>
-                            constraint_system_type;
+                        typedef plonk_constraint_system<SmallFieldType> constraint_system_type;
 
                         typedef FieldType field_type;
                         typedef PlaceholderParams placeholder_params_type;
 
-                        typedef plonk_assignment_table<SmallFieldType>
-                            variable_assignment_type;
+                        typedef plonk_assignment_table<SmallFieldType> variable_assignment_type;
 
                         typedef detail::plonk_evaluation_map<plonk_variable<typename FieldType::value_type>>
                             evaluation_map;

@@ -105,14 +105,16 @@ namespace nil {
                     placeholder_proof() = default;
 
                     placeholder_proof(const partial_proof_type &partial_proof) :
-                        placeholder_partial_proof<FieldType, ParamsType>(partial_proof) {}
+                        placeholder_partial_proof<FieldType, ParamsType>(partial_proof) {
+                    }
 
                     placeholder_proof(const partial_proof_type &partial_proof, const evaluation_proof &eval_proof) :
-                        placeholder_partial_proof<FieldType, ParamsType>(partial_proof), eval_proof(eval_proof) {}
+                        placeholder_partial_proof<FieldType, ParamsType>(partial_proof), eval_proof(eval_proof) {
+                    }
 
                     bool operator==(const placeholder_proof &rhs) const {
                         return placeholder_partial_proof<FieldType, ParamsType>::operator==(rhs) &&
-                            eval_proof == rhs.eval_proof;
+                               eval_proof == rhs.eval_proof;
                     }
                     bool operator!=(const placeholder_proof &rhs) const {
                         return !(rhs == *this);
@@ -122,8 +124,8 @@ namespace nil {
                 };
 
                 /**
-                 * An aggregated proof for the Placeholder scheme. It contains N partial proofs from N provers, with a shared
-                 * aggregated FRI proof.
+                 * An aggregated proof for the Placeholder scheme. It contains N partial proofs from N provers, with a
+                 * shared aggregated FRI proof.
                  */
                 template<typename FieldType, typename ParamsType>
                 struct placeholder_aggregated_proof {
@@ -137,8 +139,7 @@ namespace nil {
                     placeholder_aggregated_proof() = default;
 
                     bool operator==(const placeholder_aggregated_proof &rhs) const {
-                        return partial_proofs == rhs.partial_proofs &&
-                            aggregated_proof == rhs.aggregated_proof;
+                        return partial_proofs == rhs.partial_proofs && aggregated_proof == rhs.aggregated_proof;
                     }
                     bool operator!=(const placeholder_aggregated_proof &rhs) const {
                         return !(rhs == *this);

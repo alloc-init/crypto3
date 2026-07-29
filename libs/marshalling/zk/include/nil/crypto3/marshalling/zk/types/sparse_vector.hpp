@@ -51,59 +51,52 @@ namespace nil {
     namespace crypto3 {
         namespace marshalling {
             namespace types {
-                template<
-                    typename TTypeBase,
-                    typename SparseVector,
-                    typename = typename std::enable_if<
-                        std::is_same<SparseVector, ::nil::crypto3::container::sparse_vector<typename SparseVector::group_type>>::value,
-                        bool>::type,
-                    typename... TOptions>
+                template<typename TTypeBase,
+                         typename SparseVector,
+                         typename = typename std::enable_if<std::is_same<SparseVector,
+                                                                         ::nil::crypto3::container::sparse_vector<
+                                                                             typename SparseVector::group_type>>::value,
+                                                            bool>::type,
+                         typename... TOptions>
                 using sparse_vector = nil::marshalling::types::bundle<
                     TTypeBase,
-                    std::tuple<
-                        nil::marshalling::types::standard_size_t_array_list<TTypeBase>,
-                        nil::marshalling::types::standard_array_list<
-                            TTypeBase,
-                            curve_element<TTypeBase, typename SparseVector::group_type>>,
-                        nil::marshalling::types::integral<TTypeBase, std::size_t>
-                    >
-                >;
+                    std::tuple<nil::marshalling::types::standard_size_t_array_list<TTypeBase>,
+                               nil::marshalling::types::standard_array_list<
+                                   TTypeBase,
+                                   curve_element<TTypeBase, typename SparseVector::group_type>>,
+                               nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
                 template<typename TTypeBase,
                          typename KCSparseVector,
-                         typename = typename std::enable_if<
-                             std::is_same<KCSparseVector,
-                                          nil::crypto3::container::sparse_vector<typename KCSparseVector::group_type>>::value,
-                             bool>::type,
+                         typename =
+                             typename std::enable_if<std::is_same<KCSparseVector,
+                                                                  nil::crypto3::container::sparse_vector<
+                                                                      typename KCSparseVector::group_type>>::value,
+                                                     bool>::type,
                          typename... TOptions>
                 using knowledge_commitment_sparse_vector = nil::marshalling::types::bundle<
                     TTypeBase,
-                    std::tuple<
-                        nil::marshalling::types::standard_size_t_array_list<TTypeBase>,
-                        nil::marshalling::types::standard_array_list<
-                            TTypeBase,
-                            knowledge_commitment<TTypeBase, typename KCSparseVector::group_type>>,
-                        nil::marshalling::types::integral<TTypeBase, std::size_t>
-                    >
-                >;
+                    std::tuple<nil::marshalling::types::standard_size_t_array_list<TTypeBase>,
+                               nil::marshalling::types::standard_array_list<
+                                   TTypeBase,
+                                   knowledge_commitment<TTypeBase, typename KCSparseVector::group_type>>,
+                               nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
                 template<typename TTypeBase,
                          typename KCSparseVector,
-                         typename = typename std::enable_if<
-                             std::is_same<KCSparseVector,
-                                          nil::crypto3::container::sparse_vector<typename KCSparseVector::group_type>>::value,
-                             bool>::type,
+                         typename =
+                             typename std::enable_if<std::is_same<KCSparseVector,
+                                                                  nil::crypto3::container::sparse_vector<
+                                                                      typename KCSparseVector::group_type>>::value,
+                                                     bool>::type,
                          typename... TOptions>
                 using fast_knowledge_commitment_sparse_vector = nil::marshalling::types::bundle<
                     TTypeBase,
-                    std::tuple<
-                        nil::marshalling::types::standard_size_t_array_list<TTypeBase>,
-                        nil::marshalling::types::standard_array_list<
-                            TTypeBase,
-                            fast_knowledge_commitment<TTypeBase, typename KCSparseVector::group_type>>,
-                        nil::marshalling::types::integral<TTypeBase, std::size_t>
-                    >
-                >;
+                    std::tuple<nil::marshalling::types::standard_size_t_array_list<TTypeBase>,
+                               nil::marshalling::types::standard_array_list<
+                                   TTypeBase,
+                                   fast_knowledge_commitment<TTypeBase, typename KCSparseVector::group_type>>,
+                               nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
                 template<typename SparseVector, typename Endianness>
                 sparse_vector<nil::marshalling::field_type<Endianness>, SparseVector>
@@ -130,8 +123,7 @@ namespace nil {
 
                 template<typename SparseVector, typename Endianness>
                 SparseVector make_sparse_vector(
-                    const sparse_vector<nil::marshalling::field_type<Endianness>, SparseVector> &filled_sparse_vector)
-                {
+                    const sparse_vector<nil::marshalling::field_type<Endianness>, SparseVector> &filled_sparse_vector) {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
                     using integral_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
@@ -208,13 +200,14 @@ namespace nil {
 
                 template<typename KCSparseVector, typename Endianness>
                 fast_knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>
-                    fill_fast_knowledge_commitment_sparse_vector(const KCSparseVector &knowledge_commitment_sparse_vector) {
+                    fill_fast_knowledge_commitment_sparse_vector(
+                        const KCSparseVector &knowledge_commitment_sparse_vector) {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
                     using integral_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
                     using integral_vector_type = nil::marshalling::types::standard_size_t_array_list<TTypeBase>;
-                    
+
                     integral_vector_type filled_indices;
 
                     std::vector<integral_type> &filled_indices_val = filled_indices.value();
@@ -222,19 +215,19 @@ namespace nil {
                         filled_indices_val.push_back(integral_type(knowledge_commitment_sparse_vector.indices[i]));
                     }
 
-                    return ::nil::crypto3::marshalling::types::
-                        fast_knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>(
-                            std::make_tuple(
-                                filled_indices,
-                                fill_fast_knowledge_commitment_vector<typename KCSparseVector::group_type, Endianness>(
-                                    knowledge_commitment_sparse_vector.values),
-                                integral_type(knowledge_commitment_sparse_vector.domain_size_)));
+                    return ::nil::crypto3::marshalling::types::fast_knowledge_commitment_sparse_vector<
+                        nil::marshalling::field_type<Endianness>,
+                        KCSparseVector>(std::make_tuple(
+                        filled_indices,
+                        fill_fast_knowledge_commitment_vector<typename KCSparseVector::group_type, Endianness>(
+                            knowledge_commitment_sparse_vector.values),
+                        integral_type(knowledge_commitment_sparse_vector.domain_size_)));
                 }
 
                 template<typename KCSparseVector, typename Endianness>
                 KCSparseVector make_fast_knowledge_commitment_vector(
-                    const fast_knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>, KCSparseVector>
-                        &filled_kc_sparse_vector) {
+                    const fast_knowledge_commitment_sparse_vector<nil::marshalling::field_type<Endianness>,
+                                                                  KCSparseVector> &filled_kc_sparse_vector) {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
@@ -251,15 +244,16 @@ namespace nil {
 
                     KCSparseVector result;
                     result.indices = constructed_indices;
-                    result.values = make_fast_knowledge_commitment_vector<typename KCSparseVector::group_type, Endianness>(
-                        std::get<1>(filled_kc_sparse_vector.value()));
+                    result.values =
+                        make_fast_knowledge_commitment_vector<typename KCSparseVector::group_type, Endianness>(
+                            std::get<1>(filled_kc_sparse_vector.value()));
                     result.domain_size_ = std::get<2>(filled_kc_sparse_vector.value()).value();
 
                     return result;
                 }
 
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_SPARSE_VECTOR_HPP

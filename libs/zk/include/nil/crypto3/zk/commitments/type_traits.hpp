@@ -44,8 +44,7 @@ namespace nil {
 
             template<typename T>
             class has_available_static_member_function_commit {
-                struct no {
-                };
+                struct no { };
 
             protected:
                 template<typename C>
@@ -64,8 +63,7 @@ namespace nil {
 
             template<typename T>
             class has_available_static_member_function_proof_eval {
-                struct no {
-                };
+                struct no { };
 
             protected:
                 template<typename C>
@@ -84,8 +82,7 @@ namespace nil {
 
             template<typename T>
             class has_available_static_member_function_verify_eval {
-                struct no {
-                };
+                struct no { };
 
             protected:
                 template<typename C>
@@ -123,12 +120,10 @@ namespace nil {
 
             template<class T>
             struct is_kzg_struct<T, std::enable_if_t<std::is_invocable_r<bool, decltype(T::is_kzg)>::value>>
-                    : std::integral_constant<bool, T::is_kzg()> {
-            };
+                : std::integral_constant<bool, T::is_kzg()> { };
 
             template<class T>
             constexpr bool is_kzg = is_kzg_struct<T>::value;
-
 
             template<typename T, typename Enable = void>
             struct is_lpc_struct : std::false_type {
@@ -137,19 +132,17 @@ namespace nil {
 
             template<class T>
             struct is_lpc_struct<T, std::enable_if_t<std::is_invocable_r<bool, decltype(T::is_lpc)>::value>>
-                    : std::integral_constant<bool, T::is_lpc()> {
-            };
+                : std::integral_constant<bool, T::is_lpc()> { };
 
             template<class T>
             constexpr bool is_lpc = is_lpc_struct<T>::value;
 
             template<bool Condition, typename Type, std::size_t Size>
             struct select_container {
-                using type = typename std::
-                conditional<Condition, std::array<Type, Size>, std::vector<Type>>::type;
+                using type = typename std::conditional<Condition, std::array<Type, Size>, std::vector<Type>>::type;
             };
-        } // namespace zk
-    } // namespace crypto3
-} // namespace nil
+        }    // namespace zk
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ZK_COMMITMENTS_TYPE_TRAITS_HPP

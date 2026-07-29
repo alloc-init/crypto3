@@ -76,26 +76,22 @@ namespace nil {
                         polynomial_dfs_type permutation_polynomial_dfs;
                     };
 
-                    static inline prover_result_type prove_eval(
-                            const plonk_constraint_system<SmallFieldType> &constraint_system,
-                            const typename placeholder_public_preprocessor<
-                                SmallFieldType, ParamsType>::preprocessed_data_type
-                                preprocessed_data,
-                            const plonk_table_description<SmallFieldType> &table_description,
-                            const plonk_polynomial_dfs_table<SmallFieldType>
-                                &column_polynomials,
-                            typename ParamsType::commitment_scheme_type &commitment_scheme,
-                            transcript_type &transcript) {
+                    static inline prover_result_type
+                        prove_eval(const plonk_constraint_system<SmallFieldType> &constraint_system,
+                                   const typename placeholder_public_preprocessor<
+                                       SmallFieldType, ParamsType>::preprocessed_data_type preprocessed_data,
+                                   const plonk_table_description<SmallFieldType> &table_description,
+                                   const plonk_polynomial_dfs_table<SmallFieldType> &column_polynomials,
+                                   typename ParamsType::commitment_scheme_type &commitment_scheme,
+                                   transcript_type &transcript) {
                         PROFILE_SCOPE("Permutation argument prove eval");
 
-                        const std::vector<
-                            math::polynomial_dfs<typename SmallFieldType::value_type>>
-                            &S_sigma = preprocessed_data.permutation_polynomials;
-                        const std::vector<
-                            math::polynomial_dfs<typename SmallFieldType::value_type>>
-                            &S_id = preprocessed_data.identity_polynomials;
-                        std::shared_ptr<math::evaluation_domain<SmallFieldType>>
-                            basic_domain = preprocessed_data.common_data->basic_domain;
+                        const std::vector<math::polynomial_dfs<typename SmallFieldType::value_type>> &S_sigma =
+                            preprocessed_data.permutation_polynomials;
+                        const std::vector<math::polynomial_dfs<typename SmallFieldType::value_type>> &S_id =
+                            preprocessed_data.identity_polynomials;
+                        std::shared_ptr<math::evaluation_domain<SmallFieldType>> basic_domain =
+                            preprocessed_data.common_data->basic_domain;
 
                         auto permuted_columns = constraint_system.permuted_columns();
                         std::vector<std::size_t> global_indices;
@@ -109,46 +105,51 @@ namespace nil {
 
                         // 2. Calculate id_binding, sigma_binding for j from 1 to N_rows
                         // 3. Calculate $V_P$
-                        polynomial_dfs_type V_P(basic_domain->size() - 1,
-                                                                                 basic_domain->size());
+                        polynomial_dfs_type V_P(basic_domain->size() - 1, basic_domain->size());
 
                         std::vector<polynomial_dfs_type> g_v(S_id.begin(), S_id.end());
-                       std::vector<polynomial_dfs_type>
-                            h_v(S_sigma.begin(), S_sigma.end());
+                        std::vector<polynomial_dfs_type> h_v(S_sigma.begin(), S_sigma.end());
 
                         BOOST_ASSERT(global_indices.size() == S_id.size());
                         BOOST_ASSERT(global_indices.size() == S_sigma.size());
 
-                        parallel_for(0, S_id.size(), [&g_v, &h_v, &beta, &gamma, &global_indices, &column_polynomials, &basic_domain, &S_id, &S_sigma](std::size_t i) {
-                            BOOST_ASSERT(column_polynomials[global_indices[i]].size() == basic_domain->size());
-                            BOOST_ASSERT(S_id[i].size() == basic_domain->size());
-                            BOOST_ASSERT(S_sigma[i].size() == basic_domain->size());
+                        parallel_for(
+                            0, S_id.size(),
+                            [&g_v, &h_v, &beta, &gamma, &global_indices, &column_polynomials, &basic_domain, &S_id,
+                             &S_sigma](std::size_t i) {
+                                BOOST_ASSERT(column_polynomials[global_indices[i]].size() == basic_domain->size());
+                                BOOST_ASSERT(S_id[i].size() == basic_domain->size());
+                                BOOST_ASSERT(S_sigma[i].size() == basic_domain->size());
 
-                            /* g_v.push_back(column_polynomials[i] + beta * S_id[i] + gamma); */
-                            g_v[i] *= beta;
-                            g_v[i] += gamma;
-                            g_v[i] += column_polynomials[global_indices[i]];
+                                /* g_v.push_back(column_polynomials[i] + beta * S_id[i] + gamma); */
+                                g_v[i] *= beta;
+                                g_v[i] += gamma;
+                                g_v[i] += column_polynomials[global_indices[i]];
 
-                            /* h_v.push_back(column_polynomials[i] + beta * S_sigma[i] + gamma); */
-                            h_v[i] *= beta;
-                            h_v[i] += gamma;
-                            h_v[i] += column_polynomials[global_indices[i]];
-                        }, thread_pool::pool_level::HIGH);
+                                /* h_v.push_back(column_polynomials[i] + beta * S_sigma[i] + gamma); */
+                                h_v[i] *= beta;
+                                h_v[i] += gamma;
+                                h_v[i] += column_polynomials[global_indices[i]];
+                            },
+                            thread_pool::pool_level::HIGH);
 
                         V_P[0] = FieldType::value_type::one();
 
-                        auto V_P_parts = std::make_unique<std::vector<value_type>>(
-                            basic_domain->size(), FieldType::value_type::zero());
-                        parallel_for(1, basic_domain->size(), [&g_v, &h_v, &S_id, &V_P_parts](std::size_t j) {
-                            value_type nom = FieldType::value_type::one();
-                            value_type denom = FieldType::value_type::one();
+                        auto V_P_parts = std::make_unique<std::vector<value_type>>(basic_domain->size(),
+                                                                                   FieldType::value_type::zero());
+                        parallel_for(
+                            1, basic_domain->size(),
+                            [&g_v, &h_v, &S_id, &V_P_parts](std::size_t j) {
+                                value_type nom = FieldType::value_type::one();
+                                value_type denom = FieldType::value_type::one();
 
-                            for (std::size_t i = 0; i < S_id.size(); i++) {
-                                nom *= g_v[i][j - 1];
-                                denom *= h_v[i][j - 1];
-                            }
-                            (*V_P_parts)[j] = nom * denom.inversed();
-                        }, thread_pool::pool_level::LOW);
+                                for (std::size_t i = 0; i < S_id.size(); i++) {
+                                    nom *= g_v[i][j - 1];
+                                    denom *= h_v[i][j - 1];
+                                }
+                                (*V_P_parts)[j] = nom * denom.inversed();
+                            },
+                            thread_pool::pool_level::LOW);
 
                         for (std::size_t j = 1; j < basic_domain->size(); ++j)
                             V_P[j] = V_P[j - 1] * (*V_P_parts)[j];
@@ -163,10 +164,11 @@ namespace nil {
                         std::vector<polynomial_dfs_type> hs;
                         std::vector<polynomial_dfs_type> g_factors;
                         std::vector<polynomial_dfs_type> h_factors;
-                        for(std::size_t i = 0; i < g_v.size(); i++){
+                        for (std::size_t i = 0; i < g_v.size(); i++) {
                             g_factors.push_back(g_v[i]);
                             h_factors.push_back(h_v[i]);
-                            if( preprocessed_data.common_data->max_quotient_chunks != 0 && g_factors.size() == (preprocessed_data.common_data->max_quotient_chunks - 1)) {
+                            if (preprocessed_data.common_data->max_quotient_chunks != 0 &&
+                                g_factors.size() == (preprocessed_data.common_data->max_quotient_chunks - 1)) {
                                 gs.push_back(math::polynomial_product<FieldType>(g_factors));
                                 hs.push_back(math::polynomial_product<FieldType>(h_factors));
                                 g_factors.clear();
@@ -182,11 +184,9 @@ namespace nil {
                         BOOST_ASSERT(gs.size() == preprocessed_data.common_data->permutation_parts);
                         BOOST_ASSERT(gs.size() == hs.size());
 
-                        polynomial_dfs_type one_polynomial(
-                            0, V_P.size(), FieldType::value_type::one());
+                        polynomial_dfs_type one_polynomial(0, V_P.size(), FieldType::value_type::one());
                         std::array<polynomial_dfs_type, argument_size> F_dfs;
-                        polynomial_dfs_type V_P_shifted =
-                            math::polynomial_shift(V_P, 1, basic_domain->m);
+                        polynomial_dfs_type V_P_shifted = math::polynomial_shift(V_P, 1, basic_domain->m);
 
                         /* F_dfs[0] = preprocessed_data.common_data->lagrange_0 * (one_polynomial - V_P); */
 
@@ -194,12 +194,13 @@ namespace nil {
                         F_dfs[0] -= V_P;
                         F_dfs[0] *= preprocessed_data.common_data->lagrange_0;
                         std::vector<value_type> permutation_alphas;
-                        for( std::size_t i = 0; i < preprocessed_data.common_data->permutation_parts - 1; i++ ){
+                        for (std::size_t i = 0; i < preprocessed_data.common_data->permutation_parts - 1; i++) {
                             permutation_alphas.push_back(transcript.template challenge<FieldType>());
                         }
 
-                        /* F_dfs[1] = (one_polynomial - (preprocessed_data.q_last + preprocessed_data.q_blind)) * (V_P_shifted * h - V_P * g); */
-                        if ( preprocessed_data.common_data->permutation_parts == 1 ){
+                        /* F_dfs[1] = (one_polynomial - (preprocessed_data.q_last + preprocessed_data.q_blind)) *
+                         * (V_P_shifted * h - V_P * g); */
+                        if (preprocessed_data.common_data->permutation_parts == 1) {
                             auto &g = gs[0];
                             auto &h = hs[0];
                             polynomial_dfs_type t1 = V_P;
@@ -213,20 +214,21 @@ namespace nil {
                             F_dfs[1] *= V_P_shifted;
                         } else {
                             PROFILE_SCOPE("PERMUTATION ARGUMENT else block");
-                            const auto& assignment_desc = preprocessed_data.common_data->desc;
+                            const auto &assignment_desc = preprocessed_data.common_data->desc;
                             polynomial_dfs_type previous_poly = V_P;
                             polynomial_dfs_type current_poly = V_P;
-                            // We need to store all the values of current_poly. Suddenly this increases the RAM usage, but
-                            // there's no other way to parallelize this loop.
+                            // We need to store all the values of current_poly. Suddenly this increases the RAM usage,
+                            // but there's no other way to parallelize this loop.
                             std::vector<polynomial_dfs_type> all_polys(1, V_P);
 
-                            for( std::size_t i = 0; i < preprocessed_data.common_data->permutation_parts-1; i++ ){
-                                const auto& g = gs[i];
-                                const auto& h = hs[i];
+                            for (std::size_t i = 0; i < preprocessed_data.common_data->permutation_parts - 1; i++) {
+                                const auto &g = gs[i];
+                                const auto &h = hs[i];
                                 auto reduced_g = reduce_dfs_polynomial_domain(g, basic_domain->m);
                                 auto reduced_h = reduce_dfs_polynomial_domain(h, basic_domain->m);
 
-                                parallel_for(0, assignment_desc.usable_rows_amount,
+                                parallel_for(
+                                    0, assignment_desc.usable_rows_amount,
                                     [&reduced_g, &reduced_h, &current_poly, &previous_poly](std::size_t j) {
                                         current_poly[j] = (previous_poly[j] * reduced_g[j]) * reduced_h[j].inversed();
                                     },
@@ -238,11 +240,13 @@ namespace nil {
                             }
                             std::vector<polynomial_dfs_type> F_dfs_1_parts(
                                 preprocessed_data.common_data->permutation_parts);
-                            parallel_for(0, preprocessed_data.common_data->permutation_parts - 1,
+                            parallel_for(
+                                0, preprocessed_data.common_data->permutation_parts - 1,
                                 [&gs, &hs, &permutation_alphas, &all_polys, &F_dfs_1_parts](std::size_t i) {
                                     auto &g = gs[i];
                                     auto &h = hs[i];
-                                    F_dfs_1_parts[i] = permutation_alphas[i] * (all_polys[i] * g - all_polys[i + 1] * h);
+                                    F_dfs_1_parts[i] =
+                                        permutation_alphas[i] * (all_polys[i] * g - all_polys[i + 1] * h);
                                 },
                                 thread_pool::pool_level::HIGH);
 
@@ -251,11 +255,8 @@ namespace nil {
                             auto &h = hs[last];
                             F_dfs_1_parts.back() = previous_poly * g - V_P_shifted * h;
                             F_dfs[1] += polynomial_sum<FieldType>(std::move(F_dfs_1_parts));
-                            F_dfs[1] *=
-                                polynomial_dfs_type(
-                                    preprocessed_data.q_last +
-                                    preprocessed_data.q_blind) -
-                                one_polynomial;
+                            F_dfs[1] *= polynomial_dfs_type(preprocessed_data.q_last + preprocessed_data.q_blind) -
+                                        one_polynomial;
                         }
 
                         /* F_dfs[2] = preprocessed_data.q_last * V_P * (V_P - one_polynomial); */
@@ -270,9 +271,8 @@ namespace nil {
                     }
 
                     static inline void fill_challenge_queue(
-                        const typename placeholder_public_preprocessor<SmallFieldType,
-                                                                       ParamsType>::
-                            preprocessed_data_type::common_data_type &common_data,
+                        const typename placeholder_public_preprocessor<
+                            SmallFieldType, ParamsType>::preprocessed_data_type::common_data_type &common_data,
                         transcript_type &transcript,
                         std::queue<value_type> &queue) {
                         // Beta and Gamma
@@ -284,28 +284,21 @@ namespace nil {
                         }
                     }
 
-                    static inline std::array<value_type,
-                                             argument_size>
-                    verify_eval(
-                        const typename placeholder_public_preprocessor<SmallFieldType,
-                                                                       ParamsType>::
-                            preprocessed_data_type::common_data_type &common_data,
+                    static inline std::array<value_type, argument_size> verify_eval(
+                        const typename placeholder_public_preprocessor<
+                            SmallFieldType, ParamsType>::preprocessed_data_type::common_data_type &common_data,
                         const std::vector<value_type> &S_id,
                         const std::vector<value_type> &S_sigma,
-                        const std::vector<value_type>
-                            &special_selector_values,
+                        const std::vector<value_type> &special_selector_values,
                         // y
                         const value_type &challenge,
                         // f(y):
-                        const std::vector<value_type>
-                            &column_polynomials_values,
+                        const std::vector<value_type> &column_polynomials_values,
                         // V_P(y):
                         const value_type &perm_polynomial_value,
                         // V_P(omega * y):
-                        const value_type
-                            &perm_polynomial_shifted_value,
-                        const std::vector<value_type>
-                            &perm_partitions,
+                        const value_type &perm_polynomial_shifted_value,
+                        const std::vector<value_type> &perm_partitions,
                         transcript_type &transcript) {
                         // 1. Get beta, gamma
                         value_type beta = transcript.template challenge<FieldType>();
@@ -358,7 +351,7 @@ namespace nil {
                         F[0] = common_data.lagrange_0.evaluate(challenge) * (one - perm_polynomial_value);
 
                         std::vector<value_type> permutation_alphas;
-                        for( std::size_t i = 0; i < common_data.permutation_parts - 1; i++ ){
+                        for (std::size_t i = 0; i < common_data.permutation_parts - 1; i++) {
                             permutation_alphas.push_back(transcript.template challenge<FieldType>());
                         }
                         BOOST_ASSERT(permutation_alphas.size() == perm_partitions.size());
@@ -377,7 +370,7 @@ namespace nil {
                         } else {
                             value_type current_value;
                             value_type previous_value = perm_polynomial_value;
-                            for(std::size_t i = 0; i < permutation_alphas.size(); i++){
+                            for (std::size_t i = 0; i < permutation_alphas.size(); i++) {
                                 auto &h = hs[i];
                                 auto &g = gs[i];
                                 current_value = perm_partitions[i];
@@ -397,12 +390,10 @@ namespace nil {
                         return F;
                     }
 
-                    static polynomial_dfs_type reduce_dfs_polynomial_domain(
-                        const polynomial_dfs_type &polynomial,
-                        const std::size_t &new_domain_size
-                    ) {
-                        polynomial_dfs_type reduced(
-                            new_domain_size - 1, new_domain_size, FieldType::value_type::zero());
+                    static polynomial_dfs_type reduce_dfs_polynomial_domain(const polynomial_dfs_type &polynomial,
+                                                                            const std::size_t &new_domain_size) {
+                        polynomial_dfs_type reduced(new_domain_size - 1, new_domain_size,
+                                                    FieldType::value_type::zero());
 
                         BOOST_ASSERT(new_domain_size <= polynomial.size());
                         if (polynomial.size() == new_domain_size) {

@@ -22,7 +22,6 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-
 #ifndef PARALLEL_CRYPTO3_ZK_PLONK_PLACEHOLDER_TABLE_EXPORT_HPP
 #define PARALLEL_CRYPTO3_ZK_PLONK_PLACEHOLDER_TABLE_EXPORT_HPP
 
@@ -38,18 +37,19 @@ namespace nil {
 
                 using ranges = std::vector<std::pair<std::size_t, std::size_t>>;
 
-                template <typename FieldType>
-                void export_table(const plonk_assignment_table<FieldType>& table,
-                                  const plonk_table_description<FieldType>& desc,
-                                  std::ostream &out, 
-                                  const ranges& witnesses, 
-                                  const ranges& public_inputs, 
-                                  const ranges& constants,
-                                  const ranges& selectors, 
-                                  const ranges& rows, 
-                                  bool wide_export = false) { // wide_export is for e.g. potentiall fuzzer: does fixed width elements
+                template<typename FieldType>
+                void
+                    export_table(const plonk_assignment_table<FieldType>& table,
+                                 const plonk_table_description<FieldType>& desc,
+                                 std::ostream& out,
+                                 const ranges& witnesses,
+                                 const ranges& public_inputs,
+                                 const ranges& constants,
+                                 const ranges& selectors,
+                                 const ranges& rows,
+                                 bool wide_export =
+                                     false) {    // wide_export is for e.g. potentiall fuzzer: does fixed width elements
 
-                    
                     std::ios_base::fmtflags os_flags(out.flags());
                     out << std::dec;
 
@@ -68,10 +68,7 @@ namespace nil {
                             for (auto [lower_witness, upper_witness] : witnesses) {
                                 for (std::uint32_t j = lower_witness; j <= upper_witness; j++) {
                                     out << std::setw(width)
-                                        << (i < table.witness_column_size(j)
-                                                ? table.witness(j)[i]
-                                                : 0)
-                                        << " ";
+                                        << (i < table.witness_column_size(j) ? table.witness(j)[i] : 0) << " ";
                                 }
                             }
                             out << "| ";
@@ -79,9 +76,7 @@ namespace nil {
                             for (auto [lower_public_input, upper_public_input] : public_inputs) {
                                 for (std::uint32_t j = lower_public_input; j <= upper_public_input; j++) {
                                     out << std::setw(width)
-                                        << (i < table.public_input_column_size(j)
-                                                ? table.public_input(j)[i]
-                                                : 0)
+                                        << (i < table.public_input_column_size(j) ? table.public_input(j)[i] : 0)
                                         << " ";
                                 }
                             }
@@ -90,10 +85,7 @@ namespace nil {
                             for (auto [lower_constant, upper_constant] : constants) {
                                 for (std::uint32_t j = lower_constant; j <= upper_constant; j++) {
                                     out << std::setw(width)
-                                        << (i < table.constant_column_size(j)
-                                                ? table.constant(j)[i]
-                                                : 0)
-                                        << " ";
+                                        << (i < table.constant_column_size(j) ? table.constant(j)[i] : 0) << " ";
                                 }
                             }
                             out << "| ";
@@ -101,10 +93,7 @@ namespace nil {
                             for (auto [lower_selector, upper_selector] : selectors) {
                                 // Selectors only need a single bit, so we do not renew the size here
                                 for (std::uint32_t j = lower_selector; j <= upper_selector; j++) {
-                                    out << (i < table.selector_column_size(j)
-                                                ? table.selector(j)[i]
-                                                : 0)
-                                        << " ";
+                                    out << (i < table.selector_column_size(j) ? table.selector(j)[i] : 0) << " ";
                                 }
                             }
                             out << "\n";
@@ -115,13 +104,12 @@ namespace nil {
                     out.flags(os_flags);
                 }
 
-            } // namespace snark
+            }    // namespace snark
 
-        } // namespace zk
+        }    // namespace zk
 
-    } // namespace crypto3
+    }    // namespace crypto3
 
-} // namespace nil
+}    // namespace nil
 
-
-#endif // PARALLEL_CRYPTO3_ZK_PLONK_PLACEHOLDER_TABLE_EXPORT_HPP
+#endif    // PARALLEL_CRYPTO3_ZK_PLONK_PLACEHOLDER_TABLE_EXPORT_HPP

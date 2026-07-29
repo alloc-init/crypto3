@@ -161,19 +161,19 @@ namespace nil {
                             scalar_field_type::value_bits, g2_window, g2_type::value_type::one());
 
                         commitments::knowledge_commitment_vector<g1_type, g1_type> A_query =
-                            commitments::kc_batch_exp<g1_type, g1_type, scalar_field_type>(scalar_field_type::value_bits, g1_window,
-                                                                              g1_window, g1_table, g1_table, rA,
-                                                                              rA * alphaA, At, chunks);
+                            commitments::kc_batch_exp<g1_type, g1_type, scalar_field_type>(
+                                scalar_field_type::value_bits, g1_window, g1_window, g1_table, g1_table, rA,
+                                rA * alphaA, At, chunks);
 
                         commitments::knowledge_commitment_vector<g2_type, g1_type> B_query =
-                            commitments::kc_batch_exp<g2_type, g1_type, scalar_field_type>(scalar_field_type::value_bits, g2_window,
-                                                                              g1_window, g2_table, g1_table, rB,
-                                                                              rB * alphaB, Bt, chunks);
+                            commitments::kc_batch_exp<g2_type, g1_type, scalar_field_type>(
+                                scalar_field_type::value_bits, g2_window, g1_window, g2_table, g1_table, rB,
+                                rB * alphaB, Bt, chunks);
 
                         commitments::knowledge_commitment_vector<g1_type, g1_type> C_query =
-                            commitments::kc_batch_exp<g1_type, g1_type, scalar_field_type>(scalar_field_type::value_bits, g1_window,
-                                                                              g1_window, g1_table, g1_table, rC,
-                                                                              rC * alphaC, Ct, chunks);
+                            commitments::kc_batch_exp<g1_type, g1_type, scalar_field_type>(
+                                scalar_field_type::value_bits, g1_window, g1_window, g1_table, g1_table, rC,
+                                rC * alphaC, Ct, chunks);
 
                         typename std::vector<typename g1_type::value_type> H_query =
                             algebra::batch_exp<g1_type, scalar_field_type>(scalar_field_type::value_bits, g1_window,
@@ -209,7 +209,7 @@ namespace nil {
                                                                            g1_table, multiplied_IC_coefficients);
 
                         container::accumulation_vector<g1_type> encoded_IC_query(std::move(encoded_IC_base),
-                                                                      std::move(encoded_IC_values));
+                                                                                 std::move(encoded_IC_values));
 
                         verification_key_type vk =
                             verification_key_type(alphaA_g2, alphaB_g1, alphaC_g2, gamma_g2, gamma_beta_g1,
@@ -225,8 +225,8 @@ namespace nil {
                     }
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_R1CS_PPZKSNARK_BASIC_GENERATOR_HPP

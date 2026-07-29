@@ -117,8 +117,8 @@ namespace nil {
                             }
                         }
 
-                        params_type(single_commitment_type ck, verification_key_type vk) : commitment_key(ck),
-                            verification_key(vk) {
+                        params_type(single_commitment_type ck, verification_key_type vk) :
+                            commitment_key(ck), verification_key(vk) {
                         }
                     };
 
@@ -129,48 +129,42 @@ namespace nil {
 
                         public_key_type() = default;
 
-                        public_key_type(commitment_type c, scalar_value_type z, scalar_value_type e)
-                            : commit(c), z(z), eval(e) {
+                        public_key_type(commitment_type c, scalar_value_type z, scalar_value_type e) :
+                            commit(c), z(z), eval(e) {
                         }
 
                         public_key_type &operator=(const public_key_type &other) = default;
                     };
                 };
-            } // namespace commitments
+            }    // namespace commitments
 
             namespace algorithms {
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::kzg<typename CommitmentSchemeType::curve_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<std::is_base_of<commitments::kzg<typename CommitmentSchemeType::curve_type>,
+                                                            CommitmentSchemeType>::value,
+                                            bool>::type = true>
                 static typename CommitmentSchemeType::commitment_type
-                commit(const typename CommitmentSchemeType::params_type &params,
-                       const typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> &f) {
+                    commit(const typename CommitmentSchemeType::params_type &params,
+                           const typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> &f) {
                     BOOST_ASSERT(f.size() <= params.commitment_key.size());
                     return algebra::multiexp<typename CommitmentSchemeType::multiexp_method>(
-                        params.commitment_key.begin(),
-                        params.commitment_key.begin() + f.size(),
-                        f.begin(), f.end(), 1);
+                        params.commitment_key.begin(), params.commitment_key.begin() + f.size(), f.begin(), f.end(), 1);
                 }
 
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::kzg<typename CommitmentSchemeType::curve_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<std::is_base_of<commitments::kzg<typename CommitmentSchemeType::curve_type>,
+                                                            CommitmentSchemeType>::value,
+                                            bool>::type = true>
                 static typename CommitmentSchemeType::proof_type
-                proof_eval(typename CommitmentSchemeType::params_type params,
-                           const typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> &f,
-                           typename CommitmentSchemeType::scalar_value_type z) {
+                    proof_eval(typename CommitmentSchemeType::params_type params,
+                               const typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> &f,
+                               typename CommitmentSchemeType::scalar_value_type z) {
                     // We need two scopes on the next line to force it to use the initializer list version,
                     // not another constructor with 2 params.
                     const typename math::polynomial<typename CommitmentSchemeType::scalar_value_type>
-                            denominator_polynom = {
-                                {-z, CommitmentSchemeType::scalar_value_type::one()}
-                            };
+                        denominator_polynom = {{-z, CommitmentSchemeType::scalar_value_type::one()}};
 
                     typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> q(f);
                     q[0] -= f.evaluate(z);
@@ -183,33 +177,30 @@ namespace nil {
                     return commit<CommitmentSchemeType>(params, q);
                 }
 
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::kzg<typename CommitmentSchemeType::curve_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<std::is_base_of<commitments::kzg<typename CommitmentSchemeType::curve_type>,
+                                                            CommitmentSchemeType>::value,
+                                            bool>::type = true>
                 static typename CommitmentSchemeType::proof_type
-                proof_eval(typename CommitmentSchemeType::params_type params,
-                           const typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> &f,
-                           typename CommitmentSchemeType::public_key_type &pk) {
+                    proof_eval(typename CommitmentSchemeType::params_type params,
+                               const typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> &f,
+                               typename CommitmentSchemeType::public_key_type &pk) {
                     return proof_eval<CommitmentSchemeType>(params, f, pk.z);
                 }
 
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::kzg<typename CommitmentSchemeType::curve_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<std::is_base_of<commitments::kzg<typename CommitmentSchemeType::curve_type>,
+                                                            CommitmentSchemeType>::value,
+                                            bool>::type = true>
                 static bool verify_eval(const typename CommitmentSchemeType::params_type &params,
                                         const typename CommitmentSchemeType::proof_type &proof,
                                         const typename CommitmentSchemeType::public_key_type &public_key) {
                     auto A_1 = algebra::precompute_g1<typename CommitmentSchemeType::curve_type>(proof);
                     auto A_2 = algebra::precompute_g2<typename CommitmentSchemeType::curve_type>(
                         params.verification_key -
-                        public_key.z *
-                        CommitmentSchemeType::curve_type::template g2_type<>::value_type::one());
+                        public_key.z * CommitmentSchemeType::curve_type::template g2_type<>::value_type::one());
                     auto B_1 = algebra::precompute_g1<typename CommitmentSchemeType::curve_type>(
                         public_key.eval * CommitmentSchemeType::curve_type::template g1_type<>::value_type::one() -
                         public_key.commit);
@@ -217,7 +208,7 @@ namespace nil {
                         CommitmentSchemeType::curve_type::template g2_type<>::value_type::one());
 
                     typename CommitmentSchemeType::gt_value_type gt3 =
-                        algebra::double_miller_loop<typename CommitmentSchemeType::curve_type>( A_1, A_2, B_1, B_2);
+                        algebra::double_miller_loop<typename CommitmentSchemeType::curve_type>(A_1, A_2, B_1, B_2);
                     std::optional<typename CommitmentSchemeType::gt_value_type> gt_4 =
                         algebra::final_exponentiation<typename CommitmentSchemeType::curve_type>(gt3);
 
@@ -227,7 +218,7 @@ namespace nil {
 
                     return *gt_4 == CommitmentSchemeType::gt_value_type::one();
                 }
-            } // namespace algorithms
+            }    // namespace algorithms
 
             namespace commitments {
                 /**
@@ -240,8 +231,8 @@ namespace nil {
                  * <https://eprint.iacr.org/2020/081.pdf>
                  */
                 template<typename CurveType, typename TranscriptHashType,
-                         typename PolynomialType = math::polynomial_dfs<typename
-                             CurveType::scalar_field_type::value_type>>
+                         typename PolynomialType =
+                             math::polynomial_dfs<typename CurveType::scalar_field_type::value_type>>
                 struct batched_kzg {
                     constexpr static bool is_kzg = true;
 
@@ -312,9 +303,8 @@ namespace nil {
                         }
 
                         params_type(const std::vector<single_commitment_type> &commitment_key,
-                                    const std::vector<verification_key_type> &verification_key) : commitment_key(
-                                commitment_key), verification_key(verification_key) {
-                        };
+                                    const std::vector<verification_key_type> &verification_key) :
+                            commitment_key(commitment_key), verification_key(verification_key) { };
 
                         params_type &operator=(const params_type &other) {
                             commitment_key = other.commitment_key;
@@ -325,16 +315,15 @@ namespace nil {
 
                     struct public_key_type {
                         std::vector<single_commitment_type> commits;
-                        std::vector<scalar_value_type> T; // merged eval points
-                        std::vector<std::vector<scalar_value_type>> S; // eval points
-                        std::vector<polynomial_type> r; // U polynomials
+                        std::vector<scalar_value_type> T;                 // merged eval points
+                        std::vector<std::vector<scalar_value_type>> S;    // eval points
+                        std::vector<polynomial_type> r;                   // U polynomials
                         public_key_type() = default;
 
                         public_key_type(const std::vector<single_commitment_type> &commits,
                                         const std::vector<scalar_value_type> &T,
                                         const std::vector<std::vector<scalar_value_type>> &S,
-                                        const std::vector<polynomial_type> &r) : commits(commits), T(T), S(S), r(r) {
-                        };
+                                        const std::vector<polynomial_type> &r) : commits(commits), T(T), S(S), r(r) { };
 
                         public_key_type &operator=(const public_key_type &other) {
                             commits = other.commits;
@@ -345,32 +334,31 @@ namespace nil {
                         }
                     };
                 };
-            } // namespace commitments
+            }    // namespace commitments
 
             namespace algorithms {
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<typename CommitmentSchemeType::curve_type, typename
-                                     CommitmentSchemeType::transcript_hash_type, typename
-                                     CommitmentSchemeType::polynomial_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<
+                        std::is_base_of<commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
+                                                                 typename CommitmentSchemeType::transcript_hash_type,
+                                                                 typename CommitmentSchemeType::polynomial_type>,
+                                        CommitmentSchemeType>::value,
+                        bool>::type = true>
                 static void update_transcript(const typename CommitmentSchemeType::public_key_type &public_key,
                                               typename CommitmentSchemeType::transcript_type &transcript) {
                     /* The procedure of updating the transcript is subject to review and change
                      * #295 */
 
-
-                    for (const auto &commit: public_key.commits) {
+                    for (const auto &commit : public_key.commits) {
                         transcript(commit);
                     }
-                    for (const auto &S: public_key.S) {
-                        for (const auto &s: S) {
+                    for (const auto &S : public_key.S) {
+                        for (const auto &s : S) {
                             transcript(s);
                         }
                     }
-                    for (const auto &r: public_key.r) {
+                    for (const auto &r : public_key.r) {
                         for (std::size_t i = 0; i < r.size(); ++i) {
                             transcript(r[i]);
                         }
@@ -378,21 +366,25 @@ namespace nil {
                 }
 
                 // Duplicates get_U functions logic
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
-                                 typename CommitmentSchemeType::transcript_hash_type, typename
-                                 CommitmentSchemeType::polynomial_type>, CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<
+                        std::is_base_of<commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
+                                                                 typename CommitmentSchemeType::transcript_hash_type,
+                                                                 typename CommitmentSchemeType::polynomial_type>,
+                                        CommitmentSchemeType>::value,
+                        bool>::type = true>
                 static std::vector<typename CommitmentSchemeType::polynomial_type>
-                create_evals_polys(const typename CommitmentSchemeType::batch_of_polynomials_type &polys,
-                                   const std::vector<std::vector<typename CommitmentSchemeType::scalar_value_type>> S) {
+                    create_evals_polys(const typename CommitmentSchemeType::batch_of_polynomials_type &polys,
+                                       const std::vector<std::vector<typename CommitmentSchemeType::scalar_value_type>>
+                                           S) {
                     BOOST_ASSERT(polys.size() == S.size());
                     std::vector<typename CommitmentSchemeType::polynomial_type> rs(polys.size());
                     for (std::size_t i = 0; i < polys.size(); ++i) {
-                        typename std::vector<std::pair<typename CommitmentSchemeType::scalar_value_type, typename
-                            CommitmentSchemeType::scalar_value_type>> evals;
-                        for (auto s: S[i]) {
+                        typename std::vector<std::pair<typename CommitmentSchemeType::scalar_value_type,
+                                                       typename CommitmentSchemeType::scalar_value_type>>
+                            evals;
+                        for (auto s : S[i]) {
                             evals.push_back(std::make_pair(s, polys[i].evaluate(s)));
                         }
                         rs[i] = math::lagrange_interpolation(evals);
@@ -400,34 +392,30 @@ namespace nil {
                     return rs;
                 }
 
-                template<typename CommitmentSchemeType, typename PolynomialType=typename
-                         CommitmentSchemeType::polynomial_type,
+                template<typename CommitmentSchemeType,
+                         typename PolynomialType = typename CommitmentSchemeType::polynomial_type,
                          typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<
-                                     typename CommitmentSchemeType::curve_type,
-                                     typename CommitmentSchemeType::transcript_hash_type,
-                                     PolynomialType>,
-                                 CommitmentSchemeType>::value, bool>::type = true>
-                static typename CommitmentSchemeType::single_commitment_type
-                commit_one(const typename CommitmentSchemeType::params_type &params,
-                           const typename math::polynomial<typename CommitmentSchemeType::field_type::value_type> &
-                           poly) {
+                             std::is_base_of<commitments::batched_kzg<
+                                                 typename CommitmentSchemeType::curve_type,
+                                                 typename CommitmentSchemeType::transcript_hash_type, PolynomialType>,
+                                             CommitmentSchemeType>::value,
+                             bool>::type = true>
+                static typename CommitmentSchemeType::single_commitment_type commit_one(
+                    const typename CommitmentSchemeType::params_type &params,
+                    const typename math::polynomial<typename CommitmentSchemeType::field_type::value_type> &poly) {
                     BOOST_ASSERT(poly.size() <= params.commitment_key.size());
                     return algebra::multiexp<typename CommitmentSchemeType::multiexp_method>(
-                        params.commitment_key.begin(),
-                        params.commitment_key.begin() + poly.size(),
-                        poly.begin(), poly.end(), 1
-                    );
+                        params.commitment_key.begin(), params.commitment_key.begin() + poly.size(), poly.begin(),
+                        poly.end(), 1);
                 }
 
-                template<typename CommitmentSchemeType, typename PolynomialType=typename
-                         CommitmentSchemeType::polynomial_type,
+                template<typename CommitmentSchemeType,
+                         typename PolynomialType = typename CommitmentSchemeType::polynomial_type,
                          typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<typename CommitmentSchemeType::curve_type, typename
-                                     CommitmentSchemeType::transcript_hash_type, PolynomialType>,
-                                 CommitmentSchemeType>::value,
+                             std::is_base_of<commitments::batched_kzg<
+                                                 typename CommitmentSchemeType::curve_type,
+                                                 typename CommitmentSchemeType::transcript_hash_type, PolynomialType>,
+                                             CommitmentSchemeType>::value,
                              bool>::type = true>
                 static typename CommitmentSchemeType::single_commitment_type commit_one(
                     const typename CommitmentSchemeType::params_type &params,
@@ -435,26 +423,22 @@ namespace nil {
                     auto poly_normal = poly.coefficients();
                     BOOST_ASSERT(poly_normal.size() <= params.commitment_key.size());
                     return algebra::multiexp<typename CommitmentSchemeType::multiexp_method>(
-                        params.commitment_key.begin(),
-                        params.commitment_key.begin() +
-                        poly_normal.size(), poly_normal.begin(),
-                        poly_normal.end(), 1);
+                        params.commitment_key.begin(), params.commitment_key.begin() + poly_normal.size(),
+                        poly_normal.begin(), poly_normal.end(), 1);
                 }
 
-
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<
-                                     typename CommitmentSchemeType::curve_type, typename
-                                     CommitmentSchemeType::transcript_hash_type,
-                                     math::polynomial<typename CommitmentSchemeType::field_type::value_type>>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
-                static typename CommitmentSchemeType::multi_commitment_type
-                commit(const typename CommitmentSchemeType::params_type &params,
-                       const std::vector<math::polynomial<typename CommitmentSchemeType::field_type::value_type>> &
-                       polys) {
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<
+                        std::is_base_of<commitments::batched_kzg<
+                                            typename CommitmentSchemeType::curve_type,
+                                            typename CommitmentSchemeType::transcript_hash_type,
+                                            math::polynomial<typename CommitmentSchemeType::field_type::value_type>>,
+                                        CommitmentSchemeType>::value,
+                        bool>::type = true>
+                static typename CommitmentSchemeType::multi_commitment_type commit(
+                    const typename CommitmentSchemeType::params_type &params,
+                    const std::vector<math::polynomial<typename CommitmentSchemeType::field_type::value_type>> &polys) {
                     typename CommitmentSchemeType::multi_commitment_type commitments;
 
                     commitments.resize(polys.size());
@@ -465,17 +449,17 @@ namespace nil {
                     return commitments;
                 }
 
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<typename CommitmentSchemeType::curve_type, typename
-                                     CommitmentSchemeType::transcript_hash_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
-                static typename CommitmentSchemeType::multi_commitment_type
-                commit(const typename CommitmentSchemeType::params_type &params,
-                       const std::vector<math::polynomial_dfs<typename CommitmentSchemeType::field_type::value_type>> &
-                       polys) {
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<
+                        std::is_base_of<commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
+                                                                 typename CommitmentSchemeType::transcript_hash_type>,
+                                        CommitmentSchemeType>::value,
+                        bool>::type = true>
+                static typename CommitmentSchemeType::multi_commitment_type commit(
+                    const typename CommitmentSchemeType::params_type &params,
+                    const std::vector<math::polynomial_dfs<typename CommitmentSchemeType::field_type::value_type>>
+                        &polys) {
                     typename CommitmentSchemeType::multi_commitment_type commitments;
                     commitments.resize(polys.size());
                     for (std::size_t i = 0; i < polys.size(); ++i) {
@@ -485,16 +469,16 @@ namespace nil {
                     return commitments;
                 }
 
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
-                                     typename CommitmentSchemeType::transcript_hash_type, typename
-                                     CommitmentSchemeType::polynomial_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<
+                        std::is_base_of<commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
+                                                                 typename CommitmentSchemeType::transcript_hash_type,
+                                                                 typename CommitmentSchemeType::polynomial_type>,
+                                        CommitmentSchemeType>::value,
+                        bool>::type = true>
                 static std::vector<typename CommitmentSchemeType::scalar_value_type>
-                merge_eval_points(std::vector<std::vector<typename CommitmentSchemeType::scalar_value_type>> S) {
+                    merge_eval_points(std::vector<std::vector<typename CommitmentSchemeType::scalar_value_type>> S) {
                     std::set<typename CommitmentSchemeType::scalar_value_type> result;
                     for (std::size_t i = 0; i < S.size(); ++i) {
                         result.insert(S[i].begin(), S[i].end());
@@ -502,42 +486,40 @@ namespace nil {
                     return std::vector<typename CommitmentSchemeType::scalar_value_type>(result.begin(), result.end());
                 }
 
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<typename CommitmentSchemeType::curve_type, typename
-                                     CommitmentSchemeType::transcript_hash_type, typename
-                                     CommitmentSchemeType::polynomial_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
-                static typename CommitmentSchemeType::verification_key_type commit_g2(
-                    typename CommitmentSchemeType::params_type &params,
-                    typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> poly) {
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<
+                        std::is_base_of<commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
+                                                                 typename CommitmentSchemeType::transcript_hash_type,
+                                                                 typename CommitmentSchemeType::polynomial_type>,
+                                        CommitmentSchemeType>::value,
+                        bool>::type = true>
+                static typename CommitmentSchemeType::verification_key_type
+                    commit_g2(typename CommitmentSchemeType::params_type &params,
+                              typename math::polynomial<typename CommitmentSchemeType::scalar_value_type>
+                                  poly) {
                     BOOST_ASSERT(poly.size() <= params.verification_key.size());
                     typename CommitmentSchemeType::verification_key_type result;
                     auto it1 = params.verification_key.begin();
                     auto it2 = params.verification_key.begin() + poly.size();
-                    result = algebra::multiexp<typename CommitmentSchemeType::multiexp_method>(
-                        it1, it2,
-                        poly.begin(), poly.end(), 1
-                    );
+                    result = algebra::multiexp<typename CommitmentSchemeType::multiexp_method>(it1, it2, poly.begin(),
+                                                                                               poly.end(), 1);
                     return result;
                 }
 
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<typename CommitmentSchemeType::curve_type, typename
-                                     CommitmentSchemeType::transcript_hash_type, typename
-                                     CommitmentSchemeType::polynomial_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<
+                        std::is_base_of<commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
+                                                                 typename CommitmentSchemeType::transcript_hash_type,
+                                                                 typename CommitmentSchemeType::polynomial_type>,
+                                        CommitmentSchemeType>::value,
+                        bool>::type = true>
                 static typename math::polynomial<typename CommitmentSchemeType::scalar_value_type>
-                create_polynom_by_zeros(const std::vector<typename CommitmentSchemeType::scalar_value_type> S) {
+                    create_polynom_by_zeros(const std::vector<typename CommitmentSchemeType::scalar_value_type> S) {
                     assert(S.size() > 0);
                     typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> Z = {
-                        {-S[0], CommitmentSchemeType::scalar_value_type::one()}
-                    };
+                        {-S[0], CommitmentSchemeType::scalar_value_type::one()}};
                     for (std::size_t i = 1; i < S.size(); ++i) {
                         Z *= typename math::polynomial<typename CommitmentSchemeType::scalar_value_type>(
                             {-S[i], CommitmentSchemeType::scalar_value_type::one()});
@@ -545,17 +527,18 @@ namespace nil {
                     return Z;
                 }
 
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
-                                     typename CommitmentSchemeType::transcript_hash_type, typename
-                                     CommitmentSchemeType::polynomial_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<
+                        std::is_base_of<commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
+                                                                 typename CommitmentSchemeType::transcript_hash_type,
+                                                                 typename CommitmentSchemeType::polynomial_type>,
+                                        CommitmentSchemeType>::value,
+                        bool>::type = true>
                 static typename math::polynomial<typename CommitmentSchemeType::scalar_value_type>
-                set_difference_polynom(std::vector<typename CommitmentSchemeType::scalar_value_type> T,
-                                       std::vector<typename CommitmentSchemeType::scalar_value_type> S) {
+                    set_difference_polynom(std::vector<typename CommitmentSchemeType::scalar_value_type> T,
+                                           std::vector<typename CommitmentSchemeType::scalar_value_type>
+                                               S) {
                     std::sort(T.begin(), T.end());
                     std::sort(S.begin(), S.end());
                     std::vector<typename CommitmentSchemeType::scalar_value_type> result;
@@ -567,49 +550,50 @@ namespace nil {
                     return create_polynom_by_zeros<CommitmentSchemeType>(result);
                 }
 
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
-                                     typename CommitmentSchemeType::transcript_hash_type, typename
-                                     CommitmentSchemeType::polynomial_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<
+                        std::is_base_of<commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
+                                                                 typename CommitmentSchemeType::transcript_hash_type,
+                                                                 typename CommitmentSchemeType::polynomial_type>,
+                                        CommitmentSchemeType>::value,
+                        bool>::type = true>
                 static typename CommitmentSchemeType::single_commitment_type
-                proof_eval(const typename CommitmentSchemeType::params_type &params,
-                           const typename CommitmentSchemeType::batch_of_polynomials_type &polys,
-                           typename CommitmentSchemeType::public_key_type &public_key,
-                           typename CommitmentSchemeType::transcript_type &transcript) {
+                    proof_eval(const typename CommitmentSchemeType::params_type &params,
+                               const typename CommitmentSchemeType::batch_of_polynomials_type &polys,
+                               typename CommitmentSchemeType::public_key_type &public_key,
+                               typename CommitmentSchemeType::transcript_type &transcript) {
                     update_transcript<CommitmentSchemeType>(public_key, transcript);
 
-                    auto gamma = transcript.template challenge<typename
-                        CommitmentSchemeType::curve_type::scalar_field_type>();
+                    auto gamma =
+                        transcript.template challenge<typename CommitmentSchemeType::curve_type::scalar_field_type>();
                     auto factor = CommitmentSchemeType::scalar_value_type::one();
                     typename CommitmentSchemeType::polynomial_type accum;
 
                     for (std::size_t i = 0; i < polys.size(); ++i) {
                         auto spare_poly = polys[i] - public_key.r[i];
                         auto denom = create_polynom_by_zeros<CommitmentSchemeType>(public_key.S[i]);
-                        for (auto s: public_key.S[i]) {
+                        for (auto s : public_key.S[i]) {
                             assert(spare_poly.evaluate(s).is_zero());
                             assert(denom.evaluate(s).is_zero());
                         }
                         assert(spare_poly % denom ==
-                            typename math::polynomial<typename CommitmentSchemeType::scalar_value_type>(
-                                {{CommitmentSchemeType::scalar_value_type::zero()}}));
+                               typename math::polynomial<typename CommitmentSchemeType::scalar_value_type>(
+                                   {{CommitmentSchemeType::scalar_value_type::zero()}}));
                         spare_poly /= denom;
                         accum += spare_poly * factor;
                         factor *= gamma;
                     }
 
-                    //verify without pairing
+                    // verify without pairing
                     /*
                     {
                         typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> right_side({{0}});
                         factor = CommitmentSchemeType::scalar_value_type::one();
                         for (std::size_t i = 0; i < polys.size(); ++i) {
-                            right_side = right_side + factor * (polys[i] - public_key.r[i]) * set_difference_polynom<CommitmentSchemeType>(public_key.T, public_key.S[i]);
-                            factor = factor * gamma;
+                            right_side = right_side + factor * (polys[i] - public_key.r[i]) *
+                    set_difference_polynom<CommitmentSchemeType>(public_key.T, public_key.S[i]); factor = factor *
+                    gamma;
                         }
                         assert(accum * create_polynom_by_zeros<CommitmentSchemeType>(public_key.T) == right_side);
                     }*/
@@ -617,31 +601,30 @@ namespace nil {
                     return commit_one<CommitmentSchemeType>(params, accum);
                 }
 
-                template<typename CommitmentSchemeType,
-                         typename std::enable_if<
-                             std::is_base_of<
-                                 commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
-                                     typename CommitmentSchemeType::transcript_hash_type, typename
-                                     CommitmentSchemeType::polynomial_type>,
-                                 CommitmentSchemeType>::value,
-                             bool>::type = true>
+                template<
+                    typename CommitmentSchemeType,
+                    typename std::enable_if<
+                        std::is_base_of<commitments::batched_kzg<typename CommitmentSchemeType::curve_type,
+                                                                 typename CommitmentSchemeType::transcript_hash_type,
+                                                                 typename CommitmentSchemeType::polynomial_type>,
+                                        CommitmentSchemeType>::value,
+                        bool>::type = true>
                 static bool verify_eval(typename CommitmentSchemeType::params_type params,
                                         const typename CommitmentSchemeType::single_commitment_type &proof,
                                         const typename CommitmentSchemeType::public_key_type &public_key,
                                         typename CommitmentSchemeType::transcript_type &transcript) {
                     update_transcript<CommitmentSchemeType>(public_key, transcript);
 
-                    auto gamma = transcript.template challenge<typename
-                        CommitmentSchemeType::curve_type::scalar_field_type>();
+                    auto gamma =
+                        transcript.template challenge<typename CommitmentSchemeType::curve_type::scalar_field_type>();
                     auto factor = CommitmentSchemeType::scalar_value_type::one();
                     auto left_side_pairing = CommitmentSchemeType::gt_value_type::one();
 
                     for (std::size_t i = 0; i < public_key.commits.size(); ++i) {
                         auto r_commit = commit_one<CommitmentSchemeType>(params, public_key.r[i]);
                         auto left = factor * (public_key.commits[i] - r_commit);
-                        auto right = commit_g2<CommitmentSchemeType>(params,
-                                                                     set_difference_polynom<CommitmentSchemeType>(
-                                                                         public_key.T, public_key.S[i]));
+                        auto right = commit_g2<CommitmentSchemeType>(
+                            params, set_difference_polynom<CommitmentSchemeType>(public_key.T, public_key.S[i]));
                         if (public_key.commits.size() == 1) {
                             assert(right == CommitmentSchemeType::verification_key_type::one());
                         }
@@ -654,8 +637,10 @@ namespace nil {
                         factor = factor * gamma;
                     }
 
-                    auto right = commit_g2<CommitmentSchemeType>(params, create_polynom_by_zeros<CommitmentSchemeType>( public_key.T));
-                    auto right_side_pairing = algebra::pair_reduced<typename CommitmentSchemeType::curve_type>(proof, right);
+                    auto right = commit_g2<CommitmentSchemeType>(
+                        params, create_polynom_by_zeros<CommitmentSchemeType>(public_key.T));
+                    auto right_side_pairing =
+                        algebra::pair_reduced<typename CommitmentSchemeType::curve_type>(proof, right);
 
                     if (!right_side_pairing) {
                         return false;
@@ -663,17 +648,14 @@ namespace nil {
 
                     return left_side_pairing == *right_side_pairing;
                 }
-            } // namespace algorithms
-
+            }    // namespace algorithms
 
             namespace commitments {
                 // Placeholder-friendly class
                 template<typename CommitmentSchemeType>
-                class kzg_commitment_scheme :
-                        public polys_evaluator<
-                            typename CommitmentSchemeType::params_type,
-                            typename CommitmentSchemeType::commitment_type,
-                            typename CommitmentSchemeType::polynomial_type> {
+                class kzg_commitment_scheme : public polys_evaluator<typename CommitmentSchemeType::params_type,
+                                                                     typename CommitmentSchemeType::commitment_type,
+                                                                     typename CommitmentSchemeType::polynomial_type> {
                 public:
                     using curve_type = typename CommitmentSchemeType::curve_type;
                     using field_type = typename CommitmentSchemeType::field_type;
@@ -687,40 +669,42 @@ namespace nil {
                     using polynomial_type = typename CommitmentSchemeType::polynomial_type;
                     using proof_type = typename CommitmentSchemeType::proof_type;
                     using endianness = nil::marshalling::option::big_endian;
+
                 private:
                     params_type _params;
                     std::map<std::size_t, commitment_type> _commitments;
                     std::map<std::size_t, std::vector<typename CommitmentSchemeType::single_commitment_type>>
-                    _ind_commitments;
+                        _ind_commitments;
                     std::vector<typename CommitmentSchemeType::scalar_value_type> _merged_points;
 
                 protected:
                     typename CommitmentSchemeType::verification_key_type
-                    commit_g2(typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> poly) {
+                        commit_g2(typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> poly) {
                         BOOST_ASSERT(poly.size() <= _params.verification_key.size());
                         auto result = algebra::multiexp<typename CommitmentSchemeType::multiexp_method>(
-                            _params.verification_key.begin(),
-                            _params.verification_key.begin() + poly.size(), poly.begin(), poly.end(), 1);
+                            _params.verification_key.begin(), _params.verification_key.begin() + poly.size(),
+                            poly.begin(), poly.end(), 1);
                         return result;
                     }
 
                     // Differs from static one by input parameters
                     void merge_eval_points() {
                         std::set<typename CommitmentSchemeType::scalar_value_type> set;
-                        for (auto const &it: this->_points) {
+                        for (auto const &it : this->_points) {
                             auto k = it.first;
                             for (std::size_t i = 0; i < this->_points[k].size(); ++i) {
                                 set.insert(this->_points[k][i].begin(), this->_points[k][i].end());
                             }
                         }
-                        _merged_points = std::vector<typename CommitmentSchemeType::scalar_value_type>(set.begin(),
-                            set.end());
+                        _merged_points =
+                            std::vector<typename CommitmentSchemeType::scalar_value_type>(set.begin(), set.end());
                     }
 
                     typename math::polynomial<typename CommitmentSchemeType::scalar_value_type>
-                    set_difference_polynom(
-                        std::vector<typename CommitmentSchemeType::scalar_value_type> merged_points,
-                        std::vector<typename CommitmentSchemeType::scalar_value_type> points) {
+                        set_difference_polynom(std::vector<typename CommitmentSchemeType::scalar_value_type>
+                                                   merged_points,
+                                               std::vector<typename CommitmentSchemeType::scalar_value_type>
+                                                   points) {
                         std::sort(merged_points.begin(), merged_points.end());
                         std::sort(points.begin(), points.end());
                         std::vector<typename CommitmentSchemeType::scalar_value_type> result;
@@ -765,7 +749,7 @@ namespace nil {
                     // Interface functions, not useful here. Added for compatibility with LPC.
                     void mark_batch_as_fixed(std::size_t index) {
                     }
-                    void set_fixed_polys_values(const preprocessed_data_type& value) {
+                    void set_fixed_polys_values(const preprocessed_data_type &value) {
                     }
 
                     kzg_commitment_scheme(params_type kzg_params) : _params(kzg_params) {
@@ -780,12 +764,11 @@ namespace nil {
                         for (std::size_t i = 0; i < this->_polys[index].size(); ++i) {
                             BOOST_ASSERT(this->_polys[index][i].degree() <= _params.commitment_key.size());
                             auto single_commitment = nil::crypto3::zk::algorithms::commit_one<CommitmentSchemeType>(
-                                _params,
-                                this->_polys[index][i]);
+                                _params, this->_polys[index][i]);
                             this->_ind_commitments[index].push_back(single_commitment);
                             nil::marshalling::status_type status;
                             std::vector<uint8_t> single_commitment_bytes =
-                                    nil::marshalling::pack<endianness>(single_commitment, status);
+                                nil::marshalling::pack<endianness>(single_commitment, status);
                             THROW_IF_ERROR_STATUS(status, "kzg::commit");
                             result.insert(result.end(), single_commitment_bytes.begin(), single_commitment_bytes.end());
                         }
@@ -801,7 +784,7 @@ namespace nil {
                         // Nothing to be done here.
                     }
 
-                    void fill_challenge_queue_for_setup(transcript_type& transcript, std::queue<value_type>& queue) {
+                    void fill_challenge_queue_for_setup(transcript_type &transcript, std::queue<value_type> &queue) {
                         // Nothing to be done here.
                     }
 
@@ -809,47 +792,46 @@ namespace nil {
                         this->eval_polys();
                         this->merge_eval_points();
 
-                        for (auto const &it: this->_commitments) {
+                        for (auto const &it : this->_commitments) {
                             auto k = it.first;
                             update_transcript(k, transcript);
                         }
 
-                        auto gamma = transcript.template challenge<typename
-                            CommitmentSchemeType::curve_type::scalar_field_type>();
+                        auto gamma =
+                            transcript
+                                .template challenge<typename CommitmentSchemeType::curve_type::scalar_field_type>();
                         auto factor = CommitmentSchemeType::scalar_value_type::one();
-                        typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> accum =
-                                {{CommitmentSchemeType::scalar_value_type::zero()}};
+                        typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> accum = {
+                            {CommitmentSchemeType::scalar_value_type::zero()}};
 
-                        for (auto const &it: this->_polys) {
+                        for (auto const &it : this->_polys) {
                             auto k = it.first;
                             for (std::size_t i = 0; i < this->_z.get_batch_size(k); ++i) {
-                                accum += factor * (math::polynomial<typename CommitmentSchemeType::scalar_value_type>(
-                                                       this->_polys[k][i].coefficients()) - this->get_U(k, i)) /
-                                        this->get_V(this->_points[k][i]);
+                                accum += factor *
+                                         (math::polynomial<typename CommitmentSchemeType::scalar_value_type>(
+                                              this->_polys[k][i].coefficients()) -
+                                          this->get_U(k, i)) /
+                                         this->get_V(this->_points[k][i]);
                                 factor *= gamma;
                             }
                         }
 
-                        //verify without pairing. It's only for debug
-                        //if something goes wrong, it may be useful to place here verification with pairings
+                        // verify without pairing. It's only for debug
+                        // if something goes wrong, it may be useful to place here verification with pairings
                         /*
                         {
-                            typename math::polynomial<typename CommitmentSchemeType::scalar_value_type> right_side({{0}});
-                            factor = CommitmentSchemeType::scalar_value_type::one();
-                            for( auto const &it: this->_polys ){
-                                auto K = it.first;
-                                for (std::size_t i = 0; i < this->_points[K].size(); ++i) {
-                                    right_side = right_side + (factor * (math::polynomial<typename CommitmentSchemeType::scalar_value_type>(this->_polys[K][i].coefficients()) - this->get_U(K, i)) *
-                                        set_difference_polynom(this->_merged_points, this->_points[K][i]));
-                                    factor = factor * gamma;
+                            typename math::polynomial<typename CommitmentSchemeType::scalar_value_type>
+                        right_side({{0}}); factor = CommitmentSchemeType::scalar_value_type::one(); for( auto const &it:
+                        this->_polys ){ auto K = it.first; for (std::size_t i = 0; i < this->_points[K].size(); ++i) {
+                                    right_side = right_side + (factor * (math::polynomial<typename
+                        CommitmentSchemeType::scalar_value_type>(this->_polys[K][i].coefficients()) - this->get_U(K, i))
+                        * set_difference_polynom(this->_merged_points, this->_points[K][i])); factor = factor * gamma;
                                 }
                             }
                             assert(accum * this->get_V(this->_merged_points) == right_side);
                         }*/
-                        return {
-                            this->_z,
-                            nil::crypto3::zk::algorithms::commit_one<CommitmentSchemeType>(_params, accum)
-                        };
+                        return {this->_z,
+                                nil::crypto3::zk::algorithms::commit_one<CommitmentSchemeType>(_params, accum)};
                     }
 
                     bool verify_eval(const proof_type &proof,
@@ -859,17 +841,18 @@ namespace nil {
                         this->_commitments = commitments;
                         this->_z = proof.z;
 
-                        for (auto const &it: this->_commitments) {
+                        for (auto const &it : this->_commitments) {
                             auto k = it.first;
                             update_transcript(k, transcript);
                         }
 
-                        auto gamma = transcript.template challenge<typename
-                            CommitmentSchemeType::curve_type::scalar_field_type>();
+                        auto gamma =
+                            transcript
+                                .template challenge<typename CommitmentSchemeType::curve_type::scalar_field_type>();
                         auto factor = CommitmentSchemeType::scalar_value_type::one();
                         auto left_side_accum = CommitmentSchemeType::gt_value_type::one();
 
-                        for (const auto &it: this->_commitments) {
+                        for (const auto &it : this->_commitments) {
                             auto k = it.first;
                             for (std::size_t i = 0; i < this->_points.at(k).size(); ++i) {
                                 std::size_t blob_size = this->_commitments.at(k).size() / this->_points.at(k).size();
@@ -879,17 +862,17 @@ namespace nil {
                                     byteblob[j] = this->_commitments.at(k)[i * blob_size + j];
                                 }
                                 nil::marshalling::status_type status;
-                                typename curve_type::template g1_type<>::value_type
-                                        i_th_commitment = nil::marshalling::pack(byteblob, status);
+                                typename curve_type::template g1_type<>::value_type i_th_commitment =
+                                    nil::marshalling::pack(byteblob, status);
                                 THROW_IF_ERROR_STATUS(status, "kzg::verify_eval");
-                                auto U_commit = nil::crypto3::zk::algorithms::commit_one<CommitmentSchemeType>
-                                    (_params, this->get_U(k, i));
+                                auto U_commit = nil::crypto3::zk::algorithms::commit_one<CommitmentSchemeType>(
+                                    _params, this->get_U(k, i));
 
                                 auto diffpoly = set_difference_polynom(_merged_points, this->_points.at(k)[i]);
                                 auto diffpoly_commitment = commit_g2(diffpoly);
 
-                                auto left_side_pairing = nil::crypto3::algebra::pair_reduced<curve_type>
-                                    (factor * (i_th_commitment - U_commit), diffpoly_commitment);
+                                auto left_side_pairing = nil::crypto3::algebra::pair_reduced<curve_type>(
+                                    factor * (i_th_commitment - U_commit), diffpoly_commitment);
                                 if (!left_side_pairing) {
                                     return false;
                                 }
@@ -900,9 +883,7 @@ namespace nil {
                         }
 
                         auto right_side_pairing = algebra::pair_reduced<typename CommitmentSchemeType::curve_type>(
-                            proof.kzg_proof,
-                            commit_g2(this->get_V(this->_merged_points))
-                        );
+                            proof.kzg_proof, commit_g2(this->get_V(this->_merged_points)));
 
                         if (!right_side_pairing) {
                             return false;
@@ -915,9 +896,9 @@ namespace nil {
                         return _params;
                     }
                 };
-            } // namespace commitments
-        } // namespace zk
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace commitments
+        }    // namespace zk
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ZK_COMMITMENTS_KZG_HPP

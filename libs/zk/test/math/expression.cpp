@@ -88,16 +88,19 @@ BOOST_AUTO_TEST_CASE(expression_evaluation_test) {
     variable_type::assignment_type w3_value(4u);
     expression_evaluator<variable_type> evaluator(
         expr,
-        [&w0, &w1, &w2, &w3, &w0_value, &w1_value, &w2_value, &w3_value]
-        (const variable_type& var) -> const variable_type::assignment_type& {
-            if (var == w0) return w0_value;
-            if (var == w1) return w1_value;
-            if (var == w2) return w2_value;
-            if (var == w3) return w3_value;
+        [&w0, &w1, &w2, &w3, &w0_value, &w1_value, &w2_value,
+         &w3_value](const variable_type& var) -> const variable_type::assignment_type& {
+            if (var == w0)
+                return w0_value;
+            if (var == w1)
+                return w1_value;
+            if (var == w2)
+                return w2_value;
+            if (var == w3)
+                return w3_value;
             std::cerr << "Variable not found" << std::endl;
             abort();
-        }
-    );
+        });
 
     BOOST_CHECK(evaluator.evaluate() == variable_type::assignment_type((1u + 2u) * (3u + 4u)));
 }
@@ -142,20 +145,17 @@ BOOST_AUTO_TEST_CASE(expression_for_each_variable_visitor_test) {
         [&variable_indices, &variable_rotations](const variable_type& var) {
             variable_indices.insert(var.index);
             variable_rotations.insert(var.rotation);
-        }
-    );
+        });
 
     visitor.visit(expr);
 
     std::set<int> expected_indices = {0, 3, 4, 6};
     std::set<int> expected_rotations = {0, -1, 1, 2};
 
-    BOOST_CHECK_EQUAL_COLLECTIONS(
-        variable_indices.begin(), variable_indices.end(),
-        expected_indices.begin(), expected_indices.end());
-    BOOST_CHECK_EQUAL_COLLECTIONS(
-        variable_rotations.begin(), variable_rotations.end(),
-        expected_rotations.begin(), expected_rotations.end());
+    BOOST_CHECK_EQUAL_COLLECTIONS(variable_indices.begin(), variable_indices.end(), expected_indices.begin(),
+                                  expected_indices.end());
+    BOOST_CHECK_EQUAL_COLLECTIONS(variable_rotations.begin(), variable_rotations.end(), expected_rotations.begin(),
+                                  expected_rotations.end());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

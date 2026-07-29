@@ -54,7 +54,8 @@ namespace nil {
                          typename PublicKey,
                          typename = typename std::enable_if<
                              std::is_same<PublicKey,
-                                          zk::commitments::detail::r1cs_gg_ppzksnark_mpc_public_key<typename PublicKey::curve_type>>::value,
+                                          zk::commitments::detail::r1cs_gg_ppzksnark_mpc_public_key<
+                                              typename PublicKey::curve_type>>::value,
                              bool>::type,
                          typename... TOptions>
                 using r1cs_gg_ppzksnark_mpc_public_key = nil::marshalling::types::bundle<
@@ -63,8 +64,7 @@ namespace nil {
                         // delta after
                         fast_curve_element<TTypeBase, typename PublicKey::curve_type::template g1_type<>>,
                         // delta_pok
-                        element_pok<TTypeBase, typename PublicKey::pok_type>
-                    >>;
+                        element_pok<TTypeBase, typename PublicKey::pok_type>>>;
 
                 template<typename PublicKey, typename Endianness>
                 r1cs_gg_ppzksnark_mpc_public_key<nil::marshalling::field_type<Endianness>, PublicKey>
@@ -76,9 +76,7 @@ namespace nil {
                                 fill_fast_curve_element<typename PublicKey::curve_type::template g1_type<>, Endianness>(
                                     public_key.delta_after)),
                             std::move(
-                                fill_element_pok<typename PublicKey::pok_type, Endianness>(
-                                    public_key.delta_pok))
-                        ));
+                                fill_element_pok<typename PublicKey::pok_type, Endianness>(public_key.delta_pok))));
                 }
 
                 template<typename PublicKey, typename Endianness>
@@ -89,17 +87,13 @@ namespace nil {
                     return PublicKey(
                         std::move(
                             make_fast_curve_element<typename PublicKey::curve_type::template g1_type<>, Endianness>(
-                                std::get<0>(filled_public_key.value())
-                        )),
-                        std::move(
-                            make_element_pok<typename PublicKey::pok_type, Endianness>(
-                                std::get<1>(filled_public_key.value())
-                        ))
-                    );
+                                std::get<0>(filled_public_key.value()))),
+                        std::move(make_element_pok<typename PublicKey::pok_type, Endianness>(
+                            std::get<1>(filled_public_key.value()))));
                 }
 
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_R1CS_GG_PPZKSNARK_PROOF_HPP

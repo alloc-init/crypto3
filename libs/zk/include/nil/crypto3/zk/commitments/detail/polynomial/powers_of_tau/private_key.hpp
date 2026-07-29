@@ -41,9 +41,9 @@ namespace nil {
                         field_value_type beta;
                     };
                 }    // namespace detail
-            }        // namespace commitments
-        }            // namespace zk
-    }                // namespace crypto3
+            }    // namespace commitments
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_POWERS_OF_TAU_PRIVATE_KEY_HPP

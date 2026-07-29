@@ -49,7 +49,7 @@ namespace nil::crypto3::zk::snark {
         }
 
         integer_permutation(const std::size_t min_element, const std::size_t max_element) :
-                min_element(min_element), max_element(max_element) {
+            min_element(min_element), max_element(max_element) {
             assert(min_element <= max_element);
             const std::size_t size = max_element - min_element + 1;
             contents.resize(size);
@@ -88,7 +88,7 @@ namespace nil::crypto3::zk::snark {
         bool is_valid() const {
             std::unordered_set<std::size_t> elems;
 
-            for (auto &el: contents) {
+            for (auto &el : contents) {
                 if (el < min_element || el > max_element || elems.find(el) != elems.end()) {
                     return false;
                 }
@@ -113,8 +113,7 @@ namespace nil::crypto3::zk::snark {
             return result;
         }
 
-        integer_permutation slice(const std::size_t slice_min_element,
-                                  const std::size_t slice_max_element) const {
+        integer_permutation slice(const std::size_t slice_min_element, const std::size_t slice_max_element) const {
             assert(min_element <= slice_min_element && slice_min_element <= slice_max_element &&
                    slice_max_element <= max_element);
             integer_permutation result(slice_min_element, slice_max_element);
@@ -144,6 +143,6 @@ namespace nil::crypto3::zk::snark {
         }
     };
 
-} // namespace nil::crypto3::zk::snark
+}    // namespace nil::crypto3::zk::snark
 
 #endif    // CRYPTO3_ZK_MATH_INTEGER_PERMUTATION_HPP

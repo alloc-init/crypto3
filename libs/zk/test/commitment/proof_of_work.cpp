@@ -41,55 +41,56 @@ using namespace nil::crypto3::zk::commitments;
 
 BOOST_AUTO_TEST_SUITE(proof_of_knowledge_test_suite)
 
-    BOOST_AUTO_TEST_CASE(pow_poseidon_basic_test) {
-        using field_type = curves::alt_bn128_254::scalar_field_type;
-        using integral_type = typename field_type::integral_type;
-        using policy = nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>;
-        using poseidon = nil::crypto3::hashes::poseidon<policy>;
-        using pow_type = nil::crypto3::zk::commitments::field_proof_of_work<poseidon, field_type>;
+BOOST_AUTO_TEST_CASE(pow_poseidon_basic_test) {
+    using field_type = curves::alt_bn128_254::scalar_field_type;
+    using integral_type = typename field_type::integral_type;
+    using policy = nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>;
+    using poseidon = nil::crypto3::hashes::poseidon<policy>;
+    using pow_type = nil::crypto3::zk::commitments::field_proof_of_work<poseidon, field_type>;
 
-        std::size_t grinding_bits = 9;
-        nil::crypto3::zk::transcript::fiat_shamir_heuristic_sequential<poseidon> transcript;
-        auto old_transcript_1 = transcript, old_transcript_2 = transcript;
+    std::size_t grinding_bits = 9;
+    nil::crypto3::zk::transcript::fiat_shamir_heuristic_sequential<poseidon> transcript;
+    auto old_transcript_1 = transcript, old_transcript_2 = transcript;
 
-        auto result = pow_type::generate(transcript, grinding_bits);
-        BOOST_CHECK(pow_type::verify(old_transcript_1, result, grinding_bits));
+    auto result = pow_type::generate(transcript, grinding_bits);
+    BOOST_CHECK(pow_type::verify(old_transcript_1, result, grinding_bits));
 
-        // manually reimplement verify to ensure that changes in implementation didn't break it
-        old_transcript_2(result);
-        auto chal = old_transcript_2.template challenge<field_type>();
-        const integral_type expected_mask = integral_type( (1 << grinding_bits) - 1 ) << (field_type::modulus_bits - grinding_bits);
+    // manually reimplement verify to ensure that changes in implementation didn't break it
+    old_transcript_2(result);
+    auto chal = old_transcript_2.template challenge<field_type>();
+    const integral_type expected_mask = integral_type((1 << grinding_bits) - 1)
+                                        << (field_type::modulus_bits - grinding_bits);
 
-        BOOST_CHECK((integral_type(chal.to_integral()) & expected_mask) == 0);
+    BOOST_CHECK((integral_type(chal.to_integral()) & expected_mask) == 0);
 
-        using hard_pow_type = nil::crypto3::zk::commitments::field_proof_of_work<poseidon, field_type>;
-        // check that random stuff doesn't pass verify
-        BOOST_CHECK(!hard_pow_type::verify(old_transcript_1, result, 9));
-    }
+    using hard_pow_type = nil::crypto3::zk::commitments::field_proof_of_work<poseidon, field_type>;
+    // check that random stuff doesn't pass verify
+    BOOST_CHECK(!hard_pow_type::verify(old_transcript_1, result, 9));
+}
 
-    BOOST_AUTO_TEST_CASE(pow_basic_test) {
-        using keccak = nil::crypto3::hashes::keccak_1600<512>;
+BOOST_AUTO_TEST_CASE(pow_basic_test) {
+    using keccak = nil::crypto3::hashes::keccak_1600<512>;
 
-        const std::uint64_t grinding_bits = 16;
-        const uint64_t expected_mask = (1ull << grinding_bits) - 1;
+    const std::uint64_t grinding_bits = 16;
+    const uint64_t expected_mask = (1ull << grinding_bits) - 1;
 
-        using pow_type = nil::crypto3::zk::commitments::proof_of_work<keccak, std::uint64_t>;
+    using pow_type = nil::crypto3::zk::commitments::proof_of_work<keccak, std::uint64_t>;
 
-        nil::crypto3::zk::transcript::fiat_shamir_heuristic_sequential<keccak> transcript;
-        auto old_transcript_1 = transcript, old_transcript_2 = transcript;
+    nil::crypto3::zk::transcript::fiat_shamir_heuristic_sequential<keccak> transcript;
+    auto old_transcript_1 = transcript, old_transcript_2 = transcript;
 
-        auto result = pow_type::generate(transcript, grinding_bits);
-        BOOST_CHECK(pow_type::verify(old_transcript_1, result, grinding_bits));
+    auto result = pow_type::generate(transcript, grinding_bits);
+    BOOST_CHECK(pow_type::verify(old_transcript_1, result, grinding_bits));
 
-        // manually reimplement verify to ensure that changes in implementation didn't break it
-        auto bytes = pow_type::to_byte_array(result);
-        old_transcript_2(bytes);
-        auto chal = old_transcript_2.template int_challenge<std::uint32_t>();
-        BOOST_CHECK((chal & expected_mask) == 0);
+    // manually reimplement verify to ensure that changes in implementation didn't break it
+    auto bytes = pow_type::to_byte_array(result);
+    old_transcript_2(bytes);
+    auto chal = old_transcript_2.template int_challenge<std::uint32_t>();
+    BOOST_CHECK((chal & expected_mask) == 0);
 
-        // check that random stuff doesn't pass verify
-        using hard_pow_type = nil::crypto3::zk::commitments::proof_of_work<keccak, std::uint32_t>;
-        BOOST_CHECK(!hard_pow_type::verify(old_transcript_1, result, grinding_bits));
-    }
+    // check that random stuff doesn't pass verify
+    using hard_pow_type = nil::crypto3::zk::commitments::proof_of_work<keccak, std::uint32_t>;
+    BOOST_CHECK(!hard_pow_type::verify(old_transcript_1, result, grinding_bits));
+}
 
 BOOST_AUTO_TEST_SUITE_END()

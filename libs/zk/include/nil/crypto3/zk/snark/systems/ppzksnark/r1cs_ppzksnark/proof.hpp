@@ -70,8 +70,8 @@ namespace nil {
                                          typename commitments::knowledge_commitment<g1_type, g1_type>::value_type &&g_C,
                                          g1_value_type &&g_H,
                                          g1_value_type &&g_K) :
-                        g_A(std::move(g_A)),
-                        g_B(std::move(g_B)), g_C(std::move(g_C)), g_H(std::move(g_H)), g_K(std::move(g_K)) {};
+                        g_A(std::move(g_A)), g_B(std::move(g_B)), g_C(std::move(g_C)), g_H(std::move(g_H)),
+                        g_K(std::move(g_K)) { };
 
                     std::size_t G1_size() const {
                         return 7;
@@ -97,8 +97,8 @@ namespace nil {
                     }
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_R1CS_PPZKSNARK_BASIC_PROVER_HPP

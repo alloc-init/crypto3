@@ -77,33 +77,26 @@ void run_basic_test() {
 }
 
 /* Commitment to multiple polynomials */
-void run_batched_test()
-{
+void run_batched_test() {
     using curve_type = curves::bls12_381;
     using scalar_value_type = typename curve_type::scalar_field_type::value_type;
     using transcript_hash_type = hashes::sha2<256>;
-    using kzg_type = zk::commitments::batched_kzg<curve_type, transcript_hash_type, math::polynomial<scalar_value_type>>;
+    using kzg_type =
+        zk::commitments::batched_kzg<curve_type, transcript_hash_type, math::polynomial<scalar_value_type>>;
     using transcript_type = typename kzg_type::transcript_type;
 
     /* Set of polynomials */
-    typename kzg_type::batch_of_polynomials_type polys = {{
-        {{ 1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u}},
-        {{11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u}},
-        {{21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u}},
-        {{31u, 32u, 33u, 34u, 35u, 36u, 37u, 38u}}
-    }};
+    typename kzg_type::batch_of_polynomials_type polys = {{{{1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u}},
+                                                           {{11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u}},
+                                                           {{21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u}},
+                                                           {{31u, 32u, 33u, 34u, 35u, 36u, 37u, 38u}}}};
 
     /* Trusted setup */
     scalar_value_type alpha = 7u;
     auto params = typename kzg_type::params_type(8, 8, alpha);
 
     /* Set of points, where each polynomial must be evaluated */
-    std::vector<std::vector<scalar_value_type>> S = {{
-        {101u, 2u, 3u},
-        {102u, 2u, 3u},
-        {  1u, 3u},
-        {101u, 4u}
-    }};
+    std::vector<std::vector<scalar_value_type>> S = {{{101u, 2u, 3u}, {102u, 2u, 3u}, {1u, 3u}, {101u, 4u}}};
     std::vector<scalar_value_type> T = zk::algorithms::merge_eval_points<kzg_type>(S);
 
     auto rs = zk::algorithms::create_evals_polys<kzg_type>(polys, S);
@@ -111,7 +104,7 @@ void run_batched_test()
     auto commits = zk::algorithms::commit<kzg_type>(params, polys);
     /* Commitment to each polynomial is a curve point */
     std::cout << "Commitment:" << std::endl;
-    for(auto const& c: commits) {
+    for (auto const& c : commits) {
         std::cout << c << std::endl;
     }
     auto pk = typename kzg_type::public_key_type(commits, T, S, rs);
@@ -129,8 +122,7 @@ void run_batched_test()
     std::cout << "Verification result: " << std::boolalpha << verify_result << std::endl;
 }
 
-int main()
-{
+int main() {
     run_basic_test();
     run_batched_test();
 

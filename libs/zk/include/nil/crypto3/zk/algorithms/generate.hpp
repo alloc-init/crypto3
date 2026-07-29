@@ -48,7 +48,7 @@ namespace nil {
                 return ProofSystemType::generate(num_proofs);
             }
         }    // namespace zk
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_SNARK_ALGORITHMS_GENERATE_HPP

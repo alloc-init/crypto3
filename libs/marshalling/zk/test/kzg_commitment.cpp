@@ -72,11 +72,7 @@
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/prover.hpp>
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/verifier.hpp>
 
-
-template<
-    typename curve_type,
-    typename transcript_hash_type
-    >
+template<typename curve_type, typename transcript_hash_type>
 struct placeholder_class_test_initializer {
     bool run_test() {
         typedef typename curve_type::scalar_field_type::value_type scalar_value_type;
@@ -92,11 +88,10 @@ struct placeholder_class_test_initializer {
 
         typename kzg_type::batch_of_polynomials_type polys(4);
 
-        polys[0].template from_coefficients<std::vector<scalar_value_type>>({{ 1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u}});
+        polys[0].template from_coefficients<std::vector<scalar_value_type>>({{1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u}});
         polys[1].template from_coefficients<std::vector<scalar_value_type>>({{11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u}});
         polys[2].template from_coefficients<std::vector<scalar_value_type>>({{21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u}});
         polys[3].template from_coefficients<std::vector<scalar_value_type>>({{31u, 32u, 33u, 34u, 35u, 36u, 37u, 38u}});
-
 
         std::size_t batch_id = 0;
 
@@ -106,7 +101,7 @@ struct placeholder_class_test_initializer {
 
         std::set<scalar_value_type> points_0 = {101u, 2u, 3u};
         std::set<scalar_value_type> points_1 = {102u, 2u, 3u};
-        std::set<scalar_value_type> points_2 = {  1u, 2u, 3u};
+        std::set<scalar_value_type> points_2 = {1u, 2u, 3u};
         std::set<scalar_value_type> points_3 = {104u, 2u, 3u};
         kzg.append_eval_points(batch_id, 0, points_0);
         kzg.append_eval_points(batch_id, 1, points_1);
@@ -116,10 +111,11 @@ struct placeholder_class_test_initializer {
         transcript_type transcript;
         auto proof = kzg.proof_eval(transcript);
 
-        auto filled_proof = nil::crypto3::marshalling::types::fill_eval_proof<endianness, kzg_scheme_type>(proof, params);
+        auto filled_proof =
+            nil::crypto3::marshalling::types::fill_eval_proof<endianness, kzg_scheme_type>(proof, params);
         auto _proof = nil::crypto3::marshalling::types::make_eval_proof<endianness, kzg_scheme_type>(filled_proof);
 
-        BOOST_CHECK( _proof == proof);
+        BOOST_CHECK(_proof == proof);
 
         transcript_type transcript_verification;
         bool result = kzg.verify_eval(_proof, commitments, transcript_verification);
@@ -131,14 +127,13 @@ struct placeholder_class_test_initializer {
 };
 
 BOOST_AUTO_TEST_SUITE(placeholder_class)
-    using TestFixtures = boost::mpl::list<
-        placeholder_class_test_initializer< algebra::curves::alt_bn128_254, hashes::keccak_1600<256> >,
-        // TODO: Check why it fails on BLS12-377
-        // placeholder_class_test_initializer< algebra::curves::bls12_377, hashes::keccak_1600<256> >,
-        placeholder_class_test_initializer< algebra::curves::bls12_381, hashes::keccak_1600<256> >,
-        placeholder_class_test_initializer< algebra::curves::mnt4_298, hashes::keccak_1600<256> >,
-        placeholder_class_test_initializer< algebra::curves::mnt6_298, hashes::keccak_1600<256> >
-        >;
+using TestFixtures =
+    boost::mpl::list<placeholder_class_test_initializer<algebra::curves::alt_bn128_254, hashes::keccak_1600<256>>,
+                     // TODO: Check why it fails on BLS12-377
+                     // placeholder_class_test_initializer< algebra::curves::bls12_377, hashes::keccak_1600<256> >,
+                     placeholder_class_test_initializer<algebra::curves::bls12_381, hashes::keccak_1600<256>>,
+                     placeholder_class_test_initializer<algebra::curves::mnt4_298, hashes::keccak_1600<256>>,
+                     placeholder_class_test_initializer<algebra::curves::mnt6_298, hashes::keccak_1600<256>>>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(placeholder_class_test, F, TestFixtures) {
     F fixture;

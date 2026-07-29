@@ -67,9 +67,7 @@ namespace nil {
 
                     r1cs_constraint(const linear_combination<variable_type> &a,
                                     const linear_combination<variable_type> &b,
-                                    const linear_combination<variable_type> &c) :
-                        a(a),
-                        b(b), c(c) {
+                                    const linear_combination<variable_type> &c) : a(a), b(b), c(c) {
                     }
 
                     r1cs_constraint(const std::initializer_list<linear_combination<variable_type>> &A,
@@ -225,8 +223,8 @@ namespace nil {
                 };
 
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_R1CS_CONSTRAINT_SYSTEM_HPP

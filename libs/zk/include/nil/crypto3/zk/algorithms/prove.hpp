@@ -32,17 +32,17 @@ namespace nil {
         namespace zk {
             template<typename ProofSystemType>
             typename ProofSystemType::proof_type
-            prove(const typename ProofSystemType::proving_key_type &pk,
-                  const typename ProofSystemType::primary_input_type &primary_input,
-                  const typename ProofSystemType::auxiliary_input_type &auxiliary_input) {
+                prove(const typename ProofSystemType::proving_key_type &pk,
+                      const typename ProofSystemType::primary_input_type &primary_input,
+                      const typename ProofSystemType::auxiliary_input_type &auxiliary_input) {
 
                 return ProofSystemType::prove(pk, primary_input, auxiliary_input);
             }
 
             template<typename ProofSystemType,
-                    typename HashType,
-                    typename InputTranscriptIncludeIterator,
-                    typename InputProofIterator>
+                     typename HashType,
+                     typename InputTranscriptIncludeIterator,
+                     typename InputProofIterator>
             typename ProofSystemType::proof_type prove(const typename ProofSystemType::proving_srs_type &srs,
                                                        InputTranscriptIncludeIterator transcript_include_first,
                                                        InputTranscriptIncludeIterator transcript_include_last,
@@ -50,21 +50,21 @@ namespace nil {
                                                        InputProofIterator proofs_last) {
 
                 return ProofSystemType::template prove<HashType>(
-                        srs, transcript_include_first, transcript_include_last, proofs_first, proofs_last);
+                    srs, transcript_include_first, transcript_include_last, proofs_first, proofs_last);
             }
 
             template<typename ProofSystemType, typename PublicKey, typename ScalarValue>
             typename ProofSystemType::proof_type
-            prove(const typename ProofSystemType::proving_key_type &pk,
-                  const PublicKey &pubkey,
-                  const typename ProofSystemType::primary_input_type &primary_input,
-                  const typename ProofSystemType::auxiliary_input_type &auxiliary_input,
-                  const ScalarValue &r) {
+                prove(const typename ProofSystemType::proving_key_type &pk,
+                      const PublicKey &pubkey,
+                      const typename ProofSystemType::primary_input_type &primary_input,
+                      const typename ProofSystemType::auxiliary_input_type &auxiliary_input,
+                      const ScalarValue &r) {
 
                 return ProofSystemType::prove(pk, pubkey, primary_input, auxiliary_input, r);
             }
         }    // namespace zk
-    }        // namespace crypto3
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_SNARK_ALGORITHMS_PROVE_HPP

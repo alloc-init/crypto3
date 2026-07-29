@@ -57,12 +57,12 @@ namespace nil {
             namespace types {
                 template<typename TTypeBase,
                          typename Accumulator,
-                         typename = typename std::enable_if<
-                             std::is_same<Accumulator,
-                                          zk::commitments::detail::powers_of_tau_accumulator<
-                                              typename Accumulator::curve_type,
-                                              Accumulator::tau_powers_length>>::value,
-                             bool>::type,
+                         typename =
+                             typename std::enable_if<std::is_same<Accumulator,
+                                                                  zk::commitments::detail::powers_of_tau_accumulator<
+                                                                      typename Accumulator::curve_type,
+                                                                      Accumulator::tau_powers_length>>::value,
+                                                     bool>::type,
                          typename... TOptions>
                 using powers_of_tau_accumulator = nil::marshalling::types::bundle<
                     TTypeBase,
@@ -92,8 +92,7 @@ namespace nil {
                             nil::marshalling::option::sequence_size_field_prefix<
                                 nil::marshalling::types::integral<TTypeBase, std::size_t>>>,
                         // beta_g2
-                        fast_curve_element<TTypeBase, typename Accumulator::curve_type::template g2_type<>>
-                    >>;
+                        fast_curve_element<TTypeBase, typename Accumulator::curve_type::template g2_type<>>>>;
 
                 template<typename Accumulator, typename Endianness>
                 powers_of_tau_accumulator<nil::marshalling::field_type<Endianness>, Accumulator>
@@ -102,18 +101,14 @@ namespace nil {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
                     return powers_of_tau_accumulator<TTypeBase, Accumulator>(std::make_tuple(
-                        std::move(
-                            fill_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>, Endianness>(
-                                accumulator.tau_powers_g1)),
-                        std::move(
-                            fill_fast_curve_element_vector<typename Accumulator::curve_type::template g2_type<>, Endianness>(
-                                accumulator.tau_powers_g2)),
-                        std::move(
-                            fill_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>, Endianness>(
-                                accumulator.alpha_tau_powers_g1)),
-                        std::move(
-                            fill_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>, Endianness>(
-                                accumulator.beta_tau_powers_g1)),
+                        std::move(fill_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>,
+                                                                 Endianness>(accumulator.tau_powers_g1)),
+                        std::move(fill_fast_curve_element_vector<typename Accumulator::curve_type::template g2_type<>,
+                                                                 Endianness>(accumulator.tau_powers_g2)),
+                        std::move(fill_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>,
+                                                                 Endianness>(accumulator.alpha_tau_powers_g1)),
+                        std::move(fill_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>,
+                                                                 Endianness>(accumulator.beta_tau_powers_g1)),
                         std::move(
                             fill_fast_curve_element<typename Accumulator::curve_type::template g2_type<>, Endianness>(
                                 accumulator.beta_g2))));
@@ -125,25 +120,20 @@ namespace nil {
                         &filled_accumulator) {
 
                     return Accumulator(
-                        std::move(
-                            make_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>, Endianness>(
-                                std::get<0>(filled_accumulator.value()))),
-                        std::move(
-                            make_fast_curve_element_vector<typename Accumulator::curve_type::template g2_type<>, Endianness>(
-                                std::get<1>(filled_accumulator.value()))),
-                        std::move(
-                            make_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>, Endianness>(
-                                std::get<2>(filled_accumulator.value()))),
-                        std::move(
-                            make_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>, Endianness>(
-                                std::get<3>(filled_accumulator.value()))),
+                        std::move(make_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>,
+                                                                 Endianness>(std::get<0>(filled_accumulator.value()))),
+                        std::move(make_fast_curve_element_vector<typename Accumulator::curve_type::template g2_type<>,
+                                                                 Endianness>(std::get<1>(filled_accumulator.value()))),
+                        std::move(make_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>,
+                                                                 Endianness>(std::get<2>(filled_accumulator.value()))),
+                        std::move(make_fast_curve_element_vector<typename Accumulator::curve_type::template g1_type<>,
+                                                                 Endianness>(std::get<3>(filled_accumulator.value()))),
                         std::move(
                             make_fast_curve_element<typename Accumulator::curve_type::template g2_type<>, Endianness>(
-                                std::get<4>(filled_accumulator.value())))
-                    );
+                                std::get<4>(filled_accumulator.value()))));
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_POWERS_OF_TAO_ACCUMULATOR_HPP

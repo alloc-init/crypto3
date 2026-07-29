@@ -64,8 +64,11 @@ namespace boost {
                     cpp_int_modular_backend<Bits2>>::value>::type
                 eval_multiply(cpp_int_modular_backend<Bits1> &result,
                               const cpp_int_modular_backend<Bits2> &a) noexcept {
-                using cpp_int_type = boost::multiprecision::backends::cpp_int_backend<
-                    Bits1, Bits1, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked>;
+                using cpp_int_type =
+                    boost::multiprecision::backends::cpp_int_backend<Bits1,
+                                                                     Bits1,
+                                                                     boost::multiprecision::unsigned_magnitude,
+                                                                     boost::multiprecision::unchecked>;
                 cpp_int_type result_cpp_int = result.to_cpp_int();
                 cpp_int_type a_cpp_int(a.to_cpp_int());
                 boost::multiprecision::backends::eval_multiply(result_cpp_int, a_cpp_int);

@@ -54,22 +54,20 @@ namespace nil::crypto3::zk::snark {
     class linear_variable {
 
         using variable_type = linear_variable<FieldType>;
-    public:
 
+    public:
         using field_type = FieldType;
         using value_type = typename FieldType::value_type;
         using index_type = std::size_t;
         std::size_t index;
 
-        linear_variable(const std::size_t index = 0) : index(index) {};
+        linear_variable(const std::size_t index = 0) : index(index) { };
 
-        linear_term<variable_type>
-            operator*(const typename FieldType::value_type &field_coeff) const {
+        linear_term<variable_type> operator*(const typename FieldType::value_type &field_coeff) const {
             return linear_term<variable_type>(*this) * field_coeff;
         }
 
-        linear_combination<variable_type>
-            operator+(const linear_combination<variable_type> &other) const {
+        linear_combination<variable_type> operator+(const linear_combination<variable_type> &other) const {
             linear_combination<variable_type> result;
 
             result.add_term(*this);
@@ -78,8 +76,7 @@ namespace nil::crypto3::zk::snark {
             return result;
         }
 
-        linear_combination<variable_type>
-            operator-(const linear_combination<variable_type> &other) const {
+        linear_combination<variable_type> operator-(const linear_combination<variable_type> &other) const {
             return (*this) + (-other);
         }
 
@@ -94,22 +91,22 @@ namespace nil::crypto3::zk::snark {
 
     template<typename FieldType>
     linear_term<linear_variable<FieldType>> operator*(const typename FieldType::value_type &field_coeff,
-                                            const linear_variable<FieldType> &var) {
+                                                      const linear_variable<FieldType> &var) {
         return var * field_coeff;
     }
 
     template<typename FieldType>
     linear_combination<linear_variable<FieldType>> operator+(const typename FieldType::value_type &field_coeff,
-                                                   const linear_variable<FieldType> &var) {
+                                                             const linear_variable<FieldType> &var) {
         return var + field_coeff;
     }
 
     template<typename FieldType>
     linear_combination<linear_variable<FieldType>> operator-(const typename FieldType::value_type &field_coeff,
-                                                   const linear_variable<FieldType> &var) {
+                                                             const linear_variable<FieldType> &var) {
         return linear_combination<linear_variable<FieldType>>(field_coeff) - var;
     }
 
-} // namespace nil::crypto3::zk::snark
+}    // namespace nil::crypto3::zk::snark
 
 #endif    // CRYPTO3_ZK_MATH_LINEAR_VARIABLE_HPP

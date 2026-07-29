@@ -217,7 +217,7 @@ namespace nil {
                             std::get<2>(filled_key_inp.value()))));
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_PUBKEY_MARSHALLING_ELGAMAL_VERIFIABLE_HPP

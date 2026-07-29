@@ -45,11 +45,11 @@ namespace nil {
                     using expression_type = typename constraint_type::base_type;
 
                     // Using the base class's constructors
-                    using std::vector<constraint_type>::vector; // Inherit constructors
+                    using std::vector<constraint_type>::vector;    // Inherit constructors
 
                     // Constructor to initialize from std::vector
-                    lookup_input_constraints(const base_type& other)
-                        : base_type(other) {}
+                    lookup_input_constraints(const base_type& other) : base_type(other) {
+                    }
 
                     // Multiply each element with an expression.
                     lookup_input_constraints& operator*=(const expression_type& other) {
@@ -66,12 +66,13 @@ namespace nil {
                     }
 
                     // Allow multiplication with any container of the same type.
-                    template <typename Container>
+                    template<typename Container>
                     typename std::enable_if_t<
-                            nil::crypto3::detail::is_range<Container>::value && (
-                                std::is_same<typename Container::value_type, expression_type>::value ||
-                                std::is_same<typename Container::value_type, constraint_type>::value),
-                        lookup_input_constraints>& operator*=(const Container& other) {
+                        nil::crypto3::detail::is_range<Container>::value &&
+                            (std::is_same<typename Container::value_type, expression_type>::value ||
+                             std::is_same<typename Container::value_type, constraint_type>::value),
+                        lookup_input_constraints>&
+                        operator*=(const Container& other) {
                         if (this->size() < other.size())
                             this->resize(other.size());
 
@@ -83,25 +84,26 @@ namespace nil {
                         return *this;
                     }
 
-                    template <typename Container>
+                    template<typename Container>
                     typename std::enable_if_t<
-                            nil::crypto3::detail::is_range<Container>::value && (
-                                std::is_same<typename Container::value_type, expression_type>::value ||
-                                std::is_same<typename Container::value_type, constraint_type>::value),
-                            lookup_input_constraints>
-                    operator*(const Container& other) const {
+                        nil::crypto3::detail::is_range<Container>::value &&
+                            (std::is_same<typename Container::value_type, expression_type>::value ||
+                             std::is_same<typename Container::value_type, constraint_type>::value),
+                        lookup_input_constraints>
+                        operator*(const Container& other) const {
                         lookup_input_constraints result = *this;
                         result *= other;
                         return result;
                     }
 
                     // Allow addition with any container of the same type.
-                    template <typename Container>
+                    template<typename Container>
                     typename std::enable_if_t<
-                            nil::crypto3::detail::is_range<Container>::value && (
-                                std::is_same<typename Container::value_type, expression_type>::value ||
-                                std::is_same<typename Container::value_type, constraint_type>::value),
-                            lookup_input_constraints>& operator+=(const Container& other) {
+                        nil::crypto3::detail::is_range<Container>::value &&
+                            (std::is_same<typename Container::value_type, expression_type>::value ||
+                             std::is_same<typename Container::value_type, constraint_type>::value),
+                        lookup_input_constraints>&
+                        operator+=(const Container& other) {
                         if (this->size() < other.size())
                             this->resize(other.size());
 
@@ -113,25 +115,26 @@ namespace nil {
                         return *this;
                     }
 
-                    template <typename Container>
+                    template<typename Container>
                     typename std::enable_if_t<
-                            nil::crypto3::detail::is_range<Container>::value && (
-                                std::is_same<typename Container::value_type, expression_type>::value ||
-                                std::is_same<typename Container::value_type, constraint_type>::value),
-                            lookup_input_constraints>
-                    operator+(const Container& other) const {
+                        nil::crypto3::detail::is_range<Container>::value &&
+                            (std::is_same<typename Container::value_type, expression_type>::value ||
+                             std::is_same<typename Container::value_type, constraint_type>::value),
+                        lookup_input_constraints>
+                        operator+(const Container& other) const {
                         lookup_input_constraints result = *this;
                         result += other;
                         return result;
                     }
 
                     // Allow subtraction with any container of the same type.
-                    template <typename Container>
+                    template<typename Container>
                     typename std::enable_if_t<
-                            nil::crypto3::detail::is_range<Container>::value && (
-                                std::is_same<typename Container::value_type, expression_type>::value ||
-                                std::is_same<typename Container::value_type, constraint_type>::value),
-                            lookup_input_constraints>& operator-=(const Container& other) {
+                        nil::crypto3::detail::is_range<Container>::value &&
+                            (std::is_same<typename Container::value_type, expression_type>::value ||
+                             std::is_same<typename Container::value_type, constraint_type>::value),
+                        lookup_input_constraints>&
+                        operator-=(const Container& other) {
                         if (this->size() < other.size())
                             this->resize(other.size());
 
@@ -143,19 +146,18 @@ namespace nil {
                         return *this;
                     }
 
-                    template <typename Container>
+                    template<typename Container>
                     typename std::enable_if_t<
-                            nil::crypto3::detail::is_range<Container>::value && (
-                                std::is_same<typename Container::value_type, expression_type>::value ||
-                                std::is_same<typename Container::value_type, constraint_type>::value),
-                            lookup_input_constraints>
-                    operator-(const Container& other) const {
+                        nil::crypto3::detail::is_range<Container>::value &&
+                            (std::is_same<typename Container::value_type, expression_type>::value ||
+                             std::is_same<typename Container::value_type, constraint_type>::value),
+                        lookup_input_constraints>
+                        operator-(const Container& other) const {
                         lookup_input_constraints result = *this;
                         result -= other;
                         return result;
                     }
                 };
-
 
                 template<typename FieldType, typename VariableType = plonk_variable<typename FieldType::value_type>>
                 class plonk_lookup_constraint {
@@ -168,7 +170,7 @@ namespace nil {
                     std::size_t table_id;
                     lookup_input_constraints<FieldType> lookup_input;
 
-                    bool operator==(const plonk_lookup_constraint &other) const {
+                    bool operator==(const plonk_lookup_constraint& other) const {
                         return table_id == other.table_id && lookup_input == other.lookup_input;
                     }
                 };

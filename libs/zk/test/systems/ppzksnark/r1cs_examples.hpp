@@ -56,13 +56,13 @@ namespace nil {
                     r1cs_example(const r1cs_constraint_system<FieldType> &constraint_system,
                                  const r1cs_primary_input<FieldType> &primary_input,
                                  const r1cs_auxiliary_input<FieldType> &auxiliary_input) :
-                        constraint_system(constraint_system),
-                        primary_input(primary_input), auxiliary_input(auxiliary_input) {};
+                        constraint_system(constraint_system), primary_input(primary_input),
+                        auxiliary_input(auxiliary_input) { };
                     r1cs_example(r1cs_constraint_system<FieldType> &&constraint_system,
                                  r1cs_primary_input<FieldType> &&primary_input,
                                  r1cs_auxiliary_input<FieldType> &&auxiliary_input) :
-                        constraint_system(std::move(constraint_system)),
-                        primary_input(std::move(primary_input)), auxiliary_input(std::move(auxiliary_input)) {};
+                        constraint_system(std::move(constraint_system)), primary_input(std::move(primary_input)),
+                        auxiliary_input(std::move(auxiliary_input)) { };
                 };
 
                 /**
@@ -90,7 +90,8 @@ namespace nil {
                     full_variable_assignment.push_back(b);
 
                     for (std::size_t i = 0; i < num_constraints - 1; ++i) {
-                        nil::crypto3::zk::snark::linear_combination<nil::crypto3::zk::snark::linear_variable<FieldType>> A, B, C;
+                        nil::crypto3::zk::snark::linear_combination<nil::crypto3::zk::snark::linear_variable<FieldType>>
+                            A, B, C;
 
                         if (i % 2) {
                             // a * b = c
@@ -116,7 +117,8 @@ namespace nil {
                         cs.add_constraint(r1cs_constraint<FieldType>(A, B, C));
                     }
 
-                    nil::crypto3::zk::snark::linear_combination<nil::crypto3::zk::snark::linear_variable<FieldType>> A, B, C;
+                    nil::crypto3::zk::snark::linear_combination<nil::crypto3::zk::snark::linear_variable<FieldType>> A,
+                        B, C;
                     typename FieldType::value_type fin = FieldType::value_type::zero();
                     for (std::size_t i = 1; i < cs.num_variables(); ++i) {
                         A.add_term(i, 1);
@@ -176,7 +178,8 @@ namespace nil {
                            res = u + v - 2 * u * v
                            2 * u * v = u + v - res
                         */
-                        nil::crypto3::zk::snark::linear_combination<nil::crypto3::zk::snark::linear_variable<FieldType>> A, B, C;
+                        nil::crypto3::zk::snark::linear_combination<nil::crypto3::zk::snark::linear_variable<FieldType>>
+                            A, B, C;
                         A.add_term(u + 1, 2);
                         B.add_term(v + 1, 1);
                         if (u == v) {
@@ -211,8 +214,8 @@ namespace nil {
                     return re;
                 }
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_R1CS_EXAMPLES_HPP

@@ -56,13 +56,11 @@ namespace nil {
                     r1cs_gg_ppzksnark_proof(const typename CurveType::template g1_type<>::value_type &g_A,
                                             const typename CurveType::template g2_type<>::value_type &g_B,
                                             const typename CurveType::template g1_type<>::value_type &g_C) :
-                        g_A(g_A),
-                        g_B(g_B), g_C(g_C) {};
+                        g_A(g_A), g_B(g_B), g_C(g_C) { };
                     r1cs_gg_ppzksnark_proof(typename CurveType::template g1_type<>::value_type &&g_A,
                                             typename CurveType::template g2_type<>::value_type &&g_B,
                                             typename CurveType::template g1_type<>::value_type &&g_C) :
-                        g_A(std::move(g_A)),
-                        g_B(std::move(g_B)), g_C(std::move(g_C)) {};
+                        g_A(std::move(g_A)), g_B(std::move(g_B)), g_C(std::move(g_C)) { };
 
                     std::size_t G1_size() const {
                         return 2;
@@ -88,8 +86,8 @@ namespace nil {
                     }
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_R1CS_GG_PPZKSNARK_TYPES_POLICY_HPP

@@ -49,8 +49,8 @@ namespace nil {
 
                     template<typename FieldType>
                     math::polynomial<typename FieldType::value_type>
-                    fold_polynomial(math::polynomial<typename FieldType::value_type> &f,
-                                    typename FieldType::value_type alpha) {
+                        fold_polynomial(math::polynomial<typename FieldType::value_type> &f,
+                                        typename FieldType::value_type alpha) {
 
                         std::size_t d = f.degree();
                         if (d % 2 == 0) {
@@ -68,15 +68,15 @@ namespace nil {
 
                     template<typename FieldType>
                     math::polynomial_dfs<typename FieldType::value_type>
-                    fold_polynomial(math::polynomial_dfs<typename FieldType::value_type> &f,
-                                    const typename FieldType::value_type &alpha,
-                                    std::shared_ptr<math::evaluation_domain<FieldType>>
-                                    domain) {
+                        fold_polynomial(math::polynomial_dfs<typename FieldType::value_type> &f,
+                                        const typename FieldType::value_type &alpha,
+                                        std::shared_ptr<math::evaluation_domain<FieldType>>
+                                            domain) {
                         // codeword = [two.inverse() * ( (one + alpha / (offset * (omega^i)) ) * codeword[i]
                         //  + (one - alpha / (offset * (omega^i)) ) * codeword[len(codeword)//2 + i] ) for i in
                         //  range(len(codeword)//2)]
                         math::polynomial_dfs<typename FieldType::value_type> f_folded(
-                                domain->size() / 2 - 1, domain->size() / 2, FieldType::value_type::zero());
+                            domain->size() / 2 - 1, domain->size() / 2, FieldType::value_type::zero());
 
                         static const typename FieldType::value_type two_inversed =
                             typename FieldType::value_type(2u).inversed();
@@ -87,10 +87,9 @@ namespace nil {
                         for (std::size_t i = 0; i <= f_folded.degree(); i++) {
                             size_t other_ix = domain->size() / 2 + i;
                             // std::cout << "other_ix = " << other_ix << " f.degree() = " << f.degree() << std::endl;
-                            assert(other_ix < f.size()); // this must be true to avoid uninit reads
-                            f_folded[i] = two_inversed * (
-                                    (FieldType::value_type::one() + acc) * f[i] +
-                                    (FieldType::value_type::one() - acc) * f[other_ix]);
+                            assert(other_ix < f.size());    // this must be true to avoid uninit reads
+                            f_folded[i] = two_inversed * ((FieldType::value_type::one() + acc) * f[i] +
+                                                          (FieldType::value_type::one() - acc) * f[other_ix]);
                             acc *= omega_inversed;
                         }
 
@@ -98,41 +97,38 @@ namespace nil {
                     }
 
                     template<typename FieldType>
-                    math::polynomial_dfs<typename FieldType::value_type> fold_polynomial(
-                        math::polymorphic_polynomial_dfs<FieldType> &f,
-                        const typename FieldType::value_type &alpha,
-                        std::shared_ptr<math::evaluation_domain<FieldType>> domain) {
+                    math::polynomial_dfs<typename FieldType::value_type>
+                        fold_polynomial(math::polymorphic_polynomial_dfs<FieldType> &f,
+                                        const typename FieldType::value_type &alpha,
+                                        std::shared_ptr<math::evaluation_domain<FieldType>>
+                                            domain) {
                         // codeword = [two.inverse() * ( (one + alpha / (offset *
                         // (omega^i)) ) * codeword[i]
                         //  + (one - alpha / (offset * (omega^i)) ) *
                         //  codeword[len(codeword)//2 + i] ) for i in
                         //  range(len(codeword)//2)]
                         math::polynomial_dfs<typename FieldType::value_type> f_folded(
-                            domain->size() / 2 - 1, domain->size() / 2,
-                            FieldType::value_type::zero());
+                            domain->size() / 2 - 1, domain->size() / 2, FieldType::value_type::zero());
 
                         static const typename FieldType::value_type two_inversed =
                             typename FieldType::value_type(2u).inversed();
-                        typename FieldType::value_type omega_inversed =
-                            domain->get_domain_element(domain->size() - 1);
+                        typename FieldType::value_type omega_inversed = domain->get_domain_element(domain->size() - 1);
 
                         typename FieldType::value_type acc = alpha;
 
                         for (std::size_t i = 0; i <= f_folded.degree(); i++) {
                             f_folded[i] =
-                                two_inversed *
-                                ((FieldType::value_type::one() + acc) * f[i] +
-                                 (FieldType::value_type::one() - acc) *
-                                     f[domain->size() / 2 + i]);
+                                two_inversed * ((FieldType::value_type::one() + acc) * f[i] +
+                                                (FieldType::value_type::one() - acc) * f[domain->size() / 2 + i]);
                             acc *= omega_inversed;
                         }
 
                         return f_folded;
                     }
                 }    // namespace detail
-            }        // namespace commitments
-        }            // namespace zk
-    }                // namespace crypto3
+            }    // namespace commitments
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_COMMITMENTS_DETAIL_FOLD_POLYNOMIAL_HPP

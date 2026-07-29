@@ -35,15 +35,12 @@
 using namespace nil::crypto3::zk::snark;
 
 template<typename VariableType>
-VariableType generate_random_local_var(
-    boost::random::mt19937 &random_engine
-) {
+VariableType generate_random_local_var(boost::random::mt19937 &random_engine) {
     using var = VariableType;
     const std::size_t witness_amount = 140;
     const std::size_t constant_amount = 4;
     const std::size_t total_col_amount = witness_amount + constant_amount;
-    const std::int32_t random_offset =
-        boost::random::uniform_int_distribution<std::int32_t>(-1, 1)(random_engine);
+    const std::int32_t random_offset = boost::random::uniform_int_distribution<std::int32_t>(-1, 1)(random_engine);
     std::size_t random_col =
         boost::random::uniform_int_distribution<std::size_t>(0, total_col_amount - 1)(random_engine);
     typename var::column_type column_type;
@@ -57,11 +54,9 @@ VariableType generate_random_local_var(
 }
 
 template<typename VariableType>
-expression<VariableType> generate_random_constraint(
-    const std::size_t max_degree,
-    const std::size_t max_linear_comb_size,
-    boost::random::mt19937& random_engine
-) {
+expression<VariableType> generate_random_constraint(const std::size_t max_degree,
+                                                    const std::size_t max_linear_comb_size,
+                                                    boost::random::mt19937 &random_engine) {
     // Strategy: generate two random polynomials of max_degree / 2, and then multiply them
     // If max_degree % 2 != 0, we multiply the result by a random linear combination
     // Which is incidentally the ouput of this function with max_degree = 1
@@ -69,13 +64,10 @@ expression<VariableType> generate_random_constraint(
     // I need a different algorithm probably? Unsure.
     using field_type = typename VariableType::assignment_type::field_type;
     if (max_degree > 1) {
-        auto a = generate_random_constraint<VariableType>(
-            max_degree / 2, max_linear_comb_size, random_engine);
-        auto b = generate_random_constraint<VariableType>(
-            max_degree / 2, max_linear_comb_size, random_engine);
+        auto a = generate_random_constraint<VariableType>(max_degree / 2, max_linear_comb_size, random_engine);
+        auto b = generate_random_constraint<VariableType>(max_degree / 2, max_linear_comb_size, random_engine);
         if (max_degree % 2 != 0) {
-            auto c = generate_random_constraint<VariableType>(
-                1, max_linear_comb_size, random_engine);
+            auto c = generate_random_constraint<VariableType>(1, max_linear_comb_size, random_engine);
             return a * b * c;
         } else {
             return a * b;

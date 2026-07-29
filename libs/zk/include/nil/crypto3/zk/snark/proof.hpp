@@ -47,8 +47,8 @@ namespace nil {
                     typedef typename curve_type::g2_type g2_type;
                 };
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

@@ -57,9 +57,9 @@ using test_runner_type = placeholder_test_runner<field_type, hash_type, hash_typ
 
 BOOST_AUTO_TEST_CASE(circuit1) {
     test_tools::random_test_initializer<field_type> random_test_initializer;
-    auto circuit = circuit_test_1<field_type>(
-        random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
-        random_test_initializer.generic_random_engine);
+    auto circuit =
+        circuit_test_1<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
+                                   random_test_initializer.generic_random_engine);
     test_runner_type test_runner(circuit);
     BOOST_CHECK(test_runner.run_test());
 }

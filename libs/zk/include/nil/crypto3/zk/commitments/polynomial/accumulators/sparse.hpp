@@ -153,8 +153,8 @@ namespace nil {
                     return boost::accumulators::extract_result<tag::sparse<Mode>>(acc);
                 }
             }    // namespace extract
-        }        // namespace accumulators
-    }            // namespace crypto3
+        }    // namespace accumulators
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ACCUMULATORS_SNARK_HPP

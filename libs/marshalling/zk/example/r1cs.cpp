@@ -14,8 +14,7 @@ int main() {
     using constraint_system_type = nil::crypto3::zk::snark::r1cs_constraint_system<field_type>;
     using endianness = nil::marshalling::option::big_endian;
     using type_base = nil::marshalling::field_type<endianness>;
-    using marshalled_type =
-        nil::crypto3::marshalling::types::r1cs_constraint_system<type_base, constraint_system_type>;
+    using marshalled_type = nil::crypto3::marshalling::types::r1cs_constraint_system<type_base, constraint_system_type>;
 
     using variable_type = nil::crypto3::zk::snark::linear_variable<field_type>;
     using linear_combination_type = nil::crypto3::zk::snark::linear_combination<variable_type>;
@@ -30,8 +29,8 @@ int main() {
     c.add_term(variable_type(3), field_type::value_type::one());
     constraint_system.add_constraint({a, b, c});
 
-    auto filled = nil::crypto3::marshalling::types::fill_r1cs_constraint_system<
-        constraint_system_type, endianness>(constraint_system);
+    auto filled = nil::crypto3::marshalling::types::fill_r1cs_constraint_system<constraint_system_type, endianness>(
+        constraint_system);
 
     std::vector<std::uint8_t> bytes(filled.length());
     auto write_iter = bytes.begin();
@@ -49,14 +48,14 @@ int main() {
         return 1;
     }
 
-    const auto restored = nil::crypto3::marshalling::types::make_r1cs_constraint_system<
-        constraint_system_type, endianness>(decoded);
+    const auto restored =
+        nil::crypto3::marshalling::types::make_r1cs_constraint_system<constraint_system_type, endianness>(decoded);
     if (restored != constraint_system) {
         std::cerr << "R1CS round trip changed the constraint system" << std::endl;
         return 1;
     }
 
-    std::cout << "Serialized " << restored.num_constraints() << " R1CS constraints into "
-              << bytes.size() << " bytes" << std::endl;
+    std::cout << "Serialized " << restored.num_constraints() << " R1CS constraints into " << bytes.size() << " bytes"
+              << std::endl;
     return 0;
 }

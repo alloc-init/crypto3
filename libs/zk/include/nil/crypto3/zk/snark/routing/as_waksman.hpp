@@ -164,9 +164,8 @@ namespace nil {
                  *
                  * If top = true, return the top wire, otherwise return bottom wire.
                  */
-                inline std::size_t
-                as_waksman_switch_output(size_t num_packets, std::size_t row_offset, std::size_t row_idx,
-                                         bool use_top) {
+                inline std::size_t as_waksman_switch_output(size_t num_packets, std::size_t row_offset,
+                                                            std::size_t row_idx, bool use_top) {
                     std::size_t relpos = row_idx - row_offset;
                     assert(relpos % 2 == 0 && relpos + 1 < num_packets);
                     return row_offset + (relpos / 2) + (use_top ? 0 : as_waksman_top_height(num_packets));
@@ -178,9 +177,8 @@ namespace nil {
                  *
                  * This function is analogous to as_waksman_switch_output above.
                  */
-                inline std::size_t
-                as_waksman_switch_input(size_t num_packets, std::size_t row_offset, std::size_t row_idx,
-                                        bool use_top) {
+                inline std::size_t as_waksman_switch_input(size_t num_packets, std::size_t row_offset,
+                                                           std::size_t row_idx, bool use_top) {
                     /* Due to symmetry, this function equals as_waksman_switch_output. */
                     return as_waksman_switch_output(num_packets, row_offset, row_idx, use_top);
                 }
@@ -224,7 +222,7 @@ namespace nil {
                         for (std::size_t packet_idx = lo; packet_idx <= hi; ++packet_idx) {
                             neighbors[left][packet_idx].first = neighbors[left][packet_idx].second = packet_idx;
                             neighbors[right][packet_idx].first = neighbors[right][packet_idx].second =
-                                    rhs_dests[packet_idx - lo];
+                                rhs_dests[packet_idx - lo];
                         }
 
                         std::vector<std::size_t> new_rhs_dests(subnetwork_size, -1);
@@ -254,18 +252,18 @@ namespace nil {
                         for (std::size_t row_idx = lo; row_idx < (subnetwork_size % 2 == 1 ? hi : hi + 1);
                              row_idx += 2) {
                             neighbors[left][row_idx].first = neighbors[left][row_idx + 1].second =
-                                    as_waksman_switch_output(subnetwork_size, lo, row_idx, true);
+                                as_waksman_switch_output(subnetwork_size, lo, row_idx, true);
                             neighbors[left][row_idx].second = neighbors[left][row_idx + 1].first =
-                                    as_waksman_switch_output(subnetwork_size, lo, row_idx, false);
+                                as_waksman_switch_output(subnetwork_size, lo, row_idx, false);
 
                             new_rhs_dests[as_waksman_switch_input(subnetwork_size, lo, row_idx, true) - lo] = row_idx;
                             new_rhs_dests[as_waksman_switch_input(subnetwork_size, lo, row_idx, false) - lo] =
-                                    row_idx + 1;
+                                row_idx + 1;
 
                             neighbors[right][row_idx].first = neighbors[right][row_idx + 1].second =
-                                    rhs_dests[row_idx - lo];
+                                rhs_dests[row_idx - lo];
                             neighbors[right][row_idx].second = neighbors[right][row_idx + 1].first =
-                                    rhs_dests[row_idx + 1 - lo];
+                                rhs_dests[row_idx + 1 - lo];
                         }
 
                         if (subnetwork_size % 2 == 1) {
@@ -304,8 +302,7 @@ namespace nil {
 
                     as_waksman_topology neighbors(width,
                                                   std::vector<std::pair<std::size_t, std::size_t>>(
-                                                          num_packets,
-                                                          std::make_pair<std::size_t, std::size_t>(-1, -1)));
+                                                      num_packets, std::make_pair<std::size_t, std::size_t>(-1, -1)));
 
                     std::vector<std::size_t> rhs_dests(num_packets);
                     for (std::size_t packet_idx = 0; packet_idx < num_packets; ++packet_idx) {
@@ -465,9 +462,9 @@ namespace nil {
                                  * using the lower subnetwork.
                                  */
                                 const std::size_t rhs_switch =
-                                        as_waksman_get_canonical_row_idx(lo, permutation.get(hi));
+                                    as_waksman_get_canonical_row_idx(lo, permutation.get(hi));
                                 const bool rhs_switch_setting = as_waksman_get_switch_setting_from_top_bottom_decision(
-                                        lo, permutation.get(hi), false);
+                                    lo, permutation.get(hi), false);
                                 routing[right][rhs_switch] = rhs_switch_setting;
                                 std::size_t tprime = as_waksman_switch_input(subnetwork_size, lo, rhs_switch, false);
                                 new_permutation.set(hi, tprime);
@@ -503,9 +500,9 @@ namespace nil {
                                 }
                                 const bool lhs_switch_setting = routing[left][lhs_switch];
                                 const bool use_top = as_waksman_get_top_bottom_decision_from_switch_setting(
-                                        lo, to_route, lhs_switch_setting);
+                                    lo, to_route, lhs_switch_setting);
                                 const std::size_t t =
-                                        as_waksman_switch_output(subnetwork_size, lo, lhs_switch, use_top);
+                                    as_waksman_switch_output(subnetwork_size, lo, lhs_switch, use_top);
                                 if (permutation.get(to_route) == hi) {
                                     /**
                                      * We have routed to the straight wire for the odd case,
@@ -518,16 +515,16 @@ namespace nil {
                                     route_left = true;
                                 } else {
                                     const std::size_t rhs_switch =
-                                            as_waksman_get_canonical_row_idx(lo, permutation.get(to_route));
+                                        as_waksman_get_canonical_row_idx(lo, permutation.get(to_route));
                                     /**
                                      * We know that the corresponding switch on the right-hand side
                                      * cannot be set, so we set it according to the incoming wire.
                                      */
                                     assert(routing[right].find(rhs_switch) == routing[right].end());
                                     routing[right][rhs_switch] = as_waksman_get_switch_setting_from_top_bottom_decision(
-                                            lo, permutation.get(to_route), use_top);
+                                        lo, permutation.get(to_route), use_top);
                                     const std::size_t tprime =
-                                            as_waksman_switch_input(subnetwork_size, lo, rhs_switch, use_top);
+                                        as_waksman_switch_input(subnetwork_size, lo, rhs_switch, use_top);
                                     new_permutation.set(t, tprime);
                                     new_permutation_inv.set(tprime, t);
 
@@ -542,13 +539,13 @@ namespace nil {
                                  */
                                 const std::size_t rhs_switch = as_waksman_get_canonical_row_idx(lo, to_route);
                                 const std::size_t lhs_switch =
-                                        as_waksman_get_canonical_row_idx(lo, permutation_inv.get(to_route));
+                                    as_waksman_get_canonical_row_idx(lo, permutation_inv.get(to_route));
                                 assert(routing[right].find(rhs_switch) != routing[right].end());
                                 const bool rhs_switch_setting = routing[right][rhs_switch];
                                 const bool use_top = as_waksman_get_top_bottom_decision_from_switch_setting(
-                                        lo, to_route, rhs_switch_setting);
+                                    lo, to_route, rhs_switch_setting);
                                 const bool lhs_switch_setting = as_waksman_get_switch_setting_from_top_bottom_decision(
-                                        lo, permutation_inv.get(to_route), use_top);
+                                    lo, permutation_inv.get(to_route), use_top);
 
                                 /* The value on the left-hand side is either the same or not set. */
                                 auto it = routing[left].find(lhs_switch);
@@ -557,7 +554,7 @@ namespace nil {
 
                                 const std::size_t t = as_waksman_switch_input(subnetwork_size, lo, rhs_switch, use_top);
                                 const std::size_t tprime =
-                                        as_waksman_switch_output(subnetwork_size, lo, lhs_switch, use_top);
+                                    as_waksman_switch_output(subnetwork_size, lo, lhs_switch, use_top);
                                 new_permutation.set(tprime, t);
                                 new_permutation_inv.set(t, tprime);
 
@@ -597,11 +594,8 @@ namespace nil {
                         const integer_permutation new_permutation_upper = new_permutation.slice(lo, lo + d - 1);
                         const integer_permutation new_permutation_lower = new_permutation.slice(lo + d, hi);
 
-                        const integer_permutation new_permutation_inv_upper = new_permutation_inv.slice(lo,
-                                                                                                              lo + d -
-                                                                                                              1);
-                        const integer_permutation new_permutation_inv_lower = new_permutation_inv.slice(lo + d,
-                                                                                                              hi);
+                        const integer_permutation new_permutation_inv_upper = new_permutation_inv.slice(lo, lo + d - 1);
+                        const integer_permutation new_permutation_inv_lower = new_permutation_inv.slice(lo + d, hi);
 
                         as_waksman_route_inner(left + 1,
                                                right - 1,
@@ -644,10 +638,10 @@ namespace nil {
                                 auto it2 = routing[column_idx].find(packet_idx - 1);
                                 assert((it != routing[column_idx].end()) ^ (it2 != routing[column_idx].end()));
                                 const bool switch_setting =
-                                        (it != routing[column_idx].end() ? it->second : it2->second);
+                                    (it != routing[column_idx].end() ? it->second : it2->second);
 
                                 routed_packet_idx = (switch_setting ? neighbors[column_idx][packet_idx].second :
-                                                     neighbors[column_idx][packet_idx].first);
+                                                                      neighbors[column_idx][packet_idx].first);
                             }
 
                             nextperm.set(routed_packet_idx, curperm.get(packet_idx));
@@ -659,8 +653,8 @@ namespace nil {
                     return (curperm == permutation.inverse());
                 }
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_AS_WAKSMAN_ROUTING_ALGORITHM_HPP

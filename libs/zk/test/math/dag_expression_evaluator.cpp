@@ -61,17 +61,12 @@ BOOST_AUTO_TEST_CASE(dag_expression_evaluator_test) {
 
     test_tools::random_test_initializer<FieldType> random_test_initializer;
 
-
     using private_table_type = plonk_polynomial_dfs_table<FieldType>::private_table_type;
     using public_table_type = plonk_polynomial_dfs_table<FieldType>::public_table_type;
 
-    polynomial_dfs_type w0_value = {1,
-        {0x3_cppui_modular255, 
-         0x7_cppui_modular255}};
+    polynomial_dfs_type w0_value = {1, {0x3_cppui_modular255, 0x7_cppui_modular255}};
 
-    polynomial_dfs_type w1_value = {1,
-        {0x7_cppui_modular255,
-         0x6_cppui_modular255}};
+    polynomial_dfs_type w1_value = {1, {0x7_cppui_modular255, 0x6_cppui_modular255}};
 
     std::vector<polynomial_dfs_type> witness_values = {w0_value, w1_value};
 
@@ -80,12 +75,12 @@ BOOST_AUTO_TEST_CASE(dag_expression_evaluator_test) {
 
     auto polynomial_table = std::make_shared<plonk_polynomial_dfs_table<FieldType>>(private_table, public_table);
     size_t domain_size = polynomial_table->witness_column_size(0);
-    std::shared_ptr<math::evaluation_domain<FieldType>> domain = math::make_evaluation_domain<FieldType>(
-        polynomial_table->witness_column_size(0));
+    std::shared_ptr<math::evaluation_domain<FieldType>> domain =
+        math::make_evaluation_domain<FieldType>(polynomial_table->witness_column_size(0));
 
     // We don't care about the following values in this test, they are only used in selector values.
     // Just make sure they have the same size as variable values.
-    polynomial_dfs_type mask_assignment(1, 2); 
+    polynomial_dfs_type mask_assignment(1, 2);
     polynomial_dfs_type lagrange_0(1, 2);
     cached_assignment_table_type table(polynomial_table, mask_assignment, lagrange_0);
 
@@ -102,7 +97,8 @@ BOOST_AUTO_TEST_CASE(dag_expression_evaluator_test) {
 
     dag_expression_evaluator<FieldType> dag_evaluator(dag_expr, 2);
     std::vector<polynomial_dfs_type> result = dag_evaluator.evaluate(table);
-    auto classic_result = polynomial_table->get_variable_value(w0, domain) * polynomial_table->get_variable_value(w1, domain);
+    auto classic_result =
+        polynomial_table->get_variable_value(w0, domain) * polynomial_table->get_variable_value(w1, domain);
 
     // We will compare the coefficients here, because the results have different degrees.
     BOOST_CHECK(classic_result.coefficients() == result[0].coefficients());

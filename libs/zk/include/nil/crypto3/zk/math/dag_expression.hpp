@@ -45,8 +45,8 @@ namespace nil::crypto3::zk::snark {
         using assignment_type = typename VariableType::assignment_type;
         assignment_type value;
 
-        dag_constant(const assignment_type& value)
-            : value(value) {}
+        dag_constant(const assignment_type& value) : value(value) {
+        }
 
         bool operator==(const dag_constant& other) const = default;
     };
@@ -55,8 +55,8 @@ namespace nil::crypto3::zk::snark {
     struct dag_variable {
         VariableType variable;
 
-        dag_variable(const VariableType& variable)
-            : variable(variable) {}
+        dag_variable(const VariableType& variable) : variable(variable) {
+        }
 
         bool operator==(const dag_variable& other) const = default;
     };
@@ -90,20 +90,15 @@ namespace nil::crypto3::zk::snark {
     struct dag_negation {
         size_t operand;
 
-        dag_negation(size_t operand)
-            : operand(operand) {}
+        dag_negation(size_t operand) : operand(operand) {
+        }
 
         bool operator==(const dag_negation& other) const = default;
     };
 
     template<typename VariableType>
-    using dag_node = std::variant<
-        dag_constant<VariableType>,
-        dag_variable<VariableType>,
-        dag_addition,
-        dag_multiplication,
-        dag_negation
-    >;
+    using dag_node = std::variant<dag_constant<VariableType>, dag_variable<VariableType>, dag_addition,
+                                  dag_multiplication, dag_negation>;
 
     template<typename VariableType>
     class dag_node_hashing_visitor : public boost::static_visitor<size_t> {
@@ -111,7 +106,7 @@ namespace nil::crypto3::zk::snark {
         using assignment_type = typename VariableType::assignment_type;
 
         static const size_t constant_seed = 0x1;
-        static const size_t add_seed      = 0x2;
+        static const size_t add_seed = 0x2;
         static const size_t multiply_seed = 0x3;
         static const size_t negation_seed = 0x4;
 
@@ -148,8 +143,7 @@ namespace nil::crypto3::zk::snark {
         }
     };
 
-
-} // namespace nil::crypto3::zk::snark
+}    // namespace nil::crypto3::zk::snark
 
 // Define the hash of a dag_node, so we can use it in dag_expression.
 template<typename VariableType>
@@ -157,7 +151,7 @@ struct std::hash<nil::crypto3::zk::snark::dag_node<VariableType>> {
 
     nil::crypto3::zk::snark::dag_node_hashing_visitor<VariableType> visitor;
 
-    size_t operator()(const nil::crypto3::zk::snark::dag_node<VariableType> &node) const {
+    size_t operator()(const nil::crypto3::zk::snark::dag_node<VariableType>& node) const {
         return std::visit(visitor, node);
     }
 };
@@ -200,8 +194,8 @@ namespace nil::crypto3::zk::snark {
         size_t get_root_node_degree(size_t i) const {
             return root_node_degrees[i];
         }
-    private:
 
+    private:
         std::unordered_map<node_type, size_t> node_map;
         std::vector<size_t> root_nodes;
         // The degrees of expression that represent the given root node.
@@ -231,15 +225,13 @@ namespace nil::crypto3::zk::snark {
 
         dag_node_statistics_visitor() = default;
 
-        void print_stats(const dag_expression<VariableType>& dag,
-                         std::string_view tag = "DAG operations") {
+        void print_stats(const dag_expression<VariableType>& dag, std::string_view tag = "DAG operations") {
             additions = multiplications = copies = negations = 0;
-            for (const auto& node: dag.get_nodes()) {
+            for (const auto& node : dag.get_nodes()) {
                 std::visit(*this, node);
             }
 
-            SCOPED_LOG("{}: add {}, mul: {}, neg: {}, copy: {}", tag, additions,
-                       multiplications, negations, copies);
+            SCOPED_LOG("{}: add {}, mul: {}, neg: {}, copy: {}", tag, additions, multiplications, negations, copies);
         }
 
         void operator()(const dag_constant<VariableType>& n) {
@@ -268,14 +260,13 @@ namespace nil::crypto3::zk::snark {
     template<typename VariableType>
     class dag_child_occurence_counting_visitor : public boost::static_visitor<void> {
     public:
-
         std::vector<size_t> _occurences;
 
         dag_child_occurence_counting_visitor() = default;
 
-        std::vector<size_t> get_occurence_counts(const dag_expression<VariableType> &dag) {
+        std::vector<size_t> get_occurence_counts(const dag_expression<VariableType>& dag) {
             _occurences = std::vector<size_t>(dag.get_nodes_count(), 0);
-            for (const auto& node: dag.get_nodes()) {
+            for (const auto& node : dag.get_nodes()) {
                 std::visit(*this, node);
             }
             return std::move(_occurences);
@@ -314,7 +305,8 @@ namespace nil::crypto3::zk::snark {
         using term_type = term<VariableType>;
         using pow_operation_type = pow_operation<VariableType>;
         using binary_arithmetic_operation_type = binary_arithmetic_operation<VariableType>;
-        using co_occurence_map_type = std::unordered_map<std::pair<size_t, size_t>, size_t, boost::hash<std::pair<size_t,size_t>>>;
+        using co_occurence_map_type =
+            std::unordered_map<std::pair<size_t, size_t>, size_t, boost::hash<std::pair<size_t, size_t>>>;
 
         size_t get_expression_count() const {
             return expressions.size();
@@ -331,7 +323,7 @@ namespace nil::crypto3::zk::snark {
         dag_expression<VariableType> build() {
             expression_max_degree_visitor<VariableType> max_degree_visitor;
 
-            for (const auto& expr: expressions) {
+            for (const auto& expr : expressions) {
                 size_t root_node = boost::apply_visitor(*this, expr.get_expr());
                 result.root_nodes.push_back(root_node);
 
@@ -352,7 +344,7 @@ namespace nil::crypto3::zk::snark {
 
             // visitor.print_stats(result, "DAG before squashing");
 
-            merge_children(/*only_those_that_occur_once=*/ false);
+            merge_children(/*only_those_that_occur_once=*/false);
 
             // visitor.print_stats(result, "DAG After merge children");
 
@@ -365,24 +357,24 @@ namespace nil::crypto3::zk::snark {
             // visitor.print_stats(result, "DAG After removing duplicates");
 
             // Now remove children that are the only child of their parent, and parent operation matches.
-            merge_children(/*only_those_that_occur_once=*/ true);
+            merge_children(/*only_those_that_occur_once=*/true);
             remove_unreachable_nodes();
 
             // visitor.print_stats(result, "DAG after squashing");
         }
 
-        // Runs over the dag, looking at the addition and multiplication nodes. If it detects a pair of children than appear
-        // more than once in a node, it creates a separate node for that pair, and reuses that node.
-        // In order to do that [semi]optimally we constantly run over the dag and compute the co-occurence matrix.
-        // Then we merge node pairs if they co-occure more than once. Then the matrix is built again and again, until
-        // if does not contain any number >1.
+        // Runs over the dag, looking at the addition and multiplication nodes. If it detects a pair of children than
+        // appear more than once in a node, it creates a separate node for that pair, and reuses that node. In order to
+        // do that [semi]optimally we constantly run over the dag and compute the co-occurence matrix. Then we merge
+        // node pairs if they co-occure more than once. Then the matrix is built again and again, until if does not
+        // contain any number >1.
         void remove_duplicates() {
             bool something_changed;
             do {
                 something_changed = false;
                 auto [add_occurences, mul_occurences] = generate_occurance_count();
-                auto [add_co_occurence_map, mul_co_occurence_map] = generate_co_occurence_maps(
-                    add_occurences, mul_occurences);
+                auto [add_co_occurence_map, mul_co_occurence_map] =
+                    generate_co_occurence_maps(add_occurences, mul_occurences);
                 prune_co_occurence_map(add_co_occurence_map);
                 prune_co_occurence_map(mul_co_occurence_map);
 
@@ -392,8 +384,8 @@ namespace nil::crypto3::zk::snark {
                     auto& node = result.nodes[k];
                     if (std::holds_alternative<dag_addition>(node)) {
                         auto& add = std::get<dag_addition>(node);
-                        const auto [selected_pairs, used] = pair_nodes(
-                            add.operands, add_occurences, add_co_occurence_map);
+                        const auto [selected_pairs, used] =
+                            pair_nodes(add.operands, add_occurences, add_co_occurence_map);
                         if (selected_pairs.size() != 0)
                             something_changed = true;
 
@@ -402,16 +394,16 @@ namespace nil::crypto3::zk::snark {
                             if (!used[i])
                                 new_operands.push_back(new_index[add.operands[i]]);
                         }
-                        for (const auto& [first, second]: selected_pairs) {
-                            auto new_idx = new_result.register_node(dag_addition{
-                                new_index[add.operands[first]], new_index[add.operands[second]]});
+                        for (const auto& [first, second] : selected_pairs) {
+                            auto new_idx = new_result.register_node(
+                                dag_addition {new_index[add.operands[first]], new_index[add.operands[second]]});
                             new_operands.push_back(new_idx);
                         }
                         add.operands = new_operands;
                     } else if (std::holds_alternative<dag_multiplication>(node)) {
                         auto& mul = std::get<dag_multiplication>(node);
-                        const auto [selected_pairs, used] = pair_nodes(
-                            mul.operands, mul_occurences, mul_co_occurence_map);
+                        const auto [selected_pairs, used] =
+                            pair_nodes(mul.operands, mul_occurences, mul_co_occurence_map);
                         if (selected_pairs.size() != 0)
                             something_changed = true;
 
@@ -420,9 +412,9 @@ namespace nil::crypto3::zk::snark {
                             if (!used[i])
                                 new_operands.push_back(new_index[mul.operands[i]]);
                         }
-                        for (const auto& [first, second]: selected_pairs) {
-                            auto new_idx = new_result.register_node(dag_multiplication{
-                                new_index[mul.operands[first]], new_index[mul.operands[second]]});
+                        for (const auto& [first, second] : selected_pairs) {
+                            auto new_idx = new_result.register_node(
+                                dag_multiplication {new_index[mul.operands[first]], new_index[mul.operands[second]]});
                             new_operands.push_back(new_idx);
                         }
                         mul.operands = new_operands;
@@ -436,20 +428,19 @@ namespace nil::crypto3::zk::snark {
                 // Move all the root nodes as well.
                 new_result.root_nodes = result.root_nodes;
                 new_result.root_node_degrees = result.root_node_degrees;
-                for (auto& root_id: new_result.root_nodes) {
+                for (auto& root_id : new_result.root_nodes) {
                     root_id = new_index[root_id];
                 }
                 result = new_result;
-            } while(something_changed);
+            } while (something_changed);
         }
 
-        // Creates pairs of operands based on the co-occurance maps. It returns indices in the 'operands' vector, not the values.
-        // Also returns a vector telling us which index was paired.
-        std::pair<std::vector<std::pair<size_t, size_t>>, std::vector<bool>> pair_nodes(
-            const dag_operands_vector_type& operands,
-            const std::unordered_map<size_t, size_t>& occurences,
-            const co_occurence_map_type& co_occurence_map
-            ) {
+        // Creates pairs of operands based on the co-occurance maps. It returns indices in the 'operands' vector, not
+        // the values. Also returns a vector telling us which index was paired.
+        std::pair<std::vector<std::pair<size_t, size_t>>, std::vector<bool>>
+            pair_nodes(const dag_operands_vector_type& operands,
+                       const std::unordered_map<size_t, size_t>& occurences,
+                       const co_occurence_map_type& co_occurence_map) {
             // Get all the pairs that appear >=2 times and sort by decreasing order of appearances.
             std::multimap<size_t, std::pair<size_t, size_t>, std::greater<>> pairs;
             for (size_t i = 0; i < operands.size(); i++) {
@@ -458,7 +449,7 @@ namespace nil::crypto3::zk::snark {
                 for (size_t j = i + 1; j < operands.size(); j++) {
                     auto iter = co_occurence_map.find(std::make_pair(operands[i], operands[j]));
                     if (iter != co_occurence_map.end() && iter->second > 1) {
-                        pairs.emplace(iter->second, std::pair<std::size_t, std::size_t>{i, j});
+                        pairs.emplace(iter->second, std::pair<std::size_t, std::size_t> {i, j});
                     }
                 }
             }
@@ -499,7 +490,8 @@ namespace nil::crypto3::zk::snark {
 
         // Count how many times each node appears as a child in addition or multiplication.
         // If it appears only once, there is no chance it has duplicates. This is an optimization.
-        std::pair<std::unordered_map<size_t, size_t>, std::unordered_map<size_t, size_t>> generate_occurance_count() const {
+        std::pair<std::unordered_map<size_t, size_t>, std::unordered_map<size_t, size_t>>
+            generate_occurance_count() const {
             std::unordered_map<size_t, size_t> add_appearances;
             std::unordered_map<size_t, size_t> mul_appearances;
             for (size_t k = 0; k < result.nodes.size(); ++k) {
@@ -519,9 +511,9 @@ namespace nil::crypto3::zk::snark {
             return {add_appearances, mul_appearances};
         }
 
-        std::pair<co_occurence_map_type, co_occurence_map_type> generate_co_occurence_maps(
-                const std::unordered_map<size_t, size_t>& add_occurences,
-                const std::unordered_map<size_t, size_t>& mul_occurences) const {
+        std::pair<co_occurence_map_type, co_occurence_map_type>
+            generate_co_occurence_maps(const std::unordered_map<size_t, size_t>& add_occurences,
+                                       const std::unordered_map<size_t, size_t>& mul_occurences) const {
             co_occurence_map_type add_co_occurence_map;
             co_occurence_map_type mul_co_occurence_map;
             for (size_t k = 0; k < result.nodes.size(); ++k) {
@@ -582,7 +574,7 @@ namespace nil::crypto3::zk::snark {
             // Move all the root nodes as well.
             new_result.root_nodes = result.root_nodes;
             new_result.root_node_degrees = result.root_node_degrees;
-            for (auto& root_id: new_result.root_nodes) {
+            for (auto& root_id : new_result.root_nodes) {
                 root_id = new_index[root_id];
             }
             result = new_result;
@@ -593,7 +585,7 @@ namespace nil::crypto3::zk::snark {
         // replaced.
         std::vector<bool> get_reachable_nodes() {
             std::vector<bool> reachable(result.nodes.size(), false);
-            for (size_t root_id: result.root_nodes)
+            for (size_t root_id : result.root_nodes)
                 reachable[root_id] = true;
             for (int k = result.nodes.size() - 1; k >= 0; --k) {
                 if (!reachable[k])
@@ -616,10 +608,11 @@ namespace nil::crypto3::zk::snark {
             return reachable;
         }
 
-        /** \breief - Merges children into the parent node if operation matches. For example if the parent node is a multiplication,
-         *          and one of it's children is a multiplication as well, it moves the children of that child to the parent.
-         *  \param[in] only_those_that_occur_once - if set to true, will only move up children that are not re-used, I.E. this
-         *          node is the only parent, so the child can be destroyed later.
+        /** \breief - Merges children into the parent node if operation matches. For example if the parent node is a
+         * multiplication, and one of it's children is a multiplication as well, it moves the children of that child to
+         * the parent.
+         *  \param[in] only_those_that_occur_once - if set to true, will only move up children that are not re-used,
+         * I.E. this node is the only parent, so the child can be destroyed later.
          */
         void merge_children(bool only_those_that_occur_once) {
             std::vector<size_t> occurences;
@@ -673,27 +666,25 @@ namespace nil::crypto3::zk::snark {
         size_t operator()(const term<VariableType>& t) {
             dag_operands_vector_type children;
             if (t.get_vars().size() == 0 || t.get_coeff() != assignment_type::one()) {
-                auto const_idx = result.register_node(dag_constant<VariableType>{t.get_coeff()});
+                auto const_idx = result.register_node(dag_constant<VariableType> {t.get_coeff()});
                 children.push_back(const_idx);
             }
             // then insert variables
             for (const auto& variable : t.get_vars()) {
-                auto var_idx = result.register_node(dag_variable<VariableType>{variable});
+                auto var_idx = result.register_node(dag_variable<VariableType> {variable});
                 children.push_back(var_idx);
             }
             if (children.size() > 1)
-                return result.register_node(dag_multiplication{children});
+                return result.register_node(dag_multiplication {children});
             return children.front();
         }
 
-        size_t operator()(
-                const pow_operation<VariableType>& pow
-        ) {
+        size_t operator()(const pow_operation<VariableType>& pow) {
             size_t base = boost::apply_visitor(*this, pow.get_expr().get_expr());
             int power = pow.get_power();
 
             if (power == 0) {
-                return result.register_node(dag_constant<VariableType>{assignment_type::one()});
+                return result.register_node(dag_constant<VariableType> {assignment_type::one()});
             }
             if (power == 1) {
                 return base;
@@ -702,16 +693,16 @@ namespace nil::crypto3::zk::snark {
                 throw std::invalid_argument("Negative powers are not supported in DAG expressions");
             }
 
-            size_t result_node = result.register_node(dag_constant<VariableType>{assignment_type::one()});
+            size_t result_node = result.register_node(dag_constant<VariableType> {assignment_type::one()});
             size_t current_base = base;
 
             while (power > 0) {
                 if (power % 2 == 1) {
-                    result_node = result.register_node(dag_multiplication{result_node, current_base});
+                    result_node = result.register_node(dag_multiplication {result_node, current_base});
                 }
                 power /= 2;
                 if (power > 0) {
-                    current_base = result.register_node(dag_multiplication{current_base, current_base});
+                    current_base = result.register_node(dag_multiplication {current_base, current_base});
                 }
             }
 
@@ -724,12 +715,11 @@ namespace nil::crypto3::zk::snark {
 
             switch (op.get_op()) {
                 case ArithmeticOperator::ADD:
-                    return result.register_node(dag_addition{left, right});
+                    return result.register_node(dag_addition {left, right});
                 case ArithmeticOperator::SUB:
-                    return result.register_node(dag_addition{
-                        left, result.register_node(dag_negation{right})});
+                    return result.register_node(dag_addition {left, result.register_node(dag_negation {right})});
                 case ArithmeticOperator::MULT:
-                    return result.register_node(dag_multiplication{left, right});
+                    return result.register_node(dag_multiplication {left, right});
             }
             throw std::invalid_argument("ArithmeticOperator not found");
         }
@@ -743,8 +733,6 @@ namespace nil::crypto3::zk::snark {
         dag_expression<VariableType> result;
     };
 
-} // namespace nil::crypto3::zk::snark
+}    // namespace nil::crypto3::zk::snark
 
-
-
-#endif // CRYPTO3_ZK_MATH_DAG_EXPRESSION_HPP
+#endif    // CRYPTO3_ZK_MATH_DAG_EXPRESSION_HPP

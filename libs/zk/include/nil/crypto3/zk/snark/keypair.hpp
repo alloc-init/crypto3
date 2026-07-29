@@ -34,8 +34,8 @@ namespace nil {
                 template<typename ZkScheme>
                 using keypair = std::pair<typename ZkScheme::proving_key, typename ZkScheme::verification_key>;
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif

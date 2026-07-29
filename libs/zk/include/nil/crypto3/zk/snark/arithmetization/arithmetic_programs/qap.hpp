@@ -95,8 +95,7 @@ namespace nil {
                                  const std::vector<std::map<std::size_t, field_value_type>> &A_in_Lagrange_basis,
                                  const std::vector<std::map<std::size_t, field_value_type>> &B_in_Lagrange_basis,
                                  const std::vector<std::map<std::size_t, field_value_type>> &C_in_Lagrange_basis) :
-                        num_variables(num_variables),
-                        degree(degree), num_inputs(num_inputs), domain(domain),
+                        num_variables(num_variables), degree(degree), num_inputs(num_inputs), domain(domain),
                         A_in_Lagrange_basis(A_in_Lagrange_basis), B_in_Lagrange_basis(B_in_Lagrange_basis),
                         C_in_Lagrange_basis(C_in_Lagrange_basis) {
                     }
@@ -108,8 +107,7 @@ namespace nil {
                                  std::vector<std::map<std::size_t, field_value_type>> &&A_in_Lagrange_basis,
                                  std::vector<std::map<std::size_t, field_value_type>> &&B_in_Lagrange_basis,
                                  std::vector<std::map<std::size_t, field_value_type>> &&C_in_Lagrange_basis) :
-                        num_variables(num_variables),
-                        degree(degree), num_inputs(num_inputs), domain(domain),
+                        num_variables(num_variables), degree(degree), num_inputs(num_inputs), domain(domain),
                         A_in_Lagrange_basis(std::move(A_in_Lagrange_basis)),
                         B_in_Lagrange_basis(std::move(B_in_Lagrange_basis)),
                         C_in_Lagrange_basis(std::move(C_in_Lagrange_basis)) {
@@ -207,9 +205,8 @@ namespace nil {
                                             const std::vector<field_value_type> &Ct,
                                             const std::vector<field_value_type> &Ht,
                                             const field_value_type &Zt) :
-                        num_variables(num_variables),
-                        degree(degree), num_inputs(num_inputs), domain(domain), t(t), At(At), Bt(Bt), Ct(Ct), Ht(Ht),
-                        Zt(Zt) {
+                        num_variables(num_variables), degree(degree), num_inputs(num_inputs), domain(domain), t(t),
+                        At(At), Bt(Bt), Ct(Ct), Ht(Ht), Zt(Zt) {
                     }
 
                     qap_instance_evaluation(const std::shared_ptr<evaluation_domain<field_type>> &domain,
@@ -222,9 +219,8 @@ namespace nil {
                                             std::vector<field_value_type> &&Ct,
                                             std::vector<field_value_type> &&Ht,
                                             const field_value_type &Zt) :
-                        num_variables(num_variables),
-                        degree(degree), num_inputs(num_inputs), domain(domain), t(t), At(std::move(At)),
-                        Bt(std::move(Bt)), Ct(std::move(Ct)), Ht(std::move(Ht)), Zt(Zt) {
+                        num_variables(num_variables), degree(degree), num_inputs(num_inputs), domain(domain), t(t),
+                        At(std::move(At)), Bt(std::move(Bt)), Ct(std::move(Ct)), Ht(std::move(Ht)), Zt(Zt) {
                     }
 
                     qap_instance_evaluation(const qap_instance_evaluation<field_type> &other) = default;
@@ -328,8 +324,7 @@ namespace nil {
                                 const field_value_type &d3,
                                 const std::vector<field_value_type> &coefficients_for_ABCs,
                                 const std::vector<field_value_type> &coefficients_for_H) :
-                        num_variables(num_variables),
-                        degree(degree), num_inputs(num_inputs), d1(d1), d2(d2), d3(d3),
+                        num_variables(num_variables), degree(degree), num_inputs(num_inputs), d1(d1), d2(d2), d3(d3),
                         coefficients_for_ABCs(coefficients_for_ABCs), coefficients_for_H(coefficients_for_H) {
                     }
 
@@ -341,8 +336,7 @@ namespace nil {
                                 const field_value_type &d3,
                                 const std::vector<field_value_type> &coefficients_for_ABCs,
                                 std::vector<field_value_type> &&coefficients_for_H) :
-                        num_variables(num_variables),
-                        degree(degree), num_inputs(num_inputs), d1(d1), d2(d2), d3(d3),
+                        num_variables(num_variables), degree(degree), num_inputs(num_inputs), d1(d1), d2(d2), d3(d3),
                         coefficients_for_ABCs(coefficients_for_ABCs),
                         coefficients_for_H(std::move(coefficients_for_H)) {
                     }
@@ -354,8 +348,8 @@ namespace nil {
                 };
 
             }    // namespace snark
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_QAP_HPP

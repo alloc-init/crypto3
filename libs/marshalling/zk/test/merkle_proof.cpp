@@ -87,7 +87,7 @@ void print_fp2_curve_group_element(Fp2CurveGroupElement e) {
 
 template<typename ValueType, std::size_t N>
 typename std::enable_if<std::is_unsigned<ValueType>::value, std::vector<std::array<ValueType, N>>>::type
-generate_random_data(std::size_t leaf_number) {
+    generate_random_data(std::size_t leaf_number) {
     std::vector<std::array<ValueType, N>> v;
     for (std::size_t i = 0; i < leaf_number; ++i) {
         std::array<ValueType, N> leaf;
@@ -105,22 +105,20 @@ void test_merkle_proof(std::size_t tree_depth) {
     using merkle_tree_type = nil::crypto3::containers::merkle_tree<HashType, Arity>;
     using merkle_proof_type = nil::crypto3::containers::merkle_proof<HashType, Arity>;
     using merkle_proof_marshalling_type =
-            types::merkle_proof<nil::marshalling::field_type<Endianness>, merkle_proof_type>;
+        types::merkle_proof<nil::marshalling::field_type<Endianness>, merkle_proof_type>;
 
     std::size_t leafs_number = std::pow(Arity, tree_depth);
-    // You can also lazy convert byte stream to field elements stream using <nil/crypto3/hash/block_to_field_elements_wrapper.hpp>
+    // You can also lazy convert byte stream to field elements stream using
+    // <nil/crypto3/hash/block_to_field_elements_wrapper.hpp>
     auto data = generate_random_data<std::uint8_t, LeafSize>(leafs_number);
     merkle_tree_type tree;
 
     if constexpr (nil::crypto3::algebra::is_field_element<typename HashType::word_type>::value) {
         // Populate the vector with wrappers, one for each block
-        std::vector<
-            nil::crypto3::hashes::block_to_field_elements_wrapper<
-                typename HashType::word_type::field_type,
-                std::array<std::uint8_t, LeafSize>
-            >
-        > wrappers;
-        for (const auto& inner_containers : data) {
+        std::vector<nil::crypto3::hashes::block_to_field_elements_wrapper<typename HashType::word_type::field_type,
+                                                                          std::array<std::uint8_t, LeafSize>>>
+            wrappers;
+        for (const auto &inner_containers : data) {
             wrappers.emplace_back(inner_containers);
         }
         tree = nil::crypto3::containers::make_merkle_tree<HashType, Arity>(wrappers.begin(), wrappers.end());
@@ -152,45 +150,37 @@ void test_merkle_proof(std::size_t tree_depth) {
 BOOST_AUTO_TEST_SUITE(marshalling_merkle_proof_test_suite)
 
 using field_type = typename nil::crypto3::algebra::curves::alt_bn128_254::scalar_field_type;
-using poseidon = nil::crypto3::hashes::poseidon<
-    nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>>;
+using poseidon = nil::crypto3::hashes::poseidon<nil::crypto3::hashes::detail::poseidon1_policy<field_type, 128, 2>>;
 
-using HashTypes = boost::mpl::list<
-        nil::crypto3::hashes::sha2<256>,
-        nil::crypto3::hashes::keccak_1600<512>,
-        poseidon
-    >;
+using HashTypes = boost::mpl::list<nil::crypto3::hashes::sha2<256>, nil::crypto3::hashes::keccak_1600<512>, poseidon>;
 
-    BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_2_test, HashType, HashTypes) {
-        std::srand(std::time(0));
-        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2>(5);
-        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2>(10);
-        if constexpr (!std::is_same<HashType, poseidon>::value) {
-            // Poseidon is really slow, the following test takes >5 min
-            // So we ignore it for just poseidon in order to keep the tests flowing
-            test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2, 320>(15);
-        }
+BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_2_test, HashType, HashTypes) {
+    std::srand(std::time(0));
+    test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2>(5);
+    test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2>(10);
+    if constexpr (!std::is_same<HashType, poseidon>::value) {
+        // Poseidon is really slow, the following test takes >5 min
+        // So we ignore it for just poseidon in order to keep the tests flowing
+        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 2, 320>(15);
     }
+}
 
 // Poseidon hash function supports only Arity 2.
-using BlockHashTypes = boost::mpl::list<
-        nil::crypto3::hashes::sha2<256>,
-        nil::crypto3::hashes::keccak_1600<512>
-    >;
+using BlockHashTypes = boost::mpl::list<nil::crypto3::hashes::sha2<256>, nil::crypto3::hashes::keccak_1600<512>>;
 
-    BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_3_test, HashType, BlockHashTypes) {
-        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 3>(5);
-        // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 3>(10);
-    }
+BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_3_test, HashType, BlockHashTypes) {
+    test_merkle_proof<nil::marshalling::option::big_endian, HashType, 3>(5);
+    // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 3>(10);
+}
 
-    BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_4_test, HashType, BlockHashTypes) {
-        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 4>(5);
-        // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 4>(10);
-    }
+BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_4_test, HashType, BlockHashTypes) {
+    test_merkle_proof<nil::marshalling::option::big_endian, HashType, 4>(5);
+    // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 4>(10);
+}
 
-    BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_5_test, HashType, BlockHashTypes) {
-        test_merkle_proof<nil::marshalling::option::big_endian, HashType, 5>(5);
-        // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 5>(10);
-    }
+BOOST_AUTO_TEST_CASE_TEMPLATE(marshalling_merkle_proof_arity_5_test, HashType, BlockHashTypes) {
+    test_merkle_proof<nil::marshalling::option::big_endian, HashType, 5>(5);
+    // test_merkle_proof<nil::marshalling::option::big_endian, HashType, 5>(10);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

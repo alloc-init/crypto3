@@ -42,12 +42,7 @@
 
 namespace nil::crypto3::zk::snark {
 
-    enum class ArithmeticOperator : std::uint8_t
-    {
-        ADD = 0,
-        SUB = 1,
-        MULT = 2
-    };
+    enum class ArithmeticOperator : std::uint8_t { ADD = 0, SUB = 1, MULT = 2 };
 
     /******************* Forward declarations of all the classes ******************/
     template<typename VariableType>
@@ -76,39 +71,33 @@ namespace nil::crypto3::zk::snark {
 
         // We intentionally don't add variable_type and assignment_type here,
         // They must be converted to term<VariableType> before being used.
-        typedef boost::variant<
-            term<VariableType>,
-            pow_operation<VariableType>,
-            binary_arithmetic_operation<VariableType>
-            > expression_type;
+        typedef boost::
+            variant<term<VariableType>, pow_operation<VariableType>, binary_arithmetic_operation<VariableType>>
+                expression_type;
 
-        expression(): expression(assignment_type::zero()) {}
+        expression() : expression(assignment_type::zero()) {
+        }
 
-        expression(term<VariableType> expr)
-          : expr(std::make_shared<expression_type>(std::move(expr))) {
+        expression(term<VariableType> expr) : expr(std::make_shared<expression_type>(std::move(expr))) {
             update_hash();
         }
-        expression(pow_operation<VariableType> expr)
-          : expr(std::make_shared<expression_type>(std::move(expr))) {
+        expression(pow_operation<VariableType> expr) : expr(std::make_shared<expression_type>(std::move(expr))) {
             update_hash();
         }
-        expression(binary_arithmetic_operation<VariableType> expr)
-            : expr(std::make_shared<expression_type>(std::move(expr))) {
+        expression(binary_arithmetic_operation<VariableType> expr) :
+            expr(std::make_shared<expression_type>(std::move(expr))) {
             update_hash();
         }
-        expression(VariableType var)
-          : expr(std::make_shared<expression_type>(term<VariableType>(std::move(var)))) {
+        expression(VariableType var) : expr(std::make_shared<expression_type>(term<VariableType>(std::move(var)))) {
             update_hash();
         }
 
         // Constructor for integral types.
         template<class NumericType>
-        expression(const NumericType& coeff)
-          : expression(term<VariableType>((assignment_type)coeff)) {
+        expression(const NumericType& coeff) : expression(term<VariableType>((assignment_type)coeff)) {
         }
 
-        expression(const assignment_type &coeff)
-          : expression(term<VariableType>(coeff)) {
+        expression(const assignment_type& coeff) : expression(term<VariableType>(coeff)) {
         }
 
         expression<VariableType> pow(const std::size_t power) const;
@@ -124,9 +113,8 @@ namespace nil::crypto3::zk::snark {
         expression<VariableType> operator-(const expression<VariableType>& other) const;
         expression<VariableType> operator*(const expression<VariableType>& other) const;
 
-
         bool is_empty() const {
-            return *this == expression{};
+            return *this == expression {};
         }
 
         // Used for testing purposes. Checks for EXACT EQUALITY ONLY, no isomorphism!!!
@@ -168,14 +156,13 @@ namespace nil::crypto3::zk::snark {
         std::size_t hash;
     };
 
-
     /**
      * A Non-Linear term represents a formal expression of the form
      * "coeff * w^{wire_index_1}_{rotation_1} * ... * w^{wire_index_k}_{rotation_k}", where
      * the values of w^{wire_index_1}_{rotation_1} can repeat.
      */
     template<typename VariableType>
-    class term  {
+    class term {
     public:
         typedef VariableType variable_type;
         typedef typename VariableType::assignment_type assignment_type;
@@ -184,7 +171,7 @@ namespace nil::crypto3::zk::snark {
             update_hash();
         }
 
-        term(const VariableType &var) : coeff(assignment_type::one()) {
+        term(const VariableType& var) : coeff(assignment_type::one()) {
             vars.push_back(var);
             update_hash();
         }
@@ -193,22 +180,15 @@ namespace nil::crypto3::zk::snark {
         // if it can be converted to 'assignment_type'.
         // This will include integral types and big_uint
         template<class NumberType>
-        term(const NumberType &field_val) : coeff(field_val) {
+        term(const NumberType& field_val) : coeff(field_val) {
             update_hash();
         }
 
-        term(const std::vector<VariableType> &vars,
-             const assignment_type &coeff)
-            : vars(vars)
-            , coeff(coeff)
-        {
+        term(const std::vector<VariableType>& vars, const assignment_type& coeff) : vars(vars), coeff(coeff) {
             update_hash();
         }
 
-        term(const std::vector<VariableType> &vars)
-            : vars(vars)
-            , coeff(assignment_type::one())
-        {
+        term(const std::vector<VariableType>& vars) : vars(vars), coeff(assignment_type::one()) {
             update_hash();
         }
 
@@ -218,9 +198,9 @@ namespace nil::crypto3::zk::snark {
 
         // This operator will also allow multiplication with VariableType and assignment_type
         // via an implicit conversion to term.
-        term<VariableType> operator*(const term<VariableType> &other) const;
-        expression<VariableType> operator+(const term<VariableType> &other) const;
-        expression<VariableType> operator-(const term<VariableType> &other) const;
+        term<VariableType> operator*(const term<VariableType>& other) const;
+        expression<VariableType> operator+(const term<VariableType>& other) const;
+        expression<VariableType> operator-(const term<VariableType>& other) const;
 
         expression<VariableType> pow(const std::size_t power) const;
         term operator-() const;
@@ -245,7 +225,7 @@ namespace nil::crypto3::zk::snark {
             std::size_t result = coeff_hasher(coeff);
             auto vars_sorted = vars;
             sort(vars_sorted.begin(), vars_sorted.end());
-            for (const auto& var: vars_sorted) {
+            for (const auto& var : vars_sorted) {
                 boost::hash_combine(result, vars_hasher(var));
             }
             hash = result;
@@ -271,14 +251,11 @@ namespace nil::crypto3::zk::snark {
     };
 
     template<typename VariableType>
-    class pow_operation
-    {
+    class pow_operation {
     public:
         typedef VariableType variable_type;
 
-        pow_operation(const expression<VariableType>& expr, int power)
-            : expr(expr)
-            , power(power) {
+        pow_operation(const expression<VariableType>& expr, int power) : expr(expr), power(power) {
             update_hash();
         }
 
@@ -316,15 +293,15 @@ namespace nil::crypto3::zk::snark {
 
     // One of +, -, *, / operations. We build an expression tree using this class.
     template<typename VariableType>
-    class binary_arithmetic_operation
-    {
+    class binary_arithmetic_operation {
     public:
         using arithmetic_operator_type = ArithmeticOperator;
 
         binary_arithmetic_operation(expression<VariableType> expr_left,
-                                    expression<VariableType> expr_right,
-                                    ArithmeticOperator op)
-            : expr_left(std::move(expr_left)), expr_right(std::move(expr_right)), op(op) {
+                                    expression<VariableType>
+                                        expr_right,
+                                    ArithmeticOperator op) :
+            expr_left(std::move(expr_left)), expr_right(std::move(expr_right)), op(op) {
             update_hash();
         }
 
@@ -382,7 +359,7 @@ namespace nil::crypto3::zk::snark {
 
     /*********** Member function bodies for class 'term' *******************************/
     template<typename VariableType>
-    term<VariableType> term<VariableType>::operator*(const term<VariableType> &other) const {
+    term<VariableType> term<VariableType>::operator*(const term<VariableType>& other) const {
         if (this->is_zero() || other.is_zero())
             return term<VariableType>();
 
@@ -394,13 +371,13 @@ namespace nil::crypto3::zk::snark {
     }
 
     template<typename VariableType>
-    expression<VariableType> term<VariableType>::operator+(const term<VariableType> &other) const {
+    expression<VariableType> term<VariableType>::operator+(const term<VariableType>& other) const {
 
         return expression<VariableType>(*this) + other;
     }
 
     template<typename VariableType>
-    expression<VariableType> term<VariableType>::operator-(const term<VariableType> &other) const {
+    expression<VariableType> term<VariableType>::operator-(const term<VariableType>& other) const {
         return expression<VariableType>(*this) - other;
     }
 
@@ -427,8 +404,7 @@ namespace nil::crypto3::zk::snark {
     }
 
     template<typename VariableType>
-    expression<VariableType>& expression<VariableType>::operator+=(
-            const expression<VariableType>& other) {
+    expression<VariableType>& expression<VariableType>::operator+=(const expression<VariableType>& other) {
         if (this->is_empty())
             *this = other;
         else if (!other.is_empty()) {
@@ -438,15 +414,13 @@ namespace nil::crypto3::zk::snark {
     }
 
     template<typename VariableType>
-    expression<VariableType>& expression<VariableType>::operator-=(
-            const expression<VariableType>& other) {
+    expression<VariableType>& expression<VariableType>::operator-=(const expression<VariableType>& other) {
         *this = expression(binary_arithmetic_operation<VariableType>(*this, other, ArithmeticOperator::SUB));
         return *this;
     }
 
     template<typename VariableType>
-    expression<VariableType>& expression<VariableType>::operator*=(
-            const expression<VariableType>& other) {
+    expression<VariableType>& expression<VariableType>::operator*=(const expression<VariableType>& other) {
         if (this->is_empty() || other.is_empty()) {
             *this = expression<VariableType>();
         } else {
@@ -456,25 +430,21 @@ namespace nil::crypto3::zk::snark {
     }
 
     template<typename VariableType>
-    expression<VariableType> expression<VariableType>::operator+(
-            const expression<VariableType>& other) const {
+    expression<VariableType> expression<VariableType>::operator+(const expression<VariableType>& other) const {
         if (this->is_empty())
             return other;
         if (other.is_empty())
             return *this;
-        return binary_arithmetic_operation<VariableType>(
-            *this, other, ArithmeticOperator::ADD);
+        return binary_arithmetic_operation<VariableType>(*this, other, ArithmeticOperator::ADD);
     }
 
     template<typename VariableType>
-    expression<VariableType> expression<VariableType>::operator-(
-            const expression<VariableType>& other) const {
+    expression<VariableType> expression<VariableType>::operator-(const expression<VariableType>& other) const {
         return binary_arithmetic_operation<VariableType>(*this, other, ArithmeticOperator::SUB);
     }
 
     template<typename VariableType>
-    expression<VariableType> expression<VariableType>::operator*(
-            const expression<VariableType>& other) const {
+    expression<VariableType> expression<VariableType>::operator*(const expression<VariableType>& other) const {
         if (this->is_empty() || other.is_empty())
             return expression<VariableType>();
 
@@ -482,59 +452,68 @@ namespace nil::crypto3::zk::snark {
     }
 
     /***** Operators for [VariableType or assignment_type or int] +-* term. **********************/
-    template<typename VariableType, typename LeftType,
-             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value || std::is_same<LeftType, typename VariableType::assignment_type>::value || std::is_integral<LeftType>::value>>
-    term<VariableType> operator*(
-            const LeftType &left,
-            const term<VariableType> &t) {
+    template<typename VariableType,
+             typename LeftType,
+             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value ||
+                                         std::is_same<LeftType, typename VariableType::assignment_type>::value ||
+                                         std::is_integral<LeftType>::value>>
+    term<VariableType> operator*(const LeftType& left, const term<VariableType>& t) {
         return term<VariableType>(left) * t;
     }
 
-    template<typename VariableType, typename LeftType,
-             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value || std::is_same<LeftType, typename VariableType::assignment_type>::value || std::is_integral<LeftType>::value>>
-    expression<VariableType> operator+(
-            const LeftType &left,
-            const term<VariableType> &t) {
+    template<typename VariableType,
+             typename LeftType,
+             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value ||
+                                         std::is_same<LeftType, typename VariableType::assignment_type>::value ||
+                                         std::is_integral<LeftType>::value>>
+    expression<VariableType> operator+(const LeftType& left, const term<VariableType>& t) {
         return term<VariableType>(left) + t;
     }
 
-    template<typename VariableType, typename LeftType,
-             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value || std::is_same<LeftType, typename VariableType::assignment_type>::value || std::is_integral<LeftType>::value>>
-    expression<VariableType> operator-(
-            const LeftType &left,
-            const term<VariableType> &t) {
+    template<typename VariableType,
+             typename LeftType,
+             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value ||
+                                         std::is_same<LeftType, typename VariableType::assignment_type>::value ||
+                                         std::is_integral<LeftType>::value>>
+    expression<VariableType> operator-(const LeftType& left, const term<VariableType>& t) {
         return term<VariableType>(left) - t;
     }
 
     // Operators for [VariableType or assignment_type or int] +-* expression.
-    template<typename VariableType, typename LeftType,
-             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value || std::is_same<LeftType, typename VariableType::assignment_type>::value || std::is_same<LeftType, term<VariableType>>::value || std::is_integral<LeftType>::value>>
-    expression<VariableType> operator*(
-            const LeftType &left,
-            const expression<VariableType> &exp) {
+    template<typename VariableType,
+             typename LeftType,
+             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value ||
+                                         std::is_same<LeftType, typename VariableType::assignment_type>::value ||
+                                         std::is_same<LeftType, term<VariableType>>::value ||
+                                         std::is_integral<LeftType>::value>>
+    expression<VariableType> operator*(const LeftType& left, const expression<VariableType>& exp) {
         return expression<VariableType>(left) * exp;
     }
 
-    template<typename VariableType, typename LeftType,
-             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value || std::is_same<LeftType, typename VariableType::assignment_type>::value || std::is_same<LeftType, term<VariableType>>::value || std::is_integral<LeftType>::value>>
-    expression<VariableType> operator+(
-            const LeftType &left,
-            const expression<VariableType> &exp) {
+    template<typename VariableType,
+             typename LeftType,
+             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value ||
+                                         std::is_same<LeftType, typename VariableType::assignment_type>::value ||
+                                         std::is_same<LeftType, term<VariableType>>::value ||
+                                         std::is_integral<LeftType>::value>>
+    expression<VariableType> operator+(const LeftType& left, const expression<VariableType>& exp) {
         return expression<VariableType>(left) + exp;
     }
 
-    template<typename VariableType, typename LeftType,
-             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value || std::is_same<LeftType, typename VariableType::assignment_type>::value || std::is_same<LeftType, term<VariableType>>::value || std::is_integral<LeftType>::value>>
-    expression<VariableType> operator-(
-            const LeftType &left,
-            const expression<VariableType> &exp) {
+    template<typename VariableType,
+             typename LeftType,
+             typename = std::enable_if_t<std::is_same<LeftType, VariableType>::value ||
+                                         std::is_same<LeftType, typename VariableType::assignment_type>::value ||
+                                         std::is_same<LeftType, term<VariableType>>::value ||
+                                         std::is_integral<LeftType>::value>>
+    expression<VariableType> operator-(const LeftType& left, const expression<VariableType>& exp) {
         return expression<VariableType>(left) - exp;
     }
 
     template<typename VariableType>
     std::unordered_map<VariableType, int> term<VariableType>::to_unordered_map() const {
         std::unordered_map<VariableType, int> vars_map;
-        for (const auto& var: vars) {
+        for (const auto& var : vars) {
             auto iter = vars_map.find(var);
             if (iter != vars_map.end()) {
                 iter->second++;
@@ -556,7 +535,7 @@ namespace nil::crypto3::zk::snark {
         // Put both vars and other->vars into a hashmap, and check if
         // everything is equal.
         auto vars_map = this->to_unordered_map();
-        for (const auto& var: other.vars) {
+        for (const auto& var : other.vars) {
             auto iter = vars_map.find(var);
             if (iter != vars_map.end()) {
                 iter->second--;
@@ -564,7 +543,7 @@ namespace nil::crypto3::zk::snark {
                 return false;
             }
         }
-        for (const auto& entry: vars_map) {
+        for (const auto& entry : vars_map) {
             if (entry.second != 0)
                 return false;
         }
@@ -613,8 +592,8 @@ namespace nil::crypto3::zk::snark {
     // the values of terms, when the check fails.
     template<typename VariableType>
     std::ostream& operator<<(std::ostream& os, const binary_arithmetic_operation<VariableType>& bin_op) {
-        os << "(" << bin_op.get_expr_left() << " " << bin_op.get_operator_string() << " "
-            << bin_op.get_expr_right() << ")";
+        os << "(" << bin_op.get_expr_left() << " " << bin_op.get_operator_string() << " " << bin_op.get_expr_right()
+           << ")";
         return os;
     }
 
@@ -625,24 +604,19 @@ namespace nil::crypto3::zk::snark {
         os << expr.get_expr();
         return os;
     }
-} // namespace nil::crypto3::zk::snark
+}    // namespace nil::crypto3::zk::snark
 
-
-template <typename VariableType>
-struct std::hash<nil::crypto3::zk::snark::term<VariableType>>
-{
-    std::size_t operator()(const nil::crypto3::zk::snark::term<VariableType>& term) const
-    {
+template<typename VariableType>
+struct std::hash<nil::crypto3::zk::snark::term<VariableType>> {
+    std::size_t operator()(const nil::crypto3::zk::snark::term<VariableType>& term) const {
         // Hash is always pre-computed and store in the term itself.
         return term.get_hash();
     }
 };
 
-template <typename VariableType>
-struct std::hash<nil::crypto3::zk::snark::expression<VariableType>>
-{
-    std::size_t operator()(const nil::crypto3::zk::snark::expression<VariableType>& expr) const
-    {
+template<typename VariableType>
+struct std::hash<nil::crypto3::zk::snark::expression<VariableType>> {
+    std::size_t operator()(const nil::crypto3::zk::snark::expression<VariableType>& expr) const {
         // Hash is always pre-computed and store in the expression itself.
         return expr.get_hash();
     }

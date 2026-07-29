@@ -43,21 +43,21 @@ namespace nil {
                 public:
                     typedef typename CurveType::scalar_field_type field_type;
                     typedef typename CurveType::template g1_type<algebra::curves::coordinates::jacobian_with_a4_0>
-                    group_type;
+                        group_type;
                     typedef typename field_type::value_type evaluation_type;
                     typedef typename group_type::value_type commitment_type;
 
                     struct params_type {
                         // setup as an open key (non trusted, so uniform for both sides)
-                        int n; // n - number of parties
-                        int k; // K <= n - number of parties needed to open the secret message
+                        int n;    // n - number of parties
+                        int k;    // K <= n - number of parties needed to open the secret message
                         commitment_type g;
                         commitment_type h;
                     };
 
                     struct private_key {
-                        evaluation_type s; // power of g
-                        evaluation_type t; // power of h
+                        evaluation_type s;    // power of g
+                        evaluation_type t;    // power of h
 
                         private_key() : s(0), t(0) {
                         }
@@ -67,9 +67,9 @@ namespace nil {
                     };
 
                     struct proof_type {
-                        commitment_type E_0; // initial commitment
-                        std::vector<commitment_type> E; // commitments open for everyone
-                        std::vector<private_key> pk; // private keys for each party
+                        commitment_type E_0;               // initial commitment
+                        std::vector<commitment_type> E;    // commitments open for everyone
+                        std::vector<private_key> pk;       // private keys for each party
                     };
 
                     static params_type key_generator(int n, int k, commitment_type g = commitment_type::one(),
@@ -130,8 +130,8 @@ namespace nil {
                         }
 
                         std::vector<evaluation_type> s_i =
-                                poly_eval(params, f_coeffs); // pair (s_i[j], t_i[j]) is given exclusively
-                        std::vector<evaluation_type> t_i = poly_eval(params, g_coeffs); // to party number j
+                            poly_eval(params, f_coeffs);    // pair (s_i[j], t_i[j]) is given exclusively
+                        std::vector<evaluation_type> t_i = poly_eval(params, g_coeffs);    // to party number j
                         for (int i = 0; i < params.n; ++i) {
                             prf.pk.push_back(private_key(s_i[i], t_i[i]));
                         }
@@ -185,9 +185,9 @@ namespace nil {
                         return sum;
                     }
                 };
-            } // namespace commitments
-        } // namespace zk
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace commitments
+        }    // namespace zk
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ZK_PEDERSEN_COMMITMENT_SCHEME_HPP

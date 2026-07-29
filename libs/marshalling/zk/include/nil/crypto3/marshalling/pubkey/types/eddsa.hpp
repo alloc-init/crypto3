@@ -60,8 +60,7 @@ namespace nil {
                         // pubkey
                         nil::marshalling::types::array_list<
                             TTypeBase,
-                            nil::marshalling::types::integral<TTypeBase,
-                                                              typename PublicKey::schedule_type::value_type>,
+                            nil::marshalling::types::integral<TTypeBase, typename PublicKey::schedule_type::value_type>,
                             nil::marshalling::option::sequence_size_field_prefix<
                                 nil::marshalling::types::integral<TTypeBase, std::size_t>>>>>;
 
@@ -105,13 +104,12 @@ namespace nil {
 
                     integral_vector_type pubkey_data;
 
-                    std::vector<
-                        nil::marshalling::types::integral<TTypeBase, typename PublicKey::schedule_type::value_type>>
-                        &val = pubkey_data.value();
+                    std::vector<nil::marshalling::types::integral<TTypeBase,
+                                                                  typename PublicKey::schedule_type::value_type>> &val =
+                        pubkey_data.value();
                     for (std::size_t i = 0; i < key_inp.pubkey.size(); i++) {
                         val.push_back(
-                            nil::marshalling::types::integral<TTypeBase,
-                                                              typename PublicKey::schedule_type::value_type>(
+                            nil::marshalling::types::integral<TTypeBase, typename PublicKey::schedule_type::value_type>(
                                 key_inp.pubkey[i]));
                     }
 
@@ -223,7 +221,7 @@ namespace nil {
                 }
 
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_PUBKEY_MARSHALLING_EDDSA_HPP

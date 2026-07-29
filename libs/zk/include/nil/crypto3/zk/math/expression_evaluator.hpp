@@ -41,7 +41,7 @@ namespace nil::crypto3::zk::snark {
         template<typename ValueType>
         class multiplier {
         public:
-            inline void multiply(ValueType &res, const ValueType &val) {
+            inline void multiply(ValueType& res, const ValueType& val) {
                 res *= val;
             }
         };
@@ -56,27 +56,21 @@ namespace nil::crypto3::zk::snark {
 
             std::unordered_map<std::size_t, std::shared_ptr<DomainType>> domains;
 
-            inline void multiply(ValueType &res, const ValueType &val) {
+            inline void multiply(ValueType& res, const ValueType& val) {
                 const std::size_t res_domain_size = res.size();
                 const std::size_t val_domain_size = val.size();
-                const std::size_t new_domain_size =
-                    nil::crypto3::math::detail::power_of_two(std::max(
-                        {res_domain_size,
-                         val_domain_size,
-                         res.degree() + val.degree() + 1}));
+                const std::size_t new_domain_size = nil::crypto3::math::detail::power_of_two(
+                    std::max({res_domain_size, val_domain_size, res.degree() + val.degree() + 1}));
                 for (auto domain_size : {res_domain_size, val_domain_size, new_domain_size}) {
                     if (domains.find(domain_size) == domains.end()) {
                         domains[domain_size] = make_evaluation_domain<FieldType>(domain_size);
                     }
                 }
                 res.cached_multiplication(
-                    val,
-                    domains[res_domain_size],
-                    domains[val_domain_size],
-                    domains[new_domain_size]);
+                    val, domains[res_domain_size], domains[val_domain_size], domains[new_domain_size]);
             }
         };
-    }
+    }    // namespace detail
 
     // Evaluates a given expression, running over the expression tree.
     template<typename VariableType>
@@ -84,17 +78,16 @@ namespace nil::crypto3::zk::snark {
     private:
         using MultiplicationType = detail::multiplier<typename VariableType::assignment_type>;
         mutable MultiplicationType multiplicator;
+
     public:
         using ValueType = typename VariableType::assignment_type;
         /*
          * @param expr - the expression that will be evaluated.
          *  @param get_var_value - A function which can return the value for a given variable.
          */
-        expression_evaluator(
-            const expression<VariableType>& expr,
-            std::function<const ValueType&(const VariableType&)> get_var_value)
-                : expr(expr)
-                , get_var_value(get_var_value) {
+        expression_evaluator(const expression<VariableType>& expr,
+                             std::function<const ValueType&(const VariableType&)>
+                                 get_var_value) : expr(expr), get_var_value(get_var_value) {
         }
 
         ValueType evaluate() const {
@@ -109,14 +102,12 @@ namespace nil::crypto3::zk::snark {
             return result;
         }
 
-        ValueType operator()(
-                const pow_operation<VariableType>& pow) const {
+        ValueType operator()(const pow_operation<VariableType>& pow) const {
             ValueType result = boost::apply_visitor(*this, pow.get_expr().get_expr());
             return result.pow(pow.get_power());
         }
 
-        ValueType operator()(
-                const binary_arithmetic_operation<VariableType>& op) const {
+        ValueType operator()(const binary_arithmetic_operation<VariableType>& op) const {
 
             ValueType result = boost::apply_visitor(*this, op.get_expr_left().get_expr());
             switch (op.get_op()) {
@@ -137,7 +128,7 @@ namespace nil::crypto3::zk::snark {
         const expression<VariableType>& expr;
 
         // A function used to retrieve the value of a variable.
-        std::function<const ValueType&(const VariableType &var)> get_var_value;
+        std::function<const ValueType&(const VariableType& var)> get_var_value;
     };
 
     // Counts how many times each subexpression appears in a given expression.
@@ -146,9 +137,7 @@ namespace nil::crypto3::zk::snark {
     public:
         using ValueType = typename VariableType::assignment_type;
 
-        subexpression_counter(
-            const expression<VariableType>& expr)
-                : expr(expr) {
+        subexpression_counter(const expression<VariableType>& expr) : expr(expr) {
         }
 
         std::unordered_map<expression<VariableType>, size_t> count() {
@@ -164,14 +153,12 @@ namespace nil::crypto3::zk::snark {
                 _counts[term]++;
         }
 
-        void operator()(
-                const pow_operation<VariableType>& pow) {
+        void operator()(const pow_operation<VariableType>& pow) {
             _counts[pow]++;
             boost::apply_visitor(*this, pow.get_expr().get_expr());
         }
 
-        void operator()(
-                const binary_arithmetic_operation<VariableType>& op) {
+        void operator()(const binary_arithmetic_operation<VariableType>& op) {
             _counts[op]++;
             boost::apply_visitor(*this, op.get_expr_left().get_expr());
             boost::apply_visitor(*this, op.get_expr_right().get_expr());
@@ -193,6 +180,7 @@ namespace nil::crypto3::zk::snark {
     private:
         using MultiplicationType = detail::multiplier<typename VariableType::assignment_type>;
         mutable MultiplicationType multiplicator;
+
     public:
         using ValueType = typename VariableType::assignment_type;
 
@@ -201,11 +189,9 @@ namespace nil::crypto3::zk::snark {
          * @param expr - the expression that will be evaluated.
          *  @param get_var_value - A function which can return the value for a given variable.
          */
-        cached_expression_evaluator(
-            const expression<VariableType>& expr,
-            std::function<const ValueType&(const VariableType&)> get_var_value)
-                : _expr(expr)
-                , _get_var_value(get_var_value) {
+        cached_expression_evaluator(const expression<VariableType>& expr,
+                                    std::function<const ValueType&(const VariableType&)>
+                                        get_var_value) : _expr(expr), _get_var_value(get_var_value) {
         }
 
         ValueType evaluate() {
@@ -254,12 +240,10 @@ namespace nil::crypto3::zk::snark {
 
                 // Delete from cache to save memory, if not needed any more.
                 if (--_counts[pow] == 0)
-                   _cache.erase(iter);
+                    _cache.erase(iter);
                 return result;
             }
-            ValueType result =
-                boost::apply_visitor(*this, pow.get_expr().get_expr()).pow(
-                    pow.get_power());
+            ValueType result = boost::apply_visitor(*this, pow.get_expr().get_expr()).pow(pow.get_power());
             if (_counts[pow] > 1) {
                 _cache[pow] = result;
             }
@@ -298,7 +282,7 @@ namespace nil::crypto3::zk::snark {
         const expression<VariableType>& _expr;
 
         // A function used to retrieve the value of a variable.
-        std::function<const ValueType&(const VariableType &var)> _get_var_value;
+        std::function<const ValueType&(const VariableType& var)> _get_var_value;
 
         // Shows how many times each subexpression appears. We count have the expression
         // itself as a key, but apparently it's waay too slow. Just map the hash->count, assume
@@ -309,6 +293,6 @@ namespace nil::crypto3::zk::snark {
         std::unordered_map<expression<VariableType>, ValueType> _cache;
     };
 
-} // namespace nil::crypto3::zk::snark
+}    // namespace nil::crypto3::zk::snark
 
 #endif    // CRYPTO3_ZK_MATH_EXPRESSION_EVALUATOR_HPP

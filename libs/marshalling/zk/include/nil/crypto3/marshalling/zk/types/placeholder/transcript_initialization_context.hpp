@@ -46,48 +46,57 @@ namespace nil {
                 template<typename TTypeBase>
                 using marshalling_string_type = nil::marshalling::types::string<TTypeBase>;
 
-                // ******************* placeholder transcript initialization context ********************************* //
+                // ******************* placeholder transcript initialization context *********************************
+                // //
                 template<typename TTypeBase, typename TranscriptInitializationContextType>
                 using transcript_initialization_context = nil::marshalling::types::bundle<
                     TTypeBase,
                     std::tuple<
-//                      constexpr static const std::size_t witness_columns = PlaceholderParamsType::witness_columns;
+                        //                      constexpr static const std::size_t witness_columns =
+                        //                      PlaceholderParamsType::witness_columns;
                         nil::marshalling::types::integral<TTypeBase, std::size_t>,
-//                      constexpr static const std::size_t public_input_columns = PlaceholderParamsType::public_input_columns;
+                        //                      constexpr static const std::size_t public_input_columns =
+                        //                      PlaceholderParamsType::public_input_columns;
                         nil::marshalling::types::integral<TTypeBase, std::size_t>,
-//                      constexpr static const std::size_t constant_columns = PlaceholderParamsType::constant_columns;
+                        //                      constexpr static const std::size_t constant_columns =
+                        //                      PlaceholderParamsType::constant_columns;
                         nil::marshalling::types::integral<TTypeBase, std::size_t>,
-//                      constexpr static const std::size_t selector_columns = PlaceholderParamsType::selector_columns;
+                        //                      constexpr static const std::size_t selector_columns =
+                        //                      PlaceholderParamsType::selector_columns;
                         nil::marshalling::types::integral<TTypeBase, std::size_t>,
-//                      constexpr static const typename field_type::value_type delta = PlaceholderParamsType::delta;
+                        //                      constexpr static const typename field_type::value_type delta =
+                        //                      PlaceholderParamsType::delta;
                         field_element<TTypeBase, typename TranscriptInitializationContextType::field_type::value_type>,
-//                      std::size_t rows_amount;
+                        //                      std::size_t rows_amount;
                         nil::marshalling::types::integral<TTypeBase, std::size_t>,
-//                      std::size_t usable_rows_amount;
+                        //                      std::size_t usable_rows_amount;
                         nil::marshalling::types::integral<TTypeBase, std::size_t>,
-//                      typename commitment_type::params_type commitment_params;
-                        typename commitment_params<TTypeBase,
+                        //                      typename commitment_type::params_type commitment_params;
+                        typename commitment_params<
+                            TTypeBase,
                             typename TranscriptInitializationContextType::commitment_scheme_type>::type,
-//                      constexpr static const typename field_type::value_type modulus = field_type::modulus;
+                        //                      constexpr static const typename field_type::value_type modulus =
+                        //                      field_type::modulus;
                         field_element<TTypeBase, typename TranscriptInitializationContextType::field_type::value_type>,
-//                      std::string application_id;
-                        marshalling_string_type<TTypeBase>
-                    >
-                >;
+                        //                      std::string application_id;
+                        marshalling_string_type<TTypeBase>>>;
 
                 template<typename Endianness, typename TranscriptInitializationContextType>
-                transcript_initialization_context<nil::marshalling::field_type<Endianness>, TranscriptInitializationContextType>
-                fill_transcript_initialization_context(const TranscriptInitializationContextType &init_context) {
+                transcript_initialization_context<nil::marshalling::field_type<Endianness>,
+                                                  TranscriptInitializationContextType>
+                    fill_transcript_initialization_context(const TranscriptInitializationContextType &init_context) {
                     using TTypeBase = typename nil::marshalling::field_type<Endianness>;
-                    using result_type = transcript_initialization_context<TTypeBase, TranscriptInitializationContextType>;
-                    using field_element_marshalling_type = field_element<TTypeBase, typename TranscriptInitializationContextType::field_type::value_type>;
+                    using result_type =
+                        transcript_initialization_context<TTypeBase, TranscriptInitializationContextType>;
+                    using field_element_marshalling_type =
+                        field_element<TTypeBase, typename TranscriptInitializationContextType::field_type::value_type>;
 
                     result_type result;
 
                     auto filled_commitment_params =
-                        fill_commitment_params<Endianness, typename TranscriptInitializationContextType::commitment_scheme_type>(
-                            init_context.commitment_params
-                    );
+                        fill_commitment_params<Endianness,
+                                               typename TranscriptInitializationContextType::commitment_scheme_type>(
+                            init_context.commitment_params);
 
                     return result_type(std::make_tuple(
                         nil::marshalling::types::integral<TTypeBase, std::size_t>(init_context.witness_columns),
@@ -99,12 +108,11 @@ namespace nil {
                         nil::marshalling::types::integral<TTypeBase, std::size_t>(init_context.usable_rows_amount),
                         filled_commitment_params,
                         field_element_marshalling_type(init_context.modulus),
-                        marshalling_string_type<TTypeBase>(init_context.application_id)
-                    ));
+                        marshalling_string_type<TTypeBase>(init_context.application_id)));
                 }
 
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 #endif    // CRYPTO3_MARSHALLING_PLACEHOLDER_TRANSCRIPT_INITIALIZATION_CONTEXT_HPP

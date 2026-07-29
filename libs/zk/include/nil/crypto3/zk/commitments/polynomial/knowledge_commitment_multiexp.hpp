@@ -205,8 +205,8 @@ namespace nil {
                     }
                 }
             }    // namespace commitments
-        }        // namespace zk
-    }            // namespace crypto3
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // KC_MULTIEXP_HPP

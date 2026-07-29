@@ -64,30 +64,27 @@ namespace nil {
                     typedef detail::powers_of_tau_result<curve_type> result_type;
                     typedef proof_of_knowledge<curve_type> proof_of_knowledge_scheme_type;
 
-                    enum parameter_personalization {
-                        tau_personalization, alpha_personalization, beta_personalization
-                    };
+                    enum parameter_personalization { tau_personalization, alpha_personalization, beta_personalization };
 
                     // The result of this function is considered toxic wast
                     // and should thus be destroyed
                     template<typename UniformRandomBitGenerator = boost::random_device>
-                    static private_key_type generate_private_key(
-                        UniformRandomBitGenerator &&rng = boost::random_device()) {
+                    static private_key_type
+                        generate_private_key(UniformRandomBitGenerator &&rng = boost::random_device()) {
                         typename scalar_field_type::value_type tau = algebra::random_element<scalar_field_type>(rng);
                         typename scalar_field_type::value_type alpha = algebra::random_element<scalar_field_type>(rng);
                         typename scalar_field_type::value_type beta = algebra::random_element<scalar_field_type>(rng);
 
-                        return private_key_type{std::move(tau), std::move(alpha), std::move(beta)};
+                        return private_key_type {std::move(tau), std::move(alpha), std::move(beta)};
                     }
 
-                    static auto rng_from_beacon(const std::vector<std::uint8_t> &beacon,
-                                                std::size_t hash_power = 42) {
+                    static auto rng_from_beacon(const std::vector<std::uint8_t> &beacon, std::size_t hash_power = 42) {
                         if (hash_power >= std::numeric_limits<std::size_t>::digits) {
                             throw std::invalid_argument("beacon hash power exceeds platform limits");
                         }
 
                         std::vector<std::uint8_t> cur_hash = beacon;
-                        const std::size_t hash_iterations = std::size_t{1} << hash_power;
+                        const std::size_t hash_iterations = std::size_t {1} << hash_power;
                         for (std::size_t i = 0; i < hash_iterations; ++i) {
                             std::vector<std::uint8_t> hash = nil::crypto3::hash<hashes::sha2<256>>(cur_hash);
                             cur_hash = hash;
@@ -105,14 +102,14 @@ namespace nil {
                                                       const accumulator_type &before,
                                                       UniformRandomBitGenerator &&rng = boost::random_device()) {
                         std::vector<std::uint8_t> transcript = compute_transcript(before);
-                        auto tau_pok = proof_of_knowledge_scheme_type::proof_eval(
-                            private_key.tau, transcript, tau_personalization, rng);
-                        auto alpha_pok = proof_of_knowledge_scheme_type::proof_eval(
-                            private_key.alpha, transcript, alpha_personalization, rng);
-                        auto beta_pok = proof_of_knowledge_scheme_type::proof_eval(
-                            private_key.beta, transcript, beta_personalization, rng);
+                        auto tau_pok = proof_of_knowledge_scheme_type::proof_eval(private_key.tau, transcript,
+                                                                                  tau_personalization, rng);
+                        auto alpha_pok = proof_of_knowledge_scheme_type::proof_eval(private_key.alpha, transcript,
+                                                                                    alpha_personalization, rng);
+                        auto beta_pok = proof_of_knowledge_scheme_type::proof_eval(private_key.beta, transcript,
+                                                                                   beta_personalization, rng);
 
-                        return public_key_type{std::move(tau_pok), std::move(alpha_pok), std::move(beta_pok)};
+                        return public_key_type {std::move(tau_pok), std::move(alpha_pok), std::move(beta_pok)};
                     }
 
                     static bool verify_eval(const public_key_type &public_key,
@@ -123,8 +120,7 @@ namespace nil {
                         auto tau_g2_s = proof_of_knowledge_scheme_type::compute_g2_s(
                             public_key.tau_pok.g1_s, public_key.tau_pok.g1_s_x, transcript, tau_personalization);
                         auto alpha_g2_s = proof_of_knowledge_scheme_type::compute_g2_s(
-                            public_key.alpha_pok.g1_s, public_key.alpha_pok.g1_s_x, transcript,
-                            alpha_personalization);
+                            public_key.alpha_pok.g1_s, public_key.alpha_pok.g1_s_x, transcript, alpha_personalization);
                         auto beta_g2_s = proof_of_knowledge_scheme_type::compute_g2_s(
                             public_key.beta_pok.g1_s, public_key.beta_pok.g1_s_x, transcript, beta_personalization);
 
@@ -205,8 +201,8 @@ namespace nil {
                     static std::vector<std::uint8_t> serialize_accumulator(const accumulator_type &acc) {
                         using endianness = nil::marshalling::option::little_endian;
                         auto filled_val =
-                                nil::crypto3::marshalling::types::fill_powers_of_tau_accumulator<accumulator_type,
-                                    endianness>(acc);
+                            nil::crypto3::marshalling::types::fill_powers_of_tau_accumulator<accumulator_type,
+                                                                                             endianness>(acc);
                         std::vector<std::uint8_t> blob(filled_val.length());
                         auto it = std::begin(blob);
                         nil::marshalling::status_type status = filled_val.write(it, blob.size());
@@ -217,9 +213,9 @@ namespace nil {
                         }
                     }
                 };
-            } // namespace commitments
-        } // namespace zk
-    } // namespace crypto3
-} // namespace nil
+            }    // namespace commitments
+        }    // namespace zk
+    }    // namespace crypto3
+}    // namespace nil
 
 #endif    // CRYPTO3_ZK_POWERS_OF_TAU_HPP

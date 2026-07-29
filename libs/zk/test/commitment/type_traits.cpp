@@ -42,27 +42,28 @@ using namespace nil::crypto3;
 
 BOOST_AUTO_TEST_SUITE(commitments_type_traits_test_suite)
 
-    BOOST_AUTO_TEST_CASE(commitments_type_traits_basic_test) {
+BOOST_AUTO_TEST_CASE(commitments_type_traits_basic_test) {
 
-        typedef algebra::curves::bls12<381> curve_type;
-        typedef curve_type::base_field_type field_type;
+    typedef algebra::curves::bls12<381> curve_type;
+    typedef curve_type::base_field_type field_type;
 
-        typedef hashes::sha2<256> merkle_hash_type;
-        typedef hashes::sha2<256> transcript_hash_type;
+    typedef hashes::sha2<256> merkle_hash_type;
+    typedef hashes::sha2<256> transcript_hash_type;
 
-        constexpr static const std::size_t m = 2;
+    constexpr static const std::size_t m = 2;
 
-        //    static_assert(zk::is_commitment<
-        //            zk::commitments::kzg<curve_type>>::value);
-        static_assert(
-                zk::is_commitment<zk::commitments::fri<field_type, merkle_hash_type, transcript_hash_type, m>>::value);
-        static_assert(
-                zk::is_commitment<zk::commitments::list_polynomial_commitment<field_type, zk::commitments::list_polynomial_commitment_params<
-                        merkle_hash_type, transcript_hash_type, m>>>::value);
-        static_assert(
-                zk::is_commitment<zk::commitments::batched_list_polynomial_commitment<
-                        field_type,
-                        zk::commitments::list_polynomial_commitment_params<merkle_hash_type, transcript_hash_type, m>>>::value);
-    }
+    //    static_assert(zk::is_commitment<
+    //            zk::commitments::kzg<curve_type>>::value);
+    static_assert(
+        zk::is_commitment<zk::commitments::fri<field_type, merkle_hash_type, transcript_hash_type, m>>::value);
+    static_assert(
+        zk::is_commitment<zk::commitments::list_polynomial_commitment<
+            field_type,
+            zk::commitments::list_polynomial_commitment_params<merkle_hash_type, transcript_hash_type, m>>>::value);
+    static_assert(
+        zk::is_commitment<zk::commitments::batched_list_polynomial_commitment<
+            field_type,
+            zk::commitments::list_polynomial_commitment_params<merkle_hash_type, transcript_hash_type, m>>>::value);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

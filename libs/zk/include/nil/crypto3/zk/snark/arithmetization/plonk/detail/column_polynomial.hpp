@@ -91,8 +91,9 @@ namespace nil {
 
                     template<typename FieldType>
                     math::polynomial_dfs<typename FieldType::value_type>
-                        column_polynomial_dfs(const plonk_column<FieldType>& column_assignment,
-                                              std::shared_ptr<math::evaluation_domain<FieldType>> domain) {
+                        column_polynomial_dfs(const plonk_column<FieldType> &column_assignment,
+                                              std::shared_ptr<math::evaluation_domain<FieldType>>
+                                                  domain) {
 
                         std::size_t d = std::distance(column_assignment.begin(), column_assignment.end()) - 1;
 
@@ -106,8 +107,9 @@ namespace nil {
 
                     template<typename FieldType>
                     std::vector<math::polynomial_dfs<typename FieldType::value_type>>
-                        column_range_polynomial_dfs(const std::vector<plonk_column<FieldType>>& column_range_assignment,
-                                                    std::shared_ptr<math::evaluation_domain<FieldType>> domain) {
+                        column_range_polynomial_dfs(const std::vector<plonk_column<FieldType>> &column_range_assignment,
+                                                    std::shared_ptr<math::evaluation_domain<FieldType>>
+                                                        domain) {
 
                         std::size_t columns_amount = column_range_assignment.size();
                         std::vector<math::polynomial_dfs<typename FieldType::value_type>> columns(columns_amount);
@@ -122,24 +124,24 @@ namespace nil {
 
                     template<typename FieldType, std::size_t columns_amount>
                     std::array<math::polynomial_dfs<typename FieldType::value_type>, columns_amount>
-                        column_range_polynomial_dfs(
-                            std::array<plonk_column<FieldType>, columns_amount> column_range_assignment,
-                            std::shared_ptr<math::evaluation_domain<FieldType>>
-                                domain) {
+                        column_range_polynomial_dfs(std::array<plonk_column<FieldType>, columns_amount>
+                                                        column_range_assignment,
+                                                    std::shared_ptr<math::evaluation_domain<FieldType>>
+                                                        domain) {
 
                         std::array<math::polynomial_dfs<typename FieldType::value_type>, columns_amount> columns;
 
                         for (std::size_t column_index = 0; column_index < columns_amount; column_index++) {
-                            columns[column_index] =
-                                column_polynomial_dfs<FieldType>(std::move(column_range_assignment[column_index]), domain);
+                            columns[column_index] = column_polynomial_dfs<FieldType>(
+                                std::move(column_range_assignment[column_index]), domain);
                         }
 
                         return columns;
                     }
                 }    // namespace detail
-            }        // namespace snark
-        }            // namespace zk
-    }                // namespace crypto3
+            }    // namespace snark
+        }    // namespace zk
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_ZK_PLONK_TABLE_DETAIL_COLUMN_POLYNOMIAL_HPP

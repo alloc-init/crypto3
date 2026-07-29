@@ -3,11 +3,9 @@ struct base {
     }
 };
 
-struct A : base {
-};
+struct A : base { };
 
-struct B : base {
-};
+struct B : base { };
 
 int main() {
     base *x = new A();

@@ -51,7 +51,9 @@ namespace nil {
                     TTypeBase,
                     std::tuple<
                         // plonk_public_polynomial_dfs_table<FieldType> public_polynomial_table;
-                        plonk_public_polynomial_table<TTypeBase, typename PreprocessedPublicDataType::plonk_public_polynomial_dfs_table_type>,
+                        plonk_public_polynomial_table<
+                            TTypeBase,
+                            typename PreprocessedPublicDataType::plonk_public_polynomial_dfs_table_type>,
                         // std::vector<polynomial_dfs_type>  permutation_polynomials
                         polynomial_vector<TTypeBase, typename PreprocessedPublicDataType::polynomial_dfs_type>,
 
@@ -64,53 +66,61 @@ namespace nil {
                         typename polynomial<TTypeBase, typename PreprocessedPublicDataType::polynomial_dfs_type>::type,
 
                         // common_data_type common_data;
-                        placeholder_common_data<TTypeBase, typename PreprocessedPublicDataType::common_data_type>
-                    >
-                >;
+                        placeholder_common_data<TTypeBase, typename PreprocessedPublicDataType::common_data_type>>>;
 
                 template<typename Endianness, typename PreprocessedPublicDataType>
-                placeholder_preprocessed_public_data<nil::marshalling::field_type<Endianness>, PreprocessedPublicDataType>
-                fill_placeholder_preprocessed_public_data(const PreprocessedPublicDataType& preprocessed_public_data) {
+                placeholder_preprocessed_public_data<nil::marshalling::field_type<Endianness>,
+                                                     PreprocessedPublicDataType>
+                    fill_placeholder_preprocessed_public_data(
+                        const PreprocessedPublicDataType &preprocessed_public_data) {
                     using TTypeBase = typename nil::marshalling::field_type<Endianness>;
                     using PolynomialDFSType = typename PreprocessedPublicDataType::polynomial_dfs_type;
-                    using result_type = placeholder_preprocessed_public_data<
-                        nil::marshalling::field_type<Endianness>, PreprocessedPublicDataType>;
+                    using result_type = placeholder_preprocessed_public_data<nil::marshalling::field_type<Endianness>,
+                                                                             PreprocessedPublicDataType>;
 
                     return result_type(std::make_tuple(
-                        fill_plonk_public_table<Endianness, typename PreprocessedPublicDataType::plonk_public_polynomial_dfs_table_type>(
+                        fill_plonk_public_table<
+                            Endianness,
+                            typename PreprocessedPublicDataType::plonk_public_polynomial_dfs_table_type>(
                             *preprocessed_public_data.public_polynomial_table),
-                        fill_polynomial_vector<Endianness, PolynomialDFSType>(preprocessed_public_data.permutation_polynomials),
-                        fill_polynomial_vector<Endianness, PolynomialDFSType>(preprocessed_public_data.identity_polynomials),
+                        fill_polynomial_vector<Endianness, PolynomialDFSType>(
+                            preprocessed_public_data.permutation_polynomials),
+                        fill_polynomial_vector<Endianness, PolynomialDFSType>(
+                            preprocessed_public_data.identity_polynomials),
                         fill_polynomial<Endianness, PolynomialDFSType>(preprocessed_public_data.q_last),
                         fill_polynomial<Endianness, PolynomialDFSType>(preprocessed_public_data.q_blind),
                         fill_placeholder_common_data<Endianness, typename PreprocessedPublicDataType::common_data_type>(
-                            *preprocessed_public_data.common_data)
-                    ));
+                            *preprocessed_public_data.common_data)));
                 }
 
                 template<typename Endianness, typename PreprocessedPublicDataType>
                 PreprocessedPublicDataType make_placeholder_preprocessed_public_data(
-                    const placeholder_preprocessed_public_data<
-                        nil::marshalling::field_type<Endianness>,
-                        PreprocessedPublicDataType> &filled_preprocessed_public_data)
-                {
+                    const placeholder_preprocessed_public_data<nil::marshalling::field_type<Endianness>,
+                                                               PreprocessedPublicDataType>
+                        &filled_preprocessed_public_data) {
                     using TTypeBase = typename nil::marshalling::field_type<Endianness>;
                     using PolynomialDFSType = typename PreprocessedPublicDataType::polynomial_dfs_type;
 
-                    return PreprocessedPublicDataType({
-                        make_plonk_public_table<Endianness, typename PreprocessedPublicDataType::plonk_public_polynomial_dfs_table_type>(
-                            std::get<0>(filled_preprocessed_public_data.value())),
-                        make_polynomial_vector<Endianness, PolynomialDFSType>(std::get<1>(filled_preprocessed_public_data.value())),
-                        make_polynomial_vector<Endianness, PolynomialDFSType>(std::get<2>(filled_preprocessed_public_data.value())),
-                        make_polynomial<Endianness, PolynomialDFSType>(std::get<3>(filled_preprocessed_public_data.value())),
-                        make_polynomial<Endianness, PolynomialDFSType>(std::get<4>(filled_preprocessed_public_data.value())),
-                        make_placeholder_common_data<Endianness, typename PreprocessedPublicDataType::common_data_type>(
-                            std::get<5>(filled_preprocessed_public_data.value()))
-                    });
+                    return PreprocessedPublicDataType(
+                        {make_plonk_public_table<
+                             Endianness,
+                             typename PreprocessedPublicDataType::plonk_public_polynomial_dfs_table_type>(
+                             std::get<0>(filled_preprocessed_public_data.value())),
+                         make_polynomial_vector<Endianness, PolynomialDFSType>(
+                             std::get<1>(filled_preprocessed_public_data.value())),
+                         make_polynomial_vector<Endianness, PolynomialDFSType>(
+                             std::get<2>(filled_preprocessed_public_data.value())),
+                         make_polynomial<Endianness, PolynomialDFSType>(
+                             std::get<3>(filled_preprocessed_public_data.value())),
+                         make_polynomial<Endianness, PolynomialDFSType>(
+                             std::get<4>(filled_preprocessed_public_data.value())),
+                         make_placeholder_common_data<Endianness,
+                                                      typename PreprocessedPublicDataType::common_data_type>(
+                             std::get<5>(filled_preprocessed_public_data.value()))});
                 }
             }    // namespace types
-        }        // namespace marshalling
-    }            // namespace crypto3
+        }    // namespace marshalling
+    }    // namespace crypto3
 }    // namespace nil
 
 #endif    // CRYPTO3_MARSHALLING_PREPROCESSED_PUBLIC_DATA_HPP

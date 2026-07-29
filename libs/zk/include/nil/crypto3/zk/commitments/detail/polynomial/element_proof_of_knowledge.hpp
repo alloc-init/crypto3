@@ -42,14 +42,13 @@ namespace nil {
 
                         element_pok(const g1_value_type &g1_s,
                                     const g1_value_type &g1_s_x,
-                                    const g2_value_type &g2_s_x) :
-                                g1_s(g1_s), g1_s_x(g1_s_x), g2_s_x(g2_s_x) {
+                                    const g2_value_type &g2_s_x) : g1_s(g1_s), g1_s_x(g1_s_x), g2_s_x(g2_s_x) {
                         }
                     };
-                } // detail
-            }   // commitments
-        }   // zk
-    }   // crypto3
-}   // nil
+                }    // namespace detail
+            }    // namespace commitments
+        }    // namespace zk
+    }    // namespace crypto3
+}    // namespace nil
 
-#endif  // CRYPTO3_ZK_PROOF_OF_KNOWLEDGE_ELEMENT_HPP
+#endif    // CRYPTO3_ZK_PROOF_OF_KNOWLEDGE_ELEMENT_HPP

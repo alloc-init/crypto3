@@ -63,7 +63,7 @@
 
 #include <nil/crypto3/zk/commitments/polynomial/fri.hpp>
 #include <nil/crypto3/zk/commitments/polynomial/lpc.hpp>
-#include <nil/crypto3/zk/commitments/batched_commitment.hpp> // contains class polys_evaluator
+#include <nil/crypto3/zk/commitments/batched_commitment.hpp>    // contains class polys_evaluator
 
 #include "./detail/random_test_initializer.hpp"
 #include <nil/crypto3/marshalling/zk/detail/random_test_data_generation.hpp>
@@ -80,8 +80,10 @@ void test_polys_evaluator_marshalling(PolysEvaluator &evaluator) {
 
     evaluator.build_points_map();
 
-    auto filled_evaluator = nil::crypto3::marshalling::types::fill_polys_evaluator<Endianness, PolysEvaluator>(evaluator);
-    auto _evaluator = nil::crypto3::marshalling::types::make_polys_evaluator<Endianness, PolysEvaluator>(filled_evaluator);
+    auto filled_evaluator =
+        nil::crypto3::marshalling::types::fill_polys_evaluator<Endianness, PolysEvaluator>(evaluator);
+    auto _evaluator =
+        nil::crypto3::marshalling::types::make_polys_evaluator<Endianness, PolysEvaluator>(filled_evaluator);
 
     BOOST_CHECK(evaluator == _evaluator);
 
@@ -97,20 +99,20 @@ void test_polys_evaluator_marshalling(PolysEvaluator &evaluator) {
     BOOST_CHECK(status == nil::marshalling::status_type::success);
 
     PolysEvaluator constructed_val_read =
-            nil::crypto3::marshalling::types::make_polys_evaluator<Endianness, PolysEvaluator>(test_val_read);
+        nil::crypto3::marshalling::types::make_polys_evaluator<Endianness, PolysEvaluator>(test_val_read);
     BOOST_CHECK(evaluator == constructed_val_read);
 }
 
 BOOST_AUTO_TEST_SUITE(marshalling_real)
-    // Setup common types.
-    using Endianness = nil::marshalling::option::big_endian;
-    using curve_type = nil::crypto3::algebra::curves::vesta;
-    using field_type = curve_type::scalar_field_type;
-    using merkle_hash_type = nil::crypto3::hashes::keccak_1600<256>;
-    using transcript_hash_type = nil::crypto3::hashes::keccak_1600<256>;
-    using merkle_tree_type = typename containers::merkle_tree<merkle_hash_type, 2>;
+// Setup common types.
+using Endianness = nil::marshalling::option::big_endian;
+using curve_type = nil::crypto3::algebra::curves::vesta;
+using field_type = curve_type::scalar_field_type;
+using merkle_hash_type = nil::crypto3::hashes::keccak_1600<256>;
+using transcript_hash_type = nil::crypto3::hashes::keccak_1600<256>;
+using merkle_tree_type = typename containers::merkle_tree<merkle_hash_type, 2>;
 
-BOOST_FIXTURE_TEST_CASE(batches_num_3_test, nil::crypto3::zk::test_tools::random_test_initializer<field_type>){
+BOOST_FIXTURE_TEST_CASE(batches_num_3_test, nil::crypto3::zk::test_tools::random_test_initializer<field_type>) {
     // Setup types.
     constexpr static const std::size_t lambda = 40;
     constexpr static const std::size_t k = 1;
@@ -122,9 +124,8 @@ BOOST_FIXTURE_TEST_CASE(batches_num_3_test, nil::crypto3::zk::test_tools::random
 
     typedef zk::commitments::fri<field_type, merkle_hash_type, transcript_hash_type, m> fri_type;
 
-    typedef zk::commitments::
-        list_polynomial_commitment_params<merkle_hash_type, transcript_hash_type, m>
-            lpc_params_type;
+    typedef zk::commitments::list_polynomial_commitment_params<merkle_hash_type, transcript_hash_type, m>
+        lpc_params_type;
     typedef zk::commitments::list_polynomial_commitment<field_type, lpc_params_type> lpc_type;
 
     static_assert(zk::is_commitment<fri_type>::value);
@@ -136,15 +137,15 @@ BOOST_FIXTURE_TEST_CASE(batches_num_3_test, nil::crypto3::zk::test_tools::random
     std::size_t degree_log = boost::static_log2<d>::value;
 
     // Setup params
-    typename fri_type::params_type fri_params(
-        1, /*max_step*/
-        degree_log,
-        lambda,
-        2 /*expand_factor*/
+    typename fri_type::params_type fri_params(1, /*max_step*/
+                                              degree_log,
+                                              lambda,
+                                              2 /*expand_factor*/
     );
 
-    using lpc_scheme_type = nil::crypto3::zk::commitments::lpc_commitment_scheme<
-        lpc_type, math::polynomial<typename field_type::value_type>>;
+    using lpc_scheme_type =
+        nil::crypto3::zk::commitments::lpc_commitment_scheme<lpc_type,
+                                                             math::polynomial<typename field_type::value_type>>;
     using polys_evaluator_type = typename lpc_scheme_type::polys_evaluator_type;
 
     lpc_scheme_type lpc_scheme_prover(fri_params);
@@ -162,8 +163,10 @@ BOOST_FIXTURE_TEST_CASE(batches_num_3_test, nil::crypto3::zk::test_tools::random
     commitments[2] = lpc_scheme_prover.commit(2);
     commitments[3] = lpc_scheme_prover.commit(3);
 
-    auto filled_commitment = nil::crypto3::marshalling::types::fill_commitment<Endianness, lpc_scheme_type>(commitments[0]);
-    auto _commitment = nil::crypto3::marshalling::types::make_commitment<Endianness, lpc_scheme_type>(filled_commitment);
+    auto filled_commitment =
+        nil::crypto3::marshalling::types::fill_commitment<Endianness, lpc_scheme_type>(commitments[0]);
+    auto _commitment =
+        nil::crypto3::marshalling::types::make_commitment<Endianness, lpc_scheme_type>(filled_commitment);
 
     // Generate evaluation points. Generate points outside of the basic domain
     // Generate evaluation points. Choose poin1ts outside the domain
