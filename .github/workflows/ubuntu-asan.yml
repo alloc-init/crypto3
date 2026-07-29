@@ -1,34 +1,31 @@
-name: Ubuntu CI
+name: Ubuntu ASan UBSan
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Linux / Release
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    name: Linux / ASan UBSan
     runs-on: [self-hosted, Linux, X64, hetzner-public]
     container:
       image: ubuntu:26.04
     timeout-minutes: 360
     env:
-      BUILD_DIR: build/release
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:strict_init_order=1:strict_string_checks=1
+      BUILD_DIR: build/asan-ubsan
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_COMPRESS: "true"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_MAXSIZE: 5G
       CTEST_TIMEOUT_SECONDS: 1800
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
 
     steps:
     - name: Install dependencies
@@ -55,8 +52,8 @@ jobs:
       uses: actions/cache@v4
       with:
         path: .ccache
-        key: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
-        restore-keys: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}-
+        key: ccache-${{ runner.os }}-${{ github.ref_name }}-asan-ubsan-${{ github.run_id }}
+        restore-keys: ccache-${{ runner.os }}-${{ github.ref_name }}-asan-ubsan-
 
     - name: Configure compiler cache
       run: ccache --max-size="$CCACHE_MAXSIZE"
@@ -69,7 +66,7 @@ jobs:
           -B "$BUILD_DIR"
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
-          -DCMAKE_CXX_FLAGS=-Werror
+          -DCMAKE_CXX_FLAGS="-Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer"
           -DCMAKE_BUILD_TYPE=Release
         )
 
@@ -90,7 +87,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: ubuntu-ci-release-test-results
+        name: ubuntu-ci-asan-ubsan-test-results
         path: |
           ${{ env.BUILD_DIR }}/ctest-tests.txt
           ${{ env.BUILD_DIR }}/ctest-results.xml
