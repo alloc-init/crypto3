@@ -49,8 +49,7 @@ using namespace nil::crypto3;
 using namespace nil::crypto3::zk;
 using namespace nil::crypto3::zk::snark;
 
-template<typename FieldType, typename merkle_hash_type, typename transcript_hash_type, bool UseGrinding = false,
-         std::size_t max_quotient_poly_chunks = 0>
+template<typename FieldType, typename merkle_hash_type, typename transcript_hash_type>
 struct placeholder_test_runner {
     using field_type = FieldType;
 
@@ -71,7 +70,7 @@ struct placeholder_test_runner {
     using policy_type = zk::snark::detail::placeholder_policy<field_type, lpc_placeholder_params_type>;
     using circuit_type = circuit_description<field_type, placeholder_circuit_params<field_type>>;
 
-    placeholder_test_runner(const circuit_type &circuit_in) :
+    placeholder_test_runner(const circuit_type &circuit_in, size_t quo_poly_chunks = 0) :
         circuit(circuit_in), desc(circuit_in.table.witnesses().size(),
                                   circuit_in.table.public_inputs().size(),
                                   circuit_in.table.constants().size(),
@@ -80,7 +79,7 @@ struct placeholder_test_runner {
                                   circuit_in.table_rows),
         constraint_system(circuit.gates, circuit.copy_constraints, circuit.lookup_gates, circuit.lookup_tables),
         assignments(circuit.table), table_rows_log(std::log2(circuit_in.table_rows)),
-        fri_params(1, table_rows_log, placeholder_test_params::lambda, 4) {
+        fri_params(1, table_rows_log, placeholder_test_params::lambda, 4), max_quotient_poly_chunks(quo_poly_chunks) {
     }
 
     bool run_test() {
@@ -114,9 +113,10 @@ struct placeholder_test_runner {
     typename policy_type::variable_assignment_type assignments;
     std::size_t table_rows_log;
     typename lpc_type::fri_type::params_type fri_params;
+    std::size_t max_quotient_poly_chunks;
 };
 
-template<typename curve_type, typename transcript_hash_type, bool UseGrinding = false>
+template<typename curve_type, typename transcript_hash_type>
 struct placeholder_kzg_test_runner {
     using field_type = typename curve_type::scalar_field_type;
 
@@ -179,7 +179,7 @@ struct placeholder_kzg_test_runner {
     plonk_table_description<field_type> desc;
 };
 
-template<typename curve_type, typename transcript_hash_type, bool UseGrinding = false>
+template<typename curve_type, typename transcript_hash_type>
 struct placeholder_kzg_test_runner_v2 {
     using field_type = typename curve_type::scalar_field_type;
 

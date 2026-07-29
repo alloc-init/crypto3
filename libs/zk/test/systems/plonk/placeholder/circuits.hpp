@@ -45,10 +45,8 @@
 #include <nil/crypto3/zk/snark/arithmetization/plonk/variable.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/plonk/assignment.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/plonk/padding.hpp>
-#include <nil/crypto3/zk/commitments/polynomial/fri.hpp>
-#include <nil/crypto3/zk/snark/systems/plonk/placeholder/preprocessor.hpp>
-#include <nil/crypto3/zk/snark/systems/plonk/placeholder/params.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/plonk/lookup_constraint.hpp>
+#include <nil/crypto3/zk/snark/systems/plonk/placeholder/params.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -56,8 +54,6 @@ namespace nil {
             namespace snark {
                 template<typename FieldType, typename ParamsType>
                 class circuit_description {
-                    typedef zk::snark::detail::placeholder_policy<FieldType, ParamsType> policy_type;
-
                     constexpr static const std::size_t witness_columns = ParamsType::witness_columns;
                     constexpr static const std::size_t public_columns = ParamsType::public_input_columns;
 
@@ -65,7 +61,7 @@ namespace nil {
                     std::size_t table_rows;
                     std::size_t usable_rows;
 
-                    typename policy_type::variable_assignment_type table;
+                    plonk_assignment_table<typename FieldType::small_subfield> table;
 
                     std::vector<plonk_gate<FieldType, plonk_constraint<FieldType>>> gates;
                     std::vector<plonk_copy_constraint<FieldType>> copy_constraints;
