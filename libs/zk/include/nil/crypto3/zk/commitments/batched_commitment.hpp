@@ -249,7 +249,8 @@ namespace nil {
                     }
 
                     void append_to_batch(std::size_t index,
-                                         std::initializer_list<typename polynomial_type::value_type> il) {
+                                         std::initializer_list<typename polynomial_type::value_type>
+                                             il) {
                         append_to_batch(index, polynomial_type(il));
                     }
 

@@ -44,14 +44,12 @@ namespace nil {
 
                 template<typename TTypeBase, typename PlonkGate>
                 using plonk_gate = nil::marshalling::types::bundle<
-                    TTypeBase,
-                    std::tuple<
-                        // std::size_t selector_index
-                        nil::marshalling::types::integral<TTypeBase, std::size_t>,
-                        // std::vector<plonk_constraint<FieldType>> constraints
-                        nil::marshalling::types::standard_array_list<
-                            TTypeBase,
-                            plonk_constraint<TTypeBase, typename PlonkGate::constraint_type>>>>;
+                    TTypeBase, std::tuple<
+                                   // std::size_t selector_index
+                                   nil::marshalling::types::integral<TTypeBase, std::size_t>,
+                                   // std::vector<plonk_constraint<FieldType>> constraints
+                                   nil::marshalling::types::standard_array_list<
+                                       TTypeBase, plonk_constraint<TTypeBase, typename PlonkGate::constraint_type>>>>;
 
                 template<typename Endianness, typename PlonkGate>
                 plonk_gate<nil::marshalling::field_type<Endianness>, PlonkGate> fill_plonk_gate(const PlonkGate &gate) {

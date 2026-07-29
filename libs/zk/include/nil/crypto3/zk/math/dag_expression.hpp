@@ -97,8 +97,8 @@ namespace nil::crypto3::zk::snark {
     };
 
     template<typename VariableType>
-    using dag_node = std::variant<dag_constant<VariableType>, dag_variable<VariableType>, dag_addition,
-                                  dag_multiplication, dag_negation>;
+    using dag_node = std::
+        variant<dag_constant<VariableType>, dag_variable<VariableType>, dag_addition, dag_multiplication, dag_negation>;
 
     template<typename VariableType>
     class dag_node_hashing_visitor : public boost::static_visitor<size_t> {

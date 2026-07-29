@@ -100,8 +100,8 @@ using central_evaluator_type = CentralAssignmentTableExpressionEvaluator<field_t
 
 BOOST_FIXTURE_TEST_CASE(parallel_placeholder_gate_argument_test, test_tools::random_test_initializer<field_type>) {
     auto pi0 = alg_random_engines.template get_alg_engine<field_type>()();
-    auto circuit = circuit_test_t<field_type>(
-        pi0, alg_random_engines.template get_alg_engine<field_type>(), generic_random_engine);
+    auto circuit = circuit_test_t<field_type>(pi0, alg_random_engines.template get_alg_engine<field_type>(),
+                                              generic_random_engine);
 
     plonk_table_description<field_type> desc(circuit.table.witnesses().size(),
                                              circuit.table.public_inputs().size(),

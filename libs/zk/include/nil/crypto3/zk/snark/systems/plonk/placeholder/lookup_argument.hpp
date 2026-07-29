@@ -208,8 +208,8 @@ namespace nil {
 
                         std::vector<polynomial_dfs_type> h_constraint_parts(hs.size());
 
-                        TAGGED_PROFILE_SCOPE(
-                            "{low level} FFT", "Lookup argument compute h constraint parts of size {}", hs.size());
+                        TAGGED_PROFILE_SCOPE("{low level} FFT", "Lookup argument compute h constraint parts of size {}",
+                                             hs.size());
 
                         parallel_for(
                             0, hs.size(),
@@ -231,8 +231,8 @@ namespace nil {
 
                         std::vector<polynomial_dfs_type> g_constraint_parts(gs.size());
 
-                        TAGGED_PROFILE_SCOPE(
-                            "{low level} FFT", "Lookup argument compute g constraint parts of size {}", gs.size());
+                        TAGGED_PROFILE_SCOPE("{low level} FFT", "Lookup argument compute g constraint parts of size {}",
+                                             gs.size());
                         parallel_for(
                             0, gs.size(),
                             [&gs, &g_constraint_parts, &g_challenges, &alpha, &lookup_value, &counts](std::size_t i) {

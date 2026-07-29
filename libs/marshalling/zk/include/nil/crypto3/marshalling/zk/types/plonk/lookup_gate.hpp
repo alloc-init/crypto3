@@ -50,8 +50,7 @@ namespace nil {
                         nil::marshalling::types::integral<TTypeBase, std::size_t>,
                         // std::vector<plonk_lookup_constraint<FieldType>> constraints
                         nil::marshalling::types::standard_array_list<
-                            TTypeBase,
-                            plonk_lookup_constraint<TTypeBase, typename PlonkGate::constraint_type>>>>;
+                            TTypeBase, plonk_lookup_constraint<TTypeBase, typename PlonkGate::constraint_type>>>>;
 
                 template<typename Endianness, typename PlonkGate>
                 plonk_lookup_gate<nil::marshalling::field_type<Endianness>, PlonkGate>

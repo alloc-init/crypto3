@@ -113,7 +113,8 @@ namespace nil {
                         return FieldType::value_type::one();
                     }
 
-                    template<typename ChallengesType::challenges_ids ChallengeId, std::size_t ChallengesAmount,
+                    template<typename ChallengesType::challenges_ids ChallengeId,
+                             std::size_t ChallengesAmount,
                              typename FieldType>
                     std::array<typename FieldType::value_type, ChallengesAmount> challenges() {
                         std::array<typename hash_type::digest_type, ChallengesAmount> hash_results;
@@ -194,8 +195,11 @@ namespace nil {
                         challenge() {
                         // TODO: check hash is not h2f type
                         using h2f_type =
-                            hashes::h2f<FieldType, hash_type,
-                                        hashes::h2f_default_params<FieldType, hash_type, 128,
+                            hashes::h2f<FieldType,
+                                        hash_type,
+                                        hashes::h2f_default_params<FieldType,
+                                                                   hash_type,
+                                                                   128,
                                                                    hashes::uniformity_count_t::nonuniform_count,
                                                                    hashes::expand_msg_variant_t::rfc_xmd>>;
 
@@ -252,7 +256,8 @@ namespace nil {
                 // Specialize for Nil Poseidon.
                 template<typename HashType>
                 struct fiat_shamir_heuristic_sequential<
-                    HashType, typename std::enable_if<nil::crypto3::hashes::is_poseidon<HashType>::value>::type> {
+                    HashType,
+                    typename std::enable_if<nil::crypto3::hashes::is_poseidon<HashType>::value>::type> {
                     typedef HashType hash_type;
                     using field_type = typename HashType::policy_type::field_type;
                     using sponge_type = typename HashType::construction::type;

@@ -384,8 +384,8 @@ namespace nil::crypto3::zk::snark {
                     preprocessed_public_data.common_data->columns_rotations[variable_values_index];
 
                 for (int rotation : variable_values_rotation) {
-                    _commitment_scheme.append_eval_point(
-                        VARIABLE_VALUES_BATCH, variable_values_index, evaluation_challenge * _omega.pow(rotation));
+                    _commitment_scheme.append_eval_point(VARIABLE_VALUES_BATCH, variable_values_index,
+                                                         evaluation_challenge * _omega.pow(rotation));
                 }
             }
 
@@ -427,8 +427,8 @@ namespace nil::crypto3::zk::snark {
                         ->columns_rotations[witness_columns + public_input_columns + ind];
 
                 for (int rotation : fixed_values_rotation) {
-                    _commitment_scheme.append_eval_point(
-                        FIXED_VALUES_BATCH, start_index + ind, evaluation_challenge * _omega.pow(rotation));
+                    _commitment_scheme.append_eval_point(FIXED_VALUES_BATCH, start_index + ind,
+                                                         evaluation_challenge * _omega.pow(rotation));
                 }
             }
         }

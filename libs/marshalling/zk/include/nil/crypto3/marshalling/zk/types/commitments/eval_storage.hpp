@@ -67,15 +67,14 @@ namespace nil {
                         // We'll check is it good for current EVM instance
                         // All z-s are placed into plain array
                         nil::marshalling::types::standard_array_list<
-                            TTypeBase,
-                            field_element<TTypeBase, typename EvalStorage::field_type::value_type>>,
+                            TTypeBase, field_element<TTypeBase, typename EvalStorage::field_type::value_type>>,
 
-                        nil::marshalling::types::
-                            standard_array_list<TTypeBase, nil::marshalling::types::integral<TTypeBase, uint8_t>>,
+                        nil::marshalling::types::standard_array_list<
+                            TTypeBase, nil::marshalling::types::integral<TTypeBase, uint8_t>>,
 
                         // evaluation_points_num.
-                        nil::marshalling::types::
-                            standard_array_list<TTypeBase, nil::marshalling::types::integral<TTypeBase, uint8_t>>>>;
+                        nil::marshalling::types::standard_array_list<
+                            TTypeBase, nil::marshalling::types::integral<TTypeBase, uint8_t>>>>;
 
                 template<typename Endianness, typename EvalStorage>
                 eval_storage<nil::marshalling::field_type<Endianness>, EvalStorage>
@@ -116,8 +115,7 @@ namespace nil {
                         }
                     }
                     nil::marshalling::types::standard_array_list<
-                        TTypeBase,
-                        field_element<TTypeBase, typename EvalStorage::field_type::value_type>>
+                        TTypeBase, field_element<TTypeBase, typename EvalStorage::field_type::value_type>>
                         filled_z =
                             fill_field_element_vector<typename EvalStorage::field_type::value_type, Endianness>(z_val);
 

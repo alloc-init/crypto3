@@ -948,8 +948,8 @@ namespace nil {
                     typename FRI::initial_proofs_batch_type proof;
                     proof.initial_proofs.resize(fri_params.lambda);
 
-                    TAGGED_PROFILE_SCOPE(
-                        "{low level} poly eval", "Compute initial proofs of size {}", fri_params.lambda);
+                    TAGGED_PROFILE_SCOPE("{low level} poly eval", "Compute initial proofs of size {}",
+                                         fri_params.lambda);
                     parallel_for(
                         0, fri_params.lambda,
                         [&proof, &fri_params, &precommitments, &g_coeffs, &g, &challenges](std::size_t query_id) {
