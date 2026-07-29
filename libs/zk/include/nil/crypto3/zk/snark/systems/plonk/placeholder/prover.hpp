@@ -171,14 +171,13 @@ namespace nil::crypto3::zk::snark {
                 _F_dfs[1] = std::move(permutation_argument.F_dfs[1]);
                 _F_dfs[2] = std::move(permutation_argument.F_dfs[2]);
             }
-            _polynomial_table.reset();    // We don't need it anymore, release memory
-
             // 5. lookup_argument
             auto lookup_argument_result = lookup_argument(*central_evaluator);
             _F_dfs[3] = std::move(lookup_argument_result.F_dfs[0]);
             _F_dfs[4] = std::move(lookup_argument_result.F_dfs[1]);
             _F_dfs[5] = std::move(lookup_argument_result.F_dfs[2]);
             _F_dfs[6] = std::move(lookup_argument_result.F_dfs[3]);
+            _polynomial_table.reset();    // We don't need it anymore, release memory
 
             central_evaluator->reset_expressions();
 

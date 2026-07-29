@@ -74,7 +74,7 @@ namespace nil {
                         struct ate_g2_precomputed_type {
                             using coeffs_type = ate_ell_coeffs;
 
-                            bool is_zero;
+                            bool is_zero = false;
 
                             g2_field_value_type QX;
                             g2_field_value_type QY;
