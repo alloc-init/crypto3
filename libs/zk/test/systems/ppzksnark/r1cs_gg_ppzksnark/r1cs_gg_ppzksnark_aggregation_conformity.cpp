@@ -1250,6 +1250,8 @@ BOOST_AUTO_TEST_CASE(bls381_gipa_tipp_mipp_test) {
         0x662891b8617ed1084a8364b6f5079bfa73f61b837d13a795a411dfb2949aea62_cppui_modular255,
     };
     std::size_t gp_n = 8;
+    // Clang-format 22 does not reach a fixed point on these deeply nested generated test vectors.
+    // clang-format off
     std::vector<std::pair<typename commitments::kzg_ipp2<curve_type>::output_type,
                           typename commitments::kzg_ipp2<curve_type>::output_type>>
         gp_comms_ab =
@@ -2025,7 +2027,10 @@ BOOST_AUTO_TEST_CASE(bls381_prove_tipp_mipp_test) {
                                                                                          0x055a5bf7d588660a879cceeafe2e03f77fdca228cc692da9c4e22bd4dff4b3fa7fef82cb03d19abe85e49da56dbd06e1_cppui_modular381),
                                                                           fq2_value_type(0x189639597109dabac78406e60c15ccffa7084d310b197d6f59c60955c04d263d1ca4c2b0d94beeb50a3ce2ec10a9cc88_cppui_modular381, 0x15a0c0b0824785ea57a685eb0af39d1478cfe947f57e8691e94d15f660a617b526ad3b0527f95df6d586363ff6a6554a_cppui_modular381), fq2_value_type(0x147ed58c1ba4663879f4b4df925a2e94987067b7eee50c6d49952df0291f834604d87f8a9cc87e44e4558ab5f80c5c89_cppui_modular381, 0x17af81b920871eab1f38a577485c44c7c09b640372dd96958da9b2b4837040fd628faaa0a1b72a1bd7300a96eb2c5c42_cppui_modular381)),
                                                            fq6_value_type(
-                                                               fq2_value_type(0x0ede6c6073ec86d4939b5b5599de443bcfc85392606b9809767612c7b07bb1c0e08eaec2b492516b7faaf188bdbe3e38_cppui_modular381, 0x1675c0948c9985fae3bcc8e0d4ee5c0a1858d33f7fde863bf29d35970016db19d72ef000ddcabeab2cf776cf43f8f078_cppui_modular381), fq2_value_type(0x0aff723543c7fb1c786ce9c387db34bfdfbd7482351b4db92090a3c1c1d2e56e56bd3cae39319156c9b292933b050e15_cppui_modular381, 0x0e39f41a308a27cd580a6d1dc37c8115e437bc6598193814d1c7e5d5d28050b10decdcbefdbf5436a7a44920f1660304_cppui_modular381), fq2_value_type(0x1817aeee6af71229f109558831d3f8c548577ece71658d5731daf069ff4fbef8a384445c820add288b9695a8fa5c5568_cppui_modular381, 0x152bbe92c49ed9d8aaf7e71bc196a9943568730dd034e191e6ef93e2bd5546ce4ff0057d9c465147511ffcb4f66cd3be_cppui_modular381))),
+                                                               fq2_value_type(0x0ede6c6073ec86d4939b5b5599de443bcfc85392606b9809767612c7b07bb1c0e08eaec2b492516b7faaf188bdbe3e38_cppui_modular381, 0x1675c0948c9985fae3bcc8e0d4ee5c0a1858d33f7fde863bf29d35970016db19d72ef000ddcabeab2cf776cf43f8f078_cppui_modular381), fq2_value_type(0x0aff723543c7fb1c786ce9c387db34bfdfbd7482351b4db92090a3c1c1d2e56e56bd3cae39319156c9b292933b050e15_cppui_modular381, 0x0e39f41a308a27cd580a6d1dc37c8115e437bc6598193814d1c7e5d5d28050b10decdcbefdbf5436a7a44920f1660304_cppui_modular381),
+                                                               fq2_value_type(
+                                                                   0x1817aeee6af71229f109558831d3f8c548577ece71658d5731daf069ff4fbef8a384445c820add288b9695a8fa5c5568_cppui_modular381,
+                                                                   0x152bbe92c49ed9d8aaf7e71bc196a9943568730dd034e191e6ef93e2bd5546ce4ff0057d9c465147511ffcb4f66cd3be_cppui_modular381))),
                                            fq12_value_type(
                                                fq6_value_type(fq2_value_type(0x1310cd0eafab9b09e91803d930e926a0dc3d89fece355e1a8101673c885f1b86e9361fd2f2dedbc6edc73db336537d8f_cppui_modular381, 0x116bcd6589ace54f061964a4ce85a929577fca43fd3d97cfb518f69af121d074f64523a1cbe03c064e54fb27692ed7a0_cppui_modular381), fq2_value_type(0x0548a0c69aa99874043f35e7e168db5caf325a45faf5d99b2a0b251eb75f29925eef5a85ef540f519f8e76c421c7efd6_cppui_modular381, 0x051fbf6a5275c86f33b8405cd76a7b0347d5c4974e43e468e74a8d287d531cb751c7e3b68be8f01aca4d1fa3a4ede275_cppui_modular381), fq2_value_type(0x0421e6d957f1be56ecbc4e46fe3bcd878fe96ea904da7ab7cee7ec01b78805e914a7f5f87edaf372323da7adc422bea3_cppui_modular381, 0x10168429dafe94d57b489ac7f6397ca55b5dfb00ae4991076ef465a48da98acfbd89485616ad50db9d722632c4f60f6e_cppui_modular381)), fq6_value_type(
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  fq2_value_type(0x142d381d10a9c58284a41835bce6ae63a205185a51ded39a6552d820b7607987e994ca2955a87e6cafaac24b1de2b6d6_cppui_modular381, 0x179ef5865e5638fee9ca1907430d70e435a27335ac2a67c4bddd53bfea7941f929effcfa5cf16541a0927ea22fcffed7_cppui_modular381), fq2_value_type(0x072da45ff84238c87099aa21c6b2184719707e80c4a715f1cfebb0267a18c16c3167560ff55b9a7c5d30609deb1f0e77_cppui_modular381, 0x186003ec211c3e6abab26ba6e27de48f6cefb576528c780a97d4facc8156dec281229c551a6746ff652ab282888b7c9d_cppui_modular381), fq2_value_type(0x00b461a33d25a5c64a90abe32b9265dce184400b1ab70fdbc36ff3324ca613e98422247d766f9c8a67558f3257a1271f_cppui_modular381, 0x051728d4ea553931c3c8a87e776eda82d2f62f63fef88783178fc141849c6cb8146c6850712a40bc5b82a399daedd5bb_cppui_modular381)))),
@@ -2076,84 +2081,69 @@ BOOST_AUTO_TEST_CASE(bls381_prove_tipp_mipp_test) {
                     std::
                         make_pair(
                             std::
-                                make_pair(fq12_value_type(
-                                              fq6_value_type(fq2_value_type(0x11636ded8a28e71c4ec534b21f25630c4432bee1d8bb4c12589b562390215bd05e0a5d36027b75ea1ebee52fdbd30999_cppui_modular381, 0x0c91c9c3a2fbc87c918c250e8e690deca092bfbfdaadc545f0a8562c4b41c1ff26e1a998aa8f8cea9823e957f737c95f_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x169f54075fe64793c5d28f67f0b3c26ebea2231144cc35ebd998fbe4822b6a7b97238a71c43b070476732c20f59ce8dd_cppui_modular381,
-                                                                 0x00bdc66235aca5675b415f67e70c1273a5c79325102113546b19c6af66e5d7eb9795aa00eca3d52d6e924df262a854aa_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x00085900d93bbff3d2fdca81a7751d7f8ae70b6fa65a401672d1ef36d837182f8405f82fafb6aa1f208e0515f549b113_cppui_modular381,
-                                                                 0x12c2ca1c15c4a8666cca16f4747cefe67a2a4cf52d05d894868a5789fd326b0c651931aa49286e018099f449cba406bb_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x059dcfca66157c202444dabb92d3b07c53b1757fb4c9fc03ba66c0a029a56480a17200b4a7eab1529c56bc2cd734c83d_cppui_modular381,
-                                                      0x0245c89492eade1b0ea9e38f7c7fc3c4a8c2e6ceca32f8ceab88d98b35d9d03739c7fba4138d84e6c8baadc55643d722_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x19cdfe3738f8421b5c3144c21272994a96ebf8efa22dda8a71763ef7e1c8914334a1ef8a8b672334e3f4e35bc0007838_cppui_modular381,
-                                                      0x0ddc1d5a912a677505265fb7b89c7c9f297f60dabd29e520349c82f33f54ac8ce28c665ff3b3566f2e959898d9e0872b_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x16429ddc15224a7a121948f3323f07e2cf5f683f0c0ae73f9407795f964e762db8493b322dc8f27d7a8e585dac935127_cppui_modular381,
-                                                      0x15573eecb41236f429b3acafb198ded663407adcf5bfbd6f0f3722000d94993f07ffa373dec967dbdd23351bb2c6fab3_cppui_modular381))),
-                                          fq12_value_type(
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x054120cd7a23cba24c173d8c8e91f98b0d420e9fc2e7ab67dcc5bb5463c3909f3d36353174d7ec3601dcbbeaecd9c8da_cppui_modular381,
-                                                      0x11d4c1592365acc081b5f6ff5ae88f4962a7bbf7b9b2504e10853c34c605273a9a08f75fa73516fba4dd096df58722a0_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x17f3d78c977530c6828b91967c7d3d5a95b4d7343046f3cd0027e0ce956aeaf8f02392dcc6ea71b29f57385eeae54132_cppui_modular381,
-                                                      0x0cc7f4fe8b96076ad89c40a35e070d3f668c0f84f6b5ac7bd715e90b2839ee19694e53187e5777d619bc66cb0de25ba6_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x1624650546e8fa3655bb73fd483de18512d5bd10c7207c0a9102ad057515ace8a383b9f56090b4193e153c27758dd45e_cppui_modular381,
-                                                      0x191bb4c835e30b15503dc114a605679297f1dfd9f1e54a247889427cd2c5ff7149fff03430e8e20514ae6227b22891b8_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x19dd51662e0c7f3cc3c6bba83586b08af9b7fc0c6b169f1296aadc9c84390edd3541b3112fc4b9c8e1a17924cedb9895_cppui_modular381,
-                                                      0x1676fa2cde58c7b32e2c0cdb25c318d2276556bb6751648155f161f4a0f52189b2ed3218dab3a5bbacc6bd0d2a938a8e_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0c37cb4e9ae4913f212e5a051a78a962992d931114dfd59cb82e0564703ce13ea3777a84a674be490a505ec8980bae2b_cppui_modular381,
-                                                      0x14f1abb3edae9566a53f67f14f564d4914f3e8e99a036ffc7094085407daefa8156db0cc884c0fb543d52b11a2367918_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x1433bb62b65c2d2ed30676b1191f7009f13602567dc5c7d3726f1715e5ee4360ebcfb9877453473c2d0a304127ed3078_cppui_modular381,
-                                                      0x06e27fb53d7c6935b501a4f5a0a3ea25e4e88d8c8652fbd4a2de2a03ad66a88b28d47dae2fc248ed68ea69b1310ff687_cppui_modular381)))),
+                                make_pair(fq12_value_type(fq6_value_type(
+                                                              fq2_value_type(0x11636ded8a28e71c4ec534b21f25630c4432bee1d8bb4c12589b562390215bd05e0a5d36027b75ea1ebee52fdbd30999_cppui_modular381, 0x0c91c9c3a2fbc87c918c250e8e690deca092bfbfdaadc545f0a8562c4b41c1ff26e1a998aa8f8cea9823e957f737c95f_cppui_modular381), fq2_value_type(0x169f54075fe64793c5d28f67f0b3c26ebea2231144cc35ebd998fbe4822b6a7b97238a71c43b070476732c20f59ce8dd_cppui_modular381, 0x00bdc66235aca5675b415f67e70c1273a5c79325102113546b19c6af66e5d7eb9795aa00eca3d52d6e924df262a854aa_cppui_modular381), fq2_value_type(0x00085900d93bbff3d2fdca81a7751d7f8ae70b6fa65a401672d1ef36d837182f8405f82fafb6aa1f208e0515f549b113_cppui_modular381, 0x12c2ca1c15c4a8666cca16f4747cefe67a2a4cf52d05d894868a5789fd326b0c651931aa49286e018099f449cba406bb_cppui_modular381)),
+                                                          fq6_value_type(fq2_value_type(0x059dcfca66157c202444dabb92d3b07c53b1757fb4c9fc03ba66c0a029a56480a17200b4a7eab1529c56bc2cd734c83d_cppui_modular381,
+                                                                                        0x0245c89492eade1b0ea9e38f7c7fc3c4a8c2e6ceca32f8ceab88d98b35d9d03739c7fba4138d84e6c8baadc55643d722_cppui_modular381),
+                                                                         fq2_value_type(0x19cdfe3738f8421b5c3144c21272994a96ebf8efa22dda8a71763ef7e1c8914334a1ef8a8b672334e3f4e35bc0007838_cppui_modular381,
+                                                                                        0x0ddc1d5a912a677505265fb7b89c7c9f297f60dabd29e520349c82f33f54ac8ce28c665ff3b3566f2e959898d9e0872b_cppui_modular381),
+                                                                         fq2_value_type(0x16429ddc15224a7a121948f3323f07e2cf5f683f0c0ae73f9407795f964e762db8493b322dc8f27d7a8e585dac935127_cppui_modular381,
+                                                                                        0x15573eecb41236f429b3acafb198ded663407adcf5bfbd6f0f3722000d94993f07ffa373dec967dbdd23351bb2c6fab3_cppui_modular381))),
+                                          fq12_value_type(fq6_value_type(fq2_value_type(0x054120cd7a23cba24c173d8c8e91f98b0d420e9fc2e7ab67dcc5bb5463c3909f3d36353174d7ec3601dcbbeaecd9c8da_cppui_modular381, 0x11d4c1592365acc081b5f6ff5ae88f4962a7bbf7b9b2504e10853c34c605273a9a08f75fa73516fba4dd096df58722a0_cppui_modular381),
+                                                                         fq2_value_type(
+                                                                             0x17f3d78c977530c6828b91967c7d3d5a95b4d7343046f3cd0027e0ce956aeaf8f02392dcc6ea71b29f57385eeae54132_cppui_modular381,
+                                                                             0x0cc7f4fe8b96076ad89c40a35e070d3f668c0f84f6b5ac7bd715e90b2839ee19694e53187e5777d619bc66cb0de25ba6_cppui_modular381),
+                                                                         fq2_value_type(
+                                                                             0x1624650546e8fa3655bb73fd483de18512d5bd10c7207c0a9102ad057515ace8a383b9f56090b4193e153c27758dd45e_cppui_modular381,
+                                                                             0x191bb4c835e30b15503dc114a605679297f1dfd9f1e54a247889427cd2c5ff7149fff03430e8e20514ae6227b22891b8_cppui_modular381)),
+                                                          fq6_value_type(
+                                                              fq2_value_type(
+                                                                  0x19dd51662e0c7f3cc3c6bba83586b08af9b7fc0c6b169f1296aadc9c84390edd3541b3112fc4b9c8e1a17924cedb9895_cppui_modular381,
+                                                                  0x1676fa2cde58c7b32e2c0cdb25c318d2276556bb6751648155f161f4a0f52189b2ed3218dab3a5bbacc6bd0d2a938a8e_cppui_modular381),
+                                                              fq2_value_type(
+                                                                  0x0c37cb4e9ae4913f212e5a051a78a962992d931114dfd59cb82e0564703ce13ea3777a84a674be490a505ec8980bae2b_cppui_modular381,
+                                                                  0x14f1abb3edae9566a53f67f14f564d4914f3e8e99a036ffc7094085407daefa8156db0cc884c0fb543d52b11a2367918_cppui_modular381),
+                                                              fq2_value_type(
+                                                                  0x1433bb62b65c2d2ed30676b1191f7009f13602567dc5c7d3726f1715e5ee4360ebcfb9877453473c2d0a304127ed3078_cppui_modular381,
+                                                                  0x06e27fb53d7c6935b501a4f5a0a3ea25e4e88d8c8652fbd4a2de2a03ad66a88b28d47dae2fc248ed68ea69b1310ff687_cppui_modular381)))),
                             std::
-                                make_pair(fq12_value_type(
-                                              fq6_value_type(fq2_value_type(0x139dd779524372b96bb40c710d1e4c42e5e7eb6c2a24cd985ca0dbc22512d307630fbf129ce1fbc1a5cd4132f696867a_cppui_modular381,
-                                                                            0x0c0d8dcb348d44a162f1f91c4934ba484b0f89c030795fe8fcdc5aaa5c449b27852a001f2932997f001dca6f379a39c6_cppui_modular381),
-                                                             fq2_value_type(0x014a092244795b1a4574bcf8f3f68c138c898a18a7c5fb09b4f6cd5ef92465f3d2731d6eefe4f0e6e434fb7f9e797826_cppui_modular381, 0x01c26d6c33619e83ef214d95fb64b53888af5f9ab7d8500a3ba7453bfb8373c0ac338b1f61604adc55916266470b143f_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x032a40e66f3eb3219a88322cc1a672d0a4bab7688665a8cf5629a8ceeaec151cc69c5381ca841f7371716c72a8755720_cppui_modular381,
-                                                                 0x144b384eb544fdb22bdacb0f548126a0108da553e2b264edf5e7fe018107568e393edc9e64ca8896dc27a1ca1c7c575c_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x10284f4e83f16439adaed1efddb79fe9d280885a0cded5eb5940d93dcfbe318bdd8fb56e69c98e6f8232d3c3d2f59d3e_cppui_modular381,
-                                                      0x058422d0b4fe6eb5752561a91e4a8960b1ffc667a65a2c18f31684772c8e65b594b4b8687831c2aa6e716722b3050765_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0e66d58687e71d2e0741cda1c8df641415356a394764eef69e0cefc3cde2b820a8d816efe9012ff57b8d2c9926deae32_cppui_modular381,
-                                                      0x01c913beb56011f4d41bc05222350fac1b77710ed11cc693ee02c9617feab15cd250ffb213a14d7c3097d53e61679a66_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x17be5d11bd2aa3e0da7d4c77e11a54420379a0eb9c2a2db42d9f14904b4a8d896274fdeb00178698e62a5cd4ad85af82_cppui_modular381,
-                                                      0x07a35d77b81022ce61d03549895bd181892994ec28bf07e9fa33c84c541aec0ce0b92bcd5c964b0e97920826c01a702f_cppui_modular381))),
-                                          fq12_value_type(
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x098460d358cd4b4776d0b962b3e23cfd338e2dca66afbab837f90f4cf5072c8d3fbc97b5d78d6a039024ed85b9afa60d_cppui_modular381,
-                                                      0x0abab264807f67f1b0fa283237868a6d9b4735cd93d00a93b4b8f15dc8a274ded9e1767e13083257659a8af19b4bf0fe_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x13d0fcc3fb0a3d4398948986824ec71d9596c4f9b11f39be8c3eeed668aa3451646f68abf92ccc94ea6f2d33764de96f_cppui_modular381,
-                                                      0x077907e13946c298451b4c624015e5e18f0cdfa6b7bed500500d2e6fe6016b787eee7ad8d464bc775439c676fc5c8d49_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x06cd66c7dfa70c5c11a1ca5ff0b00a62c01eea92a4c7efc5ffa2f0946cc7dd82688fcbc1a3d91121ae369b4040912356_cppui_modular381,
-                                                      0x19686988bad7e7a7fee0394a719fb135a6256d832999c3325af45fb6877c6a9e452aa4c33d738e0e43d239cfe81f030d_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x10c632bd0a49755d7f3cb392d7528be8e535c1eaa78b6320d58884dfc9d04bf8065a18554ccb3f9b078d81b47d28b598_cppui_modular381,
-                                                      0x166b6c5bbc7deada98cd1aa096101b2a0c3da0e75480fb633d9188fcc086888e49dd1b6c286c62bf5eebf6e4d4d61930_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x17da0b5e7c2cbf59d5acd35d8be5d6afa323e9f3ef1032de53da1896db56414084549fcd878ede90aad2b2312f2d7935_cppui_modular381,
-                                                      0x08eeedbfc0d9fe50e3f36077e4a1939afe6d67029f790168c3e1e765537556fee20fb4a2e91ee990e6a5fcc8ac968926_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x026c536d1017d9a222e82b13694ae8152197a2a93150735b3e237dee99f0676ad7c6b664b3ea3550ff475ca67447af69_cppui_modular381,
-                                                      0x0efa39882816548d60cacb966d2f6f03c67c22a00b5a9bce42f80cd908bf18b9fe3789c1e9a1d1b3a0a65879db02fe13_cppui_modular381))))),
+                                make_pair(
+                                    fq12_value_type(
+                                        fq6_value_type(
+                                            fq2_value_type(
+                                                0x139dd779524372b96bb40c710d1e4c42e5e7eb6c2a24cd985ca0dbc22512d307630fbf129ce1fbc1a5cd4132f696867a_cppui_modular381,
+                                                0x0c0d8dcb348d44a162f1f91c4934ba484b0f89c030795fe8fcdc5aaa5c449b27852a001f2932997f001dca6f379a39c6_cppui_modular381),
+                                            fq2_value_type(
+                                                0x014a092244795b1a4574bcf8f3f68c138c898a18a7c5fb09b4f6cd5ef92465f3d2731d6eefe4f0e6e434fb7f9e797826_cppui_modular381,
+                                                0x01c26d6c33619e83ef214d95fb64b53888af5f9ab7d8500a3ba7453bfb8373c0ac338b1f61604adc55916266470b143f_cppui_modular381),
+                                            fq2_value_type(
+                                                0x032a40e66f3eb3219a88322cc1a672d0a4bab7688665a8cf5629a8ceeaec151cc69c5381ca841f7371716c72a8755720_cppui_modular381,
+                                                0x144b384eb544fdb22bdacb0f548126a0108da553e2b264edf5e7fe018107568e393edc9e64ca8896dc27a1ca1c7c575c_cppui_modular381)),
+                                        fq6_value_type(
+                                            fq2_value_type(
+                                                0x10284f4e83f16439adaed1efddb79fe9d280885a0cded5eb5940d93dcfbe318bdd8fb56e69c98e6f8232d3c3d2f59d3e_cppui_modular381,
+                                                0x058422d0b4fe6eb5752561a91e4a8960b1ffc667a65a2c18f31684772c8e65b594b4b8687831c2aa6e716722b3050765_cppui_modular381),
+                                            fq2_value_type(
+                                                0x0e66d58687e71d2e0741cda1c8df641415356a394764eef69e0cefc3cde2b820a8d816efe9012ff57b8d2c9926deae32_cppui_modular381,
+                                                0x01c913beb56011f4d41bc05222350fac1b77710ed11cc693ee02c9617feab15cd250ffb213a14d7c3097d53e61679a66_cppui_modular381),
+                                            fq2_value_type(
+                                                0x17be5d11bd2aa3e0da7d4c77e11a54420379a0eb9c2a2db42d9f14904b4a8d896274fdeb00178698e62a5cd4ad85af82_cppui_modular381,
+                                                0x07a35d77b81022ce61d03549895bd181892994ec28bf07e9fa33c84c541aec0ce0b92bcd5c964b0e97920826c01a702f_cppui_modular381))),
+                                    fq12_value_type(fq6_value_type(
+                                                        fq2_value_type(0x098460d358cd4b4776d0b962b3e23cfd338e2dca66afbab837f90f4cf5072c8d3fbc97b5d78d6a039024ed85b9afa60d_cppui_modular381, 0x0abab264807f67f1b0fa283237868a6d9b4735cd93d00a93b4b8f15dc8a274ded9e1767e13083257659a8af19b4bf0fe_cppui_modular381), fq2_value_type(0x13d0fcc3fb0a3d4398948986824ec71d9596c4f9b11f39be8c3eeed668aa3451646f68abf92ccc94ea6f2d33764de96f_cppui_modular381, 0x077907e13946c298451b4c624015e5e18f0cdfa6b7bed500500d2e6fe6016b787eee7ad8d464bc775439c676fc5c8d49_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x06cd66c7dfa70c5c11a1ca5ff0b00a62c01eea92a4c7efc5ffa2f0946cc7dd82688fcbc1a3d91121ae369b4040912356_cppui_modular381,
+                                                            0x19686988bad7e7a7fee0394a719fb135a6256d832999c3325af45fb6877c6a9e452aa4c33d738e0e43d239cfe81f030d_cppui_modular381)),
+                                                    fq6_value_type(
+                                                        fq2_value_type(
+                                                            0x10c632bd0a49755d7f3cb392d7528be8e535c1eaa78b6320d58884dfc9d04bf8065a18554ccb3f9b078d81b47d28b598_cppui_modular381,
+                                                            0x166b6c5bbc7deada98cd1aa096101b2a0c3da0e75480fb633d9188fcc086888e49dd1b6c286c62bf5eebf6e4d4d61930_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x17da0b5e7c2cbf59d5acd35d8be5d6afa323e9f3ef1032de53da1896db56414084549fcd878ede90aad2b2312f2d7935_cppui_modular381,
+                                                            0x08eeedbfc0d9fe50e3f36077e4a1939afe6d67029f790168c3e1e765537556fee20fb4a2e91ee990e6a5fcc8ac968926_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x026c536d1017d9a222e82b13694ae8152197a2a93150735b3e237dee99f0676ad7c6b664b3ea3550ff475ca67447af69_cppui_modular381,
+                                                            0x0efa39882816548d60cacb966d2f6f03c67c22a00b5a9bce42f80cd908bf18b9fe3789c1e9a1d1b3a0a65879db02fe13_cppui_modular381))))),
                 };
     std::
         vector<std::pair<typename commitments::kzg_ipp2<curve_type>::output_type,
@@ -2190,7 +2180,10 @@ BOOST_AUTO_TEST_CASE(bls381_prove_tipp_mipp_test) {
                                                                                          0x0c18af9af392dcba801c52ed2766ddf818a004043f0a03e2fb0488fa5eeb357fd1482435fedd320d30f6b960e6ab622d_cppui_modular381),
                                                                           fq2_value_type(0x190e5e7819701a8d6775478762b6fcac09ae5d38c06e6af811c239bd31292b178d61fb07eb06f0802249e7dc6ecbde40_cppui_modular381, 0x044ed5531d7f469506a2213c48ec0cc5994a4fb0a4d7f7b8a7f0c1348dd404e73455230be575cd09d8f87887adb4b302_cppui_modular381), fq2_value_type(0x18cb61c96a086bdd8702850569c4b6f54838a0ff7e4684982b45d432066bb7cd5b8a5125b12fb40bea1eaa91f7593b90_cppui_modular381, 0x093d1e653c01ee68412487b57bfffcebdfa50a283ff326b7b1427a3e8306149ad1a40e5b895677af0cb21d85e37224bf_cppui_modular381)),
                                                            fq6_value_type(
-                                                               fq2_value_type(0x00cc706b671d7c653d3331f2e68e79e02ed8f7e295a621ff02ca1d7761f71505dc618839a43eb1cbc56d3b4001a1d223_cppui_modular381, 0x0870acf52b08530c66f9fea0719e4211c80f5ec1100ff81a602cc5966fdb5f86f8d3b8927a2c1c80168914b5e964f594_cppui_modular381), fq2_value_type(0x118c2f64ff95809c89324ea1f21065e2bec3aee1f01dbd4a858421047b3d63829e8fffa3c221339d16604c31a0e6743c_cppui_modular381, 0x11bbc2ca511d06409053b7395f071bcb8bcd80089a788d89a9e1fdf20b51cf7312ba49a58dbb68e6b53b92a9bbce6aa7_cppui_modular381), fq2_value_type(0x16e56dab60ef746c48be6f98632b8aad24859c6de9deeb20dd2092a9134d9018018bea2f4ba3da11d530aa880953623f_cppui_modular381, 0x132930a777cbac72c382dc6b7bbc32b0a3d05a524a34f6793bf1f469f65f67fc8a691e0bf7591f69761c7bc734076431_cppui_modular381))),
+                                                               fq2_value_type(0x00cc706b671d7c653d3331f2e68e79e02ed8f7e295a621ff02ca1d7761f71505dc618839a43eb1cbc56d3b4001a1d223_cppui_modular381, 0x0870acf52b08530c66f9fea0719e4211c80f5ec1100ff81a602cc5966fdb5f86f8d3b8927a2c1c80168914b5e964f594_cppui_modular381), fq2_value_type(0x118c2f64ff95809c89324ea1f21065e2bec3aee1f01dbd4a858421047b3d63829e8fffa3c221339d16604c31a0e6743c_cppui_modular381, 0x11bbc2ca511d06409053b7395f071bcb8bcd80089a788d89a9e1fdf20b51cf7312ba49a58dbb68e6b53b92a9bbce6aa7_cppui_modular381),
+                                                               fq2_value_type(
+                                                                   0x16e56dab60ef746c48be6f98632b8aad24859c6de9deeb20dd2092a9134d9018018bea2f4ba3da11d530aa880953623f_cppui_modular381,
+                                                                   0x132930a777cbac72c382dc6b7bbc32b0a3d05a524a34f6793bf1f469f65f67fc8a691e0bf7591f69761c7bc734076431_cppui_modular381))),
                                            fq12_value_type(
                                                fq6_value_type(fq2_value_type(0x09d054960da1dc78f70ab3b71e7b6248aca47ef6004b9987ffc3513153158d52279122d9d79d395008bc4a989f95b08f_cppui_modular381, 0x02fc878bbcb5ba839a1da397c8be9a2498f05589cd8356479d38c759a1cf5d6e19100e96be647d286b5dacf230fb1e25_cppui_modular381), fq2_value_type(0x0574ab4c1cf1301e852dacbfba1e68f060ef334b3028004a8e07c173a7a54202733ab74a027771e6c0132529120667f6_cppui_modular381, 0x04c368e41be1ce332b22ec693ec99a655b4b44b9ac37fa4f026cb11ac96c624706ba32a7f91c338f4ad36ef22ba8c40f_cppui_modular381), fq2_value_type(0x13e1454fe720bf84b1246b1494f7a9a955fbfd53638e3c145746d9039602a6230ffa40fd4c8adf8c0c8ca52edc9bc8c0_cppui_modular381, 0x1262649c45b556f477d46268d923cf9da7900198732d9ab6c397a56ee84410292e95a3bd5d3ef158ff6feafbea8b4e80_cppui_modular381)), fq6_value_type(
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  fq2_value_type(0x13eecab13e389bdac3ea5f3ad660bd13b069294d774666016ca143d4dd7c6ef223a8f24980a4138fb56df14855d2b841_cppui_modular381, 0x0904cb4c080295575d8ccea88f58ca71d7aa177aa262cc7cc90ec93803b0d0f87c5f50c7cf2e2e689a05c01e01442c20_cppui_modular381), fq2_value_type(0x15afe840115b621cd48b62a452624434d6a924068fad122dd2231bcdd79fe587ade17326d2de85adfa029e22f650626b_cppui_modular381, 0x00b075566e5f148600de3378500290a56f0801ea60aadbb7f72ac1db6ef782b051bf30e5634dd24314d786b973aeb4b6_cppui_modular381), fq2_value_type(0x1170814f8f7eae5d20c9c8dffda1c2ec24f2807e15a5faf1f41e5f43d0a3889dd36253e78c4f50e6a2c8225d6a58a578_cppui_modular381, 0x0b583ca36821e66912297faacd31b0e42b265fde9adfd77a77e95949e1f5cdb8c4eb3519b95d97af4032bd6d41ef658a_cppui_modular381)))),
@@ -2241,84 +2234,69 @@ BOOST_AUTO_TEST_CASE(bls381_prove_tipp_mipp_test) {
                     std::
                         make_pair(
                             std::
-                                make_pair(fq12_value_type(
-                                              fq6_value_type(fq2_value_type(0x1053078f1dca8e21e67fe990ca54774c754b6605b533901da5377081e633901fb178565b6d036b84c1d23d4e354dadde_cppui_modular381, 0x0c91dd3b91b97f40f99a9f95bbf03d31121923fc3b193a9cfb46b6dbab75f24d979949766d2b10174258ac857712ec10_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x169835fd43016616b9d5db2d23008087af11813e0e50323bf79e162bde4c860fd54d58ea967cf76d9d8426edc4cbabf1_cppui_modular381,
-                                                                 0x01ee0bee5d0568528bfb0fcd790c612d1195c471959efa3906e1b84234ef587e0f26a433903111d0b9b7b9a6a2bbfbb4_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x0e1a09e26aa899cc835f78c64cb352bc228aaf929580c271e7267f32d09a6ab22c4ee7f0552c4d1740f451b50527bc99_cppui_modular381,
-                                                                 0x0b92de9fe153181a64ce45b4f39f9d0410804a7033980d1afbcda61749cb1db9c4105f6d87be656206482ec9e3bc9b90_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x08b6d38903d92c1176c0cb915eaf65879a2a4090feb19633ebdec3c0dcaebfda97270dd6b5e9ba44b6bd1c825d96bafd_cppui_modular381,
-                                                      0x1743bdbfc16ca5ce00e39ed450b699fbed1f004ab75e54c93453a4efd05a6ca7c1a8e3611ead74eab2de1bcf6404efa6_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0d422eee5db5c6e1423bdec571c86de52773534b2ddd9db1fbaa5d8780df33c5a7980ae29424e403fb4346afbd3fdb01_cppui_modular381,
-                                                      0x033400c16e3244bc253b5fad70a4e47ce42e7e66488c95fee14949bd91dd6eaf8f4e8cb222a9498c91b287d9bc8e8090_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x12df9a4a429e18c8207df99fadc5468f14e1579450b09f0f55443172ef8fb70e19ee2fa41382c8f07c51cd73c9e4cc21_cppui_modular381,
-                                                      0x0e484ecea089099176261b39c34cdae1c974cb85ea72cf9f4ff0886714e670e49edcbbc9fd660d50252f11a3c1d4c47c_cppui_modular381))),
-                                          fq12_value_type(
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x14e63b2a67a07cc1cec73cea0848c87831f586309e5b345c825064d9243f16f193b899f50d545260789fd94219e54962_cppui_modular381,
-                                                      0x15df4b4c4343a68a6d1631e4397e3fbae05eca8d06ae3e15d1bad2009a62be02075e8212cb4595c0b834c03c88c7d552_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x1565b0b60d7cc06526efd367a2ef636bed8f3a4eef2b30d60ae69380884ad57fa3593dc731b42d3a00a57612c672a151_cppui_modular381,
-                                                      0x0927d3f23c726fa6ba32ebe6a84c9b43ce50da0e59011c7a985ac202ad4101f8eda538e9643e6886cefaee1255e99c9f_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x16c144ddc9330f07c33466ba7f8a5693345b4ab95d1d05e6ebcc80276f69a2602083b03919f8b322ae093dad48376591_cppui_modular381,
-                                                      0x085bb6feaf972bdf812f01aad6e300b16686bdf2d51018d75c869fb053ef1b47de05177d21d13b8bc933d2a1d2301dd1_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x02aa6d7498c5b2115b8f21fe01807da31d427695db8493e9ec4d4642aba78078da80271ff90e7ac8632d497a7ec761db_cppui_modular381,
-                                                      0x124802596e462913a38781a89c6a8c3849b93b8449f9d1a4586405111fd6c53b23376929d0f1f1dd4ac0ace302520b7a_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0ed4b7f92b0f555191007e6c1617bc67a6bce2526066db8002160867c7418581e95282c748506b26343b1d7aed0c3afa_cppui_modular381,
-                                                      0x13e6dcbffd190514c7b02d14a26af791e52d4fce9ac40938799d4369f2f6eb5e9e72ff9cbaed6abb1c045440beb90715_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x14d7722b78d34b909c11b7081131deb6c07f54abe62ae64d238ad11c1ac93fd44e54c1837511954c79fdd4b14b091a06_cppui_modular381,
-                                                      0x0dd13ef3f8a0aa1da902f33132acc4a2380757cbbc076d101dc623e7c87838ecc631f4a67078d4a952eb922f57b1ddee_cppui_modular381)))),
+                                make_pair(fq12_value_type(fq6_value_type(
+                                                              fq2_value_type(0x1053078f1dca8e21e67fe990ca54774c754b6605b533901da5377081e633901fb178565b6d036b84c1d23d4e354dadde_cppui_modular381, 0x0c91dd3b91b97f40f99a9f95bbf03d31121923fc3b193a9cfb46b6dbab75f24d979949766d2b10174258ac857712ec10_cppui_modular381), fq2_value_type(0x169835fd43016616b9d5db2d23008087af11813e0e50323bf79e162bde4c860fd54d58ea967cf76d9d8426edc4cbabf1_cppui_modular381, 0x01ee0bee5d0568528bfb0fcd790c612d1195c471959efa3906e1b84234ef587e0f26a433903111d0b9b7b9a6a2bbfbb4_cppui_modular381), fq2_value_type(0x0e1a09e26aa899cc835f78c64cb352bc228aaf929580c271e7267f32d09a6ab22c4ee7f0552c4d1740f451b50527bc99_cppui_modular381, 0x0b92de9fe153181a64ce45b4f39f9d0410804a7033980d1afbcda61749cb1db9c4105f6d87be656206482ec9e3bc9b90_cppui_modular381)),
+                                                          fq6_value_type(fq2_value_type(0x08b6d38903d92c1176c0cb915eaf65879a2a4090feb19633ebdec3c0dcaebfda97270dd6b5e9ba44b6bd1c825d96bafd_cppui_modular381,
+                                                                                        0x1743bdbfc16ca5ce00e39ed450b699fbed1f004ab75e54c93453a4efd05a6ca7c1a8e3611ead74eab2de1bcf6404efa6_cppui_modular381),
+                                                                         fq2_value_type(0x0d422eee5db5c6e1423bdec571c86de52773534b2ddd9db1fbaa5d8780df33c5a7980ae29424e403fb4346afbd3fdb01_cppui_modular381,
+                                                                                        0x033400c16e3244bc253b5fad70a4e47ce42e7e66488c95fee14949bd91dd6eaf8f4e8cb222a9498c91b287d9bc8e8090_cppui_modular381),
+                                                                         fq2_value_type(0x12df9a4a429e18c8207df99fadc5468f14e1579450b09f0f55443172ef8fb70e19ee2fa41382c8f07c51cd73c9e4cc21_cppui_modular381,
+                                                                                        0x0e484ecea089099176261b39c34cdae1c974cb85ea72cf9f4ff0886714e670e49edcbbc9fd660d50252f11a3c1d4c47c_cppui_modular381))),
+                                          fq12_value_type(fq6_value_type(fq2_value_type(0x14e63b2a67a07cc1cec73cea0848c87831f586309e5b345c825064d9243f16f193b899f50d545260789fd94219e54962_cppui_modular381, 0x15df4b4c4343a68a6d1631e4397e3fbae05eca8d06ae3e15d1bad2009a62be02075e8212cb4595c0b834c03c88c7d552_cppui_modular381),
+                                                                         fq2_value_type(
+                                                                             0x1565b0b60d7cc06526efd367a2ef636bed8f3a4eef2b30d60ae69380884ad57fa3593dc731b42d3a00a57612c672a151_cppui_modular381,
+                                                                             0x0927d3f23c726fa6ba32ebe6a84c9b43ce50da0e59011c7a985ac202ad4101f8eda538e9643e6886cefaee1255e99c9f_cppui_modular381),
+                                                                         fq2_value_type(
+                                                                             0x16c144ddc9330f07c33466ba7f8a5693345b4ab95d1d05e6ebcc80276f69a2602083b03919f8b322ae093dad48376591_cppui_modular381,
+                                                                             0x085bb6feaf972bdf812f01aad6e300b16686bdf2d51018d75c869fb053ef1b47de05177d21d13b8bc933d2a1d2301dd1_cppui_modular381)),
+                                                          fq6_value_type(
+                                                              fq2_value_type(
+                                                                  0x02aa6d7498c5b2115b8f21fe01807da31d427695db8493e9ec4d4642aba78078da80271ff90e7ac8632d497a7ec761db_cppui_modular381,
+                                                                  0x124802596e462913a38781a89c6a8c3849b93b8449f9d1a4586405111fd6c53b23376929d0f1f1dd4ac0ace302520b7a_cppui_modular381),
+                                                              fq2_value_type(
+                                                                  0x0ed4b7f92b0f555191007e6c1617bc67a6bce2526066db8002160867c7418581e95282c748506b26343b1d7aed0c3afa_cppui_modular381,
+                                                                  0x13e6dcbffd190514c7b02d14a26af791e52d4fce9ac40938799d4369f2f6eb5e9e72ff9cbaed6abb1c045440beb90715_cppui_modular381),
+                                                              fq2_value_type(
+                                                                  0x14d7722b78d34b909c11b7081131deb6c07f54abe62ae64d238ad11c1ac93fd44e54c1837511954c79fdd4b14b091a06_cppui_modular381,
+                                                                  0x0dd13ef3f8a0aa1da902f33132acc4a2380757cbbc076d101dc623e7c87838ecc631f4a67078d4a952eb922f57b1ddee_cppui_modular381)))),
                             std::
-                                make_pair(fq12_value_type(
-                                              fq6_value_type(fq2_value_type(0x058af8cf182fab8fa2569d50874a0b459b293cb5ebaf799ea526458f34bdfdac511e19524fdbe0769d7701fc08b0408b_cppui_modular381,
-                                                                            0x0e4a4a150c2cf7035b84d207c5952523bdec4ec109ac6c5b72e17e427c7f80767d5cf2f5b539edfed61493ab764bd374_cppui_modular381),
-                                                             fq2_value_type(0x11e9adaa91b7925f378de6738411729fd8ba6271c495c5699e0ee9164ae26934e9c7389eeb2bec6dc80b1906e580022c_cppui_modular381, 0x07403f5ca0015f2a87a07d6c77337952def21a4967cfdfa6c336ea332b2e53cbd58089a3252fc4fa2c69af350e578731_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x0649b9b12c25e5fe3de854257b60ea8cb92a1356e18895455b70c5929fddf59b34a29018ff12db534a15f3ac86910166_cppui_modular381,
-                                                                 0x0f7f015596193b076a64e02764b71f7260742039f44909732dc532a8d3c06253a0d58a5c49d7b07c10fe7b156a640fb3_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x07421e0e1d8fc614579a562f5e492bdbc55bd13690c5273e7d92f2d556b6a854d1437e1c6ef5817868ff11f7a214859c_cppui_modular381,
-                                                      0x1864fee6b0258f12ae274f116a97aed6638950162ed7b74f3beb07b89101f9da4779d2cfff9167389d5b537adaa60572_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x000b81d2287de5264816bbd051ee5f712d4b31ac4bea97b0d416d431c0e330f17266abaab1af0cf609b46ffb3c0e2689_cppui_modular381,
-                                                      0x0c340f1d081c98826dd701f095677573ab6b386560312ef5cdc42576d3b1d51a98eeb2110311635c2da267af1a61fe86_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0105af3b9a3aca403100ebf814e9a88731cfb6898150a745062f992ee59bf8937d0dcd649abae228eda9c6824860f2da_cppui_modular381,
-                                                      0x11d1d034333ee910563031103c771438310196499294d6f95024df0cf0ef2836b6218f1d16e028b6cc49dc3cb93239c1_cppui_modular381))),
-                                          fq12_value_type(
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x031cc0a0e8a10d47a5af87a9bcc167ce5afd34663d8bcceaa4c0324430b37b098b10034479539c42c77377e0963ccf0f_cppui_modular381,
-                                                      0x0ebbbc427eaf2cf9b5a57438fcc488b43bc58687e454b37a2fb8d00405e1ac4e3e27cbae2b18ccdec0db732f70c0271c_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0789bea4172c8680a5a9643b91da8a91da4f785311cbb4a0692c6fbc5a55725eb57f14b9f325ee494918140b218e6c8f_cppui_modular381,
-                                                      0x027912399bb68611e8de6637fe08cb72959f648b1a8ed0f8b7f2a1d4ae4186fd2fa63e80a208cebfb62ce0f3f03ba586_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x1696e6d6ad196714afc1ff54c47787ac6ad4ccd8cd5410ddc504b2ff97b7db90a5ad2667637f8dad659f015c4f7c9634_cppui_modular381,
-                                                      0x09e92342f4f5ac91b15d610a17800633c06e8f80b24cc38aa5585426b3ceeee6a7d0d1fa66918370babc6fa3b81e777b_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x15f86d487109455c22d316a69fdfba9b4290c63c2c3486ee2f027efedc981d1e4c41452ae32ae1138644d253772d15d8_cppui_modular381,
-                                                      0x16596779de4ede0014d2ffb7b8aed13d7453dc24b28e7fed885e9729c329a3189242bc3500c115ff80f865fe22a825cd_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x02489f16c8af84e6524ebdcdcad1b549ca7d4aec5d51ed553eac6ab9bf77657733f72efd06fccd56bdc642abc4ed8aef_cppui_modular381,
-                                                      0x03d3006b63d70c94feeff2f1546d8b8dd6462a64d2bece1d49ad7fb5d0a101b1306fa73009677440f27328955e69f27f_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x00d1ef16723ea8a1463a16799acfa4ca141cf843b61e0533a99a8570f229f8d980a907af1f3cbdd2c0e01d9eafd96580_cppui_modular381,
-                                                      0x1670c4b5b58fdaaf8c8f8e401188a9c5effc7eabcda654b5758ed681839571ab65d870dbfcafe296a72c8962b9df339f_cppui_modular381))))),
+                                make_pair(
+                                    fq12_value_type(
+                                        fq6_value_type(
+                                            fq2_value_type(
+                                                0x058af8cf182fab8fa2569d50874a0b459b293cb5ebaf799ea526458f34bdfdac511e19524fdbe0769d7701fc08b0408b_cppui_modular381,
+                                                0x0e4a4a150c2cf7035b84d207c5952523bdec4ec109ac6c5b72e17e427c7f80767d5cf2f5b539edfed61493ab764bd374_cppui_modular381),
+                                            fq2_value_type(
+                                                0x11e9adaa91b7925f378de6738411729fd8ba6271c495c5699e0ee9164ae26934e9c7389eeb2bec6dc80b1906e580022c_cppui_modular381,
+                                                0x07403f5ca0015f2a87a07d6c77337952def21a4967cfdfa6c336ea332b2e53cbd58089a3252fc4fa2c69af350e578731_cppui_modular381),
+                                            fq2_value_type(
+                                                0x0649b9b12c25e5fe3de854257b60ea8cb92a1356e18895455b70c5929fddf59b34a29018ff12db534a15f3ac86910166_cppui_modular381,
+                                                0x0f7f015596193b076a64e02764b71f7260742039f44909732dc532a8d3c06253a0d58a5c49d7b07c10fe7b156a640fb3_cppui_modular381)),
+                                        fq6_value_type(
+                                            fq2_value_type(
+                                                0x07421e0e1d8fc614579a562f5e492bdbc55bd13690c5273e7d92f2d556b6a854d1437e1c6ef5817868ff11f7a214859c_cppui_modular381,
+                                                0x1864fee6b0258f12ae274f116a97aed6638950162ed7b74f3beb07b89101f9da4779d2cfff9167389d5b537adaa60572_cppui_modular381),
+                                            fq2_value_type(
+                                                0x000b81d2287de5264816bbd051ee5f712d4b31ac4bea97b0d416d431c0e330f17266abaab1af0cf609b46ffb3c0e2689_cppui_modular381,
+                                                0x0c340f1d081c98826dd701f095677573ab6b386560312ef5cdc42576d3b1d51a98eeb2110311635c2da267af1a61fe86_cppui_modular381),
+                                            fq2_value_type(
+                                                0x0105af3b9a3aca403100ebf814e9a88731cfb6898150a745062f992ee59bf8937d0dcd649abae228eda9c6824860f2da_cppui_modular381,
+                                                0x11d1d034333ee910563031103c771438310196499294d6f95024df0cf0ef2836b6218f1d16e028b6cc49dc3cb93239c1_cppui_modular381))),
+                                    fq12_value_type(fq6_value_type(
+                                                        fq2_value_type(0x031cc0a0e8a10d47a5af87a9bcc167ce5afd34663d8bcceaa4c0324430b37b098b10034479539c42c77377e0963ccf0f_cppui_modular381, 0x0ebbbc427eaf2cf9b5a57438fcc488b43bc58687e454b37a2fb8d00405e1ac4e3e27cbae2b18ccdec0db732f70c0271c_cppui_modular381), fq2_value_type(0x0789bea4172c8680a5a9643b91da8a91da4f785311cbb4a0692c6fbc5a55725eb57f14b9f325ee494918140b218e6c8f_cppui_modular381, 0x027912399bb68611e8de6637fe08cb72959f648b1a8ed0f8b7f2a1d4ae4186fd2fa63e80a208cebfb62ce0f3f03ba586_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x1696e6d6ad196714afc1ff54c47787ac6ad4ccd8cd5410ddc504b2ff97b7db90a5ad2667637f8dad659f015c4f7c9634_cppui_modular381,
+                                                            0x09e92342f4f5ac91b15d610a17800633c06e8f80b24cc38aa5585426b3ceeee6a7d0d1fa66918370babc6fa3b81e777b_cppui_modular381)),
+                                                    fq6_value_type(
+                                                        fq2_value_type(
+                                                            0x15f86d487109455c22d316a69fdfba9b4290c63c2c3486ee2f027efedc981d1e4c41452ae32ae1138644d253772d15d8_cppui_modular381,
+                                                            0x16596779de4ede0014d2ffb7b8aed13d7453dc24b28e7fed885e9729c329a3189242bc3500c115ff80f865fe22a825cd_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x02489f16c8af84e6524ebdcdcad1b549ca7d4aec5d51ed553eac6ab9bf77657733f72efd06fccd56bdc642abc4ed8aef_cppui_modular381,
+                                                            0x03d3006b63d70c94feeff2f1546d8b8dd6462a64d2bece1d49ad7fb5d0a101b1306fa73009677440f27328955e69f27f_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x00d1ef16723ea8a1463a16799acfa4ca141cf843b61e0533a99a8570f229f8d980a907af1f3cbdd2c0e01d9eafd96580_cppui_modular381,
+                                                            0x1670c4b5b58fdaaf8c8f8e401188a9c5effc7eabcda654b5758ed681839571ab65d870dbfcafe296a72c8962b9df339f_cppui_modular381))))),
                 };
     std::vector<std::pair<fq12_value_type, fq12_value_type>> tmipp_gp_z_ab = {
         std::make_pair(
@@ -2843,7 +2821,10 @@ BOOST_AUTO_TEST_CASE(bls381_aggregate_proofs) {
                                                                                          0x141ba964279f3d5f4327ba04c4f8848acec479258e5058c8a207bb43a348de5fca532a8e310ae9c220ae4a0ce05ea830_cppui_modular381),
                                                                           fq2_value_type(0x0a456511fa23aae810d4c1f1112fb0e1d0b008789ae59481ceb9aebb976726208d8f2c16c1829aea2febb9f847bd7dc7_cppui_modular381, 0x023cdaad124e21466776864d917dcead85ca7463d668f8cdd92949c8ce1bf0a81ab5f49121b158e774e8d0835034f198_cppui_modular381), fq2_value_type(0x02a736547ae54e2705b324474742e88db57a5ed4defce7f5fcc129307864d377136b34c869610616d6e95d19d977c6d6_cppui_modular381, 0x093f31ac7eea687f45e8607e69963cc38f643d43ed16b11e3d752b14d39bfb3a4fe2ba4cbef01c51f32480e8f12fa682_cppui_modular381)),
                                                            fq6_value_type(
-                                                               fq2_value_type(0x04d912752485ebc38bbbd88db6514050c2323cea025d9a0d0195ad7df76ef7d16c1fad74d04e125b8b90ea9115a42d1f_cppui_modular381, 0x1700ff80462487faa02387867f3a379db214cfd25387e8de330a85948682b3abe52d9daee21f916e7c046f64c71113dd_cppui_modular381), fq2_value_type(0x18978f46f9b0e1b9ca5fb3a6f9f6e797448ec2ea55298e1ddb63e0dccc203c013dc4a8e835ebdab0d6b6a749a959c4c0_cppui_modular381, 0x116141a2852dfe1d8975dd21cb938d741c73a17d8cd33cae69ccab7a0204e04b876dc7e013b4f0f24864b67bdd320fea_cppui_modular381), fq2_value_type(0x13b8b123c4c4edaee5aab3a21baea04c5eb50036b402669cc73b564c330066c6187d07c9e13436420e9b9a35407d665a_cppui_modular381, 0x046b9358226a2e3378d74be97e4f22801680ec747cb0148f6ce740a4cc8938c57e9266be7463c3656b8a4da7fbc6039d_cppui_modular381))),
+                                                               fq2_value_type(0x04d912752485ebc38bbbd88db6514050c2323cea025d9a0d0195ad7df76ef7d16c1fad74d04e125b8b90ea9115a42d1f_cppui_modular381, 0x1700ff80462487faa02387867f3a379db214cfd25387e8de330a85948682b3abe52d9daee21f916e7c046f64c71113dd_cppui_modular381), fq2_value_type(0x18978f46f9b0e1b9ca5fb3a6f9f6e797448ec2ea55298e1ddb63e0dccc203c013dc4a8e835ebdab0d6b6a749a959c4c0_cppui_modular381, 0x116141a2852dfe1d8975dd21cb938d741c73a17d8cd33cae69ccab7a0204e04b876dc7e013b4f0f24864b67bdd320fea_cppui_modular381),
+                                                               fq2_value_type(
+                                                                   0x13b8b123c4c4edaee5aab3a21baea04c5eb50036b402669cc73b564c330066c6187d07c9e13436420e9b9a35407d665a_cppui_modular381,
+                                                                   0x046b9358226a2e3378d74be97e4f22801680ec747cb0148f6ce740a4cc8938c57e9266be7463c3656b8a4da7fbc6039d_cppui_modular381))),
                                            fq12_value_type(
                                                fq6_value_type(fq2_value_type(0x1058b84e5a27670bb2d3975a9200d6828143fe70c994168e4a0b7423ca4559ac50b1e5390d3e5b1e352c213e9ede35f1_cppui_modular381, 0x07942b2f6ef470f1cc58a5ea651988fc9ecf22afcfa7814c975676920db6376bd8b0d97eb1ef411de8e1c06ed0219b18_cppui_modular381), fq2_value_type(0x0f674a4b6089aac668d72b1f67d76a8e0a1772610fda1ad4929a66eb58a551901c5f5677c31b2afbfd2d84405d6b5982_cppui_modular381, 0x0aa4db924381b8dc055487c067989b52a8ba40f6c7326410a94b5e05c95ad477424d8524cf73d32c9b59aef7f7342014_cppui_modular381), fq2_value_type(0x007cea626bb5cffcb9fa593ffb4acb127496b0874a921ba9825914dd63918f33beb5275d35a67e2f2cbc001b669b389d_cppui_modular381, 0x023725d7616717e9e5b1023fd7679f322822385141d985a36639d9f8ef6246086bd746fdaf0bab71de618c414ce2241d_cppui_modular381)), fq6_value_type(
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  fq2_value_type(0x06c2ac02c9ae1b80ca20fd9d0b1973068901dafab305bb4cd5dbe6f4086a7629ecbd8381a0192c668a89f74778f6a411_cppui_modular381, 0x09410255a5474f331adaa32da5ac7d943769dc7e02ca6da68a020031df1ed8155bd2b2202687bfb78ead0e296cf4a694_cppui_modular381), fq2_value_type(0x117796d2339c9834924b52d04d4b5ecd5bf84e3a16de827c1d41c9b05d4b135b4c97f331db019e1905f3fce0ba6968a1_cppui_modular381, 0x01ba2fc7634da06460c8cda364fa795027cb5737c06c01dc49a87e82e68d341c11cfab86dc38e052cda17d64b771ed81_cppui_modular381), fq2_value_type(0x11ffabfe4fb2acb09992627a01722bcd1a76d48ce85d435057a83c2251ca9c703bd99b75747bdfa6a60c057c13ee2987_cppui_modular381, 0x00840059d1e7c3e8945b6332a1fe043786ed35c44395b9d06bc5549dd52d51262791306fb5b1a9254c5daf2955debc0c_cppui_modular381)))),
@@ -2894,84 +2875,69 @@ BOOST_AUTO_TEST_CASE(bls381_aggregate_proofs) {
                     std::
                         make_pair(
                             std::
-                                make_pair(fq12_value_type(
-                                              fq6_value_type(fq2_value_type(0x177e0fd5a76fb5c5f6dc1730cfef8f9db491d8811922ed5f993a561ae1d9bf915ce95ddf05ad29f9704045ec30b143dd_cppui_modular381, 0x196ceb633fd03103e9baee645f893c8dfa471d629e1e7550ec28bb0afa6bcc50432249c022a703058e1ab1aa3f148f91_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x0ec7a7c70901ad7c6e963983a5a7a125970ea281df5b021583170d85719b6c0c1e70c542f7b6c8c0641a1cab95213ce3_cppui_modular381,
-                                                                 0x0a03089ac1cce96384e91fa94ed78c11ff939d95354511daa90cea93a37db8d85eb181df2106fd6220e04ab6a5783b02_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x0a70b914d0f4959d9f132b5856bb8bb99ffad52cbb7032724a01edc39336345106bd1820d48e8ecdc6dfeb0c9fbd4b00_cppui_modular381,
-                                                                 0x14cc1b39396d70fecb1e921faa0959e814f668a2fbae3ac77b249d1b05d9bfc054d299afd1696b690c5bec9067fb0d05_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x07acc35e4026e32f922a0594efa289955987f0f0b449b45f63ae6b32647ea69b2b9839e0284690576a25d83f63c74acc_cppui_modular381,
-                                                      0x008131a04439a62e484312797930723559dc4431cd10b9048492948c681ed696e702fb06f3e708abdb2cd388a46f13e6_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0a7aada2f918cb35d88faff7325f99e5aaa9a08bb5ba0f17591c01b36dd4405d1116202f8b1785bbe8c176e9fb874ae8_cppui_modular381,
-                                                      0x18fba1e2686c2d1514ad54137aa2a6c071d3d485a9b91ae69fbac945cfa38f39b2e75b6b3a0c2af853124673c4b9faf4_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x1075da6d4cc923fe0c419fb790b11804240bb6a1ffe4952ed0d9f59957224959355afe0aef326ce5c1047158264f104a_cppui_modular381,
-                                                      0x03897ecdd3b6e3a4ee6a1b819ae0660cdc9b6d3a5ec02f9b3f40fc0c8096fbb08d26fdbd8e4d269fbca2929f0ab0fb11_cppui_modular381))),
-                                          fq12_value_type(
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x10384944410ba651f8342133daa89073c2b99702715ceedd4f66347c6b2a76623bf5adafcf2790311b1a655f8775194b_cppui_modular381,
-                                                      0x0e7dc62df8272334de4499865060a458c5c1748b835bcd57bf8e6efc7bf9f64efd2225551ae92a66d50fea8d8056f083_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x05b3cd2f7c2dbef51b1298bb7bbb2ed3f4b66e7492b3777043f04a7e946dc0537a11672fe489a9dce0babebe77a6445f_cppui_modular381,
-                                                      0x06f6a966c9ab97fa4c778ee4bffca9ac1bcf80e54fd78a82b12a3dd1b4a26ab4f24e1e1e91a076d4fc0307a8af29977e_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0c5bc3000c337811f9cb8a6004578be2fbe3910046e066a1366e8c78d06b054eaec95207e7e16c2ba8621ef1de300eb1_cppui_modular381,
-                                                      0x162a68a8e2b216b64932d32e634993367d4009a38e043c97d81320aed6f9120d5b5465236fb5a9cd13bf1190ee2434a1_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x0ac964dc11a324808280142f03ea588b96a4a230bef85617be3666c0b8ffd886678de41d2599eb668fc7a7e96637ac43_cppui_modular381,
-                                                      0x18d38d751b0b97f01737ab7fad6cbc9a3d12d7f7d4005760e2ea911f91fa5d037c178fc58e8bd96bd0aca508d95cf6b5_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x1861ee37d6e6a406d5401793dbd1e48a67b8133e1851fdb2adcdf52045ed516857eec6a2d7ede1dd47baa0afba000fe1_cppui_modular381,
-                                                      0x07a19aced9ae096ef8af9e6d31b77ef6e4c115618169fa396abe0fc95d57bfdb9d6d963857bf4b9bec99a7ad3e96f302_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x1320b632dd321ab597e52136bb8ccebe47b73fbf2fbad470a563aa3fa156ffdf1ed114f2364a5699412f9e406ca68aaf_cppui_modular381,
-                                                      0x0fa7a7b6d87063413d8098ff116e9984cde3e5d8f84a217701b395060603e8bd16020ec67a9eff6f7f5dcd386d749f37_cppui_modular381)))),
+                                make_pair(fq12_value_type(fq6_value_type(
+                                                              fq2_value_type(0x177e0fd5a76fb5c5f6dc1730cfef8f9db491d8811922ed5f993a561ae1d9bf915ce95ddf05ad29f9704045ec30b143dd_cppui_modular381, 0x196ceb633fd03103e9baee645f893c8dfa471d629e1e7550ec28bb0afa6bcc50432249c022a703058e1ab1aa3f148f91_cppui_modular381), fq2_value_type(0x0ec7a7c70901ad7c6e963983a5a7a125970ea281df5b021583170d85719b6c0c1e70c542f7b6c8c0641a1cab95213ce3_cppui_modular381, 0x0a03089ac1cce96384e91fa94ed78c11ff939d95354511daa90cea93a37db8d85eb181df2106fd6220e04ab6a5783b02_cppui_modular381), fq2_value_type(0x0a70b914d0f4959d9f132b5856bb8bb99ffad52cbb7032724a01edc39336345106bd1820d48e8ecdc6dfeb0c9fbd4b00_cppui_modular381, 0x14cc1b39396d70fecb1e921faa0959e814f668a2fbae3ac77b249d1b05d9bfc054d299afd1696b690c5bec9067fb0d05_cppui_modular381)),
+                                                          fq6_value_type(fq2_value_type(0x07acc35e4026e32f922a0594efa289955987f0f0b449b45f63ae6b32647ea69b2b9839e0284690576a25d83f63c74acc_cppui_modular381,
+                                                                                        0x008131a04439a62e484312797930723559dc4431cd10b9048492948c681ed696e702fb06f3e708abdb2cd388a46f13e6_cppui_modular381),
+                                                                         fq2_value_type(0x0a7aada2f918cb35d88faff7325f99e5aaa9a08bb5ba0f17591c01b36dd4405d1116202f8b1785bbe8c176e9fb874ae8_cppui_modular381,
+                                                                                        0x18fba1e2686c2d1514ad54137aa2a6c071d3d485a9b91ae69fbac945cfa38f39b2e75b6b3a0c2af853124673c4b9faf4_cppui_modular381),
+                                                                         fq2_value_type(0x1075da6d4cc923fe0c419fb790b11804240bb6a1ffe4952ed0d9f59957224959355afe0aef326ce5c1047158264f104a_cppui_modular381,
+                                                                                        0x03897ecdd3b6e3a4ee6a1b819ae0660cdc9b6d3a5ec02f9b3f40fc0c8096fbb08d26fdbd8e4d269fbca2929f0ab0fb11_cppui_modular381))),
+                                          fq12_value_type(fq6_value_type(fq2_value_type(0x10384944410ba651f8342133daa89073c2b99702715ceedd4f66347c6b2a76623bf5adafcf2790311b1a655f8775194b_cppui_modular381, 0x0e7dc62df8272334de4499865060a458c5c1748b835bcd57bf8e6efc7bf9f64efd2225551ae92a66d50fea8d8056f083_cppui_modular381),
+                                                                         fq2_value_type(
+                                                                             0x05b3cd2f7c2dbef51b1298bb7bbb2ed3f4b66e7492b3777043f04a7e946dc0537a11672fe489a9dce0babebe77a6445f_cppui_modular381,
+                                                                             0x06f6a966c9ab97fa4c778ee4bffca9ac1bcf80e54fd78a82b12a3dd1b4a26ab4f24e1e1e91a076d4fc0307a8af29977e_cppui_modular381),
+                                                                         fq2_value_type(
+                                                                             0x0c5bc3000c337811f9cb8a6004578be2fbe3910046e066a1366e8c78d06b054eaec95207e7e16c2ba8621ef1de300eb1_cppui_modular381,
+                                                                             0x162a68a8e2b216b64932d32e634993367d4009a38e043c97d81320aed6f9120d5b5465236fb5a9cd13bf1190ee2434a1_cppui_modular381)),
+                                                          fq6_value_type(
+                                                              fq2_value_type(
+                                                                  0x0ac964dc11a324808280142f03ea588b96a4a230bef85617be3666c0b8ffd886678de41d2599eb668fc7a7e96637ac43_cppui_modular381,
+                                                                  0x18d38d751b0b97f01737ab7fad6cbc9a3d12d7f7d4005760e2ea911f91fa5d037c178fc58e8bd96bd0aca508d95cf6b5_cppui_modular381),
+                                                              fq2_value_type(
+                                                                  0x1861ee37d6e6a406d5401793dbd1e48a67b8133e1851fdb2adcdf52045ed516857eec6a2d7ede1dd47baa0afba000fe1_cppui_modular381,
+                                                                  0x07a19aced9ae096ef8af9e6d31b77ef6e4c115618169fa396abe0fc95d57bfdb9d6d963857bf4b9bec99a7ad3e96f302_cppui_modular381),
+                                                              fq2_value_type(
+                                                                  0x1320b632dd321ab597e52136bb8ccebe47b73fbf2fbad470a563aa3fa156ffdf1ed114f2364a5699412f9e406ca68aaf_cppui_modular381,
+                                                                  0x0fa7a7b6d87063413d8098ff116e9984cde3e5d8f84a217701b395060603e8bd16020ec67a9eff6f7f5dcd386d749f37_cppui_modular381)))),
                             std::
-                                make_pair(fq12_value_type(
-                                              fq6_value_type(fq2_value_type(0x061c2baaefbefe3f558e105b8633f05f9f48f360aaa2f736c318b93a13c65e1f96332e38c91b2d1376c36f32596995d2_cppui_modular381,
-                                                                            0x0d84681c2abb8b041831db5f77a977ea6c10a775c1022a664064bf6d486fe0257c02f15f59ca24128e0c4b722b6f42be_cppui_modular381),
-                                                             fq2_value_type(0x049ceac4612ac5797326d863ddbb413adace9f24f2c7ab7212d781e74d2a4289ade78332f0a32b2ec7310c4a8c854f43_cppui_modular381, 0x065ea06e2bf55ab3e275ded870be62058c167b3a4ecaee3bc87e60c3a2f4479f00f26ef277541cde337bcdb0690c567f_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x0e8796c8e3c7377a7404d4290de1bdfc3aeb8cd6652499b2e33683fefc9372d237aebe2d322ebe7ef8d4775da1b90621_cppui_modular381,
-                                                                 0x0e43db9d0e5cc8a0f265066d88be7b0e8c77230fe3ed64b2ca29728942973dee7d820c496ca0f8f8573305140c9fe9e0_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x05c23dddde09e67de1fa9826a8fd112a83bde34553e1ecf75308a865c6e6a3a6af198dc6c3dde019013c320f1df73e51_cppui_modular381,
-                                                      0x05f0c90ffec97a61d5ddfacc185668f61d83e2474ddbf27b6b3fbd189eae7c89cb2977f60ec64034314108b10d54dd9b_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x10b2e24e9f12e0a4dc72798fe58ee46c98a15898f601ae907258d9e4e17a7d0658f409307f1e1d03b2794ddfd231cfa1_cppui_modular381,
-                                                      0x088df46efe6ff738b01a480fdec339ad6c1d63e8f8f59f036db5f401129976b62abcc21b54b100cb63594345f15cd944_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x18fce451ac171917b5a635cee8d6dd1a2fa54e6bbc7c51d6a33da55f99a28ac38e405ef1c2837250e293039e5ad17cc7_cppui_modular381,
-                                                      0x052d8b5700bb5d61103a4dab1167117bae116db7be271f87361e85605200667cab269b354cdd109cc2f9cca44def58bc_cppui_modular381))),
-                                          fq12_value_type(
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x1342152652b7565fc3967db9c1e2a1016706a16f196d465133ae7f70af663f1d189e1faacdc88bb1a02346d87aa8bcb8_cppui_modular381,
-                                                      0x0ea20b92c2bcea5972cec24b5fd872b2ba8b99693b81369a16a0487fc2c147534cda919980827f9379887c2ce13e0759_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x02c70d3946ab946d2d0ef16d0e2abff83210d18654c20fc48d5d31b33f55387c253935efdf22c7a568902b7915516295_cppui_modular381,
-                                                      0x18f7b897dc2bbfbf6442a79894dd54dda9b4ac319686282668ed52b1a39293d90c69ee9f8e501fd0f94224c0eecca66f_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x037b3354eb3e7810fe2498a299173e82acb2f42400b004e97de842c1e397b876c44f023cadc7049636f2ee58a49e73ce_cppui_modular381,
-                                                      0x175f5eb8c8849882005291192fae39e67ed2d3acbc597e0eaa4bdeabb3649d3dc6f25996a51fd796cdf6b6a896e17c21_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x04018918fc2651f3da38fe555b0b0fbb97a0d1876c0e725ef4d15c6d4a443bee61208c6f824a9f292f0e5d322b891811_cppui_modular381,
-                                                      0x0737645e400120e4383af41d9bda3a4d4474f01ca716968ddcb97550ed166b2376fae234dddea9d344df04752c457fdc_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0fc9dbcf340265515779ec9fcc1439f579b6ac883d848caf41c431f7bd869fdcd1ddae2f9b24e9128b63764e06869339_cppui_modular381,
-                                                      0x0dfaa1b73b35aaff7ae7a0d748934b839c2f89b0d98a753248e85d54f650c53e93c57f0c7e046eecd88d9a1871c398a8_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0cde71dd1d338f0890ef4fd6a897e806b7bf3ea795331034d13f3f97c05433f8c8aefbd13e5632209c91d656f2121da6_cppui_modular381,
-                                                      0x0562d8702ef0a1fc40d7b25c7f1eb322427b9a73aa899f32500e9dd84196ff6c3551b9ceb8b292cf169be9dd45b2bff1_cppui_modular381))))),
+                                make_pair(
+                                    fq12_value_type(
+                                        fq6_value_type(
+                                            fq2_value_type(
+                                                0x061c2baaefbefe3f558e105b8633f05f9f48f360aaa2f736c318b93a13c65e1f96332e38c91b2d1376c36f32596995d2_cppui_modular381,
+                                                0x0d84681c2abb8b041831db5f77a977ea6c10a775c1022a664064bf6d486fe0257c02f15f59ca24128e0c4b722b6f42be_cppui_modular381),
+                                            fq2_value_type(
+                                                0x049ceac4612ac5797326d863ddbb413adace9f24f2c7ab7212d781e74d2a4289ade78332f0a32b2ec7310c4a8c854f43_cppui_modular381,
+                                                0x065ea06e2bf55ab3e275ded870be62058c167b3a4ecaee3bc87e60c3a2f4479f00f26ef277541cde337bcdb0690c567f_cppui_modular381),
+                                            fq2_value_type(
+                                                0x0e8796c8e3c7377a7404d4290de1bdfc3aeb8cd6652499b2e33683fefc9372d237aebe2d322ebe7ef8d4775da1b90621_cppui_modular381,
+                                                0x0e43db9d0e5cc8a0f265066d88be7b0e8c77230fe3ed64b2ca29728942973dee7d820c496ca0f8f8573305140c9fe9e0_cppui_modular381)),
+                                        fq6_value_type(
+                                            fq2_value_type(
+                                                0x05c23dddde09e67de1fa9826a8fd112a83bde34553e1ecf75308a865c6e6a3a6af198dc6c3dde019013c320f1df73e51_cppui_modular381,
+                                                0x05f0c90ffec97a61d5ddfacc185668f61d83e2474ddbf27b6b3fbd189eae7c89cb2977f60ec64034314108b10d54dd9b_cppui_modular381),
+                                            fq2_value_type(
+                                                0x10b2e24e9f12e0a4dc72798fe58ee46c98a15898f601ae907258d9e4e17a7d0658f409307f1e1d03b2794ddfd231cfa1_cppui_modular381,
+                                                0x088df46efe6ff738b01a480fdec339ad6c1d63e8f8f59f036db5f401129976b62abcc21b54b100cb63594345f15cd944_cppui_modular381),
+                                            fq2_value_type(
+                                                0x18fce451ac171917b5a635cee8d6dd1a2fa54e6bbc7c51d6a33da55f99a28ac38e405ef1c2837250e293039e5ad17cc7_cppui_modular381,
+                                                0x052d8b5700bb5d61103a4dab1167117bae116db7be271f87361e85605200667cab269b354cdd109cc2f9cca44def58bc_cppui_modular381))),
+                                    fq12_value_type(fq6_value_type(
+                                                        fq2_value_type(0x1342152652b7565fc3967db9c1e2a1016706a16f196d465133ae7f70af663f1d189e1faacdc88bb1a02346d87aa8bcb8_cppui_modular381, 0x0ea20b92c2bcea5972cec24b5fd872b2ba8b99693b81369a16a0487fc2c147534cda919980827f9379887c2ce13e0759_cppui_modular381), fq2_value_type(0x02c70d3946ab946d2d0ef16d0e2abff83210d18654c20fc48d5d31b33f55387c253935efdf22c7a568902b7915516295_cppui_modular381, 0x18f7b897dc2bbfbf6442a79894dd54dda9b4ac319686282668ed52b1a39293d90c69ee9f8e501fd0f94224c0eecca66f_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x037b3354eb3e7810fe2498a299173e82acb2f42400b004e97de842c1e397b876c44f023cadc7049636f2ee58a49e73ce_cppui_modular381,
+                                                            0x175f5eb8c8849882005291192fae39e67ed2d3acbc597e0eaa4bdeabb3649d3dc6f25996a51fd796cdf6b6a896e17c21_cppui_modular381)),
+                                                    fq6_value_type(
+                                                        fq2_value_type(
+                                                            0x04018918fc2651f3da38fe555b0b0fbb97a0d1876c0e725ef4d15c6d4a443bee61208c6f824a9f292f0e5d322b891811_cppui_modular381,
+                                                            0x0737645e400120e4383af41d9bda3a4d4474f01ca716968ddcb97550ed166b2376fae234dddea9d344df04752c457fdc_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x0fc9dbcf340265515779ec9fcc1439f579b6ac883d848caf41c431f7bd869fdcd1ddae2f9b24e9128b63764e06869339_cppui_modular381,
+                                                            0x0dfaa1b73b35aaff7ae7a0d748934b839c2f89b0d98a753248e85d54f650c53e93c57f0c7e046eecd88d9a1871c398a8_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x0cde71dd1d338f0890ef4fd6a897e806b7bf3ea795331034d13f3f97c05433f8c8aefbd13e5632209c91d656f2121da6_cppui_modular381,
+                                                            0x0562d8702ef0a1fc40d7b25c7f1eb322427b9a73aa899f32500e9dd84196ff6c3551b9ceb8b292cf169be9dd45b2bff1_cppui_modular381))))),
                 };
     std::
         vector<std::pair<typename commitments::kzg_ipp2<curve_type>::output_type,
@@ -3008,7 +2974,10 @@ BOOST_AUTO_TEST_CASE(bls381_aggregate_proofs) {
                                                                                          0x140feb6a0e87b95e1066f986e61bcf0e155085f573e3ce6953e9f6eb7bf0da43ff944ecdee49e4ff07c6ef371fffe69f_cppui_modular381),
                                                                           fq2_value_type(0x11bf6b576dc85512297c890d7db6094f5adc3de7c58daf686e9a681085b4152685afa64b2eeacca3f473026c48bab1c4_cppui_modular381, 0x17f685f39ce930a8a4f85c711540abf6e58a0a55291fc098430f10673f6a235f043d54fa7f30bcdd935f1d048a9d38bb_cppui_modular381), fq2_value_type(0x0bab1207d935191985ffc605354c309f4ec6100348d91b77aacdd2ae5bfe51e87eff8474c0e09bc9b0377a42d9ab887e_cppui_modular381, 0x066e5659b0560951d0e63e640f317bec0d9de916f701ca3377fa8a1f1c72001808d04c3b78597d7fcc607b66dbe4ab61_cppui_modular381)),
                                                            fq6_value_type(
-                                                               fq2_value_type(0x0994bbfeba3680f607ef688816c17a72b1fb08fbe3ad6ffb6bcd3fbbc81b3183d61949fb7a77eac59fc33bcbf6a40503_cppui_modular381, 0x185a593ae89638d8578576309bfbb0ce53ae66c6af1bcf28bdc6d815678852cbddc7cb4630f44b79653f5de0799b9673_cppui_modular381), fq2_value_type(0x066321b303ae08e98a656e378e96d3f2abc4fefd6b39a16f161ef9b3fe8e66b2b7b9b97f58924684afc97143681aa93b_cppui_modular381, 0x1798915ec92dbf49b578aae63caa938f047374d7843afb9d5bd170fe194d3eb4bb57882890ef084cac5690bcc578e53d_cppui_modular381), fq2_value_type(0x0cef8f02eec0326fb9755a9b8bfbeb886733a796d21692d50d60d2a9df64ec12a1db908a2a9c041fcb5ec2d10caf4a49_cppui_modular381, 0x00ba17d787706ca24dcb7c04504802c4cfd58202c5b18e816407794cd62e1063bdb9f7528e12a0d5ea770a9947832298_cppui_modular381))),
+                                                               fq2_value_type(0x0994bbfeba3680f607ef688816c17a72b1fb08fbe3ad6ffb6bcd3fbbc81b3183d61949fb7a77eac59fc33bcbf6a40503_cppui_modular381, 0x185a593ae89638d8578576309bfbb0ce53ae66c6af1bcf28bdc6d815678852cbddc7cb4630f44b79653f5de0799b9673_cppui_modular381), fq2_value_type(0x066321b303ae08e98a656e378e96d3f2abc4fefd6b39a16f161ef9b3fe8e66b2b7b9b97f58924684afc97143681aa93b_cppui_modular381, 0x1798915ec92dbf49b578aae63caa938f047374d7843afb9d5bd170fe194d3eb4bb57882890ef084cac5690bcc578e53d_cppui_modular381),
+                                                               fq2_value_type(
+                                                                   0x0cef8f02eec0326fb9755a9b8bfbeb886733a796d21692d50d60d2a9df64ec12a1db908a2a9c041fcb5ec2d10caf4a49_cppui_modular381,
+                                                                   0x00ba17d787706ca24dcb7c04504802c4cfd58202c5b18e816407794cd62e1063bdb9f7528e12a0d5ea770a9947832298_cppui_modular381))),
                                            fq12_value_type(
                                                fq6_value_type(fq2_value_type(0x06289e93e44a1f090a8e6d8366d6ac723ea5082b349a1321b1acdca8e1902d165ab7e84861286795abbc6d848721e44f_cppui_modular381, 0x0d68f1fba4098fc6bc57dbecdd318862dbd2d339be6112a036abf3f8fa98f33476334540140b86bffecd9883bcd5f3e3_cppui_modular381), fq2_value_type(0x0e6a6f08850c16823f7511758041ab52e3727cefe624150e5eaa3fb96ac80ffd55805de5259dc8ac81db8788600f0b1b_cppui_modular381, 0x092bb3dd5a6865c86e050ea7414823021cd7eee3efd6a40d1e59f84f916af3b49fd0988050b9b669b8a5e5c353a0cab4_cppui_modular381), fq2_value_type(0x00aeada84f5d058c3e44a7c3e90a8cb5ebbd5251e5ddd97b72f757fd20f4fdcc39f4172fee3b8f543061ffecaf536eda_cppui_modular381, 0x16067019047eb683cf3a271d6d8f544bfdb4cce61caee90278c7ca6c7521e26e3d3eb2a112e25888ee7306bbe7cc2dac_cppui_modular381)), fq6_value_type(
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  fq2_value_type(0x0b86c9301cbaec27f72357021fd609cbece937bd247d4d3613fe1c5a167467e8c646668f17ba22f3fc77a8ddbc7cd64c_cppui_modular381, 0x053eb955cbf20eb9ccbb8bfd136632eb1628c9667a2f87218424229945ce42ad4a01b855bbc66c7f578e4034e889ffa8_cppui_modular381), fq2_value_type(0x07733a893ff37d7d9e53a6155733406ba6e1931ae1a802ac632b540fd3e0cbbf6a7863d97435c208960767d8c03b539b_cppui_modular381, 0x1580abf5c7aaff0261a561a5d4cb7eb9bef8348fa9fe3dc8f1365db10470b2d9a3323353adfe2b38b90c4a9367ffb255_cppui_modular381), fq2_value_type(0x018fd046d712339252313c04626d8ddd34f56b2f4ccff59f58a473fb211e4c4eb1576814fe464f6cc31335a26d26d1e6_cppui_modular381, 0x198de2cfeb262028d3eef3c51c84cdaf9bb9b2298d3180b151c85e483ebfb84bfa7f32d74ab0703d43422b3de6e298d1_cppui_modular381)))),
@@ -3059,84 +3028,69 @@ BOOST_AUTO_TEST_CASE(bls381_aggregate_proofs) {
                     std::
                         make_pair(
                             std::
-                                make_pair(fq12_value_type(
-                                              fq6_value_type(fq2_value_type(0x08dd0baf4cc4c55021fdbf8bcd38d27c83c32f1a8f2420e3d017e14f8036029dce4b47960f4fc8fc6bf7afa91be69786_cppui_modular381, 0x06357e6e9524296b36c9c6cc5af30b2a0c1ff45578bd1eca61121b6fd0966611819af112d55fbcecc4cc71da7d86adfc_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x0f997e9e9d34738cea97c195b306d07235767cc63003d60af6c6b18d030c6bc46ea928498a3f7ba96a7c327a9fe34ebf_cppui_modular381,
-                                                                 0x15444304c6d940d83e7f0dd0e0ab9f528d82738726089da10300a6dfa1fb6eb66c4dd760ecae1e75eeaa48ef6eb29103_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x1588fca489c1c013a9e78dfadf1f0b126d9a1764a99fa0478875c7025f90f4827ca8bb203133b795a0aaa90df34e3699_cppui_modular381,
-                                                                 0x1485952c24f16f864671b4d6c143ef8daef69d402ea93acca4b3c168349b20a820c3ad32658fd3c89515b676e8202356_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x11c90fac4fc1e3908a484c66f320547ecb517db17c62d9b9d8ec4a4a57aa98da490130ab59b93179ed5545d503c612f5_cppui_modular381,
-                                                      0x10300a9b011ab7a2834ce2dfa93830aae20e4b85727d28ee5f5b59c24fa453eeaa0ea4a78814d6c024ba17c986e2763c_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0cd16d4877b9e65b377fa9d3b47d8cb5a5c0ed0282bb5a4bc5b2a60beb12fcce5ffb2f9d75d6bd582309f65d75e06c79_cppui_modular381,
-                                                      0x03396813e004b74711e8285b45e809f3e2833c9895ccfd30afac7f47dc741ce5f4a9cdd28a2a8f2e257cddafb68757e2_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0e5076adabf1e281e5ce7d000f43294dbaecf2842c474a8a06a7078652145ff376182743d11289ace4ba83386c81f572_cppui_modular381,
-                                                      0x0a6d7c45532b1a5ec8f69c7cd4ff78bdc94a7a3d00906f7f00cbbeaaaef4cb574c05587f617842c130bc42eca098af51_cppui_modular381))),
-                                          fq12_value_type(
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x159f089315703e2aefb16fa4aea24c64838eacc7310edab6f77ca2554d4302b5570511aaef4d9d751d316de4304828ae_cppui_modular381,
-                                                      0x064244a2309f7fe1aa66bc9df4a337597c55e5791b5b02ec21ff0eb8076c4dc8f87739409afa3b6eba77405bd0b313f0_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0ef9c735e1af2d26a684783ae0b730642fc0d3d691f5998fc854c73643001709530f0893e49a258a1ba0cd3ce0aa27b1_cppui_modular381,
-                                                      0x09e25b9707ee53b9b18aa441368ecf0d79d4c9f464613a17cfe869bc094e9ddb03b6b8dcafae03413d888edd8a4de865_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0ea2624da7a7def6e791f0a4eb3a9f76f66d861df5208ffa4c37b5eefa10d5f2a82d059c7002f1a5985ffcac9c2935db_cppui_modular381,
-                                                      0x17a94557a70dcf590a104eb033a2cc92df7ee0135dfe21c51c6e197c6432ce32119d745e29d6a34e5e61c8b442446288_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x01dc01a6745a3944d241ff50c00646174c842e1c0027819be6e7c1826ffd9cf44d7d2ceca1d7f27e76213f45d6b7e980_cppui_modular381,
-                                                      0x0f18ce5e2a3dc1a4f8c1f2ff9519c87fe386138b6eb6b36bdafedf63d43c206c4e4b34d4ed919f220928aef9efcb467e_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x18ccfe922cb1f77adb6b24ff40eb995bd54d522629395b3929f0cf98a3a21c6442a41b9f778d78415957d72dfdf8ba43_cppui_modular381,
-                                                      0x0eafc73663c4558da4e54ab01551a9fdafce32f5c56992e11c3c85b89c92bcd3cb5e3649fd60f35ca98b455455604ee1_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x1143774b3ef69def99f7d4e2b1e971e581c538e6db2d01420b1037f169eea9c0cd9d2fb4531b735d35e265ee186a798c_cppui_modular381,
-                                                      0x0bbc868064be0ba9bae5804af675a0927fce83caf64b6937d277bb7d7d7aa1ce3e23ada0eaadee28c326b5644677ca38_cppui_modular381)))),
+                                make_pair(fq12_value_type(fq6_value_type(
+                                                              fq2_value_type(0x08dd0baf4cc4c55021fdbf8bcd38d27c83c32f1a8f2420e3d017e14f8036029dce4b47960f4fc8fc6bf7afa91be69786_cppui_modular381, 0x06357e6e9524296b36c9c6cc5af30b2a0c1ff45578bd1eca61121b6fd0966611819af112d55fbcecc4cc71da7d86adfc_cppui_modular381), fq2_value_type(0x0f997e9e9d34738cea97c195b306d07235767cc63003d60af6c6b18d030c6bc46ea928498a3f7ba96a7c327a9fe34ebf_cppui_modular381, 0x15444304c6d940d83e7f0dd0e0ab9f528d82738726089da10300a6dfa1fb6eb66c4dd760ecae1e75eeaa48ef6eb29103_cppui_modular381), fq2_value_type(0x1588fca489c1c013a9e78dfadf1f0b126d9a1764a99fa0478875c7025f90f4827ca8bb203133b795a0aaa90df34e3699_cppui_modular381, 0x1485952c24f16f864671b4d6c143ef8daef69d402ea93acca4b3c168349b20a820c3ad32658fd3c89515b676e8202356_cppui_modular381)),
+                                                          fq6_value_type(fq2_value_type(0x11c90fac4fc1e3908a484c66f320547ecb517db17c62d9b9d8ec4a4a57aa98da490130ab59b93179ed5545d503c612f5_cppui_modular381,
+                                                                                        0x10300a9b011ab7a2834ce2dfa93830aae20e4b85727d28ee5f5b59c24fa453eeaa0ea4a78814d6c024ba17c986e2763c_cppui_modular381),
+                                                                         fq2_value_type(0x0cd16d4877b9e65b377fa9d3b47d8cb5a5c0ed0282bb5a4bc5b2a60beb12fcce5ffb2f9d75d6bd582309f65d75e06c79_cppui_modular381,
+                                                                                        0x03396813e004b74711e8285b45e809f3e2833c9895ccfd30afac7f47dc741ce5f4a9cdd28a2a8f2e257cddafb68757e2_cppui_modular381),
+                                                                         fq2_value_type(0x0e5076adabf1e281e5ce7d000f43294dbaecf2842c474a8a06a7078652145ff376182743d11289ace4ba83386c81f572_cppui_modular381,
+                                                                                        0x0a6d7c45532b1a5ec8f69c7cd4ff78bdc94a7a3d00906f7f00cbbeaaaef4cb574c05587f617842c130bc42eca098af51_cppui_modular381))),
+                                          fq12_value_type(fq6_value_type(fq2_value_type(0x159f089315703e2aefb16fa4aea24c64838eacc7310edab6f77ca2554d4302b5570511aaef4d9d751d316de4304828ae_cppui_modular381, 0x064244a2309f7fe1aa66bc9df4a337597c55e5791b5b02ec21ff0eb8076c4dc8f87739409afa3b6eba77405bd0b313f0_cppui_modular381),
+                                                                         fq2_value_type(
+                                                                             0x0ef9c735e1af2d26a684783ae0b730642fc0d3d691f5998fc854c73643001709530f0893e49a258a1ba0cd3ce0aa27b1_cppui_modular381,
+                                                                             0x09e25b9707ee53b9b18aa441368ecf0d79d4c9f464613a17cfe869bc094e9ddb03b6b8dcafae03413d888edd8a4de865_cppui_modular381),
+                                                                         fq2_value_type(
+                                                                             0x0ea2624da7a7def6e791f0a4eb3a9f76f66d861df5208ffa4c37b5eefa10d5f2a82d059c7002f1a5985ffcac9c2935db_cppui_modular381,
+                                                                             0x17a94557a70dcf590a104eb033a2cc92df7ee0135dfe21c51c6e197c6432ce32119d745e29d6a34e5e61c8b442446288_cppui_modular381)),
+                                                          fq6_value_type(
+                                                              fq2_value_type(
+                                                                  0x01dc01a6745a3944d241ff50c00646174c842e1c0027819be6e7c1826ffd9cf44d7d2ceca1d7f27e76213f45d6b7e980_cppui_modular381,
+                                                                  0x0f18ce5e2a3dc1a4f8c1f2ff9519c87fe386138b6eb6b36bdafedf63d43c206c4e4b34d4ed919f220928aef9efcb467e_cppui_modular381),
+                                                              fq2_value_type(
+                                                                  0x18ccfe922cb1f77adb6b24ff40eb995bd54d522629395b3929f0cf98a3a21c6442a41b9f778d78415957d72dfdf8ba43_cppui_modular381,
+                                                                  0x0eafc73663c4558da4e54ab01551a9fdafce32f5c56992e11c3c85b89c92bcd3cb5e3649fd60f35ca98b455455604ee1_cppui_modular381),
+                                                              fq2_value_type(
+                                                                  0x1143774b3ef69def99f7d4e2b1e971e581c538e6db2d01420b1037f169eea9c0cd9d2fb4531b735d35e265ee186a798c_cppui_modular381,
+                                                                  0x0bbc868064be0ba9bae5804af675a0927fce83caf64b6937d277bb7d7d7aa1ce3e23ada0eaadee28c326b5644677ca38_cppui_modular381)))),
                             std::
-                                make_pair(fq12_value_type(
-                                              fq6_value_type(fq2_value_type(0x0df1ff4f82018bfe1cfd879bdbc8aa66f42d07e78badb345ca804c320e14b593f55567aef00fdf6ada5e096ae38e5656_cppui_modular381,
-                                                                            0x133d5671ff5915bb541937c6f188150ed7545041d34138748de789a72cb3f48fb9461c3d3f737a3110c242225fb96d38_cppui_modular381),
-                                                             fq2_value_type(0x0edfed06e1ea698794252092f1968c4bb18c7ff388b70db9e7f9b1b14f690581ce50d1020122e157ec92e1144649e81f_cppui_modular381, 0x0f1c6ed1e65a9a5bf4b84e0eae5e0a18cc701438966aec2643ced3760266ddc54c22dc5a421111f62f66038d7b552a2b_cppui_modular381),
-                                                             fq2_value_type(
-                                                                 0x037ecc3d63a0a1df33aa8ba2af6dfe2f63ea0418ddda51c7f5c3c19b527704d2af48e6af9976bb6af43bd866b041107e_cppui_modular381,
-                                                                 0x09cd0a0635f4723dd6401df07f6da09783ef8ac2206fc2eff5dd69d8daafb9d0514528751fad7cd4fbc5280021cb6f0d_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x0998c7d54a67abb5d49438a1c964ba41c97443b500c6f05578bef4656e34549078d4db7db82f32cf104c7583cb59a30c_cppui_modular381,
-                                                      0x03fb13d0599f286d73197fdc49ba4ac17337a19b7b3e0034c28aac0b29ab14923b5d3bd23953d607c8761ad2a74292f0_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x11c43bb1b8a41d198101012f2c87f4248d4b0a714da37215dc0dfb9d619adaf8afe50d7cd8a8675d3f3ab828150d109d_cppui_modular381,
-                                                      0x16579444d29882a2471491f2bd413914bdf8afbb6646d3f6c33c0978c31bec9919b5b6fd08f2f218e0c1634e296dadcc_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0cd273e525a01b0ba847beaa413c1d87e640a794185575deae98f4a4c32e4e36386f0d2478be6cc3bcb41f9113e99586_cppui_modular381,
-                                                      0x04ced2941685b97a5fa763c0df6c8e41bc53700bb7334f7648e9cbf51fdf637639f979e481ff4b5dce565ef623746b6b_cppui_modular381))),
-                                          fq12_value_type(
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x164bcb92b4ec4782513bc30c122be365c2e74eaadb0035cd621988e6b1e1a5b1035ed030e3c47d8404ce13eedc36ddac_cppui_modular381,
-                                                      0x16e5a378b57a78724c00709036d075e6dfdfdbc52bf3f697fa41208d76e88d862111da45bcd4f7ad2cf1e1f63f99ded3_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x15ca4c2066a322d885a0715b589adbdc4ff08c6f3e73e53002f04e88ee1ea2483c4fa81a5496568d1e9ebdaf5102a4d1_cppui_modular381,
-                                                      0x078d68ca700bea300310148e86b2c5e67b4013cc4326ae76f047047bd6a3f17ae787aa98d89b497b42da073f8e900da4_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x15c422b4b59d3641675e83294b50080d353c1ac882ad5dff9e169f295d564167d406b6a781c4e860ef02bd6a8ccd0c9c_cppui_modular381,
-                                                      0x0c71c2aa2643a71b09d3ebd535cca5f345abdabef6890a2f9f9d5cc2eef1559d11cf81a90aa3c84394f334871cf4f0ca_cppui_modular381)),
-                                              fq6_value_type(
-                                                  fq2_value_type(
-                                                      0x103d3e9e7773178bac69c29aab093a153bd0c4a2dd542f29ba1e6e8df906d81fc09810b4c6e9e6006b3f15d43f101708_cppui_modular381,
-                                                      0x1428ba2ee1704eddb5bc89fae3c1e6914a5a30e5588995a892e23bcc242e9950119f6886bc6e4571ed685021545a15d1_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x105fbc5a3bdc0c5e23ee423a142eeaa36144597bc119c98be7282beb7ff79c5838afe711eb7fa8509a8d52d1310dd1cf_cppui_modular381,
-                                                      0x0b464223972eb42d4f7b327e091fc31f39448e9717ff457c4dd3cf01b6c50b0671f2b1b1d4a6ffe357d553de02a6500f_cppui_modular381),
-                                                  fq2_value_type(
-                                                      0x0887d566eaee0c1b5fbe3f023f4e069f542d8f09aaa8934e6dc9d82e11b5e5b0a0f183dcc830961a480bdb77e4008a1f_cppui_modular381,
-                                                      0x093fecfd59f5c1bbcde139a46fb9c60ad42f4a3a7b216b356986af0a5f2a2736c5f55aa36add7d423673a6a872e1aeac_cppui_modular381))))),
+                                make_pair(
+                                    fq12_value_type(
+                                        fq6_value_type(
+                                            fq2_value_type(
+                                                0x0df1ff4f82018bfe1cfd879bdbc8aa66f42d07e78badb345ca804c320e14b593f55567aef00fdf6ada5e096ae38e5656_cppui_modular381,
+                                                0x133d5671ff5915bb541937c6f188150ed7545041d34138748de789a72cb3f48fb9461c3d3f737a3110c242225fb96d38_cppui_modular381),
+                                            fq2_value_type(
+                                                0x0edfed06e1ea698794252092f1968c4bb18c7ff388b70db9e7f9b1b14f690581ce50d1020122e157ec92e1144649e81f_cppui_modular381,
+                                                0x0f1c6ed1e65a9a5bf4b84e0eae5e0a18cc701438966aec2643ced3760266ddc54c22dc5a421111f62f66038d7b552a2b_cppui_modular381),
+                                            fq2_value_type(
+                                                0x037ecc3d63a0a1df33aa8ba2af6dfe2f63ea0418ddda51c7f5c3c19b527704d2af48e6af9976bb6af43bd866b041107e_cppui_modular381,
+                                                0x09cd0a0635f4723dd6401df07f6da09783ef8ac2206fc2eff5dd69d8daafb9d0514528751fad7cd4fbc5280021cb6f0d_cppui_modular381)),
+                                        fq6_value_type(
+                                            fq2_value_type(
+                                                0x0998c7d54a67abb5d49438a1c964ba41c97443b500c6f05578bef4656e34549078d4db7db82f32cf104c7583cb59a30c_cppui_modular381,
+                                                0x03fb13d0599f286d73197fdc49ba4ac17337a19b7b3e0034c28aac0b29ab14923b5d3bd23953d607c8761ad2a74292f0_cppui_modular381),
+                                            fq2_value_type(
+                                                0x11c43bb1b8a41d198101012f2c87f4248d4b0a714da37215dc0dfb9d619adaf8afe50d7cd8a8675d3f3ab828150d109d_cppui_modular381,
+                                                0x16579444d29882a2471491f2bd413914bdf8afbb6646d3f6c33c0978c31bec9919b5b6fd08f2f218e0c1634e296dadcc_cppui_modular381),
+                                            fq2_value_type(
+                                                0x0cd273e525a01b0ba847beaa413c1d87e640a794185575deae98f4a4c32e4e36386f0d2478be6cc3bcb41f9113e99586_cppui_modular381,
+                                                0x04ced2941685b97a5fa763c0df6c8e41bc53700bb7334f7648e9cbf51fdf637639f979e481ff4b5dce565ef623746b6b_cppui_modular381))),
+                                    fq12_value_type(fq6_value_type(
+                                                        fq2_value_type(0x164bcb92b4ec4782513bc30c122be365c2e74eaadb0035cd621988e6b1e1a5b1035ed030e3c47d8404ce13eedc36ddac_cppui_modular381, 0x16e5a378b57a78724c00709036d075e6dfdfdbc52bf3f697fa41208d76e88d862111da45bcd4f7ad2cf1e1f63f99ded3_cppui_modular381), fq2_value_type(0x15ca4c2066a322d885a0715b589adbdc4ff08c6f3e73e53002f04e88ee1ea2483c4fa81a5496568d1e9ebdaf5102a4d1_cppui_modular381, 0x078d68ca700bea300310148e86b2c5e67b4013cc4326ae76f047047bd6a3f17ae787aa98d89b497b42da073f8e900da4_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x15c422b4b59d3641675e83294b50080d353c1ac882ad5dff9e169f295d564167d406b6a781c4e860ef02bd6a8ccd0c9c_cppui_modular381,
+                                                            0x0c71c2aa2643a71b09d3ebd535cca5f345abdabef6890a2f9f9d5cc2eef1559d11cf81a90aa3c84394f334871cf4f0ca_cppui_modular381)),
+                                                    fq6_value_type(
+                                                        fq2_value_type(
+                                                            0x103d3e9e7773178bac69c29aab093a153bd0c4a2dd542f29ba1e6e8df906d81fc09810b4c6e9e6006b3f15d43f101708_cppui_modular381,
+                                                            0x1428ba2ee1704eddb5bc89fae3c1e6914a5a30e5588995a892e23bcc242e9950119f6886bc6e4571ed685021545a15d1_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x105fbc5a3bdc0c5e23ee423a142eeaa36144597bc119c98be7282beb7ff79c5838afe711eb7fa8509a8d52d1310dd1cf_cppui_modular381,
+                                                            0x0b464223972eb42d4f7b327e091fc31f39448e9717ff457c4dd3cf01b6c50b0671f2b1b1d4a6ffe357d553de02a6500f_cppui_modular381),
+                                                        fq2_value_type(
+                                                            0x0887d566eaee0c1b5fbe3f023f4e069f542d8f09aaa8934e6dc9d82e11b5e5b0a0f183dcc830961a480bdb77e4008a1f_cppui_modular381,
+                                                            0x093fecfd59f5c1bbcde139a46fb9c60ad42f4a3a7b216b356986af0a5f2a2736c5f55aa36add7d423673a6a872e1aeac_cppui_modular381))))),
                 };
     std::vector<std::pair<fq12_value_type, fq12_value_type>> prf_gp_z_ab = {
         std::make_pair(
@@ -5589,8 +5543,9 @@ BOOST_AUTO_TEST_CASE(bls381_verification_mimc) {
             fq_value_type::one()),
         G1_value_type(
             0x13b9051f592110c431fc91d9f2c485f343d4a35cbb311753c1d57e673678a9a9ebafbd6af1175ec764c7cb4414244f25_cppui_modular381,
-            0x0984164d7f949e15e6cba14ebbf8ddf946eb4f676f42202156b0ab9536750a1e2a11f9a51153c85add517f645bfe4b78_cppui_modular381,
-            fq_value_type::one()));
+             0x0984164d7f949e15e6cba14ebbf8ddf946eb4f676f42202156b0ab9536750a1e2a11f9a51153c85add517f645bfe4b78_cppui_modular381,
+             fq_value_type::one()));
+    // clang-format on
 
     BOOST_CHECK_EQUAL(ip_ab, agg_proof.ip_ab);
     BOOST_CHECK_EQUAL(agg_c, agg_proof.agg_c);
