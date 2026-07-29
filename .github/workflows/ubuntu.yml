@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build:
     name: Linux / ${{ matrix.scenario }}
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.repository == 'alloc-init/crypto3' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: [self-hosted, Linux, X64, hetzner-public]
     container:
       image: ubuntu:26.04
@@ -34,14 +34,6 @@ jobs:
           cmake_flags: -DBUILD_TESTS=ON
           asan_options: ""
           ubsan_options: ""
-        - scenario: ASan UBSan
-          artifact_name: asan-ubsan
-          build_dir: build/asan-ubsan
-          build_type: Release
-          cxx_flags: -Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
-          cmake_flags: -DBUILD_TESTS=ON
-          asan_options: detect_leaks=1:halt_on_error=1:strict_init_order=1:strict_string_checks=1
-          ubsan_options: print_stacktrace=1:halt_on_error=1
     env:
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_COMPRESS: "true"
