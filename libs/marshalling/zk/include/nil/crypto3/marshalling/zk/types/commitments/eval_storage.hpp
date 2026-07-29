@@ -25,9 +25,14 @@
 #ifndef CRYPTO3_MARSHALLING_EVAL_STORAGE_HPP
 #define CRYPTO3_MARSHALLING_EVAL_STORAGE_HPP
 
-#include <ratio>
+#include <cstdint>
 #include <limits>
+#include <map>
+#include <ratio>
+#include <stdexcept>
+#include <tuple>
 #include <type_traits>
+#include <vector>
 
 #include <boost/assert.hpp>
 
@@ -38,8 +43,6 @@
 #include <nil/marshalling/options.hpp>
 
 #include <nil/crypto3/marshalling/algebra/types/field_element.hpp>
-#include <nil/crypto3/marshalling/containers/types/merkle_proof.hpp>
-#include <nil/crypto3/marshalling/zk/types/commitments/fri.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -81,7 +84,7 @@ namespace nil {
                     fill_eval_storage(const EvalStorage &z) {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
 
-                    nil::crypto3::marshalling::types::batch_info_type batch_info;
+                    std::map<std::size_t, std::size_t> batch_info;
 
                     nil::marshalling::types::standard_array_list<TTypeBase,
                                                                  nil::marshalling::types::integral<TTypeBase, uint8_t>>
@@ -127,7 +130,7 @@ namespace nil {
                 EvalStorage make_eval_storage(
                     const eval_storage<nil::marshalling::field_type<Endianness>, EvalStorage> &filled_storage) {
                     EvalStorage z;
-                    typename nil::crypto3::marshalling::types::batch_info_type batch_info;
+                    std::map<std::size_t, std::size_t> batch_info;
                     std::vector<std::uint8_t> eval_points_num;
 
                     auto filled_batch_info = std::get<1>(filled_storage.value()).value();
@@ -172,4 +175,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_MARSHALLING_LPC_COMMITMENT_HPP
+#endif    // CRYPTO3_MARSHALLING_EVAL_STORAGE_HPP
