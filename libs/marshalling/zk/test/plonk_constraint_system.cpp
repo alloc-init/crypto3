@@ -33,6 +33,7 @@
 #include <nil/crypto3/marshalling/zk/types/plonk/gate.hpp>
 #include <nil/crypto3/marshalling/zk/types/plonk/constraint_system.hpp>
 
+#include <nil/crypto3/zk/commitments/polynomial/lpc.hpp>
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/detail/placeholder_policy.hpp>
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/params.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/plonk/variable.hpp>
