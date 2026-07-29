@@ -16,14 +16,33 @@ concurrency:
 
 jobs:
   build:
-    name: Linux / Release
+    name: Linux / ${{ matrix.scenario }}
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, Linux, X64, hetzner-public]
     container:
       image: ubuntu:26.04
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - scenario: Release
+          artifact_name: release
+          build_dir: build/release
+          build_type: Release
+          cxx_flags: -Werror
+          cmake_flags: -DBUILD_TESTS=ON
+          asan_options: ""
+          ubsan_options: ""
+        - scenario: ASan UBSan
+          artifact_name: asan-ubsan
+          build_dir: build/asan-ubsan
+          build_type: Release
+          cxx_flags: -Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
+          cmake_flags: -DBUILD_TESTS=ON
+          asan_options: detect_leaks=1:halt_on_error=1:strict_init_order=1:strict_string_checks=1
+          ubsan_options: print_stacktrace=1:halt_on_error=1
     env:
-      BUILD_DIR: build/release
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_COMPRESS: "true"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -66,33 +85,36 @@ jobs:
       run: |
         cmake_args=(
           -S .
-          -B "$BUILD_DIR"
+          -B "${{ matrix.build_dir }}"
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
-          -DCMAKE_CXX_FLAGS=-Werror
-          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }}"
+          -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"
         )
 
-        cmake "${cmake_args[@]}" -DBUILD_TESTS=ON
+        cmake "${cmake_args[@]}" ${{ matrix.cmake_flags }}
 
     - name: List tests
-      run: ctest --test-dir "$BUILD_DIR" -N | tee "$BUILD_DIR/ctest-tests.txt"
+      run: ctest --test-dir "${{ matrix.build_dir }}" -N | tee "${{ matrix.build_dir }}/ctest-tests.txt"
 
     - name: Compile tests
       run: |
-        cmake --build "$BUILD_DIR" --target tests --parallel "$(nproc)"
+        cmake --build "${{ matrix.build_dir }}" --target tests --parallel "$(nproc)"
 
     - name: Run tests
+      env:
+        ASAN_OPTIONS: ${{ matrix.asan_options }}
+        UBSAN_OPTIONS: ${{ matrix.ubsan_options }}
       run: |
-        ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel "$(nproc)" --timeout "$CTEST_TIMEOUT_SECONDS" --output-junit "$BUILD_DIR/ctest-results.xml"
+        ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure --parallel "$(nproc)" --timeout "$CTEST_TIMEOUT_SECONDS" --output-junit "${{ matrix.build_dir }}/ctest-results.xml"
 
     - name: Upload test logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: ubuntu-ci-release-test-results
+        name: ubuntu-ci-${{ matrix.artifact_name }}-test-results
         path: |
-          ${{ env.BUILD_DIR }}/ctest-tests.txt
-          ${{ env.BUILD_DIR }}/ctest-results.xml
-          ${{ env.BUILD_DIR }}/Testing/
+          ${{ matrix.build_dir }}/ctest-tests.txt
+          ${{ matrix.build_dir }}/ctest-results.xml
+          ${{ matrix.build_dir }}/Testing/
         if-no-files-found: ignore
