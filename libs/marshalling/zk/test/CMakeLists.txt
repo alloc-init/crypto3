@@ -63,7 +63,8 @@ set(TESTS_NAMES
         "fri_commitment"
         "lpc_commitment"
         "polys_evaluator"
-        "placeholder_proof"
+        "placeholder_lpc_proof"
+        "placeholder_kzg_proof"
         "placeholder_common_data"
         "placeholder_preprocessed_public_data"
         "plonk_gates"
@@ -77,7 +78,8 @@ foreach(TEST_NAME ${TESTS_NAMES})
 endforeach()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(marshalling_zk_placeholder_proof_test PRIVATE -O1)
+    target_compile_options(marshalling_zk_placeholder_lpc_proof_test PRIVATE -O1)
+    target_compile_options(marshalling_zk_placeholder_kzg_proof_test PRIVATE -O1)
 endif()
 
 target_compile_definitions(marshalling_zk_merkle_proof_test PRIVATE
