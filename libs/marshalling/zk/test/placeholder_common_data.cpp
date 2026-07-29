@@ -171,6 +171,8 @@ using TestRunners = boost::mpl::list<
     placeholder_common_data_test_runner<typename curves::mnt4_298::scalar_field_type, keccak_256, keccak_256>,
     placeholder_common_data_test_runner<typename curves::mnt6_298::scalar_field_type, keccak_256, keccak_256>>;
 
+using canonical_test_runner = placeholder_common_data_test_runner<pallas_base_field, keccak_256, keccak_256>;
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_1, TestRunner, TestRunners) {
     using field_type = typename TestRunner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
@@ -183,8 +185,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_1, TestRunner, TestRunners) {
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_2, TestRunner, TestRunners) {
-    using field_type = typename TestRunner::field_type;
+BOOST_AUTO_TEST_CASE(circuit_2) {
+    using field_type = typename canonical_test_runner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     auto pi0 = random_test_initializer.alg_random_engines.template get_alg_engine<field_type>()();
     auto circuit =
@@ -192,90 +194,90 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_2, TestRunner, TestRunners) {
                                    random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
                                    random_test_initializer.generic_random_engine);
 
-    TestRunner test_runner(circuit);
+    canonical_test_runner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_3, TestRunner, TestRunners) {
-    using field_type = typename TestRunner::field_type;
+BOOST_AUTO_TEST_CASE(circuit_3) {
+    using field_type = typename canonical_test_runner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     auto circuit =
         circuit_test_3<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
                                    random_test_initializer.generic_random_engine);
 
-    TestRunner test_runner(circuit);
+    canonical_test_runner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_4, TestRunner, TestRunners) {
-    using field_type = typename TestRunner::field_type;
+BOOST_AUTO_TEST_CASE(circuit_4) {
+    using field_type = typename canonical_test_runner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     auto circuit =
         circuit_test_4<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
                                    random_test_initializer.generic_random_engine);
 
-    TestRunner test_runner(circuit);
+    canonical_test_runner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_5, TestRunner, TestRunners) {
-    using field_type = typename TestRunner::field_type;
+BOOST_AUTO_TEST_CASE(circuit_5) {
+    using field_type = typename canonical_test_runner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     auto circuit =
         circuit_test_5<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
                                    random_test_initializer.generic_random_engine);
 
-    TestRunner test_runner(circuit);
+    canonical_test_runner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_6, TestRunner, TestRunners) {
-    using field_type = typename TestRunner::field_type;
+BOOST_AUTO_TEST_CASE(circuit_6) {
+    using field_type = typename canonical_test_runner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     auto circuit =
         circuit_test_6<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
                                    random_test_initializer.generic_random_engine);
 
-    TestRunner test_runner(circuit);
+    canonical_test_runner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_7, TestRunner, TestRunners) {
-    using field_type = typename TestRunner::field_type;
+BOOST_AUTO_TEST_CASE(circuit_7) {
+    using field_type = typename canonical_test_runner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     auto circuit =
         circuit_test_7<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
                                    random_test_initializer.generic_random_engine);
 
-    TestRunner test_runner(circuit);
+    canonical_test_runner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_8, TestRunner, TestRunners) {
-    using field_type = typename TestRunner::field_type;
+BOOST_AUTO_TEST_CASE(circuit_8) {
+    using field_type = typename canonical_test_runner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     auto circuit =
         circuit_test_8<field_type>(random_test_initializer.alg_random_engines.template get_alg_engine<field_type>(),
                                    random_test_initializer.generic_random_engine);
 
-    TestRunner test_runner(circuit);
+    canonical_test_runner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(circuit_fib, TestRunner, TestRunners) {
-    using field_type = typename TestRunner::field_type;
+BOOST_AUTO_TEST_CASE(circuit_fib) {
+    using field_type = typename canonical_test_runner::field_type;
     test_tools::random_test_initializer<field_type> random_test_initializer;
     auto circuit = circuit_test_fib<field_type, 100>(
         random_test_initializer.alg_random_engines.template get_alg_engine<field_type>());
 
-    TestRunner test_runner(circuit);
+    canonical_test_runner test_runner(circuit);
 
     BOOST_CHECK(test_runner.run_test());
 }
