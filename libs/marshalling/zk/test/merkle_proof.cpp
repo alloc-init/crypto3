@@ -33,6 +33,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 
 #include <nil/marshalling/status_type.hpp>
@@ -66,11 +67,10 @@ void print_hex_byteblob(std::ostream &os, TIter iter_begin, TIter iter_end, bool
 template<typename MerkleProofIterator, typename VerifiedDataIterator>
 void print_merkle_proof(MerkleProofIterator merkle_proof_begin, MerkleProofIterator merkle_proof_end,
                         VerifiedDataIterator verified_data_begin, VerifiedDataIterator verified_data_end, bool endl) {
-    std::ofstream merkle_out;
-    merkle_out.open("merkle_proof.txt");
+    const std::filesystem::path output_dir(CRYPTO3_TEST_OUTPUT_DIR);
+    std::ofstream merkle_out(output_dir / "merkle_proof.txt");
     print_hex_byteblob(merkle_out, merkle_proof_begin, merkle_proof_end, endl);
-    std::ofstream merkle_verified_data_out;
-    merkle_verified_data_out.open("merkle_proof_verified_data.txt");
+    std::ofstream merkle_verified_data_out(output_dir / "merkle_proof_verified_data.txt");
     print_hex_byteblob(merkle_verified_data_out, verified_data_begin, verified_data_end, endl);
 }
 
