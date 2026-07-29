@@ -78,8 +78,20 @@ foreach(TEST_NAME ${TESTS_NAMES})
 endforeach()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(marshalling_zk_placeholder_lpc_proof_test PRIVATE -O1)
-    target_compile_options(marshalling_zk_placeholder_kzg_proof_test PRIVATE -O1)
+    set(LOW_OPTIMIZATION_TESTS
+        kzg_commitment
+        placeholder_lpc_proof
+        placeholder_kzg_proof
+        placeholder_common_data
+        placeholder_preprocessed_public_data
+        plonk_gates
+        plonk_constraint_system
+        plonk_assignment_table)
+
+    foreach(TEST_NAME ${LOW_OPTIMIZATION_TESTS})
+        target_compile_options(marshalling_zk_${TEST_NAME}_test PRIVATE
+            "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O1>")
+    endforeach()
 endif()
 
 target_compile_definitions(marshalling_zk_merkle_proof_test PRIVATE

@@ -97,6 +97,34 @@ foreach(TEST_NAME ${TESTS_NAMES})
     define_zk_test(${TEST_NAME})
 endforeach()
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    set(LOW_OPTIMIZATION_TESTS
+        "commitment/lpc"
+        "commitment/fri"
+        "commitment/kzg"
+        "commitment/powers_of_tau"
+        "commitment/r1cs_gg_ppzksnark_mpc"
+        "systems/plonk/placeholder/placeholder_circuits"
+        "systems/plonk/placeholder/placeholder_circuits_dFRI"
+        "systems/plonk/placeholder/placeholder_koalabear"
+        "systems/plonk/placeholder/placeholder_lookup_argument"
+        "systems/plonk/placeholder/placeholder_gate_argument"
+        "systems/plonk/placeholder/placeholder_permutation_argument"
+        "systems/plonk/placeholder/placeholder_kzg"
+        "systems/plonk/placeholder/placeholder_hashes"
+        "systems/plonk/placeholder/placeholder_curves"
+        "systems/plonk/placeholder/placeholder_quotient_polynomial_chunks"
+        "systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark"
+        "systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark"
+        "systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark_aggregation_conformity")
+
+    foreach(TEST_NAME ${LOW_OPTIMIZATION_TESTS})
+        string(REPLACE "/" "_" full_test_name ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_${TEST_NAME}_test)
+        target_compile_options(${full_test_name} PRIVATE
+            "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O1>")
+    endforeach()
+endif()
+
 if(BUILD_BENCH_TESTS)
     cm_add_test_subdirectory(bench_test)
 endif()
