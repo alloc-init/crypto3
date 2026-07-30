@@ -120,8 +120,13 @@ add_library(${CMAKE_WORKSPACE_NAME}::${CURRENT_PROJECT_NAME} ALIAS ${CMAKE_WORKS
 set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
         EXPORT_NAME ${CURRENT_PROJECT_NAME})
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE "${ARGV2}" "-fconstexpr-steps=2147483647" "-ftemplate-backtrace-limit=0")
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(
+        ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
+        INTERFACE
+        "${ARGV2}"
+        "-fconstexpr-steps=2147483647"
+        "-ftemplate-backtrace-limit=0")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE "${ARGV2}" "-fconstexpr-ops-limit=4294967295" "-ftemplate-backtrace-limit=0")
 endif()
