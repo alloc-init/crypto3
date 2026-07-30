@@ -41,7 +41,8 @@ root
     |-- pkpad                Public-key padding schemes
     |-- pubkey               Public-key schemes and secret sharing
     |-- random               Randomization primitives
-    `-- stream               Stream ciphers
+    |-- stream               Stream ciphers
+    `-- zk                   Zero-knowledge proof systems
 ```
 
 ## Requirements
