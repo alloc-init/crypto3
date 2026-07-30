@@ -25,6 +25,7 @@
 #include <nil/crypto3/hash/detail/poseidon2/poseidon2_policy.hpp>
 #include <nil/crypto3/hash/poseidon.hpp>
 
+#include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/algebra/fields/alt_bn128/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
 
@@ -641,7 +642,31 @@ BOOST_AUTO_TEST_CASE(poseidon2_padding_free_public_wrapper_matches_padding_free_
     BOOST_CHECK_EQUAL(public_digest, sponge_digest);
 }
 
-// Poseidon1 permutation test vectors are taken from:
+// BN254 base-field Poseidon1 reference vector generated with Plonky3.
+BOOST_AUTO_TEST_CASE(poseidon1_bn254_base_field_width3_matches_reference_vector) {
+    using field_type = fields::alt_bn128_base_field<254>;
+    using policy = poseidon1_policy<field_type, 128, 2>;
+
+    BOOST_STATIC_ASSERT_MSG(policy::state_words == 3, "The BN254 base-field Poseidon1 instance uses width 3");
+    BOOST_STATIC_ASSERT_MSG(policy::full_rounds == 8, "The BN254 base-field Poseidon1 instance uses 8 full rounds");
+    BOOST_STATIC_ASSERT_MSG(policy::part_rounds == 56,
+                            "The BN254 base-field Poseidon1 instance uses 56 partial rounds");
+
+    typename policy::state_type state = {
+        0x0000000000000000000000000000000000000000000000000000000000000000_cppui_modular254,
+        0x0000000000000000000000000000000000000000000000000000000000000001_cppui_modular254,
+        0x0000000000000000000000000000000000000000000000000000000000000002_cppui_modular254};
+    const typename policy::state_type expected_state = {
+        0x192b8ca187c4ca8349dbf7c151edea86c9ae19d97a483dd9dda048216d850b9b_cppui_modular254,
+        0x1791a6ee27025e8126795cc606aeeaac51fc874a39be483bab3c5f7ca1cd91f3_cppui_modular254,
+        0x24c433e7aa6f759314eda7d63c3b1d70f4af6beecebf266553e990057e9c9417_cppui_modular254};
+
+    poseidon1_optimized_permutation<policy>::permute(state);
+
+    BOOST_CHECK_EQUAL(state, expected_state);
+}
+
+// Remaining Poseidon1 permutation test vectors are taken from:
 //   https://extgit.iaik.tugraz.at/krypto/hadeshash/-/blob/208b5a164c6a252b137997694d90931b2bb851c5/code/test_vectors.txt
 BOOST_AUTO_TEST_CASE(poseidon1_permutation_254_2) {
     test_poseidon1_permutation<fields::alt_bn128_scalar_field<254>, 2>(
