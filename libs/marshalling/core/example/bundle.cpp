@@ -35,7 +35,7 @@
 #include <iomanip>
 #include <tuple>
 
-using namespace nil::crypto3::marshalling;
+using namespace nil::marshalling;
 
 template<typename unit>
 void print_buffer(std::vector<unit> const& v) {

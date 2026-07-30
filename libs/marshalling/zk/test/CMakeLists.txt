@@ -1,0 +1,98 @@
+#---------------------------------------------------------------------------#
+# Copyright (c) 2018-2021 Mikhail Komarov <nemo@nil.foundation>
+# Copyright (c) 2020-2021 Nikita Kaskov <nbering@nil.foundation>
+#
+# Distributed under the Boost Software License, Version 1.0
+# See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt
+#---------------------------------------------------------------------------#
+
+include(CMTest)
+
+cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
+        Boost::unit_test_framework
+
+        crypto3::multiprecision
+        crypto3::algebra
+        crypto3::zk
+        crypto3::pubkey
+        crypto3::pkpad
+        crypto3::hash
+        crypto3::random
+        crypto3::math
+
+        ${CMAKE_WORKSPACE_NAME}::crypto3_multiprecision
+        ${CMAKE_WORKSPACE_NAME}::crypto3_containers
+        ${CMAKE_WORKSPACE_NAME}::crypto3_algebra
+        ${CMAKE_WORKSPACE_NAME}::crypto3_math
+        ${CMAKE_WORKSPACE_NAME}::core
+)
+
+macro(define_marshalling_test test)
+
+    get_filename_component(name ${test} NAME)
+
+    set(full_test_name marshalling_zk_${name}_test)
+    cm_test(NAME ${full_test_name} SOURCES ${test}.cpp)
+
+    target_include_directories(marshalling_zk_${name}_test PRIVATE
+            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+            "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
+
+            ${Boost_INCLUDE_DIRS})
+
+    set_target_properties(marshalling_zk_${name}_test PROPERTIES
+            CXX_STANDARD 23
+            CXX_STANDARD_REQUIRED TRUE)
+
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(${full_test_name} PRIVATE "-fconstexpr-steps=2147483647")
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(${full_test_name} PRIVATE "-fconstexpr-ops-limit=4294967295")
+    endif()
+
+endmacro()
+
+# r1cs tests are failing compilation, turning them off for now.
+set(TESTS_NAMES
+        "merkle_proof"
+        "merkle_tree"
+        "accumulation_vector"
+        "sparse_vector"
+        "kzg_commitment"
+        "fri_commitment"
+        "lpc_commitment"
+        "polys_evaluator"
+        "placeholder_lpc_proof"
+        "placeholder_kzg_proof"
+        "placeholder_common_data"
+        "placeholder_preprocessed_public_data"
+        "plonk_gates"
+        "plonk_constraint_system"
+        "plonk_assignment_table"
+        #        "eddsa"
+)
+
+foreach(TEST_NAME ${TESTS_NAMES})
+    define_marshalling_test(${TEST_NAME})
+endforeach()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    set(LOW_OPTIMIZATION_TESTS
+        kzg_commitment
+        placeholder_lpc_proof
+        placeholder_kzg_proof
+        placeholder_common_data
+        placeholder_preprocessed_public_data
+        plonk_gates
+        plonk_constraint_system
+        plonk_assignment_table)
+
+    foreach(TEST_NAME ${LOW_OPTIMIZATION_TESTS})
+        target_compile_options(marshalling_zk_${TEST_NAME}_test PRIVATE
+            "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O1>")
+    endforeach()
+endif()
+
+target_compile_definitions(marshalling_zk_merkle_proof_test PRIVATE
+    CRYPTO3_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")

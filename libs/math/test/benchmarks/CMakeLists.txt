@@ -16,7 +16,7 @@ set(TESTS_NAMES
 
 foreach(TEST_NAME ${TESTS_NAMES})
     define_math_test(${TEST_NAME})
-    set(FULL_NAME actor_math_${TEST_NAME}_test)
+    set(FULL_NAME ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_${TEST_NAME}_test)
     target_compile_options(${FULL_NAME} PRIVATE "-march=native")
     target_link_libraries(${FULL_NAME}
         ${CMAKE_WORKSPACE_NAME}::random

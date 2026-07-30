@@ -26,8 +26,9 @@
 #ifndef MARSHALLING_ARRAY_LIST_HPP
 #define MARSHALLING_ARRAY_LIST_HPP
 
-#include <vector>
+#include <functional>
 #include <map>
+#include <vector>
 
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/types/array_list/behaviour.hpp>

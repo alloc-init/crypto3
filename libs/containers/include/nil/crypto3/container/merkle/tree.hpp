@@ -27,8 +27,9 @@
 #ifndef CRYPTO3_MERKLE_TREE_HPP
 #define CRYPTO3_MERKLE_TREE_HPP
 
-#include <vector>
+#include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include <nil/crypto3/algebra/curves/pallas.hpp>
 
@@ -38,9 +39,6 @@
 #include <nil/crypto3/hash/type_traits.hpp>
 #include <nil/crypto3/hash/algorithm/hash.hpp>
 #include <nil/crypto3/container/merkle/node.hpp>
-
-#include <nil/actor/core/thread_pool.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -493,7 +491,7 @@ namespace nil {
                     merkle_tree_impl<T, Arity> ret(std::distance(first, last));
                     ret.resize(ret.complete_size());
 
-                    nil::crypto3::parallel_transform(first, last, ret.begin(), [](const leaf_value_type &leaf) {
+                    std::transform(first, last, ret.begin(), [](const leaf_value_type &leaf) {
                         return static_cast<value_type>(crypto3::hash<hash_type>(leaf));
                     });
 
@@ -503,10 +501,10 @@ namespace nil {
                     std::size_t next_row_start_index = std::distance(first, last);
 
                     for (size_t row_number = 1; row_number < ret.row_count(); ++row_number, row_size /= Arity) {
-                        nil::crypto3::parallel_for(0, row_size, [&ret, it, next_row_start_index](std::size_t index) {
+                        for (std::size_t index = 0; index < row_size; ++index) {
                             ret[next_row_start_index + index] =
                                 generate_hash<hash_type>(it + index * Arity, it + (index + 1) * Arity);
-                        });
+                        }
                         next_row_start_index += row_size;
                         it += row_size * Arity;
                     }

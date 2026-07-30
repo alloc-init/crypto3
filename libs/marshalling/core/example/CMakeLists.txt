@@ -30,6 +30,7 @@ macro(define_marshalling_example name)
 endmacro()
 
 set(EXAMPLES_NAMES
+        "bundle"
         "interfaces"
         "pack"
         "endian")

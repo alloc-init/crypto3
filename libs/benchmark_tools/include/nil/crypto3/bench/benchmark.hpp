@@ -59,8 +59,8 @@ namespace nil::crypto3::bench {
             using duration = std::chrono::duration<double, std::nano>;
 
             constexpr std::size_t WARMUP_BATCH_SIZE = 10;
-            constexpr duration WARMUP_DURATION = std::chrono::milliseconds(500);
-            constexpr std::size_t MEASUREMENTS = 100;
+            constexpr duration WARMUP_DURATION = std::chrono::milliseconds(100);
+            constexpr std::size_t MEASUREMENTS = 30;
 
             auto run_batch = [&func](std::size_t batch_size, auto& args) {
                 NIL_CO3_USE_IF_NOT_VOID(std::apply(
@@ -107,10 +107,15 @@ namespace nil::crypto3::bench {
 
             mean /= static_cast<double>(durations.size());
             // stddiv^2 = E x^2 - (E x)^2
-            stddiv = sqrt(stddiv / static_cast<double>(durations.size()) - mean * mean);
+            const double variance = stddiv / static_cast<double>(durations.size()) - mean * mean;
+            stddiv = sqrt(std::max(0.0, variance));
 
             // https://support.numxl.com/hc/en-us/articles/115001223503-MdAPE-Median-Absolute-Percentage-Error
             for (auto& dur : durations) {
+                if (dur == 0) {
+                    dur = median == 0 ? 0 : 1;
+                    continue;
+                }
                 dur = (dur - median) / dur;
                 if (dur < 0) {
                     dur = -dur;

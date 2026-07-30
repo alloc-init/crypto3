@@ -47,13 +47,15 @@ void coordinates_examples() {
                      e5(0xff9d5ca60a4f5ae00b2abdb6dddb3f4fc5c853ed56a33a85ccaa7d3093084579_cppui_modular256), e6(1);
 
     group_value_type c1(e1, e2, e3), c2(e4, e5, e6);
+    group_value_type doubled_c1 = c1;
+    doubled_c1.double_inplace();
 
     std::cout << "Curve element values: " << std::endl;
     std::cout << "c1 value: " << (c1) << std::endl;
     std::cout << "c2 value: " << (c2) << std::endl;
     std::cout << "c1 + c2 value: " << (c1 + c2) << std::endl;
     std::cout << "c1 - c2 value: " << (c1 - c2) << std::endl;
-    std::cout << "Doubled c1 value: " << c1 << std::endl;
+    std::cout << "Doubled c1 value: " << doubled_c1 << std::endl;
 }
 
 int main() {
