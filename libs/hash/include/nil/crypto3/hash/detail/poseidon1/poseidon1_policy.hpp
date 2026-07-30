@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <type_traits>
 
+#include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/hash/detail/poseidon_common/poseidon_policy.hpp>
 
 namespace nil {
@@ -47,6 +48,11 @@ namespace nil {
                 template<typename FieldType, std::size_t Security, std::size_t Rate, std::size_t Capacity = 1,
                          std::size_t DigestBits = FieldType::value_bits, typename Enable = void>
                 struct poseidon1_policy;
+
+                template<std::size_t DigestBits>
+                struct poseidon1_policy<algebra::fields::alt_bn128_base_field<254>, 128, 2, 1, DigestBits, void>
+                    : base_poseidon1_policy<algebra::fields::alt_bn128_base_field<254>, 128, 2, 1, 5, 8, 56,
+                                            DigestBits> { };
 
                 template<typename FieldType, std::size_t Rate, std::size_t DigestBits>
                 struct poseidon1_policy<FieldType, 80, Rate, 1, DigestBits, std::enable_if_t<Rate == 1 || Rate == 2>>

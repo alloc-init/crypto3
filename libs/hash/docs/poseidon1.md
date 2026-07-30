@@ -75,6 +75,10 @@ The policy parameters are:
 |`Capacity`|Number of capacity field elements. Currently only capacity `1` has checked-in constants.|
 |`DigestBits`|Requested digest size in bits. The policy rounds this up to whole field elements.|
 
+The checked-in BN254 base-field instance is `poseidon1_policy<alt_bn128_base_field<254>, 128, 2>`. It has width `3`,
+S-box power `5`, `8` full rounds, and `56` partial rounds. Its constants and reference vector were generated with
+Plonky3.
+
 The policy derives:
 
 ```cpp
