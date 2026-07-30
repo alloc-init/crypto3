@@ -75,7 +75,7 @@ jobs:
       run: ctest --test-dir "$BUILD_DIR" -N | tee "$BUILD_DIR/ctest-tests.txt"
 
     - name: Compile tests
-      run: cmake --build "$BUILD_DIR" --target tests --parallel "$(nproc)"
+      run: cmake --build "$BUILD_DIR" --target tests --parallel "$(( $(nproc) / 2 ))"
 
     - name: Run tests
       env:
