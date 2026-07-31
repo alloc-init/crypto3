@@ -40,9 +40,6 @@
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 
-#include <nil/actor/core/thread_pool.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
-
 #include <nil/crypto3/bench/scoped_profiler.hpp>
 
 namespace nil {
@@ -491,13 +488,15 @@ namespace nil {
                         polynomial_dfs tmp(other);
                         tmp.resize(this->size());
 
-                        in_place_parallel_transform(this->begin(), this->end(), tmp.begin(),
-                                                    [](FieldValueType& v1, const FieldValueType& v2) { v1 += v2; });
+                        for (std::size_t i = 0; i < this->size(); ++i) {
+                            this->val[i] += tmp[i];
+                        }
                         return *this;
                     }
 
-                    in_place_parallel_transform(this->begin(), this->end(), other.begin(),
-                                                [](FieldValueType& v1, const FieldValueType& v2) { v1 += v2; });
+                    for (std::size_t i = 0; i < this->size(); ++i) {
+                        this->val[i] += other[i];
+                    }
 
                     return *this;
                 }
@@ -507,7 +506,9 @@ namespace nil {
                  * and stores result in polynomial A.
                  */
                 polynomial_dfs& operator+=(const FieldValueType& c) {
-                    parallel_for(0, this->size(), [this, &c](std::size_t i) { this->val[i] += c; });
+                    for (FieldValueType& value : this->val) {
+                        value += c;
+                    }
 
                     return *this;
                 }
@@ -518,7 +519,7 @@ namespace nil {
                  */
                 polynomial_dfs operator-() const {
                     polynomial_dfs result(this->_d, this->begin(), this->end());
-                    parallel_transform(this->begin(), this->end(), result.begin(), std::negate<FieldValueType>());
+                    std::transform(this->begin(), this->end(), result.begin(), std::negate<FieldValueType>());
                     return result;
                 }
 
@@ -552,14 +553,16 @@ namespace nil {
                         polynomial_dfs tmp(other);
                         tmp.resize(this->size());
 
-                        in_place_parallel_transform(this->begin(), this->end(), tmp.begin(),
-                                                    [](FieldValueType& v1, const FieldValueType& v2) { v1 -= v2; });
+                        for (std::size_t i = 0; i < this->size(); ++i) {
+                            this->val[i] -= tmp[i];
+                        }
 
                         return *this;
                     }
 
-                    in_place_parallel_transform(this->begin(), this->end(), other.begin(),
-                                                [](FieldValueType& v1, const FieldValueType& v2) { v1 -= v2; });
+                    for (std::size_t i = 0; i < this->size(); ++i) {
+                        this->val[i] -= other[i];
+                    }
                     return *this;
                 }
 
@@ -568,7 +571,9 @@ namespace nil {
                  * and stores result in polynomial A.
                  */
                 polynomial_dfs& operator-=(const FieldValueType& c) {
-                    parallel_for(0, this->size(), [this, &c](std::size_t i) { this->val[i] -= c; });
+                    for (FieldValueType& value : this->val) {
+                        value -= c;
+                    }
 
                     return *this;
                 }
@@ -620,13 +625,15 @@ namespace nil {
                         polynomial_dfs tmp(other);
                         tmp.resize(polynomial_s, other_domain, new_domain);
 
-                        in_place_parallel_transform(this->begin(), this->end(), tmp.begin(),
-                                                    [](FieldValueType& v1, const FieldValueType& v2) { v1 *= v2; });
+                        for (std::size_t i = 0; i < this->size(); ++i) {
+                            this->val[i] *= tmp[i];
+                        }
                         return *this;
                     }
 
-                    in_place_parallel_transform(this->begin(), this->end(), other.begin(),
-                                                [](FieldValueType& v1, const FieldValueType& v2) { v1 *= v2; });
+                    for (std::size_t i = 0; i < this->size(); ++i) {
+                        this->val[i] *= other[i];
+                    }
 
                     return *this;
                 }
@@ -636,7 +643,9 @@ namespace nil {
                  * and stores result in polynomial A.
                  */
                 polynomial_dfs& operator*=(const FieldValueType& c) {
-                    parallel_for(0, this->size(), [this, &c](std::size_t i) { this->val[i] *= c; });
+                    for (FieldValueType& value : this->val) {
+                        value *= c;
+                    }
                     return *this;
                 }
 
@@ -728,8 +737,9 @@ namespace nil {
                     if (domain == nullptr) {
                         detail::basic_radix2_fft<FieldType>(tmp, omega.inversed());
                         const value_type sconst = value_type(this->size()).inversed();
-                        parallel_transform(tmp.begin(), tmp.end(), tmp.begin(),
-                                           std::bind(std::multiplies<value_type>(), sconst, std::placeholders::_1));
+                        for (FieldValueType& value : tmp) {
+                            value *= sconst;
+                        }
                     } else {
                         domain->inverse_fft(tmp);
                     }
@@ -811,8 +821,9 @@ namespace nil {
                                                                 const FieldValueType& B) {
 
                 polynomial_dfs<FieldValueType> result(A);
-                parallel_foreach(
-                    result.begin(), result.end(), [&B](FieldValueType& v) { v *= B; }, thread_pool::pool_level::LOW);
+                for (FieldValueType& value : result) {
+                    value *= B;
+                }
                 return result;
             }
 
@@ -830,9 +841,9 @@ namespace nil {
                                                                 const FieldValueType& B) {
                 polynomial_dfs<FieldValueType> result(A);
                 FieldValueType B_inversed = B.inversed();
-                parallel_foreach(
-                    result.begin(), result.end(), [&B_inversed](FieldValueType& v) { v *= B_inversed; },
-                    thread_pool::pool_level::LOW);
+                for (FieldValueType& value : result) {
+                    value *= B_inversed;
+                }
 
                 return result;
             }
@@ -890,7 +901,7 @@ namespace nil {
                         max_i++;
                     }
 
-                    parallel_for(0, max_i, [&, stride, double_stride](std::size_t i) {
+                    for (std::size_t i = 0; i < max_i; ++i) {
                         std::size_t index1 = i * double_stride;
                         std::size_t index2 = index1 + stride;
                         if (index2 < addends.size()) {
@@ -907,7 +918,7 @@ namespace nil {
                             }
                             map2.clear();
                         }
-                    });
+                    }
                 }
 
                 std::unordered_map<std::size_t, polynomial_dfs<FieldValueType>>& size_to_part_sum = maps[0];
@@ -921,15 +932,10 @@ namespace nil {
 
                 std::vector<polynomial<FieldValueType>> grouped_addends_coefs(grouped_addends.size());
 
-                nil::crypto3::parallel_for(
-                    0, grouped_addends.size(),
-                    [&grouped_addends_coefs, &grouped_addends](std::size_t i) {
-                        grouped_addends_coefs[i] = grouped_addends[i].coefficients();
-                    },
-                    thread_pool::pool_level::HIGH);
+                for (std::size_t i = 0; i < grouped_addends.size(); ++i) {
+                    grouped_addends_coefs[i] = grouped_addends[i].coefficients();
+                }
 
-                // We can parallelize this by adding pairwise, like it's done in multiplication, but it's pretty fast
-                // so skipping it for now.
                 polynomial<FieldValueType> coef_result;
                 for (const auto& partial_sum : grouped_addends_coefs) {
                     coef_result += partial_sum;
@@ -946,8 +952,7 @@ namespace nil {
                 polynomial_product(std::vector<math::polynomial_dfs<typename FieldType::value_type>> multipliers) {
                 PROFILE_SCOPE("Polynomial batch product");
 
-                // Pre-create all the domains. We could do this on-the-go, but we want this function to be more
-                // parallelization-friendly.
+                // Pre-create all domains used by cached multiplications.
                 std::unordered_map<std::size_t, std::shared_ptr<evaluation_domain<FieldType>>> domain_cache;
 
                 std::size_t min_domain_size = std::numeric_limits<std::size_t>::max();
@@ -963,48 +968,37 @@ namespace nil {
                 std::vector<std::size_t> needed_domain_sizes;
                 for (std::size_t i = min_domain_size; i <= max_domain_size; i *= 2) {
                     needed_domain_sizes.push_back(i);
-                    // On the next line I want to create the tree structure, then create the evaluation domains.
-                    // This way filling of this structure can be done in parallel.
                     domain_cache[i] = nullptr;
                 }
 
-                // We cannot use LOW level thread pool here, make_evaluation_domain uses it.
-                parallel_foreach(
-                    needed_domain_sizes.begin(), needed_domain_sizes.end(),
-                    [&domain_cache](std::size_t domain_size) {
-                        domain_cache[domain_size] = make_evaluation_domain<FieldType>(domain_size);
-                    },
-                    thread_pool::pool_level::HIGH);
+                for (std::size_t domain_size : needed_domain_sizes) {
+                    domain_cache[domain_size] = make_evaluation_domain<FieldType>(domain_size);
+                }
 
                 for (std::size_t stride = 1; stride < multipliers.size(); stride <<= 1) {
                     const std::size_t double_stride = stride << 1;
-                    // This loop will run in parallel.
                     std::size_t max_i = (multipliers.size() - stride) / double_stride;
                     if ((multipliers.size() - stride) % double_stride != 0)
                         max_i++;
 
-                    // We can't use LOW level thread pool here, it's used in cached_multiplication.
-                    parallel_for(
-                        0, max_i,
-                        [&multipliers, &domain_cache, stride, double_stride](std::size_t i) {
-                            std::size_t index1 = i * double_stride;
-                            std::size_t index2 = index1 + stride;
+                    for (std::size_t i = 0; i < max_i; ++i) {
+                        std::size_t index1 = i * double_stride;
+                        std::size_t index2 = index1 + stride;
 
-                            const std::size_t current_domain_size = multipliers[index1].size();
-                            const std::size_t next_domain_size = multipliers[index2].size();
-                            const std::size_t new_domain_size = detail::power_of_two(
-                                std::max({current_domain_size, next_domain_size,
-                                          multipliers[index1].degree() + multipliers[index2].degree() + 1}));
+                        const std::size_t current_domain_size = multipliers[index1].size();
+                        const std::size_t next_domain_size = multipliers[index2].size();
+                        const std::size_t new_domain_size = detail::power_of_two(
+                            std::max({current_domain_size, next_domain_size,
+                                      multipliers[index1].degree() + multipliers[index2].degree() + 1}));
 
-                            multipliers[index1].cached_multiplication(multipliers[index2],
-                                                                      domain_cache[current_domain_size],
-                                                                      domain_cache[next_domain_size],
-                                                                      domain_cache[new_domain_size]);
+                        multipliers[index1].cached_multiplication(multipliers[index2],
+                                                                  domain_cache[current_domain_size],
+                                                                  domain_cache[next_domain_size],
+                                                                  domain_cache[new_domain_size]);
 
-                            // Free the memory we are not going to use anymore.
-                            multipliers[index2] = polynomial_dfs<typename FieldType::value_type>();
-                        },
-                        thread_pool::pool_level::HIGH);
+                        // Free the memory we are not going to use anymore.
+                        multipliers[index2] = polynomial_dfs<typename FieldType::value_type>();
+                    }
                 }
                 return multipliers[0];
             }
