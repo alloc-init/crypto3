@@ -31,7 +31,6 @@
 #include <vector>
 
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -352,8 +351,7 @@ namespace nil {
 
                 //                polynomial_view operator-() const {
                 void neg() {
-                    nil::crypto3::parallel_transform(this->begin(), this->end(), this->begin(),
-                                                     std::negate<FieldValueType>());
+                    std::transform(this->begin(), this->end(), this->begin(), std::negate<FieldValueType>());
                 }
 
                 /**
@@ -401,8 +399,7 @@ namespace nil {
                         auto glambda = [=](const FieldValueType& x, const FieldValueType& y) {
                             return y - (x * lead_coeff);
                         };
-                        nil::crypto3::parallel_transform(other.begin(), other.end(), r.begin() + shift,
-                                                         r.begin() + shift, glambda);
+                        std::transform(other.begin(), other.end(), r.begin() + shift, r.begin() + shift, glambda);
                         r.condense();
 
                         r_deg = r.size() - 1;
@@ -435,8 +432,8 @@ namespace nil {
                         auto glambda = [=](const FieldValueType& x, const FieldValueType& y) {
                             return y - (x * lead_coeff);
                         };
-                        nil::crypto3::parallel_transform(other.begin(), other.end(), this->begin() + shift,
-                                                         this->begin() + shift, glambda);
+                        std::transform(other.begin(), other.end(), this->begin() + shift, this->begin() + shift,
+                                       glambda);
                         this->condense();
 
                         r_deg = this->size() - 1;
