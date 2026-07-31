@@ -36,9 +36,6 @@
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 #include <nil/crypto3/math/detail/field_utils.hpp>
 
-#include <nil/actor/core/thread_pool.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
-
 #include <nil/crypto3/bench/scoped_profiler.hpp>
 
 namespace nil {
@@ -80,12 +77,11 @@ namespace nil {
                     bench::register_fft<FieldType>(logn);
 
                     // swapping in place (from Storer's book)
-                    // We can parallelize this look, since k and rk are pairs, they will never intersect.
-                    nil::crypto3::parallel_for(0, n, [logn, &a](std::size_t k) {
+                    for (std::size_t k = 0; k < n; ++k) {
                         const std::size_t rk = crypto3::math::detail::bitreverse(k, logn);
                         if (k < rk)
                             std::swap(a[k], a[rk]);
-                    });
+                    }
 
                     // invariant: m = 2^{s-1}
                     for (std::size_t s = 1, m = 1, inc = n / 2; s <= logn; ++s, m <<= 1, inc >>= 1) {
