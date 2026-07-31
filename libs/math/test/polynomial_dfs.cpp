@@ -1346,38 +1346,6 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_addition_perf_test, *boost::unit_test::disab
     }
 }
 
-BOOST_AUTO_TEST_CASE(polynomial_dfs_multiplication_perf_test, *boost::unit_test::disabled()) {
-    size_t size = 131072 * 4;
-
-    polynomial_dfs<typename FieldType::value_type> poly = {size / 128, size,
-                                                           nil::crypto3::algebra::random_element<FieldType>()};
-
-    std::vector<polynomial_dfs<typename FieldType::value_type>> poly4(64, poly);
-
-    auto start = std::chrono::high_resolution_clock::now();
-    nil::crypto3::wait_for_all(nil::crypto3::parallel_run_in_chunks<void>(
-        poly4.size(),
-        [&poly4, &poly](std::size_t begin, std::size_t end) {
-            for (std::size_t i = begin; i < end; i++) {
-                for (int j = 0; j < 32; ++j)
-                    poly4[i] *= poly;
-            }
-        },
-        nil::crypto3::thread_pool::pool_level::HIGH));
-
-    for (std::size_t i = 1; i < poly4.size(); ++i) {
-        BOOST_CHECK(poly4[i] == poly4[0]);
-    }
-
-    // Record the end time
-    auto end = std::chrono::high_resolution_clock::now();
-
-    // Calculate the duration
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-
-    std::cout << "Multiplication time: " << duration.count() << " microseconds." << std::endl;
-}
-
 BOOST_AUTO_TEST_CASE(polynomial_dfs_resize_perf_test, *boost::unit_test::disabled()) {
     std::vector<typename FieldType::value_type> values;
     std::size_t size = 131072 * 16;
