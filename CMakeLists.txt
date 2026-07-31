@@ -21,6 +21,13 @@ include(CMConfig)
 include(CMSetupVersion)
 
 cm_workspace(crypto3)
+
+if(APPLE)
+    # silence unnecessary warning when linking tests on mac
+    set(CMAKE_CXX_ARCHIVE_FINISH
+        "<CMAKE_RANLIB> -no_warning_for_no_symbols <TARGET>")
+endif()
+
 cm_setup_version(VERSION 0.3.0 PREFIX ${CMAKE_WORKSPACE_NAME})
 
 option(BUILD_TESTS "Enable tests" TRUE)# used by CMTest module; If set to false, tests are removed from crypto3::all target. User still can build individual ones.
