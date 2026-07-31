@@ -37,7 +37,6 @@ root
     |-- math                 Polynomial arithmetic and FFT algorithms
     |-- modes                Cipher mode headers and tests
     |-- multiprecision       Extended multiprecision types and utilities
-    |-- parallelization-utils
     |-- pkpad                Public-key padding schemes
     |-- pubkey               Public-key schemes and secret sharing
     |-- random               Randomization primitives
