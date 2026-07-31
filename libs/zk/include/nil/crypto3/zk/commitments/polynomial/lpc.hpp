@@ -42,9 +42,6 @@
 #include <nil/crypto3/zk/commitments/detail/polynomial/basic_fri.hpp>
 #include <nil/crypto3/math/polynomial/polymorphic_polynomial_dfs.hpp>
 
-#include <nil/actor/core/thread_pool.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
-
 namespace nil {
     namespace crypto3 {
         namespace zk {
@@ -178,14 +175,10 @@ namespace nil {
                             }
                         }
 
-                        parallel_for(
-                            0, indices.size(),
-                            [this, &indices](std::size_t i) {
-                                auto [batch_id, poly_idx] = indices[i];
-                                this->_polys_coefficients[batch_id][poly_idx] =
-                                    this->_polys[batch_id][poly_idx].coefficients();
-                            },
-                            thread_pool::pool_level::HIGH);
+                        for (const auto& [batch_id, poly_idx] : indices) {
+                            this->_polys_coefficients[batch_id][poly_idx] =
+                                this->_polys[batch_id][poly_idx].coefficients();
+                        }
                     }
 
                     commitment_type commit(std::size_t index) {
@@ -361,20 +354,17 @@ namespace nil {
                             compute_Q_normal_parts(point_batch_pairs, theta, points, theta_powers_for_each_batch);
 
                         PROFILE_SCOPE("Compute Q normal");
-                        parallel_for(
-                            0, points.size(),
-                            [this, &points, &Q_normals, &Q_normal_parts](std::size_t point_index) {
-                                math::polynomial<value_type>& Q_normal = Q_normals[point_index];
+                        for (std::size_t point_index = 0; point_index < points.size(); ++point_index) {
+                            math::polynomial<value_type>& Q_normal = Q_normals[point_index];
 
-                                for (size_t batch_index : this->_z.get_batches()) {
-                                    Q_normal += Q_normal_parts[point_index][batch_index];
-                                }
+                            for (size_t batch_index : this->_z.get_batches()) {
+                                Q_normal += Q_normal_parts[point_index][batch_index];
+                            }
 
-                                auto const& point = points[point_index];
-                                math::polynomial<value_type> V = {-point, 1};
-                                Q_normal /= V;
-                            },
-                            thread_pool::pool_level::HIGH);
+                            auto const& point = points[point_index];
+                            math::polynomial<value_type> V = {-point, 1};
+                            Q_normal /= V;
+                        }
                         PROFILE_SCOPE_END();
 
                         math::polynomial<value_type> combined_Q_normal =
@@ -432,40 +422,26 @@ namespace nil {
                                     math::polynomial<value_type>(Q_normal_parts_sizes[batch_id]);
                             }
                         }
-                        parallel_for(
-                            0, point_batch_pairs.size(),
-                            [this, &points, &theta, &point_batch_pairs, &Q_normal_parts, &Q_normal_parts_sizes,
-                             &theta_powers_for_each_batch](size_t point_batch_index) {
-                                value_type theta_acc = theta.pow(theta_powers_for_each_batch[point_batch_index]);
-                                auto [point_index, batch_id] = point_batch_pairs[point_batch_index];
-                                auto const& point = points[point_index];
+                        for (std::size_t point_batch_index = 0; point_batch_index < point_batch_pairs.size();
+                             ++point_batch_index) {
+                            value_type theta_acc = theta.pow(theta_powers_for_each_batch[point_batch_index]);
+                            auto [point_index, batch_id] = point_batch_pairs[point_batch_index];
+                            auto const& point = points[point_index];
 
-                                // Run in parallel, parallelizing on the index of the result. I.E. split the polynomial
-                                // size between the threads and run for a given range per thread.
-                                wait_for_all(parallel_run_in_chunks<void>(
-                                    Q_normal_parts_sizes[batch_id],
-                                    [this, batch_id, &point, &Q_normal_parts, point_index, theta_acc,
-                                     &theta](std::size_t begin, std::size_t end) mutable {
-                                        for (std::size_t poly_idx = 0; poly_idx < this->_z.get_batch_size(batch_id);
-                                             poly_idx++) {
-                                            if (!is_poly_evaluated_at_point(batch_id, poly_idx, point))
-                                                continue;
+                            for (std::size_t poly_idx = 0; poly_idx < this->_z.get_batch_size(batch_id); ++poly_idx) {
+                                if (!is_poly_evaluated_at_point(batch_id, poly_idx, point))
+                                    continue;
 
-                                            const auto& g_normal = this->_polys_coefficients[batch_id][poly_idx];
+                                const auto& g_normal = this->_polys_coefficients[batch_id][poly_idx];
 
-                                            for (size_t i = begin; i < end && i < g_normal.size(); ++i) {
-                                                Q_normal_parts[point_index][batch_id][i] += g_normal[i] * theta_acc;
-                                            }
-                                            if (begin == 0) {
-                                                const auto& Z = this->get_Z_value(batch_id, poly_idx, point);
-                                                Q_normal_parts[point_index][batch_id][0] -= Z * theta_acc;
-                                            }
-                                            theta_acc *= theta;
-                                        }
-                                    },
-                                    thread_pool::pool_level::LOW));
-                            },
-                            thread_pool::pool_level::HIGH);
+                                for (std::size_t i = 0; i < g_normal.size(); ++i) {
+                                    Q_normal_parts[point_index][batch_id][i] += g_normal[i] * theta_acc;
+                                }
+                                const auto& Z = this->get_Z_value(batch_id, poly_idx, point);
+                                Q_normal_parts[point_index][batch_id][0] -= Z * theta_acc;
+                                theta_acc *= theta;
+                            }
+                        }
 
                         return Q_normal_parts;
                     }

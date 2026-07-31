@@ -42,9 +42,6 @@
 
 #include <nil/crypto3/bench/scoped_profiler.hpp>
 
-#include <nil/actor/core/thread_pool.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
-
 namespace nil::crypto3::zk::snark {
 
     template<typename FieldType>
@@ -71,7 +68,7 @@ namespace nil::crypto3::zk::snark {
         }
 
         /** \Brief Computes the evaluation results of all the expressions.
-         *  We must take care about converting everything we need to a simd type and parallelize here.
+         *  We must take care about converting everything we need to a simd type here.
          *  The provided cache must already contain all the required variables in the required sizes.
          */
         std::vector<polynomial_dfs_type> evaluate(const cached_assignment_table_type& _cached_assignment_table) {
@@ -91,22 +88,15 @@ namespace nil::crypto3::zk::snark {
                 result.push_back(polynomial_dfs_type(degree, extended_domain_size));
             }
 
-            wait_for_all(parallel_run_in_chunks<void>(
-                extended_domain_size,
-                [this, &_cached_assignment_table, &result, extended_domain_size](std::size_t begin, std::size_t end) {
-                    auto count = math::count_chunks<mini_chunk_size>(end - begin);
+            auto count = math::count_chunks<mini_chunk_size>(extended_domain_size);
+            std::vector<simd_vector_type> assignment_chunks(this->_expr.get_nodes_count());
+            for (std::size_t j = 0; j < count; ++j) {
+                this->compute_dag_chunk_values(assignment_chunks, _cached_assignment_table, extended_domain_size, 0, j);
 
-                    std::vector<simd_vector_type> assignment_chunks(this->_expr.get_nodes_count());
-                    for (std::size_t j = 0; j < count; ++j) {
-                        this->compute_dag_chunk_values(assignment_chunks, _cached_assignment_table,
-                                                       extended_domain_size, begin, j);
-
-                        for (std::size_t k = 0; k < this->_expr.get_root_nodes_count(); ++k) {
-                            math::set_chunk(result[k], begin, j, assignment_chunks[this->_expr.get_root_node(k)]);
-                        }
-                    }
-                },
-                thread_pool::pool_level::HIGH));
+                for (std::size_t k = 0; k < this->_expr.get_root_nodes_count(); ++k) {
+                    math::set_chunk(result[k], 0, j, assignment_chunks[this->_expr.get_root_node(k)]);
+                }
+            }
 
             return result;
         }
@@ -114,9 +104,6 @@ namespace nil::crypto3::zk::snark {
     private:
         // TODO(martun): change this function to use a visitor class.
         /** \brief Computes all the values of DAG assignments for the given chunk.
-         *  This function is called from multiple threads
-         *  to compute the final results for the whole DAG.
-         *
          *  \param[out] assignment_chunks - Computed values for the current chunk for each DAG node.
          */
         void compute_dag_chunk_values(std::vector<simd_vector_type>& assignment_chunks,

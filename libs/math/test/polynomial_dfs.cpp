@@ -39,7 +39,6 @@
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
 #include <nil/crypto3/math/polynomial/shift.hpp>
-#include <nil/actor/core/thread_pool.hpp>
 
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::math;
@@ -1312,7 +1311,7 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_zero_one_test) {
     BOOST_CHECK((small_poly - one * small_poly).is_zero());
 }
 
-BOOST_AUTO_TEST_CASE(polynomial_dfs_2_levels_test) {
+BOOST_AUTO_TEST_CASE(polynomial_dfs_repeated_multiplication_test) {
     size_t size = 131072;
 
     polynomial_dfs<typename FieldType::value_type> poly = {size / 128, size,
@@ -1320,13 +1319,9 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_2_levels_test) {
 
     std::vector<polynomial_dfs<typename FieldType::value_type>> poly4(4, poly);
 
-    nil::crypto3::parallel_for(
-        0, poly4.size(),
-        [&poly4, &poly](std::size_t i) {
-            // Inside this multiplication lower level pool is used.
-            poly4[i] *= poly;
-        },
-        nil::crypto3::thread_pool::pool_level::HIGH);
+    for (std::size_t i = 0; i < poly4.size(); ++i) {
+        poly4[i] *= poly;
+    }
 
     for (std::size_t i = 1; i < poly4.size(); ++i) {
         BOOST_CHECK(poly4[i] == poly4[0]);
@@ -1344,38 +1339,6 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_addition_perf_test, *boost::unit_test::disab
     for (std::size_t i = 0; i < 5000; ++i) {
         BOOST_CHECK(poly != poly + poly);
     }
-}
-
-BOOST_AUTO_TEST_CASE(polynomial_dfs_multiplication_perf_test, *boost::unit_test::disabled()) {
-    size_t size = 131072 * 4;
-
-    polynomial_dfs<typename FieldType::value_type> poly = {size / 128, size,
-                                                           nil::crypto3::algebra::random_element<FieldType>()};
-
-    std::vector<polynomial_dfs<typename FieldType::value_type>> poly4(64, poly);
-
-    auto start = std::chrono::high_resolution_clock::now();
-    nil::crypto3::wait_for_all(nil::crypto3::parallel_run_in_chunks<void>(
-        poly4.size(),
-        [&poly4, &poly](std::size_t begin, std::size_t end) {
-            for (std::size_t i = begin; i < end; i++) {
-                for (int j = 0; j < 32; ++j)
-                    poly4[i] *= poly;
-            }
-        },
-        nil::crypto3::thread_pool::pool_level::HIGH));
-
-    for (std::size_t i = 1; i < poly4.size(); ++i) {
-        BOOST_CHECK(poly4[i] == poly4[0]);
-    }
-
-    // Record the end time
-    auto end = std::chrono::high_resolution_clock::now();
-
-    // Calculate the duration
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-
-    std::cout << "Multiplication time: " << duration.count() << " microseconds." << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(polynomial_dfs_resize_perf_test, *boost::unit_test::disabled()) {

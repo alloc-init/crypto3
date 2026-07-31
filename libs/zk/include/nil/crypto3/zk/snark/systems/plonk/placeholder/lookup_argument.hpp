@@ -34,7 +34,6 @@
 #include <format>
 #include <queue>
 #include <ranges>
-#include <thread>
 #include <unordered_map>
 
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
@@ -58,9 +57,6 @@
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/preprocessor.hpp>
 
 #include <nil/crypto3/bench/scoped_profiler.hpp>
-
-#include <nil/actor/core/thread_pool.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
 
 #include <nil/crypto3/zk/math/dag_expression.hpp>
 
@@ -149,13 +145,9 @@ namespace nil {
 
                         reduced_input.resize(lookup_input.size(), polynomial_dfs_type::zero());
 
-                        parallel_for(
-                            0, lookup_input.size(),
-                            [&reduced_input, &lookup_input, this](std::size_t i) {
-                                reduced_input[i] =
-                                    reduce_dfs_polynomial_domain(lookup_input[i], this->basic_domain_size);
-                            },
-                            thread_pool::pool_level::HIGH);
+                        for (std::size_t i = 0; i < lookup_input.size(); ++i) {
+                            reduced_input[i] = reduce_dfs_polynomial_domain(lookup_input[i], basic_domain_size);
+                        }
 
                         // Compute the counts of how many times a lookup input appears in the lookup values.
                         std::vector<polynomial_dfs_type> counts = count_lookup_input_appearances(
@@ -211,12 +203,9 @@ namespace nil {
                         TAGGED_PROFILE_SCOPE("{low level} FFT", "Lookup argument compute h constraint parts of size {}",
                                              hs.size());
 
-                        parallel_for(
-                            0, hs.size(),
-                            [&hs, &h_constraint_parts, &h_challenges, &alpha, &lookup_input, &one](std::size_t i) {
-                                h_constraint_parts[i] = h_challenges[i] * (hs[i] * (alpha - lookup_input[i]) + one);
-                            },
-                            thread_pool::pool_level::HIGH);
+                        for (std::size_t i = 0; i < hs.size(); ++i) {
+                            h_constraint_parts[i] = h_challenges[i] * (hs[i] * (alpha - lookup_input[i]) + one);
+                        }
                         PROFILE_SCOPE_END();
 
                         F_dfs[0] = polynomial_sum<FieldType>(std::move(h_constraint_parts));
@@ -233,13 +222,9 @@ namespace nil {
 
                         TAGGED_PROFILE_SCOPE("{low level} FFT", "Lookup argument compute g constraint parts of size {}",
                                              gs.size());
-                        parallel_for(
-                            0, gs.size(),
-                            [&gs, &g_constraint_parts, &g_challenges, &alpha, &lookup_value, &counts](std::size_t i) {
-                                g_constraint_parts[i] =
-                                    g_challenges[i] * (gs[i] * (alpha - lookup_value[i]) - counts[i]);
-                            },
-                            thread_pool::pool_level::HIGH);
+                        for (std::size_t i = 0; i < gs.size(); ++i) {
+                            g_constraint_parts[i] = g_challenges[i] * (gs[i] * (alpha - lookup_value[i]) - counts[i]);
+                        }
                         PROFILE_SCOPE_END();
 
                         PROFILE_SCOPE("Lookup argument compute F_dfs[0]");
@@ -274,13 +259,10 @@ namespace nil {
                         PROFILE_SCOPE("Lookup argument computing polynomials H_i");
 
                         std::vector<polynomial_dfs_type> Hs = lookup_input;
-                        parallel_for(
-                            0, Hs.size(),
-                            [&Hs, &alpha](std::size_t i) {
-                                Hs[i] -= alpha;
-                                Hs[i].element_wise_inverse();
-                            },
-                            thread_pool::pool_level::HIGH);
+                        for (std::size_t i = 0; i < Hs.size(); ++i) {
+                            Hs[i] -= alpha;
+                            Hs[i].element_wise_inverse();
+                        }
 
                         return Hs;
                     }
@@ -293,21 +275,18 @@ namespace nil {
                         PROFILE_SCOPE("Lookup argument computing polynomials G_i");
 
                         std::vector<polynomial_dfs_type> Gs = lookup_value;
-                        parallel_for(
-                            0, Gs.size(),
-                            [&Gs, &alpha, &counts](std::size_t i) {
-                                auto& g = Gs[i];
-                                for (size_t j = 0; j < g.size(); ++j) {
-                                    g[j] = alpha - g[j];
-                                }
-                                g.element_wise_inverse();
+                        for (std::size_t i = 0; i < Gs.size(); ++i) {
+                            auto& g = Gs[i];
+                            for (size_t j = 0; j < g.size(); ++j) {
+                                g[j] = alpha - g[j];
+                            }
+                            g.element_wise_inverse();
 
-                                // Don't multiply as polynomials here, they will resize.
-                                for (size_t j = 0; j < g.size(); ++j) {
-                                    g[j] *= counts[i][j];
-                                }
-                            },
-                            thread_pool::pool_level::HIGH);
+                            // Don't multiply as polynomials here, they will resize.
+                            for (size_t j = 0; j < g.size(); ++j) {
+                                g[j] *= counts[i][j];
+                            }
+                        }
                         return Gs;
                     }
 
@@ -367,21 +346,17 @@ namespace nil {
 
                             const auto& registrationss = registrationsss[t_id];
 
-                            parallel_for(
-                                0, registrationss.size(),
-                                [this, t_id, &l_table, &lookup_tag, &lookup_value, lookup_values_used,
-                                 &registrationss](std::size_t o_id) {
-                                    polynomial_dfs_type v = (value_type(t_id + 1)) * lookup_tag;
-                                    value_type theta_acc = this->theta;
-                                    for (std::size_t i = 0; i < l_table.columns_number; i++) {
-                                        v += theta_acc *
-                                             polynomial_dfs_type(this->_central_expr_evaluator.get_expression_value(
-                                                 registrationss[o_id][i]));
-                                        theta_acc *= this->theta;
-                                    }
-                                    lookup_value[lookup_values_used + o_id] = v;
-                                },
-                                thread_pool::pool_level::HIGH);
+                            for (std::size_t o_id = 0; o_id < registrationss.size(); ++o_id) {
+                                polynomial_dfs_type v = (value_type(t_id + 1)) * lookup_tag;
+                                value_type theta_acc = this->theta;
+                                for (std::size_t i = 0; i < l_table.columns_number; i++) {
+                                    v += theta_acc *
+                                         polynomial_dfs_type(this->_central_expr_evaluator.get_expression_value(
+                                             registrationss[o_id][i]));
+                                    theta_acc *= this->theta;
+                                }
+                                lookup_value[lookup_values_used + o_id] = v;
+                            }
                         }
                         return lookup_value;
                     }

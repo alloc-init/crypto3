@@ -34,7 +34,6 @@
 #include <nil/crypto3/math/domains/detail/basic_radix2_domain_aux.hpp>
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
 
 #include <nil/crypto3/bench/scoped_profiler.hpp>
 
@@ -79,7 +78,6 @@ namespace nil {
                                 "fields::arithmetic_params<FieldType>::s");
                     }
 
-                    // We need to always create fft cache, we cannot create it when needed in parallel environment.
                     create_fft_cache();
                 }
 
@@ -124,12 +122,9 @@ namespace nil {
                         return;
                     resize_to_domain_size(polys);
 
-                    nil::crypto3::parallel_foreach(
-                        polys.begin(), polys.end(),
-                        [this](std::vector<value_type> &p) {
-                            detail::basic_radix2_fft_cached<FieldType>(p, this->fft_cache->first);
-                        },
-                        thread_pool::pool_level::HIGH);
+                    for (std::vector<value_type> &p : polys) {
+                        detail::basic_radix2_fft_cached<FieldType>(p, this->fft_cache->first);
+                    }
                 }
 
                 /** \brief Batch version of the 'inverse_fft' function
@@ -143,14 +138,12 @@ namespace nil {
                     resize_to_domain_size(polys);
 
                     const field_value_type sconst = field_value_type(this->m).inversed();
-                    nil::crypto3::parallel_foreach(
-                        polys.begin(), polys.end(),
-                        [&sconst, this](std::vector<value_type> &p) {
-                            detail::basic_radix2_fft_cached<FieldType>(p, this->fft_cache->second);
-                            nil::crypto3::parallel_foreach(p.begin(), p.end(),
-                                                           [&sconst](value_type &p_i) { p_i *= sconst; });
-                        },
-                        thread_pool::pool_level::HIGH);
+                    for (std::vector<value_type> &p : polys) {
+                        detail::basic_radix2_fft_cached<FieldType>(p, this->fft_cache->second);
+                        for (value_type &p_i : p) {
+                            p_i *= sconst;
+                        }
+                    }
                 }
 
                 void inverse_fft(std::vector<value_type> &a) override {
@@ -165,7 +158,9 @@ namespace nil {
                     detail::basic_radix2_fft_cached<FieldType>(a, fft_cache->second);
 
                     const field_value_type sconst = field_value_type(this->m).inversed();
-                    nil::crypto3::parallel_foreach(a.begin(), a.end(), [&sconst](value_type &a_i) { a_i *= sconst; });
+                    for (value_type &a_i : a) {
+                        a_i *= sconst;
+                    }
                 }
 
                 std::vector<field_value_type> evaluate_all_lagrange_polynomials(const field_value_type &t) override {
@@ -214,8 +209,9 @@ namespace nil {
                 void divide_by_z_on_coset(std::vector<field_value_type> &P) override {
                     const field_value_type coset = fields::arithmetic_params<FieldType>::multiplicative_generator;
                     const field_value_type Z_inverse_at_coset = this->compute_vanishing_polynomial(coset).inversed();
-                    nil::crypto3::parallel_foreach(
-                        P.begin(), P.end(), [&Z_inverse_at_coset](field_value_type &v) { v *= Z_inverse_at_coset; });
+                    for (field_value_type &value : P) {
+                        value *= Z_inverse_at_coset;
+                    }
                 }
 
                 bool operator==(const basic_radix2_domain &rhs) const {

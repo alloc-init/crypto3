@@ -48,9 +48,6 @@
 
 #include <nil/crypto3/bench/scoped_profiler.hpp>
 
-#include <nil/actor/core/thread_pool.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
-
 namespace nil {
     namespace crypto3 {
         namespace zk {
@@ -113,43 +110,36 @@ namespace nil {
                         BOOST_ASSERT(global_indices.size() == S_id.size());
                         BOOST_ASSERT(global_indices.size() == S_sigma.size());
 
-                        parallel_for(
-                            0, S_id.size(),
-                            [&g_v, &h_v, &beta, &gamma, &global_indices, &column_polynomials, &basic_domain, &S_id,
-                             &S_sigma](std::size_t i) {
-                                BOOST_ASSERT(column_polynomials[global_indices[i]].size() == basic_domain->size());
-                                BOOST_ASSERT(S_id[i].size() == basic_domain->size());
-                                BOOST_ASSERT(S_sigma[i].size() == basic_domain->size());
+                        for (std::size_t i = 0; i < S_id.size(); ++i) {
+                            BOOST_ASSERT(column_polynomials[global_indices[i]].size() == basic_domain->size());
+                            BOOST_ASSERT(S_id[i].size() == basic_domain->size());
+                            BOOST_ASSERT(S_sigma[i].size() == basic_domain->size());
 
-                                /* g_v.push_back(column_polynomials[i] + beta * S_id[i] + gamma); */
-                                g_v[i] *= beta;
-                                g_v[i] += gamma;
-                                g_v[i] += column_polynomials[global_indices[i]];
+                            /* g_v.push_back(column_polynomials[i] + beta * S_id[i] + gamma); */
+                            g_v[i] *= beta;
+                            g_v[i] += gamma;
+                            g_v[i] += column_polynomials[global_indices[i]];
 
-                                /* h_v.push_back(column_polynomials[i] + beta * S_sigma[i] + gamma); */
-                                h_v[i] *= beta;
-                                h_v[i] += gamma;
-                                h_v[i] += column_polynomials[global_indices[i]];
-                            },
-                            thread_pool::pool_level::HIGH);
+                            /* h_v.push_back(column_polynomials[i] + beta * S_sigma[i] + gamma); */
+                            h_v[i] *= beta;
+                            h_v[i] += gamma;
+                            h_v[i] += column_polynomials[global_indices[i]];
+                        }
 
                         V_P[0] = FieldType::value_type::one();
 
                         auto V_P_parts = std::make_unique<std::vector<value_type>>(basic_domain->size(),
                                                                                    FieldType::value_type::zero());
-                        parallel_for(
-                            1, basic_domain->size(),
-                            [&g_v, &h_v, &S_id, &V_P_parts](std::size_t j) {
-                                value_type nom = FieldType::value_type::one();
-                                value_type denom = FieldType::value_type::one();
+                        for (std::size_t j = 1; j < basic_domain->size(); ++j) {
+                            value_type nom = FieldType::value_type::one();
+                            value_type denom = FieldType::value_type::one();
 
-                                for (std::size_t i = 0; i < S_id.size(); i++) {
-                                    nom *= g_v[i][j - 1];
-                                    denom *= h_v[i][j - 1];
-                                }
-                                (*V_P_parts)[j] = nom * denom.inversed();
-                            },
-                            thread_pool::pool_level::LOW);
+                            for (std::size_t i = 0; i < S_id.size(); i++) {
+                                nom *= g_v[i][j - 1];
+                                denom *= h_v[i][j - 1];
+                            }
+                            (*V_P_parts)[j] = nom * denom.inversed();
+                        }
 
                         for (std::size_t j = 1; j < basic_domain->size(); ++j)
                             V_P[j] = V_P[j - 1] * (*V_P_parts)[j];
@@ -217,8 +207,6 @@ namespace nil {
                             const auto &assignment_desc = preprocessed_data.common_data->desc;
                             polynomial_dfs_type previous_poly = V_P;
                             polynomial_dfs_type current_poly = V_P;
-                            // We need to store all the values of current_poly. Suddenly this increases the RAM usage,
-                            // but there's no other way to parallelize this loop.
                             std::vector<polynomial_dfs_type> all_polys(1, V_P);
 
                             for (std::size_t i = 0; i < preprocessed_data.common_data->permutation_parts - 1; i++) {
@@ -227,12 +215,9 @@ namespace nil {
                                 auto reduced_g = reduce_dfs_polynomial_domain(g, basic_domain->m);
                                 auto reduced_h = reduce_dfs_polynomial_domain(h, basic_domain->m);
 
-                                parallel_for(
-                                    0, assignment_desc.usable_rows_amount,
-                                    [&reduced_g, &reduced_h, &current_poly, &previous_poly](std::size_t j) {
-                                        current_poly[j] = (previous_poly[j] * reduced_g[j]) * reduced_h[j].inversed();
-                                    },
-                                    thread_pool::pool_level::LOW);
+                                for (std::size_t j = 0; j < assignment_desc.usable_rows_amount; ++j) {
+                                    current_poly[j] = (previous_poly[j] * reduced_g[j]) * reduced_h[j].inversed();
+                                }
 
                                 commitment_scheme.append_to_batch(PERMUTATION_BATCH, current_poly);
                                 all_polys.push_back(current_poly);
@@ -240,15 +225,11 @@ namespace nil {
                             }
                             std::vector<polynomial_dfs_type> F_dfs_1_parts(
                                 preprocessed_data.common_data->permutation_parts);
-                            parallel_for(
-                                0, preprocessed_data.common_data->permutation_parts - 1,
-                                [&gs, &hs, &permutation_alphas, &all_polys, &F_dfs_1_parts](std::size_t i) {
-                                    auto &g = gs[i];
-                                    auto &h = hs[i];
-                                    F_dfs_1_parts[i] =
-                                        permutation_alphas[i] * (all_polys[i] * g - all_polys[i + 1] * h);
-                                },
-                                thread_pool::pool_level::HIGH);
+                            for (std::size_t i = 0; i < preprocessed_data.common_data->permutation_parts - 1; ++i) {
+                                auto &g = gs[i];
+                                auto &h = hs[i];
+                                F_dfs_1_parts[i] = permutation_alphas[i] * (all_polys[i] * g - all_polys[i + 1] * h);
+                            }
 
                             std::size_t last = permutation_alphas.size();
                             auto &g = gs[last];

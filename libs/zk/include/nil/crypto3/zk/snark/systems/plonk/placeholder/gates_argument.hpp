@@ -52,9 +52,6 @@
 
 #include <nil/crypto3/bench/scoped_profiler.hpp>
 
-#include <nil/actor/core/parallelization_utils.hpp>
-#include <nil/actor/core/thread_pool.hpp>
-
 namespace nil {
     namespace crypto3 {
         namespace zk {

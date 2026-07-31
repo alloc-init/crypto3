@@ -32,8 +32,6 @@
 
 #include <nil/crypto3/math/polynomial/basis_change.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
-#include <nil/actor/core/thread_pool.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -120,9 +118,9 @@ namespace nil {
                     multiplication(a, g, T);
                     a.resize(this->m);
 
-                    nil::crypto3::in_place_parallel_transform(
-                        a.begin(), a.end(), T.begin(),
-                        [](value_type &a_i, const field_value_type &T_i) { a_i *= T_i.inversed(); });
+                    for (std::size_t i = 0; i < a.size(); ++i) {
+                        a[i] *= T[i].inversed();
+                    }
                 }
 
                 void inverse_fft(std::vector<value_type> &a) override {
@@ -157,9 +155,9 @@ namespace nil {
                     multiplication(a, W, T);
                     a.resize(this->m);
 
-                    nil::crypto3::in_place_parallel_transform(
-                        a.begin(), a.end(), geometric_triangular_sequence.begin(),
-                        [](value_type &a_i, const field_value_type &g_i) { a_i *= g_i.inversed(); });
+                    for (std::size_t i = 0; i < a.size(); ++i) {
+                        a[i] *= geometric_triangular_sequence[i].inversed();
+                    }
 
                     newton_to_monomial_basis_geometric<FieldType>(a, geometric_sequence, geometric_triangular_sequence,
                                                                   this->m);
@@ -373,9 +371,9 @@ namespace nil {
                         multiplication(x, x, t);
                     }
 
-                    nil::crypto3::in_place_parallel_transform(
-                        H.begin(), H.end(), x.begin(),
-                        [&coeff](field_value_type &H_i, const field_value_type &x_i) { H_i += x_i * coeff; });
+                    for (std::size_t i = 0; i < H.size(); ++i) {
+                        H[i] += x[i] * coeff;
+                    }
                 }
 
                 void divide_by_z_on_coset(std::vector<field_value_type> &P) override {
@@ -384,9 +382,9 @@ namespace nil {
                                                                                             sequence? */
                     const field_value_type Z_inverse_at_coset = compute_vanishing_polynomial(coset).inversed();
 
-                    nil::crypto3::parallel_foreach(P.begin(), P.end(), [&Z_inverse_at_coset](field_value_type &P_i) {
+                    for (field_value_type &P_i : P) {
                         P_i *= Z_inverse_at_coset;
-                    });
+                    }
                 }
             };
         }    // namespace math

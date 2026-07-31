@@ -7,6 +7,7 @@
 #---------------------------------------------------------------------------#
 
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
+project(crypto3)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -21,6 +22,13 @@ include(CMConfig)
 include(CMSetupVersion)
 
 cm_workspace(crypto3)
+
+if(APPLE)
+    # silence unnecessary warning when linking tests on mac
+    set(CMAKE_CXX_ARCHIVE_FINISH
+        "<CMAKE_RANLIB> -no_warning_for_no_symbols <TARGET>")
+endif()
+
 cm_setup_version(VERSION 0.3.0 PREFIX ${CMAKE_WORKSPACE_NAME})
 
 option(BUILD_TESTS "Enable tests" TRUE)# used by CMTest module; If set to false, tests are removed from crypto3::all target. User still can build individual ones.
@@ -51,7 +59,7 @@ else()
     target_architecture(CMAKE_TARGET_ARCHITECTURE)
 endif()
 
-find_package(Boost REQUIRED COMPONENTS
+find_package(Boost CONFIG REQUIRED COMPONENTS
         container random filesystem log log_setup program_options thread unit_test_framework timer)
 
 function(add_tests)

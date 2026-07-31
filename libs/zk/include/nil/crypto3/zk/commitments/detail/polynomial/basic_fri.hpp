@@ -59,9 +59,6 @@
 
 #include <nil/crypto3/bench/scoped_profiler.hpp>
 
-#include <nil/actor/core/thread_pool.hpp>
-#include <nil/actor/core/parallelization_utils.hpp>
-
 namespace nil {
     namespace crypto3 {
         namespace zk {
@@ -479,16 +476,11 @@ namespace nil {
                     PROFILE_SCOPE("Basic FRI precommit");
 
                     TAGGED_PROFILE_SCOPE("{low level} FFT", "Resize polynomials");
-                    // Resize uses low level thread pool, so we need to use the high
-                    // level one here.
-                    parallel_for(
-                        0, poly.size(),
-                        [&poly, &D](std::size_t i) {
-                            if (poly[i].size() != D->size()) {
-                                poly[i].resize(D->size());
-                            }
-                        },
-                        thread_pool::pool_level::HIGH);
+                    for (std::size_t i = 0; i < poly.size(); ++i) {
+                        if (poly[i].size() != D->size()) {
+                            poly[i].resize(D->size());
+                        }
+                    }
                     PROFILE_SCOPE_END();
 
                     TAGGED_PROFILE_SCOPE("{low level} hash", "Create field element consumers");
@@ -501,34 +493,33 @@ namespace nil {
                     PROFILE_SCOPE_END();
 
                     TAGGED_PROFILE_SCOPE("{low level} hash", "Precommit leafs");
-                    parallel_for(0, leafs_number,
-                                 [&y_data, &poly, domain_size, coset_size, list_size](std::size_t x_index) {
-                                     auto &element_consumer = y_data[x_index].reset_cursor();
-                                     for (std::size_t polynom_index = 0; polynom_index < list_size; polynom_index++) {
-                                         std::vector<std::array<std::size_t, FRI::m>> s_indices(coset_size / FRI::m);
-                                         s_indices[0][0] = x_index;
-                                         s_indices[0][1] = get_paired_index<FRI>(x_index, domain_size);
+                    for (std::size_t x_index = 0; x_index < leafs_number; ++x_index) {
+                        auto &element_consumer = y_data[x_index].reset_cursor();
+                        for (std::size_t polynom_index = 0; polynom_index < list_size; polynom_index++) {
+                            std::vector<std::array<std::size_t, FRI::m>> s_indices(coset_size / FRI::m);
+                            s_indices[0][0] = x_index;
+                            s_indices[0][1] = get_paired_index<FRI>(x_index, domain_size);
 
-                                         element_consumer.consume(poly[polynom_index][s_indices[0][0]]);
-                                         element_consumer.consume(poly[polynom_index][s_indices[0][1]]);
+                            element_consumer.consume(poly[polynom_index][s_indices[0][0]]);
+                            element_consumer.consume(poly[polynom_index][s_indices[0][1]]);
 
-                                         std::size_t base_index = domain_size / (FRI::m * FRI::m);
-                                         std::size_t prev_half_size = 1;
-                                         std::size_t i = 1;
-                                         while (i < coset_size / FRI::m) {
-                                             for (std::size_t j = 0; j < prev_half_size; j++) {
-                                                 s_indices[i][0] = (base_index + s_indices[j][0]) % domain_size;
-                                                 s_indices[i][1] = get_paired_index<FRI>(s_indices[i][0], domain_size);
-                                                 element_consumer.consume(poly[polynom_index][s_indices[i][0]]);
-                                                 element_consumer.consume(poly[polynom_index][s_indices[i][1]]);
+                            std::size_t base_index = domain_size / (FRI::m * FRI::m);
+                            std::size_t prev_half_size = 1;
+                            std::size_t i = 1;
+                            while (i < coset_size / FRI::m) {
+                                for (std::size_t j = 0; j < prev_half_size; j++) {
+                                    s_indices[i][0] = (base_index + s_indices[j][0]) % domain_size;
+                                    s_indices[i][1] = get_paired_index<FRI>(s_indices[i][0], domain_size);
+                                    element_consumer.consume(poly[polynom_index][s_indices[i][0]]);
+                                    element_consumer.consume(poly[polynom_index][s_indices[i][1]]);
 
-                                                 i++;
-                                             }
-                                             base_index /= FRI::m;
-                                             prev_half_size <<= 1;
-                                         }
-                                     }
-                                 });
+                                    i++;
+                                }
+                                base_index /= FRI::m;
+                                prev_half_size <<= 1;
+                            }
+                        }
+                    }
                     PROFILE_SCOPE_END();
 
                     TAGGED_PROFILE_SCOPE("{low level} hash", "Make merkle tree");
@@ -950,20 +941,17 @@ namespace nil {
 
                     TAGGED_PROFILE_SCOPE("{low level} poly eval", "Compute initial proofs of size {}",
                                          fri_params.lambda);
-                    parallel_for(
-                        0, fri_params.lambda,
-                        [&proof, &fri_params, &precommitments, &g_coeffs, &g, &challenges](std::size_t query_id) {
-                            std::size_t domain_size = fri_params.D[0]->size();
-                            std::uint64_t x_index = static_cast<std::uint64_t>(
-                                challenges[query_id].binomial_extension_coefficient(0).to_integral() % domain_size);
+                    for (std::size_t query_id = 0; query_id < fri_params.lambda; ++query_id) {
+                        std::size_t domain_size = fri_params.D[0]->size();
+                        std::uint64_t x_index = static_cast<std::uint64_t>(
+                            challenges[query_id].binomial_extension_coefficient(0).to_integral() % domain_size);
 
-                            std::map<std::size_t, typename FRI::initial_proof_type> initial_proof =
-                                build_initial_proof<FRI, polynomial_dfs_type>(precommitments, fri_params, g, g_coeffs,
-                                                                              x_index);
+                        std::map<std::size_t, typename FRI::initial_proof_type> initial_proof =
+                            build_initial_proof<FRI, polynomial_dfs_type>(precommitments, fri_params, g, g_coeffs,
+                                                                          x_index);
 
-                            proof.initial_proofs[query_id] = std::move(initial_proof);
-                        },
-                        thread_pool::pool_level::HIGH);
+                        proof.initial_proofs[query_id] = std::move(initial_proof);
+                    }
 
                     return proof;
                 }
