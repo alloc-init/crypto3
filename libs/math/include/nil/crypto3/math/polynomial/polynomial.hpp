@@ -569,8 +569,9 @@ namespace nil {
             polynomial<FieldValueType, Allocator> operator*(const polynomial<FieldValueType, Allocator>& A,
                                                             const FieldValueType& B) {
                 polynomial<FieldValueType> result(A);
-                parallel_foreach(
-                    result.begin(), result.end(), [&B](FieldValueType& v) { v *= B; }, thread_pool::pool_level::LOW);
+                for (FieldValueType& value : result) {
+                    value *= B;
+                }
                 return result;
             }
 
@@ -588,9 +589,9 @@ namespace nil {
                                                             const FieldValueType& B) {
                 polynomial<FieldValueType> result(A);
                 FieldValueType B_inversed = B.inversed();
-                parallel_foreach(
-                    result.begin(), result.end(), [&B_inversed](FieldValueType& v) { v *= B_inversed; },
-                    thread_pool::pool_level::LOW);
+                for (FieldValueType& value : result) {
+                    value *= B_inversed;
+                }
 
                 return result;
             }
