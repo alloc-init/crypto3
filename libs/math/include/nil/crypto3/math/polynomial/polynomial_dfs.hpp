@@ -685,27 +685,20 @@ namespace nil {
                  * separately.
                  */
                 void element_wise_inverse() {
-                    // Divide the vector of size "this->val.size()" into chunks and inverse each chunk.
+                    if (this->val.empty()) {
+                        return;
+                    }
                     container_type result(this->val.size());
-                    wait_for_all(parallel_run_in_chunks<void>(
-                        this->val.size(),
-                        [&result, this](std::size_t range_begin, std::size_t range_end) {
-                            result[range_begin] = value_type::one();
-                            for (size_t i = range_begin + 1; i < range_end; i++) {
-                                result[i] = result[i - 1] * this->val[i - 1];
-                            }
-                            FieldValueType inv = (result[range_end - 1] * this->val[range_end - 1]).inversed();
-                            // Suddenly we need to convert range_begin to int, otherwise it's being compared
-                            // incorrectly.
-                            for (int i = range_end - 1; i >= (int)range_begin; --i) {
-                                result[i] *= inv;
-                                inv *= this->val[i];
-                            }
-                            for (size_t i = range_begin; i < range_end; i++) {
-                                this->val[i] = result[i];
-                            }
-                        },
-                        thread_pool::pool_level::LOW));
+                    result[0] = value_type::one();
+                    for (std::size_t i = 1; i < this->val.size(); ++i) {
+                        result[i] = result[i - 1] * this->val[i - 1];
+                    }
+                    FieldValueType inv = (result.back() * this->val.back()).inversed();
+                    for (std::size_t i = this->val.size(); i-- > 0;) {
+                        result[i] *= inv;
+                        inv *= this->val[i];
+                    }
+                    this->val = std::move(result);
                 }
 
                 template<typename ContainerType>
