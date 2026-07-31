@@ -39,7 +39,6 @@
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
 #include <nil/crypto3/math/polynomial/shift.hpp>
-#include <nil/actor/core/thread_pool.hpp>
 
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::math;
@@ -1312,7 +1311,7 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_zero_one_test) {
     BOOST_CHECK((small_poly - one * small_poly).is_zero());
 }
 
-BOOST_AUTO_TEST_CASE(polynomial_dfs_2_levels_test) {
+BOOST_AUTO_TEST_CASE(polynomial_dfs_repeated_multiplication_test) {
     size_t size = 131072;
 
     polynomial_dfs<typename FieldType::value_type> poly = {size / 128, size,
@@ -1320,13 +1319,9 @@ BOOST_AUTO_TEST_CASE(polynomial_dfs_2_levels_test) {
 
     std::vector<polynomial_dfs<typename FieldType::value_type>> poly4(4, poly);
 
-    nil::crypto3::parallel_for(
-        0, poly4.size(),
-        [&poly4, &poly](std::size_t i) {
-            // Inside this multiplication lower level pool is used.
-            poly4[i] *= poly;
-        },
-        nil::crypto3::thread_pool::pool_level::HIGH);
+    for (std::size_t i = 0; i < poly4.size(); ++i) {
+        poly4[i] *= poly;
+    }
 
     for (std::size_t i = 1; i < poly4.size(); ++i) {
         BOOST_CHECK(poly4[i] == poly4[0]);

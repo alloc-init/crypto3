@@ -263,10 +263,9 @@ namespace nil::crypto3::zk::snark {
             //      may be less than split_polynomial_size.
             std::vector<polynomial_dfs_type> T_splitted_dfs(T_splitted.size());
 
-            parallel_for(
-                0, T_splitted.size(),
-                [&T_splitted, &T_splitted_dfs](std::size_t k) { T_splitted_dfs[k].from_coefficients(T_splitted[k]); },
-                thread_pool::pool_level::HIGH);
+            for (std::size_t k = 0; k < T_splitted.size(); ++k) {
+                T_splitted_dfs[k].from_coefficients(T_splitted[k]);
+            }
 
             // DO NOT CHANGE, sizes are different by design
             T_splitted_dfs.resize(split_polynomial_size);
@@ -282,16 +281,13 @@ namespace nil::crypto3::zk::snark {
 
             // 7.2. Compute F_consolidated
             std::vector<polynomial_dfs_type> F_consolidated_dfs_parts(_F_dfs.size(), polynomial_dfs_type());
-            parallel_for(
-                0, F_consolidated_dfs_parts.size(),
-                [this, &F_consolidated_dfs_parts, &alphas](std::size_t i) {
-                    F_consolidated_dfs_parts[i] = _F_dfs[i];
-                    if (_F_dfs[i].is_zero()) {
-                        return;
-                    }
-                    F_consolidated_dfs_parts[i] *= alphas[i];
-                },
-                thread_pool::pool_level::HIGH);
+            for (std::size_t i = 0; i < F_consolidated_dfs_parts.size(); ++i) {
+                F_consolidated_dfs_parts[i] = _F_dfs[i];
+                if (_F_dfs[i].is_zero()) {
+                    continue;
+                }
+                F_consolidated_dfs_parts[i] *= alphas[i];
+            }
 
             polynomial_dfs_type F_consolidated_dfs = polynomial_sum<FieldType>(std::move(F_consolidated_dfs_parts));
 

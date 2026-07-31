@@ -180,19 +180,6 @@ namespace nil {
                 pool_id));
         }
 
-        // Calls function func for each value between [start, end).
-        inline void parallel_for(std::size_t start, std::size_t end, std::function<void(std::size_t index)> func,
-                                 thread_pool::pool_level pool_id = thread_pool::pool_level::LOW) {
-            wait_for_all(parallel_run_in_chunks<void>(
-                end - start,
-                [start, func](std::size_t range_begin, std::size_t range_end) {
-                    for (std::size_t i = start + range_begin; i < start + range_end; i++) {
-                        func(i);
-                    }
-                },
-                pool_id));
-        }
-
     }    // namespace crypto3
 }    // namespace nil
 

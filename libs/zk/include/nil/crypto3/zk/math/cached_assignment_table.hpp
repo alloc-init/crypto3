@@ -175,30 +175,24 @@ namespace nil::crypto3::zk::snark {
 
             std::vector<var_without_rotation_type> new_vars(new_vars_set.begin(), new_vars_set.end());
 
-            parallel_for(
-                0, new_vars.size(),
-                [&new_vars, size, this](std::size_t i) {
-                    // Here we take from _assignment_table_coefficients the variable value
-                    // without rotation.
-                    auto value_dfs = std::make_shared<polynomial_dfs_type>();
-                    value_dfs->from_coefficients(*_assignment_table_coefficients[new_vars[i]], get_domain(size));
-                    _cache[std::make_pair(new_vars[i], size)][0] = value_dfs;
-                },
-                thread_pool::pool_level::HIGH);
+            for (std::size_t i = 0; i < new_vars.size(); ++i) {
+                // Here we take from _assignment_table_coefficients the variable value
+                // without rotation.
+                auto value_dfs = std::make_shared<polynomial_dfs_type>();
+                value_dfs->from_coefficients(*_assignment_table_coefficients[new_vars[i]], get_domain(size));
+                _cache[std::make_pair(new_vars[i], size)][0] = value_dfs;
+            }
 
             // Ensure we have the required variable in the cache with required rotation.
-            parallel_for(
-                0, new_variables_with_rotation.size(),
-                [&new_variables_with_rotation, size, this](std::size_t i) {
-                    auto v_with_rotation = new_variables_with_rotation[i];
-                    var_without_rotation_type v(v_with_rotation);
+            for (std::size_t i = 0; i < new_variables_with_rotation.size(); ++i) {
+                auto v_with_rotation = new_variables_with_rotation[i];
+                var_without_rotation_type v(v_with_rotation);
 
-                    _cache[var_and_size_pair_type(v, size)][v_with_rotation.rotation] =
-                        std::make_shared<polynomial_dfs_type>(
-                            math::polynomial_shift(*_cache[var_and_size_pair_type(v, size)][0],
-                                                   v_with_rotation.rotation, this->_original_domain_size));
-                },
-                thread_pool::pool_level::HIGH);
+                _cache[var_and_size_pair_type(v, size)][v_with_rotation.rotation] =
+                    std::make_shared<polynomial_dfs_type>(
+                        math::polynomial_shift(*_cache[var_and_size_pair_type(v, size)][0], v_with_rotation.rotation,
+                                               this->_original_domain_size));
+            }
         }
 
         bool is_cached(const variable_type& v, std::size_t size) const {
@@ -208,8 +202,7 @@ namespace nil::crypto3::zk::snark {
         }
 
         // Ensure the value is cached before calling this function. We intentionally cannot
-        // create the variable value inside this function, if it does not exist, because it's much harder
-        // in a multi-threaded invironment.
+        // create the variable value inside this function if it does not exist.
         std::shared_ptr<polynomial_dfs_type> get(const variable_type& v_with_rotation, std::size_t size) const {
             var_without_rotation_type v(v_with_rotation);
             const auto key = std::make_pair(v_with_rotation, size);

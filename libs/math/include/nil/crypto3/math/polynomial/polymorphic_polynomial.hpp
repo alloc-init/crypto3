@@ -104,7 +104,9 @@ namespace nil::crypto3::math {
             } else {
                 const auto& small = std::get<small_val>(val);
                 big_val p(small.size());
-                parallel_for(0, small.size(), [&a, &p, &small](std::size_t i) { p[i] = small[i] * a; });
+                for (std::size_t i = 0; i < small.size(); ++i) {
+                    p[i] = small[i] * a;
+                }
                 val = p;
             }
             return *this;
