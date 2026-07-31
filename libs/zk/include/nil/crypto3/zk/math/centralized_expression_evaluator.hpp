@@ -27,8 +27,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include <nil/actor/core/parallelization_utils.hpp>
-
 #include <nil/crypto3/bench/scoped_profiler.hpp>
 
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
