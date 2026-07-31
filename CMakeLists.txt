@@ -7,6 +7,7 @@
 #---------------------------------------------------------------------------#
 
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
+project(crypto3)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -58,7 +59,7 @@ else()
     target_architecture(CMAKE_TARGET_ARCHITECTURE)
 endif()
 
-find_package(Boost REQUIRED COMPONENTS
+find_package(Boost CONFIG REQUIRED COMPONENTS
         container random filesystem log log_setup program_options thread unit_test_framework timer)
 
 function(add_tests)

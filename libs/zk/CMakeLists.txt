@@ -26,9 +26,8 @@ endif()
 cm_project(zk WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES C CXX)
 
 include(CMDeploy)
-include(FindPkgConfig)
 
-find_package(Boost REQUIRED COMPONENTS
+find_package(Boost CONFIG REQUIRED COMPONENTS
         container random filesystem log log_setup program_options thread unit_test_framework timer)
 
 cm_setup_version(VERSION 0.1.0 PREFIX ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME})
