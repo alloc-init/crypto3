@@ -91,8 +91,7 @@ namespace nil::crypto3::zk::snark {
             auto count = math::count_chunks<mini_chunk_size>(extended_domain_size);
             std::vector<simd_vector_type> assignment_chunks(this->_expr.get_nodes_count());
             for (std::size_t j = 0; j < count; ++j) {
-                this->compute_dag_chunk_values(assignment_chunks, _cached_assignment_table, extended_domain_size, 0,
-                                               j);
+                this->compute_dag_chunk_values(assignment_chunks, _cached_assignment_table, extended_domain_size, 0, j);
 
                 for (std::size_t k = 0; k < this->_expr.get_root_nodes_count(); ++k) {
                     math::set_chunk(result[k], 0, j, assignment_chunks[this->_expr.get_root_node(k)]);

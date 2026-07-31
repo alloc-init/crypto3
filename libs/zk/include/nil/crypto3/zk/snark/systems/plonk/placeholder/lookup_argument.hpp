@@ -204,8 +204,7 @@ namespace nil {
                                              hs.size());
 
                         for (std::size_t i = 0; i < hs.size(); ++i) {
-                            h_constraint_parts[i] =
-                                h_challenges[i] * (hs[i] * (alpha - lookup_input[i]) + one);
+                            h_constraint_parts[i] = h_challenges[i] * (hs[i] * (alpha - lookup_input[i]) + one);
                         }
                         PROFILE_SCOPE_END();
 
@@ -224,8 +223,7 @@ namespace nil {
                         TAGGED_PROFILE_SCOPE("{low level} FFT", "Lookup argument compute g constraint parts of size {}",
                                              gs.size());
                         for (std::size_t i = 0; i < gs.size(); ++i) {
-                            g_constraint_parts[i] =
-                                g_challenges[i] * (gs[i] * (alpha - lookup_value[i]) - counts[i]);
+                            g_constraint_parts[i] = g_challenges[i] * (gs[i] * (alpha - lookup_value[i]) - counts[i]);
                         }
                         PROFILE_SCOPE_END();
 
@@ -352,9 +350,9 @@ namespace nil {
                                 polynomial_dfs_type v = (value_type(t_id + 1)) * lookup_tag;
                                 value_type theta_acc = this->theta;
                                 for (std::size_t i = 0; i < l_table.columns_number; i++) {
-                                    v += theta_acc * polynomial_dfs_type(
-                                                         this->_central_expr_evaluator.get_expression_value(
-                                                             registrationss[o_id][i]));
+                                    v += theta_acc *
+                                         polynomial_dfs_type(this->_central_expr_evaluator.get_expression_value(
+                                             registrationss[o_id][i]));
                                     theta_acc *= this->theta;
                                 }
                                 lookup_value[lookup_values_used + o_id] = v;

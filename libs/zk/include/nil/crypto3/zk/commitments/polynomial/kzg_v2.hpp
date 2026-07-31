@@ -293,8 +293,7 @@ namespace nil {
                                 auto Z_T_S_i = diffpoly.evaluate(theta_2);
                                 auto f_i = math::polynomial<typename CommitmentSchemeType::scalar_value_type>(
                                     this->_polys[k][i].coefficients());
-                                addends[polys_idx] +=
-                                    theta_i * Z_T_S_i * (f_i - this->get_U(k, i).evaluate(theta_2));
+                                addends[polys_idx] += theta_i * Z_T_S_i * (f_i - this->get_U(k, i).evaluate(theta_2));
                                 theta_i *= theta;
                             }
                         }

@@ -62,8 +62,7 @@ namespace nil {
                 polynomial_dfs<FieldValueType> f_shifted(f.degree(), extended_domain_size);
 
                 for (std::size_t index = 0; index < extended_domain_size; ++index) {
-                    f_shifted[index] =
-                        f[(extended_domain_size + index + domain_scale * shift) % extended_domain_size];
+                    f_shifted[index] = f[(extended_domain_size + index + domain_scale * shift) % extended_domain_size];
                 }
 
                 return f_shifted;

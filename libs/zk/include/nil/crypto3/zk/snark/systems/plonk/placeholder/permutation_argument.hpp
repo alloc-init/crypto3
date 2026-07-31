@@ -216,8 +216,7 @@ namespace nil {
                                 auto reduced_h = reduce_dfs_polynomial_domain(h, basic_domain->m);
 
                                 for (std::size_t j = 0; j < assignment_desc.usable_rows_amount; ++j) {
-                                    current_poly[j] =
-                                        (previous_poly[j] * reduced_g[j]) * reduced_h[j].inversed();
+                                    current_poly[j] = (previous_poly[j] * reduced_g[j]) * reduced_h[j].inversed();
                                 }
 
                                 commitment_scheme.append_to_batch(PERMUTATION_BATCH, current_poly);
@@ -229,8 +228,7 @@ namespace nil {
                             for (std::size_t i = 0; i < preprocessed_data.common_data->permutation_parts - 1; ++i) {
                                 auto &g = gs[i];
                                 auto &h = hs[i];
-                                F_dfs_1_parts[i] =
-                                    permutation_alphas[i] * (all_polys[i] * g - all_polys[i + 1] * h);
+                                F_dfs_1_parts[i] = permutation_alphas[i] * (all_polys[i] * g - all_polys[i + 1] * h);
                             }
 
                             std::size_t last = permutation_alphas.size();
