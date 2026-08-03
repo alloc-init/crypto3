@@ -74,7 +74,7 @@ cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         INCLUDE include
         NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
 
-add_tests(test)
+cm_add_test_subdirectory(test)
 
 if(BUILD_EXAMPLES)
     add_subdirectory(example)
