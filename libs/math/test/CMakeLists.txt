@@ -39,6 +39,7 @@ macro(define_math_test name)
 endmacro()
 
 set(TESTS_NAMES
+    "batch_inverse"
     "evaluation_domain"
     # "kronecker_substitution"  # FIXME: This fails. Disabled for passing CI
     "polynomial_arithmetic"
