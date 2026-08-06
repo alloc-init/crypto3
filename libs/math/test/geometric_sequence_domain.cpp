@@ -43,11 +43,27 @@ namespace {
 
     using bn254_fq = algebra::fields::alt_bn128<254>;
 
-    template<typename ValueType>
-    ValueType evaluate(const std::vector<ValueType> &coefficients, const ValueType &point) {
+    template<typename Coefficients, typename ValueType>
+    ValueType evaluate(const Coefficients &coefficients, const ValueType &point) {
         ValueType result = ValueType::zero();
         for (auto it = coefficients.rbegin(); it != coefficients.rend(); ++it) {
             result = result * point + *it;
+        }
+        return result;
+    }
+
+    template<typename DomainType>
+    auto construct_vanishing_polynomial_directly(DomainType &domain) {
+        using value_type = decltype(domain.get_domain_element(0));
+
+        std::vector<value_type> result(domain.size() + 1, value_type::zero());
+        result[0] = value_type::one();
+        for (std::size_t i = 0; i < domain.size(); ++i) {
+            const value_type point = domain.get_domain_element(i);
+            for (std::size_t degree = i + 1; degree > 0; --degree) {
+                result[degree] = result[degree - 1] - point * result[degree];
+            }
+            result[0] = -(point * result[0]);
         }
         return result;
     }
@@ -88,6 +104,42 @@ BOOST_AUTO_TEST_CASE(large_bn254_domain_supports_lagrange_evaluation) {
     BOOST_CHECK_EQUAL(weight_sum, bn254_fq::value_type::one());
     BOOST_CHECK_EQUAL(weighted_points, t);
     BOOST_CHECK_EQUAL(vanishing_at_t, domain.compute_vanishing_polynomial(t));
+
+    const math::polynomial<bn254_fq::value_type> vanishing_polynomial = domain.get_vanishing_polynomial();
+    BOOST_CHECK_EQUAL(vanishing_polynomial.size(), domain_size + 1);
+    BOOST_CHECK_EQUAL(vanishing_polynomial[domain_size], bn254_fq::value_type::one());
+    BOOST_CHECK_EQUAL(evaluate(vanishing_polynomial, t), vanishing_at_t);
+}
+
+BOOST_AUTO_TEST_CASE(vanishing_polynomial_matches_direct_construction) {
+    using value_type = bn254_fq::value_type;
+
+    for (std::size_t domain_size = 2; domain_size <= 64; ++domain_size) {
+        math::geometric_sequence_domain<bn254_fq> domain(domain_size);
+        const math::polynomial<value_type> actual = domain.get_vanishing_polynomial();
+        const std::vector<value_type> expected = construct_vanishing_polynomial_directly(domain);
+
+        BOOST_REQUIRE_EQUAL(actual.size(), expected.size());
+        for (std::size_t i = 0; i < actual.size(); ++i) {
+            BOOST_CHECK_EQUAL(actual[i], expected[i]);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(vanishing_polynomial_handles_an_exact_order_generator) {
+    using field_type = algebra::fields::mersenne31;
+    using value_type = field_type::value_type;
+
+    constexpr std::size_t domain_size = 31;
+    math::geometric_sequence_domain<field_type> domain(domain_size);
+    const math::polynomial<value_type> vanishing_polynomial = domain.get_vanishing_polynomial();
+
+    BOOST_REQUIRE_EQUAL(vanishing_polynomial.size(), domain_size + 1);
+    BOOST_CHECK_EQUAL(vanishing_polynomial[0], -value_type::one());
+    BOOST_CHECK_EQUAL(vanishing_polynomial[domain_size], value_type::one());
+    for (std::size_t i = 1; i < domain_size; ++i) {
+        BOOST_CHECK_EQUAL(vanishing_polynomial[i], value_type::zero());
+    }
 }
 
 BOOST_AUTO_TEST_CASE(combined_lagrange_api_has_a_default_domain_implementation) {

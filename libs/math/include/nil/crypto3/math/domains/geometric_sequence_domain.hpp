@@ -47,14 +47,14 @@ namespace nil {
             /**
              * An exact-size evaluation domain whose points are x_i = r^i for 0 <= i < m.
              *
-             * The field-element Lagrange path precomputes the domain points and barycentric weights in O(m) field
-             * operations, using one field inversion through batch inversion. Each subsequent evaluation of all m
-             * Lagrange basis polynomials at one point takes O(m) field operations and one field inversion. Therefore,
-             * after constructing one reusable domain, evaluating the weights at k points takes O(m * k), not
-             * quadratic work per point.
+             * The field-element Lagrange path precomputes the domain points, barycentric weights, and vanishing
+             * polynomial coefficients in O(m) field operations, using one field inversion through batch inversion.
+             * Each subsequent evaluation of all m Lagrange basis polynomials at one point takes O(m) field operations
+             * and one field inversion. Therefore, after constructing one reusable domain, evaluating the weights at k
+             * points takes O(m * k), not quadratic work per point.
              *
-             * This complexity guarantee applies to the field-element Lagrange overloads. The legacy transforms and
-             * powers-based overload are documented separately below.
+             * This complexity guarantee applies to constructor precomputation and the field-element Lagrange
+             * overloads. The legacy transforms and powers-based overload are documented separately below.
              */
             template<typename FieldType, typename ValueType = typename FieldType::value_type>
             class geometric_sequence_domain : public evaluation_domain<FieldType, ValueType> {
@@ -66,17 +66,19 @@ namespace nil {
                     std::vector<field_value_type> geometric_sequence;
                     std::vector<field_value_type> geometric_triangular_sequence;
                     std::vector<field_value_type> barycentric_weights;
+                    polynomial<field_value_type> vanishing_polynomial;
 
                     /*
                      * Here m is the exact domain size: there are m points x_0, ..., x_(m-1), and transforms consume
                      * exactly m coefficients or evaluations.
                      *
-                     * Build the reusable field data once, in three linear stages:
+                     * Build the reusable field data once, in four linear stages:
                      *   1. Generate r^i and r^(i(i-1)/2), while validating that the domain points are distinct.
                      *   2. Batch-invert a packed denominator vector using one field inversion. Its first entry is r,
-                     *      and entry i > 0 is 1 - r^i, so the result supplies both r^-1 and every
-                     *      (1 - r^i)^-1 needed below.
+                     *      and entry i > 0 is 1 - r^i, so the result supplies both r^-1 and every inverse needed by
+                     *      the recurrences below.
                      *   3. Derive the barycentric weights by recurrence.
+                     *   4. Derive the coefficients of Z(X) = product_(i=0)^(m-1) (X - r^i) by recurrence.
                      *
                      * The completed object is immutable and constructor-only scratch remains local, so concurrent
                      * Lagrange evaluations share only read-only state.
@@ -85,14 +87,15 @@ namespace nil {
                         generator(fields::arithmetic_params<FieldType>::geometric_generator),
                         geometric_sequence(m, field_value_type::zero()),
                         geometric_triangular_sequence(m, field_value_type::zero()),
-                        barycentric_weights(m, field_value_type::zero()) {
+                        barycentric_weights(m, field_value_type::zero()),
+                        vanishing_polynomial(m + 1, field_value_type::zero()) {
                         if (generator.is_zero()) {
                             throw std::invalid_argument("geometric: expected a nonzero geometric generator");
                         }
 
                         geometric_sequence[0] = field_value_type::one();
                         geometric_triangular_sequence[0] = field_value_type::one();
-                        std::vector<field_value_type> denominators(m, field_value_type::zero());
+                        std::vector<field_value_type> denominators(m + 1, field_value_type::zero());
                         denominators[0] = generator;
                         for (std::size_t i = 1; i < m; ++i) {
                             geometric_sequence[i] = geometric_sequence[i - 1] * generator;
@@ -103,6 +106,15 @@ namespace nil {
                             geometric_triangular_sequence[i] =
                                 geometric_triangular_sequence[i - 1] * geometric_sequence[i - 1];
                             denominators[i] = field_value_type::one() - geometric_sequence[i];
+                        }
+
+                        const field_value_type generator_to_m = geometric_sequence[m - 1] * generator;
+                        if (generator_to_m.is_one()) {
+                            // The last denominator would be zero. It is not needed in the exact-order case handled
+                            // below, while all earlier denominators are nonzero by the distinctness check above.
+                            denominators.resize(m);
+                        } else {
+                            denominators[m] = field_value_type::one() - generator_to_m;
                         }
 
                         // Inverting the generator and all nonzero (1 - r^i) terms together makes domain construction
@@ -138,6 +150,35 @@ namespace nil {
                             barycentric_weights[i] =
                                 -(barycentric_weights[i - 1] * inverse_geometric_sequence[m - 1 - i] *
                                   denominators[m - i] * inverse_denominators[i]);
+                        }
+
+                        /*
+                         * Write the vanishing polynomial as
+                         *
+                         *   Z(X) = sum_(j=0)^m c_j X^(m-j), with c_0 = 1.
+                         *
+                         * The Gaussian-binomial theorem gives
+                         *
+                         *   c_j = (-1)^j r^(j(j-1)/2) [m choose j]_r.
+                         *
+                         * Taking the ratio of adjacent Gaussian-binomial coefficients yields, for 1 <= j <= m,
+                         *
+                         *   c_j = -c_(j-1) r^(j-1) (1 - r^(m-j+1)) / (1 - r^j).
+                         *
+                         * Thus all m+1 coefficients take O(m) field operations. The powers of r and inverses of
+                         * 1-r^j come from the arrays already built above. If r^m = 1, distinctness means that r has
+                         * exact order m, so the recurrence's final denominator vanishes and Z(X) is simply X^m - 1.
+                         */
+                        vanishing_polynomial[m] = field_value_type::one();
+                        if (generator_to_m.is_one()) {
+                            vanishing_polynomial[0] = -field_value_type::one();
+                        } else {
+                            field_value_type coefficient = field_value_type::one();
+                            for (std::size_t j = 1; j <= m; ++j) {
+                                coefficient = -(coefficient * geometric_sequence[j - 1] * denominators[m - j + 1] *
+                                                inverse_denominators[j]);
+                                vanishing_polynomial[m - j] = coefficient;
+                            }
                         }
                     }
                 };
@@ -394,38 +435,15 @@ namespace nil {
                 }
 
                 polynomial<field_value_type> get_vanishing_polynomial() override {
-                    /*
-                     * TODO: Generate and cache these coefficients in O(m) with the Gaussian-binomial recurrence.
-                     * Repeated polynomial multiplication is quadratic and may request unsupported roots from the
-                     * generic multiplication backend over low-2-adicity fields.
-                     */
-                    polynomial<field_value_type> z({field_value_type::one()});
-                    for (std::size_t i = 0; i < this->m; i++) {
-                        z = z * polynomial<field_value_type>(
-                                    {-precomputation_.geometric_sequence[i], field_value_type::one()});
-                    }
-                    return z;
+                    return precomputation_.vanishing_polynomial;
                 }
 
                 void add_poly_z(const field_value_type &coeff, std::vector<field_value_type> &H) override {
                     if (H.size() != this->m + 1)
                         throw std::invalid_argument("geometric: expected H.size() == this->m+1");
 
-                    // TODO: Reuse the linear-time, cached vanishing-polynomial coefficients once they are available.
-                    // Directly multiplying the m linear factors below takes O(m^2) field operations.
-                    std::vector<field_value_type> vanishing_polynomial(this->m + 1, field_value_type::zero());
-                    vanishing_polynomial[0] = field_value_type::one();
-                    for (std::size_t i = 0; i < this->m; ++i) {
-                        const field_value_type &point = precomputation_.geometric_sequence[i];
-                        for (std::size_t degree = i + 1; degree > 0; --degree) {
-                            vanishing_polynomial[degree] =
-                                vanishing_polynomial[degree - 1] - point * vanishing_polynomial[degree];
-                        }
-                        vanishing_polynomial[0] = -(point * vanishing_polynomial[0]);
-                    }
-
                     for (std::size_t i = 0; i < H.size(); ++i) {
-                        H[i] += vanishing_polynomial[i] * coeff;
+                        H[i] += precomputation_.vanishing_polynomial[i] * coeff;
                     }
                 }
 
