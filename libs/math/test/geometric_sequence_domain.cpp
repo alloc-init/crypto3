@@ -111,6 +111,8 @@ BOOST_AUTO_TEST_CASE(large_bn254_domain_supports_lagrange_evaluation) {
     BOOST_CHECK_EQUAL(evaluate(vanishing_polynomial, t), vanishing_at_t);
     BOOST_CHECK_EQUAL(evaluate(vanishing_polynomial, domain.get_domain_element(domain_size / 2)),
                       bn254_fq::value_type::zero());
+    BOOST_CHECK_EQUAL(evaluate(vanishing_polynomial, domain.get_domain_element(domain_size - 1)),
+                      bn254_fq::value_type::zero());
 }
 
 BOOST_AUTO_TEST_CASE(vanishing_polynomial_matches_direct_construction) {
