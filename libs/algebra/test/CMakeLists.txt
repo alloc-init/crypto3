@@ -42,18 +42,6 @@ macro(define_runtime_algebra_test name)
     target_compile_definitions(${test_name} PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
 endmacro()
 
-macro(define_compile_time_algebra_test name)
-    cm_test(NAME algebra_${name}_compile_test SOURCES ${name}.cpp COMPILE_ONLY)
-
-    target_include_directories(algebra_${name}_compile_test PRIVATE
-            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-            "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
-
-            ${Boost_INCLUDE_DIRS})
-
-    set_target_properties(algebra_${name}_compile_test PROPERTIES CXX_STANDARD 23)
-endmacro()
-
 set(RUNTIME_TESTS_NAMES
         "curves"
         "short_weierstrass_coordinates"
@@ -68,10 +56,6 @@ set(RUNTIME_TESTS_NAMES
 
 foreach(TEST_NAME ${RUNTIME_TESTS_NAMES})
     define_runtime_algebra_test(${TEST_NAME})
-endforeach()
-
-foreach(TEST_NAME ${COMPILE_TIME_TESTS_NAMES})
-    define_compile_time_algebra_test(${TEST_NAME})
 endforeach()
 
 if(BUILD_BENCH_TESTS)

@@ -31,8 +31,8 @@
 
 #include <nil/crypto3/detail/assert.hpp>
 
-#include <nil/crypto3/math/vector/utility.hpp>
-#include <nil/crypto3/math/vector/vector.hpp>
+#include <nil/crypto3/math/static_matrix/utility.hpp>
+#include <nil/crypto3/math/static_matrix/vector.hpp>
 
 namespace nil::crypto3::math {
     /** @brief A container representing a matrix

@@ -11,7 +11,7 @@
 
 #include <cstddef>
 
-#include <nil/crypto3/math/matrix/matrix.hpp>
+#include <nil/crypto3/math/static_matrix/matrix.hpp>
 
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_constants_data.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>

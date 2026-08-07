@@ -54,8 +54,7 @@ foreach(TEST_NAME ${TESTS_NAMES})
 endforeach()
 
 set(COMPILE_TIME_TESTS_NAMES
-        "matrix"
-        "vector")
+        "static_matrix")
 
 foreach(TEST_NAME ${COMPILE_TIME_TESTS_NAMES})
     cm_test(NAME math_${TEST_NAME}_compile_test SOURCES ${TEST_NAME}.cpp COMPILE_ONLY)

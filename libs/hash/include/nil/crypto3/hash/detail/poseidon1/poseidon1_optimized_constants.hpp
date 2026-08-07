@@ -14,8 +14,8 @@
 
 #include <boost/assert.hpp>
 
-#include <nil/crypto3/math/matrix/math.hpp>
-#include <nil/crypto3/math/vector/operators.hpp>
+#include <nil/crypto3/math/static_matrix/math.hpp>
+#include <nil/crypto3/math/static_matrix/operators.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_constants.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_round_functions.hpp>
