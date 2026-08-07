@@ -26,8 +26,14 @@
 #ifndef CRYPTO3_MATH_UNITY_ROOT_HPP
 #define CRYPTO3_MATH_UNITY_ROOT_HPP
 
-#include <type_traits>
+#include <cstddef>
+#include <cstdint>
+#include <cmath>
 #include <complex>
+#include <set>
+#include <stdexcept>
+#include <type_traits>
+#include <vector>
 
 #include <boost/math/constants/constants.hpp>
 #include <boost/multiprecision/number.hpp>
@@ -41,6 +47,32 @@ namespace nil {
     namespace crypto3 {
         namespace math {
             using namespace boost::multiprecision;
+
+            namespace detail {
+
+                // Return the distinct prime divisors of n in increasing order, discarding repeated factors.
+                inline std::vector<std::size_t> distinct_prime_factors(std::size_t n) {
+                    std::vector<std::size_t> factors;
+
+                    for (std::size_t divisor = 2; divisor <= n / divisor; ++divisor) {
+                        if (n % divisor != 0) {
+                            continue;
+                        }
+
+                        factors.push_back(divisor);
+                        do {
+                            n /= divisor;
+                        } while (n % divisor == 0);
+                    }
+
+                    if (n > 1) {
+                        factors.push_back(n);
+                    }
+
+                    return factors;
+                }
+
+            }    // namespace detail
 
             /*
              A helper function to RootOfUnity function. This finds a generator for a given
@@ -152,12 +184,51 @@ namespace nil {
                 return typename FieldType::value_type(cos(2 * PI / n), sin(2 * PI / n));
             }
 
+            /**
+             * Return a field element of order n. Power-of-two orders use Crypto3's existing radix-2 construction;
+             * non-power-of-two orders use the field's multiplicative generator.
+             */
             template<typename FieldType>
             constexpr
                 typename std::enable_if<!std::is_same<typename FieldType::value_type, std::complex<double>>::value,
                                         typename FieldType::value_type>::type
                 unity_root(const std::size_t n) {
                 typedef typename FieldType::value_type value_type;
+
+                if (n == 0) {
+                    throw std::invalid_argument("unity_root: expected n > 0");
+                }
+
+                if (n == 1) {
+                    return value_type::one();
+                }
+
+                const bool is_power_of_two = (n & (n - 1)) == 0;
+                if (!is_power_of_two) {
+                    typedef typename FieldType::integral_type integral_type;
+
+                    const integral_type multiplicative_group_order = FieldType::modulus - 1;
+                    if (multiplicative_group_order % n != 0) {
+                        throw std::invalid_argument("unity_root: n must divide FieldType::modulus - 1");
+                    }
+
+                    const integral_type exponent = multiplicative_group_order / n;
+                    const value_type generator =
+                        value_type(algebra::fields::arithmetic_params<FieldType>::multiplicative_generator);
+                    const value_type omega = generator.pow(exponent);
+
+                    if (omega.pow(n) != value_type::one()) {
+                        throw std::invalid_argument("unity_root: failed to construct a root of the requested order");
+                    }
+
+                    for (const std::size_t prime_factor : detail::distinct_prime_factors(n)) {
+                        if (omega.pow(n / prime_factor) == value_type::one()) {
+                            throw std::invalid_argument("unity_root: multiplicative generator has insufficient order");
+                        }
+                    }
+
+                    return omega;
+                }
 
                 const std::size_t logn = std::ceil(std::log2(n));
 
