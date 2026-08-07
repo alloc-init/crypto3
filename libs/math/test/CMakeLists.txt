@@ -65,4 +65,6 @@ foreach(TEST_NAME ${COMPILE_TIME_TESTS_NAMES})
     set_target_properties(math_${TEST_NAME}_compile_test PROPERTIES CXX_STANDARD 23)
 endforeach()
 
-add_subdirectory(benchmarks)
+if(BUILD_BENCH_TESTS)
+    cm_add_test_subdirectory(bench_test)
+endif()
