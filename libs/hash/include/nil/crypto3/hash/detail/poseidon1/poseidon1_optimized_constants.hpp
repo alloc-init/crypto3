@@ -14,6 +14,7 @@
 
 #include <boost/assert.hpp>
 
+#include <nil/crypto3/math/static_matrix/static_matrix.hpp>
 #include <nil/crypto3/math/static_matrix/math.hpp>
 #include <nil/crypto3/math/static_matrix/operators.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_constants.hpp>
@@ -52,7 +53,7 @@ namespace nil {
                     static_assert(part_rounds > 0, "Optimized Poseidon1 requires at least one partial round.");
 
                     using matrix_type = typename base_type::mds_matrix_type;
-                    using partial_matrix_type = math::matrix<element_type, state_words - 1, state_words - 1>;
+                    using partial_matrix_type = math::static_matrix<element_type, state_words - 1, state_words - 1>;
                     using partial_vector_type = std::array<element_type, state_words - 1>;
                     using partial_round_constants_type = std::array<element_type, part_rounds - 1>;
                     using sparse_vectors_type = std::array<partial_vector_type, part_rounds>;

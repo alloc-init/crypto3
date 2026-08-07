@@ -32,26 +32,26 @@
 #include <nil/crypto3/detail/assert.hpp>
 
 #include <nil/crypto3/math/static_matrix/utility.hpp>
-#include <nil/crypto3/math/static_matrix/vector.hpp>
+#include <nil/crypto3/math/static_matrix/static_vector.hpp>
 
 namespace nil::crypto3::math {
-    /** @brief A container representing a matrix
+    /** @brief A container representing a static_matrix at compile time
      *    @tparam T scalar type to contain
      *    @tparam N number of rows
      *    @tparam M number of columns
      *
-     *    `matrix` is a container representing a matrix.
+     *    `static_matrix` is a container representing a static_matrix at compile time.
      *    It is an aggregate type containing a single member array of type
      *    `T[N][M]` which can be initialized with aggregate initialization.
      */
     template<typename T, std::size_t N, std::size_t M>
-    struct matrix {
-        static_assert(N != 0 && M != 0, "matrix must have have positive dimensions");
+    struct static_matrix {
+        static_assert(N != 0 && M != 0, "static_matrix must have have positive dimensions");
 
-        constexpr matrix() : arrays {} {
+        constexpr static_matrix() : arrays {} {
         }
 
-        constexpr matrix(const T (&array)[N][M]) {
+        constexpr static_matrix(const T (&array)[N][M]) {
             for (std::size_t i = 0; i < N; ++i) {
                 for (std::size_t j = 0; j < M; ++j) {
                     arrays[i][j] = array[i][j];
@@ -60,8 +60,8 @@ namespace nil::crypto3::math {
         }
 
         template<typename... Args>
-        constexpr matrix(Args... args) : arrays {std::forward<Args>(args)...} {
-            static_assert(sizeof...(args) == N * M, "Number of arguments must match the matrix size");
+        constexpr static_matrix(Args... args) : arrays {std::forward<Args>(args)...} {
+            static_assert(sizeof...(args) == N * M, "Number of arguments must match the static_matrix size");
         }
 
         // CRYPTO3_DETAIL_ASSERT_ARITHMETIC(T)
@@ -77,9 +77,9 @@ namespace nil::crypto3::math {
          *    @param i index of the row to extract
          *    @return the selected row
          *
-         *    Extracts a row from the matrix.
+         *    Extracts a row from the static_matrix.
          */
-        constexpr vector<T, M> row(size_type i) const {
+        constexpr static_vector<T, M> row(size_type i) const {
             if (i >= N) {
                 throw "index out of range";
             }
@@ -90,9 +90,9 @@ namespace nil::crypto3::math {
          *    @param i index of the column to extract
          *    @return the selected row
          *
-         *    Extracts a column from the matrix
+         *    Extracts a column from the static_matrix
          */
-        constexpr vector<T, N> column(size_type i) const {
+        constexpr static_vector<T, N> column(size_type i) const {
             if (i >= M)
                 throw "index out of range";
             return generate<N>([i, this](size_type j) { return arrays[j][i]; });
@@ -104,7 +104,7 @@ namespace nil::crypto3::math {
          *
          *    This function returns a pointer to the specified row.    The intention
          *    of this function is to then access the specified element from the
-         *    row pointer.    For a matrix `m`, accessing the element in the 5th row
+         *    row pointer.    For a static_matrix `m`, accessing the element in the 5th row
          *    and 3rd column can be done with `m[5][3]`.
          */
         constexpr T *operator[](size_type i) {
@@ -116,7 +116,7 @@ namespace nil::crypto3::math {
             return arrays[i];
         }
 
-        constexpr bool operator==(const matrix &other) const {
+        constexpr bool operator==(const static_matrix &other) const {
             for (std::size_t i = 0; i < N; ++i) {
                 for (std::size_t j = 0; j < M; ++j) {
                     if (arrays[i][j] != other.arrays[i][j]) {
@@ -136,26 +136,26 @@ namespace nil::crypto3::math {
         T arrays[N][M];    ///< @private
     };
 
-    /** \addtogroup matrix
+    /** \addtogroup static_matrix
      *    @{
      */
 
-    /** @name matrix deduction guides */
+    /** @name static_matrix deduction guides */
 
     ///@{
 
     /** @brief deduction guide for aggregate initialization
-     *    @relatesalso matrix
+     *    @relatesalso static_matrix
      *
-     *    This deduction guide allows matrix to be constructed like this:
+     *    This deduction guide allows static_matrix to be constructed like this:
      *    \code{.cpp}
-     *    matrix m{{{1., 2.}, {3., 4.}}}; // deduces the type of m to be matrix<double, 2, 2>
+     *    static_matrix m{{{1., 2.}, {3., 4.}}}; // deduces the type of m to be static_matrix<double, 2, 2>
      *    \endcode
      */
     template<typename T, std::size_t M, std::size_t N>
-    matrix(const T (&)[M][N]) -> matrix<T, M, N>;
+    static_matrix(const T (&)[M][N]) -> static_matrix<T, M, N>;
 
     ///@}
 
     /** @}*/
-}    // namespace nil::crypto3::algebra
+}    // namespace nil::crypto3::math

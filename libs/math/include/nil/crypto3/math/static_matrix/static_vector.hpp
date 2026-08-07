@@ -34,14 +34,14 @@ namespace nil::crypto3::math {
      *    @tparam T scalar type to contain
      *    @tparam N size of the vector
      *
-     *    `vector` is a container representing a vector.
+     *    `static_vector` is a container representing a vector at compile time.
      *
      *    It is an aggregate type similar to `std::array`, and can be initialized with
      *    aggregate initialization or with the `make_vector` function.
      */
     template<typename T, std::size_t N>
-    struct vector {
-        static_assert(N != 0, "vector must contain at least one element");
+    struct static_vector {
+        static_assert(N != 0, "static vector must contain at least one element");
 
         using value_type = T;
         using size_type = std::size_t;
@@ -101,49 +101,50 @@ namespace nil::crypto3::math {
         T array[N];    ///< @private
     };
 
-    /** \addtogroup vector
+    /** \addtogroup static_vector
      *    @{
      */
 
-    /** @brief constructs a `vector` from arguments
-     *    @param args scalar elements to combine into a vector
-     *    @return a vector containing `args`
-     *    @relatesalso vector
+    /** @brief constructs a `static_vector` from arguments
+     *    @param args scalar elements to combine into a static_vector
+     *    @return a static_vector containing `args`
+     *    @relatesalso static_vector
      *
-     *    Constructs a vector from its arguments, checking that all arguments are of
+     *    Constructs a static_vector from its arguments, checking that all arguments are of
      *    the same type.
      */
     template<typename... Args>
     constexpr decltype(auto) make_vector(Args... args) {
-        return vector {args...};
+        return static_vector {args...};
     }
 
-    /** @name vector deduction guides */
+    /** @name static_vector deduction guides */
     ///@{
 
     /** @brief deduction guide for uniform initialization
-     *    @relatesalso vector
+     *    @relatesalso static_vector
      *
-     *    This deduction guide allows vector to be constructed like this:
+     *    This deduction guide allows static_vector to be constructed like this:
      *    \code{.cpp}
-     *    vector v{1., 2.}; // deduces the type of v to be vector<double, 2>
+     *    static_vector v{1., 2.}; // deduces the type of v to be static_vector<double, 2>
      *    \endcode
      */
     template<typename T, typename... U>
-    vector(T, U...) -> vector<typename std::enable_if<(std::is_same<T, U>::value && ...), T>::type, 1 + sizeof...(U)>;
+    static_vector(T, U...)
+        -> static_vector<typename std::enable_if<(std::is_same<T, U>::value && ...), T>::type, 1 + sizeof...(U)>;
 
     /** @brief deduction guide for aggregate initialization
-     *    @relatesalso vector
+     *    @relatesalso static_vector
      *
-     *    This deduction guide allows vector to be constructed like this:
+     *    This deduction guide allows static_vector to be constructed like this:
      *    \code{.cpp}
-     *    vector v{{1., 2.}}; // deduces the type of v to be vector<double, 2>
+     *    static_vector v{{1., 2.}}; // deduces the type of v to be static_vector<double, 2>
      *    \endcode
      */
     template<typename T, std::size_t N>
-    vector(const T (&)[N]) -> vector<T, N>;
+    static_vector(const T (&)[N]) -> static_vector<T, N>;
 
     ///@}
 
     /** @}*/
-}    // namespace nil::crypto3::algebra
+}    // namespace nil::crypto3::math

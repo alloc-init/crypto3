@@ -28,87 +28,87 @@
 
 #include <algorithm>
 
-#include <nil/crypto3/math/static_matrix/vector.hpp>
-#include <nil/crypto3/math/static_matrix/matrix.hpp>
+#include <nil/crypto3/math/static_matrix/static_vector.hpp>
+#include <nil/crypto3/math/static_matrix/static_matrix.hpp>
 #include <nil/crypto3/math/static_matrix/utility.hpp>
 
 namespace nil::crypto3::math {
-/** \addtogroup vector
+    /** \addtogroup static_vector
      *  @{
      */
 
     /** @brief computes the elementwise square root
-     *  @param v an N-vector of type T
-     *  @return an N-vector \f$ \begin{bmatrix} \sqrt{v_1} & \ldots &\sqrt{v_N} \end{bmatrix} \f$ of type T
+     *  @param v an N-static_vector of type T
+     *  @return an N-static_vector \f$ \begin{bmatrix} \sqrt{v_1} & \ldots &\sqrt{v_N} \end{bmatrix} \f$ of type T
      *
-     *  Computes the elementwise square root of a vector.
+     *  Computes the elementwise square root of a static_vector.
      */
     template<typename T, std::size_t N>
-    constexpr vector<T, N> sqrt(const vector<T, N> &v) {
+    constexpr static_vector<T, N> sqrt(const static_vector<T, N> &v) {
         return elementwise(static_cast<T (*)(T)>(sqrt), v);
     }
 
     /** @brief computes the dot product
-     *  @param a an N-vector of type T
-     *  @param b an N-vector of type T
+     *  @param a an N-static_vector of type T
+     *  @param b an N-static_vector of type T
      *  @return a scalar \f$ \textbf{a} \cdot \textbf{b} \f$ of type T such that
      *  \f$ \left(\textbf{a}\cdot\textbf{b}\right)_i = a_i \overline{b_i} \f$
      *
      *  Computes the dot (inner) product of two vectors.
      */
     template<typename T, std::size_t N>
-    constexpr T dot(const vector<T, N> &a, const vector<T, N> &b) {
+    constexpr T dot(const static_vector<T, N> &a, const static_vector<T, N> &b) {
         T r = 0;
-        for (std::size_t i = 0; i < vector<T, N>::size; ++i)
+        for (std::size_t i = 0; i < static_vector<T, N>::size; ++i)
             r += a[i] * conj(b[i]);
         return r;
     }
 
     /** @brief computes the sum of elements
-     *  @param v an N-vector of type T
+     *  @param v an N-static_vector of type T
      *  @return a scalar \f$ \sum\limits_{i} v_i \f$ of type T
      *
-     *  Computes the sum of the elements of a vector.
+     *  Computes the sum of the elements of a static_vector.
      */
     template<typename T, std::size_t N>
-    constexpr T sum(const vector<T, N> &v) {
+    constexpr T sum(const static_vector<T, N> &v) {
         return accumulate(v, T(0u), std::plus<T>());
     }
 
     /** @brief computes the minimum valued element
-     *  @param v an N-vector of type T
+     *  @param v an N-static_vector of type T
      *  @return a scalar \f$ v_i \f$ of type T where \f$ v_i \leq v_j,\ \forall j \f$
      *
-     *  Computes the minimum valued element of a vector.
+     *  Computes the minimum valued element of a static_vector.
      */
     template<typename T, std::size_t N>
-    constexpr T min(const vector<T, N> &v) {
+    constexpr T min(const static_vector<T, N> &v) {
         return accumulate(v, v[0], [](T a, T b) { return std::min(a, b); });
     }
 
     /** @brief computes the maximum valued element
-     *  @param v an N-vector of type T
+     *  @param v an N-static_vector of type T
      *  @return a scalar \f$ v_i \f$ of type T where \f$ v_i \geq v_j,\ \forall j \f$
      *
-     *  Computes the maximum valued element of a vector.
+     *  Computes the maximum valued element of a static_vector.
      */
     template<typename T, std::size_t N>
-    constexpr T max(const vector<T, N> &v) {
+    constexpr T max(const static_vector<T, N> &v) {
         return accumulate(v, v[0], [](T a, T b) { return std::max(a, b); });
     }
 
     /** @brief computes the index of the minimum valued element
-     *  @param v an N-vector of type T
+     *  @param v an N-static_vector of type T
      *  @return an index \f$ i \f$ where \f$ v_i \leq v_j,\ \forall j \f$
      *
-     *  Computes the index of the minimum valued element of a vector.
+     *  Computes the index of the minimum valued element of a static_vector.
      *  Note: the return value is zero-indexed.
      */
     template<typename T, std::size_t N>
-    constexpr std::size_t min_index(const vector<T, N> &v) {
+    constexpr std::size_t min_index(const static_vector<T, N> &v) {
         T min = v[0];
         std::size_t index = 0;
-        for (std::size_t i = 0; i < vector<T, N>::size; ++i)
+        for (std::size_t i = 0; i < static_vector<T, N>::size; ++i)
             if (v[i] < min) {
                 index = i;
                 min = v[i];
@@ -117,17 +117,17 @@ namespace nil::crypto3::math {
     }
 
     /** @brief computes the index of the maximum valued element
-     *  @param v an N-vector of type T
+     *  @param v an N-static_vector of type T
      *  @return an index \f$ i \f$ where \f$ v_i \geq v_j,\ \forall j \f$
      *
-     *  Computes the index of the maximum valued element of a vector.
+     *  Computes the index of the maximum valued element of a static_vector.
      *  Note: the return value is zero-indexed.
      */
     template<typename T, std::size_t N>
-    constexpr std::size_t max_index(const vector<T, N> &v) {
+    constexpr std::size_t max_index(const static_vector<T, N> &v) {
         T max = v[0];
         std::size_t index = 0;
-        for (std::size_t i = 0; i < vector<T, N>::size; ++i)
+        for (std::size_t i = 0; i < static_vector<T, N>::size; ++i)
             if (v[i] > max) {
                 index = i;
                 max = v[i];
@@ -135,62 +135,61 @@ namespace nil::crypto3::math {
         return index;
     }
 
-
-    /** \addtogroup matrix
+    /** \addtogroup static_matrix
      *  @{
      */
 
     /** @brief computes the transpose
-     *  @param m an \f$ M \times N \f$ matrix of type T
-     *  @return an \f$ N \times M \f$ matrix \f$ \textbf{m}^{\mathrm{T}} \f$ of type T such that
+     *  @param m an \f$ M \times N \f$ static_matrix of type T
+     *  @return an \f$ N \times M \f$ static_matrix \f$ \textbf{m}^{\mathrm{T}} \f$ of type T such that
      *  \f$ \left(\textbf{m}^{\mathrm{T}}\right)_{ij} = \textbf{m}_{ji},\ \forall i,j \f$
      *
-     *  Computes the matrix transpose.
+     *  Computes the static_matrix transpose.
      */
     template<typename T, std::size_t M, std::size_t N>
-    constexpr matrix<T, N, M> transpose(const matrix<T, M, N> &m) {
+    constexpr static_matrix<T, N, M> transpose(const static_matrix<T, M, N> &m) {
         return generate<N, M>([&m](auto i, auto j) { return m[j][i]; });
     }
 
-    /** @brief computes the matrix product
-     *  @param a an \f$M \times N\f$ matrix
-     *  @param b an \f$N \times P\f$ matrix
-     *  @return an \f$ M \times P \f$ matrix \f$ \textbf{a}\textbf{b} \f$ of type T such that
+    /** @brief computes the static_matrix product
+     *  @param a an \f$M \times N\f$ static_matrix
+     *  @param b an \f$N \times P\f$ static_matrix
+     *  @return an \f$ M \times P \f$ static_matrix \f$ \textbf{a}\textbf{b} \f$ of type T such that
      *  \f$ \left(\textbf{ab}\right)_{ij} = \sum\limits_{k=1}^{N}\textbf{a}_{ik}\textbf{b}_{kj} \f$
      *
      *  Computes the product of two matrices.
      */
     template<typename T, std::size_t M, std::size_t N, std::size_t P>
-    constexpr matrix<T, M, P> matmul(const matrix<T, M, N> &a, const matrix<T, N, P> &b) {
+    constexpr static_matrix<T, M, P> matmul(const static_matrix<T, M, N> &a, const static_matrix<T, N, P> &b) {
         return generate<M, P>([&a, &b](auto i, auto j) { return sum(a.row(i) * b.column(j)); });
     }
 
     /*!
-     * @brief computes the product of vector and matrix
-     * @param v an M-vector
-     * @param m an \f$M \times N\f$ matrix
-     * @return an N-vector of type T
+     * @brief computes the product of static_vector and static_matrix
+     * @param v an M-static_vector
+     * @param m an \f$M \times N\f$ static_matrix
+     * @return an N-static_vector of type T
      */
     template<typename T, std::size_t M, std::size_t N>
-    constexpr vector<T, N> vectmatmul(const vector<T, M> &v, const matrix<T, M, N> &m) {
+    constexpr static_vector<T, N> vectmatmul(const static_vector<T, M> &v, const static_matrix<T, M, N> &m) {
         return generate<N>([&v, &m](auto i) { return sum(v * m.column(i)); });
     }
 
     /*!
-     * @brief computes the product of matrix and vector
-     * @param m an \f$M \times N\f$ matrix
-     * @param v an N-vector
-     * @return an M-vector of type T
+     * @brief computes the product of static_matrix and static_vector
+     * @param m an \f$M \times N\f$ static_matrix
+     * @param v an N-static_vector
+     * @return an M-static_vector of type T
      */
     template<typename T, std::size_t M, std::size_t N>
-    constexpr vector<T, M> matvectmul(const matrix<T, M, N> &m, const vector<T, N> &v) {
+    constexpr static_vector<T, M> matvectmul(const static_matrix<T, M, N> &m, const static_vector<T, N> &v) {
         return generate<M>([&v, &m](auto i) { return sum(m.row(i) * v); });
     }
 
     /** @brief Computes the kronecker tensor product
-     *  @param a an \f$M \times N\f$ matrix
-     *  @param b an \f$P \times Q\f$ matrix
-     *  @return An \f$ MP \times NQ \f$ matrix \f$ \textbf{a}\otimes\textbf{b} \f$ of type T such that
+     *  @param a an \f$M \times N\f$ static_matrix
+     *  @param b an \f$P \times Q\f$ static_matrix
+     *  @return An \f$ MP \times NQ \f$ static_matrix \f$ \textbf{a}\otimes\textbf{b} \f$ of type T such that
      *  \f$ \left(\textbf{a}\otimes\textbf{b}\right)_{ij} = \textbf{a}_{\lfloor i/P \rfloor,\lfloor j/Q
      * \rfloor}\textbf{b}_{i\textrm{%}P,j\textrm{%}Q} \f$ where \f$ i \textrm{%} P \f$ is the remainder of \f$
      * i/P \f$
@@ -198,39 +197,39 @@ namespace nil::crypto3::math {
      * Computes the kronecker tensor product of two matrices.
      */
     template<typename T, std::size_t M, std::size_t N, std::size_t P, std::size_t Q>
-    constexpr matrix<T, M * P, N * Q> kron(const matrix<T, M, N> &a, const matrix<T, P, Q> &b) {
+    constexpr static_matrix<T, M * P, N * Q> kron(const static_matrix<T, M, N> &a, const static_matrix<T, P, Q> &b) {
         return generate<M * P, N * Q>([&a, &b](auto i, auto j) { return a[i / P][j / Q] * b[i % P][j % Q]; });
     }
 
     /** @brief Computes the maximum absolute column sum norm
-     *  @param m an \f$M \times N\f$ matrix
+     *  @param m an \f$M \times N\f$ static_matrix
      *  @return a scalar \f$ {\left\lVert \textbf{m} \right\rVert}_1 \f$ of type T
      * such that \f$ {\left\lVert \textbf{m} \right\rVert}_1 = \max\limits_j
      * \sum\limits_{i=1}^M \left\lvert \textbf{m}_{ij} \right\rvert \f$
      *
-     *  Computes the maximum absolute column sum norm of a matrix.
+     *  Computes the maximum absolute column sum norm of a static_matrix.
      */
     template<typename T, std::size_t M, std::size_t N>
-    constexpr T macs(const matrix<T, M, N> &m) {
+    constexpr T macs(const static_matrix<T, M, N> &m) {
         return max(generate<N>([&m](std::size_t i) { return sum(abs(m.column(i))); }));
     }
 
     /** @brief Computes the maximum absolute row sum norm
-     *  @param m an \f$M \times N\f$ matrix
+     *  @param m an \f$M \times N\f$ static_matrix
      *  @return a scalar \f$ {\left\lVert \textbf{m} \right\rVert}_\infty \f$ of
      * type T such that \f$ {\left\lVert \textbf{m} \right\rVert}_\infty = \max\limits_i
      * \sum\limits_{j=1}^N \left\lvert \textbf{m}_{ij} \right\rvert \f$
      *
-     *  Computes the maximum absolute row sum norm of a matrix.
+     *  Computes the maximum absolute row sum norm of a static_matrix.
      */
     template<typename T, std::size_t M, std::size_t N>
-    constexpr T mars(const matrix<T, M, N> &m) {
+    constexpr T mars(const static_matrix<T, M, N> &m) {
         return max(generate<M>([&m](std::size_t i) { return sum(abs(m.row(i))); }));
     }
 
     /// @private
     template<typename T, std::size_t M, std::size_t N>
-    constexpr std::tuple<matrix<T, M, N>, std::size_t, T> gauss_jordan_impl(matrix<T, M, N> m) {
+    constexpr std::tuple<static_matrix<T, M, N>, std::size_t, T> gauss_jordan_impl(static_matrix<T, M, N> m) {
         // CRYPTO3_DETAIL_ASSERT_FLOATING_POINT(T)
         // CRYPTO3_DETAIL_ASSERT_REAL(T)
 
@@ -290,81 +289,81 @@ namespace nil::crypto3::math {
     }
 
     /** @brief Compute the reduced row echelon form
-     *  @param m an \f$ M \times N \f$ matrix of type T
-     *  @return an \f$ M \times N \f$ matrix of type T, the reduced row echelon form
+     *  @param m an \f$ M \times N \f$ static_matrix of type T
+     *  @return an \f$ M \times N \f$ static_matrix of type T, the reduced row echelon form
      * of \f$ \textbf{m} \f$
      *
-     *  Computes the reduced row echelon form of a matrix using Gauss-Jordan
+     *  Computes the reduced row echelon form of a static_matrix using Gauss-Jordan
      * elimination.  The tolerance for determining negligible elements is \f$
      * \max\left(N, M\right) \cdot \epsilon \cdot {\left\lVert \textbf{m}
      * \right\rVert}_\infty \f$.
      */
     template<typename T, std::size_t M, std::size_t N>
-    constexpr matrix<T, M, N> rref(const matrix<T, M, N> &m) {
+    constexpr static_matrix<T, M, N> rref(const static_matrix<T, M, N> &m) {
         return std::get<0>(gauss_jordan_impl(m));
     }
 
     /** @brief Compute the reduced row echelon form
-     *  @param m an \f$ M \times N \f$ matrix of type T
+     *  @param m an \f$ M \times N \f$ static_matrix of type T
      *  @param tolerance the tolerance used to determine when an element is
      * negligible (near zero)
-     *  @return an \f$ M \times N \f$ matrix of type T, the reduced row echelon form
+     *  @return an \f$ M \times N \f$ static_matrix of type T, the reduced row echelon form
      * of \f$ \textbf{m} \f$
      *
-     *  Computes the reduced row echelon form of a matrix using Gauss-Jordan
+     *  Computes the reduced row echelon form of a static_matrix using Gauss-Jordan
      * elimination.
      */
     template<typename T, std::size_t M, std::size_t N>
-    constexpr matrix<T, M, N> rref(const matrix<T, M, N> &m, T tolerance) {
+    constexpr static_matrix<T, M, N> rref(const static_matrix<T, M, N> &m, T tolerance) {
         return std::get<0>(gauss_jordan_impl(m), tolerance);
     }
 
     /** @brief Compute the rank
-     *  @param m \f$ M \times N \f$ matrix of type T
+     *  @param m \f$ M \times N \f$ static_matrix of type T
      *  @return a scalar \f$ \textrm{rank}\left(\textbf{m}\right) \f$
      *
      *  Computes the rank using the reduced row echelon form.
      */
     template<typename T, std::size_t M, std::size_t N>
-    constexpr std::size_t rank(const matrix<T, M, N> &m) {
+    constexpr std::size_t rank(const static_matrix<T, M, N> &m) {
         return std::get<1>(gauss_jordan_impl(m));
     }
 
     /** @brief Compute the determinant
-     *  @param m \f$ M \times M \f$ matrix of type T
+     *  @param m \f$ M \times M \f$ static_matrix of type T
      *  @return a scalar \f$ \left\lvert \textbf{m} \right\rvert \f$ of type T
      *
      *  Computes the determinant using the reduced row echelon form.
      */
     template<typename T, std::size_t M>
-    constexpr T det(const matrix<T, M, M> &m) {
+    constexpr T det(const static_matrix<T, M, M> &m) {
         return std::get<2>(gauss_jordan_impl(m));
     }
 
-    /** @brief computes the matrix inverse
-     *  @param m an \f$ M \times M \f$ matrix of type T
+    /** @brief computes the static_matrix inverse
+     *  @param m an \f$ M \times M \f$ static_matrix of type T
      *  @return The inverse of \f$ \textbf{m} \f$, \f$ \textbf{m}^{-1}\f$ such that
      *  \f$ \textbf{m}\textbf{m}^{-1} = \textbf{m}^{-1}\textbf{m} = \textbf{I}_{M}
      * \f$
      *
-     *  Computes the inverse of a matrix using the reduced row echelon form.
+     *  Computes the inverse of a static_matrix using the reduced row echelon form.
      */
     template<typename T, std::size_t M>
-    constexpr matrix<T, M, M> inverse(const matrix<T, M, M> &m) {
+    constexpr static_matrix<T, M, M> inverse(const static_matrix<T, M, M> &m) {
         if (rank(m) < M)
-            throw "matrix is not invertible";
+            throw "static_matrix is not invertible";
         return submat<M, M>(rref(horzcat(m, get_identity<T, M>())), 0, M);
     }
 
     /** @brief computes the trace
-     *  @param m an \f$ M \times M \f$ matrix of type T
+     *  @param m an \f$ M \times M \f$ static_matrix of type T
      *  @return the trace of \f$ \textbf{m} \f$, \f$ \textrm{tr}\left(\textbf{m}\right) \f$
      *  such that \f$ \textrm{tr}\left(\textbf{m}\right) = \sum\limits_{n=1}^{M} \textbf{m}_{nn} \f$
      *
-     *  Computes the trace of a matrix.
+     *  Computes the trace of a static_matrix.
      */
     template<typename T, std::size_t M>
-    constexpr T trace(const matrix<T, M, M> &m) {
+    constexpr T trace(const static_matrix<T, M, M> &m) {
         return sum(generate<M>([&m](std::size_t i) { return m[i][i]; }));
     }
 
