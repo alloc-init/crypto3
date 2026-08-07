@@ -66,10 +66,6 @@ set(RUNTIME_TESTS_NAMES
         "multiexp"
 )
 
-set(COMPILE_TIME_TESTS_NAMES
-        "matrix"
-        "vector")
-
 foreach(TEST_NAME ${RUNTIME_TESTS_NAMES})
     define_runtime_algebra_test(${TEST_NAME})
 endforeach()

@@ -29,14 +29,15 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <nil/crypto3/algebra/vector/vector.hpp>
-#include <nil/crypto3/algebra/vector/math.hpp>
-#include <nil/crypto3/algebra/vector/operators.hpp>
-#include <nil/crypto3/algebra/vector/utility.hpp>
+#include <nil/crypto3/math/vector/vector.hpp>
+#include <nil/crypto3/math/vector/math.hpp>
+#include <nil/crypto3/math/vector/operators.hpp>
+#include <nil/crypto3/math/vector/utility.hpp>
 
 #include <nil/crypto3/algebra/fields/goldilocks.hpp>
 
 using namespace nil::crypto3::algebra;
+using namespace nil::crypto3::math;
 
 using field = fields::goldilocks;
 using value = field::value_type;

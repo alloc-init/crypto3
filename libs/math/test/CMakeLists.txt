@@ -53,4 +53,17 @@ foreach(TEST_NAME ${TESTS_NAMES})
     define_math_test(${TEST_NAME})
 endforeach()
 
+set(COMPILE_TIME_TESTS_NAMES
+        "matrix"
+        "vector")
+
+foreach(TEST_NAME ${COMPILE_TIME_TESTS_NAMES})
+    cm_test(NAME math_${TEST_NAME}_compile_test SOURCES ${TEST_NAME}.cpp COMPILE_ONLY)
+    target_include_directories(math_${TEST_NAME}_compile_test PRIVATE
+            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+            "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
+            ${Boost_INCLUDE_DIRS})
+    set_target_properties(math_${TEST_NAME}_compile_test PROPERTIES CXX_STANDARD 23)
+endforeach()
+
 add_subdirectory(benchmarks)

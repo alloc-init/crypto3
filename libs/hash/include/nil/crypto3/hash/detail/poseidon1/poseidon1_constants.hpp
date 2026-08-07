@@ -11,7 +11,7 @@
 
 #include <cstddef>
 
-#include <nil/crypto3/algebra/matrix/matrix.hpp>
+#include <nil/crypto3/math/matrix/matrix.hpp>
 
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_constants_data.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>
@@ -34,8 +34,8 @@ namespace nil {
                     constexpr static const std::size_t full_rounds = policy_type::full_rounds;
                     constexpr static const std::size_t part_rounds = policy_type::part_rounds;
 
-                    using mds_matrix_type = algebra::matrix<element_type, state_words, state_words>;
-                    using round_constants_type = algebra::matrix<element_type, full_rounds + part_rounds, state_words>;
+                    using mds_matrix_type = math::matrix<element_type, state_words, state_words>;
+                    using round_constants_type = math::matrix<element_type, full_rounds + part_rounds, state_words>;
 
                     using constants_data_type = poseidon1_constants_data<policy_type>;
 

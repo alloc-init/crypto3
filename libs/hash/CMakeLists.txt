@@ -88,6 +88,7 @@ if(CRYPTO3_HASH_POSEIDON)
     list(APPEND ${CURRENT_PROJECT_NAME}_INTERFACE_LIBRARIES
             ${CMAKE_WORKSPACE_NAME}::algebra
             ${CMAKE_WORKSPACE_NAME}::multiprecision
+            ${CMAKE_WORKSPACE_NAME}::math
 
             marshalling::crypto3_algebra)
     if(${CMAKE_UPPER_WORKSPACE_NAME}_HASH_POSEIDON_COMPILE_TIME_CONSTANTS)
