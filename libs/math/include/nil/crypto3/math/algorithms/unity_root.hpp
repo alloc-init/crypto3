@@ -50,19 +50,15 @@ namespace nil {
 
             namespace detail {
 
-                // Return the distinct prime divisors of n in increasing order, discarding repeated factors.
-                inline std::vector<std::size_t> distinct_prime_factors(std::size_t n) {
+                // Return the prime factors of n in increasing order, including repeated factors.
+                inline std::vector<std::size_t> prime_factors(std::size_t n) {
                     std::vector<std::size_t> factors;
 
                     for (std::size_t divisor = 2; divisor <= n / divisor; ++divisor) {
-                        if (n % divisor != 0) {
-                            continue;
-                        }
-
-                        factors.push_back(divisor);
-                        do {
+                        while (n % divisor == 0) {
+                            factors.push_back(divisor);
                             n /= divisor;
-                        } while (n % divisor == 0);
+                        }
                     }
 
                     if (n > 1) {
@@ -70,6 +66,17 @@ namespace nil {
                     }
 
                     return factors;
+                }
+
+                // Return the distinct prime divisors of n in increasing order, discarding repeated factors.
+                inline std::vector<std::size_t> distinct_prime_factors(std::size_t n) {
+                    std::vector<std::size_t> distinct_factors;
+                    for (const std::size_t factor : prime_factors(n)) {
+                        if (distinct_factors.empty() || distinct_factors.back() != factor) {
+                            distinct_factors.push_back(factor);
+                        }
+                    }
+                    return distinct_factors;
                 }
 
             }    // namespace detail

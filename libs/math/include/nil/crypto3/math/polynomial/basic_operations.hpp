@@ -27,8 +27,10 @@
 #define CRYPTO3_MATH_POLYNOMIAL_BASIC_OPERATIONS_HPP
 
 #include <algorithm>
+#include <stdexcept>
 #include <vector>
 
+#include <nil/crypto3/math/algorithms/mixed_radix_fft.hpp>
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 #include <nil/crypto3/math/domains/detail/basic_radix2_domain_aux.hpp>
 #include <nil/crypto3/math/detail/field_utils.hpp>
@@ -267,6 +269,39 @@ namespace nil {
                 }
 
                 condense(c);
+            }
+
+            /**
+             * Multiply two polynomials using an explicit exact-size mixed-radix FFT plan.
+             * The plan may be larger than the convolution, but it must contain every output coefficient.
+             */
+            template<typename AlgebraicRange, typename FieldType>
+            void multiplication(AlgebraicRange &c, const AlgebraicRange &a, const AlgebraicRange &b,
+                                const mixed_radix_fft_plan<FieldType> &fft_plan) {
+                using value_type =
+                    typename std::iterator_traits<decltype(std::begin(std::declval<AlgebraicRange>()))>::value_type;
+
+                if (a.empty() || b.empty()) {
+                    throw std::invalid_argument("multiplication: input polynomials must not be empty");
+                }
+
+                const std::size_t result_size = a.size() + b.size() - 1;
+                if (fft_plan.size() < result_size) {
+                    throw std::invalid_argument("multiplication: mixed-radix FFT plan is too small");
+                }
+
+                std::vector<value_type> left(a.begin(), a.end());
+                std::vector<value_type> right(b.begin(), b.end());
+                fft_plan.fft(left);
+                fft_plan.fft(right);
+
+                for (std::size_t i = 0; i < fft_plan.size(); ++i) {
+                    left[i] = left[i] * right[i];
+                }
+
+                fft_plan.inverse_fft(left);
+                c.resize(result_size);
+                std::copy_n(left.begin(), result_size, c.begin());
             }
 
             /**
