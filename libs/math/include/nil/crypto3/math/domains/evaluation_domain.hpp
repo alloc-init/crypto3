@@ -108,6 +108,20 @@ namespace nil {
                 virtual std::vector<field_value_type> evaluate_all_lagrange_polynomials(const field_value_type &t) = 0;
 
                 /**
+                 * Evaluate all Lagrange polynomials and the domain vanishing polynomial at t.
+                 *
+                 * The default implementation composes the existing operations. Domains that naturally compute both
+                 * results together may override this method to avoid duplicated work.
+                 */
+                virtual std::vector<field_value_type>
+                    evaluate_all_lagrange_polynomials(const field_value_type &t,
+                                                      field_value_type &vanishing_polynomial_at_t) {
+                    std::vector<field_value_type> result = evaluate_all_lagrange_polynomials(t);
+                    vanishing_polynomial_at_t = compute_vanishing_polynomial(t);
+                    return result;
+                }
+
+                /**
                  * Evaluate all Lagrange polynomials.
                  *
                  * The inputs are:
