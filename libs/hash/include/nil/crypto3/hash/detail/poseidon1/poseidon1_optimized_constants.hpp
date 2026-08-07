@@ -14,8 +14,9 @@
 
 #include <boost/assert.hpp>
 
-#include <nil/crypto3/algebra/matrix/math.hpp>
-#include <nil/crypto3/algebra/vector/operators.hpp>
+#include <nil/crypto3/math/static_matrix/static_matrix.hpp>
+#include <nil/crypto3/math/static_matrix/math.hpp>
+#include <nil/crypto3/math/static_matrix/operators.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_constants.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_round_functions.hpp>
@@ -52,7 +53,7 @@ namespace nil {
                     static_assert(part_rounds > 0, "Optimized Poseidon1 requires at least one partial round.");
 
                     using matrix_type = typename base_type::mds_matrix_type;
-                    using partial_matrix_type = algebra::matrix<element_type, state_words - 1, state_words - 1>;
+                    using partial_matrix_type = math::static_matrix<element_type, state_words - 1, state_words - 1>;
                     using partial_vector_type = std::array<element_type, state_words - 1>;
                     using partial_round_constants_type = std::array<element_type, part_rounds - 1>;
                     using sparse_vectors_type = std::array<partial_vector_type, part_rounds>;
@@ -66,7 +67,7 @@ namespace nil {
                         // derived independently from the MDS itself. Use crypto3's matrix inverse here
                         // rather than carrying another Gauss-Jordan implementation in the hash code.
                         const matrix_type &mds_matrix = this->get_mds_matrix();
-                        const matrix_type mds_inverse = algebra::inverse(mds_matrix);
+                        const matrix_type mds_inverse = math::inverse(mds_matrix);
                         const auto partial_round_constants = load_partial_round_constants();
 
                         compute_equivalent_round_constants(partial_round_constants, mds_inverse);
@@ -166,9 +167,9 @@ namespace nil {
                             }
                         }
 
-                        // Delegate the inversion itself to crypto3's algebra matrix helper; this keeps the
+                        // Delegate the inversion itself to crypto3's math matrix helper; this keeps the
                         // optimized Poseidon code focused on the Poseidon-specific sparse factorization.
-                        return algebra::inverse(submatrix);
+                        return math::inverse(submatrix);
                     }
 
                     static partial_vector_type partial_matrix_vector_mul(const partial_matrix_type &matrix,
@@ -230,7 +231,7 @@ namespace nil {
                         // step, multiplied_matrix is split so that the next sparse matrix has an arbitrary
                         // first row, an identity lower-right block, and only one non-zero column below the
                         // first element.
-                        const matrix_type mds_transposed = algebra::transpose(mds);
+                        const matrix_type mds_transposed = math::transpose(mds);
                         matrix_type multiplied_matrix = mds_transposed;
                         matrix_type current_matrix = zero_matrix();
 
@@ -269,12 +270,12 @@ namespace nil {
                                 current_matrix[0][j] = zero();
                             }
 
-                            multiplied_matrix = algebra::matmul(mds_transposed, current_matrix);
+                            multiplied_matrix = math::matmul(mds_transposed, current_matrix);
                         }
 
                         // The factorization is produced in reverse order. Store the bridge matrix and then
                         // reverse the sparse vectors so the permutation can apply them in forward order.
-                        pre_sparse_matrix = algebra::transpose(current_matrix);
+                        pre_sparse_matrix = math::transpose(current_matrix);
                         for (std::size_t round = 0; round < part_rounds; ++round) {
                             const std::size_t reversed_round = part_rounds - 1 - round;
                             sparse_columns[round] = equivalent_sparse_columns[reversed_round];
