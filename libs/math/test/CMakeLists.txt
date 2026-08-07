@@ -55,4 +55,6 @@ foreach(TEST_NAME ${TESTS_NAMES})
     define_math_test(${TEST_NAME})
 endforeach()
 
-add_subdirectory(benchmarks)
+if(BUILD_BENCH_TESTS)
+    cm_add_test_subdirectory(bench_test)
+endif()
