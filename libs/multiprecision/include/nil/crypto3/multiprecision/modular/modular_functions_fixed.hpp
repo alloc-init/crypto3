@@ -20,6 +20,10 @@
 #include <type_traits>
 #include <utility>
 
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX) && defined(__x86_64__)
+#include <nil/crypto3/multiprecision/detail/x86_64_schoolbook.hpp>
+#endif
+
 namespace boost {
     namespace multiprecision {
         namespace backends {
@@ -497,69 +501,101 @@ namespace boost {
                     static_assert(std::numeric_limits<std::size_t>::digits <= limb_bits,
                                   "the accumulator needs one limb for the range length");
                     constexpr std::size_t operand_limbs = Backend::internal_limb_count;
-                    constexpr std::size_t product_diagonals = 2 * operand_limbs - 1;
-                    constexpr std::size_t max_block_terms =
-                        std::numeric_limits<internal_limb_type>::max() / (2 * operand_limbs);
 
                     Backend_doubled_padded_limbs accumulator(internal_limb_type(0u));
-                    while (first1 != last1) {
-                        std::array<internal_limb_type, product_diagonals> diagonal_low = {};
-                        std::array<internal_limb_type, product_diagonals> diagonal_middle = {};
-                        std::array<internal_limb_type, product_diagonals> diagonal_high = {};
-
-                        std::size_t block_terms = 0;
-                        for (; first1 != last1 && block_terms < max_block_terms; ++first1, ++first2, ++block_terms) {
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX) && defined(__x86_64__)
+                    if constexpr (operand_limbs == 4 && std::numeric_limits<internal_limb_type>::digits == 64) {
+                        // Reuse fp12_fast's ADX/BMI2 raw multiplier, but retain the extra accumulator limb: the sum
+                        // may exceed the eight limbs accepted by the assembly Montgomery-reduction kernel.
+                        internal_limb_type *accumulator_limbs = accumulator.limbs();
+                        for (; first1 != last1; ++first1, ++first2) {
                             BOOST_ASSERT(eval_lt(*first1, m_mod) && eval_lt(*first2, m_mod));
-                            const internal_limb_type *left_limbs = (*first1).limbs();
-                            const internal_limb_type *right_limbs = (*first2).limbs();
+                            std::array<internal_limb_type, 2 * operand_limbs> product;
+                            nil::crypto3::multiprecision::detail::schoolbook_4x4_adx_bmi2(
+                                product.data(), (*first1).limbs(), (*first2).limbs());
 
-                            // Comba accumulation keeps the independent product diagonals separate. Carries are
-                            // propagated only after the block instead of forming a dependency chain in every product.
-                            for (std::size_t i = 0; i < operand_limbs; ++i) {
-                                for (std::size_t j = 0; j < operand_limbs; ++j) {
-                                    const std::size_t diagonal = i + j;
-                                    const internal_double_limb_type product =
-                                        static_cast<internal_double_limb_type>(left_limbs[i]) * right_limbs[j];
+                            internal_limb_type carry = 0;
+                            for (std::size_t i = 0; i < product.size(); ++i) {
+                                const internal_double_limb_type partial =
+                                    static_cast<internal_double_limb_type>(accumulator_limbs[i]) + product[i] + carry;
+                                accumulator_limbs[i] = static_cast<internal_limb_type>(partial);
+                                carry = static_cast<internal_limb_type>(partial >> limb_bits);
+                            }
+                            const internal_double_limb_type top =
+                                static_cast<internal_double_limb_type>(accumulator_limbs[2 * operand_limbs]) + carry;
+                            accumulator_limbs[2 * operand_limbs] = static_cast<internal_limb_type>(top);
+                            BOOST_ASSERT((top >> limb_bits) == 0);
+                        }
+                    } else
+#endif
+                    {
+                        constexpr std::size_t product_diagonals = 2 * operand_limbs - 1;
+                        constexpr std::size_t max_block_terms =
+                            std::numeric_limits<internal_limb_type>::max() / (2 * operand_limbs);
 
-                                    internal_double_limb_type partial =
-                                        static_cast<internal_double_limb_type>(diagonal_low[diagonal]) +
-                                        static_cast<internal_limb_type>(product);
-                                    diagonal_low[diagonal] = static_cast<internal_limb_type>(partial);
-                                    const internal_limb_type carry =
-                                        static_cast<internal_limb_type>(partial >> limb_bits);
+                        while (first1 != last1) {
+                            std::array<internal_limb_type, product_diagonals> diagonal_low = {};
+                            std::array<internal_limb_type, product_diagonals> diagonal_middle = {};
+                            std::array<internal_limb_type, product_diagonals> diagonal_high = {};
 
-                                    partial = static_cast<internal_double_limb_type>(diagonal_middle[diagonal]) +
-                                              static_cast<internal_limb_type>(product >> limb_bits) + carry;
-                                    diagonal_middle[diagonal] = static_cast<internal_limb_type>(partial);
-                                    diagonal_high[diagonal] += static_cast<internal_limb_type>(partial >> limb_bits);
+                            std::size_t block_terms = 0;
+                            for (; first1 != last1 && block_terms < max_block_terms;
+                                 ++first1, ++first2, ++block_terms) {
+                                BOOST_ASSERT(eval_lt(*first1, m_mod) && eval_lt(*first2, m_mod));
+                                const internal_limb_type *left_limbs = (*first1).limbs();
+                                const internal_limb_type *right_limbs = (*first2).limbs();
+
+                                // Comba accumulation keeps the independent product diagonals separate. Carries are
+                                // propagated only after the block instead of forming a dependency chain in every
+                                // product.
+                                for (std::size_t i = 0; i < operand_limbs; ++i) {
+                                    for (std::size_t j = 0; j < operand_limbs; ++j) {
+                                        const std::size_t diagonal = i + j;
+                                        const internal_double_limb_type product =
+                                            static_cast<internal_double_limb_type>(left_limbs[i]) * right_limbs[j];
+
+                                        internal_double_limb_type partial =
+                                            static_cast<internal_double_limb_type>(diagonal_low[diagonal]) +
+                                            static_cast<internal_limb_type>(product);
+                                        diagonal_low[diagonal] = static_cast<internal_limb_type>(partial);
+                                        const internal_limb_type carry =
+                                            static_cast<internal_limb_type>(partial >> limb_bits);
+
+                                        partial = static_cast<internal_double_limb_type>(diagonal_middle[diagonal]) +
+                                                  static_cast<internal_limb_type>(product >> limb_bits) + carry;
+                                        diagonal_middle[diagonal] = static_cast<internal_limb_type>(partial);
+                                        diagonal_high[diagonal] +=
+                                            static_cast<internal_limb_type>(partial >> limb_bits);
+                                    }
                                 }
                             }
+
+                            Backend_doubled_padded_limbs block_product(internal_limb_type(0u));
+                            internal_limb_type *block_limbs = block_product.limbs();
+                            internal_limb_type carry_low = 0;
+                            internal_limb_type carry_high = 0;
+                            for (std::size_t diagonal = 0; diagonal < product_diagonals; ++diagonal) {
+                                internal_double_limb_type partial =
+                                    static_cast<internal_double_limb_type>(diagonal_low[diagonal]) + carry_low;
+                                block_limbs[diagonal] = static_cast<internal_limb_type>(partial);
+                                const internal_limb_type low_overflow =
+                                    static_cast<internal_limb_type>(partial >> limb_bits);
+
+                                partial = static_cast<internal_double_limb_type>(diagonal_middle[diagonal]) +
+                                          carry_high + low_overflow;
+                                carry_low = static_cast<internal_limb_type>(partial);
+                                const internal_limb_type middle_overflow =
+                                    static_cast<internal_limb_type>(partial >> limb_bits);
+
+                                partial =
+                                    static_cast<internal_double_limb_type>(diagonal_high[diagonal]) + middle_overflow;
+                                carry_high = static_cast<internal_limb_type>(partial);
+                                BOOST_ASSERT((partial >> limb_bits) == 0);
+                            }
+                            block_limbs[2 * operand_limbs - 1] = carry_low;
+                            block_limbs[2 * operand_limbs] = carry_high;
+                            eval_add(accumulator, block_product);
                         }
-
-                        Backend_doubled_padded_limbs block_product(internal_limb_type(0u));
-                        internal_limb_type *block_limbs = block_product.limbs();
-                        internal_limb_type carry_low = 0;
-                        internal_limb_type carry_high = 0;
-                        for (std::size_t diagonal = 0; diagonal < product_diagonals; ++diagonal) {
-                            internal_double_limb_type partial =
-                                static_cast<internal_double_limb_type>(diagonal_low[diagonal]) + carry_low;
-                            block_limbs[diagonal] = static_cast<internal_limb_type>(partial);
-                            const internal_limb_type low_overflow =
-                                static_cast<internal_limb_type>(partial >> limb_bits);
-
-                            partial = static_cast<internal_double_limb_type>(diagonal_middle[diagonal]) + carry_high +
-                                      low_overflow;
-                            carry_low = static_cast<internal_limb_type>(partial);
-                            const internal_limb_type middle_overflow =
-                                static_cast<internal_limb_type>(partial >> limb_bits);
-
-                            partial = static_cast<internal_double_limb_type>(diagonal_high[diagonal]) + middle_overflow;
-                            carry_high = static_cast<internal_limb_type>(partial);
-                            BOOST_ASSERT((partial >> limb_bits) == 0);
-                        }
-                        block_limbs[2 * operand_limbs - 1] = carry_low;
-                        block_limbs[2 * operand_limbs] = carry_high;
-                        eval_add(accumulator, block_product);
                     }
 
                     montgomery_reduce(accumulator);
