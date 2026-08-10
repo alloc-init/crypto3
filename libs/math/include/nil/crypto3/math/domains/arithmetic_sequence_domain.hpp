@@ -49,6 +49,7 @@ namespace nil {
 
             public:
                 typedef FieldType field_type;
+                using evaluation_domain<FieldType, ValueType>::evaluate_all_lagrange_polynomials;
 
                 bool precomputation_sentinel;
                 std::vector<std::vector<std::vector<field_value_type>>> subproduct_tree;

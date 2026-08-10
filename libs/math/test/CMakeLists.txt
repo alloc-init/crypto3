@@ -39,7 +39,9 @@ macro(define_math_test name)
 endmacro()
 
 set(TESTS_NAMES
+    "batch_inverse"
     "evaluation_domain"
+    "geometric_sequence_domain"
     # "kronecker_substitution"  # FIXME: This fails. Disabled for passing CI
     "polynomial_arithmetic"
     "polynomial"
@@ -55,4 +57,18 @@ foreach(TEST_NAME ${TESTS_NAMES})
     define_math_test(${TEST_NAME})
 endforeach()
 
-add_subdirectory(benchmarks)
+set(COMPILE_TIME_TESTS_NAMES
+        "static_matrix")
+
+foreach(TEST_NAME ${COMPILE_TIME_TESTS_NAMES})
+    cm_test(NAME math_${TEST_NAME}_compile_test SOURCES ${TEST_NAME}.cpp COMPILE_ONLY)
+    target_include_directories(math_${TEST_NAME}_compile_test PRIVATE
+            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+            "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>"
+            ${Boost_INCLUDE_DIRS})
+    set_target_properties(math_${TEST_NAME}_compile_test PROPERTIES CXX_STANDARD 23)
+endforeach()
+
+if(BUILD_BENCH_TESTS)
+    cm_add_test_subdirectory(bench_test)
+endif()

@@ -60,6 +60,7 @@ namespace nil {
 
             public:
                 typedef FieldType field_type;
+                using evaluation_domain<FieldType, ValueType>::evaluate_all_lagrange_polynomials;
 
                 const std::size_t small_m;
                 const field_value_type omega;

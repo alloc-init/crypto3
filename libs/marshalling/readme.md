@@ -32,7 +32,7 @@ marshalling
 ```
 
 For convenience the umbrella `pack` function is provided, that can be used for
-either process. See `algebra/examples` for example usage. `core/examples`
+either process. See `algebra/example` for example usage. `core/example`
 contains samples for creating custom `fill_S` and `make_S` functions.
 
 ## Algebra

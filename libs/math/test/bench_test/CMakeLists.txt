@@ -11,7 +11,7 @@ cm_test_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 )
 
 set(TESTS_NAMES
-    "polynomial_dfs_benchmark"
+    "polynomial_dfs_bench"
 )
 
 foreach(TEST_NAME ${TESTS_NAMES})
