@@ -155,15 +155,21 @@ BOOST_AUTO_TEST_CASE(fq_transforms_round_trip_at_large_smooth_orders) {
 }
 
 BOOST_AUTO_TEST_CASE(fq12_transforms_match_naive_dft_and_round_trip) {
-    const math::mixed_radix_fft_plan<bn254_fq> plan(6);
-    const std::vector<bn254_fq12_value> coefficients = fq12_values(6, 0xF012);
-    std::vector<bn254_fq12_value> actual = coefficients;
+    constexpr std::array<std::size_t, 2> sizes = {6, 29};
 
-    plan.fft(actual);
-    BOOST_CHECK(actual == naive_dft(coefficients, plan.omega()));
+    for (const std::size_t size : sizes) {
+        BOOST_TEST_CONTEXT("size = " << size) {
+            const math::mixed_radix_fft_plan<bn254_fq> plan(size);
+            const std::vector<bn254_fq12_value> coefficients = fq12_values(size, 0xF012 + size);
+            std::vector<bn254_fq12_value> actual = coefficients;
 
-    plan.inverse_fft(actual);
-    BOOST_CHECK(actual == coefficients);
+            plan.fft(actual);
+            BOOST_CHECK(actual == naive_dft(coefficients, plan.omega()));
+
+            plan.inverse_fft(actual);
+            BOOST_CHECK(actual == coefficients);
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(medium_fq12_transform_round_trips) {

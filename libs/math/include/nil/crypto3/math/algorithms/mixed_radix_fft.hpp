@@ -25,11 +25,15 @@
 #ifndef CRYPTO3_MATH_MIXED_RADIX_FFT_HPP
 #define CRYPTO3_MATH_MIXED_RADIX_FFT_HPP
 
+#include <array>
 #include <cstddef>
 #include <stdexcept>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
+#include <nil/crypto3/algebra/fields/field_element_coordinate_traits.hpp>
 
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 
@@ -123,6 +127,60 @@ namespace nil {
                     return powers;
                 }
 
+                // Apply the backend inner product independently to each base-field coordinate. The products remain
+                // unreduced until the complete radix sum has been accumulated, replacing one Montgomery reduction per
+                // term with one reduction per output coordinate.
+                template<std::size_t CoordinateCount, typename ValueType, typename CoordinateAccessor>
+                void lazy_montgomery_radix_dft(std::vector<ValueType> &workspace, std::size_t workspace_offset,
+                                               std::size_t workspace_stride, std::vector<ValueType> &output,
+                                               std::size_t output_offset, std::size_t output_stride, std::size_t radix,
+                                               std::size_t root_stride, const std::vector<field_value_type> &powers,
+                                               CoordinateAccessor coordinate) const {
+                    using base_value_type =
+                        std::remove_cvref_t<decltype(coordinate(std::declval<ValueType &>(), std::size_t(0)))>;
+                    using backend_type =
+                        std::remove_reference_t<decltype(std::declval<base_value_type &>().data.backend().base_data())>;
+                    using scalar_backend_type = std::remove_reference_t<
+                        decltype(std::declval<field_value_type &>().data.backend().base_data())>;
+                    static_assert(std::is_same_v<backend_type, scalar_backend_type>,
+                                  "FFT values and roots must use the same base-field backend");
+
+                    std::array<std::vector<backend_type>, CoordinateCount> coordinate_inputs;
+                    for (std::vector<backend_type> &inputs : coordinate_inputs) {
+                        inputs.resize(radix);
+                    }
+                    for (std::size_t input_index = 0; input_index < radix; ++input_index) {
+                        ValueType &value = workspace[workspace_offset + input_index * workspace_stride];
+                        for (std::size_t coordinate_index = 0; coordinate_index < CoordinateCount; ++coordinate_index) {
+                            coordinate_inputs[coordinate_index][input_index] =
+                                coordinate(value, coordinate_index).data.backend().base_data();
+                        }
+                    }
+
+                    std::vector<backend_type> scalar_inputs(radix);
+                    for (std::size_t output_index = 0; output_index < radix; ++output_index) {
+                        std::size_t power_index = 0;
+                        const std::size_t power_step = root_stride * output_index;
+                        for (std::size_t input_index = 0; input_index < radix; ++input_index) {
+                            scalar_inputs[input_index] = powers[power_index].data.backend().base_data();
+                            power_index += power_step;
+                            if (power_index >= size_) {
+                                power_index -= size_;
+                            }
+                        }
+
+                        ValueType sum = ValueType::zero();
+                        for (std::size_t coordinate_index = 0; coordinate_index < CoordinateCount; ++coordinate_index) {
+                            backend_type coordinate_sum;
+                            base_value_type::modulus_params.get_mod_obj().montgomery_inner_product(
+                                coordinate_sum, coordinate_inputs[coordinate_index].begin(),
+                                coordinate_inputs[coordinate_index].end(), scalar_inputs.begin());
+                            coordinate(sum, coordinate_index).data.backend().base_data() = coordinate_sum;
+                        }
+                        output[output_offset + output_index * output_stride] = sum;
+                    }
+                }
+
                 // Evaluate one prime-radix DFT from temporary input slots into strided output slots.
                 // Direct radix kernels make the full transform O(size * sum(radices)); this is efficient for
                 // small and moderate prime factors, but sizes with very large prime factors need another algorithm.
@@ -131,6 +189,23 @@ namespace nil {
                                std::size_t workspace_stride, std::vector<ValueType> &output, std::size_t output_offset,
                                std::size_t output_stride, std::size_t radix, std::size_t root_stride,
                                const std::vector<field_value_type> &powers) const {
+                    // Constructing backend input arrays is more expensive than eager reduction for the small radix-2
+                    // and radix-3 kernels. Larger kernels amortize that setup over enough products to benefit from
+                    // accumulating each base-field coordinate before a single Montgomery reduction.
+                    constexpr std::size_t lazy_montgomery_radix_threshold = 8;
+                    if (radix >= lazy_montgomery_radix_threshold) {
+                        using coordinate_traits = algebra::fields::field_element_coordinate_traits<ValueType>;
+                        if constexpr (coordinate_traits::is_supported) {
+                            lazy_montgomery_radix_dft<coordinate_traits::coordinate_count>(
+                                workspace, workspace_offset, workspace_stride, output, output_offset, output_stride,
+                                radix, root_stride, powers, [](ValueType &value, std::size_t index) -> decltype(auto) {
+                                    return coordinate_traits::coordinate(value, index);
+                                });
+                            return;
+                        }
+                    }
+
+                    // Generic values and small radices use the ordinary field operations.
                     for (std::size_t output_index = 0; output_index < radix; ++output_index) {
                         ValueType sum = ValueType::zero();
                         std::size_t power_index = 0;
