@@ -1,0 +1,203 @@
+//---------------------------------------------------------------------------//
+// Copyright (c) 2026 Riccardo Abbate
+//
+// MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//---------------------------------------------------------------------------//
+
+#ifndef CRYPTO3_MATH_MIXED_RADIX_FFT_HPP
+#define CRYPTO3_MATH_MIXED_RADIX_FFT_HPP
+
+#include <cstddef>
+#include <stdexcept>
+#include <vector>
+
+#include <nil/crypto3/algebra/type_traits.hpp>
+
+#include <nil/crypto3/math/algorithms/unity_root.hpp>
+
+namespace nil {
+    namespace crypto3 {
+        namespace math {
+
+            /**
+             * Stores the field-only data for exact-size mixed-radix transforms.
+             *
+             * The plan factors the transform size into prime radices and caches
+             * every forward and inverse power of a primitive root of that size.
+             * It is independent of the type of values that a transform operates on.
+             */
+            template<typename FieldType>
+            class mixed_radix_fft_plan {
+                static_assert(algebra::is_field<FieldType>::value, "FieldType must be a field");
+
+                using field_value_type = typename FieldType::value_type;
+
+            public:
+                explicit mixed_radix_fft_plan(std::size_t size) :
+                    size_(validate_size(size)), radices_(detail::prime_factors(size_)),
+                    omega_(unity_root<FieldType>(size_)), size_inverse_(field_value_type(size_).inversed()),
+                    forward_powers_(root_powers(omega_, size_)),
+                    inverse_powers_(root_powers(forward_powers_[size_ - 1], size_)) {
+                }
+
+                std::size_t size() const {
+                    return size_;
+                }
+
+                const std::vector<std::size_t> &radices() const {
+                    return radices_;
+                }
+
+                const field_value_type &omega() const {
+                    return omega_;
+                }
+
+                /**
+                 * Replace coefficients with their evaluations at successive powers of omega.
+                 * Short inputs are zero-padded to the plan size; oversized inputs are rejected.
+                 */
+                template<typename ValueType>
+                void fft(std::vector<ValueType> &values) const {
+                    if (values.size() > size_) {
+                        throw std::invalid_argument("mixed_radix_fft_plan::fft: input exceeds plan size");
+                    }
+
+                    values.resize(size_, ValueType::zero());
+                    std::vector<ValueType> scratch(size_, ValueType::zero());
+                    transform_recursive(values, 0, 1, scratch, 0, size_, 0, 1, forward_powers_);
+                    values.swap(scratch);
+                }
+
+                /**
+                 * Recover coefficients from evaluations at successive powers of omega.
+                 * Short inputs are zero-padded to the plan size; oversized inputs are rejected.
+                 */
+                template<typename ValueType>
+                void inverse_fft(std::vector<ValueType> &values) const {
+                    if (values.size() > size_) {
+                        throw std::invalid_argument("mixed_radix_fft_plan::inverse_fft: input exceeds plan size");
+                    }
+
+                    values.resize(size_, ValueType::zero());
+                    std::vector<ValueType> scratch(size_, ValueType::zero());
+                    transform_recursive(values, 0, 1, scratch, 0, size_, 0, 1, inverse_powers_);
+                    for (ValueType &value : scratch) {
+                        value = value * size_inverse_;
+                    }
+                    values.swap(scratch);
+                }
+
+            private:
+                // Reject zero before the size is used to construct the rest of the plan.
+                static std::size_t validate_size(std::size_t size) {
+                    if (size == 0) {
+                        throw std::invalid_argument("mixed_radix_fft_plan: expected size > 0");
+                    }
+                    return size;
+                }
+
+                // Build [1, root, root^2, ..., root^(size - 1)] using one multiplication per new power.
+                static std::vector<field_value_type> root_powers(const field_value_type &root, std::size_t size) {
+                    std::vector<field_value_type> powers(size, field_value_type::one());
+                    for (std::size_t i = 1; i < size; ++i) {
+                        powers[i] = powers[i - 1] * root;
+                    }
+                    return powers;
+                }
+
+                // Evaluate one prime-radix DFT from temporary input slots into strided output slots.
+                // Direct radix kernels make the full transform O(size * sum(radices)); this is efficient for
+                // small and moderate prime factors, but sizes with very large prime factors need another algorithm.
+                template<typename ValueType>
+                void radix_dft(std::vector<ValueType> &workspace, std::size_t workspace_offset,
+                               std::size_t workspace_stride, std::vector<ValueType> &output, std::size_t output_offset,
+                               std::size_t output_stride, std::size_t radix, std::size_t root_stride,
+                               const std::vector<field_value_type> &powers) const {
+                    for (std::size_t output_index = 0; output_index < radix; ++output_index) {
+                        ValueType sum = ValueType::zero();
+                        std::size_t power_index = 0;
+                        const std::size_t power_step = root_stride * output_index;
+
+                        for (std::size_t input_index = 0; input_index < radix; ++input_index) {
+                            sum += workspace[workspace_offset + input_index * workspace_stride] * powers[power_index];
+                            power_index += power_step;
+                            if (power_index >= size_) {
+                                power_index -= size_;
+                            }
+                        }
+
+                        output[output_offset + output_index * output_stride] = sum;
+                    }
+                }
+
+                // Recursively transform residue classes modulo the next radix, then combine them in standard order.
+                template<typename ValueType>
+                void transform_recursive(std::vector<ValueType> &input, std::size_t input_offset,
+                                         std::size_t input_stride, std::vector<ValueType> &output,
+                                         std::size_t output_offset, std::size_t transform_size, std::size_t radix_index,
+                                         std::size_t root_stride, const std::vector<field_value_type> &powers) const {
+                    if (transform_size == 1) {
+                        output[output_offset] = input[input_offset];
+                        return;
+                    }
+
+                    const std::size_t radix = radices_[radix_index];
+                    const std::size_t subtransform_size = transform_size / radix;
+
+                    for (std::size_t residue = 0; residue < radix; ++residue) {
+                        transform_recursive(input, input_offset + residue * input_stride, input_stride * radix, output,
+                                            output_offset + residue * subtransform_size, subtransform_size,
+                                            radix_index + 1, root_stride * radix, powers);
+                    }
+
+                    for (std::size_t subtransform_index = 0; subtransform_index < subtransform_size;
+                         ++subtransform_index) {
+                        std::size_t power_index = 0;
+                        const std::size_t power_step = root_stride * subtransform_index;
+
+                        for (std::size_t residue = 0; residue < radix; ++residue) {
+                            input[input_offset + residue * input_stride] =
+                                output[output_offset + residue * subtransform_size + subtransform_index] *
+                                powers[power_index];
+                            power_index += power_step;
+                            if (power_index >= size_) {
+                                power_index -= size_;
+                            }
+                        }
+
+                        radix_dft(input, input_offset, input_stride, output, output_offset + subtransform_index,
+                                  subtransform_size, radix, root_stride * subtransform_size, powers);
+                    }
+                }
+
+                std::size_t size_;
+                std::vector<std::size_t> radices_;
+                field_value_type omega_;
+                field_value_type size_inverse_;
+                std::vector<field_value_type> forward_powers_;
+                std::vector<field_value_type> inverse_powers_;
+            };
+
+        }    // namespace math
+    }    // namespace crypto3
+}    // namespace nil
+
+#endif    // CRYPTO3_MATH_MIXED_RADIX_FFT_HPP

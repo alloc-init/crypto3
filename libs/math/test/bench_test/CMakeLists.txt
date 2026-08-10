@@ -28,3 +28,15 @@ foreach(TEST_NAME ${TESTS_NAMES})
         Boost::timer
         Boost::random)
 endforeach()
+
+# This benchmark is built only when requested and is not registered with CTest.
+set(MIXED_RADIX_BENCHMARK ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_mixed_radix_benchmark)
+add_executable(${MIXED_RADIX_BENCHMARK} EXCLUDE_FROM_ALL mixed_radix_benchmark.cpp)
+set_target_properties(${MIXED_RADIX_BENCHMARK} PROPERTIES CXX_STANDARD 23)
+target_compile_options(${MIXED_RADIX_BENCHMARK} PRIVATE "-march=native")
+target_link_libraries(${MIXED_RADIX_BENCHMARK}
+    ${CMAKE_WORKSPACE_NAME}::random
+    ${CMAKE_WORKSPACE_NAME}::math
+    ${CMAKE_WORKSPACE_NAME}::algebra
+    ${CMAKE_WORKSPACE_NAME}::multiprecision
+    Boost::random)

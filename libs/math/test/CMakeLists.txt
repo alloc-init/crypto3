@@ -49,6 +49,8 @@ set(TESTS_NAMES
     "polynomial_dfs"
     "polynomial_dfs_view"
     "lagrange_interpolation"
+    "unity_root"
+    "mixed_radix_fft"
     "basic_radix2_domain")
 
 foreach(TEST_NAME ${TESTS_NAMES})
