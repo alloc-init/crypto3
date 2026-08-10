@@ -25,8 +25,10 @@
 #ifndef CRYPTO3_MATH_MIXED_RADIX_FFT_HPP
 #define CRYPTO3_MATH_MIXED_RADIX_FFT_HPP
 
+#include <array>
 #include <cstddef>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
@@ -123,6 +125,60 @@ namespace nil {
                     return powers;
                 }
 
+                // Throwaway integration path: apply the backend inner product independently to the twelve base-field
+                // coordinates of an Fq12 tower value. This is intentionally kept out of the production branches.
+                template<typename ValueType>
+                void lazy_fq12_radix_dft(std::vector<ValueType> &workspace, std::size_t workspace_offset,
+                                         std::size_t workspace_stride, std::vector<ValueType> &output,
+                                         std::size_t output_offset, std::size_t output_stride, std::size_t radix,
+                                         std::size_t root_stride, const std::vector<field_value_type> &powers) const {
+                    auto coordinate = [](ValueType &value, std::size_t index) -> decltype(auto) {
+                        return value.data[index / 6].data[(index % 6) / 2].data[index % 2];
+                    };
+
+                    using base_value_type =
+                        std::remove_reference_t<decltype(coordinate(std::declval<ValueType &>(), std::size_t(0)))>;
+                    using backend_type =
+                        std::remove_reference_t<decltype(std::declval<base_value_type &>().data.backend().base_data())>;
+
+                    std::array<std::vector<backend_type>, 12> coordinate_inputs;
+                    for (std::vector<backend_type> &inputs : coordinate_inputs) {
+                        inputs.resize(radix);
+                    }
+                    for (std::size_t input_index = 0; input_index < radix; ++input_index) {
+                        ValueType &value = workspace[workspace_offset + input_index * workspace_stride];
+                        for (std::size_t coordinate_index = 0; coordinate_index < coordinate_inputs.size();
+                             ++coordinate_index) {
+                            coordinate_inputs[coordinate_index][input_index] =
+                                coordinate(value, coordinate_index).data.backend().base_data();
+                        }
+                    }
+
+                    std::vector<backend_type> scalar_inputs(radix);
+                    for (std::size_t output_index = 0; output_index < radix; ++output_index) {
+                        std::size_t power_index = 0;
+                        const std::size_t power_step = root_stride * output_index;
+                        for (std::size_t input_index = 0; input_index < radix; ++input_index) {
+                            scalar_inputs[input_index] = powers[power_index].data.backend().base_data();
+                            power_index += power_step;
+                            if (power_index >= size_) {
+                                power_index -= size_;
+                            }
+                        }
+
+                        ValueType sum = ValueType::zero();
+                        for (std::size_t coordinate_index = 0; coordinate_index < coordinate_inputs.size();
+                             ++coordinate_index) {
+                            backend_type coordinate_sum;
+                            base_value_type::modulus_params.get_mod_obj().montgomery_inner_product(
+                                coordinate_sum, coordinate_inputs[coordinate_index].begin(),
+                                coordinate_inputs[coordinate_index].end(), scalar_inputs.begin());
+                            coordinate(sum, coordinate_index).data.backend().base_data() = coordinate_sum;
+                        }
+                        output[output_offset + output_index * output_stride] = sum;
+                    }
+                }
+
                 // Evaluate one prime-radix DFT from temporary input slots into strided output slots.
                 // Direct radix kernels make the full transform O(size * sum(radices)); this is efficient for
                 // small and moderate prime factors, but sizes with very large prime factors need another algorithm.
@@ -131,6 +187,19 @@ namespace nil {
                                std::size_t workspace_stride, std::vector<ValueType> &output, std::size_t output_offset,
                                std::size_t output_stride, std::size_t radix, std::size_t root_stride,
                                const std::vector<field_value_type> &powers) const {
+#ifndef CRYPTO3_MIXED_RADIX_DISABLE_LAZY_MONTGOMERY
+                    if constexpr (requires(ValueType value, field_value_type scalar) {
+                                      value.data[0].data[0].data[0].data.backend().base_data();
+                                      scalar.data.backend().base_data();
+                                  }) {
+                        if (radix >= 8) {
+                            lazy_fq12_radix_dft(workspace, workspace_offset, workspace_stride, output, output_offset,
+                                                output_stride, radix, root_stride, powers);
+                            return;
+                        }
+                    }
+#endif
+
                     for (std::size_t output_index = 0; output_index < radix; ++output_index) {
                         ValueType sum = ValueType::zero();
                         std::size_t power_index = 0;
