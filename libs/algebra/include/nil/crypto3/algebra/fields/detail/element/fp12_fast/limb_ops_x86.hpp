@@ -1,6 +1,7 @@
 #pragma once
 
 #include <nil/crypto3/algebra/fields/detail/element/fp12_fast/types.hpp>
+#include <nil/crypto3/multiprecision/detail/x86_64_schoolbook.hpp>
 #include <boost/preprocessor.hpp>
 
 // clang-format off
@@ -11,45 +12,8 @@
 #define PTR(REGNAME, I) STR(I) "*8(%[" #REGNAME "])"
 #define PTR2(REGNAME, I, J) PTR(REGNAME, BOOST_PP_ADD(I, J))
 
-// Get the (i + j) mod 4 d register in the 4-live-limb schoolbook window.
-#define D4(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 4)) "]"
-
-#define SCHOOLBOOK_4x4_ROUND(ROUND, Z, Z_BASE, X, X_BASE, Y, Y_BASE) \
-    "mov " PTR2(Y, Y_BASE, ROUND) ", %%rdx\n"                        \
-    "mulx " PTR2(X, X_BASE, 0) ", %[low], %[high]\n"                 \
-    "adox %[low], " D4(0, ROUND) "\n"                                \
-    "mov " D4(0, ROUND) ", " PTR2(Z, Z_BASE, ROUND) "\n"             \
-    "adcx %[high], " D4(1, ROUND) "\n"                               \
-    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[high]\n"                 \
-    "adox %[low], " D4(1, ROUND) "\n"                                \
-    "adcx %[high], " D4(2, ROUND) "\n"                               \
-    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[high]\n"                 \
-    "adox %[low], " D4(2, ROUND) "\n"                                \
-    "adcx %[high], " D4(3, ROUND) "\n"                               \
-    "mulx " PTR2(X, X_BASE, 3) ", %[low], " D4(4, ROUND) "\n"        \
-    "adox %[low], " D4(3, ROUND) "\n"                                \
-    "adox %[zero], " D4(4, ROUND) "\n"                               \
-    "adcx %[zero], " D4(4, ROUND) "\n"
-
-#define SCHOOLBOOK_4x4(Z, Z_BASE, X, X_BASE, Y, Y_BASE)             \
-    "xor %[zero], %[zero]\n"                                        \
-    "mov " PTR2(Y, Y_BASE, 0) ", %%rdx\n"                           \
-    "mulx " PTR2(X, X_BASE, 0) ", %[d0], %[d1]\n"                   \
-    "mov %[d0], " PTR2(Z, Z_BASE, 0) "\n"                           \
-    "mulx " PTR2(X, X_BASE, 1) ", %[low], %[d2]\n"                  \
-    "add %[low], %[d1]\n"                                           \
-    "mulx " PTR2(X, X_BASE, 2) ", %[low], %[d3]\n"                  \
-    "adc %[low], %[d2]\n"                                           \
-    "mulx " PTR2(X, X_BASE, 3) ", %[low], %[d0]\n"                  \
-    "adc %[low], %[d3]\n"                                           \
-    "adc $0, %[d0]\n"                                               \
-    SCHOOLBOOK_4x4_ROUND(1, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
-    SCHOOLBOOK_4x4_ROUND(2, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
-    SCHOOLBOOK_4x4_ROUND(3, Z, Z_BASE, X, X_BASE, Y, Y_BASE)        \
-    "mov " D4(0, 4) ", " PTR2(Z, Z_BASE, 4) "\n"                    \
-    "mov " D4(1, 4) ", " PTR2(Z, Z_BASE, 5) "\n"                    \
-    "mov " D4(2, 4) ", " PTR2(Z, Z_BASE, 6) "\n"                    \
-    "mov " D4(3, 4) ", " PTR2(Z, Z_BASE, 7) "\n"
+// Reuse the four-limb ADX/BMI2 multiplication fragment shared with the multiprecision backend.
+#define SCHOOLBOOK_4x4(...) CRYPTO3_MP_DETAIL_SCHOOLBOOK_4X4(__VA_ARGS__)
 
 // Get the (i + j) mod 6 d register in the 6-live-limb schoolbook window.
 #define D6(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 6)) "]"
