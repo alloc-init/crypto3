@@ -27,6 +27,10 @@
 #ifndef CRYPTO3_ALGEBRA_TYPE_TRAITS_HPP
 #define CRYPTO3_ALGEBRA_TYPE_TRAITS_HPP
 
+#include <concepts>
+#include <cstddef>
+#include <type_traits>
+
 #include <boost/type_traits.hpp>
 #include <boost/tti/tti.hpp>
 #include <boost/mpl/placeholders.hpp>
@@ -159,6 +163,20 @@ namespace nil {
             struct is_extended_field_element {
                 static const bool value = is_field_element<T>::value && has_type_underlying_type<T>::value;
             };
+
+            template<typename T>
+            concept FieldElementWithCoordinates =
+                is_field_element<T>::value && requires(T &value, const T &const_value, std::size_t index) {
+                    value.coordinate(index);
+                    const_value.coordinate(index);
+                    requires std::is_lvalue_reference_v<decltype(value.coordinate(index))>;
+                    requires std::is_lvalue_reference_v<decltype(const_value.coordinate(index))>;
+                    requires(!std::is_const_v<std::remove_reference_t<decltype(value.coordinate(index))>>);
+                    requires std::is_const_v<std::remove_reference_t<decltype(const_value.coordinate(index))>>;
+                    requires std::same_as<std::remove_cvref_t<decltype(value.coordinate(index))>,
+                                          std::remove_cvref_t<decltype(const_value.coordinate(index))>>;
+                    requires is_field_element<std::remove_cvref_t<decltype(value.coordinate(index))>>::value;
+                };
 
             template<typename T>
             struct is_complex : std::false_type { };

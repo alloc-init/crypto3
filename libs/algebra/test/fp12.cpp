@@ -26,6 +26,7 @@
 
 #include <array>
 #include <cstddef>
+#include <memory>
 #include <string_view>
 
 #include <boost/mpl/list.hpp>
@@ -149,6 +150,37 @@ namespace {
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(fp12_tests)
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(coordinates_follow_tower_storage_order, Fp12Field, fp12_field_types) {
+    using fp12_value_type = typename Fp12Field::value_type;
+    using base_value_type = typename Fp12Field::base_field_type::value_type;
+
+    fp12_value_type value = fp12_value_type::zero();
+    for (std::size_t index = 0; index < Fp12Field::arity; ++index) {
+        const std::size_t outer_index = index / 6;
+        const std::size_t middle_index = (index % 6) / 2;
+        const std::size_t inner_index = index % 2;
+        value.data[outer_index].data[middle_index].data[inner_index] = base_value_type(index + 1);
+    }
+
+    const fp12_value_type &const_value = value;
+    for (std::size_t index = 0; index < Fp12Field::arity; ++index) {
+        const std::size_t outer_index = index / 6;
+        const std::size_t middle_index = (index % 6) / 2;
+        const std::size_t inner_index = index % 2;
+        const base_value_type &nested_coordinate = const_value.data[outer_index].data[middle_index].data[inner_index];
+        BOOST_CHECK(std::addressof(const_value.coordinate(index)) == std::addressof(nested_coordinate));
+    }
+
+    for (std::size_t index = 0; index < Fp12Field::arity; ++index) {
+        const std::size_t outer_index = index / 6;
+        const std::size_t middle_index = (index % 6) / 2;
+        const std::size_t inner_index = index % 2;
+        const base_value_type replacement(index + Fp12Field::arity + 1);
+        value.coordinate(index) = replacement;
+        BOOST_CHECK_EQUAL(value.data[outer_index].data[middle_index].data[inner_index], replacement);
+    }
+}
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(multiplication_matches_generic_implementation, Fp12Field, fp12_field_types) {
     using fp12_value_type = typename Fp12Field::value_type;

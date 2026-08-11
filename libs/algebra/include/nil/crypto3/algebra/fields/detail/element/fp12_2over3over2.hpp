@@ -27,7 +27,6 @@
 #ifndef CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP12_2OVER3OVER2_HPP
 #define CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP12_2OVER3OVER2_HPP
 
-#include <nil/crypto3/algebra/fields/field_element_coordinate_traits.hpp>
 #include <nil/crypto3/algebra/fields/detail/exponentiation.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/operations.hpp>
 
@@ -66,6 +65,22 @@ namespace nil {
 
                         constexpr element_fp12_2over3over2(const element_fp12_2over3over2 &&B) BOOST_NOEXCEPT
                             : data(std::move(B.data)) { };
+
+                        constexpr decltype(auto) coordinate(std::size_t index) {
+                            using underlying_field_type = typename underlying_type::field_type;
+                            constexpr std::size_t underlying_coordinate_count = underlying_field_type::arity;
+                            const std::size_t component_index = index / underlying_coordinate_count;
+                            const std::size_t coordinate_index = index % underlying_coordinate_count;
+                            return data[component_index].coordinate(coordinate_index);
+                        }
+
+                        constexpr decltype(auto) coordinate(std::size_t index) const {
+                            using underlying_field_type = typename underlying_type::field_type;
+                            constexpr std::size_t underlying_coordinate_count = underlying_field_type::arity;
+                            const std::size_t component_index = index / underlying_coordinate_count;
+                            const std::size_t coordinate_index = index % underlying_coordinate_count;
+                            return data[component_index].coordinate(coordinate_index);
+                        }
 
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.
@@ -453,24 +468,6 @@ namespace nil {
                         return os;
                     }
                 }    // namespace detail
-
-                template<typename FieldParams>
-                struct field_element_coordinate_traits<detail::element_fp12_2over3over2<FieldParams>> {
-                    using value_type = detail::element_fp12_2over3over2<FieldParams>;
-                    using coordinate_type = typename value_type::underlying_type::underlying_type::underlying_type;
-
-                    constexpr static bool is_supported = true;
-                    constexpr static std::size_t coordinate_count = 12;
-
-                    constexpr static coordinate_type &coordinate(value_type &value, std::size_t index) {
-                        return value.data[index / 6].data[(index % 6) / 2].data[index % 2];
-                    }
-
-                    constexpr static const coordinate_type &coordinate(const value_type &value, std::size_t index) {
-                        return value.data[index / 6].data[(index % 6) / 2].data[index % 2];
-                    }
-                };
-
             }    // namespace fields
         }    // namespace algebra
     }    // namespace crypto3

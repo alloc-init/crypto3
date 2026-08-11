@@ -62,6 +62,8 @@ BOOST_AUTO_TEST_SUITE(type_traits_manual_tests)
 
 template<typename value_type>
 void test_field_value_types() {
+    static_assert(FieldElementWithCoordinates<value_type>);
+
     BOOST_ASSERT(has_type_field_type<value_type>::value);
     BOOST_ASSERT((has_function_is_zero<const value_type, bool>::value));
     BOOST_ASSERT((has_function_inversed<const value_type, value_type>::value));
@@ -175,6 +177,7 @@ BOOST_AUTO_TEST_CASE(babyjubjub_type_traits) {
 
 BOOST_AUTO_TEST_CASE(goldilocks_field_type_traits) {
     test_field_types<fields::goldilocks>();
+    test_field_types<fields::goldilocks_fp2>();
 }
 
 BOOST_AUTO_TEST_CASE(mersenne31_field_type_traits) {
@@ -187,6 +190,7 @@ BOOST_AUTO_TEST_CASE(koalabear_field_type_traits) {
 
 BOOST_AUTO_TEST_CASE(babybear_field_type_traits) {
     test_field_types<fields::babybear>();
+    test_field_types<fields::babybear_fp4>();
 }
 
 BOOST_AUTO_TEST_CASE(secp_type_traits) {

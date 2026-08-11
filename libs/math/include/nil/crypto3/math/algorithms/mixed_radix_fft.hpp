@@ -33,13 +33,22 @@
 #include <vector>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
-#include <nil/crypto3/algebra/fields/field_element_coordinate_traits.hpp>
 
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 
 namespace nil {
     namespace crypto3 {
         namespace math {
+
+            namespace detail {
+                template<typename ValueType, typename ScalarType>
+                concept MontgomeryCoordinateFieldElement =
+                    algebra::FieldElementWithCoordinates<ValueType> &&
+                    requires(ValueType &value, const ScalarType &scalar, std::size_t index) {
+                        value.coordinate(index).data.backend().base_data();
+                        scalar.data.backend().base_data();
+                    };
+            }    // namespace detail
 
             /**
              * Stores the field-only data for exact-size mixed-radix transforms.
@@ -130,14 +139,17 @@ namespace nil {
                 // Apply the backend inner product independently to each base-field coordinate. The products remain
                 // unreduced until the complete radix sum has been accumulated, replacing one Montgomery reduction per
                 // term with one reduction per output coordinate.
-                template<std::size_t CoordinateCount, typename ValueType, typename CoordinateAccessor>
+                template<typename ValueType>
+                    requires detail::MontgomeryCoordinateFieldElement<ValueType, field_value_type>
                 void lazy_montgomery_radix_dft(std::vector<ValueType> &workspace, std::size_t workspace_offset,
                                                std::size_t workspace_stride, std::vector<ValueType> &output,
                                                std::size_t output_offset, std::size_t output_stride, std::size_t radix,
-                                               std::size_t root_stride, const std::vector<field_value_type> &powers,
-                                               CoordinateAccessor coordinate) const {
+                                               std::size_t root_stride,
+                                               const std::vector<field_value_type> &powers) const {
                     using base_value_type =
-                        std::remove_cvref_t<decltype(coordinate(std::declval<ValueType &>(), std::size_t(0)))>;
+                        std::remove_cvref_t<decltype(std::declval<ValueType &>().coordinate(std::size_t(0)))>;
+                    using value_field_type = typename ValueType::field_type;
+                    constexpr std::size_t coordinate_count = value_field_type::arity;
                     using backend_type =
                         std::remove_reference_t<decltype(std::declval<base_value_type &>().data.backend().base_data())>;
                     using scalar_backend_type = std::remove_reference_t<
@@ -145,15 +157,16 @@ namespace nil {
                     static_assert(std::is_same_v<backend_type, scalar_backend_type>,
                                   "FFT values and roots must use the same base-field backend");
 
-                    std::array<std::vector<backend_type>, CoordinateCount> coordinate_inputs;
+                    std::array<std::vector<backend_type>, coordinate_count> coordinate_inputs;
                     for (std::vector<backend_type> &inputs : coordinate_inputs) {
                         inputs.resize(radix);
                     }
                     for (std::size_t input_index = 0; input_index < radix; ++input_index) {
                         ValueType &value = workspace[workspace_offset + input_index * workspace_stride];
-                        for (std::size_t coordinate_index = 0; coordinate_index < CoordinateCount; ++coordinate_index) {
+                        for (std::size_t coordinate_index = 0; coordinate_index < coordinate_count;
+                             ++coordinate_index) {
                             coordinate_inputs[coordinate_index][input_index] =
-                                coordinate(value, coordinate_index).data.backend().base_data();
+                                value.coordinate(coordinate_index).data.backend().base_data();
                         }
                     }
 
@@ -170,12 +183,13 @@ namespace nil {
                         }
 
                         ValueType sum = ValueType::zero();
-                        for (std::size_t coordinate_index = 0; coordinate_index < CoordinateCount; ++coordinate_index) {
+                        for (std::size_t coordinate_index = 0; coordinate_index < coordinate_count;
+                             ++coordinate_index) {
                             backend_type coordinate_sum;
                             base_value_type::modulus_params.get_mod_obj().montgomery_inner_product(
                                 coordinate_sum, coordinate_inputs[coordinate_index].begin(),
                                 coordinate_inputs[coordinate_index].end(), scalar_inputs.begin());
-                            coordinate(sum, coordinate_index).data.backend().base_data() = coordinate_sum;
+                            sum.coordinate(coordinate_index).data.backend().base_data() = coordinate_sum;
                         }
                         output[output_offset + output_index * output_stride] = sum;
                     }
@@ -194,13 +208,9 @@ namespace nil {
                     // accumulating each base-field coordinate before a single Montgomery reduction.
                     constexpr std::size_t lazy_montgomery_radix_threshold = 8;
                     if (radix >= lazy_montgomery_radix_threshold) {
-                        using coordinate_traits = algebra::fields::field_element_coordinate_traits<ValueType>;
-                        if constexpr (coordinate_traits::is_supported) {
-                            lazy_montgomery_radix_dft<coordinate_traits::coordinate_count>(
-                                workspace, workspace_offset, workspace_stride, output, output_offset, output_stride,
-                                radix, root_stride, powers, [](ValueType &value, std::size_t index) -> decltype(auto) {
-                                    return coordinate_traits::coordinate(value, index);
-                                });
+                        if constexpr (detail::MontgomeryCoordinateFieldElement<ValueType, field_value_type>) {
+                            lazy_montgomery_radix_dft(workspace, workspace_offset, workspace_stride, output,
+                                                      output_offset, output_stride, radix, root_stride, powers);
                             return;
                         }
                     }

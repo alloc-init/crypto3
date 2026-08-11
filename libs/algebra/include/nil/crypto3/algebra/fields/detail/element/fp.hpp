@@ -28,7 +28,6 @@
 
 #include <iostream>
 
-#include <nil/crypto3/algebra/fields/field_element_coordinate_traits.hpp>
 #include <nil/crypto3/algebra/fields/detail/exponentiation.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/operations.hpp>
 
@@ -63,6 +62,7 @@ namespace nil {
                         constexpr static const integral_type modulus = policy_type::modulus;
 
                         using data_type = modular_type;
+
                         data_type data;
 
                         constexpr element_fp() = default;
@@ -87,6 +87,14 @@ namespace nil {
                         }
 
                         constexpr element_fp(const element_fp &&B) BOOST_NOEXCEPT : data(std::move(B.data)) {
+                        }
+
+                        constexpr element_fp &coordinate(std::size_t) {
+                            return *this;
+                        }
+
+                        constexpr const element_fp &coordinate(std::size_t) const {
+                            return *this;
                         }
 
                         constexpr typename field_type::integral_type to_integral() const {
@@ -309,24 +317,6 @@ namespace nil {
                     }
 
                 }    // namespace detail
-
-                template<typename FieldParams>
-                struct field_element_coordinate_traits<detail::element_fp<FieldParams>> {
-                    using value_type = detail::element_fp<FieldParams>;
-                    using coordinate_type = value_type;
-
-                    constexpr static bool is_supported = true;
-                    constexpr static std::size_t coordinate_count = 1;
-
-                    constexpr static coordinate_type &coordinate(value_type &value, std::size_t) {
-                        return value;
-                    }
-
-                    constexpr static const coordinate_type &coordinate(const value_type &value, std::size_t) {
-                        return value;
-                    }
-                };
-
             }    // namespace fields
         }    // namespace algebra
     }    // namespace crypto3
