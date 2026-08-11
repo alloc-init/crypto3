@@ -6,6 +6,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <random>
 #include <type_traits>
 #include <vector>
 
@@ -13,6 +14,7 @@
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 #include <nil/crypto3/math/matrix/backends/ublas/compressed.hpp>
 #include <nil/crypto3/math/matrix/backends/ublas/regular.hpp>
+#include <nil/crypto3/math/matrix/random.hpp>
 #include <nil/crypto3/math/matrix/solve.hpp>
 
 namespace math = nil::crypto3::math;
@@ -288,6 +290,32 @@ BOOST_AUTO_TEST_CASE(solver_is_backend_generic) {
     BOOST_REQUIRE(result);
     BOOST_CHECK((*result)[0] == one);
     BOOST_CHECK((*result)[1] == two);
+}
+
+BOOST_AUTO_TEST_CASE(random_generation_is_frontend_and_engine_generic) {
+    using matrix_type = math::matrix<test_matrix_backend<unsigned>>;
+    using vector_type = math::vector<test_vector_backend<unsigned>>;
+    std::mt19937 engine(17);
+    auto sample = [](auto &rng) { return rng() % 100; };
+
+    auto matrix = math::random_matrix<matrix_type>(2, 3, engine, sample);
+    auto vector = math::random_vector<vector_type>(4, engine, sample);
+
+    BOOST_CHECK_EQUAL(matrix.rows(), 2);
+    BOOST_CHECK_EQUAL(matrix.columns(), 3);
+    BOOST_CHECK_EQUAL(vector.size(), 4);
+    BOOST_CHECK_LT(matrix(1, 2), 100);
+    BOOST_CHECK_LT(vector[3], 100);
+}
+
+BOOST_AUTO_TEST_CASE(random_generation_samples_field_elements_by_default) {
+    std::mt19937_64 engine(23);
+    auto vector = math::random_vector<math::regular_vector<bn254_fp12_value>>(3, engine);
+    auto matrix = math::random_matrix<math::compressed_matrix<bn254_fp12_value>>(2, 2, engine);
+
+    BOOST_CHECK_EQUAL(vector.size(), 3);
+    BOOST_CHECK_EQUAL(matrix.rows(), 2);
+    BOOST_CHECK_EQUAL(matrix.columns(), 2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

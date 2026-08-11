@@ -24,6 +24,10 @@ frontends rather than access a backend directly:
   arithmetic;
 - `find_element` and `for_each_nonzero` provide sparse access without exposing
   backend iterators;
+- `random.hpp` constructs any compatible matrix or vector frontend from a
+  caller-supplied random engine. Field-element frontends use
+  `crypto3::algebra::random_element` by default, and callers can supply a
+  custom sampler for other element types;
 - `solve.hpp` provides backend-generic Gaussian elimination,
   `back_substitute`, and matrix-shape helpers.
 
