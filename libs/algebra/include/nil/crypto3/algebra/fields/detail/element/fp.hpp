@@ -62,6 +62,7 @@ namespace nil {
                         constexpr static const integral_type modulus = policy_type::modulus;
 
                         using data_type = modular_type;
+
                         data_type data;
 
                         constexpr element_fp() = default;
@@ -86,6 +87,14 @@ namespace nil {
                         }
 
                         constexpr element_fp(const element_fp &&B) BOOST_NOEXCEPT : data(std::move(B.data)) {
+                        }
+
+                        constexpr element_fp &coordinate(std::size_t) {
+                            return *this;
+                        }
+
+                        constexpr const element_fp &coordinate(std::size_t) const {
+                            return *this;
                         }
 
                         constexpr typename field_type::integral_type to_integral() const {
