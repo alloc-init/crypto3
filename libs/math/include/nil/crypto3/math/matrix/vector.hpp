@@ -65,9 +65,8 @@ namespace nil::crypto3::math {
         }
 
         template<VectorBackend Other>
-            requires(!std::same_as<Other, backend_type> && requires(backend_type &backend, const Other &other) {
-                backend = other;
-            })
+            requires(!std::same_as<Other, backend_type> &&
+                     requires(backend_type &backend, const Other &other) { backend = other; })
         vector &operator=(const vector<Other> &other) {
             backend_ = other.backend();
             return *this;
@@ -82,7 +81,8 @@ namespace nil::crypto3::math {
         }
 
         void resize(size_type size)
-            requires ResizableVectorBackend<backend_type> {
+            requires ResizableVectorBackend<backend_type>
+        {
             backend_.resize(size);
         }
 
@@ -115,18 +115,14 @@ namespace nil::crypto3::math {
         }
 
         template<VectorExpression Expression>
-            requires requires(backend_type &backend, const Expression &expression) {
-                backend += expression;
-            }
+            requires requires(backend_type &backend, const Expression &expression) { backend += expression; }
         vector &operator+=(const Expression &expression) {
             backend_ += expression;
             return *this;
         }
 
         template<VectorExpression Expression>
-            requires requires(backend_type &backend, const Expression &expression) {
-                backend -= expression;
-            }
+            requires requires(backend_type &backend, const Expression &expression) { backend -= expression; }
         vector &operator-=(const Expression &expression) {
             backend_ -= expression;
             return *this;

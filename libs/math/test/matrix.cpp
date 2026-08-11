@@ -83,14 +83,10 @@ private:
 };
 
 template<typename Left, typename Right>
-concept LvalueAddable = requires(Left &left, Right &right) {
-    left + right;
-};
+concept LvalueAddable = requires(Left &left, Right &right) { left + right; };
 
 template<typename Left, typename Right>
-concept RvalueAddable = requires {
-    Left() + Right();
-};
+concept RvalueAddable = requires { Left() + Right(); };
 
 static_assert(math::MatrixBackend<math::backends::ublas::regular_matrix<int>>);
 static_assert(math::MatrixBackend<math::backends::ublas::compressed_matrix<int>>);

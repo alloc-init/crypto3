@@ -42,17 +42,15 @@ namespace nil::crypto3::math {
     Vector random_vector(std::size_t size, RandomEngine &engine) {
         using value_type = typename Vector::value_type;
         using field_type = typename value_type::field_type;
-        return random_vector<Vector>(size, engine, [](auto &rng) {
-            return value_type(algebra::random_element<field_type>(rng));
-        });
+        return random_vector<Vector>(size, engine,
+                                     [](auto &rng) { return value_type(algebra::random_element<field_type>(rng)); });
     }
 
     template<typename Matrix, typename RandomEngine>
     Matrix random_matrix(std::size_t rows, std::size_t columns, RandomEngine &engine) {
         using value_type = typename Matrix::value_type;
         using field_type = typename value_type::field_type;
-        return random_matrix<Matrix>(rows, columns, engine, [](auto &rng) {
-            return value_type(algebra::random_element<field_type>(rng));
-        });
+        return random_matrix<Matrix>(rows, columns, engine,
+                                     [](auto &rng) { return value_type(algebra::random_element<field_type>(rng)); });
     }
 }    // namespace nil::crypto3::math

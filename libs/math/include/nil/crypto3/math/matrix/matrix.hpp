@@ -66,9 +66,8 @@ namespace nil::crypto3::math {
         }
 
         template<MatrixBackend Other>
-            requires(!std::same_as<Other, backend_type> && requires(backend_type &backend, const Other &other) {
-                backend = other;
-            })
+            requires(!std::same_as<Other, backend_type> &&
+                     requires(backend_type &backend, const Other &other) { backend = other; })
         matrix &operator=(const matrix<Other> &other) {
             backend_ = other.backend();
             return *this;
@@ -87,7 +86,8 @@ namespace nil::crypto3::math {
         }
 
         void resize(size_type rows, size_type columns)
-            requires ResizableMatrixBackend<backend_type> {
+            requires ResizableMatrixBackend<backend_type>
+        {
             backend_.resize(rows, columns);
         }
 
@@ -113,36 +113,28 @@ namespace nil::crypto3::math {
         }
 
         template<MatrixExpression Expression>
-            requires requires(backend_type &backend, const Expression &expression) {
-                backend += expression;
-            }
+            requires requires(backend_type &backend, const Expression &expression) { backend += expression; }
         matrix &operator+=(const Expression &expression) {
             backend_ += expression;
             return *this;
         }
 
         template<MatrixBackend Other>
-            requires requires(backend_type &backend, const Other &other) {
-                backend += other;
-            }
+            requires requires(backend_type &backend, const Other &other) { backend += other; }
         matrix &operator+=(const matrix<Other> &other) {
             backend_ += other.backend();
             return *this;
         }
 
         template<MatrixExpression Expression>
-            requires requires(backend_type &backend, const Expression &expression) {
-                backend -= expression;
-            }
+            requires requires(backend_type &backend, const Expression &expression) { backend -= expression; }
         matrix &operator-=(const Expression &expression) {
             backend_ -= expression;
             return *this;
         }
 
         template<MatrixBackend Other>
-            requires requires(backend_type &backend, const Other &other) {
-                backend -= other;
-            }
+            requires requires(backend_type &backend, const Other &other) { backend -= other; }
         matrix &operator-=(const matrix<Other> &other) {
             backend_ -= other.backend();
             return *this;

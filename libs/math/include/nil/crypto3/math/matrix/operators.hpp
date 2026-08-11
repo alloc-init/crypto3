@@ -15,33 +15,25 @@ namespace nil::crypto3::math {
     // lazy. The expression borrows both operands, so temporary frontends are
     // explicitly rejected below.
     template<MatrixBackend Left, MatrixBackend Right>
-        requires requires(const Left &left, const Right &right) {
-            requires MatrixExpression<decltype(left + right)>;
-        }
+        requires requires(const Left &left, const Right &right) { requires MatrixExpression<decltype(left + right)>; }
     decltype(auto) operator+(const matrix<Left> &left, const matrix<Right> &right) {
         return left.backend() + right.backend();
     }
 
     template<MatrixBackend Left, MatrixBackend Right>
-        requires requires(const Left &left, const Right &right) {
-            requires MatrixExpression<decltype(left - right)>;
-        }
+        requires requires(const Left &left, const Right &right) { requires MatrixExpression<decltype(left - right)>; }
     decltype(auto) operator-(const matrix<Left> &left, const matrix<Right> &right) {
         return left.backend() - right.backend();
     }
 
     template<VectorBackend Left, VectorBackend Right>
-        requires requires(const Left &left, const Right &right) {
-            requires VectorExpression<decltype(left + right)>;
-        }
+        requires requires(const Left &left, const Right &right) { requires VectorExpression<decltype(left + right)>; }
     decltype(auto) operator+(const vector<Left> &left, const vector<Right> &right) {
         return left.backend() + right.backend();
     }
 
     template<VectorBackend Left, VectorBackend Right>
-        requires requires(const Left &left, const Right &right) {
-            requires VectorExpression<decltype(left - right)>;
-        }
+        requires requires(const Left &left, const Right &right) { requires VectorExpression<decltype(left - right)>; }
     decltype(auto) operator-(const vector<Left> &left, const vector<Right> &right) {
         return left.backend() - right.backend();
     }
@@ -71,17 +63,13 @@ namespace nil::crypto3::math {
     }
 
     template<VectorBackend Left, VectorBackend Right>
-        requires requires(const Left &left, const Right &right) {
-            boost::numeric::ublas::inner_prod(left, right);
-        }
+        requires requires(const Left &left, const Right &right) { boost::numeric::ublas::inner_prod(left, right); }
     decltype(auto) inner_product(const vector<Left> &left, const vector<Right> &right) {
         return boost::numeric::ublas::inner_prod(left.backend(), right.backend());
     }
 
     template<VectorExpression Left, VectorBackend Right>
-        requires requires(const Left &left, const Right &right) {
-            boost::numeric::ublas::inner_prod(left, right);
-        }
+        requires requires(const Left &left, const Right &right) { boost::numeric::ublas::inner_prod(left, right); }
     decltype(auto) inner_product(const Left &left, const vector<Right> &right) {
         return boost::numeric::ublas::inner_prod(left, right.backend());
     }

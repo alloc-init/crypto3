@@ -10,8 +10,7 @@
 
 namespace nil::crypto3::math {
     namespace backends::ublas {
-        template<typename T,
-                 typename Layout = boost::numeric::ublas::row_major,
+        template<typename T, typename Layout = boost::numeric::ublas::row_major,
                  typename Storage = boost::numeric::ublas::unbounded_array<T>>
         using regular_matrix = boost::numeric::ublas::matrix<T, Layout, Storage>;
 
@@ -19,8 +18,7 @@ namespace nil::crypto3::math {
         using regular_vector = boost::numeric::ublas::vector<T, Storage>;
     }    // namespace backends::ublas
 
-    template<typename T,
-             typename Layout = boost::numeric::ublas::row_major,
+    template<typename T, typename Layout = boost::numeric::ublas::row_major,
              typename Storage = boost::numeric::ublas::unbounded_array<T>>
     using regular_matrix = matrix<backends::ublas::regular_matrix<T, Layout, Storage>>;
 

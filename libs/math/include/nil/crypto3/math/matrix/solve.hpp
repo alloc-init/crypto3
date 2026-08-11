@@ -70,8 +70,8 @@ namespace nil::crypto3::math {
 
     template<MatrixBackend MatrixBackendType, VectorBackend VectorBackendType>
         requires std::same_as<typename MatrixBackendType::value_type, typename VectorBackendType::value_type>
-    std::optional<vector<VectorBackendType>> solve(matrix<MatrixBackendType> matrix,
-                                                   vector<VectorBackendType> right_hand_side) {
+    std::optional<vector<VectorBackendType>>
+        solve(matrix<MatrixBackendType> matrix, vector<VectorBackendType> right_hand_side) {
         using value_type = typename MatrixBackendType::value_type;
 
         const std::size_t row_count = matrix.rows();

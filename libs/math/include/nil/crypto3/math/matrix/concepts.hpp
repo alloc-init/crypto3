@@ -30,13 +30,13 @@ namespace nil::crypto3::math {
     // returns non-owning expression-template objects that are readable but not
     // necessarily default constructible or mutable.
     template<typename T>
-    concept VectorExpression = requires(const std::remove_cvref_t<T> &value,
-                                        typename std::remove_cvref_t<T>::size_type i) {
-        typename std::remove_cvref_t<T>::value_type;
-        typename std::remove_cvref_t<T>::size_type;
-        { value.size() } -> std::convertible_to<typename std::remove_cvref_t<T>::size_type>;
-        { value(i) } -> std::convertible_to<typename std::remove_cvref_t<T>::value_type>;
-    };
+    concept VectorExpression =
+        requires(const std::remove_cvref_t<T> &value, typename std::remove_cvref_t<T>::size_type i) {
+            typename std::remove_cvref_t<T>::value_type;
+            typename std::remove_cvref_t<T>::size_type;
+            { value.size() } -> std::convertible_to<typename std::remove_cvref_t<T>::size_type>;
+            { value(i) } -> std::convertible_to<typename std::remove_cvref_t<T>::value_type>;
+        };
 
     template<typename T>
     concept MatrixExpression = requires(const std::remove_cvref_t<T> &value,
@@ -71,24 +71,20 @@ namespace nil::crypto3::math {
     }
 
     template<typename T>
-    concept VectorBackend = VectorExpression<T> && std::semiregular<T> &&
-        requires(T &value, typename T::size_type i, typename T::value_type element) {
-            value(i) = element;
-        };
+    concept VectorBackend =
+        VectorExpression<T> && std::semiregular<T> &&
+        requires(T &value, typename T::size_type i, typename T::value_type element) { value(i) = element; };
 
     template<typename T>
-    concept MatrixBackend = MatrixExpression<T> && std::semiregular<T> &&
-        requires(T &value, typename T::size_type i, typename T::value_type element) {
-            value(i, i) = element;
-        };
+    concept MatrixBackend =
+        MatrixExpression<T> && std::semiregular<T> &&
+        requires(T &value, typename T::size_type i, typename T::value_type element) { value(i, i) = element; };
 
     template<typename T>
-    concept ResizableVectorBackend = VectorBackend<T> && requires(T &value, typename T::size_type i) {
-        value.resize(i);
-    };
+    concept ResizableVectorBackend =
+        VectorBackend<T> && requires(T &value, typename T::size_type i) { value.resize(i); };
 
     template<typename T>
-    concept ResizableMatrixBackend = MatrixBackend<T> && requires(T &value, typename T::size_type i) {
-        value.resize(i, i);
-    };
+    concept ResizableMatrixBackend =
+        MatrixBackend<T> && requires(T &value, typename T::size_type i) { value.resize(i, i); };
 }    // namespace nil::crypto3::math
