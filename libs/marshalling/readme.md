@@ -56,7 +56,7 @@ expressions.
 
 ## Multiprecision
 
-Provides support for marshalling of multiprecision itegrals.
+Provides support for marshalling of multiprecision integers.
 
 ## ZK
 
@@ -64,23 +64,27 @@ Provides support for marshalling of Zero-Knowledge structures: commitments of
 different schemes, assignment table, constraint system and various structures
 comprising Placeholder proof.
 
-## Build & test
+## Build and Test
 
-To run single test:
+Configure the Crypto3 monorepo from its root, build the marshalling tests, and
+run them through CTest:
 
-```bash
-nix develop .#<derivation>
-eval "$configurePhase" // automatically move to the build directory
-ninja <test-name>
+```sh
+cmake -S . -B build -DBUILD_TESTS=ON
+cmake --build build --target tests --parallel
+ctest --test-dir build --output-on-failure
 ```
 
-For example:
+To build and run only the algebra curve-element test:
 
-```bash
-nix develop .#crypto3-debug-tests
-eval "$configurePhase" // automatically move to the build directory
-ninja marshalling_algebra_curve_element_test
+```sh
+cmake --build build --target marshalling_algebra_curve_element_test
+ctest --test-dir build --output-on-failure \
+  -R '^marshalling_algebra_curve_element_test$'
 ```
+
+See the [root build instructions](../../README.md#clone-and-build) for
+dependencies and platform-specific setup.
 
 ## Usage
 
