@@ -1,4 +1,3 @@
-//---------------------------------------------------------------------------//
 // MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,62 +18,81 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //---------------------------------------------------------------------------//
-
 #pragma once
 
-#include <array>
 #include <cstddef>
+#include <type_traits>
+#include <utility>
+
+#include <nil/crypto3/math/matrix/concepts.hpp>
 
 namespace nil::crypto3::math {
-    template<typename T, std::size_t N, VectorBackend Backend>
-    struct vector {
-        static_assert(N != 0, "vector must contain at least one element");
+    template<VectorBackend Backend>
+    class vector {
+    public:
+        using backend_type = Backend;
+        using value_type = typename backend_type::value_type;
+        using size_type = typename backend_type::size_type;
 
-        T &operator[](size_t i) noexcept {
-            return backend[i];
+        vector() = default;
+
+        explicit vector(size_type size)
+            requires std::constructible_from<backend_type, size_type>
+            : backend_(size) {
         }
 
-        const T &operator[](size_t i) const noexcept {
-            return backend[i];
+        explicit vector(backend_type backend) : backend_(std::move(backend)) {
         }
 
-        constexpr auto begin() noexcept {
-            return backend.begin();
+        template<VectorExpression Expression>
+            requires(!std::same_as<std::remove_cvref_t<Expression>, vector> &&
+                     std::constructible_from<backend_type, Expression &&>)
+        vector(Expression &&expression) : backend_(std::forward<Expression>(expression)) {
         }
 
-        constexpr auto end() noexcept {
-            return backend.end();
+        template<VectorExpression Expression>
+            requires requires(backend_type &backend, Expression &&expression) {
+                backend = std::forward<Expression>(expression);
+            }
+        vector &operator=(Expression &&expression) {
+            backend_ = std::forward<Expression>(expression);
+            return *this;
         }
 
-        constexpr auto begin() const noexcept {
-            return backend.begin();
+        size_type size() const noexcept {
+            return backend_.size();
         }
 
-        constexpr auto end() const noexcept {
-            return backend.end();
+        void resize(size_type size)
+            requires ResizableVectorBackend<backend_type> {
+            backend_.resize(size);
         }
 
-        constexpr auto cbegin() const noexcept {
-            return backend.cbegin();
+        decltype(auto) operator[](size_type i) {
+            return backend_(i);
         }
 
-        constexpr auto cend() const noexcept {
-            return backend.cend();
+        decltype(auto) operator[](size_type i) const {
+            return backend_(i);
         }
 
-        Backend backend;
+        backend_type &backend() & noexcept {
+            return backend_;
+        }
+
+        const backend_type &backend() const & noexcept {
+            return backend_;
+        }
+
+        backend_type &&backend() && noexcept {
+            return std::move(backend_);
+        }
+
+    private:
+        backend_type backend_;
     };
 
-    template<typename... Args>
-    constexpr decltype(auto) make_vector(Args... args) {
-        return vector {args...};
-    }
-
-    template<typename T, typename... U>
-        requires(std::same_as<T, U> && ...)
-    vector(T, U...) -> vector<T, 1 + sizeof...(U)>;
-
-    template<typename T, std::size_t N>
-    vector(const T (&)[N]) -> vector<T, N>;
+    template<VectorBackend Backend>
+    vector(Backend) -> vector<Backend>;
 
 }    // namespace nil::crypto3::math

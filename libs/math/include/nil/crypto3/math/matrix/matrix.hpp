@@ -18,74 +18,87 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //---------------------------------------------------------------------------//
-
 #pragma once
 
+#include <cstddef>
+#include <type_traits>
+#include <utility>
+
+#include <nil/crypto3/math/matrix/concepts.hpp>
+
 namespace nil::crypto3::math {
-    template<typename T, std::size_t N, std::size_t M>
-    struct static_matrix {
-        static_assert(N != 0 && M != 0, "static_matrix must have have positive dimensions");
+    template<MatrixBackend Backend>
+    class matrix {
+    public:
+        using backend_type = Backend;
+        using value_type = typename backend_type::value_type;
+        using size_type = typename backend_type::size_type;
 
-        constexpr static_matrix() : arrays {} {
+        matrix() = default;
+
+        matrix(size_type rows, size_type columns)
+            requires std::constructible_from<backend_type, size_type, size_type>
+            : backend_(rows, columns) {
         }
 
-        constexpr static_matrix(const T (&array)[N][M]) {
-            for (std::size_t i = 0; i < N; ++i) {
-                for (std::size_t j = 0; j < M; ++j) {
-                    arrays[i][j] = array[i][j];
-                }
+        explicit matrix(backend_type backend) : backend_(std::move(backend)) {
+        }
+
+        // This is the materialization boundary for a lazy uBLAS expression.
+        template<MatrixExpression Expression>
+            requires(!std::same_as<std::remove_cvref_t<Expression>, matrix> &&
+                     std::constructible_from<backend_type, Expression &&>)
+        matrix(Expression &&expression) : backend_(std::forward<Expression>(expression)) {
+        }
+
+        template<MatrixExpression Expression>
+            requires requires(backend_type &backend, Expression &&expression) {
+                backend = std::forward<Expression>(expression);
             }
+        matrix &operator=(Expression &&expression) {
+            backend_ = std::forward<Expression>(expression);
+            return *this;
         }
 
-        template<typename... Args>
-        constexpr static_matrix(Args... args) : arrays {std::forward<Args>(args)...} {
-            static_assert(sizeof...(args) == N * M, "Number of arguments must match the static_matrix size");
+        size_type rows() const noexcept {
+            return backend_.size1();
         }
 
-        using value_type = T;
-        using size_type = std::size_t;
-        constexpr static const size_type column_size = N;
-        constexpr static const size_type row_size = M;
-
-        constexpr static_vector<T, M> row(size_type i) const {
-            if (i >= N) {
-                throw "index out of range";
-            }
-            return generate<M>([i, this](size_type j) { return arrays[i][j]; });
+        size_type columns() const noexcept {
+            return backend_.size2();
         }
 
-        constexpr static_vector<T, N> column(size_type i) const {
-            if (i >= M)
-                throw "index out of range";
-            return generate<N>([i, this](size_type j) { return arrays[j][i]; });
+        void resize(size_type rows, size_type columns)
+            requires ResizableMatrixBackend<backend_type> {
+            backend_.resize(rows, columns);
         }
 
-        constexpr T *operator[](size_type i) {
-            return arrays[i];
+        // decltype(auto) preserves dense references and sparse element proxies.
+        decltype(auto) operator()(size_type row, size_type column) {
+            return backend_(row, column);
         }
 
-        constexpr T const *operator[](size_type i) const {
-            return arrays[i];
+        decltype(auto) operator()(size_type row, size_type column) const {
+            return backend_(row, column);
         }
 
-        constexpr bool operator==(const static_matrix &other) const {
-            for (std::size_t i = 0; i < N; ++i) {
-                for (std::size_t j = 0; j < M; ++j) {
-                    if (arrays[i][j] != other.arrays[i][j]) {
-                        return false;
-                    }
-                }
-            }
-            return true;
+        backend_type &backend() & noexcept {
+            return backend_;
         }
 
-        constexpr const T &operator()(size_type i, size_type j) const {
-            return arrays[i][j];
+        const backend_type &backend() const & noexcept {
+            return backend_;
         }
 
-        T arrays[N][M];    ///< @private
+        backend_type &&backend() && noexcept {
+            return std::move(backend_);
+        }
+
+    private:
+        backend_type backend_;
     };
 
-    template<typename T, std::size_t M, std::size_t N>
-    static_matrix(const T (&)[M][N]) -> static_matrix<T, M, N>;
+    template<MatrixBackend Backend>
+    matrix(Backend) -> matrix<Backend>;
+
 }    // namespace nil::crypto3::math
