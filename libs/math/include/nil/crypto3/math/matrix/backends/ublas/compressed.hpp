@@ -38,4 +38,27 @@ namespace nil::crypto3::math {
              typename IndexStorage = boost::numeric::ublas::unbounded_array<std::size_t>,
              typename ValueStorage = boost::numeric::ublas::unbounded_array<T>>
     using compressed_vector = vector<backends::ublas::compressed_vector<T, IndexBase, IndexStorage, ValueStorage>>;
+
+    template<typename Backend>
+        requires requires(const Backend &backend, std::size_t row, std::size_t column) {
+            backend.find_element(row, column);
+        }
+    const typename Backend::value_type *find_element(const matrix<Backend> &value,
+                                                     std::size_t row,
+                                                     std::size_t column) {
+        return value.backend().find_element(row, column);
+    }
+
+    template<typename Backend, typename Function>
+        requires requires(const Backend &backend) {
+            backend.begin1();
+            backend.end1();
+        }
+    void for_each_nonzero(const matrix<Backend> &value, Function &&function) {
+        for (auto outer = value.backend().begin1(); outer != value.backend().end1(); ++outer) {
+            for (auto element = outer.begin(); element != outer.end(); ++element) {
+                function(element.index1(), element.index2(), *element);
+            }
+        }
+    }
 }    // namespace nil::crypto3::math

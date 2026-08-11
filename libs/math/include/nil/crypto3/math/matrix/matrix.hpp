@@ -44,6 +44,11 @@ namespace nil::crypto3::math {
         explicit matrix(backend_type backend) : backend_(std::move(backend)) {
         }
 
+        template<MatrixBackend Other>
+            requires(!std::same_as<Other, backend_type> && std::constructible_from<backend_type, const Other &>)
+        matrix(const matrix<Other> &other) : backend_(other.backend()) {
+        }
+
         // This is the materialization boundary for a lazy uBLAS expression.
         template<MatrixExpression Expression>
             requires(!std::same_as<std::remove_cvref_t<Expression>, matrix> &&
@@ -60,12 +65,25 @@ namespace nil::crypto3::math {
             return *this;
         }
 
+        template<MatrixBackend Other>
+            requires(!std::same_as<Other, backend_type> && requires(backend_type &backend, const Other &other) {
+                backend = other;
+            })
+        matrix &operator=(const matrix<Other> &other) {
+            backend_ = other.backend();
+            return *this;
+        }
+
         size_type rows() const noexcept {
             return backend_.size1();
         }
 
         size_type columns() const noexcept {
             return backend_.size2();
+        }
+
+        bool empty() const noexcept {
+            return rows() == 0 || columns() == 0;
         }
 
         void resize(size_type rows, size_type columns)
@@ -92,6 +110,42 @@ namespace nil::crypto3::math {
 
         backend_type &&backend() && noexcept {
             return std::move(backend_);
+        }
+
+        template<MatrixExpression Expression>
+            requires requires(backend_type &backend, const Expression &expression) {
+                backend += expression;
+            }
+        matrix &operator+=(const Expression &expression) {
+            backend_ += expression;
+            return *this;
+        }
+
+        template<MatrixBackend Other>
+            requires requires(backend_type &backend, const Other &other) {
+                backend += other;
+            }
+        matrix &operator+=(const matrix<Other> &other) {
+            backend_ += other.backend();
+            return *this;
+        }
+
+        template<MatrixExpression Expression>
+            requires requires(backend_type &backend, const Expression &expression) {
+                backend -= expression;
+            }
+        matrix &operator-=(const Expression &expression) {
+            backend_ -= expression;
+            return *this;
+        }
+
+        template<MatrixBackend Other>
+            requires requires(backend_type &backend, const Other &other) {
+                backend -= other;
+            }
+        matrix &operator-=(const matrix<Other> &other) {
+            backend_ -= other.backend();
+            return *this;
         }
 
     private:

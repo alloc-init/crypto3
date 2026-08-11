@@ -44,6 +44,11 @@ namespace nil::crypto3::math {
         explicit vector(backend_type backend) : backend_(std::move(backend)) {
         }
 
+        template<VectorBackend Other>
+            requires(!std::same_as<Other, backend_type> && std::constructible_from<backend_type, const Other &>)
+        vector(const vector<Other> &other) : backend_(other.backend()) {
+        }
+
         template<VectorExpression Expression>
             requires(!std::same_as<std::remove_cvref_t<Expression>, vector> &&
                      std::constructible_from<backend_type, Expression &&>)
@@ -59,8 +64,21 @@ namespace nil::crypto3::math {
             return *this;
         }
 
+        template<VectorBackend Other>
+            requires(!std::same_as<Other, backend_type> && requires(backend_type &backend, const Other &other) {
+                backend = other;
+            })
+        vector &operator=(const vector<Other> &other) {
+            backend_ = other.backend();
+            return *this;
+        }
+
         size_type size() const noexcept {
             return backend_.size();
+        }
+
+        bool empty() const noexcept {
+            return size() == 0;
         }
 
         void resize(size_type size)
@@ -76,6 +94,14 @@ namespace nil::crypto3::math {
             return backend_(i);
         }
 
+        decltype(auto) operator()(size_type i) {
+            return backend_(i);
+        }
+
+        decltype(auto) operator()(size_type i) const {
+            return backend_(i);
+        }
+
         backend_type &backend() & noexcept {
             return backend_;
         }
@@ -86,6 +112,24 @@ namespace nil::crypto3::math {
 
         backend_type &&backend() && noexcept {
             return std::move(backend_);
+        }
+
+        template<VectorExpression Expression>
+            requires requires(backend_type &backend, const Expression &expression) {
+                backend += expression;
+            }
+        vector &operator+=(const Expression &expression) {
+            backend_ += expression;
+            return *this;
+        }
+
+        template<VectorExpression Expression>
+            requires requires(backend_type &backend, const Expression &expression) {
+                backend -= expression;
+            }
+        vector &operator-=(const Expression &expression) {
+            backend_ -= expression;
+            return *this;
         }
 
     private:

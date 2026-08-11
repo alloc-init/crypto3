@@ -22,6 +22,9 @@ add_library(${CMAKE_WORKSPACE_NAME}::${CURRENT_PROJECT_NAME} ALIAS ${CMAKE_WORKS
 set_target_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} PROPERTIES
         EXPORT_NAME ${CURRENT_PROJECT_NAME})
 
+# Boost.uBLAS is header-only. Boost's headers target is not a requested
+# component, so annotate it for the legacy CMDeploy dependency exporter.
+set_property(TARGET Boost::headers PROPERTY INTERFACE_FIND_PACKAGE_NAME Boost)
 
 target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -33,6 +36,7 @@ target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         crypto3::algebra
         crypto3::multiprecision
         crypto3::benchmark_tools
+        Boost::headers
         Boost::random)
 
 cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}

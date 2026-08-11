@@ -30,21 +30,45 @@ namespace nil::crypto3::math {
     // returns non-owning expression-template objects that are readable but not
     // necessarily default constructible or mutable.
     template<typename T>
-    concept VectorExpression = requires(const T &value, typename T::size_type i) {
-        typename T::value_type;
-        typename T::size_type;
-        { value.size() } -> std::convertible_to<typename T::size_type>;
-        { value(i) } -> std::convertible_to<typename T::value_type>;
+    concept VectorExpression = requires(const std::remove_cvref_t<T> &value,
+                                        typename std::remove_cvref_t<T>::size_type i) {
+        typename std::remove_cvref_t<T>::value_type;
+        typename std::remove_cvref_t<T>::size_type;
+        { value.size() } -> std::convertible_to<typename std::remove_cvref_t<T>::size_type>;
+        { value(i) } -> std::convertible_to<typename std::remove_cvref_t<T>::value_type>;
     };
 
     template<typename T>
-    concept MatrixExpression = requires(const T &value, typename T::size_type i) {
-        typename T::value_type;
-        typename T::size_type;
-        { value.size1() } -> std::convertible_to<typename T::size_type>;
-        { value.size2() } -> std::convertible_to<typename T::size_type>;
-        { value(i, i) } -> std::convertible_to<typename T::value_type>;
-    };
+    concept MatrixExpression = requires(const std::remove_cvref_t<T> &value,
+                                        typename std::remove_cvref_t<T>::size_type i) {
+        typename std::remove_cvref_t<T>::value_type;
+        typename std::remove_cvref_t<T>::size_type;
+        { value(i, i) } -> std::convertible_to<typename std::remove_cvref_t<T>::value_type>;
+    } && (requires(const std::remove_cvref_t<T> &value) {
+        { value.rows() } -> std::convertible_to<typename std::remove_cvref_t<T>::size_type>;
+        { value.columns() } -> std::convertible_to<typename std::remove_cvref_t<T>::size_type>;
+    } || requires(const std::remove_cvref_t<T> &value) {
+        { value.size1() } -> std::convertible_to<typename std::remove_cvref_t<T>::size_type>;
+        { value.size2() } -> std::convertible_to<typename std::remove_cvref_t<T>::size_type>;
+    });
+
+    template<MatrixExpression Expression>
+    auto rows(const Expression &value) {
+        if constexpr (requires { value.rows(); }) {
+            return value.rows();
+        } else {
+            return value.size1();
+        }
+    }
+
+    template<MatrixExpression Expression>
+    auto columns(const Expression &value) {
+        if constexpr (requires { value.columns(); }) {
+            return value.columns();
+        } else {
+            return value.size2();
+        }
+    }
 
     template<typename T>
     concept VectorBackend = VectorExpression<T> && std::semiregular<T> &&
