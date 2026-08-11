@@ -44,6 +44,7 @@ set(TESTS_NAMES
     "geometric_sequence_domain"
     # "kronecker_substitution"  # FIXME: This fails. Disabled for passing CI
     "polynomial_arithmetic"
+    "polynomial_backend"
     "polynomial"
     "polynomial_view"
     "polynomial_dfs"
