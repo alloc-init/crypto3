@@ -34,7 +34,7 @@ root
     |-- kdf                  Key derivation functions, including PBKDF2
     |-- mac                  Message authentication codes
     |-- marshalling          Algebra, container, math, and numeric marshalling
-    |-- math                 Static matrices, polynomial arithmetic, and FFTs
+    |-- math                 Matrices, polynomial arithmetic, and FFTs
     |-- modes                Cipher mode headers and tests
     |-- multiprecision       Extended multiprecision types and utilities
     |-- pkpad                Public-key padding schemes
