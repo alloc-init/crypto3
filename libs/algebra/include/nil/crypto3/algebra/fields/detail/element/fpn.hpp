@@ -70,6 +70,14 @@ namespace nil::crypto3::algebra::fields::detail {
             return {};
         }
 
+        constexpr self &coordinate(std::size_t) {
+            return *this;
+        }
+
+        constexpr const self &coordinate(std::size_t) const {
+            return *this;
+        }
+
         constexpr std::strong_ordering operator<=>(const self &) const = default;
 
         constexpr self operator*(const self &) const {
@@ -129,6 +137,7 @@ namespace nil::crypto3::algebra::fields::detail {
         using field_type = typename Params::field_type;
         using base_field_type = typename Params::base_field_type;
         using underlying_type = typename Params::base_field_type::value_type;
+
         constexpr static std::size_t dimension = Params::dimension;
 
     private:
@@ -147,6 +156,22 @@ namespace nil::crypto3::algebra::fields::detail {
             for (std::size_t i = 1; i < dimension; ++i) {
                 data[i] = underlying_type::zero();
             }
+        }
+
+        constexpr decltype(auto) coordinate(std::size_t index) {
+            using underlying_field_type = typename underlying_type::field_type;
+            constexpr std::size_t underlying_coordinate_count = underlying_field_type::arity;
+            const std::size_t component_index = index / underlying_coordinate_count;
+            const std::size_t coordinate_index = index % underlying_coordinate_count;
+            return data[component_index].coordinate(coordinate_index);
+        }
+
+        constexpr decltype(auto) coordinate(std::size_t index) const {
+            using underlying_field_type = typename underlying_type::field_type;
+            constexpr std::size_t underlying_coordinate_count = underlying_field_type::arity;
+            const std::size_t component_index = index / underlying_coordinate_count;
+            const std::size_t coordinate_index = index % underlying_coordinate_count;
+            return data[component_index].coordinate(coordinate_index);
         }
 
         template<std::integral Number>

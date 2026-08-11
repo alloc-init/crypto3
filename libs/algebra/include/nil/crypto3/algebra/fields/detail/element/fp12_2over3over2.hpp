@@ -66,6 +66,22 @@ namespace nil {
                         constexpr element_fp12_2over3over2(const element_fp12_2over3over2 &&B) BOOST_NOEXCEPT
                             : data(std::move(B.data)) { };
 
+                        constexpr decltype(auto) coordinate(std::size_t index) {
+                            using underlying_field_type = typename underlying_type::field_type;
+                            constexpr std::size_t underlying_coordinate_count = underlying_field_type::arity;
+                            const std::size_t component_index = index / underlying_coordinate_count;
+                            const std::size_t coordinate_index = index % underlying_coordinate_count;
+                            return data[component_index].coordinate(coordinate_index);
+                        }
+
+                        constexpr decltype(auto) coordinate(std::size_t index) const {
+                            using underlying_field_type = typename underlying_type::field_type;
+                            constexpr std::size_t underlying_coordinate_count = underlying_field_type::arity;
+                            const std::size_t component_index = index / underlying_coordinate_count;
+                            const std::size_t coordinate_index = index % underlying_coordinate_count;
+                            return data[component_index].coordinate(coordinate_index);
+                        }
+
                         // Creating a zero is a fairly slow operation and is called very often, so we must return a
                         // reference to the same static object every time.
                         constexpr static const element_fp12_2over3over2 &zero();
