@@ -89,14 +89,21 @@ namespace nil {
                  */
                 template<typename ValueType>
                 void fft(std::vector<ValueType> &values) const {
-                    if (values.size() > size_) {
-                        throw std::invalid_argument("mixed_radix_fft_plan::fft: input exceeds plan size");
-                    }
+                    std::vector<ValueType> workspace;
+                    fft(values, workspace);
+                }
 
-                    values.resize(size_, ValueType::zero());
-                    std::vector<ValueType> scratch(size_, ValueType::zero());
-                    transform_recursive(values, 0, 1, scratch, 0, size_, 0, 1, forward_powers_);
-                    values.swap(scratch);
+                /**
+                 * Perform a forward transform using caller-owned temporary storage.
+                 * After computing the transform, values and workspace exchange their storage: values contains the
+                 * result, while the workspace contains unspecified data. Both vectors retain plan-sized allocations
+                 * that subsequent transforms can reuse. Values and workspace must be distinct vectors.
+                 */
+                template<typename ValueType>
+                void fft(std::vector<ValueType> &values, std::vector<ValueType> &workspace) const {
+                    prepare_transform(values, workspace, "mixed_radix_fft_plan::fft: input exceeds plan size");
+                    transform_recursive(values, 0, 1, workspace, 0, size_, 0, 1, forward_powers_);
+                    values.swap(workspace);
                 }
 
                 /**
@@ -105,17 +112,24 @@ namespace nil {
                  */
                 template<typename ValueType>
                 void inverse_fft(std::vector<ValueType> &values) const {
-                    if (values.size() > size_) {
-                        throw std::invalid_argument("mixed_radix_fft_plan::inverse_fft: input exceeds plan size");
-                    }
+                    std::vector<ValueType> workspace;
+                    inverse_fft(values, workspace);
+                }
 
-                    values.resize(size_, ValueType::zero());
-                    std::vector<ValueType> scratch(size_, ValueType::zero());
-                    transform_recursive(values, 0, 1, scratch, 0, size_, 0, 1, inverse_powers_);
-                    for (ValueType &value : scratch) {
+                /**
+                 * Perform an inverse transform using caller-owned temporary storage.
+                 * After computing the transform, values and workspace exchange their storage: values contains the
+                 * result, while the workspace contains unspecified data. Both vectors retain plan-sized allocations
+                 * that subsequent transforms can reuse. Values and workspace must be distinct vectors.
+                 */
+                template<typename ValueType>
+                void inverse_fft(std::vector<ValueType> &values, std::vector<ValueType> &workspace) const {
+                    prepare_transform(values, workspace, "mixed_radix_fft_plan::inverse_fft: input exceeds plan size");
+                    transform_recursive(values, 0, 1, workspace, 0, size_, 0, 1, inverse_powers_);
+                    for (ValueType &value : workspace) {
                         value = value * size_inverse_;
                     }
-                    values.swap(scratch);
+                    values.swap(workspace);
                 }
 
             private:
@@ -125,6 +139,20 @@ namespace nil {
                         throw std::invalid_argument("mixed_radix_fft_plan: expected size > 0");
                     }
                     return size;
+                }
+
+                template<typename ValueType>
+                void prepare_transform(std::vector<ValueType> &values, std::vector<ValueType> &workspace,
+                                       const char *oversized_input_message) const {
+                    if (&values == &workspace) {
+                        throw std::invalid_argument("mixed_radix_fft_plan: workspace must not alias input");
+                    }
+                    if (values.size() > size_) {
+                        throw std::invalid_argument(oversized_input_message);
+                    }
+
+                    values.resize(size_, ValueType::zero());
+                    workspace.resize(size_, ValueType::zero());
                 }
 
                 // Build [1, root, root^2, ..., root^(size - 1)] using one multiplication per new power.

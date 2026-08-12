@@ -206,6 +206,68 @@ BOOST_AUTO_TEST_CASE(short_inputs_are_zero_padded) {
     BOOST_CHECK(actual == padded_evaluations);
 }
 
+BOOST_AUTO_TEST_CASE(caller_owned_workspaces_match_default_transforms) {
+    const math::mixed_radix_fft_plan<bn254_fq> plan(6);
+
+    const std::vector<bn254_fq_value> fq_coefficients = {bn254_fq_value(3), bn254_fq_value(5), bn254_fq_value(7)};
+    std::vector<bn254_fq_value> expected_fq = fq_coefficients;
+    std::vector<bn254_fq_value> actual_fq = fq_coefficients;
+    std::vector<bn254_fq_value> fq_workspace(plan.size() + 2, bn254_fq_value::one());
+
+    plan.fft(expected_fq);
+    plan.fft(actual_fq, fq_workspace);
+    BOOST_CHECK(actual_fq == expected_fq);
+
+    plan.inverse_fft(expected_fq);
+    plan.inverse_fft(actual_fq, fq_workspace);
+    BOOST_CHECK(actual_fq == expected_fq);
+
+    const std::vector<bn254_fq12_value> fq12_coefficients = fq12_values(plan.size(), 0xC012);
+    std::vector<bn254_fq12_value> expected_fq12 = fq12_coefficients;
+    std::vector<bn254_fq12_value> actual_fq12 = fq12_coefficients;
+    std::vector<bn254_fq12_value> fq12_workspace;
+
+    plan.fft(expected_fq12);
+    plan.fft(actual_fq12, fq12_workspace);
+    BOOST_CHECK(actual_fq12 == expected_fq12);
+
+    plan.inverse_fft(expected_fq12);
+    plan.inverse_fft(actual_fq12, fq12_workspace);
+    BOOST_CHECK(actual_fq12 == expected_fq12);
+}
+
+BOOST_AUTO_TEST_CASE(caller_owned_workspace_reuses_vector_storage) {
+    const math::mixed_radix_fft_plan<bn254_fq> plan(6);
+    const std::vector<bn254_fq_value> coefficients = fq_values(plan.size());
+    std::vector<bn254_fq_value> actual = coefficients;
+    std::vector<bn254_fq_value> workspace(plan.size(), bn254_fq_value::zero());
+
+    const bn254_fq_value *const values_storage = actual.data();
+    const bn254_fq_value *const workspace_storage = workspace.data();
+
+    plan.fft(actual, workspace);
+    BOOST_CHECK(actual.data() == workspace_storage);
+    BOOST_CHECK(workspace.data() == values_storage);
+
+    plan.inverse_fft(actual, workspace);
+    BOOST_CHECK(actual.data() == values_storage);
+    BOOST_CHECK(workspace.data() == workspace_storage);
+    BOOST_CHECK(actual == coefficients);
+}
+
+BOOST_AUTO_TEST_CASE(caller_owned_workspace_rejects_aliasing_and_oversized_inputs) {
+    const math::mixed_radix_fft_plan<bn254_fq> plan(6);
+    std::vector<bn254_fq_value> values = fq_values(plan.size());
+    std::vector<bn254_fq_value> workspace;
+
+    BOOST_CHECK_THROW(plan.fft(values, values), std::invalid_argument);
+    BOOST_CHECK_THROW(plan.inverse_fft(values, values), std::invalid_argument);
+
+    values.push_back(bn254_fq_value::one());
+    BOOST_CHECK_THROW(plan.fft(values, workspace), std::invalid_argument);
+    BOOST_CHECK_THROW(plan.inverse_fft(values, workspace), std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_CASE(oversized_inputs_are_rejected) {
     const math::mixed_radix_fft_plan<bn254_fq> plan(6);
     std::vector<bn254_fq_value> values(7, bn254_fq_value::one());
