@@ -40,3 +40,15 @@ target_link_libraries(${MIXED_RADIX_BENCHMARK}
     ${CMAKE_WORKSPACE_NAME}::algebra
     ${CMAKE_WORKSPACE_NAME}::multiprecision
     Boost::random)
+
+# This benchmark is built only when requested and is not registered with CTest.
+set(POLYNOMIAL_BACKEND_BENCHMARK ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_polynomial_backend_benchmark)
+add_executable(${POLYNOMIAL_BACKEND_BENCHMARK} EXCLUDE_FROM_ALL polynomial_backend_benchmark.cpp)
+set_target_properties(${POLYNOMIAL_BACKEND_BENCHMARK} PROPERTIES CXX_STANDARD 23)
+target_compile_options(${POLYNOMIAL_BACKEND_BENCHMARK} PRIVATE "-march=native")
+target_link_libraries(${POLYNOMIAL_BACKEND_BENCHMARK}
+    ${CMAKE_WORKSPACE_NAME}::random
+    ${CMAKE_WORKSPACE_NAME}::math
+    ${CMAKE_WORKSPACE_NAME}::algebra
+    ${CMAKE_WORKSPACE_NAME}::multiprecision
+    Boost::random)
