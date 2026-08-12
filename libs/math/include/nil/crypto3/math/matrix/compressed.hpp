@@ -10,29 +10,17 @@
 #include <nil/crypto3/math/matrix/vector.hpp>
 
 namespace nil::crypto3::math {
-    namespace backends::ublas {
-        template<typename T, typename Layout = boost::numeric::ublas::row_major, std::size_t IndexBase = 0,
-                 typename IndexStorage = boost::numeric::ublas::unbounded_array<std::size_t>,
-                 typename ValueStorage = boost::numeric::ublas::unbounded_array<T>>
-        using compressed_matrix =
-            boost::numeric::ublas::compressed_matrix<T, Layout, IndexBase, IndexStorage, ValueStorage>;
-
-        template<typename T, std::size_t IndexBase = 0,
-                 typename IndexStorage = boost::numeric::ublas::unbounded_array<std::size_t>,
-                 typename ValueStorage = boost::numeric::ublas::unbounded_array<T>>
-        using compressed_vector = boost::numeric::ublas::compressed_vector<T, IndexBase, IndexStorage, ValueStorage>;
-    }    // namespace backends::ublas
-
     template<typename T, typename Layout = boost::numeric::ublas::row_major, std::size_t IndexBase = 0,
              typename IndexStorage = boost::numeric::ublas::unbounded_array<std::size_t>,
              typename ValueStorage = boost::numeric::ublas::unbounded_array<T>>
     using compressed_matrix =
-        matrix<backends::ublas::compressed_matrix<T, Layout, IndexBase, IndexStorage, ValueStorage>>;
+        matrix<boost::numeric::ublas::compressed_matrix<T, Layout, IndexBase, IndexStorage, ValueStorage>>;
 
     template<typename T, std::size_t IndexBase = 0,
              typename IndexStorage = boost::numeric::ublas::unbounded_array<std::size_t>,
              typename ValueStorage = boost::numeric::ublas::unbounded_array<T>>
-    using compressed_vector = vector<backends::ublas::compressed_vector<T, IndexBase, IndexStorage, ValueStorage>>;
+    using compressed_vector =
+        vector<boost::numeric::ublas::compressed_vector<T, IndexBase, IndexStorage, ValueStorage>>;
 
     template<typename Backend>
         requires requires(const Backend &backend, std::size_t row, std::size_t column) {

@@ -12,8 +12,8 @@
 
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
-#include <nil/crypto3/math/matrix/backends/ublas/compressed.hpp>
-#include <nil/crypto3/math/matrix/backends/ublas/regular.hpp>
+#include <nil/crypto3/math/matrix/compressed.hpp>
+#include <nil/crypto3/math/matrix/regular.hpp>
 #include <nil/crypto3/math/matrix/random.hpp>
 #include <nil/crypto3/math/matrix/solve.hpp>
 
@@ -88,16 +88,16 @@ concept LvalueAddable = requires(Left &left, Right &right) { left + right; };
 template<typename Left, typename Right>
 concept RvalueAddable = requires { Left() + Right(); };
 
-static_assert(math::MatrixBackend<math::backends::ublas::regular_matrix<int>>);
-static_assert(math::MatrixBackend<math::backends::ublas::compressed_matrix<int>>);
-static_assert(math::VectorBackend<math::backends::ublas::regular_vector<int>>);
-static_assert(math::VectorBackend<math::backends::ublas::compressed_vector<int>>);
-static_assert(math::ResizableMatrixBackend<math::backends::ublas::regular_matrix<int>>);
-static_assert(math::ResizableMatrixBackend<math::backends::ublas::compressed_matrix<int>>);
-static_assert(math::ResizableVectorBackend<math::backends::ublas::regular_vector<int>>);
-static_assert(math::ResizableVectorBackend<math::backends::ublas::compressed_vector<int>>);
-static_assert(math::MatrixBackend<math::backends::ublas::regular_matrix<bn254_fp12_value>>);
-static_assert(math::MatrixBackend<math::backends::ublas::compressed_matrix<bn254_fp12_value>>);
+static_assert(math::MatrixBackend<typename math::regular_matrix<int>::backend_type>);
+static_assert(math::MatrixBackend<typename math::compressed_matrix<int>::backend_type>);
+static_assert(math::VectorBackend<typename math::regular_vector<int>::backend_type>);
+static_assert(math::VectorBackend<typename math::compressed_vector<int>::backend_type>);
+static_assert(math::ResizableMatrixBackend<typename math::regular_matrix<int>::backend_type>);
+static_assert(math::ResizableMatrixBackend<typename math::compressed_matrix<int>::backend_type>);
+static_assert(math::ResizableVectorBackend<typename math::regular_vector<int>::backend_type>);
+static_assert(math::ResizableVectorBackend<typename math::compressed_vector<int>::backend_type>);
+static_assert(math::MatrixBackend<typename math::regular_matrix<bn254_fp12_value>::backend_type>);
+static_assert(math::MatrixBackend<typename math::compressed_matrix<bn254_fp12_value>::backend_type>);
 static_assert(LvalueAddable<math::regular_matrix<int>, math::regular_matrix<int>>);
 static_assert(!RvalueAddable<math::regular_matrix<int>, math::regular_matrix<int>>);
 static_assert(LvalueAddable<math::regular_vector<int>, math::regular_vector<int>>);
