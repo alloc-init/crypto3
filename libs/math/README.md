@@ -1,7 +1,7 @@
 # Crypto3.Math
 
-Polynomial arithmetic, evaluation domains, and Fast Fourier Transform
-algorithms for the Crypto3 suite.
+Matrix and polynomial arithmetic, evaluation domains, and Fast Fourier
+Transform algorithms for the Crypto3 suite.
 
 This header-only component is maintained as part of the Crypto3 monorepo. See
 the [root build instructions](../../README.md#clone-and-build) to configure the

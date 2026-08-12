@@ -28,6 +28,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 #include <tuple>
 #include <vector>
@@ -36,6 +37,7 @@
 
 #include <nil/crypto3/mac/algorithm/compute.hpp>
 #include <nil/crypto3/random/chacha.hpp>
+#include <nil/crypto3/random/chacha_urbg.hpp>
 #include <nil/crypto3/stream/algorithm/encrypt.hpp>
 
 using namespace nil::crypto3;
@@ -90,6 +92,17 @@ namespace {
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(chacha_rng_tests)
+
+BOOST_AUTO_TEST_CASE(urbg_adapter_is_scalar_and_deterministic) {
+    const std::vector<std::uint8_t> seed = {0x01, 0x23, 0x45, 0x67};
+    random::chacha_urbg<> first(seed);
+    random::chacha_urbg<> second(seed);
+
+    BOOST_TEST(first() == second());
+    BOOST_TEST(first() == second());
+    BOOST_TEST(random::chacha_urbg<>::min() == 0u);
+    BOOST_TEST(random::chacha_urbg<>::max() == std::numeric_limits<std::uint64_t>::max());
+}
 
 BOOST_AUTO_TEST_CASE(default_seed_is_deterministic) {
     rng_type rng;
