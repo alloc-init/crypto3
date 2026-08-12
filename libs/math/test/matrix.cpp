@@ -193,6 +193,8 @@ BOOST_AUTO_TEST_CASE(products_inner_product_and_compound_assignment) {
     math::regular_matrix<int> right(2, 2);
     math::regular_vector<int> input(2);
     left(0, 0) = 1;
+    left(1, 0) = 0;
+    left(0, 1) = 0;
     left(1, 1) = 2;
     right(0, 0) = 3;
     right(1, 1) = 4;
