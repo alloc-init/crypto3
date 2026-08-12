@@ -33,6 +33,7 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 
+#include <nil/crypto3/math/polynomial/mixed_radix_backend.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_backend.hpp>
 #include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
 
@@ -49,9 +50,14 @@ namespace {
         using value_type = fq_value_type;
     };
 
+    using fq_mixed_radix_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type>;
+    using fq12_mixed_radix_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type, fq12_value_type>;
+
     static_assert(!polynomial_arithmetic::PolynomialBackend<incomplete_backend>);
     static_assert(polynomial_arithmetic::PolynomialBackend<polynomial_arithmetic::schoolbook_backend<fq_value_type>>);
     static_assert(polynomial_arithmetic::PolynomialBackend<polynomial_arithmetic::schoolbook_backend<fq12_value_type>>);
+    static_assert(polynomial_arithmetic::PolynomialBackend<fq_mixed_radix_backend>);
+    static_assert(polynomial_arithmetic::PolynomialBackend<fq12_mixed_radix_backend>);
 
     template<typename ValueType>
     polynomial_arithmetic::coefficient_vector<ValueType>
@@ -138,8 +144,7 @@ namespace {
 
 BOOST_AUTO_TEST_SUITE(polynomial_backend_test_suite)
 
-BOOST_AUTO_TEST_CASE(schoolbook_fq_backend_conforms) {
-    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+BOOST_AUTO_TEST_CASE(fq_backends_conform) {
     using coefficient_vector = polynomial_arithmetic::coefficient_vector<fq_value_type>;
 
     const coefficient_vector left = {1, 2, 0, 3};
@@ -147,11 +152,16 @@ BOOST_AUTO_TEST_CASE(schoolbook_fq_backend_conforms) {
     const coefficient_vector expected_product = {4, 8, 5, 22, 0, 15};
     const coefficient_vector expected_square = {1, 4, 4, 6, 12, 0, 9};
 
-    check_backend_conformance(backend_type {}, left, right, expected_product, expected_square);
+    BOOST_TEST_CONTEXT("schoolbook") {
+        check_backend_conformance(polynomial_arithmetic::schoolbook_backend<fq_value_type> {}, left, right,
+                                  expected_product, expected_square);
+    }
+    BOOST_TEST_CONTEXT("mixed radix") {
+        check_backend_conformance(fq_mixed_radix_backend(9), left, right, expected_product, expected_square);
+    }
 }
 
-BOOST_AUTO_TEST_CASE(schoolbook_fq12_backend_conforms) {
-    using backend_type = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+BOOST_AUTO_TEST_CASE(fq12_backends_conform) {
     using coefficient_vector = polynomial_arithmetic::coefficient_vector<fq12_value_type>;
 
     const fq12_value_type x = fq12_value(1);
@@ -163,7 +173,30 @@ BOOST_AUTO_TEST_CASE(schoolbook_fq12_backend_conforms) {
     const coefficient_vector expected_product = {x * z, x * w + y * z, y * w};
     const coefficient_vector expected_square = {x * x, x * y + y * x, y * y};
 
-    check_backend_conformance(backend_type {}, left, right, expected_product, expected_square);
+    BOOST_TEST_CONTEXT("schoolbook") {
+        check_backend_conformance(polynomial_arithmetic::schoolbook_backend<fq12_value_type> {}, left, right,
+                                  expected_product, expected_square);
+    }
+    BOOST_TEST_CONTEXT("mixed radix") {
+        check_backend_conformance(fq12_mixed_radix_backend(3), left, right, expected_product, expected_square);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(mixed_radix_backend_uses_only_the_prefix_needed_by_multiply_low) {
+    using coefficient_vector = polynomial_arithmetic::coefficient_vector<fq_value_type>;
+
+    fq_mixed_radix_backend backend(3);
+    const coefficient_vector input = {fq_value_type(1), fq_value_type(2), fq_value_type(3)};
+    coefficient_vector output;
+
+    BOOST_CHECK_THROW(backend.multiply(output, input, input), std::invalid_argument);
+    BOOST_CHECK_THROW(backend.square(output, input), std::invalid_argument);
+
+    backend.multiply_low(output, input, input, 1);
+    BOOST_CHECK(output == coefficient_vector({fq_value_type(1)}));
+    backend.multiply_low(output, input, input, 2);
+    BOOST_CHECK(output == coefficient_vector({fq_value_type(1), fq_value_type(4)}));
+    BOOST_CHECK_THROW(backend.multiply_low(output, input, input, 3), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
