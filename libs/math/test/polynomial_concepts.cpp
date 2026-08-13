@@ -39,11 +39,11 @@ using polymorphic_coefficient_polynomial = math::polymorphic_polynomial<fields::
 using polymorphic_evaluation_polynomial = math::polymorphic_polynomial_dfs<fields::babybear_fp4>;
 
 static_assert(math::CoefficientPolynomial<coefficient_polynomial>);
-static_assert(math::CoefficientPolynomial<const coefficient_polynomial&>);
+static_assert(math::CoefficientPolynomial<const coefficient_polynomial &>);
 static_assert(!math::EvaluationPolynomial<coefficient_polynomial>);
 
 static_assert(math::EvaluationPolynomial<evaluation_polynomial>);
-static_assert(math::EvaluationPolynomial<const evaluation_polynomial&>);
+static_assert(math::EvaluationPolynomial<const evaluation_polynomial &>);
 static_assert(!math::CoefficientPolynomial<evaluation_polynomial>);
 
 static_assert(math::CoefficientPolynomial<polymorphic_coefficient_polynomial>);
