@@ -38,6 +38,7 @@
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
 #include <nil/crypto3/math/domains/evaluation_domain.hpp>
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/concepts.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 
 #include <nil/crypto3/bench/scoped_profiler.hpp>
@@ -70,6 +71,7 @@ namespace nil {
                 typedef typename container_type::const_reverse_iterator const_reverse_iterator;
 
                 using polynomial_type = polynomial<value_type>;
+                using representation_type = evaluation_representation;
 
                 // Default constructor creates a zero polynomial of degree 0 and size 1.
                 polynomial_dfs() : val(1, FieldValueType::zero()), _d(0) {
