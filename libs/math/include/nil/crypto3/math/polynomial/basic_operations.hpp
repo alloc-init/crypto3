@@ -28,132 +28,115 @@
 
 #include <algorithm>
 #include <concepts>
+#include <iterator>
 #include <ranges>
 #include <stdexcept>
 #include <vector>
 
-#include <nil/crypto3/math/algorithms/mixed_radix_fft.hpp>
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 #include <nil/crypto3/math/domains/detail/basic_radix2_domain_aux.hpp>
 #include <nil/crypto3/math/detail/field_utils.hpp>
+#include <nil/crypto3/math/polynomial/polynomial_backend.hpp>
 
 namespace nil {
     namespace crypto3 {
         namespace math {
-            /**
-             * Returns the polynomial modulus.
-             *
-             * @param &dividend the input dividend polynomial with degree >= degree of
-             * divisor.
-             * @param &divisor the input divisor polynomial with degree <= degree of
-             * dividend and divisor is a monic polynomial.
-             * @param &modulus the working modulus.
-             * @return resultant polynomial vector s.t. return = divident mod
-             * (divisor,modulus).
-             */
-            template<typename FieldRange>
-            FieldRange modulus(const FieldRange &dividend, const FieldRange &divisor) {
-                std::size_t divisor_length = std::distance(std::begin(divisor), std::end(divisor));
-                std::size_t dividend_length = std::distance(std::begin(dividend), std::end(dividend));
+            namespace detail {
+                template<typename Range>
+                concept PolynomialCoefficientRange =
+                    std::ranges::random_access_range<const Range> && std::ranges::sized_range<const Range>;
 
-                FieldRange result(divisor_length - 1, modulus);
-                std::size_t runs = dividend_length - divisor_length + 1;    // no. of iterations
+                template<typename Range>
+                concept MutablePolynomialCoefficientRange =
+                    PolynomialCoefficientRange<Range> && std::ranges::random_access_range<Range> &&
+                    requires(Range &range, const Range &source, std::ranges::range_size_t<const Range> size,
+                             const std::ranges::range_value_t<Range> &value) {
+                        range = source;
+                        range[size] = value;
+                        range.resize(size);
+                        range.resize(size, value);
+                    };
 
-                auto mat = [](const typename FieldRange::value_type &x, const typename FieldRange::value_type &y,
-                              const typename FieldRange::value_type &z) { return z - (x * y); };
-
-                FieldRange running_dividend(dividend);
-
-                uint32_t divisor_ptr;
-                for (uint32_t i = 0; i < runs; i++) {
-                    typename FieldRange::value_type div_const(
-                        running_dividend[dividend_length - 1]);    // get the highest degree coeff
-                    divisor_ptr = divisor_length - 1;
-                    for (uint32_t j = 0; j < dividend_length - i - 1; j++) {
-                        if (divisor_ptr > j) {
-                            running_dividend[dividend_length - 1 - j] =
-                                mat(divisor[divisor_ptr - 1 - j], div_const, running_dividend[dividend_length - 2 - j]);
-                        } else {
-                            running_dividend[dividend_length - 1 - j] = running_dividend[dividend_length - 2 - j];
-                        }
-                    }
-                }
-
-                for (uint32_t i = 0, j = runs; i < divisor_length - 1; i++, j++) {
-                    result[i] = running_dividend[j];
-                }
-
-                return result;
-            }
-
-            /**
-             * Returns the polynomial after raising it by exponent = power.
-             * Uses Frobenius mapping.
-             *
-             * @param &input is operand polynomial which needs to be exponentiated.
-             * @param &power is the exponent.
-             * @return exponentiated polynomial (input^power).
-             */
-            template<std::ranges::range FieldRange, typename IntegerType>
-                requires requires { typename std::ranges::range_value_t<FieldRange>::field_type; } &&
-                         algebra::is_field<typename std::ranges::range_value_t<FieldRange>::field_type>::value &&
-                         std::same_as<typename std::ranges::range_value_t<FieldRange>::field_type::value_type,
-                                      std::ranges::range_value_t<FieldRange>>
-            FieldRange power(const FieldRange &input, IntegerType power) {
-                typedef typename std::iterator_traits<decltype(std::begin(std::declval<FieldRange>()))>::value_type
-                    field_value_type;
-
-                typedef typename field_value_type::field_type FieldType;
-
-                IntegerType final_degree = (std::distance(std::begin(input), std::end(input)) - 1) * power;
-                FieldRange result(final_degree + 1, FieldType::modulus);
-                result[0] = input[0];
-                for (uint32_t i = 1; i < std::distance(std::begin(input), std::end(input)); i++) {
-                    result[i * power] = input[i];
-                }
-                return result;
-            }
+            }    // namespace detail
 
             /**
              * Returns true if polynomial A is a zero polynomial.
              */
-            template<typename Iter>
+            template<std::input_iterator Iter>
+                requires std::default_initializable<std::iter_value_t<Iter>> &&
+                         std::equality_comparable<std::iter_value_t<Iter>>
             bool is_zero(const Iter &begin, const Iter &end) {
-                typename Iter::value_type zero = typename std::iterator_traits<Iter>::value_type();
-                return !std::any_of(begin, end, [zero](typename Iter::value_type i) { return i != zero; });
+                std::iter_value_t<Iter> zero {};
+                return !std::any_of(begin, end, [&zero](const auto &value) { return value != zero; });
             }
 
             /**
              * Returns true if polynomial A is a zero polynomial.
              */
             template<typename Range>
+                requires std::ranges::input_range<const Range> &&
+                         std::default_initializable<std::ranges::range_value_t<const Range>> &&
+                         std::equality_comparable<std::ranges::range_value_t<const Range>>
             bool is_zero(const Range &a) {
-                typename Range::value_type zero =
-                    typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type();
-                return !std::any_of(
-                    std::begin(a),
-                    std::end(a),
-                    [zero](typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type i) {
-                        return i != zero;
-                    });
+                return is_zero(std::ranges::begin(a), std::ranges::end(a));
             }
 
-            template<typename Range>
+            /**
+             * Reverse the coefficient order, then truncate the result to n coefficients.
+             *
+             * @pre n <= a.size().
+             */
+            template<detail::MutablePolynomialCoefficientRange Range>
             void reverse(Range &a, std::size_t n) {
-                std::reverse(std::begin(a), std::end(a));
+                // Legacy std::reverse only requires swappable elements. std::ranges::reverse additionally requires
+                // std::permutable, which some supported Crypto3 curve elements do not satisfy.
+                std::reverse(std::ranges::begin(a), std::ranges::end(a));
                 a.resize(n);
             }
 
+            namespace detail {
+                template<MutablePolynomialCoefficientRange AlgebraicRange, typename MultiplyOperation>
+                    requires std::copy_constructible<AlgebraicRange> && std::default_initializable<AlgebraicRange> &&
+                             requires(AlgebraicRange &result, const AlgebraicRange &input,
+                                      MultiplyOperation &multiply_operation,
+                                      const std::ranges::range_value_t<AlgebraicRange> &value) {
+                                 multiply_operation(result, input);
+                                 result.emplace_back(value);
+                                 {
+                                     std::ranges::range_value_t<AlgebraicRange>::zero()
+                                 } -> std::convertible_to<std::ranges::range_value_t<AlgebraicRange>>;
+                             }
+                AlgebraicRange transpose_multiplication_impl(const std::size_t n, const AlgebraicRange &a,
+                                                             MultiplyOperation multiply_operation) {
+                    const std::size_t m = std::ranges::size(a);
+
+                    AlgebraicRange product(a);
+                    reverse(product, m);
+                    multiply_operation(product, product);
+                    product.resize(m + n, std::ranges::range_value_t<AlgebraicRange>::zero());
+
+                    AlgebraicRange result;
+                    for (std::size_t i = m - 1; i < n + m; ++i) {
+                        result.emplace_back(product[i]);
+                    }
+                    return result;
+                }
+            }    // namespace detail
+
             /**
-             * Removes extraneous zero entries from in vector representation of polynomial.
+             * Removes trailing zero coefficients while retaining at least one coefficient.
+             *
              * Example - Degree-4 Polynomial: [0, 1, 2, 3, 4, 0, 0, 0, 0] -> [0, 1, 2, 3, 4]
-             * Note: Simplest condensed form is a zero polynomial of vector form: [0]
+             * The condensed representation of the zero polynomial is [0].
+             *
+             * @pre a is not empty.
              */
-            template<typename Range>
+            template<detail::MutablePolynomialCoefficientRange Range>
+                requires std::default_initializable<std::ranges::range_value_t<Range>> &&
+                         std::equality_comparable<std::ranges::range_value_t<Range>>
             void condense(Range &a) {
-                std::size_t i = std::distance(std::cbegin(a), std::cend(a));
-                typename Range::value_type zero =
-                    typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type();
+                std::size_t i = std::ranges::size(a);
+                std::ranges::range_value_t<Range> zero {};
                 while (i > 1 && a[i - 1] == zero) {
                     --i;
                 }
@@ -163,31 +146,39 @@ namespace nil {
             /**
              * Computes the standard polynomial addition, polynomial A + polynomial B, and stores result in
              * polynomial C.
+             * The output may alias either input.
+             *
+             * @pre a and b are not empty.
              */
-            template<typename Range>
+            template<detail::MutablePolynomialCoefficientRange Range>
+                requires std::default_initializable<std::ranges::range_value_t<Range>> &&
+                         std::equality_comparable<std::ranges::range_value_t<Range>> &&
+                         requires(const std::ranges::range_value_t<Range> &left,
+                                  const std::ranges::range_value_t<Range> &right) {
+                             { left + right } -> std::convertible_to<std::ranges::range_value_t<Range>>;
+                         }
             void addition(Range &c, const Range &a, const Range &b) {
 
-                typedef
-                    typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type value_type;
+                using value_type = std::ranges::range_value_t<Range>;
 
                 if (is_zero(a)) {
                     c = b;
                 } else if (is_zero(b)) {
                     c = a;
                 } else {
-                    std::size_t a_size = std::distance(std::begin(a), std::end(a));
-                    std::size_t b_size = std::distance(std::begin(b), std::end(b));
+                    std::size_t a_size = std::ranges::size(a);
+                    std::size_t b_size = std::ranges::size(b);
 
                     if (a_size > b_size) {
                         c.resize(a_size);
-                        std::transform(std::begin(b), std::end(b), std::begin(a), std::begin(c),
-                                       std::plus<value_type>());
-                        std::copy(std::begin(a) + b_size, std::end(a), std::begin(c) + b_size);
+                        std::transform(std::ranges::begin(b), std::ranges::end(b), std::ranges::begin(a),
+                                       std::ranges::begin(c), std::plus<value_type>());
+                        std::copy(std::ranges::begin(a) + b_size, std::ranges::end(a), std::ranges::begin(c) + b_size);
                     } else {
                         c.resize(b_size);
-                        std::transform(std::begin(a), std::end(a), std::begin(b), std::begin(c),
-                                       std::plus<value_type>());
-                        std::copy(std::begin(b) + a_size, std::end(b), std::begin(c) + a_size);
+                        std::transform(std::ranges::begin(a), std::ranges::end(a), std::ranges::begin(b),
+                                       std::ranges::begin(c), std::plus<value_type>());
+                        std::copy(std::ranges::begin(b) + a_size, std::ranges::end(b), std::ranges::begin(c) + a_size);
                     }
                 }
 
@@ -197,30 +188,43 @@ namespace nil {
             /**
              * Computes the standard polynomial subtraction, polynomial A - polynomial B, and stores result in
              * polynomial C.
+             * The output may alias either input.
+             *
+             * @pre a and b are not empty.
              */
-            template<typename Range>
+            template<detail::MutablePolynomialCoefficientRange Range>
+                requires std::default_initializable<std::ranges::range_value_t<Range>> &&
+                         std::equality_comparable<std::ranges::range_value_t<Range>> &&
+                         requires(const std::ranges::range_value_t<Range> &left,
+                                  const std::ranges::range_value_t<Range> &right) {
+                             { left - right } -> std::convertible_to<std::ranges::range_value_t<Range>>;
+                             { -right } -> std::convertible_to<std::ranges::range_value_t<Range>>;
+                         }
             void subtraction(Range &c, const Range &a, const Range &b) {
 
-                typedef
-                    typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type value_type;
+                using value_type = std::ranges::range_value_t<Range>;
 
                 if (is_zero(b)) {
                     c = a;
                 } else if (is_zero(a)) {
-                    c.resize(b.size());
-                    std::transform(b.begin(), b.end(), c.begin(), std::negate<value_type>());
+                    c.resize(std::ranges::size(b));
+                    std::transform(std::ranges::begin(b), std::ranges::end(b), std::ranges::begin(c),
+                                   std::negate<value_type>());
                 } else {
-                    std::size_t a_size = a.size();
-                    std::size_t b_size = b.size();
+                    std::size_t a_size = std::ranges::size(a);
+                    std::size_t b_size = std::ranges::size(b);
 
                     if (a_size > b_size) {
                         c.resize(a_size);
-                        std::transform(a.begin(), a.begin() + b_size, b.begin(), c.begin(), std::minus<value_type>());
-                        std::copy(a.begin() + b_size, a.end(), c.begin() + b_size);
+                        std::transform(std::ranges::begin(a), std::ranges::begin(a) + b_size, std::ranges::begin(b),
+                                       std::ranges::begin(c), std::minus<value_type>());
+                        std::copy(std::ranges::begin(a) + b_size, std::ranges::end(a), std::ranges::begin(c) + b_size);
                     } else {
                         c.resize(b_size);
-                        std::transform(a.begin(), a.end(), b.begin(), c.begin(), std::minus<value_type>());
-                        std::transform(b.begin() + a_size, b.end(), c.begin() + a_size, std::negate<value_type>());
+                        std::transform(std::ranges::begin(a), std::ranges::end(a), std::ranges::begin(b),
+                                       std::ranges::begin(c), std::minus<value_type>());
+                        std::transform(std::ranges::begin(b) + a_size, std::ranges::end(b),
+                                       std::ranges::begin(c) + a_size, std::negate<value_type>());
                     }
                 }
 
@@ -228,27 +232,47 @@ namespace nil {
             }
 
             /**
-             * Perform the multiplication of two polynomials, polynomial A * polynomial B, using FFT, and stores
-             * result in polynomial C.
-             * FieldRange is a range of field elements
-             * AlgebraicRange is a range of either field elements or curve elements
+             * Multiply two polynomials using a radix-2 FFT whose size is the smallest power of two containing the
+             * complete product, and store the result in polynomial C.
+             * This handles both ordinary field-by-field polynomial multiplication and curve-by-field module-valued
+             * convolution. FieldRange contains field elements, while AlgebraicRange contains either field or curve
+             * elements.
+             * The output may alias either input when their range types permit it.
+             *
+             * @pre a and b are not empty.
+             * @todo Move ordinary same-coefficient-type multiplication into a radix-2 backend. Preserve the
+             * curve-by-field case separately as module-valued convolution.
              */
-            template<typename AlgebraicRange, std::ranges::range FieldRange>
+            template<detail::MutablePolynomialCoefficientRange AlgebraicRange,
+                     detail::MutablePolynomialCoefficientRange FieldRange>
                 requires requires { typename std::ranges::range_value_t<FieldRange>::field_type; } &&
                          algebra::is_field<typename std::ranges::range_value_t<FieldRange>::field_type>::value &&
                          std::same_as<typename std::ranges::range_value_t<FieldRange>::field_type::value_type,
-                                      std::ranges::range_value_t<FieldRange>>
+                                      std::ranges::range_value_t<FieldRange>> &&
+                         std::default_initializable<std::ranges::range_value_t<AlgebraicRange>> &&
+                         std::equality_comparable<std::ranges::range_value_t<AlgebraicRange>> &&
+                         requires(std::ranges::range_value_t<AlgebraicRange> &algebraic_value,
+                                  const std::ranges::range_value_t<AlgebraicRange> &const_algebraic_value,
+                                  const std::ranges::range_value_t<FieldRange> &field_value) {
+                             {
+                                 std::ranges::range_value_t<AlgebraicRange>::zero()
+                             } -> std::convertible_to<std::ranges::range_value_t<AlgebraicRange>>;
+                             {
+                                 const_algebraic_value * field_value
+                             } -> std::convertible_to<std::ranges::range_value_t<AlgebraicRange>>;
+                             algebraic_value *= field_value;
+                             algebraic_value += const_algebraic_value;
+                             algebraic_value -= const_algebraic_value;
+                         }
             void multiplication(AlgebraicRange &c, const AlgebraicRange &a, const FieldRange &b) {
-                typedef typename std::iterator_traits<decltype(std::begin(std::declval<AlgebraicRange>()))>::value_type
-                    algebraic_value_type;
-                typedef typename std::iterator_traits<decltype(std::begin(std::declval<FieldRange>()))>::value_type
-                    field_value_type;
+                using algebraic_value_type = std::ranges::range_value_t<AlgebraicRange>;
+                using field_value_type = std::ranges::range_value_t<FieldRange>;
 
                 typedef typename field_value_type::field_type FieldType;
-                BOOST_ASSERT_MSG(a.size() != 0, "Uninitialized polynomial");
-                BOOST_ASSERT_MSG(b.size() != 0, "Uninitialized polynomial");
+                BOOST_ASSERT_MSG(!std::ranges::empty(a), "Uninitialized polynomial");
+                BOOST_ASSERT_MSG(!std::ranges::empty(b), "Uninitialized polynomial");
 
-                const std::size_t n = detail::power_of_two(a.size() + b.size() - 1);
+                const std::size_t n = detail::power_of_two(std::ranges::size(a) + std::ranges::size(b) - 1);
                 field_value_type omega = unity_root<FieldType>(n);
 
                 AlgebraicRange u(a);
@@ -266,135 +290,182 @@ namespace nil {
 
                 detail::basic_radix2_fft<FieldType>(c, omega.inversed());
 
-                const field_value_type sconst = field_value_type(n).inversed();
+                const field_value_type size_inverse = field_value_type(n).inversed();
 
                 for (std::size_t i = 0; i < n; ++i) {
-                    c[i] *= sconst;
+                    c[i] = c[i] * size_inverse;
                 }
 
                 condense(c);
             }
 
             /**
-             * Multiply two polynomials using an explicit exact-size mixed-radix FFT plan.
-             * The plan may be larger than the convolution, but it must contain every output coefficient.
+             * Multiply canonical coefficient vectors using a reusable polynomial-arithmetic context.
+             * The output is canonical and may alias either input.
              */
-            template<typename AlgebraicRange, typename FieldType>
-            void multiplication(AlgebraicRange &c, const AlgebraicRange &a, const AlgebraicRange &b,
-                                const mixed_radix_fft_plan<FieldType> &fft_plan) {
-                using value_type =
-                    typename std::iterator_traits<decltype(std::begin(std::declval<AlgebraicRange>()))>::value_type;
-
-                if (a.empty() || b.empty()) {
-                    throw std::invalid_argument("multiplication: input polynomials must not be empty");
-                }
-
-                const std::size_t result_size = a.size() + b.size() - 1;
-                if (fft_plan.size() < result_size) {
-                    throw std::invalid_argument("multiplication: mixed-radix FFT plan is too small");
-                }
-
-                std::vector<value_type> left(a.begin(), a.end());
-                std::vector<value_type> right(b.begin(), b.end());
-                fft_plan.fft(left);
-                fft_plan.fft(right);
-
-                for (std::size_t i = 0; i < fft_plan.size(); ++i) {
-                    left[i] = left[i] * right[i];
-                }
-
-                fft_plan.inverse_fft(left);
-                c.resize(result_size);
-                std::copy_n(left.begin(), result_size, c.begin());
+            template<polynomial_arithmetic::PolynomialBackend Backend>
+            void multiplication(polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &output,
+                                const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &left,
+                                const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &right,
+                                polynomial_arithmetic::polynomial_context<Backend> &context) {
+                context.multiply(output, left, right);
             }
 
             /**
-             * Compute the transposed, polynomial multiplication of vector a and vector b.
-             * Below we make use of the transposed multiplication definition from
-             * [Bostan, Lecerf, & Schost, 2003. Tellegen's Principle in Practice, on page 39].
+             * Square a canonical coefficient vector using a reusable polynomial-arithmetic context.
+             * The output is canonical and may alias the input.
              */
-            template<typename AlgebraicRange, typename FieldRange>
+            template<polynomial_arithmetic::PolynomialBackend Backend>
+            void square(polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &output,
+                        const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &input,
+                        polynomial_arithmetic::polynomial_context<Backend> &context) {
+                context.square(output, input);
+            }
+
+            /**
+             * Compute the product modulo X^coefficient_count using a reusable polynomial-arithmetic context.
+             * The output is canonical and may alias either input. A coefficient count of zero produces [0].
+             */
+            template<polynomial_arithmetic::PolynomialBackend Backend>
+            void multiply_low(polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &output,
+                              const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &left,
+                              const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &right,
+                              std::size_t coefficient_count,
+                              polynomial_arithmetic::polynomial_context<Backend> &context) {
+                context.multiply_low(output, left, right, coefficient_count);
+            }
+
+            /**
+             * Compute the transposed multiplication of a by c. If m is a.size(), reverse a, multiply it by c, and
+             * return the n + 1 coefficients at product indices m - 1 through m + n - 1.
+             *
+             * Below we use the transposed multiplication definition from
+             * [Bostan, Lecerf, & Schost, 2003. Tellegen's Principle in Practice, on page 39].
+             *
+             * @pre a is not empty.
+             * @note The internal convolution currently uses the legacy radix-2 multiplication overload.
+             */
+            template<detail::MutablePolynomialCoefficientRange AlgebraicRange,
+                     detail::MutablePolynomialCoefficientRange FieldRange>
+                requires std::copy_constructible<AlgebraicRange> && std::default_initializable<AlgebraicRange> &&
+                         requires(AlgebraicRange &result, const AlgebraicRange &input, const FieldRange &coefficients,
+                                  const std::ranges::range_value_t<AlgebraicRange> &value) {
+                             result.emplace_back(value);
+                             multiplication(result, input, coefficients);
+                         }
             AlgebraicRange transpose_multiplication(const std::size_t &n, const AlgebraicRange &a,
                                                     const FieldRange &c) {
-                typedef typename std::iterator_traits<decltype(std::begin(std::declval<AlgebraicRange>()))>::value_type
-                    value_type;
-
-                const std::size_t m = a.size();
-                // if (c.size() - 1 > m + n)
-                // throw InvalidSizeException("expected c.size() - 1 <= m + n");
-
-                AlgebraicRange r(a);
-                reverse(r, m);
-                multiplication(r, r, c);
-
-                /* Determine Middle Product */
-                AlgebraicRange result;
-                for (std::size_t i = m - 1; i < n + m; i++) {
-                    result.emplace_back(r[i]);
-                }
-                return result;
+                return detail::transpose_multiplication_impl(
+                    n, a,
+                    [&c](AlgebraicRange &output, const AlgebraicRange &input) { multiplication(output, input, c); });
             }
 
             /**
-             * Perform the standard Euclidean Division algorithm. We can not assume that q or r are empty.
-             * Input: Polynomial A, Polynomial B, where A / B
-             * Output: Polynomial Q, Polynomial R, such that A = (Q * B) + R.
+             * Compute transposed multiplication using a reusable polynomial-arithmetic context. Field coefficients
+             * are embedded into the backend's coefficient ring before multiplication.
+             *
+             * @pre a is not empty.
              */
-            template<typename Range>
-            void division(Range &q, Range &r, const Range &a, const Range &b) {
-                typedef
-                    typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type value_type;
+            template<polynomial_arithmetic::PolynomialBackend Backend, detail::PolynomialCoefficientRange FieldRange>
+                requires algebra::is_field_element<std::ranges::range_value_t<const FieldRange>>::value &&
+                         requires(const std::ranges::range_value_t<const FieldRange> &field_value) {
+                             {
+                                 Backend::value_type::one() * field_value
+                             } -> std::convertible_to<typename Backend::value_type>;
+                         }
+            polynomial_arithmetic::coefficient_vector<typename Backend::value_type> transpose_multiplication(
+                const std::size_t n, const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &a,
+                const FieldRange &c, polynomial_arithmetic::polynomial_context<Backend> &context) {
+                using value_type = typename Backend::value_type;
+                using coefficient_vector = polynomial_arithmetic::coefficient_vector<value_type>;
 
-                std::size_t d = b.size() - 1; /* Degree of B */
+                coefficient_vector embedded_coefficients;
+                embedded_coefficients.reserve(std::ranges::size(c));
+                for (const auto &coefficient : c) {
+                    embedded_coefficients.emplace_back(value_type::one() * coefficient);
+                }
+
+                return detail::transpose_multiplication_impl(
+                    n, a,
+                    [&embedded_coefficients, &context](coefficient_vector &output, const coefficient_vector &input) {
+                        multiplication(output, input, embedded_coefficients, context);
+                    });
+            }
+
+            /**
+             * Perform quadratic Euclidean polynomial division, producing Q and R such that A = Q * B + R.
+             * This implementation is suitable as the small-degree fallback for future fast division algorithms.
+             * Existing contents of Q and R are replaced.
+             *
+             * @pre A and B are nonempty canonical coefficient vectors.
+             * @pre B has a nonzero leading coefficient.
+             * @pre Q and R are distinct and do not alias either input.
+             */
+            template<detail::MutablePolynomialCoefficientRange Range>
+                requires algebra::is_field_element<std::ranges::range_value_t<Range>>::value &&
+                         std::copy_constructible<Range> &&
+                         std::constructible_from<Range, std::ranges::range_size_t<const Range>,
+                                                 std::ranges::range_value_t<Range>> &&
+                         std::constructible_from<Range, std::ranges::iterator_t<const Range>,
+                                                 std::ranges::sentinel_t<const Range>>
+            void division(Range &q, Range &r, const Range &a, const Range &b) {
+                using value_type = std::ranges::range_value_t<Range>;
+
+                const std::size_t divisor_degree = std::ranges::size(b) - 1;
 
                 // Special case when B has degree 0.
-                if (d == 0) {
-                    value_type c = b[0].inversed();
-                    q.resize(a.size());
-                    std::transform(std::begin(a), std::end(a), std::begin(q),
-                                   [&c](const value_type &value) { return value * c; });
-                    // We will always have no reminder here.
+                if (divisor_degree == 0) {
+                    const value_type divisor_inverse = b[0].inversed();
+                    q.resize(std::ranges::size(a));
+                    std::transform(std::ranges::begin(a), std::ranges::end(a), std::ranges::begin(q),
+                                   [&divisor_inverse](const value_type &value) { return value * divisor_inverse; });
+                    // Division by a nonzero constant always has zero remainder.
                     r.resize(1);
-                    r[0] = 0u;
+                    r[0] = value_type::zero();
                 }
-                // Special case when B = X^N + C.
-                else if (b.back() == value_type::one() && is_zero(b.begin() + 1, b.end() - 1) && a.size() >= b.size()) {
-                    q = Range(a.size() - b.size() + 1, value_type::zero());
-                    r = Range(a.begin(), a.end() - (a.size() - b.size() + 1));
+                // Divide by B(X) = X^N + C in linear time. Modulo B, X^N = -C, so each
+                // coefficient above degree N - 1 is moved into the quotient and folded N
+                // positions down into the remaining dividend by multiplication with -C.
+                else if (b[std::ranges::size(b) - 1] == value_type::one() &&
+                         is_zero(std::ranges::begin(b) + 1, std::ranges::end(b) - 1) &&
+                         std::ranges::size(a) >= std::ranges::size(b)) {
+                    q = Range(std::ranges::size(a) - std::ranges::size(b) + 1, value_type::zero());
+                    r = Range(std::ranges::begin(a),
+                              std::ranges::end(a) - (std::ranges::size(a) - std::ranges::size(b) + 1));
 
-                    value_type c = -b[0];
-                    auto end = --a.end();
-                    for (std::size_t t = q.size(); t != 0; --t, --end) {
+                    const value_type negated_constant = -b[0];
+                    auto end = --std::ranges::end(a);
+                    for (std::size_t t = std::ranges::size(q); t != 0; --t, --end) {
                         q[t - 1] += *end;
-                        if (t - 1 >= d) {
-                            q[t - 1 - d] = q[t - 1] * c;
+                        if (t - 1 >= divisor_degree) {
+                            q[t - 1 - divisor_degree] = q[t - 1] * negated_constant;
                         } else {
-                            r[t - 1] += q[t - 1] * c;
+                            r[t - 1] += q[t - 1] * negated_constant;
                         }
                     }
                     condense(r);
                 } else {
-                    value_type c = b.back().inversed(); /* Inverse of Leading Coefficient of B */
+                    const value_type inverse_leading_coefficient = b[std::ranges::size(b) - 1].inversed();
                     r = Range(a);
-                    q = Range(r.size(), value_type::zero());
+                    q = Range(std::ranges::size(r), value_type::zero());
 
-                    std::size_t r_deg = r.size() - 1;
-                    std::size_t shift;
+                    std::size_t remainder_degree = std::ranges::size(r) - 1;
 
-                    while (r_deg >= d && !is_zero(r)) {
-                        shift = r_deg - d;
+                    while (remainder_degree >= divisor_degree && !is_zero(r)) {
+                        const std::size_t degree_shift = remainder_degree - divisor_degree;
+                        const value_type quotient_coefficient = r[remainder_degree] * inverse_leading_coefficient;
 
-                        value_type lead_coeff = r.back() * c;
+                        q[degree_shift] = quotient_coefficient;
 
-                        q[shift] = lead_coeff;
-
-                        if (b.size() + shift + 1 > r.size())
-                            r.resize(b.size() + shift + 1);
-                        auto glambda = [=](value_type x, value_type y) { return y - (x * lead_coeff); };
-                        std::transform(b.begin(), b.end(), r.begin() + shift, r.begin() + shift, glambda);
+                        std::transform(std::ranges::begin(b), std::ranges::end(b), std::ranges::begin(r) + degree_shift,
+                                       std::ranges::begin(r) + degree_shift,
+                                       [&quotient_coefficient](const value_type &divisor_coefficient,
+                                                               const value_type &remainder_coefficient) {
+                                           return remainder_coefficient - divisor_coefficient * quotient_coefficient;
+                                       });
 
                         condense(r);
-                        r_deg = r.size() - 1;
+                        remainder_degree = std::ranges::size(r) - 1;
                     }
                 }
                 condense(q);

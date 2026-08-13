@@ -24,6 +24,7 @@
 
 #define BOOST_TEST_MODULE polynomial_backend_test
 
+#include <array>
 #include <cstddef>
 #include <utility>
 
@@ -38,6 +39,7 @@
 #include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
 
 namespace {
+    namespace math = nil::crypto3::math;
     namespace polynomial_arithmetic = nil::crypto3::math::polynomial_arithmetic;
     namespace fields = nil::crypto3::algebra::fields;
 
@@ -52,6 +54,9 @@ namespace {
 
     using fq_mixed_radix_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type>;
     using fq12_mixed_radix_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type, fq12_value_type>;
+
+    constexpr std::size_t odd_smooth_order = 3 * 3 * 29 * 67;
+    constexpr std::size_t even_smooth_order = 2 * odd_smooth_order;
 
     static_assert(!polynomial_arithmetic::PolynomialBackend<incomplete_backend>);
     static_assert(polynomial_arithmetic::PolynomialBackend<polynomial_arithmetic::schoolbook_backend<fq_value_type>>);
@@ -88,47 +93,47 @@ namespace {
         polynomial_arithmetic::polynomial_context<Backend> context(std::move(backend));
         coefficient_vector output = {value_type::one()};
 
-        context.multiply(output, left, right);
+        math::multiplication(output, left, right, context);
         BOOST_CHECK(output == expected_product);
 
-        context.square(output, left);
+        math::square(output, left, context);
         BOOST_CHECK(output == expected_square);
 
         coefficient_vector left_alias = left;
-        context.multiply(left_alias, left_alias, right);
+        math::multiplication(left_alias, left_alias, right, context);
         BOOST_CHECK(left_alias == expected_product);
 
         coefficient_vector right_alias = right;
-        context.multiply(right_alias, left, right_alias);
+        math::multiplication(right_alias, left, right_alias, context);
         BOOST_CHECK(right_alias == expected_product);
 
         coefficient_vector both_aliases = left;
-        context.multiply(both_aliases, both_aliases, both_aliases);
+        math::multiplication(both_aliases, both_aliases, both_aliases, context);
         BOOST_CHECK(both_aliases == expected_square);
 
         coefficient_vector square_alias = left;
-        context.square(square_alias, square_alias);
+        math::square(square_alias, square_alias, context);
         BOOST_CHECK(square_alias == expected_square);
 
         for (std::size_t coefficient_count = 0; coefficient_count <= expected_product.size() + 2; ++coefficient_count) {
-            context.multiply_low(output, left, right, coefficient_count);
+            math::multiply_low(output, left, right, coefficient_count, context);
             BOOST_CHECK(output == expected_low_product(expected_product, coefficient_count));
         }
 
         coefficient_vector low_alias = left;
-        context.multiply_low(low_alias, low_alias, right, 2);
+        math::multiply_low(low_alias, low_alias, right, 2, context);
         BOOST_CHECK(low_alias == expected_low_product(expected_product, 2));
 
         const coefficient_vector zero = {value_type::zero()};
-        context.multiply(output, zero, right);
+        math::multiplication(output, zero, right, context);
         BOOST_CHECK(output == zero);
-        context.multiply(output, left, zero);
+        math::multiplication(output, left, zero, context);
         BOOST_CHECK(output == zero);
-        context.multiply_low(output, zero, right, 2);
+        math::multiply_low(output, zero, right, 2, context);
         BOOST_CHECK(output == zero);
-        context.multiply_low(output, left, zero, 2);
+        math::multiply_low(output, left, zero, 2, context);
         BOOST_CHECK(output == zero);
-        context.square(output, zero);
+        math::square(output, zero, context);
         BOOST_CHECK(output == zero);
     }
 
@@ -197,6 +202,47 @@ BOOST_AUTO_TEST_CASE(mixed_radix_backend_uses_only_the_prefix_needed_by_multiply
     backend.multiply_low(output, input, input, 2);
     BOOST_CHECK(output == coefficient_vector({fq_value_type(1), fq_value_type(4)}));
     BOOST_CHECK_THROW(backend.multiply_low(output, input, input, 3), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(transpose_multiplication_uses_the_selected_backend) {
+    using coefficient_vector = polynomial_arithmetic::coefficient_vector<fq12_value_type>;
+
+    const coefficient_vector input = {fq12_value(1), fq12_value(13)};
+    const std::vector<fq_value_type> field_coefficients = {fq_value_type(7)};
+    polynomial_arithmetic::polynomial_context<fq12_mixed_radix_backend> context {fq12_mixed_radix_backend(3)};
+
+    const coefficient_vector result = math::transpose_multiplication(2, input, field_coefficients, context);
+    const coefficient_vector expected = {input[0] * field_coefficients[0], fq12_value_type::zero(),
+                                         fq12_value_type::zero()};
+    BOOST_CHECK(result == expected);
+}
+
+BOOST_AUTO_TEST_CASE(fq12_mixed_radix_backend_uses_the_larger_smooth_order) {
+    using coefficient_vector = polynomial_arithmetic::coefficient_vector<fq12_value_type>;
+    using schoolbook_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+
+    constexpr std::size_t operand_size = odd_smooth_order / 2 + 2;
+    const std::array<fq12_value_type, 6> samples = {fq12_value(1),  fq12_value(13), fq12_value(25),
+                                                    fq12_value(37), fq12_value(49), fq12_value(61)};
+    coefficient_vector left(operand_size, fq12_value_type::zero());
+    coefficient_vector right(operand_size, fq12_value_type::zero());
+    left[0] = samples[0];
+    left[113] = samples[1];
+    left.back() = samples[2];
+    right[0] = samples[3];
+    right[257] = samples[4];
+    right.back() = samples[5];
+
+    polynomial_arithmetic::polynomial_context<schoolbook_backend> schoolbook_context;
+    coefficient_vector expected;
+    math::multiplication(expected, left, right, schoolbook_context);
+    BOOST_REQUIRE_GT(expected.size(), odd_smooth_order);
+
+    polynomial_arithmetic::polynomial_context<fq12_mixed_radix_backend> mixed_radix_context {
+        fq12_mixed_radix_backend(even_smooth_order)};
+    coefficient_vector result;
+    math::multiplication(result, left, right, mixed_radix_context);
+    BOOST_CHECK(result == expected);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

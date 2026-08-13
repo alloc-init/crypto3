@@ -22,14 +22,18 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
+#include <array>
 #include <list>
 #include <utility>
 #include <vector>
 
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/basis_change.hpp>
 #include <nil/crypto3/math/polynomial/evaluate.hpp>
 #include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/shift.hpp>
+#include <nil/crypto3/math/polynomial/xgcd.hpp>
 
 namespace math = nil::crypto3::math;
 namespace fields = nil::crypto3::algebra::fields;
@@ -39,11 +43,30 @@ using coefficients = std::vector<value_type>;
 using interpolation_points = std::vector<std::pair<value_type, value_type>>;
 
 template<typename Range>
-concept SupportsPolynomialPower = requires(const Range &input) { math::power(input, std::size_t(2)); };
-
-template<typename Range>
 concept SupportsPolynomialMultiplication =
     requires(Range &output, const Range &input) { math::multiplication(output, input, input); };
+
+template<typename Range>
+concept SupportsMutableCoefficientOperations = requires(Range &output, const Range &input) {
+    math::reverse(output, std::size_t(1));
+    math::condense(output);
+    math::addition(output, input, input);
+    math::subtraction(output, input, input);
+};
+
+template<typename Range>
+concept SupportsPolynomialDivision = requires(Range &quotient, Range &remainder, const Range &input) {
+    math::division(quotient, remainder, input, input);
+};
+
+template<typename Range>
+concept SupportsExtendedEuclidean =
+    requires(Range &g, Range &u, Range &v, const Range &input) { math::extended_euclidean(input, input, g, u, v); };
+
+template<typename Range, typename Point>
+concept SupportsPolynomialEvaluation = requires(const Range &coefficients, const Point &point) {
+    math::evaluate_polynomial(coefficients, point, coefficients.size());
+};
 
 template<typename Range, typename Point>
 concept SupportsLagrangeEvaluation = requires(const Range &domain, const Point &point) {
@@ -53,11 +76,44 @@ concept SupportsLagrangeEvaluation = requires(const Range &domain, const Point &
 template<typename Range>
 concept SupportsLagrangeInterpolation = requires(const Range &points) { math::lagrange_interpolation(points); };
 
-static_assert(SupportsPolynomialPower<coefficients>);
-static_assert(!SupportsPolynomialPower<std::vector<int>>);
+template<typename Range>
+concept SupportsGeometricBasisChange = requires(Range &values, const Range &field_values) {
+    math::monomial_to_newton_basis_geometric<fields::babybear>(values, field_values, field_values, std::size_t(1));
+    math::newton_to_monomial_basis_geometric<fields::babybear>(values, field_values, field_values, std::size_t(1));
+};
+
+template<typename FieldType>
+concept SupportsSubproductTree = requires(std::vector<std::vector<std::vector<typename FieldType::value_type>>> &tree) {
+    math::compute_subproduct_tree<FieldType>(tree, std::size_t(1));
+};
+
+template<typename ValueType>
+concept SupportsPolynomialShift = requires(const math::polynomial<ValueType> &polynomial, const ValueType &value) {
+    math::polynomial_shift(polynomial, value);
+};
+
+static_assert(math::detail::PolynomialCoefficientRange<coefficients>);
+static_assert(math::detail::MutablePolynomialCoefficientRange<coefficients>);
+static_assert(math::detail::PolynomialCoefficientRange<std::array<value_type, 2>>);
+static_assert(!math::detail::MutablePolynomialCoefficientRange<std::array<value_type, 2>>);
+static_assert(!math::detail::PolynomialCoefficientRange<std::list<value_type>>);
 
 static_assert(SupportsPolynomialMultiplication<coefficients>);
 static_assert(!SupportsPolynomialMultiplication<std::vector<int>>);
+
+static_assert(SupportsMutableCoefficientOperations<coefficients>);
+static_assert(SupportsMutableCoefficientOperations<std::vector<int>>);
+static_assert(!SupportsMutableCoefficientOperations<std::list<value_type>>);
+
+static_assert(SupportsPolynomialDivision<coefficients>);
+static_assert(!SupportsPolynomialDivision<std::vector<int>>);
+
+static_assert(SupportsExtendedEuclidean<coefficients>);
+static_assert(!SupportsExtendedEuclidean<std::vector<int>>);
+
+static_assert(SupportsPolynomialEvaluation<coefficients, value_type>);
+static_assert(!SupportsPolynomialEvaluation<std::list<value_type>, value_type>);
+static_assert(!SupportsPolynomialEvaluation<std::vector<int>, value_type>);
 
 static_assert(SupportsLagrangeEvaluation<coefficients, value_type>);
 static_assert(!SupportsLagrangeEvaluation<std::vector<int>, value_type>);
@@ -66,3 +122,10 @@ static_assert(!SupportsLagrangeEvaluation<std::list<value_type>, value_type>);
 static_assert(SupportsLagrangeInterpolation<interpolation_points>);
 static_assert(!SupportsLagrangeInterpolation<std::vector<value_type>>);
 static_assert(!SupportsLagrangeInterpolation<std::list<std::pair<value_type, value_type>>>);
+
+static_assert(SupportsGeometricBasisChange<coefficients>);
+static_assert(!SupportsGeometricBasisChange<std::list<value_type>>);
+static_assert(SupportsSubproductTree<fields::babybear>);
+
+static_assert(SupportsPolynomialShift<value_type>);
+static_assert(!SupportsPolynomialShift<int>);

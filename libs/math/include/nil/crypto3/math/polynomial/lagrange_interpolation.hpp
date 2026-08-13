@@ -31,6 +31,7 @@
 #include <ranges>
 #include <utility>
 
+#include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/domains/evaluation_domain.hpp>
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
@@ -38,14 +39,20 @@
 namespace nil {
     namespace crypto3 {
         namespace math {
-            // Default implementation according to Wikipedia
-            // https://en.wikipedia.org/wiki/Lagrange_polynomial
+            /**
+             * Construct the polynomial passing through the supplied points by explicitly summing its Lagrange
+             * basis polynomials.
+             * See https://en.wikipedia.org/wiki/Lagrange_polynomial for the defining formula.
+             *
+             * @pre The first components of the point pairs are pairwise distinct.
+             */
             template<typename InputRange,
                      typename FieldValueType = typename std::ranges::range_value_t<const InputRange>::first_type>
                 requires std::ranges::random_access_range<const InputRange> &&
                          std::ranges::sized_range<const InputRange> &&
                          std::same_as<std::ranges::range_value_t<const InputRange>,
-                                      std::pair<FieldValueType, FieldValueType>>
+                                      std::pair<FieldValueType, FieldValueType>> &&
+                         algebra::is_field_element<FieldValueType>::value
             polynomial<FieldValueType> lagrange_interpolation(const InputRange &points) {
                 std::size_t k = std::ranges::size(points);
                 auto first = std::ranges::begin(points);

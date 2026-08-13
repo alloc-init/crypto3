@@ -27,8 +27,11 @@
 #define CRYPTO3_MATH_BASIS_CHANGE_HPP
 
 #include <algorithm>
+#include <concepts>
+#include <ranges>
 #include <vector>
 
+#include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
 #include <nil/crypto3/math/polynomial/xgcd.hpp>
 
@@ -43,6 +46,7 @@ namespace nil {
              * page 7.
              */
             template<typename FieldType>
+                requires algebra::is_field<FieldType>::value
             void compute_subproduct_tree(std::vector<std::vector<std::vector<typename FieldType::value_type>>> &T,
                                          std::size_t m) {
 
@@ -85,18 +89,20 @@ namespace nil {
 
             /**
              * Perform the general change of basis from Monomial to Newton Basis with Subproduct Tree T.
+             * Polynomial products use the legacy radix-2 FFT multiplication path.
              * Below we make use of the MonomialToNewton and TNewtonToMonomial pseudocode from
              * [Bostan and Schost 2005. Polynomial Evaluation and Interpolation on Special Sets of Points], on page
              * 12 and 14.
              */
-            template<typename FieldType, typename Range>
+            template<typename FieldType, detail::MutablePolynomialCoefficientRange Range>
+                requires algebra::is_field<FieldType>::value
             void
                 monomial_to_newton_basis(Range &a,
                                          const std::vector<std::vector<std::vector<typename FieldType::value_type>>> &T,
                                          size_t n) {
 
-                typedef typename Range::value_type value_type;
-                typedef typename FieldType::value_type field_value_type;
+                using value_type = std::ranges::range_value_t<Range>;
+                using field_value_type = typename FieldType::value_type;
 
                 std::size_t m = log2(n);
                 // if (T.size() != m + 1u)
@@ -150,13 +156,14 @@ namespace nil {
              * [Bostan and Schost 2005. Polynomial Evaluation and Interpolation on Special Sets of Points], on
              * page 11.
              */
-            template<typename FieldType, typename Range>
+            template<typename FieldType, detail::MutablePolynomialCoefficientRange Range>
+                requires algebra::is_field<FieldType>::value
             void
                 newton_to_monomial_basis(Range &a,
                                          const std::vector<std::vector<std::vector<typename FieldType::value_type>>> &T,
                                          size_t n) {
 
-                typedef typename Range::value_type value_type;
+                using value_type = std::ranges::range_value_t<Range>;
 
                 std::size_t m = log2(n);
                 // if (T.size() != m + 1u)
@@ -181,17 +188,27 @@ namespace nil {
 
             /**
              * Perform the change of basis from Monomial to Newton Basis for geometric sequence.
+             * Polynomial products use the legacy radix-2 FFT multiplication path.
              * Below we make use of the psuedocode from
              * [Bostan & Schost 2005. Polynomial Evaluation and Interpolation on Special Sets of Points] on page 26.
+             *
+             * @pre n > 0.
+             * @pre a, geometric_sequence, and geometric_triangular_sequence each contain at least n elements.
              */
-            template<typename FieldType, typename Range1, typename Range2, typename Range3>
+            template<typename FieldType,
+                     detail::MutablePolynomialCoefficientRange Range1,
+                     detail::PolynomialCoefficientRange Range2,
+                     detail::PolynomialCoefficientRange Range3>
+                requires algebra::is_field<FieldType>::value &&
+                         std::same_as<std::ranges::range_value_t<const Range2>, typename FieldType::value_type> &&
+                         std::same_as<std::ranges::range_value_t<const Range3>, typename FieldType::value_type>
             void monomial_to_newton_basis_geometric(Range1 &a,
                                                     const Range2 &geometric_sequence,
                                                     const Range3 &geometric_triangular_sequence,
-                                                    const std::size_t &n) {
+                                                    std::size_t n) {
 
-                typedef typename FieldType::value_type field_value_type;
-                typedef typename Range1::value_type value_type;
+                using field_value_type = typename FieldType::value_type;
+                using value_type = std::ranges::range_value_t<Range1>;
 
                 std::vector<field_value_type> u(n, field_value_type::zero());
                 std::vector<value_type> w(n, value_type::zero());
@@ -224,17 +241,27 @@ namespace nil {
 
             /**
              * Perform the change of basis from Newton to Monomial Basis for geometric sequence
+             * Polynomial products use the legacy radix-2 FFT multiplication path.
              * Below we make use of the psuedocode from
              * [Bostan & Schost 2005. Polynomial Evaluation and Interpolation on Special Sets of Points] on page 26.
+             *
+             * @pre n > 0.
+             * @pre a, geometric_sequence, and geometric_triangular_sequence each contain at least n elements.
              */
-            template<typename FieldType, typename Range1, typename Range2, typename Range3>
+            template<typename FieldType,
+                     detail::MutablePolynomialCoefficientRange Range1,
+                     detail::PolynomialCoefficientRange Range2,
+                     detail::PolynomialCoefficientRange Range3>
+                requires algebra::is_field<FieldType>::value &&
+                         std::same_as<std::ranges::range_value_t<const Range2>, typename FieldType::value_type> &&
+                         std::same_as<std::ranges::range_value_t<const Range3>, typename FieldType::value_type>
             void newton_to_monomial_basis_geometric(Range1 &a,
                                                     const Range2 &geometric_sequence,
                                                     const Range3 &geometric_triangular_sequence,
                                                     std::size_t n) {
 
-                typedef typename Range1::value_type value_type;
-                typedef typename FieldType::value_type field_value_type;
+                using value_type = std::ranges::range_value_t<Range1>;
+                using field_value_type = typename FieldType::value_type;
 
                 std::vector<value_type> v(n, value_type::zero());
                 std::vector<field_value_type> u(n, field_value_type::zero());

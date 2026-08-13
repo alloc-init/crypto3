@@ -38,6 +38,7 @@
 #include <nil/crypto3/algebra/random_element.hpp>
 #include <nil/crypto3/math/algorithms/mixed_radix_fft.hpp>
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/mixed_radix_backend.hpp>
 
 namespace {
 
@@ -45,6 +46,8 @@ namespace {
     using bn254_fq = nil::crypto3::algebra::fields::alt_bn128_base_field<254>;
     using bn254_fq12 = nil::crypto3::algebra::fields::fp12_2over3over2<nil::crypto3::algebra::fields::alt_bn128<254>>;
     using fq12_value_type = bn254_fq12::value_type;
+    using backend_type = nil::crypto3::math::polynomial_arithmetic::mixed_radix_backend<bn254_fq, fq12_value_type>;
+    using context_type = nil::crypto3::math::polynomial_arithmetic::polynomial_context<backend_type>;
 
     constexpr std::size_t odd_smooth_order = 3 * 3 * 29 * 67;
     constexpr std::size_t even_smooth_order = 2 * odd_smooth_order;
@@ -72,6 +75,11 @@ namespace {
         const auto plan_finish = clock_type::now();
         const double plan_ms = std::chrono::duration<double, std::milli>(plan_finish - plan_start).count();
 
+        const auto backend_start = clock_type::now();
+        context_type context {backend_type(size)};
+        const auto backend_finish = clock_type::now();
+        const double backend_ms = std::chrono::duration<double, std::milli>(backend_finish - backend_start).count();
+
         const std::vector<fq12_value_type> coefficients = random_values(size, rng);
         std::vector<fq12_value_type> transformed = coefficients;
         const double forward_ms = elapsed_milliseconds([&]() { plan.fft(transformed); });
@@ -86,13 +94,13 @@ namespace {
         const std::vector<fq12_value_type> right = random_values(right_size, rng);
         std::vector<fq12_value_type> product;
         const double multiplication_ms =
-            elapsed_milliseconds([&]() { nil::crypto3::math::multiplication(product, left, right, plan); });
+            elapsed_milliseconds([&]() { nil::crypto3::math::multiplication(product, left, right, context); });
         if (product.size() != size) {
             throw std::runtime_error("mixed-radix multiplication returned the wrong size");
         }
 
-        std::cout << size << ',' << plan_ms << ',' << forward_ms << ',' << inverse_ms << ',' << multiplication_ms
-                  << '\n';
+        std::cout << size << ',' << plan_ms << ',' << backend_ms << ',' << forward_ms << ',' << inverse_ms << ','
+                  << multiplication_ms << '\n';
     }
 
 }    // namespace
@@ -101,7 +109,7 @@ int main() {
     boost::random::mt19937 rng(0xC0FFEE);
 
     std::cout << "Mixed-radix Fq12 benchmark; milliseconds; no pass/fail thresholds\n";
-    std::cout << "size,plan,forward,inverse,multiplication\n";
+    std::cout << "size,fft_plan,backend,forward,inverse,multiplication\n";
     std::cout << std::fixed << std::setprecision(3);
 
     for (const std::size_t size : std::array<std::size_t, 2> {odd_smooth_order, even_smooth_order}) {
