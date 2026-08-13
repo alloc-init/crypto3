@@ -26,8 +26,9 @@
 #define CRYPTO3_MARSHALLING_POLYNOMIAL_HPP
 
 #include <limits>
+#include <ranges>
 #include <ratio>
-#include <type_traits>
+#include <vector>
 
 #include <boost/assert.hpp>
 
@@ -38,7 +39,7 @@
 #include <nil/marshalling/options.hpp>
 
 #include <nil/crypto3/marshalling/algebra/types/field_element.hpp>
-#include <nil/crypto3/math/type_traits.hpp>
+#include <nil/crypto3/math/polynomial/concepts.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -48,25 +49,25 @@ namespace nil {
                 ///////////////////////////////////////////////
                 // math::polynomial marshalling.
                 ///////////////////////////////////////////////
-                template<typename TTypeBase, typename PolynomialType, typename Enable = void>
+                template<typename TTypeBase, typename PolynomialType>
                 struct polynomial;
 
                 template<typename TTypeBase, typename PolynomialType>
-                struct polynomial<TTypeBase,
-                                  PolynomialType,
-                                  std::enable_if_t<nil::crypto3::math::is_polynomial<PolynomialType>::value>> {
+                    requires nil::crypto3::math::CoefficientPolynomial<PolynomialType> &&
+                             std::ranges::range<const PolynomialType>
+                struct polynomial<TTypeBase, PolynomialType> {
                     using type = field_element_vector<typename PolynomialType::value_type, TTypeBase>;
                 };
 
                 template<typename Endianness, typename PolynomialType>
-                typename polynomial<nil::marshalling::field_type<Endianness>,
-                                    PolynomialType,
-                                    std::enable_if_t<nil::crypto3::math::is_polynomial<PolynomialType>::value>>::type
+                    requires nil::crypto3::math::CoefficientPolynomial<PolynomialType> &&
+                             std::ranges::range<const PolynomialType>
+                typename polynomial<nil::marshalling::field_type<Endianness>, PolynomialType>::type
                     fill_polynomial(const PolynomialType &f) {
 
                     std::vector<typename PolynomialType::value_type> val;
-                    for (auto it = f.begin(); it != f.end(); it++) {
-                        val.push_back(*it);
+                    for (const auto &value : f) {
+                        val.push_back(value);
                     }
 
                     return nil::crypto3::marshalling::types::
@@ -74,12 +75,13 @@ namespace nil {
                 }
 
                 template<typename Endianness, typename PolynomialType>
-                PolynomialType
-                    make_polynomial(const typename polynomial<
-                                    nil::marshalling::field_type<Endianness>,
-                                    PolynomialType,
-                                    std::enable_if_t<nil::crypto3::math::is_polynomial<PolynomialType>::value>>::type
-                                        &filled_polynomial) {
+                    requires nil::crypto3::math::CoefficientPolynomial<PolynomialType> &&
+                             std::ranges::range<const PolynomialType> &&
+                             requires(std::vector<typename PolynomialType::value_type> &values) {
+                                 PolynomialType(values.begin(), values.end());
+                             }
+                PolynomialType make_polynomial(const typename polynomial<nil::marshalling::field_type<Endianness>,
+                                                                         PolynomialType>::type &filled_polynomial) {
                     auto val =
                         nil::crypto3::marshalling::types::make_field_element_vector<typename PolynomialType::value_type,
                                                                                     Endianness>(filled_polynomial);
@@ -91,9 +93,9 @@ namespace nil {
                 // math::polynomial_dfs marshalling.
                 ///////////////////////////////////////////////
                 template<typename TTypeBase, typename PolynomialDFSType>
-                struct polynomial<TTypeBase,
-                                  PolynomialDFSType,
-                                  std::enable_if_t<nil::crypto3::math::is_polynomial_dfs<PolynomialDFSType>::value>> {
+                    requires nil::crypto3::math::EvaluationPolynomial<PolynomialDFSType> &&
+                             std::ranges::range<const PolynomialDFSType>
+                struct polynomial<TTypeBase, PolynomialDFSType> {
                     using type = nil::marshalling::types::bundle<
                         TTypeBase,
                         std::tuple<
@@ -104,18 +106,17 @@ namespace nil {
                 };
 
                 template<typename Endianness, typename PolynomialDFSType>
-                typename polynomial<
-                    nil::marshalling::field_type<Endianness>,
-                    PolynomialDFSType,
-                    std::enable_if_t<nil::crypto3::math::is_polynomial_dfs<PolynomialDFSType>::value>>::type
+                    requires nil::crypto3::math::EvaluationPolynomial<PolynomialDFSType> &&
+                             std::ranges::range<const PolynomialDFSType>
+                typename polynomial<nil::marshalling::field_type<Endianness>, PolynomialDFSType>::type
                     fill_polynomial(const PolynomialDFSType &f) {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
                     using result_type =
                         typename polynomial<nil::marshalling::field_type<Endianness>, PolynomialDFSType>::type;
 
                     std::vector<typename PolynomialDFSType::value_type> val;
-                    for (auto it = f.begin(); it != f.end(); it++) {
-                        val.push_back(*it);
+                    for (const auto &value : f) {
+                        val.push_back(value);
                     }
 
                     return result_type(std::make_tuple(
@@ -125,12 +126,14 @@ namespace nil {
                 }
 
                 template<typename Endianness, typename PolynomialDFSType>
-                PolynomialDFSType make_polynomial(
-                    const typename polynomial<
-                        nil::marshalling::field_type<Endianness>,
-                        PolynomialDFSType,
-                        std::enable_if_t<nil::crypto3::math::is_polynomial_dfs<PolynomialDFSType>::value>>::type
-                        &filled_polynomial) {
+                    requires nil::crypto3::math::EvaluationPolynomial<PolynomialDFSType> &&
+                             std::ranges::range<const PolynomialDFSType> &&
+                             requires(std::size_t degree, std::vector<typename PolynomialDFSType::value_type> &values) {
+                                 PolynomialDFSType(degree, values.begin(), values.end());
+                             }
+                PolynomialDFSType
+                    make_polynomial(const typename polynomial<nil::marshalling::field_type<Endianness>,
+                                                              PolynomialDFSType>::type &filled_polynomial) {
                     auto val = nil::crypto3::marshalling::types::
                         make_field_element_vector<typename PolynomialDFSType::value_type, Endianness>(
                             std::get<1>(filled_polynomial.value()));

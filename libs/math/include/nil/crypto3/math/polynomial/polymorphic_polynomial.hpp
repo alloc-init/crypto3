@@ -42,6 +42,7 @@ namespace nil::crypto3::math {
         using small_field_value_type = typename FieldType::small_subfield::value_type;
 
         using size_type = std::size_t;
+        using representation_type = coefficient_representation;
         using small_val = polynomial<small_field_value_type>;
         using big_val = polynomial<value_type>;
 
@@ -57,6 +58,10 @@ namespace nil::crypto3::math {
 
         size_type size() const noexcept {
             return std::visit([](const auto& v) { return v.size(); }, val);
+        }
+
+        size_type degree() const noexcept {
+            return std::visit([](const auto& v) { return v.degree(); }, val);
         }
 
         value_type operator[](size_type s) const {

@@ -42,10 +42,10 @@
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
 #include <nil/crypto3/math/domains/evaluation_domain.hpp>
 #include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/concepts.hpp>
 #include <nil/crypto3/math/polynomial/polymorphic_polynomial_dfs.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
-#include <nil/crypto3/math/type_traits.hpp>
 
 #include <nil/crypto3/container/merkle/tree.hpp>
 #include <nil/crypto3/container/merkle/proof.hpp>
@@ -380,7 +380,7 @@ namespace nil {
                 }
 
                 template<typename FRI, typename polynomial_dfs_type>
-                    requires((math::is_any_polynomial_dfs<polynomial_dfs_type>::value) &&
+                    requires(math::EvaluationPolynomial<polynomial_dfs_type> &&
                              algebra::is_field_element<typename polynomial_dfs_type::value_type>::value) &&
                             std::is_base_of_v<
                                 commitments::detail::basic_batched_fri<
@@ -467,8 +467,8 @@ namespace nil {
                                             typename FRI::transcript_hash_type, FRI::m, typename FRI::grinding_type>,
                                         FRI>::value,
                         bool>::type = true>
-                static typename std::enable_if<math::is_any_polynomial_dfs<typename ContainerType::value_type>::value,
-                                               typename FRI::precommitment_type>::type
+                    requires math::EvaluationPolynomial<typename ContainerType::value_type>
+                static typename FRI::precommitment_type
                     precommit(ContainerType poly,
                               std::shared_ptr<math::evaluation_domain<typename FRI::field_type>>
                                   D,
@@ -536,8 +536,8 @@ namespace nil {
                                             typename FRI::transcript_hash_type, FRI::m, typename FRI::grinding_type>,
                                         FRI>::value,
                         bool>::type = true>
-                static typename std::enable_if<math::is_polynomial<typename ContainerType::value_type>::value,
-                                               typename FRI::precommitment_type>::type
+                    requires math::CoefficientPolynomial<typename ContainerType::value_type>
+                static typename FRI::precommitment_type
                     precommit(const ContainerType &poly,
                               std::shared_ptr<math::evaluation_domain<typename FRI::field_type>>
                                   D,
@@ -713,7 +713,7 @@ namespace nil {
                             typename FRI::field_type::value_type alpha =
                                 transcript.template challenge<typename FRI::field_type>();
                             // Calculate next f
-                            if constexpr (math::is_any_polynomial_dfs<polynomial_dfs_type>::value) {
+                            if constexpr (math::EvaluationPolynomial<polynomial_dfs_type>) {
                                 f = commitments::detail::fold_polynomial<typename FRI::field_type>(f, alpha,
                                                                                                    fri_params.D[t]);
                             } else {
@@ -722,7 +722,7 @@ namespace nil {
                         }
                         if (i != fri_params.step_list.size() - 1) {
                             const auto &D = fri_params.D[t];
-                            if constexpr (math::is_any_polynomial_dfs<polynomial_dfs_type>::value) {
+                            if constexpr (math::EvaluationPolynomial<polynomial_dfs_type>) {
                                 if (f.size() != D->size()) {
                                     PROFILE_SCOPE("Resize polynomial dfs before precommit");
                                     f.resize(D->size());
@@ -732,7 +732,7 @@ namespace nil {
                         }
                     }
                     fs.push_back(f);
-                    if constexpr (math::is_any_polynomial_dfs<polynomial_dfs_type>::value) {
+                    if constexpr (math::EvaluationPolynomial<polynomial_dfs_type>) {
                         PROFILE_SCOPE("Get final polynomial coefficients");
                         commitments_proof.final_polynomial =
                             math::polynomial<typename FRI::field_type::value_type>(f.coefficients());
@@ -743,7 +743,7 @@ namespace nil {
                     return std::make_tuple(fs, fri_trees, commitments_proof);
                 }
 
-                template<typename FRI, typename polynomial_dfs_type>
+                template<typename FRI, math::EvaluationPolynomial polynomial_dfs_type>
                 static std::map<std::size_t, typename FRI::initial_proof_type> build_initial_proof(
                     const std::map<std::size_t, typename FRI::precommitment_type> &precommitments,
                     const typename FRI::params_type &fri_params,
@@ -783,7 +783,6 @@ namespace nil {
 
                         for (std::size_t polynomial_index = 0; polynomial_index < g_k.size(); ++polynomial_index) {
                             initial_proof[k].values[polynomial_index].resize(coset_size / FRI::m);
-                            static_assert(math::is_any_polynomial_dfs<polynomial_dfs_type>::value);
                             if (g_k[polynomial_index].size() == fri_params.D[0]->size()) {
                                 for (std::size_t j = 0; j < coset_size / FRI::m; j++) {
                                     std::size_t ind0 = std::min(s_indices[j][0], s_indices[j][1]);
@@ -862,7 +861,7 @@ namespace nil {
 
                             round_proofs[i].y.resize(coset_size / FRI::m);
                             for (std::size_t j = 0; j < coset_size / FRI::m; j++) {
-                                if constexpr (math::is_any_polynomial_dfs<polynomial_dfs_type>::value) {
+                                if constexpr (math::EvaluationPolynomial<polynomial_dfs_type>) {
                                     std::size_t ind0 = std::min(s_indices[j][0], s_indices[j][1]);
                                     std::size_t ind1 = std::max(s_indices[j][0], s_indices[j][1]);
                                     round_proofs[i].y[j][0] = fs[i + 1][ind0];
@@ -926,7 +925,7 @@ namespace nil {
                 }
 
                 template<typename FRI, typename polynomial_dfs_type>
-                    requires(math::is_any_polynomial_dfs<polynomial_dfs_type>::value)
+                    requires(math::EvaluationPolynomial<polynomial_dfs_type>)
                 static typename FRI::initial_proofs_batch_type query_phase_initial_proofs(
                     const std::map<std::size_t, typename FRI::precommitment_type> &precommitments,
                     const typename FRI::params_type &fri_params,
@@ -1023,7 +1022,7 @@ namespace nil {
 
                 template<typename FRI, typename polynomial_dfs_type>
                     requires(
-                        math::is_any_polynomial_dfs<polynomial_dfs_type>::value &&
+                        math::EvaluationPolynomial<polynomial_dfs_type> &&
                         std::is_base_of<commitments::detail::basic_batched_fri<
                                             typename FRI::field_type, typename FRI::merkle_tree_hash_type,
                                             typename FRI::transcript_hash_type, FRI::m, typename FRI::grinding_type>,

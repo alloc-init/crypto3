@@ -47,6 +47,7 @@ namespace nil::crypto3::math {
         using small_field_value_type = typename FieldType::small_subfield::value_type;
 
         using size_type = std::size_t;
+        using representation_type = evaluation_representation;
         using small_val = polynomial_dfs<small_field_value_type>;
         using big_val = polynomial_dfs<value_type>;
 

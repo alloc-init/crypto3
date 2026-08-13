@@ -33,6 +33,7 @@
 #include <vector>
 
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/concepts.hpp>
 
 #include <nil/crypto3/algebra/fields/utils.hpp>
 
@@ -47,6 +48,7 @@ namespace nil {
 
             public:
                 using polynomial_type = polynomial;
+                using representation_type = coefficient_representation;
 
                 typedef typename container_type::value_type value_type;
                 typedef typename container_type::allocator_type allocator_type;
