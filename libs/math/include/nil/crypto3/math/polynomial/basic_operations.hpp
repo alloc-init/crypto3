@@ -27,6 +27,8 @@
 #define CRYPTO3_MATH_POLYNOMIAL_BASIC_OPERATIONS_HPP
 
 #include <algorithm>
+#include <concepts>
+#include <ranges>
 #include <stdexcept>
 #include <vector>
 
@@ -34,7 +36,6 @@
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 #include <nil/crypto3/math/domains/detail/basic_radix2_domain_aux.hpp>
 #include <nil/crypto3/math/detail/field_utils.hpp>
-#include <nil/crypto3/detail/type_traits.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -93,15 +94,16 @@ namespace nil {
              * @param &power is the exponent.
              * @return exponentiated polynomial (input^power).
              */
-            template<typename FieldRange, typename IntegerType,
-                     typename = typename std::enable_if<nil::crypto3::detail::is_range<FieldRange>::value>::type>
+            template<std::ranges::range FieldRange, typename IntegerType>
+                requires requires { typename std::ranges::range_value_t<FieldRange>::field_type; } &&
+                         algebra::is_field<typename std::ranges::range_value_t<FieldRange>::field_type>::value &&
+                         std::same_as<typename std::ranges::range_value_t<FieldRange>::field_type::value_type,
+                                      std::ranges::range_value_t<FieldRange>>
             FieldRange power(const FieldRange &input, IntegerType power) {
                 typedef typename std::iterator_traits<decltype(std::begin(std::declval<FieldRange>()))>::value_type
                     field_value_type;
 
                 typedef typename field_value_type::field_type FieldType;
-                BOOST_STATIC_ASSERT(algebra::is_field<FieldType>::value);
-                BOOST_STATIC_ASSERT(std::is_same<typename FieldType::value_type, field_value_type>::value);
 
                 IntegerType final_degree = (std::distance(std::begin(input), std::end(input)) - 1) * power;
                 FieldRange result(final_degree + 1, FieldType::modulus);
@@ -231,7 +233,11 @@ namespace nil {
              * FieldRange is a range of field elements
              * AlgebraicRange is a range of either field elements or curve elements
              */
-            template<typename AlgebraicRange, typename FieldRange>
+            template<typename AlgebraicRange, std::ranges::range FieldRange>
+                requires requires { typename std::ranges::range_value_t<FieldRange>::field_type; } &&
+                         algebra::is_field<typename std::ranges::range_value_t<FieldRange>::field_type>::value &&
+                         std::same_as<typename std::ranges::range_value_t<FieldRange>::field_type::value_type,
+                                      std::ranges::range_value_t<FieldRange>>
             void multiplication(AlgebraicRange &c, const AlgebraicRange &a, const FieldRange &b) {
                 typedef typename std::iterator_traits<decltype(std::begin(std::declval<AlgebraicRange>()))>::value_type
                     algebraic_value_type;
@@ -239,8 +245,6 @@ namespace nil {
                     field_value_type;
 
                 typedef typename field_value_type::field_type FieldType;
-                BOOST_STATIC_ASSERT(algebra::is_field<FieldType>::value);
-                BOOST_STATIC_ASSERT(std::is_same<typename FieldType::value_type, field_value_type>::value);
                 BOOST_ASSERT_MSG(a.size() != 0, "Uninitialized polynomial");
                 BOOST_ASSERT_MSG(b.size() != 0, "Uninitialized polynomial");
 
