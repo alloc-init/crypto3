@@ -37,6 +37,7 @@
 #include "polymorphic_polynomial.hpp"
 #include "polynomial_dfs.hpp"
 
+#include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/bench/scoped_profiler.hpp>
 
 namespace nil::crypto3::math {
@@ -171,9 +172,10 @@ namespace nil::crypto3::math {
 
     // Used in the unit tests, so we can use BOOST_CHECK_EQUALS, and see
     // the values of polynomials, when the check fails.
-    template<typename value_type, typename = typename std::enable_if<detail::is_field_element<value_type>::value>::type>
-    std::ostream& operator<<(std::ostream& os, const polymorphic_polynomial_dfs<value_type>& poly) {
-        return std::visit([&os](const auto& v) { return os << v; }, poly.val);
+    template<typename FieldType>
+        requires algebra::is_field<FieldType>::value
+    std::ostream& operator<<(std::ostream& os, const polymorphic_polynomial_dfs<FieldType>& poly) {
+        return std::visit([&os](const auto& value) -> std::ostream& { return os << value; }, poly.val);
     }
 }    // namespace nil::crypto3::math
 
