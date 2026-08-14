@@ -28,12 +28,15 @@
 // - a linear combination (i.e., sum_i a_i * x_i).
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MATH_LINEAR_COMBINATION_HPP
-#define CRYPTO3_ZK_MATH_LINEAR_COMBINATION_HPP
+#ifndef CRYPTO3_MATH_LINEAR_COMBINATION_HPP
+#define CRYPTO3_MATH_LINEAR_COMBINATION_HPP
 
+#include <algorithm>
+#include <cstddef>
+#include <type_traits>
 #include <vector>
 
-namespace nil::crypto3::zk::snark {
+namespace nil::crypto3::math {
 
     /**
      * Forward declaration.
@@ -119,11 +122,17 @@ namespace nil::crypto3::zk::snark {
 
     public:
         typedef typename VariableType::field_type field_type;
+        typedef VariableType variable_type;
         std::vector<linear_term<VariableType>> terms;
 
         linear_combination() { };
         linear_combination(const field_value_type &field_coeff) {
             this->add_term(linear_term<VariableType>(0) * field_coeff);
+        }
+        template<typename T = VariableType,
+                 std::enable_if_t<std::is_same_v<typename T::field_type, typename T::value_type>, int> = 0>
+        linear_combination(std::size_t index) {
+            this->add_term(VariableType(index));
         }
         linear_combination(const VariableType &var) {
             this->add_term(var);
@@ -174,6 +183,15 @@ namespace nil::crypto3::zk::snark {
             field_value_type acc = field_value_type::zero();
             for (auto &lt : terms) {
                 acc += (lt.index == 0 ? field_value_type::one() : assignment[lt.index - 1]) * lt.coeff;
+            }
+            return acc;
+        }
+        template<typename AssignmentType>
+        typename AssignmentType::value_type eval(const AssignmentType &assignment) const {
+            using result_type = typename AssignmentType::value_type;
+            result_type acc(0);
+            for (const auto &lt : terms) {
+                acc += result_type(lt.coeff) * assignment[lt.index];
             }
             return acc;
         }
@@ -274,6 +292,16 @@ namespace nil::crypto3::zk::snark {
         return linear_combination<VariableType>(field_coeff) - lc;
     }
 
+}    // namespace nil::crypto3::math
+
+namespace nil::crypto3::zk::snark {
+
+    template<typename VariableType>
+    using linear_term = nil::crypto3::math::linear_term<VariableType>;
+
+    template<typename VariableType>
+    using linear_combination = nil::crypto3::math::linear_combination<VariableType>;
+
 }    // namespace nil::crypto3::zk::snark
 
-#endif    // CRYPTO3_ZK_MATH_LINEAR_COMBINATION_HPP
+#endif    // CRYPTO3_MATH_LINEAR_COMBINATION_HPP

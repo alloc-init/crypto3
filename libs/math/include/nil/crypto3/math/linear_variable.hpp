@@ -26,24 +26,14 @@
 // - a linear_variable (i.e., x_i)
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MATH_LINEAR_VARIABLE_HPP
-#define CRYPTO3_ZK_MATH_LINEAR_VARIABLE_HPP
+#ifndef CRYPTO3_MATH_LINEAR_VARIABLE_HPP
+#define CRYPTO3_MATH_LINEAR_VARIABLE_HPP
 
-#include <vector>
+#include <cstddef>
 
-namespace nil::crypto3::zk::snark {
+#include <nil/crypto3/math/linear_combination.hpp>
 
-    /**
-     * Forward declaration.
-     */
-    template<typename VariableType>
-    class linear_term;
-
-    /**
-     * Forward declaration.
-     */
-    template<typename VariableType>
-    class linear_combination;
+namespace nil::crypto3::math {
 
     /********************************* Variable **********************************/
 
@@ -81,7 +71,7 @@ namespace nil::crypto3::zk::snark {
         }
 
         linear_term<variable_type> operator-() const {
-            return linear_term<FieldType>(*this) * (-FieldType::value_type::one());
+            return linear_term<variable_type>(*this) * (-FieldType::value_type::one());
         }
 
         bool operator==(const linear_variable &other) const {
@@ -107,6 +97,13 @@ namespace nil::crypto3::zk::snark {
         return linear_combination<linear_variable<FieldType>>(field_coeff) - var;
     }
 
+}    // namespace nil::crypto3::math
+
+namespace nil::crypto3::zk::snark {
+
+    template<typename FieldType>
+    using linear_variable = nil::crypto3::math::linear_variable<FieldType>;
+
 }    // namespace nil::crypto3::zk::snark
 
-#endif    // CRYPTO3_ZK_MATH_LINEAR_VARIABLE_HPP
+#endif    // CRYPTO3_MATH_LINEAR_VARIABLE_HPP
