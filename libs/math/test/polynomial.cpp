@@ -26,6 +26,8 @@
 
 #define BOOST_TEST_MODULE polynomial_test
 
+#include <limits>
+
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
@@ -33,6 +35,7 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/bls12.hpp>
 
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
+#include <nil/crypto3/math/polynomial/shift.hpp>
 
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::math;
@@ -171,6 +174,54 @@ BOOST_AUTO_TEST_CASE(derivative_is_alias_safe_and_canonical) {
 
     const polynomial_type constant = {value_type(5)};
     derivative(output, constant);
+    BOOST_CHECK(output == polynomial_type({value_type::zero()}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(polynomial_power_of_x_shift_test_suite)
+
+BOOST_AUTO_TEST_CASE(power_of_x_shifts_are_alias_safe_and_canonical) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    const polynomial_type input = {value_type(1), value_type::zero(), value_type(3)};
+    const polynomial_type shifted_left = {value_type::zero(), value_type::zero(), value_type(1), value_type::zero(),
+                                          value_type(3)};
+
+    polynomial_type output;
+    shift_left(output, input, 2);
+    BOOST_CHECK(output == shifted_left);
+
+    output = input;
+    shift_left(output, output, 2);
+    BOOST_CHECK(output == shifted_left);
+
+    shift_left(output, input, 0);
+    BOOST_CHECK(output == input);
+
+    shift_right(output, shifted_left, 2);
+    BOOST_CHECK(output == input);
+
+    output = shifted_left;
+    shift_right(output, output, 2);
+    BOOST_CHECK(output == input);
+
+    shift_right(output, input, 0);
+    BOOST_CHECK(output == input);
+
+    const polynomial_type shifted_right = {value_type::zero(), value_type(3)};
+    shift_right(output, input, 1);
+    BOOST_CHECK(output == shifted_right);
+
+    output = input;
+    shift_right(output, output, 1);
+    BOOST_CHECK(output == shifted_right);
+
+    shift_left(output, polynomial_type({value_type::zero()}), std::numeric_limits<std::size_t>::max());
+    BOOST_CHECK(output == polynomial_type({value_type::zero()}));
+
+    shift_right(output, input, input.size());
     BOOST_CHECK(output == polynomial_type({value_type::zero()}));
 }
 

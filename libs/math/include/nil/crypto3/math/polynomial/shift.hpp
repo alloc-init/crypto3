@@ -27,9 +27,14 @@
 #define CRYPTO3_MATH_POLYNOMIAL_SHIFT_HPP
 
 #include <cassert>
+#include <concepts>
 #include <cstdint>
+#include <limits>
+#include <memory>
+#include <stdexcept>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
+#include <nil/crypto3/math/polynomial/basic_operations.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
 
@@ -37,8 +42,9 @@ namespace nil {
     namespace crypto3 {
         namespace math {
             /**
-             * Return g(X) = f(x * X) by multiplying coefficient i by x^i.
-             * This is a multiplicative argument scaling, not the additive shift f(X + x).
+             * Scale the polynomial argument: return
+             * g(X) = f(x * X) = sum_i a_i * x^i * X^i for f(X) = sum_i a_i * X^i.
+             * This changes coefficient values without moving them to different degrees.
              */
             template<typename FieldValueType>
                 requires algebra::is_field_element<FieldValueType>::value
@@ -48,16 +54,89 @@ namespace nil {
                 FieldValueType x_power = x;
                 for (std::size_t i = 1; i < f.size(); i++) {
                     f_shifted[i] *= x_power;
-                    x_power *= x;
+                    if (i + 1 < f.size()) {
+                        x_power *= x;
+                    }
                 }
 
                 return f_shifted;
             }
 
             /**
-             * Return the DFS polynomial representing g(X) = f(omega^shift * X), where omega is the root for the
-             * logical domain_size. This is a cyclic rotation of the evaluations, including when f is stored over
-             * a larger extended domain.
+             * Shift coefficients toward higher degrees: compute g(X) = X^shift * f(X). With ascending coefficient
+             * storage, this prepends shift zero coefficients. Store the canonical result in output, which may alias
+             * input.
+             */
+            template<CoefficientPolynomial Polynomial>
+                requires detail::MutablePolynomialCoefficientRange<Polynomial> &&
+                         std::default_initializable<typename Polynomial::value_type> &&
+                         std::equality_comparable<typename Polynomial::value_type>
+            void shift_left(Polynomial &output, const Polynomial &input, std::size_t shift) {
+                using value_type = typename Polynomial::value_type;
+
+                if (input.size() == 1 && input[0] == value_type {}) {
+                    output.resize(1);
+                    output[0] = value_type {};
+                    return;
+                }
+
+                const std::size_t input_size = input.size();
+                if (shift > std::numeric_limits<std::size_t>::max() - input_size) {
+                    throw std::length_error("polynomial shift exceeds the maximum coefficient count");
+                }
+                output.resize(input_size + shift, value_type {});
+                if (std::addressof(output) == std::addressof(input)) {
+                    for (std::size_t i = input_size; i > 0; --i) {
+                        output[i - 1 + shift] = output[i - 1];
+                    }
+                } else {
+                    for (std::size_t i = 0; i < input_size; ++i) {
+                        output[i + shift] = input[i];
+                    }
+                }
+                for (std::size_t i = 0; i < shift; ++i) {
+                    output[i] = value_type {};
+                }
+                condense(output);
+            }
+
+            /**
+             * Shift coefficients toward lower degrees: for f(X) = sum_i a_i * X^i, compute
+             * g(X) = sum_{i >= shift} a_i * X^(i - shift). With ascending coefficient storage, this discards the
+             * first shift coefficients. Store the canonical result in output, which may alias input.
+             */
+            template<CoefficientPolynomial Polynomial>
+                requires detail::MutablePolynomialCoefficientRange<Polynomial> &&
+                         std::default_initializable<typename Polynomial::value_type> &&
+                         std::equality_comparable<typename Polynomial::value_type>
+            void shift_right(Polynomial &output, const Polynomial &input, std::size_t shift) {
+                using value_type = typename Polynomial::value_type;
+
+                if (shift >= input.size()) {
+                    output.resize(1);
+                    output[0] = value_type {};
+                    return;
+                }
+
+                const std::size_t result_size = input.size() - shift;
+                if (std::addressof(output) == std::addressof(input)) {
+                    for (std::size_t i = 0; i < result_size; ++i) {
+                        output[i] = output[i + shift];
+                    }
+                    output.resize(result_size);
+                } else {
+                    output.resize(result_size);
+                    for (std::size_t i = 0; i < result_size; ++i) {
+                        output[i] = input[i + shift];
+                    }
+                }
+                condense(output);
+            }
+
+            /**
+             * Scale the argument of the represented polynomial by a root of unity: return the DFS representation
+             * of g(X) = f(omega^shift * X), where omega is the root for the logical domain_size. This rotates the
+             * evaluations cyclically, including when f is stored over a larger extended domain.
              *
              * @pre f is nonempty.
              * @pre domain_size is zero, selecting f.size(), or is a positive divisor of f.size().
