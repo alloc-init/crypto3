@@ -207,6 +207,18 @@ BOOST_AUTO_TEST_CASE(derivative_supports_extension_field_coefficients) {
     BOOST_CHECK(output == expected);
 }
 
+BOOST_AUTO_TEST_CASE(make_monic_supports_extension_field_coefficients) {
+    using polynomial_type = math::polynomial<fq12_value_type>;
+
+    const fq12_value_type leading_coefficient = fq12_value(7);
+    const polynomial_type input = {fq12_value(3), leading_coefficient};
+    polynomial_type output;
+
+    math::make_monic(output, input);
+    const polynomial_type expected = {input[0] * leading_coefficient.inversed(), fq12_value_type::one()};
+    BOOST_CHECK(output == expected);
+}
+
 BOOST_AUTO_TEST_CASE(mixed_radix_backend_uses_only_the_prefix_needed_by_multiply_low) {
     using polynomial_type = math::polynomial<fq_value_type>;
 

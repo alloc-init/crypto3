@@ -155,6 +155,37 @@ BOOST_AUTO_TEST_CASE(scalar_multiplication_is_alias_safe_and_canonical) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
+BOOST_AUTO_TEST_SUITE(polynomial_monic_normalization_test_suite)
+
+BOOST_AUTO_TEST_CASE(make_monic_is_alias_safe_and_rejects_zero) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    const polynomial_type input = {value_type(2), value_type(4), value_type(2), value_type::zero()};
+    const polynomial_type expected = {value_type(1), value_type(2), value_type(1)};
+
+    polynomial_type output;
+    make_monic(output, input);
+    BOOST_CHECK(output == expected);
+
+    output = input;
+    make_monic(output, output);
+    BOOST_CHECK(output == expected);
+
+    const polynomial_type already_monic = {value_type(3), value_type::one()};
+    make_monic(output, already_monic);
+    BOOST_CHECK(output == already_monic);
+
+    const polynomial_type constant = {value_type(7)};
+    make_monic(output, constant);
+    BOOST_CHECK(output == polynomial_type({value_type::one()}));
+
+    const polynomial_type zero = {value_type::zero()};
+    BOOST_CHECK_THROW(make_monic(output, zero), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(polynomial_derivative_test_suite)
 
 BOOST_AUTO_TEST_CASE(derivative_is_alias_safe_and_canonical) {

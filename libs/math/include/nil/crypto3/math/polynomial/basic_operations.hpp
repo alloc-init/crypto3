@@ -58,6 +58,12 @@ namespace nil {
                         range.resize(size, value);
                     };
 
+                template<typename Polynomial>
+                concept MutableNormalizableCoefficientPolynomial =
+                    CoefficientPolynomial<Polynomial> && MutablePolynomialCoefficientRange<Polynomial> &&
+                    std::default_initializable<typename Polynomial::value_type> &&
+                    std::equality_comparable<typename Polynomial::value_type>;
+
             }    // namespace detail
 
             /**
@@ -150,10 +156,7 @@ namespace nil {
              * result. This computes the polynomial modulo X^coefficient_count; a zero coefficient_count produces
              * [0].
              */
-            template<CoefficientPolynomial Polynomial>
-                requires detail::MutablePolynomialCoefficientRange<Polynomial> &&
-                         std::default_initializable<typename Polynomial::value_type> &&
-                         std::equality_comparable<typename Polynomial::value_type>
+            template<detail::MutableNormalizableCoefficientPolynomial Polynomial>
             void truncate(Polynomial &polynomial, std::size_t coefficient_count) {
                 using value_type = typename Polynomial::value_type;
 
@@ -173,13 +176,10 @@ namespace nil {
              * Output may alias input. Scalar may have a different type from the coefficients, provided that
              * coefficient * scalar is convertible to the coefficient type.
              */
-            template<CoefficientPolynomial Polynomial, typename Scalar>
-                requires detail::MutablePolynomialCoefficientRange<Polynomial> &&
-                         std::default_initializable<typename Polynomial::value_type> &&
-                         std::equality_comparable<typename Polynomial::value_type> &&
-                         requires(const typename Polynomial::value_type &coefficient, const Scalar &scalar) {
-                             { coefficient * scalar } -> std::convertible_to<typename Polynomial::value_type>;
-                         }
+            template<detail::MutableNormalizableCoefficientPolynomial Polynomial, typename Scalar>
+                requires requires(const typename Polynomial::value_type &coefficient, const Scalar &scalar) {
+                    { coefficient * scalar } -> std::convertible_to<typename Polynomial::value_type>;
+                }
             void scalar_multiplication(Polynomial &output, const Polynomial &input, const Scalar &scalar) {
                 if (std::addressof(output) != std::addressof(input)) {
                     output = input;
@@ -191,17 +191,44 @@ namespace nil {
             }
 
             /**
+             * Scale a nonzero coefficient polynomial by the inverse of its leading coefficient and store the
+             * canonical monic result in output. Output may alias input.
+             *
+             * @throws std::invalid_argument if input is the zero polynomial.
+             */
+            template<detail::MutableNormalizableCoefficientPolynomial Polynomial>
+                requires requires(const typename Polynomial::value_type &coefficient) {
+                    { coefficient.inversed() } -> std::convertible_to<typename Polynomial::value_type>;
+                    { Polynomial::value_type::one() } -> std::convertible_to<typename Polynomial::value_type>;
+                    { coefficient * coefficient } -> std::convertible_to<typename Polynomial::value_type>;
+                }
+            void make_monic(Polynomial &output, const Polynomial &input) {
+                using value_type = typename Polynomial::value_type;
+
+                if (std::addressof(output) != std::addressof(input)) {
+                    output = input;
+                }
+                condense(output);
+                if (output.size() == 1 && output[0] == value_type {}) {
+                    throw std::invalid_argument("the zero polynomial cannot be made monic");
+                }
+
+                const value_type leading_coefficient = output[output.size() - 1];
+                if (leading_coefficient == value_type::one()) {
+                    return;
+                }
+                scalar_multiplication(output, output, leading_coefficient.inversed());
+            }
+
+            /**
              * For input f(X) = sum_{i=0}^n a_i X^i, compute
              * f'(X) = sum_{i=1}^n i * a_i X^(i-1).
              * Store the canonical coefficient polynomial in output, which may alias input.
              */
-            template<CoefficientPolynomial Polynomial>
-                requires detail::MutablePolynomialCoefficientRange<Polynomial> &&
-                         std::default_initializable<typename Polynomial::value_type> &&
-                         std::equality_comparable<typename Polynomial::value_type> &&
-                         requires(const typename Polynomial::value_type &coefficient, std::size_t degree) {
-                             { coefficient * degree } -> std::convertible_to<typename Polynomial::value_type>;
-                         }
+            template<detail::MutableNormalizableCoefficientPolynomial Polynomial>
+                requires requires(const typename Polynomial::value_type &coefficient, std::size_t degree) {
+                    { coefficient * degree } -> std::convertible_to<typename Polynomial::value_type>;
+                }
             void derivative(Polynomial &output, const Polynomial &input) {
                 using value_type = typename Polynomial::value_type;
 

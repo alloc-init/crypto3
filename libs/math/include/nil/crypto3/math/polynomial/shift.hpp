@@ -67,10 +67,7 @@ namespace nil {
              * storage, this prepends shift zero coefficients. Store the canonical result in output, which may alias
              * input.
              */
-            template<CoefficientPolynomial Polynomial>
-                requires detail::MutablePolynomialCoefficientRange<Polynomial> &&
-                         std::default_initializable<typename Polynomial::value_type> &&
-                         std::equality_comparable<typename Polynomial::value_type>
+            template<detail::MutableNormalizableCoefficientPolynomial Polynomial>
             void shift_left(Polynomial &output, const Polynomial &input, std::size_t shift) {
                 using value_type = typename Polynomial::value_type;
 
@@ -105,10 +102,7 @@ namespace nil {
              * g(X) = sum_{i >= shift} a_i * X^(i - shift). With ascending coefficient storage, this discards the
              * first shift coefficients. Store the canonical result in output, which may alias input.
              */
-            template<CoefficientPolynomial Polynomial>
-                requires detail::MutablePolynomialCoefficientRange<Polynomial> &&
-                         std::default_initializable<typename Polynomial::value_type> &&
-                         std::equality_comparable<typename Polynomial::value_type>
+            template<detail::MutableNormalizableCoefficientPolynomial Polynomial>
             void shift_right(Polynomial &output, const Polynomial &input, std::size_t shift) {
                 using value_type = typename Polynomial::value_type;
 
