@@ -68,6 +68,46 @@ BOOST_AUTO_TEST_CASE(polynomial_constructor) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
+BOOST_AUTO_TEST_SUITE(polynomial_normalization_test_suite)
+
+BOOST_AUTO_TEST_CASE(condense_and_truncate) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    const value_type zero = value_type::zero();
+    const value_type one = value_type::one();
+    const value_type two = one + one;
+
+    polynomial_type value;
+    value.clear();
+    value.condense();
+    BOOST_CHECK(value == polynomial_type({zero}));
+
+    value = {one, zero, two, zero, zero};
+    condense(value);
+    BOOST_CHECK(value == polynomial_type({one, zero, two}));
+
+    value = {zero, zero, zero};
+    condense(value);
+    BOOST_CHECK(value == polynomial_type({zero}));
+
+    value = {one, zero, two};
+    truncate(value, 2);
+    BOOST_CHECK(value == polynomial_type({one}));
+
+    value = {one, zero, two};
+    truncate(value, 3);
+    BOOST_CHECK(value == polynomial_type({one, zero, two}));
+
+    truncate(value, 5);
+    BOOST_CHECK(value == polynomial_type({one, zero, two}));
+
+    truncate(value, 0);
+    BOOST_CHECK(value == polynomial_type({zero}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(polynomial_addition_test_suite)
 
 void test_addition(polynomial<typename FieldType::value_type> a,

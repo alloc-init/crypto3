@@ -30,6 +30,7 @@
 #include <utility>
 
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_backend.hpp>
 
 namespace nil::crypto3::math::polynomial_arithmetic {
@@ -46,31 +47,28 @@ namespace nil::crypto3::math::polynomial_arithmetic {
     class schoolbook_backend {
     public:
         using value_type = ValueType;
-        using coefficient_vector = polynomial_arithmetic::coefficient_vector<value_type>;
+        using polynomial_type = math::polynomial<value_type>;
 
-        void multiply(coefficient_vector &output, const coefficient_vector &left,
-                      const coefficient_vector &right) const {
+        void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) const {
             multiply_low(output, left, right, left.size() + right.size() - 1);
         }
 
-        void square(coefficient_vector &output, const coefficient_vector &input) const {
+        void square(polynomial_type &output, const polynomial_type &input) const {
             multiply(output, input, input);
         }
 
-        void multiply_low(coefficient_vector &output, const coefficient_vector &left, const coefficient_vector &right,
+        void multiply_low(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
                           std::size_t coefficient_count) const {
             const std::size_t product_size = left.size() + right.size() - 1;
             const std::size_t result_size = std::min(coefficient_count, product_size);
-            if (result_size == 0 || math::is_zero(left) || math::is_zero(right)) {
+            if (result_size == 0) {
                 output.assign(1, value_type::zero());
                 return;
             }
 
-            coefficient_vector result(result_size, value_type::zero());
-            for (std::size_t left_index = 0; left_index < left.size(); ++left_index) {
-                if (left_index >= result_size) {
-                    break;
-                }
+            polynomial_type result(result_size, value_type::zero());
+            const std::size_t left_count = std::min(left.size(), result_size);
+            for (std::size_t left_index = 0; left_index < left_count; ++left_index) {
                 if (left[left_index].is_zero()) {
                     continue;
                 }

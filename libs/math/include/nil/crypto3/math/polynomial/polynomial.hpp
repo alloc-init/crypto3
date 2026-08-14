@@ -423,16 +423,11 @@ namespace nil {
                 }
 
                 /**
-                 * Removes extraneous zero entries from in vector representation of polynomial.
-                 * Example - Degree-4 Polynomial: [0, 1, 2, 3, 4, 0, 0, 0, 0] -> [0, 1, 2, 3, 4]
-                 * Note: Simplest condensed form is a zero polynomial of vector form: [0]
+                 * Normalize the coefficient representation by removing trailing zero coefficients.
+                 * Empty inputs and all representations of zero become [0].
                  */
                 void condense() {
-                    while (std::distance(this->cbegin(), this->cend()) > 1 &&
-                           this->back() == typename std::iterator_traits<decltype(std::begin(
-                                               std::declval<container_type>()))>::value_type()) {
-                        this->pop_back();
-                    }
+                    math::condense(*this);
                 }
 
                 /**
