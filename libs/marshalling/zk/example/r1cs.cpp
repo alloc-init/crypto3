@@ -16,8 +16,8 @@ int main() {
     using type_base = nil::marshalling::field_type<endianness>;
     using marshalled_type = nil::crypto3::marshalling::types::r1cs_constraint_system<type_base, constraint_system_type>;
 
-    using variable_type = nil::crypto3::zk::snark::linear_variable<field_type>;
-    using linear_combination_type = nil::crypto3::zk::snark::linear_combination<variable_type>;
+    using variable_type = nil::crypto3::math::linear_variable<field_type>;
+    using linear_combination_type = nil::crypto3::math::linear_combination<variable_type>;
 
     constraint_system_type constraint_system;
     constraint_system.primary_input_size = 2;

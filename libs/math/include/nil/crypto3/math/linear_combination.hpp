@@ -28,17 +28,33 @@
 // - a linear combination (i.e., sum_i a_i * x_i).
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MATH_LINEAR_COMBINATION_HPP
-#define CRYPTO3_ZK_MATH_LINEAR_COMBINATION_HPP
+#pragma once
 
+#include <algorithm>
+#include <cstddef>
+#include <ostream>
+#include <type_traits>
 #include <vector>
 
-namespace nil::crypto3::zk::snark {
+namespace nil::crypto3::math {
+
+    // Describes how a variable assignment represents the distinguished
+    // constant-one variable x_0.
+    enum class assignment_layout {
+        // x_0 is omitted. Term index 0 evaluates to one, while variable i is
+        // read from assignment[i - 1]. This is the standard Crypto3 R1CS layout.
+        implicit_constant,
+
+        // assignment[0] stores x_0 explicitly, normally as one. Every term
+        // index directly addresses the assignment. AADP uses this layout so
+        // witness vectors align with matrix columns.
+        explicit_constant,
+    };
 
     /**
      * Forward declaration.
      */
-    template<typename VariableType>
+    template<typename VariableType, assignment_layout AssignmentLayout = assignment_layout::implicit_constant>
     class linear_combination;
 
     /****************************** Linear term **********************************/
@@ -111,7 +127,7 @@ namespace nil::crypto3::zk::snark {
     /**
      * A linear combination represents a formal expression of the form "sum_i coeff_i * x_{index_i}".
      */
-    template<typename VariableType>
+    template<typename VariableType, assignment_layout AssignmentLayout>
     class linear_combination {
         typedef typename VariableType::value_type field_value_type;
 
@@ -119,18 +135,29 @@ namespace nil::crypto3::zk::snark {
 
     public:
         typedef typename VariableType::field_type field_type;
+        typedef VariableType variable_type;
         std::vector<linear_term<VariableType>> terms;
 
         linear_combination() { };
+
         linear_combination(const field_value_type &field_coeff) {
             this->add_term(linear_term<VariableType>(0) * field_coeff);
         }
+
+        template<typename T = VariableType,
+                 std::enable_if_t<std::is_same_v<typename T::field_type, typename T::value_type>, int> = 0>
+        linear_combination(std::size_t index) {
+            this->add_term(VariableType(index));
+        }
+
         linear_combination(const VariableType &var) {
             this->add_term(var);
         }
+
         linear_combination(const linear_term<VariableType> &lt) {
             this->add_term(lt);
         }
+
         linear_combination(const std::vector<linear_term<VariableType>> &all_terms) {
             if (all_terms.empty()) {
                 return;
@@ -170,13 +197,24 @@ namespace nil::crypto3::zk::snark {
             this->terms.emplace_back(lt);
         }
 
-        field_value_type evaluate(const std::vector<field_value_type> &assignment) const {
-            field_value_type acc = field_value_type::zero();
-            for (auto &lt : terms) {
-                acc += (lt.index == 0 ? field_value_type::one() : assignment[lt.index - 1]) * lt.coeff;
+        // AssignmentLayout determines how term indices map to assignment slots;
+        // see assignment_layout above. Coefficients and assignment values may
+        // belong to different fields if they define a scalar action such as
+        // Fp * Fp12.
+        template<typename AssignmentType>
+        typename AssignmentType::value_type evaluate(const AssignmentType &assignment) const {
+            using result_type = typename AssignmentType::value_type;
+            result_type acc = result_type::zero();
+            for (const auto &lt : terms) {
+                if constexpr (AssignmentLayout == assignment_layout::implicit_constant) {
+                    acc += lt.coeff * (lt.index == 0 ? result_type::one() : assignment[lt.index - 1]);
+                } else {
+                    acc += lt.coeff * assignment[lt.index];
+                }
             }
             return acc;
         }
+
         linear_combination operator*(const field_value_type &field_coeff) const {
             linear_combination result;
             result.terms.reserve(this->terms.size());
@@ -185,6 +223,7 @@ namespace nil::crypto3::zk::snark {
             }
             return result;
         }
+
         linear_combination operator+(const linear_combination &other) const {
             linear_combination result;
 
@@ -218,9 +257,11 @@ namespace nil::crypto3::zk::snark {
 
             return result;
         }
+
         linear_combination operator-(const linear_combination &other) const {
             return (*this) + (-other);
         }
+
         linear_combination operator-() const {
             return (*this) * (-field_value_type::one());
         }
@@ -239,6 +280,10 @@ namespace nil::crypto3::zk::snark {
         }
 
         bool is_valid(size_t num_variables) const {
+            if (terms.empty()) {
+                return true;
+            }
+
             /* check that all terms in linear combination are sorted */
             for (std::size_t i = 1; i < terms.size(); ++i) {
                 if (terms[i - 1].index >= terms[i].index) {
@@ -256,24 +301,46 @@ namespace nil::crypto3::zk::snark {
         }
     };
 
-    template<typename VariableType>
-    linear_combination<VariableType> operator*(const typename VariableType::value_type &field_coeff,
-                                               const linear_combination<VariableType> &lc) {
+    template<typename VariableType, assignment_layout AssignmentLayout>
+    linear_combination<VariableType, AssignmentLayout>
+        operator*(const typename VariableType::value_type &field_coeff,
+                  const linear_combination<VariableType, AssignmentLayout> &lc) {
         return lc * field_coeff;
     }
 
-    template<typename VariableType>
-    linear_combination<VariableType> operator+(const typename VariableType::value_type &field_coeff,
-                                               const linear_combination<VariableType> &lc) {
-        return linear_combination<VariableType>(field_coeff) + lc;
+    template<typename VariableType, assignment_layout AssignmentLayout>
+    linear_combination<VariableType, AssignmentLayout>
+        operator+(const typename VariableType::value_type &field_coeff,
+                  const linear_combination<VariableType, AssignmentLayout> &lc) {
+        return linear_combination<VariableType, AssignmentLayout>(field_coeff) + lc;
     }
 
-    template<typename VariableType>
-    linear_combination<VariableType> operator-(const typename VariableType::value_type &field_coeff,
-                                               const linear_combination<VariableType> &lc) {
-        return linear_combination<VariableType>(field_coeff) - lc;
+    template<typename VariableType, assignment_layout AssignmentLayout>
+    linear_combination<VariableType, AssignmentLayout>
+        operator-(const typename VariableType::value_type &field_coeff,
+                  const linear_combination<VariableType, AssignmentLayout> &lc) {
+        return linear_combination<VariableType, AssignmentLayout>(field_coeff) - lc;
     }
 
-}    // namespace nil::crypto3::zk::snark
+    template<typename VariableType, assignment_layout AssignmentLayout>
+    void add_scaled(linear_combination<VariableType, AssignmentLayout> &out,
+                    const typename VariableType::value_type &coefficient,
+                    const linear_combination<VariableType, AssignmentLayout> &in) {
+        for (const auto &term : in.terms) {
+            out.add_term(VariableType(term.index), coefficient * term.coeff);
+        }
+    }
 
-#endif    // CRYPTO3_ZK_MATH_LINEAR_COMBINATION_HPP
+    template<typename VariableType, assignment_layout AssignmentLayout>
+    std::ostream &operator<<(std::ostream &out, const linear_combination<VariableType, AssignmentLayout> &combination) {
+        for (std::size_t i = 0; i < combination.terms.size(); ++i) {
+            const auto &term = combination.terms[i];
+            out << term.coeff << " * v" << term.index;
+            if (i + 1 < combination.terms.size()) {
+                out << " + ";
+            }
+        }
+        return out;
+    }
+
+}    // namespace nil::crypto3::math

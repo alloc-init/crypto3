@@ -54,8 +54,8 @@ namespace nil {
                          typename LT,
                          typename = typename std::enable_if<
                              std::is_same<LT,
-                                          nil::crypto3::zk::snark::linear_term<nil::crypto3::zk::snark::linear_variable<
-                                              typename LT::field_type>>>::value,
+                                          nil::crypto3::math::linear_term<
+                                              nil::crypto3::math::linear_variable<typename LT::field_type>>>::value,
                              bool>::type,
                          typename... TOptions>
                 using linear_term = nil::marshalling::types::bundle<
@@ -64,24 +64,23 @@ namespace nil {
                         // index
                         nil::marshalling::types::integral<
                             TTypeBase,
-                            typename nil::crypto3::zk::snark::linear_variable<typename LT::field_type>::index_type>,
+                            typename nil::crypto3::math::linear_variable<typename LT::field_type>::index_type>,
                         // coeff
                         field_element<TTypeBase, typename LT::field_type::value_type>>>;
 
-                template<
-                    typename TTypeBase,
-                    typename LC,
-                    typename = typename std::enable_if<
-                        std::is_same<LC,
-                                     nil::crypto3::zk::snark::linear_combination<
-                                         nil::crypto3::zk::snark::linear_variable<typename LC::field_type>>>::value,
-                        bool>::type,
-                    typename... TOptions>
+                template<typename TTypeBase,
+                         typename LC,
+                         typename = typename std::enable_if<
+                             std::is_same<LC,
+                                          nil::crypto3::math::linear_combination<
+                                              nil::crypto3::math::linear_variable<typename LC::field_type>>>::value,
+                             bool>::type,
+                         typename... TOptions>
                 using linear_combination = nil::marshalling::types::array_list<
                     TTypeBase,
-                    linear_term<TTypeBase,
-                                nil::crypto3::zk::snark::linear_term<
-                                    nil::crypto3::zk::snark::linear_variable<typename LC::field_type>>>,
+                    linear_term<
+                        TTypeBase,
+                        nil::crypto3::math::linear_term<nil::crypto3::math::linear_variable<typename LC::field_type>>>,
                     nil::marshalling::option::sequence_size_field_prefix<
                         nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
@@ -96,20 +95,17 @@ namespace nil {
                     TTypeBase,
                     std::tuple<
                         // a
-                        linear_combination<
-                            TTypeBase,
-                            nil::crypto3::zk::snark::linear_combination<
-                                nil::crypto3::zk::snark::linear_variable<typename Constraint::field_type>>>,
+                        linear_combination<TTypeBase,
+                                           nil::crypto3::math::linear_combination<
+                                               nil::crypto3::math::linear_variable<typename Constraint::field_type>>>,
                         // b
-                        linear_combination<
-                            TTypeBase,
-                            nil::crypto3::zk::snark::linear_combination<
-                                nil::crypto3::zk::snark::linear_variable<typename Constraint::field_type>>>,
+                        linear_combination<TTypeBase,
+                                           nil::crypto3::math::linear_combination<
+                                               nil::crypto3::math::linear_variable<typename Constraint::field_type>>>,
                         // c
-                        linear_combination<
-                            TTypeBase,
-                            nil::crypto3::zk::snark::linear_combination<
-                                nil::crypto3::zk::snark::linear_variable<typename Constraint::field_type>>>>>;
+                        linear_combination<TTypeBase,
+                                           nil::crypto3::math::linear_combination<
+                                               nil::crypto3::math::linear_variable<typename Constraint::field_type>>>>>;
 
                 template<typename TTypeBase,
                          typename CS,
@@ -137,7 +133,7 @@ namespace nil {
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
                     using integral_type = nil::marshalling::types::integral<
                         TTypeBase,
-                        typename nil::crypto3::zk::snark::linear_variable<typename LT::field_type>::index_type>;
+                        typename nil::crypto3::math::linear_variable<typename LT::field_type>::index_type>;
                     using field_element_type = field_element<TTypeBase, typename LT::field_type::value_type>;
 
                     return linear_term<TTypeBase, LT>(
@@ -153,17 +149,17 @@ namespace nil {
                 template<typename LC, typename Endianness>
                 linear_combination<nil::marshalling::field_type<Endianness>, LC> fill_linear_combination(const LC &lc) {
 
-                    using lt_type = linear_term<nil::marshalling::field_type<Endianness>,
-                                                nil::crypto3::zk::snark::linear_term<
-                                                    nil::crypto3::zk::snark::linear_variable<typename LC::field_type>>>;
+                    using lt_type = linear_term<
+                        nil::marshalling::field_type<Endianness>,
+                        nil::crypto3::math::linear_term<nil::crypto3::math::linear_variable<typename LC::field_type>>>;
                     using lc_type = linear_combination<nil::marshalling::field_type<Endianness>, LC>;
 
                     lc_type result;
                     std::vector<lt_type> &val = result.value();
                     for (std::size_t i = 0; i < lc.terms.size(); i++) {
                         val.push_back(
-                            fill_linear_term<nil::crypto3::zk::snark::linear_term<
-                                                 nil::crypto3::zk::snark::linear_variable<typename LC::field_type>>,
+                            fill_linear_term<nil::crypto3::math::linear_term<
+                                                 nil::crypto3::math::linear_variable<typename LC::field_type>>,
                                              Endianness>(lc.terms[i]));
                     }
 
@@ -175,16 +171,15 @@ namespace nil {
                     const linear_combination<nil::marshalling::field_type<Endianness>, LC> &filled_lc) {
 
                     LC result;
-                    const std::vector<
-                        linear_term<nil::marshalling::field_type<Endianness>,
-                                    nil::crypto3::zk::snark::linear_term<
-                                        nil::crypto3::zk::snark::linear_variable<typename LC::field_type>>>> &values =
-                        filled_lc.value();
+                    const std::vector<linear_term<
+                        nil::marshalling::field_type<Endianness>,
+                        nil::crypto3::math::linear_term<nil::crypto3::math::linear_variable<typename LC::field_type>>>>
+                        &values = filled_lc.value();
                     std::size_t size = values.size();
                     for (std::size_t i = 0; i < size; i++) {
                         result.add_term(
-                            make_linear_term<nil::crypto3::zk::snark::linear_term<
-                                                 nil::crypto3::zk::snark::linear_variable<typename LC::field_type>>,
+                            make_linear_term<nil::crypto3::math::linear_term<
+                                                 nil::crypto3::math::linear_variable<typename LC::field_type>>,
                                              Endianness>(values[i]));
                     }
 
@@ -195,19 +190,19 @@ namespace nil {
                 r1cs_constraint<nil::marshalling::field_type<Endianness>, Constraint>
                     fill_r1cs_constraint(const Constraint &c) {
 
-                    return r1cs_constraint<nil::marshalling::field_type<Endianness>, Constraint>(std::make_tuple(
-                        fill_linear_combination<
-                            nil::crypto3::zk::snark::linear_combination<
-                                nil::crypto3::zk::snark::linear_variable<typename Constraint::field_type>>,
-                            Endianness>(c.a),
-                        fill_linear_combination<
-                            nil::crypto3::zk::snark::linear_combination<
-                                nil::crypto3::zk::snark::linear_variable<typename Constraint::field_type>>,
-                            Endianness>(c.b),
-                        fill_linear_combination<
-                            nil::crypto3::zk::snark::linear_combination<
-                                nil::crypto3::zk::snark::linear_variable<typename Constraint::field_type>>,
-                            Endianness>(c.c)));
+                    return r1cs_constraint<nil::marshalling::field_type<Endianness>, Constraint>(
+                        std::make_tuple(fill_linear_combination<
+                                            nil::crypto3::math::linear_combination<
+                                                nil::crypto3::math::linear_variable<typename Constraint::field_type>>,
+                                            Endianness>(c.a),
+                                        fill_linear_combination<
+                                            nil::crypto3::math::linear_combination<
+                                                nil::crypto3::math::linear_variable<typename Constraint::field_type>>,
+                                            Endianness>(c.b),
+                                        fill_linear_combination<
+                                            nil::crypto3::math::linear_combination<
+                                                nil::crypto3::math::linear_variable<typename Constraint::field_type>>,
+                                            Endianness>(c.c)));
                 }
 
                 template<typename Constraint, typename Endianness>
@@ -216,16 +211,16 @@ namespace nil {
 
                     return Constraint(
                         std::move(make_linear_combination<
-                                  nil::crypto3::zk::snark::linear_combination<
-                                      nil::crypto3::zk::snark::linear_variable<typename Constraint::field_type>>,
+                                  nil::crypto3::math::linear_combination<
+                                      nil::crypto3::math::linear_variable<typename Constraint::field_type>>,
                                   Endianness>(std::get<0>(filled_c.value()))),
                         std::move(make_linear_combination<
-                                  nil::crypto3::zk::snark::linear_combination<
-                                      nil::crypto3::zk::snark::linear_variable<typename Constraint::field_type>>,
+                                  nil::crypto3::math::linear_combination<
+                                      nil::crypto3::math::linear_variable<typename Constraint::field_type>>,
                                   Endianness>(std::get<1>(filled_c.value()))),
                         std::move(make_linear_combination<
-                                  nil::crypto3::zk::snark::linear_combination<
-                                      nil::crypto3::zk::snark::linear_variable<typename Constraint::field_type>>,
+                                  nil::crypto3::math::linear_combination<
+                                      nil::crypto3::math::linear_variable<typename Constraint::field_type>>,
                                   Endianness>(std::get<2>(filled_c.value()))));
                 }
 
