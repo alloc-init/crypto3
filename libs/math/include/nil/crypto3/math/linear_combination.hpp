@@ -33,6 +33,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <ostream>
 #include <type_traits>
 #include <vector>
 
@@ -290,6 +291,27 @@ namespace nil::crypto3::math {
     linear_combination<VariableType> operator-(const typename VariableType::value_type &field_coeff,
                                                const linear_combination<VariableType> &lc) {
         return linear_combination<VariableType>(field_coeff) - lc;
+    }
+
+    template<typename VariableType>
+    void add_scaled(linear_combination<VariableType> &out,
+                    const typename VariableType::value_type &coefficient,
+                    const linear_combination<VariableType> &in) {
+        for (const auto &term : in.terms) {
+            out.add_term(VariableType(term.index), coefficient * term.coeff);
+        }
+    }
+
+    template<typename VariableType>
+    std::ostream &operator<<(std::ostream &out, const linear_combination<VariableType> &combination) {
+        for (std::size_t i = 0; i < combination.terms.size(); ++i) {
+            const auto &term = combination.terms[i];
+            out << term.coeff << " * v" << term.index;
+            if (i + 1 < combination.terms.size()) {
+                out << " + ";
+            }
+        }
+        return out;
     }
 
 }    // namespace nil::crypto3::math
