@@ -38,10 +38,23 @@
 
 namespace nil::crypto3::math {
 
+    // Describes how a variable assignment represents the distinguished
+    // constant-one variable x_0.
+    enum class assignment_layout {
+        // x_0 is omitted. Term index 0 evaluates to one, while variable i is
+        // read from assignment[i - 1]. This is the standard Crypto3 R1CS layout.
+        implicit_constant,
+
+        // assignment[0] stores x_0 explicitly, normally as one. Every term
+        // index directly addresses the assignment. AADP uses this layout so
+        // witness vectors align with matrix columns.
+        explicit_constant,
+    };
+
     /**
      * Forward declaration.
      */
-    template<typename VariableType>
+    template<typename VariableType, assignment_layout AssignmentLayout = assignment_layout::implicit_constant>
     class linear_combination;
 
     /****************************** Linear term **********************************/
@@ -114,7 +127,7 @@ namespace nil::crypto3::math {
     /**
      * A linear combination represents a formal expression of the form "sum_i coeff_i * x_{index_i}".
      */
-    template<typename VariableType>
+    template<typename VariableType, assignment_layout AssignmentLayout>
     class linear_combination {
         typedef typename VariableType::value_type field_value_type;
 
@@ -184,26 +197,20 @@ namespace nil::crypto3::math {
             this->terms.emplace_back(lt);
         }
 
-        // Standard Crypto3 assignments omit x_0: term 0 is the implicit constant
-        // one, and variable i is stored at assignment[i - 1].
-        field_value_type evaluate(const std::vector<field_value_type> &assignment) const {
-            field_value_type acc = field_value_type::zero();
-            for (auto &lt : terms) {
-                acc += (lt.index == 0 ? field_value_type::one() : assignment[lt.index - 1]) * lt.coeff;
-            }
-            return acc;
-        }
-
-        // AADP-style witnesses store the constant-one value explicitly at slot
-        // zero, so every term directly indexes assignment[term.index]. The
-        // coefficient type may differ from the assignment value type as long as
-        // it defines the corresponding scalar action (for example Fp * Fp12).
+        // AssignmentLayout determines how term indices map to assignment slots;
+        // see assignment_layout above. Coefficients and assignment values may
+        // belong to different fields if they define a scalar action such as
+        // Fp * Fp12.
         template<typename AssignmentType>
-        typename AssignmentType::value_type evaluate_with_constant_slot(const AssignmentType &assignment) const {
+        typename AssignmentType::value_type evaluate(const AssignmentType &assignment) const {
             using result_type = typename AssignmentType::value_type;
             result_type acc = result_type::zero();
             for (const auto &lt : terms) {
-                acc += lt.coeff * assignment[lt.index];
+                if constexpr (AssignmentLayout == assignment_layout::implicit_constant) {
+                    acc += lt.coeff * (lt.index == 0 ? result_type::one() : assignment[lt.index - 1]);
+                } else {
+                    acc += lt.coeff * assignment[lt.index];
+                }
             }
             return acc;
         }
@@ -294,35 +301,38 @@ namespace nil::crypto3::math {
         }
     };
 
-    template<typename VariableType>
-    linear_combination<VariableType> operator*(const typename VariableType::value_type &field_coeff,
-                                               const linear_combination<VariableType> &lc) {
+    template<typename VariableType, assignment_layout AssignmentLayout>
+    linear_combination<VariableType, AssignmentLayout>
+        operator*(const typename VariableType::value_type &field_coeff,
+                  const linear_combination<VariableType, AssignmentLayout> &lc) {
         return lc * field_coeff;
     }
 
-    template<typename VariableType>
-    linear_combination<VariableType> operator+(const typename VariableType::value_type &field_coeff,
-                                               const linear_combination<VariableType> &lc) {
-        return linear_combination<VariableType>(field_coeff) + lc;
+    template<typename VariableType, assignment_layout AssignmentLayout>
+    linear_combination<VariableType, AssignmentLayout>
+        operator+(const typename VariableType::value_type &field_coeff,
+                  const linear_combination<VariableType, AssignmentLayout> &lc) {
+        return linear_combination<VariableType, AssignmentLayout>(field_coeff) + lc;
     }
 
-    template<typename VariableType>
-    linear_combination<VariableType> operator-(const typename VariableType::value_type &field_coeff,
-                                               const linear_combination<VariableType> &lc) {
-        return linear_combination<VariableType>(field_coeff) - lc;
+    template<typename VariableType, assignment_layout AssignmentLayout>
+    linear_combination<VariableType, AssignmentLayout>
+        operator-(const typename VariableType::value_type &field_coeff,
+                  const linear_combination<VariableType, AssignmentLayout> &lc) {
+        return linear_combination<VariableType, AssignmentLayout>(field_coeff) - lc;
     }
 
-    template<typename VariableType>
-    void add_scaled(linear_combination<VariableType> &out,
+    template<typename VariableType, assignment_layout AssignmentLayout>
+    void add_scaled(linear_combination<VariableType, AssignmentLayout> &out,
                     const typename VariableType::value_type &coefficient,
-                    const linear_combination<VariableType> &in) {
+                    const linear_combination<VariableType, AssignmentLayout> &in) {
         for (const auto &term : in.terms) {
             out.add_term(VariableType(term.index), coefficient * term.coeff);
         }
     }
 
-    template<typename VariableType>
-    std::ostream &operator<<(std::ostream &out, const linear_combination<VariableType> &combination) {
+    template<typename VariableType, assignment_layout AssignmentLayout>
+    std::ostream &operator<<(std::ostream &out, const linear_combination<VariableType, AssignmentLayout> &combination) {
         for (std::size_t i = 0; i < combination.terms.size(); ++i) {
             const auto &term = combination.terms[i];
             out << term.coeff << " * v" << term.index;
