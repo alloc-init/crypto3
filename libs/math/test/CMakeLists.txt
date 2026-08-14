@@ -51,6 +51,7 @@ set(TESTS_NAMES
     "polynomial_dfs"
     "polynomial_dfs_view"
     "lagrange_interpolation"
+    "linear_combination"
     "unity_root"
     "mixed_radix_fft"
     "basic_radix2_domain")

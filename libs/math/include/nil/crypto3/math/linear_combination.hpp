@@ -28,8 +28,7 @@
 // - a linear combination (i.e., sum_i a_i * x_i).
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_MATH_LINEAR_COMBINATION_HPP
-#define CRYPTO3_MATH_LINEAR_COMBINATION_HPP
+#pragma once
 
 #include <algorithm>
 #include <cstddef>
@@ -127,20 +126,25 @@ namespace nil::crypto3::math {
         std::vector<linear_term<VariableType>> terms;
 
         linear_combination() { };
+
         linear_combination(const field_value_type &field_coeff) {
             this->add_term(linear_term<VariableType>(0) * field_coeff);
         }
+
         template<typename T = VariableType,
                  std::enable_if_t<std::is_same_v<typename T::field_type, typename T::value_type>, int> = 0>
         linear_combination(std::size_t index) {
             this->add_term(VariableType(index));
         }
+
         linear_combination(const VariableType &var) {
             this->add_term(var);
         }
+
         linear_combination(const linear_term<VariableType> &lt) {
             this->add_term(lt);
         }
+
         linear_combination(const std::vector<linear_term<VariableType>> &all_terms) {
             if (all_terms.empty()) {
                 return;
@@ -180,6 +184,8 @@ namespace nil::crypto3::math {
             this->terms.emplace_back(lt);
         }
 
+        // Standard Crypto3 assignments omit x_0: term 0 is the implicit constant
+        // one, and variable i is stored at assignment[i - 1].
         field_value_type evaluate(const std::vector<field_value_type> &assignment) const {
             field_value_type acc = field_value_type::zero();
             for (auto &lt : terms) {
@@ -187,15 +193,21 @@ namespace nil::crypto3::math {
             }
             return acc;
         }
+
+        // AADP-style witnesses store the constant-one value explicitly at slot
+        // zero, so every term directly indexes assignment[term.index]. The
+        // coefficient type may differ from the assignment value type as long as
+        // it defines the corresponding scalar action (for example Fp * Fp12).
         template<typename AssignmentType>
-        typename AssignmentType::value_type eval(const AssignmentType &assignment) const {
+        typename AssignmentType::value_type evaluate_with_constant_slot(const AssignmentType &assignment) const {
             using result_type = typename AssignmentType::value_type;
-            result_type acc(0);
+            result_type acc = result_type::zero();
             for (const auto &lt : terms) {
-                acc += result_type(lt.coeff) * assignment[lt.index];
+                acc += lt.coeff * assignment[lt.index];
             }
             return acc;
         }
+
         linear_combination operator*(const field_value_type &field_coeff) const {
             linear_combination result;
             result.terms.reserve(this->terms.size());
@@ -204,6 +216,7 @@ namespace nil::crypto3::math {
             }
             return result;
         }
+
         linear_combination operator+(const linear_combination &other) const {
             linear_combination result;
 
@@ -237,9 +250,11 @@ namespace nil::crypto3::math {
 
             return result;
         }
+
         linear_combination operator-(const linear_combination &other) const {
             return (*this) + (-other);
         }
+
         linear_combination operator-() const {
             return (*this) * (-field_value_type::one());
         }
@@ -258,6 +273,10 @@ namespace nil::crypto3::math {
         }
 
         bool is_valid(size_t num_variables) const {
+            if (terms.empty()) {
+                return true;
+            }
+
             /* check that all terms in linear combination are sorted */
             for (std::size_t i = 1; i < terms.size(); ++i) {
                 if (terms[i - 1].index >= terms[i].index) {
@@ -315,15 +334,3 @@ namespace nil::crypto3::math {
     }
 
 }    // namespace nil::crypto3::math
-
-namespace nil::crypto3::zk::snark {
-
-    template<typename VariableType>
-    using linear_term = nil::crypto3::math::linear_term<VariableType>;
-
-    template<typename VariableType>
-    using linear_combination = nil::crypto3::math::linear_combination<VariableType>;
-
-}    // namespace nil::crypto3::zk::snark
-
-#endif    // CRYPTO3_MATH_LINEAR_COMBINATION_HPP

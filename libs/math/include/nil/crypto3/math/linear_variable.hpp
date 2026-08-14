@@ -99,11 +99,4 @@ namespace nil::crypto3::math {
 
 }    // namespace nil::crypto3::math
 
-namespace nil::crypto3::zk::snark {
-
-    template<typename FieldType>
-    using linear_variable = nil::crypto3::math::linear_variable<FieldType>;
-
-}    // namespace nil::crypto3::zk::snark
-
 #endif    // CRYPTO3_MATH_LINEAR_VARIABLE_HPP
