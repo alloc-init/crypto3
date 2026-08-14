@@ -152,6 +152,30 @@ BOOST_AUTO_TEST_CASE(scalar_multiplication_is_alias_safe_and_canonical) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
+BOOST_AUTO_TEST_SUITE(polynomial_derivative_test_suite)
+
+BOOST_AUTO_TEST_CASE(derivative_is_alias_safe_and_canonical) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    const polynomial_type input = {value_type(5), value_type(3), value_type(4), value_type(2)};
+    const polynomial_type expected = {value_type(3), value_type(8), value_type(6)};
+
+    polynomial_type output;
+    derivative(output, input);
+    BOOST_CHECK(output == expected);
+
+    output = input;
+    derivative(output, output);
+    BOOST_CHECK(output == expected);
+
+    const polynomial_type constant = {value_type(5)};
+    derivative(output, constant);
+    BOOST_CHECK(output == polynomial_type({value_type::zero()}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(polynomial_addition_test_suite)
 
 void test_addition(polynomial<typename FieldType::value_type> a,

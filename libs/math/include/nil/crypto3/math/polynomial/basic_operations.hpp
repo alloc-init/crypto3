@@ -191,6 +191,38 @@ namespace nil {
             }
 
             /**
+             * For input f(X) = sum_{i=0}^n a_i X^i, compute
+             * f'(X) = sum_{i=1}^n i * a_i X^(i-1).
+             * Store the canonical coefficient polynomial in output, which may alias input.
+             */
+            template<CoefficientPolynomial Polynomial>
+                requires detail::MutablePolynomialCoefficientRange<Polynomial> &&
+                         std::default_initializable<typename Polynomial::value_type> &&
+                         std::equality_comparable<typename Polynomial::value_type> &&
+                         requires(const typename Polynomial::value_type &coefficient, std::size_t degree) {
+                             { coefficient * degree } -> std::convertible_to<typename Polynomial::value_type>;
+                         }
+            void derivative(Polynomial &output, const Polynomial &input) {
+                using value_type = typename Polynomial::value_type;
+
+                if (input.size() <= 1) {
+                    output.resize(1);
+                    output[0] = value_type {};
+                    return;
+                }
+
+                const std::size_t input_size = input.size();
+                if (std::addressof(output) != std::addressof(input)) {
+                    output.resize(input_size - 1);
+                }
+                for (std::size_t degree = 1; degree < input_size; ++degree) {
+                    output[degree - 1] = input[degree] * degree;
+                }
+                output.resize(input_size - 1);
+                condense(output);
+            }
+
+            /**
              * Computes the standard polynomial addition, polynomial A + polynomial B, and stores result in
              * polynomial C.
              * The output may alias either input.

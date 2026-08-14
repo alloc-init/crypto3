@@ -196,6 +196,17 @@ BOOST_AUTO_TEST_CASE(scalar_multiplication_supports_base_field_scalars) {
     BOOST_CHECK(output == expected);
 }
 
+BOOST_AUTO_TEST_CASE(derivative_supports_extension_field_coefficients) {
+    using polynomial_type = math::polynomial<fq12_value_type>;
+
+    const polynomial_type input = {fq12_value(1), fq12_value(13), fq12_value(25)};
+    polynomial_type output;
+
+    math::derivative(output, input);
+    const polynomial_type expected = {input[1], input[2] * std::size_t(2)};
+    BOOST_CHECK(output == expected);
+}
+
 BOOST_AUTO_TEST_CASE(mixed_radix_backend_uses_only_the_prefix_needed_by_multiply_low) {
     using polynomial_type = math::polynomial<fq_value_type>;
 
