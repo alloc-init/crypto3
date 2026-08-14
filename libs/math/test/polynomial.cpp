@@ -26,8 +26,6 @@
 
 #define BOOST_TEST_MODULE polynomial_test
 
-#include <limits>
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
@@ -249,8 +247,11 @@ BOOST_AUTO_TEST_CASE(power_of_x_shifts_are_alias_safe_and_canonical) {
     shift_right(output, output, 1);
     BOOST_CHECK(output == shifted_right);
 
-    shift_left(output, polynomial_type({value_type::zero()}), std::numeric_limits<std::size_t>::max());
-    BOOST_CHECK(output == polynomial_type({value_type::zero()}));
+    polynomial_type zero_output;
+    const std::size_t zero_output_capacity = zero_output.capacity();
+    shift_left(zero_output, polynomial_type({value_type::zero()}), 1024);
+    BOOST_CHECK(zero_output == polynomial_type({value_type::zero()}));
+    BOOST_CHECK_EQUAL(zero_output.capacity(), zero_output_capacity);
 
     shift_right(output, input, input.size());
     BOOST_CHECK(output == polynomial_type({value_type::zero()}));
