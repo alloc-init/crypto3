@@ -125,6 +125,33 @@ BOOST_AUTO_TEST_CASE(reverse_retains_the_requested_fixed_length) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
+BOOST_AUTO_TEST_SUITE(polynomial_scalar_multiplication_test_suite)
+
+BOOST_AUTO_TEST_CASE(scalar_multiplication_is_alias_safe_and_canonical) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    const polynomial_type input = {value_type(1), value_type::zero(), value_type(3)};
+    const value_type scalar = value_type(2);
+    const polynomial_type expected = {value_type(2), value_type::zero(), value_type(6)};
+
+    polynomial_type output;
+    scalar_multiplication(output, input, scalar);
+    BOOST_CHECK(output == expected);
+
+    output = input;
+    scalar_multiplication(output, output, scalar);
+    BOOST_CHECK(output == expected);
+
+    BOOST_CHECK(input * scalar == expected);
+    BOOST_CHECK(scalar * input == expected);
+
+    scalar_multiplication(output, input, value_type::zero());
+    BOOST_CHECK(output == polynomial_type({value_type::zero()}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(polynomial_addition_test_suite)
 
 void test_addition(polynomial<typename FieldType::value_type> a,

@@ -565,10 +565,8 @@ namespace nil {
                 requires algebra::is_field_element<FieldValueType>::value
             polynomial<FieldValueType, Allocator> operator*(const polynomial<FieldValueType, Allocator>& A,
                                                             const FieldValueType& B) {
-                polynomial<FieldValueType> result(A);
-                for (FieldValueType& value : result) {
-                    value *= B;
-                }
+                polynomial<FieldValueType, Allocator> result;
+                scalar_multiplication(result, A, B);
                 return result;
             }
 
@@ -576,7 +574,6 @@ namespace nil {
                 requires algebra::is_field_element<FieldValueType>::value
             polynomial<FieldValueType, Allocator> operator*(const FieldValueType& A,
                                                             const polynomial<FieldValueType, Allocator>& B) {
-                // Call the upper function.
                 return B * A;
             }
 

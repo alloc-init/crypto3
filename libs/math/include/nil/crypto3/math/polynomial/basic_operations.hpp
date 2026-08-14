@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <concepts>
 #include <iterator>
+#include <memory>
 #include <ranges>
 #include <stdexcept>
 #include <vector>
@@ -165,6 +166,28 @@ namespace nil {
                     polynomial.resize(coefficient_count);
                 }
                 condense(polynomial);
+            }
+
+            /**
+             * Multiply every coefficient of input by scalar and store the canonical result in output.
+             * Output may alias input. Scalar may have a different type from the coefficients, provided that
+             * coefficient * scalar is convertible to the coefficient type.
+             */
+            template<CoefficientPolynomial Polynomial, typename Scalar>
+                requires detail::MutablePolynomialCoefficientRange<Polynomial> &&
+                         std::default_initializable<typename Polynomial::value_type> &&
+                         std::equality_comparable<typename Polynomial::value_type> &&
+                         requires(const typename Polynomial::value_type &coefficient, const Scalar &scalar) {
+                             { coefficient * scalar } -> std::convertible_to<typename Polynomial::value_type>;
+                         }
+            void scalar_multiplication(Polynomial &output, const Polynomial &input, const Scalar &scalar) {
+                if (std::addressof(output) != std::addressof(input)) {
+                    output = input;
+                }
+                for (typename Polynomial::value_type &coefficient : output) {
+                    coefficient = coefficient * scalar;
+                }
+                condense(output);
             }
 
             /**

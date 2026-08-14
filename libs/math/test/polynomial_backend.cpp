@@ -184,6 +184,18 @@ BOOST_AUTO_TEST_CASE(fq12_backends_conform) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(scalar_multiplication_supports_base_field_scalars) {
+    using polynomial_type = math::polynomial<fq12_value_type>;
+
+    const polynomial_type input = {fq12_value(1), fq12_value(13)};
+    const fq_value_type scalar(7);
+    polynomial_type output;
+
+    math::scalar_multiplication(output, input, scalar);
+    const polynomial_type expected = {input[0] * scalar, input[1] * scalar};
+    BOOST_CHECK(output == expected);
+}
+
 BOOST_AUTO_TEST_CASE(mixed_radix_backend_uses_only_the_prefix_needed_by_multiply_low) {
     using polynomial_type = math::polynomial<fq_value_type>;
 
