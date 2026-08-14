@@ -38,8 +38,10 @@
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
 #include <nil/crypto3/math/domains/evaluation_domain.hpp>
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/concepts.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 
+#include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/bench/scoped_profiler.hpp>
 
 namespace nil {
@@ -70,6 +72,7 @@ namespace nil {
                 typedef typename container_type::const_reverse_iterator const_reverse_iterator;
 
                 using polynomial_type = polynomial<value_type>;
+                using representation_type = evaluation_representation;
 
                 // Default constructor creates a zero polynomial of degree 0 and size 1.
                 polynomial_dfs() : val(1, FieldValueType::zero()), _d(0) {
@@ -771,9 +774,8 @@ namespace nil {
                 }
             };
 
-            template<typename FieldValueType,
-                     typename Allocator = std::allocator<FieldValueType>,
-                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
+                requires algebra::is_field_element<FieldValueType>::value
             polynomial_dfs<FieldValueType, Allocator> operator+(const polynomial_dfs<FieldValueType, Allocator>& A,
                                                                 const FieldValueType& B) {
                 polynomial_dfs<FieldValueType> result(A);
@@ -783,9 +785,8 @@ namespace nil {
                 return result;
             }
 
-            template<typename FieldValueType,
-                     typename Allocator = std::allocator<FieldValueType>,
-                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
+                requires algebra::is_field_element<FieldValueType>::value
             polynomial_dfs<FieldValueType, Allocator> operator+(const FieldValueType& A,
                                                                 const polynomial_dfs<FieldValueType, Allocator>& B) {
                 polynomial_dfs<FieldValueType> result(B);
@@ -795,9 +796,8 @@ namespace nil {
                 return result;
             }
 
-            template<typename FieldValueType,
-                     typename Allocator = std::allocator<FieldValueType>,
-                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
+                requires algebra::is_field_element<FieldValueType>::value
             polynomial_dfs<FieldValueType, Allocator> operator-(const polynomial_dfs<FieldValueType, Allocator>& A,
                                                                 const FieldValueType& B) {
                 polynomial_dfs<FieldValueType> result(A);
@@ -807,9 +807,8 @@ namespace nil {
                 return result;
             }
 
-            template<typename FieldValueType,
-                     typename Allocator = std::allocator<FieldValueType>,
-                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
+                requires algebra::is_field_element<FieldValueType>::value
             polynomial_dfs<FieldValueType, Allocator> operator-(const FieldValueType& A,
                                                                 const polynomial_dfs<FieldValueType, Allocator>& B) {
                 polynomial_dfs<FieldValueType> result(B);
@@ -819,9 +818,8 @@ namespace nil {
                 return result;
             }
 
-            template<typename FieldValueType,
-                     typename Allocator = std::allocator<FieldValueType>,
-                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
+                requires algebra::is_field_element<FieldValueType>::value
             polynomial_dfs<FieldValueType, Allocator> operator*(const polynomial_dfs<FieldValueType, Allocator>& A,
                                                                 const FieldValueType& B) {
 
@@ -832,18 +830,16 @@ namespace nil {
                 return result;
             }
 
-            template<typename FieldValueType,
-                     typename Allocator = std::allocator<FieldValueType>,
-                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
+                requires algebra::is_field_element<FieldValueType>::value
             polynomial_dfs<FieldValueType, Allocator> operator*(const FieldValueType& A,
                                                                 const polynomial_dfs<FieldValueType, Allocator>& B) {
                 // Call the upper function.
                 return B * A;
             }
 
-            template<typename FieldValueType,
-                     typename Allocator = std::allocator<FieldValueType>,
-                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
+                requires algebra::is_field_element<FieldValueType>::value
             polynomial_dfs<FieldValueType, Allocator> operator/(const polynomial_dfs<FieldValueType, Allocator>& A,
                                                                 const FieldValueType& B) {
                 polynomial_dfs<FieldValueType> result(A);
@@ -855,9 +851,8 @@ namespace nil {
                 return result;
             }
 
-            template<typename FieldValueType,
-                     typename Allocator = std::allocator<FieldValueType>,
-                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
+                requires algebra::is_field_element<FieldValueType>::value
             polynomial_dfs<FieldValueType, Allocator> operator/(const FieldValueType& A,
                                                                 const polynomial_dfs<FieldValueType, Allocator>& B) {
 
@@ -866,9 +861,8 @@ namespace nil {
 
             // Used in the unit tests, so we can use BOOST_CHECK_EQUALS, and see
             // the values of polynomials, when the check fails.
-            template<typename FieldValueType,
-                     typename Allocator = std::allocator<FieldValueType>,
-                     typename = typename std::enable_if<detail::is_field_element<FieldValueType>::value>::type>
+            template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
+                requires algebra::is_field_element<FieldValueType>::value
             std::ostream& operator<<(std::ostream& os, const polynomial_dfs<FieldValueType, Allocator>& poly) {
                 if (poly.degree() == 0) {
                     // If all it contains is a constant, print the constant, so it's more readable.

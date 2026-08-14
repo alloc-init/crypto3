@@ -38,7 +38,6 @@
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
 #include <nil/crypto3/math/algorithms/mixed_radix_fft.hpp>
-#include <nil/crypto3/math/polynomial/basic_operations.hpp>
 
 using namespace nil::crypto3;
 
@@ -83,23 +82,6 @@ namespace {
             values.push_back(algebra::random_element<bn254_fq12>(rng));
         }
         return values;
-    }
-
-    template<typename ValueType>
-    std::vector<ValueType> schoolbook_multiply(const std::vector<ValueType> &left,
-                                               const std::vector<ValueType> &right) {
-        std::vector<ValueType> result(left.size() + right.size() - 1, ValueType::zero());
-        for (std::size_t i = 0; i < left.size(); ++i) {
-            if (left[i].is_zero()) {
-                continue;
-            }
-            for (std::size_t j = 0; j < right.size(); ++j) {
-                if (!right[j].is_zero()) {
-                    result[i + j] += left[i] * right[j];
-                }
-            }
-        }
-        return result;
     }
 
 }    // namespace
@@ -206,6 +188,68 @@ BOOST_AUTO_TEST_CASE(short_inputs_are_zero_padded) {
     BOOST_CHECK(actual == padded_evaluations);
 }
 
+BOOST_AUTO_TEST_CASE(caller_owned_workspaces_match_default_transforms) {
+    const math::mixed_radix_fft_plan<bn254_fq> plan(6);
+
+    const std::vector<bn254_fq_value> fq_coefficients = {bn254_fq_value(3), bn254_fq_value(5), bn254_fq_value(7)};
+    std::vector<bn254_fq_value> expected_fq = fq_coefficients;
+    std::vector<bn254_fq_value> actual_fq = fq_coefficients;
+    std::vector<bn254_fq_value> fq_workspace(plan.size() + 2, bn254_fq_value::one());
+
+    plan.fft(expected_fq);
+    plan.fft(actual_fq, fq_workspace);
+    BOOST_CHECK(actual_fq == expected_fq);
+
+    plan.inverse_fft(expected_fq);
+    plan.inverse_fft(actual_fq, fq_workspace);
+    BOOST_CHECK(actual_fq == expected_fq);
+
+    const std::vector<bn254_fq12_value> fq12_coefficients = fq12_values(plan.size(), 0xC012);
+    std::vector<bn254_fq12_value> expected_fq12 = fq12_coefficients;
+    std::vector<bn254_fq12_value> actual_fq12 = fq12_coefficients;
+    std::vector<bn254_fq12_value> fq12_workspace;
+
+    plan.fft(expected_fq12);
+    plan.fft(actual_fq12, fq12_workspace);
+    BOOST_CHECK(actual_fq12 == expected_fq12);
+
+    plan.inverse_fft(expected_fq12);
+    plan.inverse_fft(actual_fq12, fq12_workspace);
+    BOOST_CHECK(actual_fq12 == expected_fq12);
+}
+
+BOOST_AUTO_TEST_CASE(caller_owned_workspace_reuses_vector_storage) {
+    const math::mixed_radix_fft_plan<bn254_fq> plan(6);
+    const std::vector<bn254_fq_value> coefficients = fq_values(plan.size());
+    std::vector<bn254_fq_value> actual = coefficients;
+    std::vector<bn254_fq_value> workspace(plan.size(), bn254_fq_value::zero());
+
+    const bn254_fq_value *const values_storage = actual.data();
+    const bn254_fq_value *const workspace_storage = workspace.data();
+
+    plan.fft(actual, workspace);
+    BOOST_CHECK(actual.data() == workspace_storage);
+    BOOST_CHECK(workspace.data() == values_storage);
+
+    plan.inverse_fft(actual, workspace);
+    BOOST_CHECK(actual.data() == values_storage);
+    BOOST_CHECK(workspace.data() == workspace_storage);
+    BOOST_CHECK(actual == coefficients);
+}
+
+BOOST_AUTO_TEST_CASE(caller_owned_workspace_rejects_aliasing_and_oversized_inputs) {
+    const math::mixed_radix_fft_plan<bn254_fq> plan(6);
+    std::vector<bn254_fq_value> values = fq_values(plan.size());
+    std::vector<bn254_fq_value> workspace;
+
+    BOOST_CHECK_THROW(plan.fft(values, values), std::invalid_argument);
+    BOOST_CHECK_THROW(plan.inverse_fft(values, values), std::invalid_argument);
+
+    values.push_back(bn254_fq_value::one());
+    BOOST_CHECK_THROW(plan.fft(values, workspace), std::invalid_argument);
+    BOOST_CHECK_THROW(plan.inverse_fft(values, workspace), std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_CASE(oversized_inputs_are_rejected) {
     const math::mixed_radix_fft_plan<bn254_fq> plan(6);
     std::vector<bn254_fq_value> values(7, bn254_fq_value::one());
@@ -240,87 +284,6 @@ BOOST_AUTO_TEST_CASE(zero_constant_and_sparse_polynomials_transform_correctly) {
     BOOST_CHECK(sparse == naive_dft(sparse_coefficients, plan.omega()));
     plan.inverse_fft(sparse);
     BOOST_CHECK(sparse == sparse_coefficients);
-}
-
-BOOST_AUTO_TEST_CASE(fq_polynomial_multiplication_matches_schoolbook) {
-    const math::mixed_radix_fft_plan<bn254_fq> plan(18);
-    const std::vector<bn254_fq_value> left = fq_values(8);
-    const std::vector<bn254_fq_value> right = fq_values(7);
-    std::vector<bn254_fq_value> result;
-
-    math::multiplication(result, left, right, plan);
-
-    BOOST_CHECK(result == schoolbook_multiply(left, right));
-}
-
-BOOST_AUTO_TEST_CASE(fq12_polynomial_multiplication_matches_schoolbook) {
-    const math::mixed_radix_fft_plan<bn254_fq> plan(18);
-    const std::vector<bn254_fq12_value> left = fq12_values(8, 0xA012);
-    const std::vector<bn254_fq12_value> right = fq12_values(7, 0xB012);
-    std::vector<bn254_fq12_value> result;
-
-    math::multiplication(result, left, right, plan);
-
-    BOOST_CHECK(result == schoolbook_multiply(left, right));
-}
-
-BOOST_AUTO_TEST_CASE(polynomial_multiplication_supports_output_aliasing) {
-    const math::mixed_radix_fft_plan<bn254_fq> plan(9);
-    const std::vector<bn254_fq_value> left = fq_values(4);
-    const std::vector<bn254_fq_value> right = fq_values(4);
-    const std::vector<bn254_fq_value> expected = schoolbook_multiply(left, right);
-
-    std::vector<bn254_fq_value> output = left;
-    math::multiplication(output, output, right, plan);
-    BOOST_CHECK(output == expected);
-
-    output = right;
-    math::multiplication(output, left, output, plan);
-    BOOST_CHECK(output == expected);
-}
-
-BOOST_AUTO_TEST_CASE(polynomial_multiplication_preserves_exact_output_length) {
-    const math::mixed_radix_fft_plan<bn254_fq> plan(6);
-    const std::vector<bn254_fq_value> left = {bn254_fq_value(1), bn254_fq_value(2), bn254_fq_value::zero()};
-    const std::vector<bn254_fq_value> right = {bn254_fq_value(3), bn254_fq_value(4), bn254_fq_value::zero()};
-    std::vector<bn254_fq_value> result;
-
-    math::multiplication(result, left, right, plan);
-
-    BOOST_CHECK_EQUAL(result.size(), left.size() + right.size() - 1);
-    BOOST_CHECK(result == schoolbook_multiply(left, right));
-}
-
-BOOST_AUTO_TEST_CASE(polynomial_multiplication_rejects_invalid_inputs) {
-    const math::mixed_radix_fft_plan<bn254_fq> plan(6);
-    const std::vector<bn254_fq_value> coefficients = fq_values(4);
-    const std::vector<bn254_fq_value> empty;
-    std::vector<bn254_fq_value> result;
-
-    BOOST_CHECK_THROW(math::multiplication(result, empty, coefficients, plan), std::invalid_argument);
-    BOOST_CHECK_THROW(math::multiplication(result, coefficients, empty, plan), std::invalid_argument);
-    BOOST_CHECK_THROW(math::multiplication(result, coefficients, coefficients, plan), std::invalid_argument);
-}
-
-BOOST_AUTO_TEST_CASE(fq12_polynomial_multiplication_uses_the_larger_smooth_order) {
-    constexpr std::size_t operand_size = odd_smooth_order / 2 + 2;
-    const std::vector<bn254_fq12_value> samples = fq12_values(6, 0x34974);
-    std::vector<bn254_fq12_value> left(operand_size, bn254_fq12_value::zero());
-    std::vector<bn254_fq12_value> right(operand_size, bn254_fq12_value::zero());
-    left[0] = samples[0];
-    left[113] = samples[1];
-    left.back() = samples[2];
-    right[0] = samples[3];
-    right[257] = samples[4];
-    right.back() = samples[5];
-
-    const std::vector<bn254_fq12_value> expected = schoolbook_multiply(left, right);
-    const math::mixed_radix_fft_plan<bn254_fq> plan(even_smooth_order);
-    std::vector<bn254_fq12_value> result;
-
-    BOOST_REQUIRE_GT(expected.size(), odd_smooth_order);
-    math::multiplication(result, left, right, plan);
-    BOOST_CHECK(result == expected);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

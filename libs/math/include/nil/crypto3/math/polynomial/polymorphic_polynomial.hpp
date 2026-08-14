@@ -26,12 +26,14 @@
 #define CRYPTO3_MATH_POLYNOMIAL_POLYMORPHIC_POLYNOMIAL_HPP
 
 #include <algorithm>
+#include <ostream>
 #include <ranges>
 #include <vector>
 #include <variant>
 
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 
+#include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/algebra/fields/utils.hpp>
 
 namespace nil::crypto3::math {
@@ -42,6 +44,7 @@ namespace nil::crypto3::math {
         using small_field_value_type = typename FieldType::small_subfield::value_type;
 
         using size_type = std::size_t;
+        using representation_type = coefficient_representation;
         using small_val = polynomial<small_field_value_type>;
         using big_val = polynomial<value_type>;
 
@@ -57,6 +60,10 @@ namespace nil::crypto3::math {
 
         size_type size() const noexcept {
             return std::visit([](const auto& v) { return v.size(); }, val);
+        }
+
+        size_type degree() const noexcept {
+            return std::visit([](const auto& v) { return v.degree(); }, val);
         }
 
         value_type operator[](size_type s) const {
@@ -143,9 +150,10 @@ namespace nil::crypto3::math {
 
     // Used in the unit tests, so we can use BOOST_CHECK_EQUALS, and see
     // the values of polymorphic_polynomials, when the check fails.
-    template<typename value_type, typename = typename std::enable_if<detail::is_field_element<value_type>::value>::type>
-    std::ostream& operator<<(std::ostream& os, const polymorphic_polynomial<value_type>& poly) {
-        return std::visit([&os](const auto& v) { os << v; }, poly.val);
+    template<typename FieldType>
+        requires algebra::is_field<FieldType>::value
+    std::ostream& operator<<(std::ostream& os, const polymorphic_polynomial<FieldType>& poly) {
+        return std::visit([&os](const auto& value) -> std::ostream& { return os << value; }, poly.val);
     }
 }    // namespace nil::crypto3::math
 

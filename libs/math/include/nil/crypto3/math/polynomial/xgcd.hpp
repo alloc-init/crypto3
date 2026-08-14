@@ -27,11 +27,12 @@
 #define CRYPTO3_MATH_XGCD_HPP
 
 #include <algorithm>
+#include <cassert>
+#include <concepts>
+#include <ranges>
 #include <vector>
 
-#include <boost/math/tools/polynomial_gcd.hpp>
-#include <boost/integer/extended_euclidean.hpp>
-
+#include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
 
 namespace nil {
@@ -42,12 +43,30 @@ namespace nil {
              * @brief Perform the standard Extended Euclidean Division algorithm.
              * Input: Polynomial A, Polynomial B.
              * Output: Polynomial G, Polynomial U, Polynomial V, such that G = (A * U) + (B * V).
+             * This implementation uses quadratic polynomial division and the legacy radix-2 FFT multiplication path.
+             *
+             * @pre A and B are nonempty canonical coefficient ranges.
+             * @pre G, U, and V are distinct output objects.
              */
-            template<typename Range1, typename Range2, typename Range3, typename Range4, typename Range5>
+            template<detail::PolynomialCoefficientRange Range1, detail::PolynomialCoefficientRange Range2,
+                     detail::MutablePolynomialCoefficientRange Range3, detail::MutablePolynomialCoefficientRange Range4,
+                     detail::MutablePolynomialCoefficientRange Range5>
+                requires std::same_as<std::ranges::range_value_t<const Range1>,
+                                      std::ranges::range_value_t<const Range2>> &&
+                         std::same_as<std::ranges::range_value_t<const Range1>, std::ranges::range_value_t<Range3>> &&
+                         std::same_as<std::ranges::range_value_t<const Range1>, std::ranges::range_value_t<Range4>> &&
+                         std::same_as<std::ranges::range_value_t<const Range1>, std::ranges::range_value_t<Range5>> &&
+                         algebra::is_field_element<std::ranges::range_value_t<const Range1>>::value &&
+                         requires(const Range1 &input, Range3 &g, Range4 &u, Range5 &v,
+                                  const std::vector<std::ranges::range_value_t<const Range1>> &coefficients) {
+                             g = input;
+                             g = coefficients;
+                             u = coefficients;
+                             v = coefficients;
+                         }
             void extended_euclidean(const Range1 &a, const Range2 &b, Range3 &g, Range4 &u, Range5 &v) {
 
-                typedef
-                    typename std::iterator_traits<decltype(std::begin(std::declval<Range1>()))>::value_type value_type;
+                using value_type = std::ranges::range_value_t<const Range1>;
 
                 if (is_zero(b)) {
                     g = a;
@@ -56,41 +75,47 @@ namespace nil {
                     return;
                 }
 
-                std::vector<value_type> U(1, value_type::one());
-                std::vector<value_type> V1(1, value_type::zero());
-                std::vector<value_type> G(a);
-                std::vector<value_type> V3(b);
+                std::vector<value_type> previous_a_coefficient(1, value_type::one());
+                std::vector<value_type> a_coefficient(1, value_type::zero());
+                std::vector<value_type> previous_remainder(a);
+                std::vector<value_type> remainder(b);
 
-                std::vector<value_type> Q(1, value_type::zero());
-                std::vector<value_type> R(1, value_type::zero());
-                std::vector<value_type> T(1, value_type::zero());
+                std::vector<value_type> quotient(1, value_type::zero());
+                std::vector<value_type> next_remainder(1, value_type::zero());
+                std::vector<value_type> product(1, value_type::zero());
+                std::vector<value_type> next_a_coefficient(1, value_type::zero());
 
-                while (!is_zero(V3)) {
-                    division(Q, R, G, V3);
-                    multiplication(G, V1, Q);
-                    subtraction(T, U, G);
+                while (!is_zero(remainder)) {
+                    division(quotient, next_remainder, previous_remainder, remainder);
+                    multiplication(product, a_coefficient, quotient);
+                    subtraction(next_a_coefficient, previous_a_coefficient, product);
 
-                    U = V1;
-                    G = V3;
-                    V1 = T;
-                    V3 = R;
+                    previous_a_coefficient = a_coefficient;
+                    previous_remainder = remainder;
+                    a_coefficient = next_a_coefficient;
+                    remainder = next_remainder;
                 }
 
-                multiplication(V3, a, U);
-                subtraction(V3, G, V3);
-                division(V1, R, V3, b);
+                // Recover the coefficient of b from G = a * U + b * V once the Euclidean loop has found G and U.
+                multiplication(product, a, previous_a_coefficient);
+                subtraction(product, previous_remainder, product);
+                std::vector<value_type> b_coefficient(1, value_type::zero());
+                division(b_coefficient, next_remainder, product, b);
+                assert(is_zero(next_remainder));
 
-                value_type lead_coeff = G.back().inversed();
-                std::transform(G.begin(), G.end(), G.begin(),
-                               std::bind(std::multiplies<value_type>(), lead_coeff, std::placeholders::_1));
-                std::transform(U.begin(), U.end(), U.begin(),
-                               std::bind(std::multiplies<value_type>(), lead_coeff, std::placeholders::_1));
-                std::transform(V1.begin(), V1.end(), V1.begin(),
-                               std::bind(std::multiplies<value_type>(), lead_coeff, std::placeholders::_1));
+                const value_type inverse_leading_coefficient = previous_remainder.back().inversed();
+                const auto scale_to_monic = [&inverse_leading_coefficient](const value_type &coefficient) {
+                    return coefficient * inverse_leading_coefficient;
+                };
+                std::transform(previous_remainder.begin(), previous_remainder.end(), previous_remainder.begin(),
+                               scale_to_monic);
+                std::transform(previous_a_coefficient.begin(), previous_a_coefficient.end(),
+                               previous_a_coefficient.begin(), scale_to_monic);
+                std::transform(b_coefficient.begin(), b_coefficient.end(), b_coefficient.begin(), scale_to_monic);
 
-                g = G;
-                u = U;
-                v = V1;
+                g = previous_remainder;
+                u = previous_a_coefficient;
+                v = b_coefficient;
             }
         }    // namespace math
     }    // namespace crypto3
