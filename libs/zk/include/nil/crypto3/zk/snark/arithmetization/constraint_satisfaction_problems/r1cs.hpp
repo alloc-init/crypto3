@@ -57,8 +57,7 @@ namespace nil {
                  *
                  * A R1CS constraint is used to construct a R1CS constraint system (see below).
                  */
-                template<typename FieldType,
-                         typename variable_type = nil::crypto3::math::linear_variable<FieldType>>
+                template<typename FieldType, typename variable_type = nil::crypto3::math::linear_variable<FieldType>>
                 struct r1cs_constraint {
                     typedef FieldType field_type;
 

@@ -69,8 +69,7 @@ BOOST_AUTO_TEST_CASE(evaluation_over_extension_field) {
     base_combination_type combination(base_value_type(2));
     combination.add_term(base_variable_type(2), base_value_type(3));
 
-    const fp6_value_type extension_component(fp2_value_type::zero(), fp2_value_type::one(),
-                                              fp2_value_type::zero());
+    const fp6_value_type extension_component(fp2_value_type::zero(), fp2_value_type::one(), fp2_value_type::zero());
     const std::vector<fp12_value_type> witness {
         fp12_value_type(fp6_value_type::one(), extension_component),
         fp12_value_type::one(),
