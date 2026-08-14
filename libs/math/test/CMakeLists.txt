@@ -60,6 +60,7 @@ foreach(TEST_NAME ${TESTS_NAMES})
 endforeach()
 
 set(COMPILE_TIME_TESTS_NAMES
+        "polynomial_algorithm_constraints"
         "polynomial_concepts"
         "static_matrix")
 

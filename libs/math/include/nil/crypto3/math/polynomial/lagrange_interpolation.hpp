@@ -27,6 +27,11 @@
 #ifndef CRYPTO3_MATH_LAGRANGE_INTERPOLATION_HPP
 #define CRYPTO3_MATH_LAGRANGE_INTERPOLATION_HPP
 
+#include <concepts>
+#include <ranges>
+#include <utility>
+
+#include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/domains/evaluation_domain.hpp>
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
@@ -34,25 +39,31 @@
 namespace nil {
     namespace crypto3 {
         namespace math {
-            // Default implementation according to Wikipedia
-            // https://en.wikipedia.org/wiki/Lagrange_polynomial
+            /**
+             * Construct the polynomial passing through the supplied points by explicitly summing its Lagrange
+             * basis polynomials.
+             * See https://en.wikipedia.org/wiki/Lagrange_polynomial for the defining formula.
+             *
+             * @pre The first components of the point pairs are pairwise distinct.
+             */
             template<typename InputRange,
-                     typename FieldValueType =
-                         typename std::iterator_traits<typename InputRange::iterator>::value_type::first_type>
-            typename std::enable_if<
-                std::is_same<std::pair<FieldValueType, FieldValueType>,
-                             typename std::iterator_traits<typename InputRange::iterator>::value_type>::value,
-                polynomial<FieldValueType>>::type
-                lagrange_interpolation(const InputRange &points) {
-                std::size_t k = std::size(points);
+                     typename FieldValueType = typename std::ranges::range_value_t<const InputRange>::first_type>
+                requires std::ranges::random_access_range<const InputRange> &&
+                         std::ranges::sized_range<const InputRange> &&
+                         std::same_as<std::ranges::range_value_t<const InputRange>,
+                                      std::pair<FieldValueType, FieldValueType>> &&
+                         algebra::is_field_element<FieldValueType>::value
+            polynomial<FieldValueType> lagrange_interpolation(const InputRange &points) {
+                std::size_t k = std::ranges::size(points);
+                auto first = std::ranges::begin(points);
 
                 polynomial<FieldValueType> result;
                 for (std::size_t j = 0; j < k; ++j) {
-                    polynomial<FieldValueType> term({points[j].second});
+                    polynomial<FieldValueType> term({first[j].second});
                     for (std::size_t m = 0; m < k; ++m) {
                         if (m != j) {
-                            term = term * (polynomial<FieldValueType>({-points[m].first, FieldValueType::one()}) *
-                                           (points[j].first - points[m].first).inversed());
+                            term = term * (polynomial<FieldValueType>({-first[m].first, FieldValueType::one()}) *
+                                           (first[j].first - first[m].first).inversed());
                         }
                     }
                     result = result + term;

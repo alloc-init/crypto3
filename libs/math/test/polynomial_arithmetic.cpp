@@ -271,6 +271,18 @@ BOOST_AUTO_TEST_CASE(polynomial_multiplication_zero_b) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(transpose_multiplication_zero_pads_the_middle_product) {
+    using value_type = typename ScalarFieldType::value_type;
+
+    const std::vector<value_type> a = {1u, 2u};
+    const std::vector<value_type> c = {1u};
+
+    const std::vector<value_type> result = nil::crypto3::math::transpose_multiplication(2, a, c);
+    const std::vector<value_type> expected = {1u, 0u, 0u};
+
+    BOOST_CHECK(result == expected);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(polynomial_division_test_suite)
@@ -294,6 +306,38 @@ BOOST_AUTO_TEST_CASE(polynomial_division1) {
     for (std::size_t i = 0; i < R.size(); i++) {
         BOOST_CHECK_EQUAL(R_ans[i], R[i]);
     }
+}
+
+BOOST_AUTO_TEST_CASE(polynomial_division_by_constant) {
+    using value_type = typename ScalarFieldType::value_type;
+
+    const std::vector<value_type> dividend = {2u, 4u, 6u};
+    const std::vector<value_type> divisor = {2u};
+    std::vector<value_type> quotient;
+    std::vector<value_type> remainder;
+
+    division(quotient, remainder, dividend, divisor);
+
+    const std::vector<value_type> expected_quotient = {1u, 2u, 3u};
+    const std::vector<value_type> expected_remainder = {value_type::zero()};
+    BOOST_CHECK(quotient == expected_quotient);
+    BOOST_CHECK(remainder == expected_remainder);
+}
+
+BOOST_AUTO_TEST_CASE(polynomial_dense_long_division) {
+    using value_type = typename ScalarFieldType::value_type;
+
+    const std::vector<value_type> dividend = {8u, 16u, 11u, 4u};
+    const std::vector<value_type> divisor = {1u, 2u, 1u};
+    std::vector<value_type> quotient;
+    std::vector<value_type> remainder;
+
+    division(quotient, remainder, dividend, divisor);
+
+    const std::vector<value_type> expected_quotient = {3u, 4u};
+    const std::vector<value_type> expected_remainder = {5u, 6u};
+    BOOST_CHECK(quotient == expected_quotient);
+    BOOST_CHECK(remainder == expected_remainder);
 }
 
 BOOST_AUTO_TEST_CASE(polynomial_division2) {
@@ -362,10 +406,18 @@ BOOST_AUTO_TEST_CASE(extended_gcd) {
     extended_euclidean(a, b, pg, pu, pv);
 
     std::vector<typename ScalarFieldType::value_type> pv_ans = {1u, 6u, 25u, 90u};
+    BOOST_CHECK(pv_ans == pv);
 
-    for (std::size_t i = 0; i < pv.size(); i++) {
-        BOOST_CHECK_EQUAL(pv_ans[i], pv[i]);
-    }
+    std::vector<typename ScalarFieldType::value_type> a_times_u;
+    std::vector<typename ScalarFieldType::value_type> b_times_v;
+    std::vector<typename ScalarFieldType::value_type> reconstructed_gcd;
+    multiplication(a_times_u, a, pu);
+    multiplication(b_times_v, b, pv);
+    addition(reconstructed_gcd, a_times_u, b_times_v);
+
+    BOOST_CHECK(reconstructed_gcd == pg);
+    BOOST_REQUIRE(!pg.empty());
+    BOOST_CHECK(pg.back() == ScalarFieldType::value_type::one());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

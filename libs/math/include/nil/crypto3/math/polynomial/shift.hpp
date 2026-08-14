@@ -26,13 +26,22 @@
 #ifndef CRYPTO3_MATH_POLYNOMIAL_SHIFT_HPP
 #define CRYPTO3_MATH_POLYNOMIAL_SHIFT_HPP
 
+#include <cassert>
+#include <cstdint>
+
+#include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
 
 namespace nil {
     namespace crypto3 {
         namespace math {
+            /**
+             * Return g(X) = f(x * X) by multiplying coefficient i by x^i.
+             * This is a multiplicative argument scaling, not the additive shift f(X + x).
+             */
             template<typename FieldValueType>
+                requires algebra::is_field_element<FieldValueType>::value
             static inline polynomial<FieldValueType> polynomial_shift(const polynomial<FieldValueType> &f,
                                                                       const FieldValueType &x) {
                 polynomial<FieldValueType> f_shifted(f);
@@ -45,7 +54,16 @@ namespace nil {
                 return f_shifted;
             }
 
+            /**
+             * Return the DFS polynomial representing g(X) = f(omega^shift * X), where omega is the root for the
+             * logical domain_size. This is a cyclic rotation of the evaluations, including when f is stored over
+             * a larger extended domain.
+             *
+             * @pre f is nonempty.
+             * @pre domain_size is zero, selecting f.size(), or is a positive divisor of f.size().
+             */
             template<typename FieldValueType>
+                requires algebra::is_field_element<FieldValueType>::value
             static inline polynomial_dfs<FieldValueType> polynomial_shift(const polynomial_dfs<FieldValueType> &f,
                                                                           const int shift,
                                                                           std::size_t domain_size = 0) {
@@ -58,11 +76,19 @@ namespace nil {
                 assert((extended_domain_size % domain_size) == 0);
 
                 const std::size_t domain_scale = extended_domain_size / domain_size;
+                std::size_t normalized_shift;
+                if (shift >= 0) {
+                    normalized_shift = static_cast<std::size_t>(shift) % domain_size;
+                } else {
+                    const std::size_t magnitude = static_cast<std::size_t>(-(static_cast<std::int64_t>(shift)));
+                    const std::size_t remainder = magnitude % domain_size;
+                    normalized_shift = remainder == 0 ? 0 : domain_size - remainder;
+                }
 
                 polynomial_dfs<FieldValueType> f_shifted(f.degree(), extended_domain_size);
 
                 for (std::size_t index = 0; index < extended_domain_size; ++index) {
-                    f_shifted[index] = f[(extended_domain_size + index + domain_scale * shift) % extended_domain_size];
+                    f_shifted[index] = f[(index + domain_scale * normalized_shift) % extended_domain_size];
                 }
 
                 return f_shifted;

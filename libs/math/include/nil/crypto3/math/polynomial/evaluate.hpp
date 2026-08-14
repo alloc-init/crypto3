@@ -26,9 +26,15 @@
 #ifndef CRYPTO3_MATH_EVALUATE_HPP
 #define CRYPTO3_MATH_EVALUATE_HPP
 
+#include <concepts>
+#include <iterator>
+#include <ranges>
+#include <stdexcept>
 #include <vector>
 
 #include <boost/math/tools/polynomial.hpp>
+
+#include <nil/crypto3/algebra/type_traits.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -42,8 +48,12 @@ namespace nil {
              * - a vector coeff representing monomial P of size m
              * - a field element element t
              * The output is the polynomial P(x) evaluated at x = t.
+             *
+             * @pre m > 0.
+             * @pre [first, last) contains exactly m coefficients.
              */
-            template<typename FieldValueType, typename ContiguousIterator>
+            template<typename FieldValueType, std::contiguous_iterator ContiguousIterator>
+                requires std::same_as<std::iter_value_t<ContiguousIterator>, FieldValueType>
             inline FieldValueType evaluate_polynomial(ContiguousIterator first, ContiguousIterator last,
                                                       const FieldValueType &t, std::size_t m) {
                 BOOST_ASSERT(std::size_t(std::distance(first, last)) == m);
@@ -52,9 +62,11 @@ namespace nil {
             }
 
             template<typename FieldValueType, typename ContiguousContainer>
+                requires std::ranges::contiguous_range<const ContiguousContainer> &&
+                         std::same_as<std::ranges::range_value_t<const ContiguousContainer>, FieldValueType>
             inline FieldValueType evaluate_polynomial(const ContiguousContainer &coeff, const FieldValueType &t,
                                                       std::size_t m) {
-                return evaluate_polynomial(coeff.begin(), coeff.end(), t, m);
+                return evaluate_polynomial(std::ranges::begin(coeff), std::ranges::end(coeff), t, m);
             }
 
             /*!
@@ -67,14 +79,16 @@ namespace nil {
              * - a field element element t
              * - an index idx in {0,...,m-1}
              * The output is the polynomial L_{idx,S}(z) evaluated at z = t.
+             *
+             * @pre The points in [first, last) are pairwise distinct.
              */
-            template<typename FieldValueType, typename InputIterator>
+            template<typename FieldValueType, std::random_access_iterator InputIterator>
+                requires std::same_as<std::iter_value_t<InputIterator>, FieldValueType> &&
+                         algebra::is_field_element<FieldValueType>::value
             inline FieldValueType evaluate_lagrange_polynomial(InputIterator first, InputIterator last,
                                                                const FieldValueType &t, std::size_t m,
                                                                std::size_t idx) {
                 typedef typename std::iterator_traits<InputIterator>::value_type value_type;
-
-                BOOST_STATIC_ASSERT(std::is_same<value_type, FieldValueType>::value);
 
                 if (m != std::size_t(std::distance(first, last))) {
                     throw std::invalid_argument("expected m == domain.size()");
@@ -99,13 +113,12 @@ namespace nil {
             }
 
             template<typename FieldValueType, typename Range>
+                requires std::ranges::random_access_range<const Range> &&
+                         std::same_as<std::ranges::range_value_t<const Range>, FieldValueType> &&
+                         algebra::is_field_element<FieldValueType>::value
             inline FieldValueType evaluate_lagrange_polynomial(const Range &domain, const FieldValueType &t,
                                                                std::size_t m, std::size_t idx) {
-                typedef FieldValueType value_type;
-                BOOST_STATIC_ASSERT(std::is_same<value_type, typename std::iterator_traits<decltype(std::begin(
-                                                                 std::declval<Range>()))>::value_type>::value);
-
-                return evaluate_lagrange_polynomial(domain.begin(), domain.end(), t, m, idx);
+                return evaluate_lagrange_polynomial(std::ranges::begin(domain), std::ranges::end(domain), t, m, idx);
             }
         }    // namespace math
     }    // namespace crypto3
