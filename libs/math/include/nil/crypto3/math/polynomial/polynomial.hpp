@@ -431,13 +431,12 @@ namespace nil {
                 }
 
                 /**
-                 * Compute the reverse polynomial up to vector size n (degree n-1).
-                 * Below we make use of the reversal endomorphism definition from
-                 * [Bostan, Lecerf, & Schost, 2003. Tellegen's Principle in Practice, on page 38].
+                 * Reverse the complete coefficient sequence, then retain its first n entries without normalization.
+                 *
+                 * @pre 0 < n <= size().
                  */
                 void reverse(std::size_t n) {
-                    std::reverse(this->begin(), this->end());
-                    this->resize(n);
+                    math::reverse(*this, n);
                 }
 
                 /**

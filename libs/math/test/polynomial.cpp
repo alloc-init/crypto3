@@ -108,6 +108,23 @@ BOOST_AUTO_TEST_CASE(condense_and_truncate) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
+BOOST_AUTO_TEST_SUITE(polynomial_reversal_test_suite)
+
+BOOST_AUTO_TEST_CASE(reverse_retains_the_requested_fixed_length) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    polynomial_type value = {value_type(1), value_type::zero(), value_type(2), value_type(3)};
+    value.reverse(3);
+    BOOST_CHECK(value == polynomial_type({value_type(3), value_type(2), value_type::zero()}));
+
+    value = {value_type(1), value_type::zero(), value_type(2), value_type(3)};
+    reverse(value, value.size());
+    BOOST_CHECK(value == polynomial_type({value_type(3), value_type(2), value_type::zero(), value_type(1)}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(polynomial_addition_test_suite)
 
 void test_addition(polynomial<typename FieldType::value_type> a,

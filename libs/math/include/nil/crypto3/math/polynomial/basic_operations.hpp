@@ -82,9 +82,9 @@ namespace nil {
             }
 
             /**
-             * Reverse the coefficient order, then truncate the result to n coefficients.
+             * Reverse the complete coefficient sequence, then retain its first n entries without normalization.
              *
-             * @pre n <= a.size().
+             * @pre 0 < n <= a.size().
              */
             template<detail::MutablePolynomialCoefficientRange Range>
             void reverse(Range &a, std::size_t n) {
