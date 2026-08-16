@@ -28,24 +28,18 @@
 #include <concepts>
 #include <cstddef>
 #include <utility>
-#include <vector>
+
+#include <nil/crypto3/math/polynomial/concepts.hpp>
 
 namespace nil::crypto3::math::polynomial_arithmetic {
-
-    /**
-     * Polynomial coefficients are stored in ascending degree order. A canonical
-     * polynomial is nonempty and has no trailing zero coefficients, except that
-     * the zero polynomial is represented by the single coefficient [0].
-     */
-    template<typename ValueType>
-    using coefficient_vector = std::vector<ValueType>;
 
     /**
      * Interface for interchangeable polynomial multiplication implementations.
      * Higher-level polynomial algorithms use these operations without depending
      * on how products are computed.
      *
-     * Inputs use canonical vector form and every operation produces canonical
+     * The associated polynomial type must use the coefficient representation.
+     * Inputs use canonical form and every operation produces canonical
      * output. The output may alias either input. multiply_low computes the product
      * modulo X^coefficient_count; when coefficient_count is zero, it stores [0].
      *
@@ -55,10 +49,12 @@ namespace nil::crypto3::math::polynomial_arithmetic {
      */
     template<typename Backend>
     concept PolynomialBackend =
-        requires { typename Backend::value_type; } &&
-        requires(Backend &backend, coefficient_vector<typename Backend::value_type> &output,
-                 const coefficient_vector<typename Backend::value_type> &left,
-                 const coefficient_vector<typename Backend::value_type> &right, std::size_t coefficient_count) {
+        requires {
+            typename Backend::polynomial_type;
+            requires CoefficientPolynomial<typename Backend::polynomial_type>;
+        } && requires(Backend &backend, typename Backend::polynomial_type &output,
+                      const typename Backend::polynomial_type &left, const typename Backend::polynomial_type &right,
+                      std::size_t coefficient_count) {
             { backend.multiply(output, left, right) } -> std::same_as<void>;
             { backend.square(output, left) } -> std::same_as<void>;
             { backend.multiply_low(output, left, right, coefficient_count) } -> std::same_as<void>;
@@ -70,32 +66,31 @@ namespace nil::crypto3::math::polynomial_arithmetic {
      * reuse implementation-specific configuration, precomputed state, and scratch
      * storage instead of rebuilding them for every product.
      *
-     * The context is the stable entry point used by higher-level algorithms, so
-     * they do not handle backend-specific resources or representations. A context
-     * can be reused sequentially, but callers must use separate contexts for
-     * concurrent operations.
+     * Higher-level algorithms use the context without managing backend-specific
+     * plans, configuration, or scratch storage. A context can be reused sequentially,
+     * but callers must use separate contexts for concurrent operations.
      */
     template<PolynomialBackend Backend>
     class polynomial_context {
     public:
         using backend_type = Backend;
-        using value_type = typename backend_type::value_type;
-        using coefficient_vector = polynomial_arithmetic::coefficient_vector<value_type>;
+        using polynomial_type = typename backend_type::polynomial_type;
+        using value_type = typename polynomial_type::value_type;
 
         polynomial_context() = default;
 
         explicit polynomial_context(backend_type backend) : backend_(std::move(backend)) {
         }
 
-        void multiply(coefficient_vector &output, const coefficient_vector &left, const coefficient_vector &right) {
+        void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) {
             backend_.multiply(output, left, right);
         }
 
-        void square(coefficient_vector &output, const coefficient_vector &input) {
+        void square(polynomial_type &output, const polynomial_type &input) {
             backend_.square(output, input);
         }
 
-        void multiply_low(coefficient_vector &output, const coefficient_vector &left, const coefficient_vector &right,
+        void multiply_low(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
                           std::size_t coefficient_count) {
             backend_.multiply_low(output, left, right, coefficient_count);
         }

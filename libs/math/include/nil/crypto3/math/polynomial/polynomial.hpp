@@ -423,26 +423,20 @@ namespace nil {
                 }
 
                 /**
-                 * Removes extraneous zero entries from in vector representation of polynomial.
-                 * Example - Degree-4 Polynomial: [0, 1, 2, 3, 4, 0, 0, 0, 0] -> [0, 1, 2, 3, 4]
-                 * Note: Simplest condensed form is a zero polynomial of vector form: [0]
+                 * Normalize the coefficient representation by removing trailing zero coefficients.
+                 * Empty inputs and all representations of zero become [0].
                  */
                 void condense() {
-                    while (std::distance(this->cbegin(), this->cend()) > 1 &&
-                           this->back() == typename std::iterator_traits<decltype(std::begin(
-                                               std::declval<container_type>()))>::value_type()) {
-                        this->pop_back();
-                    }
+                    math::condense(*this);
                 }
 
                 /**
-                 * Compute the reverse polynomial up to vector size n (degree n-1).
-                 * Below we make use of the reversal endomorphism definition from
-                 * [Bostan, Lecerf, & Schost, 2003. Tellegen's Principle in Practice, on page 38].
+                 * Reverse the complete coefficient sequence, then retain its first n entries without normalization.
+                 *
+                 * @pre 0 < n <= size().
                  */
                 void reverse(std::size_t n) {
-                    std::reverse(this->begin(), this->end());
-                    this->resize(n);
+                    math::reverse(*this, n);
                 }
 
                 /**
@@ -571,10 +565,8 @@ namespace nil {
                 requires algebra::is_field_element<FieldValueType>::value
             polynomial<FieldValueType, Allocator> operator*(const polynomial<FieldValueType, Allocator>& A,
                                                             const FieldValueType& B) {
-                polynomial<FieldValueType> result(A);
-                for (FieldValueType& value : result) {
-                    value *= B;
-                }
+                polynomial<FieldValueType, Allocator> result;
+                scalar_multiplication(result, A, B);
                 return result;
             }
 
@@ -582,7 +574,6 @@ namespace nil {
                 requires algebra::is_field_element<FieldValueType>::value
             polynomial<FieldValueType, Allocator> operator*(const FieldValueType& A,
                                                             const polynomial<FieldValueType, Allocator>& B) {
-                // Call the upper function.
                 return B * A;
             }
 

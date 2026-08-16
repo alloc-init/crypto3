@@ -40,6 +40,8 @@ namespace fields = nil::crypto3::algebra::fields;
 
 using value_type = fields::babybear::value_type;
 using coefficients = std::vector<value_type>;
+using coefficient_polynomial = math::polynomial<value_type>;
+using evaluation_polynomial = math::polynomial_dfs<value_type>;
 using interpolation_points = std::vector<std::pair<value_type, value_type>>;
 
 template<typename Range>
@@ -94,6 +96,9 @@ concept SupportsPolynomialShift = requires(const math::polynomial<ValueType> &po
 
 static_assert(math::detail::PolynomialCoefficientRange<coefficients>);
 static_assert(math::detail::MutablePolynomialCoefficientRange<coefficients>);
+static_assert(math::detail::MutableNormalizableCoefficientPolynomial<coefficient_polynomial>);
+static_assert(!math::detail::MutableNormalizableCoefficientPolynomial<evaluation_polynomial>);
+static_assert(!math::detail::MutableNormalizableCoefficientPolynomial<coefficients>);
 static_assert(math::detail::PolynomialCoefficientRange<std::array<value_type, 2>>);
 static_assert(!math::detail::MutablePolynomialCoefficientRange<std::array<value_type, 2>>);
 static_assert(!math::detail::PolynomialCoefficientRange<std::list<value_type>>);

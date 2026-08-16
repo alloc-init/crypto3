@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <concepts>
 #include <iterator>
+#include <memory>
 #include <ranges>
 #include <stdexcept>
 #include <vector>
@@ -57,6 +58,12 @@ namespace nil {
                         range.resize(size, value);
                     };
 
+                template<typename Polynomial>
+                concept MutableNormalizableCoefficientPolynomial =
+                    CoefficientPolynomial<Polynomial> && MutablePolynomialCoefficientRange<Polynomial> &&
+                    std::default_initializable<typename Polynomial::value_type> &&
+                    std::equality_comparable<typename Polynomial::value_type>;
+
             }    // namespace detail
 
             /**
@@ -82,9 +89,9 @@ namespace nil {
             }
 
             /**
-             * Reverse the coefficient order, then truncate the result to n coefficients.
+             * Reverse the complete coefficient sequence, then retain its first n entries without normalization.
              *
-             * @pre n <= a.size().
+             * @pre 0 < n <= a.size().
              */
             template<detail::MutablePolynomialCoefficientRange Range>
             void reverse(Range &a, std::size_t n) {
@@ -98,10 +105,8 @@ namespace nil {
                 template<MutablePolynomialCoefficientRange AlgebraicRange, typename MultiplyOperation>
                     requires std::copy_constructible<AlgebraicRange> && std::default_initializable<AlgebraicRange> &&
                              requires(AlgebraicRange &result, const AlgebraicRange &input,
-                                      MultiplyOperation &multiply_operation,
-                                      const std::ranges::range_value_t<AlgebraicRange> &value) {
+                                      MultiplyOperation &multiply_operation) {
                                  multiply_operation(result, input);
-                                 result.emplace_back(value);
                                  {
                                      std::ranges::range_value_t<AlgebraicRange>::zero()
                                  } -> std::convertible_to<std::ranges::range_value_t<AlgebraicRange>>;
@@ -116,8 +121,9 @@ namespace nil {
                     product.resize(m + n, std::ranges::range_value_t<AlgebraicRange>::zero());
 
                     AlgebraicRange result;
-                    for (std::size_t i = m - 1; i < n + m; ++i) {
-                        result.emplace_back(product[i]);
+                    result.resize(n + 1, std::ranges::range_value_t<AlgebraicRange>::zero());
+                    for (std::size_t i = 0; i <= n; ++i) {
+                        result[i] = product[m - 1 + i];
                     }
                     return result;
                 }
@@ -127,9 +133,7 @@ namespace nil {
              * Removes trailing zero coefficients while retaining at least one coefficient.
              *
              * Example - Degree-4 Polynomial: [0, 1, 2, 3, 4, 0, 0, 0, 0] -> [0, 1, 2, 3, 4]
-             * The condensed representation of the zero polynomial is [0].
-             *
-             * @pre a is not empty.
+             * Empty inputs and all representations of the zero polynomial become [0].
              */
             template<detail::MutablePolynomialCoefficientRange Range>
                 requires std::default_initializable<std::ranges::range_value_t<Range>> &&
@@ -137,10 +141,112 @@ namespace nil {
             void condense(Range &a) {
                 std::size_t i = std::ranges::size(a);
                 std::ranges::range_value_t<Range> zero {};
+                if (i == 0) {
+                    a.resize(1, zero);
+                    return;
+                }
                 while (i > 1 && a[i - 1] == zero) {
                     --i;
                 }
                 a.resize(i);
+            }
+
+            /**
+             * Replace a coefficient polynomial by its first coefficient_count coefficients and normalize the
+             * result. This computes the polynomial modulo X^coefficient_count; a zero coefficient_count produces
+             * [0].
+             */
+            template<detail::MutableNormalizableCoefficientPolynomial Polynomial>
+            void truncate(Polynomial &polynomial, std::size_t coefficient_count) {
+                using value_type = typename Polynomial::value_type;
+
+                if (coefficient_count == 0) {
+                    polynomial.resize(1);
+                    polynomial[0] = value_type {};
+                    return;
+                }
+                if (polynomial.size() > coefficient_count) {
+                    polynomial.resize(coefficient_count);
+                }
+                condense(polynomial);
+            }
+
+            /**
+             * Multiply every coefficient of input by scalar and store the canonical result in output.
+             * Output may alias input. Scalar may have a different type from the coefficients, provided that
+             * coefficient * scalar is convertible to the coefficient type.
+             */
+            template<detail::MutableNormalizableCoefficientPolynomial Polynomial, typename Scalar>
+                requires requires(const typename Polynomial::value_type &coefficient, const Scalar &scalar) {
+                    { coefficient * scalar } -> std::convertible_to<typename Polynomial::value_type>;
+                }
+            void scalar_multiplication(Polynomial &output, const Polynomial &input, const Scalar &scalar) {
+                if (std::addressof(output) != std::addressof(input)) {
+                    output = input;
+                }
+                for (typename Polynomial::value_type &coefficient : output) {
+                    coefficient = coefficient * scalar;
+                }
+                condense(output);
+            }
+
+            /**
+             * Scale a nonzero coefficient polynomial by the inverse of its leading coefficient and store the
+             * canonical monic result in output. Output may alias input.
+             *
+             * @throws std::invalid_argument if input is the zero polynomial.
+             */
+            template<detail::MutableNormalizableCoefficientPolynomial Polynomial>
+                requires requires(const typename Polynomial::value_type &coefficient) {
+                    { coefficient.inversed() } -> std::convertible_to<typename Polynomial::value_type>;
+                    { Polynomial::value_type::one() } -> std::convertible_to<typename Polynomial::value_type>;
+                    { coefficient * coefficient } -> std::convertible_to<typename Polynomial::value_type>;
+                }
+            void make_monic(Polynomial &output, const Polynomial &input) {
+                using value_type = typename Polynomial::value_type;
+
+                if (std::addressof(output) != std::addressof(input)) {
+                    output = input;
+                }
+                condense(output);
+                if (output.size() == 1 && output[0] == value_type {}) {
+                    throw std::invalid_argument("the zero polynomial cannot be made monic");
+                }
+
+                const value_type leading_coefficient = output[output.size() - 1];
+                if (leading_coefficient == value_type::one()) {
+                    return;
+                }
+                scalar_multiplication(output, output, leading_coefficient.inversed());
+            }
+
+            /**
+             * For input f(X) = sum_{i=0}^n a_i X^i, compute
+             * f'(X) = sum_{i=1}^n i * a_i X^(i-1).
+             * Store the canonical coefficient polynomial in output, which may alias input.
+             */
+            template<detail::MutableNormalizableCoefficientPolynomial Polynomial>
+                requires requires(const typename Polynomial::value_type &coefficient, std::size_t degree) {
+                    { coefficient * degree } -> std::convertible_to<typename Polynomial::value_type>;
+                }
+            void derivative(Polynomial &output, const Polynomial &input) {
+                using value_type = typename Polynomial::value_type;
+
+                if (input.size() <= 1) {
+                    output.resize(1);
+                    output[0] = value_type {};
+                    return;
+                }
+
+                const std::size_t input_size = input.size();
+                if (std::addressof(output) != std::addressof(input)) {
+                    output.resize(input_size - 1);
+                }
+                for (std::size_t degree = 1; degree < input_size; ++degree) {
+                    output[degree - 1] = input[degree] * degree;
+                }
+                output.resize(input_size - 1);
+                condense(output);
             }
 
             /**
@@ -300,24 +406,23 @@ namespace nil {
             }
 
             /**
-             * Multiply canonical coefficient vectors using a reusable polynomial-arithmetic context.
+             * Multiply canonical coefficient polynomials using a reusable polynomial-arithmetic context.
              * The output is canonical and may alias either input.
              */
             template<polynomial_arithmetic::PolynomialBackend Backend>
-            void multiplication(polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &output,
-                                const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &left,
-                                const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &right,
+            void multiplication(typename Backend::polynomial_type &output,
+                                const typename Backend::polynomial_type &left,
+                                const typename Backend::polynomial_type &right,
                                 polynomial_arithmetic::polynomial_context<Backend> &context) {
                 context.multiply(output, left, right);
             }
 
             /**
-             * Square a canonical coefficient vector using a reusable polynomial-arithmetic context.
+             * Square a canonical coefficient polynomial using a reusable polynomial-arithmetic context.
              * The output is canonical and may alias the input.
              */
             template<polynomial_arithmetic::PolynomialBackend Backend>
-            void square(polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &output,
-                        const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &input,
+            void square(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
                         polynomial_arithmetic::polynomial_context<Backend> &context) {
                 context.square(output, input);
             }
@@ -327,10 +432,8 @@ namespace nil {
              * The output is canonical and may alias either input. A coefficient count of zero produces [0].
              */
             template<polynomial_arithmetic::PolynomialBackend Backend>
-            void multiply_low(polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &output,
-                              const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &left,
-                              const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &right,
-                              std::size_t coefficient_count,
+            void multiply_low(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &left,
+                              const typename Backend::polynomial_type &right, std::size_t coefficient_count,
                               polynomial_arithmetic::polynomial_context<Backend> &context) {
                 context.multiply_low(output, left, right, coefficient_count);
             }
@@ -348,9 +451,7 @@ namespace nil {
             template<detail::MutablePolynomialCoefficientRange AlgebraicRange,
                      detail::MutablePolynomialCoefficientRange FieldRange>
                 requires std::copy_constructible<AlgebraicRange> && std::default_initializable<AlgebraicRange> &&
-                         requires(AlgebraicRange &result, const AlgebraicRange &input, const FieldRange &coefficients,
-                                  const std::ranges::range_value_t<AlgebraicRange> &value) {
-                             result.emplace_back(value);
+                         requires(AlgebraicRange &result, const AlgebraicRange &input, const FieldRange &coefficients) {
                              multiplication(result, input, coefficients);
                          }
             AlgebraicRange transpose_multiplication(const std::size_t &n, const AlgebraicRange &a,
@@ -367,27 +468,28 @@ namespace nil {
              * @pre a is not empty.
              */
             template<polynomial_arithmetic::PolynomialBackend Backend, detail::PolynomialCoefficientRange FieldRange>
-                requires algebra::is_field_element<std::ranges::range_value_t<const FieldRange>>::value &&
+                requires std::default_initializable<typename Backend::polynomial_type> &&
+                         algebra::is_field_element<std::ranges::range_value_t<const FieldRange>>::value &&
                          requires(const std::ranges::range_value_t<const FieldRange> &field_value) {
                              {
-                                 Backend::value_type::one() * field_value
-                             } -> std::convertible_to<typename Backend::value_type>;
+                                 Backend::polynomial_type::value_type::one() * field_value
+                             } -> std::convertible_to<typename Backend::polynomial_type::value_type>;
                          }
-            polynomial_arithmetic::coefficient_vector<typename Backend::value_type> transpose_multiplication(
-                const std::size_t n, const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &a,
-                const FieldRange &c, polynomial_arithmetic::polynomial_context<Backend> &context) {
-                using value_type = typename Backend::value_type;
-                using coefficient_vector = polynomial_arithmetic::coefficient_vector<value_type>;
+            typename Backend::polynomial_type
+                transpose_multiplication(const std::size_t n, const typename Backend::polynomial_type &a,
+                                         const FieldRange &c,
+                                         polynomial_arithmetic::polynomial_context<Backend> &context) {
+                using polynomial_type = typename Backend::polynomial_type;
+                using value_type = typename polynomial_type::value_type;
 
-                coefficient_vector embedded_coefficients;
-                embedded_coefficients.reserve(std::ranges::size(c));
+                polynomial_type embedded_coefficients(std::ranges::size(c), value_type::zero());
+                std::size_t coefficient_index = 0;
                 for (const auto &coefficient : c) {
-                    embedded_coefficients.emplace_back(value_type::one() * coefficient);
+                    embedded_coefficients[coefficient_index++] = value_type::one() * coefficient;
                 }
 
                 return detail::transpose_multiplication_impl(
-                    n, a,
-                    [&embedded_coefficients, &context](coefficient_vector &output, const coefficient_vector &input) {
+                    n, a, [&embedded_coefficients, &context](polynomial_type &output, const polynomial_type &input) {
                         multiplication(output, input, embedded_coefficients, context);
                     });
             }

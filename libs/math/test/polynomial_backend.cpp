@@ -49,7 +49,7 @@ namespace {
     using fq12_value_type = fq12_field_type::value_type;
 
     struct incomplete_backend {
-        using value_type = fq_value_type;
+        using polynomial_type = math::polynomial<fq_value_type>;
     };
 
     using fq_mixed_radix_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type>;
@@ -65,14 +65,13 @@ namespace {
     static_assert(polynomial_arithmetic::PolynomialBackend<fq12_mixed_radix_backend>);
 
     template<typename ValueType>
-    polynomial_arithmetic::coefficient_vector<ValueType>
-        expected_low_product(const polynomial_arithmetic::coefficient_vector<ValueType> &product,
-                             std::size_t coefficient_count) {
+    math::polynomial<ValueType> expected_low_product(const math::polynomial<ValueType> &product,
+                                                     std::size_t coefficient_count) {
         if (coefficient_count == 0) {
             return {ValueType::zero()};
         }
 
-        polynomial_arithmetic::coefficient_vector<ValueType> result = product;
+        math::polynomial<ValueType> result = product;
         if (result.size() > coefficient_count) {
             result.resize(coefficient_count);
         }
@@ -81,17 +80,15 @@ namespace {
     }
 
     template<polynomial_arithmetic::PolynomialBackend Backend>
-    void check_backend_conformance(
-        Backend backend,
-        const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &left,
-        const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &right,
-        const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &expected_product,
-        const polynomial_arithmetic::coefficient_vector<typename Backend::value_type> &expected_square) {
-        using value_type = typename Backend::value_type;
-        using coefficient_vector = polynomial_arithmetic::coefficient_vector<value_type>;
+    void check_backend_conformance(Backend backend, const typename Backend::polynomial_type &left,
+                                   const typename Backend::polynomial_type &right,
+                                   const typename Backend::polynomial_type &expected_product,
+                                   const typename Backend::polynomial_type &expected_square) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using value_type = typename polynomial_type::value_type;
 
         polynomial_arithmetic::polynomial_context<Backend> context(std::move(backend));
-        coefficient_vector output = {value_type::one()};
+        polynomial_type output = {value_type::one()};
 
         math::multiplication(output, left, right, context);
         BOOST_CHECK(output == expected_product);
@@ -99,19 +96,19 @@ namespace {
         math::square(output, left, context);
         BOOST_CHECK(output == expected_square);
 
-        coefficient_vector left_alias = left;
+        polynomial_type left_alias = left;
         math::multiplication(left_alias, left_alias, right, context);
         BOOST_CHECK(left_alias == expected_product);
 
-        coefficient_vector right_alias = right;
+        polynomial_type right_alias = right;
         math::multiplication(right_alias, left, right_alias, context);
         BOOST_CHECK(right_alias == expected_product);
 
-        coefficient_vector both_aliases = left;
+        polynomial_type both_aliases = left;
         math::multiplication(both_aliases, both_aliases, both_aliases, context);
         BOOST_CHECK(both_aliases == expected_square);
 
-        coefficient_vector square_alias = left;
+        polynomial_type square_alias = left;
         math::square(square_alias, square_alias, context);
         BOOST_CHECK(square_alias == expected_square);
 
@@ -120,11 +117,11 @@ namespace {
             BOOST_CHECK(output == expected_low_product(expected_product, coefficient_count));
         }
 
-        coefficient_vector low_alias = left;
+        polynomial_type low_alias = left;
         math::multiply_low(low_alias, low_alias, right, 2, context);
         BOOST_CHECK(low_alias == expected_low_product(expected_product, 2));
 
-        const coefficient_vector zero = {value_type::zero()};
+        const polynomial_type zero = {value_type::zero()};
         math::multiplication(output, zero, right, context);
         BOOST_CHECK(output == zero);
         math::multiplication(output, left, zero, context);
@@ -150,12 +147,12 @@ namespace {
 BOOST_AUTO_TEST_SUITE(polynomial_backend_test_suite)
 
 BOOST_AUTO_TEST_CASE(fq_backends_conform) {
-    using coefficient_vector = polynomial_arithmetic::coefficient_vector<fq_value_type>;
+    using polynomial_type = math::polynomial<fq_value_type>;
 
-    const coefficient_vector left = {1, 2, 0, 3};
-    const coefficient_vector right = {4, 0, 5};
-    const coefficient_vector expected_product = {4, 8, 5, 22, 0, 15};
-    const coefficient_vector expected_square = {1, 4, 4, 6, 12, 0, 9};
+    const polynomial_type left = {1, 2, 0, 3};
+    const polynomial_type right = {4, 0, 5};
+    const polynomial_type expected_product = {4, 8, 5, 22, 0, 15};
+    const polynomial_type expected_square = {1, 4, 4, 6, 12, 0, 9};
 
     BOOST_TEST_CONTEXT("schoolbook") {
         check_backend_conformance(polynomial_arithmetic::schoolbook_backend<fq_value_type> {}, left, right,
@@ -167,16 +164,16 @@ BOOST_AUTO_TEST_CASE(fq_backends_conform) {
 }
 
 BOOST_AUTO_TEST_CASE(fq12_backends_conform) {
-    using coefficient_vector = polynomial_arithmetic::coefficient_vector<fq12_value_type>;
+    using polynomial_type = math::polynomial<fq12_value_type>;
 
     const fq12_value_type x = fq12_value(1);
     const fq12_value_type y = fq12_value(13);
     const fq12_value_type z = fq12_value(25);
     const fq12_value_type w = fq12_value(37);
-    const coefficient_vector left = {x, y};
-    const coefficient_vector right = {z, w};
-    const coefficient_vector expected_product = {x * z, x * w + y * z, y * w};
-    const coefficient_vector expected_square = {x * x, x * y + y * x, y * y};
+    const polynomial_type left = {x, y};
+    const polynomial_type right = {z, w};
+    const polynomial_type expected_product = {x * z, x * w + y * z, y * w};
+    const polynomial_type expected_square = {x * x, x * y + y * x, y * y};
 
     BOOST_TEST_CONTEXT("schoolbook") {
         check_backend_conformance(polynomial_arithmetic::schoolbook_backend<fq12_value_type> {}, left, right,
@@ -187,45 +184,83 @@ BOOST_AUTO_TEST_CASE(fq12_backends_conform) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(scalar_multiplication_supports_base_field_scalars) {
+    using polynomial_type = math::polynomial<fq12_value_type>;
+
+    const polynomial_type input = {fq12_value(1), fq12_value(13)};
+    const fq_value_type scalar(7);
+    polynomial_type output;
+
+    math::scalar_multiplication(output, input, scalar);
+    const polynomial_type expected = {input[0] * scalar, input[1] * scalar};
+    BOOST_CHECK(output == expected);
+}
+
+BOOST_AUTO_TEST_CASE(derivative_supports_extension_field_coefficients) {
+    using polynomial_type = math::polynomial<fq12_value_type>;
+
+    const polynomial_type input = {fq12_value(1), fq12_value(13), fq12_value(25)};
+    polynomial_type output;
+
+    math::derivative(output, input);
+    const polynomial_type expected = {input[1], input[2] * std::size_t(2)};
+    BOOST_CHECK(output == expected);
+}
+
+BOOST_AUTO_TEST_CASE(make_monic_supports_extension_field_coefficients) {
+    using polynomial_type = math::polynomial<fq12_value_type>;
+
+    const fq12_value_type leading_coefficient = fq12_value(7);
+    const polynomial_type input = {fq12_value(3), leading_coefficient};
+    polynomial_type output;
+
+    math::make_monic(output, input);
+    const polynomial_type expected = {input[0] * leading_coefficient.inversed(), fq12_value_type::one()};
+    BOOST_CHECK(output == expected);
+}
+
 BOOST_AUTO_TEST_CASE(mixed_radix_backend_uses_only_the_prefix_needed_by_multiply_low) {
-    using coefficient_vector = polynomial_arithmetic::coefficient_vector<fq_value_type>;
+    using polynomial_type = math::polynomial<fq_value_type>;
 
     fq_mixed_radix_backend backend(3);
-    const coefficient_vector input = {fq_value_type(1), fq_value_type(2), fq_value_type(3)};
-    coefficient_vector output;
+    const polynomial_type input = {fq_value_type(1), fq_value_type(2), fq_value_type(3)};
+    polynomial_type output;
 
     BOOST_CHECK_THROW(backend.multiply(output, input, input), std::invalid_argument);
     BOOST_CHECK_THROW(backend.square(output, input), std::invalid_argument);
 
     backend.multiply_low(output, input, input, 1);
-    BOOST_CHECK(output == coefficient_vector({fq_value_type(1)}));
+    BOOST_CHECK(output == polynomial_type({fq_value_type(1)}));
     backend.multiply_low(output, input, input, 2);
-    BOOST_CHECK(output == coefficient_vector({fq_value_type(1), fq_value_type(4)}));
+    BOOST_CHECK(output == polynomial_type({fq_value_type(1), fq_value_type(4)}));
     BOOST_CHECK_THROW(backend.multiply_low(output, input, input, 3), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(transpose_multiplication_uses_the_selected_backend) {
-    using coefficient_vector = polynomial_arithmetic::coefficient_vector<fq12_value_type>;
+    using polynomial_type = math::polynomial<fq12_value_type>;
 
-    const coefficient_vector input = {fq12_value(1), fq12_value(13)};
+    const polynomial_type input = {fq12_value(1), fq12_value(13)};
     const std::vector<fq_value_type> field_coefficients = {fq_value_type(7)};
     polynomial_arithmetic::polynomial_context<fq12_mixed_radix_backend> context {fq12_mixed_radix_backend(3)};
 
-    const coefficient_vector result = math::transpose_multiplication(2, input, field_coefficients, context);
-    const coefficient_vector expected = {input[0] * field_coefficients[0], fq12_value_type::zero(),
-                                         fq12_value_type::zero()};
-    BOOST_CHECK(result == expected);
+    const polynomial_type result = math::transpose_multiplication(2, input, field_coefficients, context);
+    const polynomial_type expected = {input[0] * field_coefficients[0], fq12_value_type::zero(),
+                                      fq12_value_type::zero()};
+    BOOST_REQUIRE_EQUAL(result.size(), expected.size());
+    for (std::size_t i = 0; i < result.size(); ++i) {
+        BOOST_CHECK(result[i] == expected[i]);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(fq12_mixed_radix_backend_uses_the_larger_smooth_order) {
-    using coefficient_vector = polynomial_arithmetic::coefficient_vector<fq12_value_type>;
+    using polynomial_type = math::polynomial<fq12_value_type>;
     using schoolbook_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
 
     constexpr std::size_t operand_size = odd_smooth_order / 2 + 2;
     const std::array<fq12_value_type, 6> samples = {fq12_value(1),  fq12_value(13), fq12_value(25),
                                                     fq12_value(37), fq12_value(49), fq12_value(61)};
-    coefficient_vector left(operand_size, fq12_value_type::zero());
-    coefficient_vector right(operand_size, fq12_value_type::zero());
+    polynomial_type left(operand_size, fq12_value_type::zero());
+    polynomial_type right(operand_size, fq12_value_type::zero());
     left[0] = samples[0];
     left[113] = samples[1];
     left.back() = samples[2];
@@ -234,13 +269,13 @@ BOOST_AUTO_TEST_CASE(fq12_mixed_radix_backend_uses_the_larger_smooth_order) {
     right.back() = samples[5];
 
     polynomial_arithmetic::polynomial_context<schoolbook_backend> schoolbook_context;
-    coefficient_vector expected;
+    polynomial_type expected;
     math::multiplication(expected, left, right, schoolbook_context);
     BOOST_REQUIRE_GT(expected.size(), odd_smooth_order);
 
     polynomial_arithmetic::polynomial_context<fq12_mixed_radix_backend> mixed_radix_context {
         fq12_mixed_radix_backend(even_smooth_order)};
-    coefficient_vector result;
+    polynomial_type result;
     math::multiplication(result, left, right, mixed_radix_context);
     BOOST_CHECK(result == expected);
 }

@@ -48,6 +48,7 @@ namespace {
     using fq12_value_type = bn254_fq12::value_type;
     using backend_type = nil::crypto3::math::polynomial_arithmetic::mixed_radix_backend<bn254_fq, fq12_value_type>;
     using context_type = nil::crypto3::math::polynomial_arithmetic::polynomial_context<backend_type>;
+    using polynomial_type = typename context_type::polynomial_type;
 
     constexpr std::size_t odd_smooth_order = 3 * 3 * 29 * 67;
     constexpr std::size_t even_smooth_order = 2 * odd_smooth_order;
@@ -90,9 +91,9 @@ namespace {
 
         const std::size_t left_size = (size + 1) / 2;
         const std::size_t right_size = size - left_size + 1;
-        const std::vector<fq12_value_type> left = random_values(left_size, rng);
-        const std::vector<fq12_value_type> right = random_values(right_size, rng);
-        std::vector<fq12_value_type> product;
+        const polynomial_type left(random_values(left_size, rng));
+        const polynomial_type right(random_values(right_size, rng));
+        polynomial_type product;
         const double multiplication_ms =
             elapsed_milliseconds([&]() { nil::crypto3::math::multiplication(product, left, right, context); });
         if (product.size() != size) {

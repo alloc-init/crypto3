@@ -33,6 +33,7 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/bls12.hpp>
 
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
+#include <nil/crypto3/math/polynomial/shift.hpp>
 
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::math;
@@ -64,6 +65,196 @@ BOOST_AUTO_TEST_CASE(polynomial_constructor) {
     polynomial<typename FieldType::value_type> a_expected = {0u, 0u, 0u, 0u, 0u, 1u};
 
     BOOST_CHECK_EQUAL(a_expected, a);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(polynomial_normalization_test_suite)
+
+BOOST_AUTO_TEST_CASE(condense_and_truncate) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    const value_type zero = value_type::zero();
+    const value_type one = value_type::one();
+    const value_type two = one + one;
+
+    polynomial_type value;
+    value.clear();
+    value.condense();
+    BOOST_CHECK(value == polynomial_type({zero}));
+
+    value = {one, zero, two, zero, zero};
+    condense(value);
+    BOOST_CHECK(value == polynomial_type({one, zero, two}));
+
+    value = {zero, zero, zero};
+    condense(value);
+    BOOST_CHECK(value == polynomial_type({zero}));
+
+    value = {one, zero, two};
+    truncate(value, 2);
+    BOOST_CHECK(value == polynomial_type({one}));
+
+    value = {one, zero, two};
+    truncate(value, 3);
+    BOOST_CHECK(value == polynomial_type({one, zero, two}));
+
+    truncate(value, 5);
+    BOOST_CHECK(value == polynomial_type({one, zero, two}));
+
+    truncate(value, 0);
+    BOOST_CHECK(value == polynomial_type({zero}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(polynomial_reversal_test_suite)
+
+BOOST_AUTO_TEST_CASE(reverse_retains_the_requested_fixed_length) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    polynomial_type value = {value_type(1), value_type::zero(), value_type(2), value_type(3)};
+    value.reverse(3);
+    BOOST_CHECK(value == polynomial_type({value_type(3), value_type(2), value_type::zero()}));
+
+    value = {value_type(1), value_type::zero(), value_type(2), value_type(3)};
+    reverse(value, value.size());
+    BOOST_CHECK(value == polynomial_type({value_type(3), value_type(2), value_type::zero(), value_type(1)}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(polynomial_scalar_multiplication_test_suite)
+
+BOOST_AUTO_TEST_CASE(scalar_multiplication_is_alias_safe_and_canonical) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    const polynomial_type input = {value_type(1), value_type::zero(), value_type(3)};
+    const value_type scalar = value_type(2);
+    const polynomial_type expected = {value_type(2), value_type::zero(), value_type(6)};
+
+    polynomial_type output;
+    scalar_multiplication(output, input, scalar);
+    BOOST_CHECK(output == expected);
+
+    output = input;
+    scalar_multiplication(output, output, scalar);
+    BOOST_CHECK(output == expected);
+
+    BOOST_CHECK(input * scalar == expected);
+    BOOST_CHECK(scalar * input == expected);
+
+    scalar_multiplication(output, input, value_type::zero());
+    BOOST_CHECK(output == polynomial_type({value_type::zero()}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(polynomial_monic_normalization_test_suite)
+
+BOOST_AUTO_TEST_CASE(make_monic_is_alias_safe_and_rejects_zero) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    const polynomial_type input = {value_type(2), value_type(4), value_type(2), value_type::zero()};
+    const polynomial_type expected = {value_type(1), value_type(2), value_type(1)};
+
+    polynomial_type output;
+    make_monic(output, input);
+    BOOST_CHECK(output == expected);
+
+    output = input;
+    make_monic(output, output);
+    BOOST_CHECK(output == expected);
+
+    const polynomial_type already_monic = {value_type(3), value_type::one()};
+    make_monic(output, already_monic);
+    BOOST_CHECK(output == already_monic);
+
+    const polynomial_type constant = {value_type(7)};
+    make_monic(output, constant);
+    BOOST_CHECK(output == polynomial_type({value_type::one()}));
+
+    const polynomial_type zero = {value_type::zero()};
+    BOOST_CHECK_THROW(make_monic(output, zero), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(polynomial_derivative_test_suite)
+
+BOOST_AUTO_TEST_CASE(derivative_is_alias_safe_and_canonical) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    const polynomial_type input = {value_type(5), value_type(3), value_type(4), value_type(2)};
+    const polynomial_type expected = {value_type(3), value_type(8), value_type(6)};
+
+    polynomial_type output;
+    derivative(output, input);
+    BOOST_CHECK(output == expected);
+
+    output = input;
+    derivative(output, output);
+    BOOST_CHECK(output == expected);
+
+    const polynomial_type constant = {value_type(5)};
+    derivative(output, constant);
+    BOOST_CHECK(output == polynomial_type({value_type::zero()}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(polynomial_power_of_x_shift_test_suite)
+
+BOOST_AUTO_TEST_CASE(power_of_x_shifts_are_alias_safe_and_canonical) {
+    using value_type = typename FieldType::value_type;
+    using polynomial_type = polynomial<value_type>;
+
+    const polynomial_type input = {value_type(1), value_type::zero(), value_type(3)};
+    const polynomial_type shifted_left = {value_type::zero(), value_type::zero(), value_type(1), value_type::zero(),
+                                          value_type(3)};
+
+    polynomial_type output;
+    shift_left(output, input, 2);
+    BOOST_CHECK(output == shifted_left);
+
+    output = input;
+    shift_left(output, output, 2);
+    BOOST_CHECK(output == shifted_left);
+
+    shift_left(output, input, 0);
+    BOOST_CHECK(output == input);
+
+    shift_right(output, shifted_left, 2);
+    BOOST_CHECK(output == input);
+
+    output = shifted_left;
+    shift_right(output, output, 2);
+    BOOST_CHECK(output == input);
+
+    shift_right(output, input, 0);
+    BOOST_CHECK(output == input);
+
+    const polynomial_type shifted_right = {value_type::zero(), value_type(3)};
+    shift_right(output, input, 1);
+    BOOST_CHECK(output == shifted_right);
+
+    output = input;
+    shift_right(output, output, 1);
+    BOOST_CHECK(output == shifted_right);
+
+    polynomial_type zero_output;
+    const std::size_t zero_output_capacity = zero_output.capacity();
+    shift_left(zero_output, polynomial_type({value_type::zero()}), 1024);
+    BOOST_CHECK(zero_output == polynomial_type({value_type::zero()}));
+    BOOST_CHECK_EQUAL(zero_output.capacity(), zero_output_capacity);
+
+    shift_right(output, input, input.size());
+    BOOST_CHECK(output == polynomial_type({value_type::zero()}));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
