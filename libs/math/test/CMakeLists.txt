@@ -43,6 +43,7 @@ set(TESTS_NAMES
     "evaluation_domain"
     "geometric_sequence_domain"
     "matrix"
+    "polynomial_gcd"
     # "kronecker_substitution"  # FIXME: This fails. Disabled for passing CI
     "polynomial_arithmetic"
     "polynomial_backend"
