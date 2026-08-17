@@ -34,6 +34,15 @@
 namespace nil::crypto3::math::polynomial_arithmetic {
 
     /**
+     * Algorithm-selection parameters shared by higher-level polynomial operations.
+     * A zero cutoff disables the corresponding basecase-division criterion.
+     */
+    struct polynomial_context_options {
+        std::size_t basecase_divisor_coefficient_cutoff = 10;
+        std::size_t basecase_quotient_coefficient_cutoff = 2;
+    };
+
+    /**
      * Interface for interchangeable polynomial multiplication implementations.
      * Higher-level polynomial algorithms use these operations without depending
      * on how products are computed.
@@ -61,10 +70,11 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         };
 
     /**
-     * Owns the multiplication implementation used by a sequence of higher-level
-     * polynomial operations. Keeping one backend alive lets those operations
-     * reuse implementation-specific configuration, precomputed state, and scratch
-     * storage instead of rebuilding them for every product.
+     * Owns the multiplication implementation and algorithm-selection parameters
+     * used by a sequence of higher-level polynomial operations. Keeping one backend
+     * alive lets those operations reuse implementation-specific configuration,
+     * precomputed state, and scratch storage instead of rebuilding them for every
+     * product.
      *
      * Higher-level algorithms use the context without managing backend-specific
      * plans, configuration, or scratch storage. A context can be reused sequentially,
@@ -76,10 +86,12 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         using backend_type = Backend;
         using polynomial_type = typename backend_type::polynomial_type;
         using value_type = typename polynomial_type::value_type;
+        using options_type = polynomial_context_options;
 
         polynomial_context() = default;
 
-        explicit polynomial_context(backend_type backend) : backend_(std::move(backend)) {
+        explicit polynomial_context(backend_type backend, options_type options = {}) :
+            backend_(std::move(backend)), options_(options) {
         }
 
         void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) {
@@ -95,8 +107,13 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             backend_.multiply_low(output, left, right, coefficient_count);
         }
 
+        const options_type &options() const {
+            return options_;
+        }
+
     private:
         backend_type backend_;
+        options_type options_;
     };
 
 }    // namespace nil::crypto3::math::polynomial_arithmetic
