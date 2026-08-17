@@ -39,14 +39,18 @@ namespace nil::crypto3::math {
      * Compute the inverse of input modulo X^coefficient_count using Newton iteration. The constant coefficient of
      * input must be nonzero. The output is canonical and may alias input; a coefficient count of zero produces [0].
      *
-     * Let g_m be an approximation satisfying input * g_m = 1 mod X^m, and define its error as
-     * e_m = 1 - input * g_m. Starting with g_1 = input[0]^-1, each iteration computes
+     * Let f be input and let g_m satisfy f * g_m = 1 mod X^m. Write
      *
-     *     g_{2m} = g_m * (2 - input * g_m) mod X^(2m).
+     *     f * g_m = 1 + X^m * e_m.
      *
-     * The new error satisfies 1 - input * g_{2m} = e_m^2. Since e_m is divisible by X^m, its square is divisible by
-     * X^(2m), so every iteration doubles the number of correct coefficients. The final iteration is truncated when
-     * coefficient_count is not a power of two.
+     * Starting with g_1 = f[0]^-1, an iteration extending the precision from m to n, where m < n <= 2m, retains the
+     * first m coefficients and computes only the new high block:
+     *
+     *     g_n = g_m - X^m * (g_m * e_m mod X^(n-m)).
+     *
+     * Substitution gives f * g_n = 1 mod X^n. Computing only this high block avoids repeating the already-correct low
+     * coefficients in the second multiplication. The final iteration is truncated when coefficient_count is not a
+     * power of two.
      *
      * @throws std::invalid_argument if coefficient_count is nonzero and input has zero constant coefficient.
      */
@@ -60,7 +64,6 @@ namespace nil::crypto3::math {
                          Backend::polynomial_type::value_type::one()
                      } -> std::convertible_to<typename Backend::polynomial_type::value_type>;
                      { left.inversed() } -> std::convertible_to<typename Backend::polynomial_type::value_type>;
-                     { left + right } -> std::convertible_to<typename Backend::polynomial_type::value_type>;
                      { left - right } -> std::convertible_to<typename Backend::polynomial_type::value_type>;
                  }
     void inverse_series(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
@@ -81,24 +84,33 @@ namespace nil::crypto3::math {
         approximation.resize(1);
         approximation[0] = input[0].inversed();
 
-        polynomial_type correction;
-        polynomial_type next_approximation;
+        polynomial_type product;
+        polynomial_type high_error;
+        polynomial_type new_coefficients;
 
-        const value_type two = value_type::one() + value_type::one();
         std::size_t precision = 1;
         while (precision < coefficient_count) {
             const std::size_t next_precision = precision + std::min(precision, coefficient_count - precision);
+            const std::size_t added_coefficient_count = next_precision - precision;
 
-            multiply_low(correction, input, approximation, next_precision, context);
-
-            correction[0] = two - correction[0];
-            for (std::size_t i = 1; i < correction.size(); ++i) {
-                correction[i] = value_type {} - correction[i];
+            // The first precision coefficients of input * approximation are already [1, 0, ..., 0]. The following
+            // block is e_m from input * approximation = 1 + X^precision * e_m.
+            multiply_low(product, input, approximation, next_precision, context);
+            product.resize(next_precision, value_type {});
+            high_error.resize(added_coefficient_count);
+            for (std::size_t i = 0; i < added_coefficient_count; ++i) {
+                high_error[i] = product[precision + i];
             }
-            condense(correction);
+            condense(high_error);
 
-            multiply_low(next_approximation, approximation, correction, next_precision, context);
-            approximation = std::move(next_approximation);
+            // -approximation * high_error gives exactly the new coefficients to append; the known low block is kept.
+            multiply_low(new_coefficients, approximation, high_error, added_coefficient_count, context);
+            new_coefficients.resize(added_coefficient_count, value_type {});
+            approximation.resize(next_precision, value_type {});
+            for (std::size_t i = 0; i < added_coefficient_count; ++i) {
+                approximation[precision + i] = value_type {} - new_coefficients[i];
+            }
+            condense(approximation);
             precision = next_precision;
         }
 
