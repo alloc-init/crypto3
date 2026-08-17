@@ -78,7 +78,10 @@ namespace {
                        const typename Backend::polynomial_type &divisor, std::size_t inverse_precision) {
         using polynomial_type = typename Backend::polynomial_type;
 
-        polynomial_arithmetic::polynomial_context<Backend> arithmetic_context(std::move(backend));
+        polynomial_arithmetic::polynomial_context_options options;
+        options.basecase_divisor_coefficient_cutoff = 0;
+        options.basecase_quotient_coefficient_cutoff = 0;
+        polynomial_arithmetic::polynomial_context<Backend> arithmetic_context(std::move(backend), options);
         math::polynomial_divisor_context<Backend> divisor_context(divisor, inverse_precision, arithmetic_context);
         polynomial_type quotient;
         polynomial_type remainder;
@@ -299,6 +302,58 @@ BOOST_AUTO_TEST_CASE(fast_exact_division_rejects_a_nonzero_remainder_and_may_ali
     BOOST_CHECK(inexact_alias == inexact_dividend);
 }
 
+BOOST_AUTO_TEST_CASE(fast_mulmod_multiplies_reduces_and_may_alias_either_input) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    const polynomial_type left = {fq_value_type::one(), fq_value_type(2), fq_value_type(3)};
+    const polynomial_type right = {fq_value_type(4), fq_value_type(5), fq_value_type(6)};
+    const polynomial_type divisor = {fq_value_type::one(), fq_value_type::one(), fq_value_type::one()};
+    const polynomial_type expected_remainder = {fq_value_type(3), fq_value_type(3)};
+
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_divisor_context<backend_type> divisor_context(divisor, 3, arithmetic_context);
+
+    polynomial_type result;
+    math::mulmod(result, left, right, divisor_context, arithmetic_context);
+    BOOST_CHECK(result == expected_remainder);
+
+    polynomial_type left_alias = left;
+    math::mulmod(left_alias, left_alias, right, divisor_context, arithmetic_context);
+    BOOST_CHECK(left_alias == expected_remainder);
+
+    polynomial_type right_alias = right;
+    math::mulmod(right_alias, left, right_alias, divisor_context, arithmetic_context);
+    BOOST_CHECK(right_alias == expected_remainder);
+
+    const polynomial_type constant_divisor = {fq_value_type(7)};
+    math::polynomial_divisor_context<backend_type> constant_context(constant_divisor, 1, arithmetic_context);
+    math::mulmod(result, left, right, constant_context, arithmetic_context);
+    BOOST_CHECK(result == polynomial_type({fq_value_type::zero()}));
+}
+
+BOOST_AUTO_TEST_CASE(fast_mulmod_supports_extension_coefficients_and_base_field_roots) {
+    using schoolbook_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using mixed_radix_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type, fq12_value_type>;
+    using polynomial_type = typename schoolbook_backend::polynomial_type;
+
+    const polynomial_type left = {fq12_value(1), fq12_value(13), fq12_value(25)};
+    const polynomial_type right = {fq12_value(37), fq12_value(49), fq12_value(61)};
+    const polynomial_type divisor = {fq12_value(73), fq12_value(85), fq12_value(97)};
+
+    polynomial_type product;
+    schoolbook_backend {}.multiply(product, left, right);
+    const auto expected = compute_divrem(schoolbook_backend {}, product, divisor, 3);
+
+    constexpr std::size_t transform_size = 9;
+    polynomial_arithmetic::polynomial_context<mixed_radix_backend> arithmetic_context {
+        mixed_radix_backend(transform_size)};
+    math::polynomial_divisor_context<mixed_radix_backend> divisor_context(divisor, 3, arithmetic_context);
+    polynomial_type result;
+    math::mulmod(result, left, right, divisor_context, arithmetic_context);
+    BOOST_CHECK(result == expected.second);
+}
+
 BOOST_AUTO_TEST_CASE(fast_divrem_rejects_shared_outputs_and_insufficient_precision) {
     using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
     using polynomial_type = typename backend_type::polynomial_type;
@@ -306,7 +361,10 @@ BOOST_AUTO_TEST_CASE(fast_divrem_rejects_shared_outputs_and_insufficient_precisi
     const polynomial_type dividend = {fq_value_type(7), fq_value_type(11), fq_value_type(9), fq_value_type(7),
                                       fq_value_type(4)};
     const polynomial_type divisor = {fq_value_type::one(), fq_value_type::one(), fq_value_type::one()};
-    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context(backend_type {}, options);
 
     math::polynomial_divisor_context<backend_type> precise_context(divisor, 3, arithmetic_context);
     polynomial_type shared_output;
@@ -317,6 +375,53 @@ BOOST_AUTO_TEST_CASE(fast_divrem_rejects_shared_outputs_and_insufficient_precisi
     polynomial_type quotient;
     polynomial_type remainder;
     BOOST_CHECK_THROW(math::divrem(quotient, remainder, dividend, imprecise_context, arithmetic_context),
+                      std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(divrem_selects_the_configurable_basecase_fallback) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    const polynomial_type small_divisor = {fq_value_type::one(), fq_value_type::one(), fq_value_type::one()};
+    const polynomial_type dividend = {fq_value_type(7), fq_value_type(11), fq_value_type(9), fq_value_type(7),
+                                      fq_value_type(4)};
+    const polynomial_type expected_quotient = {fq_value_type(2), fq_value_type(3), fq_value_type(4)};
+    const polynomial_type expected_remainder = {fq_value_type(5), fq_value_type(6)};
+
+    polynomial_arithmetic::polynomial_context<backend_type> default_context;
+    math::polynomial_divisor_context<backend_type> small_divisor_context(small_divisor, 1, default_context);
+    polynomial_type quotient;
+    polynomial_type remainder;
+    math::divrem(quotient, remainder, dividend, small_divisor_context, default_context);
+    BOOST_CHECK(quotient == expected_quotient);
+    BOOST_CHECK(remainder == expected_remainder);
+
+    const polynomial_type large_divisor = {fq_value_type(1), fq_value_type(2),  fq_value_type(3), fq_value_type(4),
+                                           fq_value_type(5), fq_value_type(6),  fq_value_type(7), fq_value_type(8),
+                                           fq_value_type(9), fq_value_type(10), fq_value_type(11)};
+    const polynomial_type short_quotient = {fq_value_type(12), fq_value_type(13)};
+    const polynomial_type short_remainder = {fq_value_type(14), fq_value_type(15)};
+    polynomial_type large_dividend;
+    backend_type {}.multiply(large_dividend, large_divisor, short_quotient);
+    math::addition(large_dividend, large_dividend, short_remainder);
+
+    math::polynomial_divisor_context<backend_type> large_divisor_context(large_divisor, 1, default_context);
+    math::divrem(quotient, remainder, large_dividend, large_divisor_context, default_context);
+    BOOST_CHECK(quotient == short_quotient);
+    BOOST_CHECK(remainder == short_remainder);
+
+    const polynomial_type long_quotient = {fq_value_type(12), fq_value_type(13), fq_value_type(14)};
+    backend_type {}.multiply(large_dividend, large_divisor, long_quotient);
+    math::polynomial_divisor_context<backend_type> default_insufficient_context(large_divisor, 2, default_context);
+    BOOST_CHECK_THROW(math::divrem(quotient, remainder, large_dividend, default_insufficient_context, default_context),
+                      std::invalid_argument);
+
+    polynomial_arithmetic::polynomial_context_options no_basecase_options;
+    no_basecase_options.basecase_divisor_coefficient_cutoff = 0;
+    no_basecase_options.basecase_quotient_coefficient_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> no_basecase_context(backend_type {}, no_basecase_options);
+    math::polynomial_divisor_context<backend_type> insufficient_context(small_divisor, 1, no_basecase_context);
+    BOOST_CHECK_THROW(math::divrem(quotient, remainder, dividend, insufficient_context, no_basecase_context),
                       std::invalid_argument);
 }
 
