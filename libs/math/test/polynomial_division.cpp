@@ -241,6 +241,64 @@ BOOST_AUTO_TEST_CASE(fast_divrem_outputs_may_alias_the_dividend) {
     BOOST_CHECK(remainder_alias == expected_remainder);
 }
 
+BOOST_AUTO_TEST_CASE(fast_remainder_discards_the_quotient_and_may_alias_the_dividend) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    const polynomial_type dividend = {fq_value_type(7), fq_value_type(11), fq_value_type(9), fq_value_type(7),
+                                      fq_value_type(4)};
+    const polynomial_type divisor = {fq_value_type::one(), fq_value_type::one(), fq_value_type::one()};
+    const polynomial_type expected_remainder = {fq_value_type(5), fq_value_type(6)};
+
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_divisor_context<backend_type> divisor_context(divisor, 3, arithmetic_context);
+
+    polynomial_type result;
+    math::remainder(result, dividend, divisor_context, arithmetic_context);
+    BOOST_CHECK(result == expected_remainder);
+
+    polynomial_type aliased_result = dividend;
+    math::remainder(aliased_result, aliased_result, divisor_context, arithmetic_context);
+    BOOST_CHECK(aliased_result == expected_remainder);
+
+    const polynomial_type small_dividend = {fq_value_type(2), fq_value_type(3)};
+    math::remainder(result, small_dividend, divisor_context, arithmetic_context);
+    BOOST_CHECK(result == small_dividend);
+}
+
+BOOST_AUTO_TEST_CASE(fast_exact_division_rejects_a_nonzero_remainder_and_may_alias_the_dividend) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    const polynomial_type divisor = {fq_value_type::one(), fq_value_type::one(), fq_value_type::one()};
+    const polynomial_type expected_quotient = {fq_value_type(2), fq_value_type(3), fq_value_type(4)};
+    const polynomial_type exact_dividend = {fq_value_type(2), fq_value_type(5), fq_value_type(9), fq_value_type(7),
+                                            fq_value_type(4)};
+
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_divisor_context<backend_type> divisor_context(divisor, 3, arithmetic_context);
+
+    polynomial_type result;
+    math::exact_division(result, exact_dividend, divisor_context, arithmetic_context);
+    BOOST_CHECK(result == expected_quotient);
+
+    polynomial_type aliased_result = exact_dividend;
+    math::exact_division(aliased_result, aliased_result, divisor_context, arithmetic_context);
+    BOOST_CHECK(aliased_result == expected_quotient);
+
+    const polynomial_type inexact_dividend = {fq_value_type(7), fq_value_type(11), fq_value_type(9), fq_value_type(7),
+                                              fq_value_type(4)};
+    result = {fq_value_type(17)};
+    BOOST_CHECK_THROW(math::exact_division(result, inexact_dividend, divisor_context, arithmetic_context),
+                      std::invalid_argument);
+    BOOST_CHECK(result == polynomial_type({fq_value_type(17)}));
+
+    polynomial_type inexact_alias = inexact_dividend;
+    BOOST_CHECK_THROW(math::exact_division(inexact_alias, inexact_alias, divisor_context, arithmetic_context),
+                      std::invalid_argument);
+    BOOST_CHECK(inexact_alias == inexact_dividend);
+}
+
 BOOST_AUTO_TEST_CASE(fast_divrem_rejects_shared_outputs_and_insufficient_precision) {
     using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
     using polynomial_type = typename backend_type::polynomial_type;

@@ -178,6 +178,51 @@ namespace nil::crypto3::math {
         remainder = std::move(remainder_result);
     }
 
+    namespace detail {
+        template<typename Backend>
+        concept SupportsDivrem =
+            polynomial_arithmetic::PolynomialBackend<Backend> &&
+            std::default_initializable<typename Backend::polynomial_type> &&
+            requires(typename Backend::polynomial_type &quotient, typename Backend::polynomial_type &remainder,
+                     const typename Backend::polynomial_type &dividend,
+                     const polynomial_divisor_context<Backend> &divisor_context,
+                     polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                divrem(quotient, remainder, dividend, divisor_context, arithmetic_context);
+            };
+    }    // namespace detail
+
+    /**
+     * Reduce dividend modulo the divisor stored in divisor_context. The result is canonical and may alias dividend.
+     * The precomputed inverse must have enough precision for the quotient that divrem computes internally.
+     */
+    template<detail::SupportsDivrem Backend>
+    void remainder(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &dividend,
+                   const polynomial_divisor_context<Backend> &divisor_context,
+                   polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        typename Backend::polynomial_type quotient;
+        divrem(quotient, output, dividend, divisor_context, arithmetic_context);
+    }
+
+    /**
+     * Divide dividend by the divisor stored in divisor_context and reject a nonzero remainder. The canonical quotient
+     * may alias dividend. Output is replaced only after exact divisibility has been verified.
+     *
+     * @throws std::invalid_argument if dividend is not exactly divisible by the stored divisor or the precomputed
+     *         inverse has insufficient precision.
+     */
+    template<detail::SupportsDivrem Backend>
+    void exact_division(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &dividend,
+                        const polynomial_divisor_context<Backend> &divisor_context,
+                        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        typename Backend::polynomial_type quotient;
+        typename Backend::polynomial_type remainder_result;
+        divrem(quotient, remainder_result, dividend, divisor_context, arithmetic_context);
+        if (!is_zero(remainder_result)) {
+            throw std::invalid_argument("polynomial division is not exact");
+        }
+        output = std::move(quotient);
+    }
+
 }    // namespace nil::crypto3::math
 
 #endif    // CRYPTO3_MATH_POLYNOMIAL_DIVISION_HPP
