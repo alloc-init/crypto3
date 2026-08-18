@@ -291,6 +291,24 @@ BOOST_AUTO_TEST_CASE(mixed_radix_backend_uses_only_the_prefix_needed_by_multiply
     BOOST_CHECK_THROW(backend.multiply_low(output, input, input, 3), std::invalid_argument);
 }
 
+BOOST_AUTO_TEST_CASE(mixed_radix_backend_uses_schoolbook_at_or_below_the_configured_cutoff) {
+    using polynomial_type = math::polynomial<fq_value_type>;
+
+    const polynomial_type input = {fq_value_type(1), fq_value_type(2), fq_value_type(3)};
+    const polynomial_type expected = {fq_value_type(1), fq_value_type(4), fq_value_type(10), fq_value_type(12),
+                                      fq_value_type(9)};
+    polynomial_type output;
+
+    fq_mixed_radix_backend schoolbook_selected(3, 9);
+    schoolbook_selected.multiply(output, math::coefficient_view(input), math::coefficient_view(input));
+    BOOST_CHECK(output == expected);
+
+    fq_mixed_radix_backend mixed_radix_selected(3, 8);
+    BOOST_CHECK_THROW(
+        mixed_radix_selected.multiply(output, math::coefficient_view(input), math::coefficient_view(input)),
+        std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_CASE(transpose_multiplication_uses_the_selected_backend) {
     using polynomial_type = math::polynomial<fq12_value_type>;
 

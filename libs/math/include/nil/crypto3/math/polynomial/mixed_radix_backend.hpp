@@ -35,6 +35,7 @@
 #include <nil/crypto3/math/polynomial/basic_operations.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_backend.hpp>
+#include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
 
 namespace nil::crypto3::math::polynomial_arithmetic {
 
@@ -44,9 +45,13 @@ namespace nil::crypto3::math::polynomial_arithmetic {
      * contains each product. It reuses its workspace across operations and is therefore intended
      * for sequential use. Concurrent operations require separate backend instances.
      *
-     * The configured transform must contain the complete product of the coefficients
-     * used by an operation. multiply_low discards input coefficients that cannot
-     * affect the requested low coefficients before computing that product.
+     * An optional cutoff selects schoolbook multiplication for a full product when
+     * left.size() * right.size(), the number of coefficient products, is at most the cutoff.
+     * A zero cutoff disables this fallback.
+     *
+     * When the mixed-radix path is selected, the configured transform must contain the complete
+     * product of the coefficients used by an operation. multiply_low discards input coefficients
+     * that cannot affect the requested low coefficients before computing that product.
      */
     template<typename RootFieldType, typename ValueType = typename RootFieldType::value_type>
     class mixed_radix_backend {
@@ -54,7 +59,9 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         using value_type = ValueType;
         using polynomial_type = math::polynomial<value_type>;
 
-        explicit mixed_radix_backend(std::size_t transform_size) {
+        explicit mixed_radix_backend(std::size_t transform_size,
+                                     std::size_t schoolbook_coefficient_product_cutoff = 0) :
+            schoolbook_coefficient_product_cutoff_(schoolbook_coefficient_product_cutoff) {
             // Every divisor of a valid transform order also has a root of unity. Caching those plans lets algorithms
             // whose operands grow in stages use a proportionally sized transform at each stage instead of repeatedly
             // paying for the configured maximum transform.
@@ -69,6 +76,11 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             if (left.empty() || right.empty() || math::is_zero(left.begin(), left.end()) ||
                 math::is_zero(right.begin(), right.end())) {
                 set_zero(output);
+                return;
+            }
+
+            if (should_use_schoolbook(left.size(), right.size())) {
+                schoolbook_backend<value_type> {}.multiply(output, left, right);
                 return;
             }
 
@@ -117,6 +129,12 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         }
 
     private:
+        bool should_use_schoolbook(std::size_t left_size, std::size_t right_size) const {
+            // Division avoids overflowing the equivalent product comparison.
+            return schoolbook_coefficient_product_cutoff_ != 0 &&
+                   left_size <= schoolbook_coefficient_product_cutoff_ / right_size;
+        }
+
         static std::vector<std::size_t> divisor_transform_sizes(std::size_t transform_size) {
             if (transform_size == 0) {
                 throw std::invalid_argument("mixed_radix_backend: expected transform size > 0");
@@ -185,6 +203,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             output = std::move(transformed);
         }
 
+        std::size_t schoolbook_coefficient_product_cutoff_;
         std::vector<mixed_radix_fft_plan<RootFieldType>> plans_;
         std::vector<value_type> workspace_;
     };
