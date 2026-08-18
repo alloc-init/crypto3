@@ -29,6 +29,8 @@ target_include_directories(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTER
 target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         Boost::container
 
+        crypto3::math
+        ${CMAKE_WORKSPACE_NAME}::crypto3_algebra
         ${CMAKE_WORKSPACE_NAME}::core)
 
 if((CMAKE_COMPILER_IS_GNUCC) OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
@@ -84,3 +86,5 @@ endif()
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+cm_add_test_subdirectory(test)
