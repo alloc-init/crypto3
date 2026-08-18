@@ -30,15 +30,23 @@
 #include <cstddef>
 #include <utility>
 
-#include <nil/crypto3/math/polynomial/polynomial_division.hpp>
+#include <nil/crypto3/math/polynomial/half_gcd.hpp>
 
 namespace nil::crypto3::math {
 
     /**
-     * Compute the monic greatest common divisor of two canonical coefficient polynomials using the Euclidean
-     * algorithm. Each remainder step follows the arithmetic context's division policy: small steps use quadratic long
-     * division, while larger steps use Newton division and the configured multiplication backend. Output may alias
-     * either input. The GCD of two zero polynomials is the zero polynomial.
+     * Compute the monic greatest common divisor of two canonical coefficient polynomials. Small inputs use the
+     * Euclidean algorithm. When enabled by the configured cutoff, larger inputs use recursive half-GCD reduction.
+     * Polynomial products and division steps use the configured arithmetic backend. Output may alias either input.
+     * The GCD of two zero polynomials is the zero polynomial.
+     *
+     * The Euclidean algorithm divides the larger polynomial A by the smaller polynomial B and replaces the pair
+     * (A, B) with (B, A mod B). The remainder has lower degree than B, so repeating this step eventually leaves a zero
+     * remainder. This replacement preserves all common divisors: a divisor of A and B also divides A - q * B, the
+     * remainder, while a divisor of B and the remainder also divides q * B + remainder, which is A. At termination,
+     * the common divisors are therefore exactly the divisors of the last nonzero remainder, making its monic form the
+     * GCD. Half-GCD batches several of these same quotient steps into one recursively constructed polynomial-matrix
+     * transformation.
      */
     template<detail::SupportsDivrem Backend>
         requires std::copy_constructible<typename Backend::polynomial_type> &&
@@ -72,16 +80,32 @@ namespace nil::crypto3::math {
 
         polynomial_type quotient;
         polynomial_type next_remainder;
+        detail::gcd_divrem_step(quotient, next_remainder, previous_remainder, current_remainder, arithmetic_context);
+        previous_remainder = std::move(current_remainder);
+        current_remainder = std::move(next_remainder);
+
+        const auto &options = arithmetic_context.options();
         while (!is_zero(current_remainder)) {
-            const std::size_t quotient_size = previous_remainder.size() - current_remainder.size() + 1;
-            if (detail::use_basecase_division(arithmetic_context.options(), current_remainder.size(), quotient_size)) {
-                division(quotient, next_remainder, previous_remainder, current_remainder);
-            } else {
-                polynomial_divisor_context<Backend> divisor_context(current_remainder, quotient_size,
-                                                                    arithmetic_context);
-                remainder(next_remainder, previous_remainder, divisor_context, arithmetic_context);
+            if (options.gcd_half_gcd_cutoff == 0 || current_remainder.size() < options.gcd_half_gcd_cutoff) {
+                detail::gcd_divrem_step(quotient, next_remainder, previous_remainder, current_remainder,
+                                        arithmetic_context);
+                previous_remainder = std::move(current_remainder);
+                current_remainder = std::move(next_remainder);
+                continue;
             }
 
+            polynomial_type reduced_first;
+            polynomial_type reduced_second;
+            detail::half_gcd_reduce(reduced_first, reduced_second, previous_remainder, current_remainder,
+                                    options.half_gcd_basecase_cutoff, arithmetic_context);
+            previous_remainder = std::move(reduced_first);
+            current_remainder = std::move(reduced_second);
+            if (is_zero(current_remainder)) {
+                break;
+            }
+
+            detail::gcd_divrem_step(quotient, next_remainder, previous_remainder, current_remainder,
+                                    arithmetic_context);
             previous_remainder = std::move(current_remainder);
             current_remainder = std::move(next_remainder);
         }
