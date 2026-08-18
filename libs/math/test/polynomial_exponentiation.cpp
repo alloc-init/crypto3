@@ -32,6 +32,7 @@
 
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
+#include <nil/crypto3/algebra/fields/field_order.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 
 #include <nil/crypto3/math/polynomial/mixed_radix_backend.hpp>
@@ -143,6 +144,22 @@ BOOST_AUTO_TEST_CASE(powmod_supports_large_multiprecision_exponents_and_rejects_
     BOOST_CHECK_THROW(math::powmod(result, base, cpp_int(-1), divisor_context, arithmetic_context),
                       std::invalid_argument);
     BOOST_CHECK(result == polynomial_type({fq_value_type(17)}));
+}
+
+BOOST_AUTO_TEST_CASE(powmod_accepts_an_extension_field_order_as_its_exponent) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    const polynomial_type base = {fq_value_type::zero(), fq_value_type::one()};
+    const polynomial_type divisor = {fq_value_type::one(), fq_value_type::zero(), fq_value_type::one()};
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_divisor_context<backend_type> divisor_context(divisor, 1, arithmetic_context);
+
+    polynomial_type result;
+    math::powmod(result, base, fields::field_order<fq12_field_type>(), divisor_context, arithmetic_context);
+
+    // X^2 = -1 modulo X^2 + 1. The twelfth power of an odd characteristic is 1 modulo 4, so X^(q^12) = X.
+    BOOST_CHECK(result == base);
 }
 
 BOOST_AUTO_TEST_CASE(powmod_returns_zero_modulo_a_nonzero_constant) {
