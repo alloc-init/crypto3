@@ -40,6 +40,7 @@ endmacro()
 
 set(TESTS_NAMES
     "batch_inverse"
+    "coefficient_view"
     "evaluation_domain"
     "geometric_sequence_domain"
     "matrix"
