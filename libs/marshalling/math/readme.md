@@ -1,6 +1,7 @@
 # Crypto3 Math Marshalling
 
-Marshalling fields and adapters for Crypto3 polynomials and polynomial terms.
+Marshalling fields and adapters for Crypto3 polynomials, matrices, and polynomial
+terms.
 
 This header-only component is maintained as part of the Crypto3 monorepo. See
 the [root build instructions](../../../README.md#clone-and-build) to configure
