@@ -51,8 +51,8 @@ helper functions for arrays and vectors of other elements.
 
 ## Math
 
-Provides support for marshalling of math objects: polynomials and arithmetic
-expressions.
+Provides support for marshalling of math objects: polynomials, matrices, and 
+arithmetic expressions.
 
 ## Multiprecision
 

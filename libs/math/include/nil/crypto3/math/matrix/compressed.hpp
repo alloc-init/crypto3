@@ -31,6 +31,12 @@ namespace nil::crypto3::math {
         return value.backend().find_element(row, column);
     }
 
+    template<typename Backend>
+        requires requires(const Backend &backend, std::size_t index) { backend.find_element(index); }
+    const typename Backend::value_type *find_element(const vector<Backend> &value, std::size_t index) {
+        return value.backend().find_element(index);
+    }
+
     template<typename Backend, typename Function>
         requires requires(const Backend &backend) {
             backend.begin1();
@@ -41,6 +47,17 @@ namespace nil::crypto3::math {
             for (auto element = outer.begin(); element != outer.end(); ++element) {
                 function(element.index1(), element.index2(), *element);
             }
+        }
+    }
+
+    template<typename Backend, typename Function>
+        requires requires(const Backend &backend) {
+            backend.begin();
+            backend.end();
+        }
+    void for_each_nonzero(const vector<Backend> &value, Function &&function) {
+        for (auto element = value.backend().begin(); element != value.backend().end(); ++element) {
+            function(element.index(), *element);
         }
     }
 }    // namespace nil::crypto3::math
