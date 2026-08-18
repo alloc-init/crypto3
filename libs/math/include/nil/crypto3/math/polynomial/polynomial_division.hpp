@@ -253,37 +253,6 @@ namespace nil::crypto3::math {
         output = std::move(quotient);
     }
 
-    /**
-     * Compute output = (left * right) mod B, where B is the nonzero polynomial stored in divisor_context. B need not
-     * be monic or irreducible. The result is canonical, has degree less than degree(B) when B is nonconstant, and may
-     * alias either input.
-     *
-     * If the canonical product has p coefficients and d = degree(B), reduction requires p - d quotient coefficients
-     * when p > d. The context's precomputed inverse must have at least that precision. In particular, for nonconstant
-     * B, inputs already reduced modulo B require at most d - 1 inverse coefficients.
-     *
-     * @throws std::invalid_argument if the precomputed inverse has insufficient precision.
-     */
-    template<detail::SupportsDivrem Backend>
-    void mulmod(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &left,
-                const typename Backend::polynomial_type &right,
-                const polynomial_divisor_context<Backend> &divisor_context,
-                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
-        using polynomial_type = typename Backend::polynomial_type;
-        using value_type = typename polynomial_type::value_type;
-
-        // Every polynomial is zero modulo a nonzero constant, so no product needs to be computed.
-        if (divisor_context.degree() == 0) {
-            output.resize(1);
-            output[0] = value_type {};
-            return;
-        }
-
-        polynomial_type product;
-        multiplication(product, left, right, arithmetic_context);
-        remainder(output, product, divisor_context, arithmetic_context);
-    }
-
 }    // namespace nil::crypto3::math
 
 #endif    // CRYPTO3_MATH_POLYNOMIAL_DIVISION_HPP
