@@ -32,9 +32,7 @@ namespace nil::crypto3::math {
     }
 
     template<typename Backend>
-        requires requires(const Backend &backend, std::size_t index) {
-            backend.find_element(index);
-        }
+        requires requires(const Backend &backend, std::size_t index) { backend.find_element(index); }
     const typename Backend::value_type *find_element(const vector<Backend> &value, std::size_t index) {
         return value.backend().find_element(index);
     }

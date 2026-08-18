@@ -27,8 +27,7 @@ namespace nil::crypto3::marshalling::types {
         using index_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
         using value_type = field_element<TTypeBase, typename MatrixType::value_type>;
         using values_type = nil::marshalling::types::standard_array_list<TTypeBase, value_type>;
-        using type = nil::marshalling::types::bundle<
-            TTypeBase, std::tuple<index_type, index_type, values_type>>;
+        using type = nil::marshalling::types::bundle<TTypeBase, std::tuple<index_type, index_type, values_type>>;
     };
 
     template<typename Endianness, typename MatrixType>
@@ -45,10 +44,9 @@ namespace nil::crypto3::marshalling::types {
             }
         }
 
-        return typename marshalling_type::type(std::make_tuple(
-            typename marshalling_type::index_type(matrix.rows()),
-            typename marshalling_type::index_type(matrix.columns()),
-            std::move(values)));
+        return typename marshalling_type::type(std::make_tuple(typename marshalling_type::index_type(matrix.rows()),
+                                                               typename marshalling_type::index_type(matrix.columns()),
+                                                               std::move(values)));
     }
 
     template<typename Endianness, typename MatrixType>
@@ -110,11 +108,9 @@ namespace nil::crypto3::marshalling::types {
     struct compressed_matrix {
         using index_type = nil::marshalling::types::integral<TTypeBase, std::size_t>;
         using value_type = field_element<TTypeBase, typename MatrixType::value_type>;
-        using entry_type = nil::marshalling::types::bundle<
-            TTypeBase, std::tuple<index_type, index_type, value_type>>;
+        using entry_type = nil::marshalling::types::bundle<TTypeBase, std::tuple<index_type, index_type, value_type>>;
         using entries_type = nil::marshalling::types::standard_array_list<TTypeBase, entry_type>;
-        using type = nil::marshalling::types::bundle<
-            TTypeBase, std::tuple<index_type, index_type, entries_type>>;
+        using type = nil::marshalling::types::bundle<TTypeBase, std::tuple<index_type, index_type, entries_type>>;
     };
 
     template<typename Endianness, typename MatrixType>
@@ -126,16 +122,14 @@ namespace nil::crypto3::marshalling::types {
         typename marshalling_type::entries_type entries;
         nil::crypto3::math::for_each_nonzero(
             matrix, [&](std::size_t row, std::size_t column, const typename MatrixType::value_type &value) {
-                entries.value().emplace_back(std::make_tuple(
-                    typename marshalling_type::index_type(row),
-                    typename marshalling_type::index_type(column),
-                    typename marshalling_type::value_type(value)));
+                entries.value().emplace_back(std::make_tuple(typename marshalling_type::index_type(row),
+                                                             typename marshalling_type::index_type(column),
+                                                             typename marshalling_type::value_type(value)));
             });
 
-        return typename marshalling_type::type(std::make_tuple(
-            typename marshalling_type::index_type(matrix.rows()),
-            typename marshalling_type::index_type(matrix.columns()),
-            std::move(entries)));
+        return typename marshalling_type::type(std::make_tuple(typename marshalling_type::index_type(matrix.rows()),
+                                                               typename marshalling_type::index_type(matrix.columns()),
+                                                               std::move(entries)));
     }
 
     template<typename Endianness, typename MatrixType>
@@ -179,13 +173,12 @@ namespace nil::crypto3::marshalling::types {
         typename marshalling_type::entries_type entries;
         nil::crypto3::math::for_each_nonzero(
             vector, [&](std::size_t index, const typename VectorType::value_type &value) {
-                entries.value().emplace_back(std::make_tuple(
-                    typename marshalling_type::index_type(index),
-                    typename marshalling_type::value_type(value)));
+                entries.value().emplace_back(std::make_tuple(typename marshalling_type::index_type(index),
+                                                             typename marshalling_type::value_type(value)));
             });
 
-        return typename marshalling_type::type(std::make_tuple(
-            typename marshalling_type::index_type(vector.size()), std::move(entries)));
+        return typename marshalling_type::type(
+            std::make_tuple(typename marshalling_type::index_type(vector.size()), std::move(entries)));
     }
 
     template<typename Endianness, typename VectorType>
