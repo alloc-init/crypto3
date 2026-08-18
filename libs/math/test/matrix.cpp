@@ -270,6 +270,66 @@ BOOST_AUTO_TEST_CASE(regular_matrix_solver) {
     BOOST_CHECK(!math::solve(singular, right_hand_side));
 }
 
+BOOST_AUTO_TEST_CASE(upper_triangular_detection_and_back_substitution) {
+    const bn254_fp12_value one = bn254_fp12_value::one();
+    const bn254_fp12_value two = one.doubled();
+    const bn254_fp12_value three = one + two;
+
+    math::regular_matrix<bn254_fp12_value> upper(3, 3);
+    upper(0, 0) = one;
+    upper(0, 1) = two;
+    upper(0, 2) = one;
+    upper(1, 1) = two;
+    upper(1, 2) = one;
+    upper(2, 2) = one;
+    BOOST_REQUIRE(math::is_upper_triangular(upper));
+
+    math::regular_vector<bn254_fp12_value> expected(3);
+    expected[0] = one;
+    expected[1] = two;
+    expected[2] = three;
+    math::regular_vector<bn254_fp12_value> right_hand_side(3);
+    right_hand_side[0] = one + two * two + three;
+    right_hand_side[1] = two * two + three;
+    right_hand_side[2] = three;
+
+    const auto result = math::back_substitute(upper, right_hand_side);
+    BOOST_CHECK(result[0] == expected[0]);
+    BOOST_CHECK(result[1] == expected[1]);
+    BOOST_CHECK(result[2] == expected[2]);
+
+    auto below_diagonal = upper;
+    below_diagonal(2, 0) = one;
+    BOOST_CHECK(!math::is_upper_triangular(below_diagonal));
+
+    auto zero_diagonal = upper;
+    zero_diagonal(1, 1) = bn254_fp12_value::zero();
+    BOOST_CHECK(!math::is_upper_triangular(zero_diagonal));
+
+    math::regular_matrix<bn254_fp12_value> non_square(2, 3);
+    BOOST_CHECK(!math::is_upper_triangular(non_square));
+}
+
+BOOST_AUTO_TEST_CASE(compressed_vector_element_and_inner_products) {
+    math::compressed_vector<int> values(5);
+    math::compressed_vector<int> zero(5);
+    math::compressed_vector<int> mask(5);
+    values[1] = 3;
+    values[4] = 5;
+    for (std::size_t index = 0; index < mask.size(); ++index) {
+        mask[index] = 1;
+    }
+
+    math::compressed_vector<int> zero_product(math::element_product(values, zero));
+    math::compressed_vector<int> masked_product(math::element_product(values, mask));
+    BOOST_CHECK_EQUAL(zero_product.backend().nnz(), 0);
+    BOOST_CHECK_EQUAL(masked_product[1], 3);
+    BOOST_CHECK_EQUAL(masked_product[4], 5);
+    BOOST_CHECK_EQUAL(masked_product.backend().nnz(), 2);
+    BOOST_CHECK_EQUAL(math::inner_product(values, zero), 0);
+    BOOST_CHECK_EQUAL(math::inner_product(values, mask), 8);
+}
+
 BOOST_AUTO_TEST_CASE(solver_is_backend_generic) {
     using matrix_type = math::matrix<test_matrix_backend<bn254_fp12_value>>;
     using vector_type = math::vector<test_vector_backend<bn254_fp12_value>>;
