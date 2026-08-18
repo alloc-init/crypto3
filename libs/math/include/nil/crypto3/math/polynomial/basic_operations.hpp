@@ -418,6 +418,21 @@ namespace nil {
             }
 
             /**
+             * Multiply two coefficient ranges using a reusable polynomial-arithmetic context.
+             * Inputs may be empty or noncanonical. The output is canonical and may own the
+             * storage referenced by either input view.
+             */
+            template<polynomial_arithmetic::PolynomialBackend Backend>
+            void multiplication(typename Backend::polynomial_type &output,
+                                coefficient_view<typename Backend::polynomial_type::value_type>
+                                    left,
+                                coefficient_view<typename Backend::polynomial_type::value_type>
+                                    right,
+                                polynomial_arithmetic::polynomial_context<Backend> &context) {
+                context.multiply(output, left, right);
+            }
+
+            /**
              * Square a canonical coefficient polynomial using a reusable polynomial-arithmetic context.
              * The output is canonical and may alias the input.
              */

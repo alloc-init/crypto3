@@ -65,14 +65,15 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
         }
 
-        void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) {
-            if (math::is_zero(left) || math::is_zero(right)) {
+        void multiply(polynomial_type &output, coefficient_view<value_type> left, coefficient_view<value_type> right) {
+            if (left.empty() || right.empty() || math::is_zero(left.begin(), left.end()) ||
+                math::is_zero(right.begin(), right.end())) {
                 set_zero(output);
                 return;
             }
 
             const std::size_t result_size = left.size() + right.size() - 1;
-            multiply_prefixes(output, left, left.size(), right, right.size(), result_size);
+            multiply_ranges(output, left, right, result_size);
         }
 
         void square(polynomial_type &output, const polynomial_type &input) {
@@ -102,15 +103,17 @@ namespace nil::crypto3::math::polynomial_arithmetic {
 
             const std::size_t left_size = std::min(left.size(), coefficient_count);
             const std::size_t right_size = std::min(right.size(), coefficient_count);
-            if (math::is_zero(left.begin(), left.begin() + left_size) ||
-                math::is_zero(right.begin(), right.begin() + right_size)) {
+            const coefficient_view<value_type> left_prefix = coefficient_view<value_type>(left).first(left_size);
+            const coefficient_view<value_type> right_prefix = coefficient_view<value_type>(right).first(right_size);
+            if (math::is_zero(left_prefix.begin(), left_prefix.end()) ||
+                math::is_zero(right_prefix.begin(), right_prefix.end())) {
                 set_zero(output);
                 return;
             }
 
             const std::size_t prefix_product_size = left_size + right_size - 1;
             const std::size_t result_size = std::min(coefficient_count, prefix_product_size);
-            multiply_prefixes(output, left, left_size, right, right_size, result_size);
+            multiply_ranges(output, left_prefix, right_prefix, result_size);
         }
 
     private:
@@ -159,12 +162,12 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             return *plan;
         }
 
-        void multiply_prefixes(polynomial_type &output, const polynomial_type &left, std::size_t left_size,
-                               const polynomial_type &right, std::size_t right_size, std::size_t result_size) {
-            const mixed_radix_fft_plan<RootFieldType> &plan = plan_for(left_size + right_size - 1);
+        void multiply_ranges(polynomial_type &output, coefficient_view<value_type> left,
+                             coefficient_view<value_type> right, std::size_t result_size) {
+            const mixed_radix_fft_plan<RootFieldType> &plan = plan_for(left.size() + right.size() - 1);
 
-            polynomial_type transformed_left(left.begin(), left.begin() + left_size);
-            polynomial_type transformed_right(right.begin(), right.begin() + right_size);
+            polynomial_type transformed_left(left.begin(), left.end());
+            polynomial_type transformed_right(right.begin(), right.end());
             plan.fft(transformed_left.get_storage(), workspace_);
             plan.fft(transformed_right.get_storage(), workspace_);
 

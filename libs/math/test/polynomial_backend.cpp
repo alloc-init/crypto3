@@ -24,6 +24,7 @@
 
 #define BOOST_TEST_MODULE polynomial_backend_test
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <utility>
@@ -34,6 +35,7 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 
+#include <nil/crypto3/math/polynomial/coefficient_view.hpp>
 #include <nil/crypto3/math/polynomial/mixed_radix_backend.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_backend.hpp>
 #include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
@@ -93,6 +95,21 @@ namespace {
         math::multiplication(output, left, right, context);
         BOOST_CHECK(output == expected_product);
 
+        polynomial_type left_storage(left.size() + 2, value_type::zero());
+        polynomial_type right_storage(right.size() + 2, value_type::zero());
+        std::copy(left.begin(), left.end(), left_storage.begin() + 1);
+        std::copy(right.begin(), right.end(), right_storage.begin() + 1);
+        const math::coefficient_view<value_type> left_view =
+            math::coefficient_view<value_type>(left_storage).subview(1, left.size());
+        const math::coefficient_view<value_type> right_view =
+            math::coefficient_view<value_type>(right_storage).subview(1, right.size());
+        math::multiplication(output, left_view, right_view, context);
+        BOOST_CHECK(output == expected_product);
+
+        polynomial_type view_alias = left;
+        math::multiplication(view_alias, math::coefficient_view<value_type>(view_alias), right_view, context);
+        BOOST_CHECK(view_alias == expected_product);
+
         math::square(output, left, context);
         BOOST_CHECK(output == expected_square);
 
@@ -122,6 +139,11 @@ namespace {
         BOOST_CHECK(low_alias == expected_low_product(expected_product, 2));
 
         const polynomial_type zero = {value_type::zero()};
+        const math::coefficient_view<value_type> empty_view;
+        math::multiplication(output, empty_view, right_view, context);
+        BOOST_CHECK(output == zero);
+        math::multiplication(output, left_view, empty_view, context);
+        BOOST_CHECK(output == zero);
         math::multiplication(output, zero, right, context);
         BOOST_CHECK(output == zero);
         math::multiplication(output, left, zero, context);
@@ -160,6 +182,38 @@ BOOST_AUTO_TEST_CASE(fq_backends_conform) {
     }
     BOOST_TEST_CONTEXT("mixed radix") {
         check_backend_conformance(fq_mixed_radix_backend(9), left, right, expected_product, expected_square);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(fq_backends_accept_noncanonical_coefficient_views) {
+    using polynomial_type = math::polynomial<fq_value_type>;
+
+    const polynomial_type left_storage = {1, 2, 0};
+    const polynomial_type right_storage = {3, 0};
+    const polynomial_type zero_storage = {0, 0, 0};
+    const math::coefficient_view<fq_value_type> left(left_storage);
+    const math::coefficient_view<fq_value_type> right(right_storage);
+    const math::coefficient_view<fq_value_type> zero(zero_storage);
+    const polynomial_type expected = {3, 6};
+    const polynomial_type expected_zero = {0};
+
+    const auto check_backend = [&](auto backend) {
+        using backend_type = decltype(backend);
+        polynomial_arithmetic::polynomial_context<backend_type> context(std::move(backend));
+        polynomial_type output;
+        math::multiplication(output, left, right, context);
+        BOOST_CHECK(output == expected);
+        math::multiplication(output, zero, right, context);
+        BOOST_CHECK(output == expected_zero);
+        math::multiplication(output, left, zero, context);
+        BOOST_CHECK(output == expected_zero);
+    };
+
+    BOOST_TEST_CONTEXT("schoolbook") {
+        check_backend(polynomial_arithmetic::schoolbook_backend<fq_value_type> {});
+    }
+    BOOST_TEST_CONTEXT("mixed radix") {
+        check_backend(fq_mixed_radix_backend(9));
     }
 }
 
@@ -226,7 +280,8 @@ BOOST_AUTO_TEST_CASE(mixed_radix_backend_uses_only_the_prefix_needed_by_multiply
     const polynomial_type input = {fq_value_type(1), fq_value_type(2), fq_value_type(3)};
     polynomial_type output;
 
-    BOOST_CHECK_THROW(backend.multiply(output, input, input), std::invalid_argument);
+    BOOST_CHECK_THROW(backend.multiply(output, math::coefficient_view(input), math::coefficient_view(input)),
+                      std::invalid_argument);
     BOOST_CHECK_THROW(backend.square(output, input), std::invalid_argument);
 
     backend.multiply_low(output, input, input, 1);

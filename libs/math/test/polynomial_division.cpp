@@ -342,7 +342,8 @@ BOOST_AUTO_TEST_CASE(fast_mulmod_supports_extension_coefficients_and_base_field_
     const polynomial_type divisor = {fq12_value(73), fq12_value(85), fq12_value(97)};
 
     polynomial_type product;
-    schoolbook_backend {}.multiply(product, left, right);
+    polynomial_arithmetic::polynomial_context<schoolbook_backend> schoolbook_context;
+    math::multiplication(product, left, right, schoolbook_context);
     const auto expected = compute_divrem(schoolbook_backend {}, product, divisor, 3);
 
     constexpr std::size_t transform_size = 9;
@@ -402,7 +403,7 @@ BOOST_AUTO_TEST_CASE(divrem_selects_the_configurable_basecase_fallback) {
     const polynomial_type short_quotient = {fq_value_type(12), fq_value_type(13)};
     const polynomial_type short_remainder = {fq_value_type(14), fq_value_type(15)};
     polynomial_type large_dividend;
-    backend_type {}.multiply(large_dividend, large_divisor, short_quotient);
+    math::multiplication(large_dividend, large_divisor, short_quotient, default_context);
     math::addition(large_dividend, large_dividend, short_remainder);
 
     math::polynomial_divisor_context<backend_type> large_divisor_context(large_divisor, 1, default_context);
@@ -411,7 +412,7 @@ BOOST_AUTO_TEST_CASE(divrem_selects_the_configurable_basecase_fallback) {
     BOOST_CHECK(remainder == short_remainder);
 
     const polynomial_type long_quotient = {fq_value_type(12), fq_value_type(13), fq_value_type(14)};
-    backend_type {}.multiply(large_dividend, large_divisor, long_quotient);
+    math::multiplication(large_dividend, large_divisor, long_quotient, default_context);
     math::polynomial_divisor_context<backend_type> default_insufficient_context(large_divisor, 2, default_context);
     BOOST_CHECK_THROW(math::divrem(quotient, remainder, large_dividend, default_insufficient_context, default_context),
                       std::invalid_argument);
@@ -435,7 +436,8 @@ BOOST_AUTO_TEST_CASE(fast_divrem_supports_extension_coefficients_and_base_field_
     const polynomial_type expected_remainder = {fq12_value(85), fq12_value(97)};
     polynomial_type product;
     polynomial_type dividend;
-    schoolbook_backend {}.multiply(product, expected_quotient, divisor);
+    polynomial_arithmetic::polynomial_context<schoolbook_backend> schoolbook_context;
+    math::multiplication(product, expected_quotient, divisor, schoolbook_context);
     math::addition(dividend, product, expected_remainder);
 
     const auto [schoolbook_quotient, schoolbook_remainder] =

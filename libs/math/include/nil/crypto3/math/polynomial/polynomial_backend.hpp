@@ -29,6 +29,7 @@
 #include <cstddef>
 #include <utility>
 
+#include <nil/crypto3/math/polynomial/coefficient_view.hpp>
 #include <nil/crypto3/math/polynomial/concepts.hpp>
 
 namespace nil::crypto3::math::polynomial_arithmetic {
@@ -48,9 +49,12 @@ namespace nil::crypto3::math::polynomial_arithmetic {
      * on how products are computed.
      *
      * The associated polynomial type must use the coefficient representation.
-     * Inputs use canonical form and every operation produces canonical
-     * output. The output may alias either input. multiply_low computes the product
-     * modulo X^coefficient_count; when coefficient_count is zero, it stores [0].
+     * multiply accepts coefficient views, which may be empty or noncanonical;
+     * square and multiply_low accept canonical owning polynomials. Every
+     * operation produces canonical output. The output may alias an owning input
+     * or own storage referenced by either input view. multiply_low computes the
+     * product modulo X^coefficient_count; when coefficient_count is zero, it
+     * stores [0].
      *
      * Operations are invoked on a mutable backend so implementations may update
      * reusable caches or scratch storage; stateless implementations may still
@@ -63,8 +67,10 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             requires CoefficientPolynomial<typename Backend::polynomial_type>;
         } && requires(Backend &backend, typename Backend::polynomial_type &output,
                       const typename Backend::polynomial_type &left, const typename Backend::polynomial_type &right,
+                      coefficient_view<typename Backend::polynomial_type::value_type> left_view,
+                      coefficient_view<typename Backend::polynomial_type::value_type> right_view,
                       std::size_t coefficient_count) {
-            { backend.multiply(output, left, right) } -> std::same_as<void>;
+            { backend.multiply(output, left_view, right_view) } -> std::same_as<void>;
             { backend.square(output, left) } -> std::same_as<void>;
             { backend.multiply_low(output, left, right, coefficient_count) } -> std::same_as<void>;
         };
@@ -95,6 +101,10 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         }
 
         void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) {
+            backend_.multiply(output, coefficient_view<value_type>(left), coefficient_view<value_type>(right));
+        }
+
+        void multiply(polynomial_type &output, coefficient_view<value_type> left, coefficient_view<value_type> right) {
             backend_.multiply(output, left, right);
         }
 

@@ -41,7 +41,8 @@ namespace nil::crypto3::math::polynomial_arithmetic {
      * setup cost of faster backends for small products.
      *
      * Every operation builds a private result before assigning output, so output
-     * may alias either input without changing the computation.
+     * may own storage referenced by either input view without changing the
+     * computation.
      */
     template<typename ValueType>
     class schoolbook_backend {
@@ -49,22 +50,33 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         using value_type = ValueType;
         using polynomial_type = math::polynomial<value_type>;
 
-        void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) const {
-            multiply_low(output, left, right, left.size() + right.size() - 1);
+        void multiply(polynomial_type &output, coefficient_view<value_type> left,
+                      coefficient_view<value_type> right) const {
+            const std::size_t coefficient_count = left.empty() || right.empty() ? 0 : left.size() + right.size() - 1;
+            multiply_ranges_low(output, left, right, coefficient_count);
         }
 
         void square(polynomial_type &output, const polynomial_type &input) const {
-            multiply(output, input, input);
+            const coefficient_view<value_type> input_view(input);
+            multiply(output, input_view, input_view);
         }
 
         void multiply_low(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
                           std::size_t coefficient_count) const {
-            const std::size_t product_size = left.size() + right.size() - 1;
-            const std::size_t result_size = std::min(coefficient_count, product_size);
-            if (result_size == 0) {
+            multiply_ranges_low(output, coefficient_view<value_type>(left), coefficient_view<value_type>(right),
+                                coefficient_count);
+        }
+
+    private:
+        static void multiply_ranges_low(polynomial_type &output, coefficient_view<value_type> left,
+                                        coefficient_view<value_type> right, std::size_t coefficient_count) {
+            if (coefficient_count == 0 || left.empty() || right.empty()) {
                 output.assign(1, value_type::zero());
                 return;
             }
+
+            const std::size_t product_size = left.size() + right.size() - 1;
+            const std::size_t result_size = std::min(coefficient_count, product_size);
 
             polynomial_type result(result_size, value_type::zero());
             const std::size_t left_count = std::min(left.size(), result_size);
