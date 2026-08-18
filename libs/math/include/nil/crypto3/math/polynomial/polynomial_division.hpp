@@ -35,6 +35,17 @@
 
 namespace nil::crypto3::math {
 
+    namespace detail {
+        inline bool use_basecase_division(const polynomial_arithmetic::polynomial_context_options &options,
+                                          std::size_t divisor_coefficient_count,
+                                          std::size_t quotient_coefficient_count) {
+            return (options.basecase_divisor_coefficient_cutoff != 0 &&
+                    divisor_coefficient_count <= options.basecase_divisor_coefficient_cutoff) ||
+                   (options.basecase_quotient_coefficient_cutoff != 0 &&
+                    quotient_coefficient_count <= options.basecase_quotient_coefficient_cutoff);
+        }
+    }    // namespace detail
+
     /**
      * Immutable precomputation for repeated division and reduction by one polynomial B. If d = degree(B), define
      * rev(B) = X^d * B(X^-1), which reverses B's d + 1 coefficients. The context stores B in canonical form and
@@ -153,12 +164,7 @@ namespace nil::crypto3::math {
         const auto &options = arithmetic_context.options();
         // Long division avoids Newton multiplication overhead when either the divisor or quotient is small. It does
         // not use the precomputed reversed-divisor inverse, so this dispatch precedes the inverse-precision check.
-        const bool use_basecase_division =
-            (options.basecase_divisor_coefficient_cutoff != 0 &&
-             divisor_context.divisor().size() <= options.basecase_divisor_coefficient_cutoff) ||
-            (options.basecase_quotient_coefficient_cutoff != 0 &&
-             quotient_size <= options.basecase_quotient_coefficient_cutoff);
-        if (use_basecase_division) {
+        if (detail::use_basecase_division(options, divisor_context.divisor().size(), quotient_size)) {
             division(quotient_result, remainder_result, dividend, divisor_context.divisor());
             quotient = std::move(quotient_result);
             remainder = std::move(remainder_result);

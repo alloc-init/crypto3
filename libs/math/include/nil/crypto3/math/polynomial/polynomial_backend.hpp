@@ -33,13 +33,19 @@
 
 namespace nil::crypto3::math::polynomial_arithmetic {
 
-    /**
-     * Algorithm-selection parameters shared by higher-level polynomial operations.
-     * A zero cutoff disables the corresponding basecase-division criterion.
-     */
+    /** Algorithm-selection parameters shared by higher-level polynomial operations. */
     struct polynomial_context_options {
+        // Long division is selected when either enabled coefficient-count cutoff matches.
         std::size_t basecase_divisor_coefficient_cutoff = 10;
         std::size_t basecase_quotient_coefficient_cutoff = 2;
+
+        // Recursive half-GCD switches to iterative matrix construction at or below this coefficient count. Zero
+        // disables the iterative base case.
+        std::size_t half_gcd_basecase_cutoff = 30;
+
+        // GCD uses half-GCD when its smaller operand has at least this many coefficients. Zero disables half-GCD;
+        // callers should select this backend-dependent crossover from benchmarks.
+        std::size_t gcd_half_gcd_cutoff = 0;
     };
 
     /**
