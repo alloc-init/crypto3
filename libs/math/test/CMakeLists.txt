@@ -42,6 +42,7 @@ set(TESTS_NAMES
     "batch_inverse"
     "evaluation_domain"
     "geometric_sequence_domain"
+    "integer_sqrt"
     "matrix"
     "polynomial_gcd"
     # "kronecker_substitution"  # FIXME: This fails. Disabled for passing CI
@@ -49,6 +50,8 @@ set(TESTS_NAMES
     "polynomial_backend"
     "polynomial_division"
     "polynomial_exponentiation"
+    "polynomial_composition"
+    "polynomial_frobenius"
     "power_series"
     "polynomial"
     "polynomial_view"

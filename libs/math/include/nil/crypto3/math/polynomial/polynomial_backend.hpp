@@ -27,6 +27,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <limits>
 #include <utility>
 
 #include <nil/crypto3/math/polynomial/concepts.hpp>
@@ -46,6 +47,11 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // GCD uses half-GCD when its smaller operand has at least this many coefficients. Zero disables half-GCD;
         // callers should select this backend-dependent crossover from benchmarks.
         std::size_t gcd_half_gcd_cutoff = 0;
+
+        // Brent-Kung modular composition caches at most this many reduced powers of the inner polynomial. Each power
+        // has at most degree(divisor) coefficients. The limit must be positive; the default permits the algorithm's
+        // square-root block size.
+        std::size_t modular_composition_cached_power_limit = std::numeric_limits<std::size_t>::max();
     };
 
     /**
