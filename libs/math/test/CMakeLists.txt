@@ -51,6 +51,7 @@ set(TESTS_NAMES
     "polynomial_division"
     "polynomial_exponentiation"
     "polynomial_composition"
+    "polynomial_frobenius"
     "power_series"
     "polynomial"
     "polynomial_view"
