@@ -195,6 +195,69 @@ BOOST_AUTO_TEST_CASE(brent_kung_composition_matches_the_reference_at_different_m
     }
 }
 
+BOOST_AUTO_TEST_CASE(brent_kung_precomputation_is_reusable_and_enforces_its_outer_size) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    const polynomial_type first_outer = {fq_value_type(1), fq_value_type(2), fq_value_type(3), fq_value_type(4),
+                                         fq_value_type(5), fq_value_type(6), fq_value_type(7), fq_value_type(8),
+                                         fq_value_type(9), fq_value_type(10)};
+    const polynomial_type second_outer = {fq_value_type(11), fq_value_type(12), fq_value_type(13),
+                                          fq_value_type(14), fq_value_type(15), fq_value_type(16)};
+    const polynomial_type inner = {fq_value_type(17), fq_value_type(18), fq_value_type(19),
+                                   fq_value_type(20), fq_value_type(21), fq_value_type(22)};
+    const polynomial_type divisor = {fq_value_type(23), fq_value_type(24), fq_value_type(25),   fq_value_type(26),
+                                     fq_value_type(27), fq_value_type(28), fq_value_type::one()};
+
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_divisor_context<backend_type> divisor_context(divisor, 5, arithmetic_context);
+    math::polynomial_composition_precomputation<backend_type> precomputation(inner, first_outer.size(), divisor_context,
+                                                                             arithmetic_context);
+
+    for (const polynomial_type &outer : {first_outer, second_outer}) {
+        polynomial_type expected;
+        math::compose_mod_reference(expected, outer, inner, divisor_context, arithmetic_context);
+
+        polynomial_type result;
+        math::compose_mod(result, outer, precomputation, divisor_context, arithmetic_context);
+        BOOST_CHECK(result == expected);
+
+        polynomial_type aliased = outer;
+        math::compose_mod(aliased, aliased, precomputation, divisor_context, arithmetic_context);
+        BOOST_CHECK(aliased == expected);
+    }
+
+    polynomial_type oversized_outer = first_outer;
+    oversized_outer.push_back(fq_value_type(11));
+    polynomial_type unchanged = {fq_value_type(17)};
+    BOOST_CHECK_THROW(
+        math::compose_mod(unchanged, oversized_outer, precomputation, divisor_context, arithmetic_context),
+        std::invalid_argument);
+    BOOST_CHECK(unchanged == polynomial_type({fq_value_type(17)}));
+
+    const polynomial_type constant_divisor = {fq_value_type(29)};
+    math::polynomial_divisor_context<backend_type> constant_divisor_context(constant_divisor, 1, arithmetic_context);
+    math::polynomial_composition_precomputation<backend_type> constant_precomputation(
+        inner, first_outer.size(), constant_divisor_context, arithmetic_context);
+    BOOST_CHECK_THROW(math::compose_mod(unchanged, oversized_outer, constant_precomputation, constant_divisor_context,
+                                        arithmetic_context),
+                      std::invalid_argument);
+    BOOST_CHECK(unchanged == polynomial_type({fq_value_type(17)}));
+
+    BOOST_CHECK_THROW(
+        math::polynomial_composition_precomputation<backend_type>(inner, 0, divisor_context, arithmetic_context),
+        std::invalid_argument);
+
+    polynomial_arithmetic::polynomial_context_options invalid_options;
+    invalid_options.modular_composition_cached_power_limit = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> invalid_arithmetic_context(backend_type {},
+                                                                                       invalid_options);
+    math::polynomial_divisor_context<backend_type> invalid_divisor_context(divisor, 5, invalid_arithmetic_context);
+    BOOST_CHECK_THROW(math::polynomial_composition_precomputation<backend_type>(
+                          inner, first_outer.size(), invalid_divisor_context, invalid_arithmetic_context),
+                      std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_CASE(brent_kung_composition_may_alias_inputs_and_rejects_a_zero_cache_limit) {
     using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
     using polynomial_type = typename backend_type::polynomial_type;

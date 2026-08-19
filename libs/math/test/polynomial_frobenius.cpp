@@ -93,6 +93,18 @@ BOOST_AUTO_TEST_CASE(frobenius_matches_direct_exponentiation_and_may_alias_the_i
     polynomial_type aliased = input;
     math::frobenius_map(aliased, aliased, frobenius_context, arithmetic_context);
     BOOST_CHECK(aliased == expected);
+
+    const polynomial_type unreduced = {fq_value_type(13), fq_value_type(17), fq_value_type(19), fq_value_type(23),
+                                       fq_value_type(29)};
+    math::powmod(expected, unreduced, fields::field_order<fq_field_type>(), frobenius_context.divisor_context(),
+                 arithmetic_context);
+
+    math::frobenius_map(result, unreduced, frobenius_context, arithmetic_context);
+    BOOST_CHECK(result == expected);
+
+    aliased = unreduced;
+    math::frobenius_map(aliased, aliased, frobenius_context, arithmetic_context);
+    BOOST_CHECK(aliased == expected);
 }
 
 BOOST_AUTO_TEST_CASE(iterated_frobenius_matches_a_power_of_the_field_order) {
@@ -157,6 +169,24 @@ BOOST_AUTO_TEST_CASE(frobenius_modulo_a_nonzero_constant_is_zero) {
     polynomial_type result;
     math::frobenius_map(result, input, frobenius_context, arithmetic_context);
     BOOST_CHECK(result == polynomial_type({fq_value_type::zero()}));
+}
+
+BOOST_AUTO_TEST_CASE(frobenius_context_rejects_invalid_precomputation_inputs) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    const polynomial_type zero_divisor = {fq_value_type::zero()};
+    BOOST_CHECK_THROW(math::polynomial_frobenius_context<backend_type>(zero_divisor, arithmetic_context),
+                      std::invalid_argument);
+
+    polynomial_arithmetic::polynomial_context_options invalid_options;
+    invalid_options.modular_composition_cached_power_limit = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> invalid_arithmetic_context(backend_type {},
+                                                                                       invalid_options);
+    const polynomial_type divisor = {fq_value_type::one(), fq_value_type::zero(), fq_value_type::one()};
+    BOOST_CHECK_THROW(math::polynomial_frobenius_context<backend_type>(divisor, invalid_arithmetic_context),
+                      std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

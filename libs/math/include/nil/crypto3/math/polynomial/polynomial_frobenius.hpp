@@ -46,8 +46,12 @@ namespace nil::crypto3::math {
      *
      *     A(X)^Q mod B = A(X^Q mod B) mod B.
      *
-     * Consequently, constructing the context requires one modular exponentiation, while each later Frobenius map
-     * uses modular composition. B need not be irreducible.
+     * Consequently, constructing the context performs one modular exponentiation and precomputes the Brent-Kung
+     * powers of X^Q mod B. Each later Frobenius map reuses those powers for modular composition. B need not be
+     * irreducible.
+     *
+     * @throws std::invalid_argument if B is the zero polynomial or the configured modular-composition cached-power
+     *         limit is zero.
      */
     template<detail::SupportsDivrem Backend>
     class polynomial_frobenius_context {
@@ -59,10 +63,10 @@ namespace nil::crypto3::math {
 
         polynomial_frobenius_context(const polynomial_type &divisor,
                                      polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) :
-            divisor_context_(divisor, required_inverse_precision(divisor), arithmetic_context) {
-            const polynomial_type x = {value_type {}, value_type::one()};
-            powmod(x_to_field_order_, x, algebra::fields::field_order<field_type>(), divisor_context_,
-                   arithmetic_context);
+            divisor_context_(divisor, required_inverse_precision(divisor), arithmetic_context),
+            x_to_field_order_(compute_x_to_field_order(divisor_context_, arithmetic_context)),
+            composition_precomputation_(x_to_field_order_, std::max<std::size_t>(1, divisor_context_.degree()),
+                                        divisor_context_, arithmetic_context) {
         }
 
         const polynomial_divisor_context<backend_type> &divisor_context() const {
@@ -73,7 +77,20 @@ namespace nil::crypto3::math {
             return x_to_field_order_;
         }
 
+        const polynomial_composition_precomputation<backend_type> &composition_precomputation() const {
+            return composition_precomputation_;
+        }
+
     private:
+        static polynomial_type
+            compute_x_to_field_order(const polynomial_divisor_context<backend_type> &divisor_context,
+                                     polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) {
+            const polynomial_type x = {value_type {}, value_type::one()};
+            polynomial_type result;
+            powmod(result, x, algebra::fields::field_order<field_type>(), divisor_context, arithmetic_context);
+            return result;
+        }
+
         static std::size_t required_inverse_precision(const polynomial_type &divisor) {
             // Products of representatives of degree below d have quotients with at most d - 1 coefficients. Keep
             // one coefficient for constant and linear divisors because the divisor context requires positive
@@ -83,6 +100,7 @@ namespace nil::crypto3::math {
 
         polynomial_divisor_context<backend_type> divisor_context_;
         polynomial_type x_to_field_order_;
+        polynomial_composition_precomputation<backend_type> composition_precomputation_;
     };
 
     /**
@@ -93,8 +111,15 @@ namespace nil::crypto3::math {
     void frobenius_map(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
                        const polynomial_frobenius_context<Backend> &frobenius_context,
                        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
-        compose_mod(output, input, frobenius_context.x_to_field_order(), frobenius_context.divisor_context(),
-                    arithmetic_context);
+        if (input.size() <= frobenius_context.composition_precomputation().maximum_outer_coefficient_count()) {
+            compose_mod(output, input, frobenius_context.composition_precomputation(),
+                        frobenius_context.divisor_context(), arithmetic_context);
+        } else {
+            // Quotient-ring representatives use the reusable precomputation. Retain support for larger, unreduced
+            // inputs by constructing a one-off composition precomputation sized for that input.
+            compose_mod(output, input, frobenius_context.x_to_field_order(), frobenius_context.divisor_context(),
+                        arithmetic_context);
+        }
     }
 
     /**
