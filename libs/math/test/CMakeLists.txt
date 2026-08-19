@@ -49,6 +49,7 @@ set(TESTS_NAMES
     "polynomial_backend"
     "polynomial_division"
     "polynomial_exponentiation"
+    "polynomial_composition"
     "power_series"
     "polynomial"
     "polynomial_view"
