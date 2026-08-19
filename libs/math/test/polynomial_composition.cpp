@@ -108,21 +108,25 @@ BOOST_AUTO_TEST_CASE(reference_composition_reduces_the_inner_polynomial) {
     BOOST_CHECK(inner_alias == from_unreduced);
 }
 
-BOOST_AUTO_TEST_CASE(reference_composition_handles_zero_constant_and_constant_modulus_cases) {
+BOOST_AUTO_TEST_CASE(composition_handles_zero_constant_and_constant_modulus_cases) {
     using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
     using polynomial_type = typename backend_type::polynomial_type;
 
     polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
     const polynomial_type divisor = {fq_value_type(2), fq_value_type(3), fq_value_type(1)};
     math::polynomial_divisor_context<backend_type> divisor_context(divisor, 1, arithmetic_context);
-    const polynomial_type inner = {fq_value_type(4), fq_value_type(5)};
+    const polynomial_type inner = {fq_value_type(4), fq_value_type(5), fq_value_type(6), fq_value_type(7)};
 
     polynomial_type result;
     math::compose_mod_reference(result, polynomial_type {fq_value_type::zero()}, inner, divisor_context,
                                 arithmetic_context);
     BOOST_CHECK(result == polynomial_type({fq_value_type::zero()}));
+    math::compose_mod(result, polynomial_type {fq_value_type::zero()}, inner, divisor_context, arithmetic_context);
+    BOOST_CHECK(result == polynomial_type({fq_value_type::zero()}));
 
     math::compose_mod_reference(result, polynomial_type {fq_value_type(7)}, inner, divisor_context, arithmetic_context);
+    BOOST_CHECK(result == polynomial_type({fq_value_type(7)}));
+    math::compose_mod(result, polynomial_type {fq_value_type(7)}, inner, divisor_context, arithmetic_context);
     BOOST_CHECK(result == polynomial_type({fq_value_type(7)}));
 
     const polynomial_type constant_divisor = {fq_value_type(11)};
@@ -130,9 +134,12 @@ BOOST_AUTO_TEST_CASE(reference_composition_handles_zero_constant_and_constant_mo
     math::compose_mod_reference(result, polynomial_type {fq_value_type(1), fq_value_type(2)}, inner, constant_context,
                                 arithmetic_context);
     BOOST_CHECK(result == polynomial_type({fq_value_type::zero()}));
+    math::compose_mod(result, polynomial_type {fq_value_type(1), fq_value_type(2)}, inner, constant_context,
+                      arithmetic_context);
+    BOOST_CHECK(result == polynomial_type({fq_value_type::zero()}));
 }
 
-BOOST_AUTO_TEST_CASE(reference_composition_rejects_insufficient_inverse_precision_without_changing_output) {
+BOOST_AUTO_TEST_CASE(composition_rejects_insufficient_inverse_precision_without_changing_output) {
     using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
     using polynomial_type = typename backend_type::polynomial_type;
 
@@ -150,9 +157,76 @@ BOOST_AUTO_TEST_CASE(reference_composition_rejects_insufficient_inverse_precisio
     BOOST_CHECK_THROW(math::compose_mod_reference(output, outer, inner, divisor_context, arithmetic_context),
                       std::invalid_argument);
     BOOST_CHECK(output == polynomial_type({fq_value_type(17)}));
+
+    BOOST_CHECK_THROW(math::compose_mod(output, outer, inner, divisor_context, arithmetic_context),
+                      std::invalid_argument);
+    BOOST_CHECK(output == polynomial_type({fq_value_type(17)}));
 }
 
-BOOST_AUTO_TEST_CASE(reference_composition_matches_between_schoolbook_and_mixed_radix_backends) {
+BOOST_AUTO_TEST_CASE(brent_kung_composition_matches_the_reference_at_different_memory_limits) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    const polynomial_type outer = {fq_value_type(1), fq_value_type(2), fq_value_type(3), fq_value_type(4),
+                                   fq_value_type(5), fq_value_type(6), fq_value_type(7), fq_value_type(8),
+                                   fq_value_type(9), fq_value_type(10)};
+    const polynomial_type inner = {fq_value_type(11), fq_value_type(12), fq_value_type(13),
+                                   fq_value_type(14), fq_value_type(15), fq_value_type(16)};
+    const polynomial_type divisor = {fq_value_type(17), fq_value_type(18), fq_value_type(19),   fq_value_type(20),
+                                     fq_value_type(21), fq_value_type(22), fq_value_type::one()};
+
+    polynomial_arithmetic::polynomial_context_options reference_options;
+    reference_options.basecase_divisor_coefficient_cutoff = 0;
+    reference_options.basecase_quotient_coefficient_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> reference_context(backend_type {}, reference_options);
+    math::polynomial_divisor_context<backend_type> reference_divisor(divisor, 5, reference_context);
+    polynomial_type expected;
+    math::compose_mod_reference(expected, outer, inner, reference_divisor, reference_context);
+
+    for (const std::size_t cached_power_limit : {1, 2, 3, 4, 100}) {
+        polynomial_arithmetic::polynomial_context_options options = reference_options;
+        options.modular_composition_cached_power_limit = cached_power_limit;
+        polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context(backend_type {}, options);
+        math::polynomial_divisor_context<backend_type> divisor_context(divisor, 5, arithmetic_context);
+
+        polynomial_type result;
+        math::compose_mod(result, outer, inner, divisor_context, arithmetic_context);
+        BOOST_CHECK(result == expected);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(brent_kung_composition_may_alias_inputs_and_rejects_a_zero_cache_limit) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    const polynomial_type outer = {fq_value_type(1), fq_value_type(2), fq_value_type(3), fq_value_type(4)};
+    const polynomial_type inner = {fq_value_type(5), fq_value_type(6), fq_value_type(7), fq_value_type(8)};
+    const polynomial_type divisor = {fq_value_type(9), fq_value_type(10), fq_value_type(11), fq_value_type::one()};
+
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_cached_power_limit = 2;
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context(backend_type {}, options);
+    math::polynomial_divisor_context<backend_type> divisor_context(divisor, 2, arithmetic_context);
+    polynomial_type expected;
+    math::compose_mod_reference(expected, outer, inner, divisor_context, arithmetic_context);
+
+    polynomial_type outer_alias = outer;
+    math::compose_mod(outer_alias, outer_alias, inner, divisor_context, arithmetic_context);
+    BOOST_CHECK(outer_alias == expected);
+
+    polynomial_type inner_alias = inner;
+    math::compose_mod(inner_alias, outer, inner_alias, divisor_context, arithmetic_context);
+    BOOST_CHECK(inner_alias == expected);
+
+    options.modular_composition_cached_power_limit = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> invalid_context(backend_type {}, options);
+    math::polynomial_divisor_context<backend_type> invalid_divisor(divisor, 2, invalid_context);
+    polynomial_type output = {fq_value_type(17)};
+    BOOST_CHECK_THROW(math::compose_mod(output, outer, inner, invalid_divisor, invalid_context), std::invalid_argument);
+    BOOST_CHECK(output == polynomial_type({fq_value_type(17)}));
+}
+
+BOOST_AUTO_TEST_CASE(composition_matches_between_schoolbook_and_mixed_radix_backends) {
     using schoolbook_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
     using mixed_radix_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type, fq12_value_type>;
     using polynomial_type = typename schoolbook_backend::polynomial_type;
@@ -169,11 +243,15 @@ BOOST_AUTO_TEST_CASE(reference_composition_matches_between_schoolbook_and_mixed_
     polynomial_arithmetic::polynomial_context_options options;
     options.basecase_divisor_coefficient_cutoff = 0;
     options.basecase_quotient_coefficient_cutoff = 0;
+    options.modular_composition_cached_power_limit = 2;
     polynomial_arithmetic::polynomial_context<mixed_radix_backend> mixed_radix_context(mixed_radix_backend(18),
                                                                                        options);
     math::polynomial_divisor_context<mixed_radix_backend> mixed_radix_divisor(divisor, 2, mixed_radix_context);
     polynomial_type result;
     math::compose_mod_reference(result, outer, inner, mixed_radix_divisor, mixed_radix_context);
+    BOOST_CHECK(result == expected);
+
+    math::compose_mod(result, outer, inner, mixed_radix_divisor, mixed_radix_context);
     BOOST_CHECK(result == expected);
 }
 
