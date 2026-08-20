@@ -31,13 +31,19 @@
 
 namespace nil::crypto3::algebra::fields {
 
+    /** Return the characteristic of FieldType. Extension fields have the same characteristic as their prime field. */
+    template<typename FieldType>
+    boost::multiprecision::cpp_int field_characteristic() {
+        return boost::multiprecision::cpp_int(FieldType::modulus.backend().to_cpp_int());
+    }
+
     /**
      * Return the number of elements in FieldType. Crypto3 field types describe extensions with an arity equal to their
      * degree over the prime field, so a field of characteristic p and arity d has p^d elements.
      */
     template<typename FieldType>
     boost::multiprecision::cpp_int field_order() {
-        const boost::multiprecision::cpp_int characteristic(FieldType::modulus.backend().to_cpp_int());
+        const boost::multiprecision::cpp_int characteristic = field_characteristic<FieldType>();
         boost::multiprecision::cpp_int order = 1;
         for (std::size_t i = 0; i < FieldType::arity; ++i) {
             order *= characteristic;
