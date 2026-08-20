@@ -36,22 +36,6 @@
 #include <nil/crypto3/math/polynomial/polynomial_factorization.hpp>
 
 namespace nil::crypto3::math {
-    namespace detail {
-
-        template<SupportsDivrem Backend>
-        void factorization_exact_quotient(typename Backend::polynomial_type &output,
-                                          const typename Backend::polynomial_type &dividend,
-                                          const typename Backend::polynomial_type &divisor,
-                                          polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
-            const std::size_t quotient_coefficient_count =
-                dividend.size() >= divisor.size() ? dividend.size() - divisor.size() + 1 : 1;
-            polynomial_divisor_context<Backend> divisor_context(divisor, quotient_coefficient_count,
-                                                                arithmetic_context);
-            exact_division(output, dividend, divisor_context, arithmetic_context);
-        }
-
-    }    // namespace detail
-
     /**
      * Separate a polynomial into monic square-free factors with distinct multiplicities using Yun's decomposition.
      * For a nonconstant input, the returned leading coefficient is the input's original leading coefficient. By

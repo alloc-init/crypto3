@@ -29,6 +29,7 @@
 #include <vector>
 
 #include <nil/crypto3/math/polynomial/concepts.hpp>
+#include <nil/crypto3/math/polynomial/polynomial_division.hpp>
 
 namespace nil::crypto3::math {
 
@@ -64,6 +65,56 @@ namespace nil::crypto3::math {
 
         bool operator==(const polynomial_factorization_result &) const = default;
     };
+
+    /**
+     * One group produced by distinct-degree factorization. polynomial is the product of all irreducible input factors
+     * whose degree equals irreducible_factor_degree; it need not itself be irreducible.
+     */
+    template<CoefficientPolynomial Polynomial>
+    struct distinct_degree_factor {
+        Polynomial polynomial;
+        std::size_t irreducible_factor_degree = 1;
+
+        bool operator==(const distinct_degree_factor &) const = default;
+    };
+
+    /**
+     * A collected distinct-degree factorization. A complete result satisfies
+     *
+     *     input = leading_coefficient * product(factor.polynomial).
+     *
+     * Each stored polynomial is monic and square-free, and contains all input factors having the associated
+     * irreducible_factor_degree. A stopped result contains the produced prefix, including the factor that caused the
+     * stop, and has complete set to false.
+     */
+    template<CoefficientPolynomial Polynomial>
+    struct distinct_degree_factorization_result {
+        using polynomial_type = Polynomial;
+        using value_type = typename polynomial_type::value_type;
+        using factor_type = distinct_degree_factor<polynomial_type>;
+
+        value_type leading_coefficient {};
+        std::vector<factor_type> factors;
+        bool complete = true;
+
+        bool operator==(const distinct_degree_factorization_result &) const = default;
+    };
+
+    namespace detail {
+
+        template<SupportsDivrem Backend>
+        void factorization_exact_quotient(typename Backend::polynomial_type &output,
+                                          const typename Backend::polynomial_type &dividend,
+                                          const typename Backend::polynomial_type &divisor,
+                                          polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+            const std::size_t quotient_coefficient_count =
+                dividend.size() >= divisor.size() ? dividend.size() - divisor.size() + 1 : 1;
+            polynomial_divisor_context<Backend> divisor_context(divisor, quotient_coefficient_count,
+                                                                arithmetic_context);
+            exact_division(output, dividend, divisor_context, arithmetic_context);
+        }
+
+    }    // namespace detail
 
 }    // namespace nil::crypto3::math
 
