@@ -35,6 +35,7 @@
 
 #include <nil/crypto3/math/polynomial/mixed_radix_backend.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_division.hpp>
+#include <nil/crypto3/math/polynomial/polynomial_modular_arithmetic.hpp>
 #include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
 
 namespace {

@@ -27,19 +27,31 @@
 
 #include <concepts>
 #include <cstddef>
+#include <limits>
 #include <utility>
 
 #include <nil/crypto3/math/polynomial/concepts.hpp>
 
 namespace nil::crypto3::math::polynomial_arithmetic {
 
-    /**
-     * Algorithm-selection parameters shared by higher-level polynomial operations.
-     * A zero cutoff disables the corresponding basecase-division criterion.
-     */
+    /** Algorithm-selection parameters shared by higher-level polynomial operations. */
     struct polynomial_context_options {
+        // Long division is selected when either enabled coefficient-count cutoff matches.
         std::size_t basecase_divisor_coefficient_cutoff = 10;
         std::size_t basecase_quotient_coefficient_cutoff = 2;
+
+        // Recursive half-GCD switches to iterative matrix construction at or below this coefficient count. Zero
+        // disables the iterative base case.
+        std::size_t half_gcd_basecase_cutoff = 30;
+
+        // GCD uses half-GCD when its smaller operand has at least this many coefficients. Zero disables half-GCD;
+        // callers should select this backend-dependent crossover from benchmarks.
+        std::size_t gcd_half_gcd_cutoff = 0;
+
+        // Brent-Kung modular composition caches at most this many reduced powers of the inner polynomial. Each power
+        // has at most degree(divisor) coefficients. The limit must be positive; the default permits the algorithm's
+        // square-root block size.
+        std::size_t modular_composition_cached_power_limit = std::numeric_limits<std::size_t>::max();
     };
 
     /**

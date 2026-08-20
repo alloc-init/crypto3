@@ -35,6 +35,17 @@
 
 namespace nil::crypto3::math {
 
+    namespace detail {
+        inline bool use_basecase_division(const polynomial_arithmetic::polynomial_context_options &options,
+                                          std::size_t divisor_coefficient_count,
+                                          std::size_t quotient_coefficient_count) {
+            return (options.basecase_divisor_coefficient_cutoff != 0 &&
+                    divisor_coefficient_count <= options.basecase_divisor_coefficient_cutoff) ||
+                   (options.basecase_quotient_coefficient_cutoff != 0 &&
+                    quotient_coefficient_count <= options.basecase_quotient_coefficient_cutoff);
+        }
+    }    // namespace detail
+
     /**
      * Immutable precomputation for repeated division and reduction by one polynomial B. If d = degree(B), define
      * rev(B) = X^d * B(X^-1), which reverses B's d + 1 coefficients. The context stores B in canonical form and
@@ -153,12 +164,7 @@ namespace nil::crypto3::math {
         const auto &options = arithmetic_context.options();
         // Long division avoids Newton multiplication overhead when either the divisor or quotient is small. It does
         // not use the precomputed reversed-divisor inverse, so this dispatch precedes the inverse-precision check.
-        const bool use_basecase_division =
-            (options.basecase_divisor_coefficient_cutoff != 0 &&
-             divisor_context.divisor().size() <= options.basecase_divisor_coefficient_cutoff) ||
-            (options.basecase_quotient_coefficient_cutoff != 0 &&
-             quotient_size <= options.basecase_quotient_coefficient_cutoff);
-        if (use_basecase_division) {
+        if (detail::use_basecase_division(options, divisor_context.divisor().size(), quotient_size)) {
             division(quotient_result, remainder_result, dividend, divisor_context.divisor());
             quotient = std::move(quotient_result);
             remainder = std::move(remainder_result);
@@ -245,37 +251,6 @@ namespace nil::crypto3::math {
             throw std::invalid_argument("polynomial division is not exact");
         }
         output = std::move(quotient);
-    }
-
-    /**
-     * Compute output = (left * right) mod B, where B is the nonzero polynomial stored in divisor_context. B need not
-     * be monic or irreducible. The result is canonical, has degree less than degree(B) when B is nonconstant, and may
-     * alias either input.
-     *
-     * If the canonical product has p coefficients and d = degree(B), reduction requires p - d quotient coefficients
-     * when p > d. The context's precomputed inverse must have at least that precision. In particular, for nonconstant
-     * B, inputs already reduced modulo B require at most d - 1 inverse coefficients.
-     *
-     * @throws std::invalid_argument if the precomputed inverse has insufficient precision.
-     */
-    template<detail::SupportsDivrem Backend>
-    void mulmod(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &left,
-                const typename Backend::polynomial_type &right,
-                const polynomial_divisor_context<Backend> &divisor_context,
-                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
-        using polynomial_type = typename Backend::polynomial_type;
-        using value_type = typename polynomial_type::value_type;
-
-        // Every polynomial is zero modulo a nonzero constant, so no product needs to be computed.
-        if (divisor_context.degree() == 0) {
-            output.resize(1);
-            output[0] = value_type {};
-            return;
-        }
-
-        polynomial_type product;
-        multiplication(product, left, right, arithmetic_context);
-        remainder(output, product, divisor_context, arithmetic_context);
     }
 
 }    // namespace nil::crypto3::math

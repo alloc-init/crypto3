@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------//
 //
 // Copyright (c) 2018-2020 Mikhail Komarov <nemo@nil.foundation>
-// Copyright (c) 2026 Alloc Init
+// Copyright (c) 2026 Alloc Init Labs Inc.
 //
 // MIT License
 //
