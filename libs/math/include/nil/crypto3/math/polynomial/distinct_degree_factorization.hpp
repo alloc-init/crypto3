@@ -50,6 +50,12 @@ namespace nil::crypto3::math {
      * original monic input. This is also valid modulo every factor subsequently removed from that input and avoids
      * rebuilding the Frobenius precomputation after each split.
      *
+     * For example, let F = L1 * L2 * Q1 * Q2 * C, where L1 and L2 are irreducible linears, Q1 and Q2 are
+     * irreducible quadratics, and C is an irreducible cubic. At d = 1, the GCD extracts L1 * L2. At d = 2,
+     * X^(Q^2) - X contains factors of degrees one and two, but the linears have already been removed, so the GCD
+     * extracts Q1 * Q2. The remaining C is then reported with degree three. The algorithm therefore returns three
+     * groups: (L1 * L2, 1), (Q1 * Q2, 2), and (C, 3).
+     *
      * The input is normalized to monic form and its original leading coefficient is preserved in the result. Zero
      * and constant inputs return that coefficient and no factors. Nonconstant input must be square-free; this is
      * checked before the decomposition begins.
