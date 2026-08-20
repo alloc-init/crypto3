@@ -40,6 +40,7 @@ endmacro()
 
 set(TESTS_NAMES
     "batch_inverse"
+    "distinct_degree_factorization"
     "evaluation_domain"
     "geometric_sequence_domain"
     "integer_sqrt"
@@ -52,6 +53,7 @@ set(TESTS_NAMES
     "polynomial_exponentiation"
     "polynomial_composition"
     "polynomial_frobenius"
+    "square_free_factorization"
     "power_series"
     "polynomial"
     "polynomial_view"

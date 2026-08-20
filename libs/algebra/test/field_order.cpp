@@ -46,6 +46,8 @@ BOOST_AUTO_TEST_CASE(prime_field_order_equals_its_characteristic) {
     const boost::multiprecision::cpp_int expected(
         "21888242871839275222246405745257275088696311157297823662689037894645226208583");
 
+    BOOST_CHECK(fields::field_characteristic<fq_field_type>() == expected);
+    BOOST_CHECK(fields::field_characteristic<fq12_field_type>() == expected);
     BOOST_CHECK(fields::field_order<fq_field_type>() == expected);
 }
 
