@@ -127,6 +127,19 @@ BOOST_AUTO_TEST_CASE(compressed_matrix_access_uses_backend_proxy) {
     BOOST_CHECK_EQUAL(value.backend().nnz(), 1);
 }
 
+BOOST_AUTO_TEST_CASE(assign_if_stored_preserves_sparsity) {
+    math::compressed_matrix<int> source(2, 2);
+    source(0, 1) = 7;
+    math::compressed_matrix<int> destination(3, 3);
+
+    math::assign_if_stored(source, 0, 1, destination, 2, 2);
+    math::assign_if_stored(source, 1, 0, destination, 1, 1);
+
+    BOOST_CHECK_EQUAL(destination(2, 2), 7);
+    BOOST_CHECK_EQUAL(destination(1, 1), 0);
+    BOOST_CHECK_EQUAL(destination.backend().nnz(), 1);
+}
+
 BOOST_AUTO_TEST_CASE(matrix_arithmetic_remains_lazy_until_materialized) {
     math::regular_matrix<int> left(2, 2);
     math::regular_matrix<int> right(2, 2);

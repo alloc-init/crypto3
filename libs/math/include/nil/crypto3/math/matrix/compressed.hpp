@@ -31,6 +31,21 @@ namespace nil::crypto3::math {
         return value.backend().find_element(row, column);
     }
 
+    // An absent sparse source element leaves the destination unchanged.
+    template<typename SourceBackend, typename DestinationBackend>
+        requires requires(const SourceBackend &source, DestinationBackend &destination, std::size_t row,
+                          std::size_t column) {
+            source.find_element(row, column);
+            destination(row, column) = *source.find_element(row, column);
+        }
+    void assign_if_stored(const matrix<SourceBackend> &source, std::size_t source_row,
+                          std::size_t source_column, matrix<DestinationBackend> &destination,
+                          std::size_t destination_row, std::size_t destination_column) {
+        if (auto element = source.backend().find_element(source_row, source_column)) {
+            destination(destination_row, destination_column) = *element;
+        }
+    }
+
     template<typename Backend>
         requires requires(const Backend &backend, std::size_t index) { backend.find_element(index); }
     const typename Backend::value_type *find_element(const vector<Backend> &value, std::size_t index) {
