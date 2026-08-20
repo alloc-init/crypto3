@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------//
 // Copyright (c) 2019 Mikhail Komarov <nemo@nil.foundation>
-// Copyright (c) 2026 Alloc Init
+// Copyright (c) 2026 Alloc Init Labs Inc.
 //
 // MIT License
 //
@@ -185,15 +185,15 @@ namespace nil {
                         return compute<mac::poly1305>(data, poly1305_key);
                     }
                 };
-            }    // namespace aead
-        }    // namespace modes
+            } // namespace aead
+        } // namespace modes
 
         namespace stream {
             namespace modes {
                 typedef ::nil::crypto3::modes::aead::chacha20poly1305 chacha20poly1305;
-            }    // namespace modes
-        }    // namespace stream
-    }    // namespace crypto3
-}    // namespace nil
+            } // namespace modes
+        } // namespace stream
+    } // namespace crypto3
+} // namespace nil
 
 #endif    // CRYPTO3_MODE_AEAD_CHACHA20_POLY1305_HPP

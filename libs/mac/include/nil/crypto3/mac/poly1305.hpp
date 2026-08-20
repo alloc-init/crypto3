@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------//
-// Copyright (c) 2026 Alloc Init
+// Copyright (c) 2026 Alloc Init Labs Inc.
 //
 // MIT License
 //
@@ -149,8 +149,10 @@ namespace nil {
                         std::copy(key.begin() + r_bytes.size(), key.end(), s_bytes.begin());
 
                         clamp_poly1305_r(r_bytes);
-                        return {load_little_endian_integer(r_bytes.cbegin(), r_bytes.size()),
-                                load_little_endian_integer(s_bytes.cbegin(), s_bytes.size())};
+                        return {
+                            load_little_endian_integer(r_bytes.cbegin(), r_bytes.size()),
+                            load_little_endian_integer(s_bytes.cbegin(), s_bytes.size())
+                        };
                     }
 
                     template<typename InputIterator>
@@ -336,13 +338,15 @@ namespace nil {
                         const std::uint64_t t0 = load_little_endian_64(key.data());
                         const std::uint64_t t1 = load_little_endian_64(key.data() + 8);
 
-                        key_schedule_type schedule = {t0 & 0xffc0fffffff,
-                                                      ((t0 >> 44) | (t1 << 20)) & 0xfffffc0ffff,
-                                                      (t1 >> 24) & 0x00ffffffc0f,
-                                                      0,
-                                                      0,
-                                                      load_little_endian_64(key.data() + 16),
-                                                      load_little_endian_64(key.data() + 24)};
+                        key_schedule_type schedule = {
+                            t0 & 0xffc0fffffff,
+                            ((t0 >> 44) | (t1 << 20)) & 0xfffffc0ffff,
+                            (t1 >> 24) & 0x00ffffffc0f,
+                            0,
+                            0,
+                            load_little_endian_64(key.data() + 16),
+                            load_little_endian_64(key.data() + 24)
+                        };
 
                         schedule.s1 = schedule.r1 * (5 << 2);
                         schedule.s2 = schedule.r2 * (5 << 2);
@@ -367,7 +371,7 @@ namespace nil {
 #else
                 typedef poly1305_reference_backend poly1305_default_backend;
 #endif
-            }    // namespace detail
+            } // namespace detail
 
             template<typename Backend = detail::poly1305_default_backend>
             struct basic_poly1305 {
@@ -443,8 +447,8 @@ namespace nil {
 
                 key_schedule_type schedule;
             };
-        }    // namespace mac
-    }    // namespace crypto3
-}    // namespace nil
+        } // namespace mac
+    } // namespace crypto3
+} // namespace nil
 
 #endif    // CRYPTO3_MAC_POLY1305_HPP

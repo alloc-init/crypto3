@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------//
-// Copyright (c) 2026 Alloc Init
+// Copyright (c) 2026 Alloc Init Labs Inc.
 //
 // MIT License
 //
