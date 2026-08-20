@@ -38,9 +38,9 @@ namespace nil::crypto3::math {
             source.find_element(row, column);
             destination(row, column) = *source.find_element(row, column);
         }
-    void assign_if_stored(const matrix<SourceBackend> &source, std::size_t source_row,
-                          std::size_t source_column, matrix<DestinationBackend> &destination,
-                          std::size_t destination_row, std::size_t destination_column) {
+    void assign_if_stored(const matrix<SourceBackend> &source, std::size_t source_row, std::size_t source_column,
+                          matrix<DestinationBackend> &destination, std::size_t destination_row,
+                          std::size_t destination_column) {
         if (auto element = source.backend().find_element(source_row, source_column)) {
             destination(destination_row, destination_column) = *element;
         }
