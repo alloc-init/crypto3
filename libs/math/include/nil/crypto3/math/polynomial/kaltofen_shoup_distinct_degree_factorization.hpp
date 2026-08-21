@@ -316,9 +316,18 @@ namespace nil::crypto3::math::detail {
                 factorization_exact_quotient(quotient, unclassified, coarse_block, arithmetic_context);
                 unclassified = std::move(quotient);
 
-                if (kaltofen_shoup_split_coarse_block(output, std::move(coarse_block), giant_step, first_factor_degree,
-                                                      degree_count, precomputation, arithmetic_context,
-                                                      factor_callback) == factorization_control::stop_factorization) {
+                const std::size_t coarse_block_degree = coarse_block.size() - 1;
+                // Every irreducible factor in this block has degree at least first_factor_degree. If the block's total
+                // degree is less than twice that bound, it cannot contain two factors and is itself irreducible.
+                if (coarse_block_degree / 2 < first_factor_degree) {
+                    output.push_back({std::move(coarse_block), coarse_block_degree});
+                    if (factor_callback(output.back()) == factorization_control::stop_factorization) {
+                        return factorization_control::stop_factorization;
+                    }
+                } else if (kaltofen_shoup_split_coarse_block(output, std::move(coarse_block), giant_step,
+                                                             first_factor_degree, degree_count, precomputation,
+                                                             arithmetic_context, factor_callback) ==
+                           factorization_control::stop_factorization) {
                     return factorization_control::stop_factorization;
                 }
             }
