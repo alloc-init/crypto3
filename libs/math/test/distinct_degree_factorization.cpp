@@ -25,6 +25,7 @@
 #define BOOST_TEST_MODULE distinct_degree_factorization_test
 
 #include <cstddef>
+#include <vector>
 
 #include <boost/test/unit_test.hpp>
 
@@ -257,6 +258,8 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_coarse_blocks_extract_degree_intervals) {
 
     backend_type backend;
     const polynomial_type linear_factor = {fq_value_type::one(), fq_value_type::one()};
+    // Three generates the multiplicative group of BN254 Fq, so 3 is not a square and neither 3 nor 9 = 3^2 is a
+    // cube. Consequently X^2 - 3, X^3 - 3, and X^3 - 9 are irreducible over this field.
     const polynomial_type quadratic_factor = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::one()};
     const polynomial_type first_cubic_factor = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::zero(),
                                                 fq_value_type::one()};
@@ -301,6 +304,118 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_coarse_block_rejects_an_invalid_degree_count
                       std::invalid_argument);
     BOOST_CHECK_THROW(math::detail::kaltofen_shoup_coarse_block_factor(output, divisor, giant_step, 3, precomputation,
                                                                        frobenius_context, arithmetic_context),
+                      std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(kaltofen_shoup_fine_splitting_separates_exact_degrees) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+    using factor_type = math::distinct_degree_factor<polynomial_type>;
+
+    backend_type backend;
+    const polynomial_type linear_factor = {fq_value_type::one(), fq_value_type::one()};
+    // Three generates the multiplicative group of BN254 Fq, so 3 is not a square and neither 3 nor 9 = 3^2 is a
+    // cube. Consequently X^2 - 3, X^3 - 3, and X^3 - 9 are irreducible over this field.
+    const polynomial_type quadratic_factor = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::one()};
+    const polynomial_type first_cubic_factor = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::zero(),
+                                                fq_value_type::one()};
+    const polynomial_type second_cubic_factor = {-fq_value_type(9), fq_value_type::zero(), fq_value_type::zero(),
+                                                 fq_value_type::one()};
+    const polynomial_type first_block = multiply(backend, linear_factor, quadratic_factor);
+    const polynomial_type second_block = multiply(backend, first_cubic_factor, second_cubic_factor);
+    const polynomial_type input = multiply(backend, first_block, second_block);
+
+    constexpr std::size_t block_size = 2;
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_frobenius_context<backend_type> frobenius_context(input, arithmetic_context);
+    math::detail::kaltofen_shoup_frobenius_precomputation<backend_type> precomputation(block_size, frobenius_context,
+                                                                                       arithmetic_context);
+
+    std::vector<factor_type> factors;
+    std::size_t callback_count = 0;
+    auto record_factor = [&](const factor_type &) {
+        ++callback_count;
+        return math::factorization_control::continue_factorization;
+    };
+
+    polynomial_type giant_step = precomputation.baby_step(block_size);
+    BOOST_CHECK(math::detail::kaltofen_shoup_split_coarse_block(factors, first_block, giant_step, 1, block_size,
+                                                                precomputation, arithmetic_context, record_factor) ==
+                math::factorization_control::continue_factorization);
+
+    precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context, arithmetic_context);
+    BOOST_CHECK(math::detail::kaltofen_shoup_split_coarse_block(factors, second_block, giant_step, 3, 1, precomputation,
+                                                                arithmetic_context, record_factor) ==
+                math::factorization_control::continue_factorization);
+
+    BOOST_CHECK_EQUAL(callback_count, 3);
+    BOOST_REQUIRE_EQUAL(factors.size(), 3);
+    BOOST_CHECK(factors[0] == factor_type({linear_factor, 1}));
+    BOOST_CHECK(factors[1] == factor_type({quadratic_factor, 2}));
+    BOOST_CHECK(factors[2] == factor_type({second_block, 3}));
+}
+
+BOOST_AUTO_TEST_CASE(kaltofen_shoup_fine_splitting_honors_an_early_stop) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+    using factor_type = math::distinct_degree_factor<polynomial_type>;
+
+    backend_type backend;
+    const polynomial_type linear_factor = {fq_value_type::one(), fq_value_type::one()};
+    const polynomial_type quadratic_factor = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::one()};
+    const polynomial_type input = multiply(backend, linear_factor, quadratic_factor);
+
+    constexpr std::size_t block_size = 2;
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_frobenius_context<backend_type> frobenius_context(input, arithmetic_context);
+    math::detail::kaltofen_shoup_frobenius_precomputation<backend_type> precomputation(block_size, frobenius_context,
+                                                                                       arithmetic_context);
+    const polynomial_type giant_step = precomputation.baby_step(block_size);
+    std::vector<factor_type> factors;
+
+    const auto control = math::detail::kaltofen_shoup_split_coarse_block(
+        factors, input, giant_step, 1, block_size, precomputation, arithmetic_context,
+        [](const factor_type &) { return math::factorization_control::stop_factorization; });
+
+    BOOST_CHECK(control == math::factorization_control::stop_factorization);
+    BOOST_REQUIRE_EQUAL(factors.size(), 1);
+    BOOST_CHECK(factors.front() == factor_type({linear_factor, 1}));
+}
+
+BOOST_AUTO_TEST_CASE(kaltofen_shoup_fine_splitting_rejects_invalid_degree_intervals) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+    using factor_type = math::distinct_degree_factor<polynomial_type>;
+
+    backend_type backend;
+    const polynomial_type linear_factor = {fq_value_type::one(), fq_value_type::one()};
+    const polynomial_type quadratic_factor = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::one()};
+    const polynomial_type input = multiply(backend, linear_factor, quadratic_factor);
+
+    constexpr std::size_t block_size = 2;
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_frobenius_context<backend_type> frobenius_context(input, arithmetic_context);
+    math::detail::kaltofen_shoup_frobenius_precomputation<backend_type> precomputation(block_size, frobenius_context,
+                                                                                       arithmetic_context);
+    const polynomial_type giant_step = precomputation.baby_step(block_size);
+    std::vector<factor_type> factors;
+    auto continue_factorization = [](const factor_type &) {
+        return math::factorization_control::continue_factorization;
+    };
+
+    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(factors, input, giant_step, 0, 1, precomputation,
+                                                                      arithmetic_context, continue_factorization),
+                      std::invalid_argument);
+    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(factors, input, giant_step, 1, 0, precomputation,
+                                                                      arithmetic_context, continue_factorization),
+                      std::invalid_argument);
+    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(factors, input, giant_step, 1, 3, precomputation,
+                                                                      arithmetic_context, continue_factorization),
+                      std::invalid_argument);
+
+    // The stated interval contains only degree one, so the unclassified quadratic must be rejected.
+    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(factors, input, giant_step, 1, 1, precomputation,
+                                                                      arithmetic_context, continue_factorization),
                       std::invalid_argument);
 }
 

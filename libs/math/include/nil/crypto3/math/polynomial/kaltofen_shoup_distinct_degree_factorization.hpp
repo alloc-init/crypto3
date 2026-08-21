@@ -26,12 +26,14 @@
 #define CRYPTO3_MATH_KALTOFEN_SHOUP_DISTINCT_DEGREE_FACTORIZATION_HPP
 
 #include <algorithm>
+#include <concepts>
 #include <cstddef>
 #include <stdexcept>
 #include <utility>
 #include <vector>
 
 #include <nil/crypto3/math/polynomial/gcd.hpp>
+#include <nil/crypto3/math/polynomial/polynomial_factorization.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_frobenius.hpp>
 
 namespace nil::crypto3::math::detail {
@@ -172,6 +174,77 @@ namespace nil::crypto3::math::detail {
                    arithmetic_context);
         }
         gcd(output, remaining, interval_product, arithmetic_context);
+    }
+
+    /**
+     * Split one coarse Kaltofen-Shoup block into exact-degree groups. Let the coefficient field contain Q elements,
+     * let B be the modulus used to construct precomputation, let b = precomputation.block_size(), and let
+     * h[i] = X^(Q^i) mod B. If giant_step = X^(Q^e) mod B, the first degree in its block is
+     *
+     *     first_factor_degree = e - b + 1.
+     *
+     * The polynomial passed as coarse_block contains only irreducible factors whose degrees range from
+     * first_factor_degree through first_factor_degree + degree_count - 1. At offset i, subtracting h[b - 1 - i] from
+     * giant_step targets degree
+     *
+     *     e - (b - 1 - i) = first_factor_degree + i.
+     *
+     * After the lower degrees in this block have been removed, taking the GCD with coarse_block therefore extracts
+     * exactly the factors of that degree.
+     *
+     * The extracted groups are appended in increasing degree order. The callback is invoked immediately after each
+     * group is appended and may stop the split early.
+     *
+     * @return stop_factorization if the callback requests an early stop; continue_factorization otherwise.
+     * @throws std::invalid_argument if first_factor_degree is zero, or if degree_count is zero or greater than the
+     * block size.
+     * @pre coarse_block is monic and square-free, divides the modulus used for precomputation, and contains only
+     * factors in the stated degree interval.
+     * @pre giant_step and first_factor_degree describe the same block as precomputation.
+     */
+    template<SupportsDivrem Backend, typename FactorCallback>
+        requires requires(FactorCallback &callback,
+                          const distinct_degree_factor<typename Backend::polynomial_type> &factor) {
+            { callback(factor) } -> std::same_as<factorization_control>;
+        }
+    factorization_control kaltofen_shoup_split_coarse_block(
+        std::vector<distinct_degree_factor<typename Backend::polynomial_type>> &output,
+        typename Backend::polynomial_type coarse_block, const typename Backend::polynomial_type &giant_step,
+        std::size_t first_factor_degree, std::size_t degree_count,
+        const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
+        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, FactorCallback &&factor_callback) {
+        using polynomial_type = typename Backend::polynomial_type;
+
+        if (first_factor_degree == 0 || degree_count == 0 || degree_count > precomputation.block_size()) {
+            throw std::invalid_argument(
+                "the first factor degree and degree count must be positive, and the degree count must not exceed the "
+                "block size");
+        }
+
+        polynomial_type difference;
+        polynomial_type factor;
+        polynomial_type quotient;
+        for (std::size_t offset = 0; offset < degree_count && coarse_block.size() > 1; ++offset) {
+            const std::size_t baby_step_index = precomputation.block_size() - 1 - offset;
+            subtraction(difference, giant_step, precomputation.baby_step(baby_step_index));
+            gcd(factor, coarse_block, difference, arithmetic_context);
+            if (factor.size() == 1) {
+                continue;
+            }
+
+            output.push_back({std::move(factor), first_factor_degree + offset});
+            if (factor_callback(output.back()) == factorization_control::stop_factorization) {
+                return factorization_control::stop_factorization;
+            }
+
+            factorization_exact_quotient(quotient, coarse_block, output.back().polynomial, arithmetic_context);
+            coarse_block = std::move(quotient);
+        }
+
+        if (coarse_block.size() > 1) {
+            throw std::invalid_argument("the coarse block contains factors outside the stated degree interval");
+        }
+        return factorization_control::continue_factorization;
     }
 
 }    // namespace nil::crypto3::math::detail
