@@ -32,11 +32,32 @@
 #include <utility>
 #include <vector>
 
+#include <nil/crypto3/math/detail/integer_sqrt.hpp>
+#include <nil/crypto3/math/polynomial/distinct_degree_factorization.hpp>
 #include <nil/crypto3/math/polynomial/gcd.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_factorization.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_frobenius.hpp>
 
 namespace nil::crypto3::math::detail {
+
+    /**
+     * Select the Kaltofen-Shoup degree-block size for a degree-n polynomial. Distinct-degree factorization explicitly
+     * examines degrees only through n / 2; any factor left afterward is irreducible. Choosing
+     *
+     *     b = ceil(sqrt(n / 2))
+     *
+     * balances the b baby Frobenius steps against approximately n / (2b) giant-step blocks: the sum
+     * b + n / (2b) is minimized at b = sqrt(n / 2). The computation rounds n / 2 upward before applying the integer
+     * ceiling square root, which gives the same integer b without using floating-point arithmetic. Constant and
+     * linear inputs use the minimum valid block size of one.
+     */
+    constexpr std::size_t kaltofen_shoup_block_size(std::size_t polynomial_degree) {
+        if (polynomial_degree <= 1) {
+            return 1;
+        }
+        const std::size_t half_degree_rounded_up = polynomial_degree / 2 + polynomial_degree % 2;
+        return ceil_sqrt(half_degree_rounded_up);
+    }
 
     /**
      * Frobenius precomputation for one Kaltofen-Shoup degree block. Let the coefficient field contain Q elements, let
@@ -203,10 +224,7 @@ namespace nil::crypto3::math::detail {
      * @pre giant_step and first_factor_degree describe the same block as precomputation.
      */
     template<SupportsDivrem Backend, typename FactorCallback>
-        requires requires(FactorCallback &callback,
-                          const distinct_degree_factor<typename Backend::polynomial_type> &factor) {
-            { callback(factor) } -> std::same_as<factorization_control>;
-        }
+        requires DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
     factorization_control kaltofen_shoup_split_coarse_block(
         std::vector<distinct_degree_factor<typename Backend::polynomial_type>> &output,
         typename Backend::polynomial_type coarse_block, const typename Backend::polynomial_type &giant_step,
@@ -247,6 +265,136 @@ namespace nil::crypto3::math::detail {
         return factorization_control::continue_factorization;
     }
 
+    /**
+     * Factor a monic square-free polynomial into distinct-degree groups using an explicit Kaltofen-Shoup block size.
+     * For each consecutive degree block, the algorithm computes one coarse GCD, removes that block from the
+     * unclassified polynomial, and immediately fine-splits it. Interleaving the coarse and fine phases avoids storing
+     * a giant-step polynomial for every block while preserving increasing degree order and immediate callback stops.
+     *
+     * Once the smallest unprocessed factor degree is greater than half the degree of the unclassified polynomial,
+     * that polynomial is either constant or irreducible. Otherwise it would contain at least two factors of at least
+     * the smallest unprocessed degree, whose combined degree would exceed the polynomial's degree. The irreducible
+     * remainder can therefore be emitted directly.
+     *
+     * @return stop_factorization if the callback requests an early stop; continue_factorization otherwise.
+     * @throws std::invalid_argument if block_size is zero.
+     * @pre input is monic, square-free, nonzero, and nonconstant.
+     */
+    template<SupportsDivrem Backend, typename FactorCallback>
+        requires DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
+    factorization_control kaltofen_shoup_factor_monic_square_free(
+        std::vector<distinct_degree_factor<typename Backend::polynomial_type>> &output,
+        typename Backend::polynomial_type input, std::size_t block_size,
+        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, FactorCallback &&factor_callback) {
+        using polynomial_type = typename Backend::polynomial_type;
+
+        if (block_size == 0) {
+            throw std::invalid_argument("the Kaltofen-Shoup block size must be positive");
+        }
+        // A linear polynomial is already one degree-one factor, so no Frobenius precomputation is needed.
+        if (input.size() == 2) {
+            output.push_back({std::move(input), 1});
+            return factor_callback(output.back());
+        }
+
+        polynomial_frobenius_context<Backend> frobenius_context(input, arithmetic_context);
+        kaltofen_shoup_frobenius_precomputation<Backend> precomputation(block_size, frobenius_context,
+                                                                        arithmetic_context);
+        polynomial_type giant_step = precomputation.baby_step(block_size);
+        polynomial_type unclassified(std::move(input));
+
+        std::size_t first_factor_degree = 1;
+        while (first_factor_degree <= (unclassified.size() - 1) / 2) {
+            const std::size_t maximum_degree_to_test = (unclassified.size() - 1) / 2;
+            const std::size_t degree_count = std::min(block_size, maximum_degree_to_test - first_factor_degree + 1);
+
+            polynomial_type coarse_block;
+            kaltofen_shoup_coarse_block_factor(coarse_block, unclassified, giant_step, degree_count, precomputation,
+                                               frobenius_context, arithmetic_context);
+            if (coarse_block.size() > 1) {
+                polynomial_type quotient;
+                factorization_exact_quotient(quotient, unclassified, coarse_block, arithmetic_context);
+                unclassified = std::move(quotient);
+
+                if (kaltofen_shoup_split_coarse_block(output, std::move(coarse_block), giant_step, first_factor_degree,
+                                                      degree_count, precomputation, arithmetic_context,
+                                                      factor_callback) == factorization_control::stop_factorization) {
+                    return factorization_control::stop_factorization;
+                }
+            }
+
+            // Giant-step exponents remain aligned to fixed-size blocks, including when the final tested interval is
+            // shorter than block_size.
+            first_factor_degree += block_size;
+            if (first_factor_degree <= (unclassified.size() - 1) / 2) {
+                precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context, arithmetic_context);
+            }
+        }
+
+        if (unclassified.size() > 1) {
+            const std::size_t irreducible_factor_degree = unclassified.size() - 1;
+            output.push_back({std::move(unclassified), irreducible_factor_degree});
+            if (factor_callback(output.back()) == factorization_control::stop_factorization) {
+                return factorization_control::stop_factorization;
+            }
+        }
+        return factorization_control::continue_factorization;
+    }
+
 }    // namespace nil::crypto3::math::detail
+
+namespace nil::crypto3::math {
+
+    /**
+     * Split a square-free polynomial into products of irreducible factors of equal degree using the blocked
+     * Kaltofen-Shoup distinct-degree algorithm. The input is normalized to monic form while its original leading
+     * coefficient is preserved in the result. Zero and constant inputs produce no factors.
+     *
+     * The block size is selected automatically to balance baby and giant Frobenius steps. Factors are emitted in
+     * increasing irreducible-factor degree. After each factor is appended, factor_callback may request an early stop;
+     * the stopped result includes that factor and has complete set to false.
+     *
+     * @throws std::invalid_argument if a nonconstant input is not square-free.
+     * @pre input is a nonempty coefficient polynomial.
+     */
+    template<detail::SupportsDivrem Backend, typename FactorCallback>
+        requires detail::DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
+    distinct_degree_factorization_result<typename Backend::polynomial_type>
+        distinct_degree_factorization_kaltofen_shoup(
+            const typename Backend::polynomial_type &input,
+            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+            FactorCallback &&factor_callback) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using result_type = distinct_degree_factorization_result<polynomial_type>;
+
+        result_type result;
+        polynomial_type monic_input;
+        if (!detail::prepare_distinct_degree_factorization_input<Backend>(monic_input, result.leading_coefficient,
+                                                                          input, arithmetic_context)) {
+            return result;
+        }
+
+        const std::size_t block_size = detail::kaltofen_shoup_block_size(monic_input.size() - 1);
+        if (detail::kaltofen_shoup_factor_monic_square_free(result.factors, std::move(monic_input), block_size,
+                                                            arithmetic_context, factor_callback) ==
+            factorization_control::stop_factorization) {
+            result.complete = false;
+        }
+        return result;
+    }
+
+    /** Compute the complete Kaltofen-Shoup distinct-degree factorization without a staged callback. */
+    template<detail::SupportsDivrem Backend>
+    distinct_degree_factorization_result<typename Backend::polynomial_type>
+        distinct_degree_factorization_kaltofen_shoup(
+            const typename Backend::polynomial_type &input,
+            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        using factor_type = distinct_degree_factor<typename Backend::polynomial_type>;
+        return distinct_degree_factorization_kaltofen_shoup<Backend>(
+            input, arithmetic_context,
+            [](const factor_type &) { return factorization_control::continue_factorization; });
+    }
+
+}    // namespace nil::crypto3::math
 
 #endif    // CRYPTO3_MATH_KALTOFEN_SHOUP_DISTINCT_DEGREE_FACTORIZATION_HPP

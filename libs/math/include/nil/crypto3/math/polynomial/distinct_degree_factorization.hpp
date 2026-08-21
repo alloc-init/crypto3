@@ -36,6 +36,50 @@
 
 namespace nil::crypto3::math {
 
+    namespace detail {
+
+        /** A callback that controls staged distinct-degree factorization after receiving one degree group. */
+        template<typename FactorCallback, typename Polynomial>
+        concept DistinctDegreeFactorCallback =
+            CoefficientPolynomial<Polynomial> &&
+            requires(FactorCallback &callback, const distinct_degree_factor<Polynomial> &factor) {
+                { callback(factor) } -> std::same_as<factorization_control>;
+            };
+
+        /**
+         * Normalize a distinct-degree factorization input and verify that every irreducible factor has multiplicity
+         * one. The original leading coefficient is returned separately. Constant inputs return false; nonconstant
+         * square-free inputs return true and monic_input receives their monic form.
+         *
+         * @throws std::invalid_argument if a nonconstant input is not square-free.
+         * @pre input is a nonempty coefficient polynomial.
+         */
+        template<SupportsDivrem Backend>
+        bool prepare_distinct_degree_factorization_input(
+            typename Backend::polynomial_type &monic_input,
+            typename Backend::polynomial_type::value_type &leading_coefficient,
+            const typename Backend::polynomial_type &input,
+            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+            monic_input = input;
+            condense(monic_input);
+            leading_coefficient = monic_input.back();
+            if (monic_input.size() == 1) {
+                return false;
+            }
+            make_monic(monic_input, monic_input);
+
+            typename Backend::polynomial_type input_derivative;
+            derivative(input_derivative, monic_input);
+            typename Backend::polynomial_type repeated_factor;
+            gcd(repeated_factor, monic_input, input_derivative, arithmetic_context);
+            if (repeated_factor.size() > 1) {
+                throw std::invalid_argument("distinct-degree factorization requires a square-free polynomial");
+            }
+            return true;
+        }
+
+    }    // namespace detail
+
     /**
      * Split a square-free polynomial into products of irreducible factors of equal degree using the classical
      * distinct-degree algorithm. This implementation is intended as a correctness reference for faster blocked
@@ -67,10 +111,7 @@ namespace nil::crypto3::math {
      * @pre input is a nonempty coefficient polynomial.
      */
     template<detail::SupportsDivrem Backend, typename FactorCallback>
-        requires requires(FactorCallback &callback,
-                          const distinct_degree_factor<typename Backend::polynomial_type> &factor) {
-            { callback(factor) } -> std::same_as<factorization_control>;
-        }
+        requires detail::DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
     distinct_degree_factorization_result<typename Backend::polynomial_type>
         distinct_degree_factorization_reference(const typename Backend::polynomial_type &input,
                                                 polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
@@ -80,20 +121,10 @@ namespace nil::crypto3::math {
         using result_type = distinct_degree_factorization_result<polynomial_type>;
 
         result_type result;
-        polynomial_type monic_input(input);
-        condense(monic_input);
-        result.leading_coefficient = monic_input.back();
-        if (monic_input.size() == 1) {
+        polynomial_type monic_input;
+        if (!detail::prepare_distinct_degree_factorization_input<Backend>(monic_input, result.leading_coefficient,
+                                                                          input, arithmetic_context)) {
             return result;
-        }
-        make_monic(monic_input, monic_input);
-
-        polynomial_type input_derivative;
-        derivative(input_derivative, monic_input);
-        polynomial_type repeated_factor;
-        gcd(repeated_factor, monic_input, input_derivative, arithmetic_context);
-        if (repeated_factor.size() > 1) {
-            throw std::invalid_argument("distinct-degree factorization requires a square-free polynomial");
         }
 
         const polynomial_type x = {value_type {}, value_type::one()};
