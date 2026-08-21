@@ -31,6 +31,7 @@
 #include <utility>
 #include <vector>
 
+#include <nil/crypto3/math/polynomial/gcd.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_frobenius.hpp>
 
 namespace nil::crypto3::math::detail {
@@ -125,6 +126,53 @@ namespace nil::crypto3::math::detail {
         std::vector<polynomial_type> baby_steps_;
         polynomial_composition_precomputation<backend_type> block_frobenius_precomputation_;
     };
+
+    /**
+     * Extract one coarse Kaltofen-Shoup degree block. Let the coefficient field contain Q elements, let B be the
+     * modulus in frobenius_context, and let precomputation store h[i] = X^(Q^i) mod B for a block of size b. For
+     * zero-based block j, the giant-step exponent is e = (j + 1) * b. The number c = degree_count satisfies
+     * 1 <= c <= b and allows the final block to process fewer than b degrees. Let R denote the polynomial passed as
+     * remaining. If giant_step = X^(Q^e) mod B, form
+     *
+     *     interval_product = product(giant_step - h[b - 1 - i]) mod B,  0 <= i < c.
+     *
+     * These differences correspond to degrees e - b + 1 through e - b + c. Their product permits one GCD with R to
+     * extract every irreducible factor in that interval. A difference may also contain factors whose degrees divide
+     * the target degree, so R must already have all lower-degree factors removed.
+     *
+     * For example, with b = 2, the first giant step is X^(Q^2): subtracting h[1] targets degree one and subtracting
+     * h[0] targets degree two. The next giant step is X^(Q^4): the same subtractions target degrees three and four.
+     *
+     * @throws std::invalid_argument if degree_count is zero or greater than the block size.
+     * @pre remaining is square-free, divides B, and has all earlier degree factors removed.
+     * @pre giant_step is reduced modulo B.
+     * @pre frobenius_context represents the same B used to construct precomputation.
+     */
+    template<SupportsDivrem Backend>
+    void kaltofen_shoup_coarse_block_factor(typename Backend::polynomial_type &output,
+                                            const typename Backend::polynomial_type &remaining,
+                                            const typename Backend::polynomial_type &giant_step,
+                                            std::size_t degree_count,
+                                            const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
+                                            const polynomial_frobenius_context<Backend> &frobenius_context,
+                                            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using value_type = typename polynomial_type::value_type;
+
+        if (degree_count == 0 || degree_count > precomputation.block_size()) {
+            throw std::invalid_argument("the coarse Kaltofen-Shoup degree count must be within the block");
+        }
+
+        polynomial_type interval_product = {value_type::one()};
+        polynomial_type difference;
+        for (std::size_t offset = 0; offset < degree_count; ++offset) {
+            const std::size_t baby_step_index = precomputation.block_size() - 1 - offset;
+            subtraction(difference, giant_step, precomputation.baby_step(baby_step_index));
+            mulmod(interval_product, interval_product, difference, frobenius_context.divisor_context(),
+                   arithmetic_context);
+        }
+        gcd(output, remaining, interval_product, arithmetic_context);
+    }
 
 }    // namespace nil::crypto3::math::detail
 

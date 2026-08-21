@@ -251,4 +251,57 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_precomputation_reduces_the_initial_baby_step
     BOOST_CHECK(constant_precomputation.baby_step(0) == polynomial_type({fq_value_type::zero()}));
 }
 
+BOOST_AUTO_TEST_CASE(kaltofen_shoup_coarse_blocks_extract_degree_intervals) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    backend_type backend;
+    const polynomial_type linear_factor = {fq_value_type::one(), fq_value_type::one()};
+    const polynomial_type quadratic_factor = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::one()};
+    const polynomial_type first_cubic_factor = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::zero(),
+                                                fq_value_type::one()};
+    const polynomial_type second_cubic_factor = {-fq_value_type(9), fq_value_type::zero(), fq_value_type::zero(),
+                                                 fq_value_type::one()};
+    const polynomial_type first_block = multiply(backend, linear_factor, quadratic_factor);
+    const polynomial_type second_block = multiply(backend, first_cubic_factor, second_cubic_factor);
+    const polynomial_type input = multiply(backend, first_block, second_block);
+
+    constexpr std::size_t block_size = 2;
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_frobenius_context<backend_type> frobenius_context(input, arithmetic_context);
+    math::detail::kaltofen_shoup_frobenius_precomputation<backend_type> precomputation(block_size, frobenius_context,
+                                                                                       arithmetic_context);
+
+    polynomial_type giant_step = precomputation.baby_step(block_size);
+    polynomial_type factor;
+    math::detail::kaltofen_shoup_coarse_block_factor(factor, input, giant_step, block_size, precomputation,
+                                                     frobenius_context, arithmetic_context);
+    BOOST_CHECK(factor == first_block);
+
+    precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context, arithmetic_context);
+    math::detail::kaltofen_shoup_coarse_block_factor(factor, second_block, giant_step, 1, precomputation,
+                                                     frobenius_context, arithmetic_context);
+    BOOST_CHECK(factor == second_block);
+}
+
+BOOST_AUTO_TEST_CASE(kaltofen_shoup_coarse_block_rejects_an_invalid_degree_count) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+
+    const polynomial_type divisor = {fq_value_type::one(), fq_value_type::zero(), fq_value_type::one()};
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_frobenius_context<backend_type> frobenius_context(divisor, arithmetic_context);
+    math::detail::kaltofen_shoup_frobenius_precomputation<backend_type> precomputation(2, frobenius_context,
+                                                                                       arithmetic_context);
+    const polynomial_type giant_step = precomputation.baby_step(2);
+    polynomial_type output;
+
+    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_coarse_block_factor(output, divisor, giant_step, 0, precomputation,
+                                                                       frobenius_context, arithmetic_context),
+                      std::invalid_argument);
+    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_coarse_block_factor(output, divisor, giant_step, 3, precomputation,
+                                                                       frobenius_context, arithmetic_context),
+                      std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
