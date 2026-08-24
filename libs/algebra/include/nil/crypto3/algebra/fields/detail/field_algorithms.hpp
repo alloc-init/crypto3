@@ -42,8 +42,8 @@ namespace nil::crypto3::algebra::fields::detail {
     // public API while keeping field-specific types and algorithms private.
     template<FieldValue Value>
     struct field_algorithms {
-        static Value
-            two_primary_component(const Value &x, const boost::multiprecision::cpp_int &odd_order, std::size_t) {
+        static Value two_primary_component(const Value &x, const boost::multiprecision::cpp_int &odd_order,
+                                           std::size_t) {
             return x.pow(odd_order);
         }
 

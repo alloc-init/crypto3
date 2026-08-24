@@ -90,22 +90,23 @@ namespace nil::crypto3::math {
     };
 
     template<typename FieldType>
-    linear_term<linear_variable<FieldType>> operator*(const typename linear_variable<FieldType>::value_type &field_coeff,
-                                                       const linear_variable<FieldType> &var) {
+    linear_term<linear_variable<FieldType>>
+        operator*(const typename linear_variable<FieldType>::value_type &field_coeff,
+                  const linear_variable<FieldType> &var) {
         return var * field_coeff;
     }
 
     template<typename FieldType>
-    linear_combination<linear_variable<FieldType>> operator+(
-        const typename linear_variable<FieldType>::value_type &field_coeff,
-                                                              const linear_variable<FieldType> &var) {
+    linear_combination<linear_variable<FieldType>>
+        operator+(const typename linear_variable<FieldType>::value_type &field_coeff,
+                  const linear_variable<FieldType> &var) {
         return var + field_coeff;
     }
 
     template<typename FieldType>
-    linear_combination<linear_variable<FieldType>> operator-(
-        const typename linear_variable<FieldType>::value_type &field_coeff,
-                                                              const linear_variable<FieldType> &var) {
+    linear_combination<linear_variable<FieldType>>
+        operator-(const typename linear_variable<FieldType>::value_type &field_coeff,
+                  const linear_variable<FieldType> &var) {
         return linear_combination<linear_variable<FieldType>>(field_coeff) - var;
     }
 

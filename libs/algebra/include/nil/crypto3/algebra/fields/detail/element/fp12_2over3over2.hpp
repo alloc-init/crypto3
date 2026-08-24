@@ -60,8 +60,7 @@ namespace nil {
                             data({in_data, underlying_type::zero()}) {
                         }
 
-                        constexpr element_fp12_2over3over2(
-                            const typename underlying_type::underlying_type &in_data) :
+                        constexpr element_fp12_2over3over2(const typename underlying_type::underlying_type &in_data) :
                             element_fp12_2over3over2(underlying_type(in_data)) {
                         }
 
@@ -239,8 +238,8 @@ namespace nil {
                             static const element_fp12_2over3over2 non_residue_to_odd_part = []() {
                                 using base_type = typename underlying_type::underlying_type::underlying_type;
                                 for (unsigned candidate = 1; candidate < 256; ++candidate) {
-                                    const element_fp12_2over3over2 value(
-                                        underlying_type::zero(), underlying_type(base_type(candidate)));
+                                    const element_fp12_2over3over2 value(underlying_type::zero(),
+                                                                         underlying_type(base_type(candidate)));
                                     if (value.pow(order_minus_one >> 1) == -one()) {
                                         return value.pow(parameters.first);
                                     }
@@ -265,8 +264,7 @@ namespace nil {
                                 }
                                 assert(i < remaining_power && "Fp12 Tonelli-Shanks step failed");
 
-                                const element_fp12_2over3over2 b =
-                                    c.pow(cpp_int(1) << (remaining_power - i - 1));
+                                const element_fp12_2over3over2 b = c.pow(cpp_int(1) << (remaining_power - i - 1));
                                 const element_fp12_2over3over2 b_squared = b.squared();
                                 root *= b;
                                 t *= b_squared;
