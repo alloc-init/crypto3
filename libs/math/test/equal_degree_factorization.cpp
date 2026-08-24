@@ -26,6 +26,8 @@
 
 #include <array>
 #include <cstddef>
+#include <stdexcept>
+#include <vector>
 
 #include <boost/test/unit_test.hpp>
 
@@ -171,6 +173,65 @@ BOOST_AUTO_TEST_CASE(cantor_zassenhaus_trial_rejects_invalid_inputs_before_sampl
                           factor, degree_one_split_context, nonmonic_divisor, arithmetic_context, generator),
                       std::invalid_argument);
 
+    BOOST_CHECK_EQUAL(generated_coefficient_count, 0);
+}
+
+BOOST_AUTO_TEST_CASE(cantor_zassenhaus_retries_and_splits_until_every_factor_has_the_requested_degree) {
+    backend_type backend;
+    const polynomial_type first_factor = {-value_type(1), value_type::one()};
+    const polynomial_type second_factor = {-value_type(2), value_type::one()};
+    const polynomial_type third_factor = {-value_type(3), value_type::one()};
+    polynomial_type group;
+    backend.multiply(group, first_factor, second_factor);
+    polynomial_type complete_group;
+    backend.multiply(complete_group, group, third_factor);
+    group = std::move(complete_group);
+
+    // The constant samples 1 fail. The following X - 1 and X - 2 samples share a proper factor with the current
+    // subgroup, so their early GCDs split it without exponentiation.
+    const std::array coefficients = {
+        value_type::one(),  value_type::zero(), value_type::zero(), -value_type::one(), value_type::one(),
+        value_type::zero(), value_type::one(),  value_type::zero(), -value_type(2),     value_type::one(),
+    };
+    std::size_t next_coefficient = 0;
+    auto generator = [&] {
+        if (next_coefficient == coefficients.size()) {
+            throw std::runtime_error("Cantor-Zassenhaus consumed more test coefficients than expected");
+        }
+        return coefficients[next_coefficient++];
+    };
+
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::detail::cantor_zassenhaus_context<backend_type> split_context(1);
+    const std::vector<polynomial_type> factors =
+        math::detail::cantor_zassenhaus_split_all<backend_type>(group, split_context, arithmetic_context, generator);
+
+    BOOST_REQUIRE_EQUAL(factors.size(), 3);
+    polynomial_type reconstructed = {value_type::one()};
+    for (const polynomial_type &factor : factors) {
+        BOOST_CHECK_EQUAL(factor.degree(), 1);
+        polynomial_type product;
+        backend.multiply(product, reconstructed, factor);
+        reconstructed = std::move(product);
+    }
+    BOOST_CHECK(reconstructed == group);
+    BOOST_CHECK_EQUAL(next_coefficient, coefficients.size());
+}
+
+BOOST_AUTO_TEST_CASE(cantor_zassenhaus_does_not_sample_an_already_irreducible_group) {
+    const polynomial_type group = {-value_type(3), value_type::zero(), value_type::one()};
+    std::size_t generated_coefficient_count = 0;
+    auto generator = [&] {
+        ++generated_coefficient_count;
+        return value_type::one();
+    };
+
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::detail::cantor_zassenhaus_context<backend_type> split_context(2);
+    const std::vector<polynomial_type> factors =
+        math::detail::cantor_zassenhaus_split_all<backend_type>(group, split_context, arithmetic_context, generator);
+
+    BOOST_CHECK(factors == std::vector<polynomial_type>({group}));
     BOOST_CHECK_EQUAL(generated_coefficient_count, 0);
 }
 

@@ -28,6 +28,7 @@
 #include <concepts>
 #include <cstddef>
 #include <stdexcept>
+#include <vector>
 
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -170,6 +171,61 @@ namespace nil::crypto3::math {
 
             factor.assign(1, value_type::zero());
             return false;
+        }
+
+        /**
+         * Repeatedly apply Cantor-Zassenhaus splitting until every returned factor has
+         * split_context.irreducible_factor_degree(). An explicit worklist avoids recursion depth proportional to the
+         * number of factors. Each composite subgroup gets one divisor context that is reused across all failed trials
+         * against that subgroup.
+         *
+         * A successful trial divides the current subgroup into the returned proper factor and its exact quotient, then
+         * places both pieces back on the worklist. A piece whose degree equals the requested irreducible-factor degree
+         * is already irreducible under the equal-degree input precondition and is moved to the result.
+         *
+         * @pre group is monic and square-free, all its irreducible factors have the context's factor degree, and
+         * generator supplies independent uniformly distributed coefficient-field elements.
+         */
+        template<SupportsDivrem Backend, typename Generator>
+        std::vector<typename Backend::polynomial_type> cantor_zassenhaus_split_all(
+            typename Backend::polynomial_type group, const cantor_zassenhaus_context<Backend> &split_context,
+            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, Generator &generator) {
+            using polynomial_type = typename Backend::polynomial_type;
+
+            std::vector<polynomial_type> factors;
+            std::vector<polynomial_type> pending;
+            pending.push_back(std::move(group));
+
+            while (!pending.empty()) {
+                polynomial_type current = std::move(pending.back());
+                pending.pop_back();
+
+                const std::size_t current_degree = current.size() - 1;
+                if (current_degree < split_context.irreducible_factor_degree() ||
+                    current_degree % split_context.irreducible_factor_degree() != 0) {
+                    throw std::invalid_argument(
+                        "Cantor-Zassenhaus splitting requires the factor degree to divide every pending degree");
+                }
+                if (current_degree == split_context.irreducible_factor_degree()) {
+                    factors.push_back(std::move(current));
+                    continue;
+                }
+
+                polynomial_divisor_context<Backend> divisor_context(current, current_degree - 1, arithmetic_context);
+                polynomial_type factor;
+                // The condition performs one complete random trial. Failure requires no state update other than the
+                // generator advancing, so the loop body is intentionally empty and the next condition retries.
+                while (!try_cantor_zassenhaus_split<Backend>(factor, split_context, divisor_context, arithmetic_context,
+                                                             generator)) {
+                }
+
+                polynomial_type quotient;
+                factorization_exact_quotient(quotient, current, factor, arithmetic_context);
+                pending.push_back(std::move(factor));
+                pending.push_back(std::move(quotient));
+            }
+
+            return factors;
         }
 
         /**
