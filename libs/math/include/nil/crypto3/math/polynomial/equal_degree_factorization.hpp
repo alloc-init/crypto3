@@ -28,6 +28,7 @@
 #include <concepts>
 #include <cstddef>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include <boost/multiprecision/cpp_int.hpp>
@@ -58,8 +59,8 @@ namespace nil::crypto3::math {
          * the algorithm samples this many coefficients. A random scalar is not sufficient because it has the same
          * residue modulo every irreducible factor of G and therefore cannot generally separate those factors.
          * The highest sampled coefficient may be zero: lower-degree and constant representatives are still valid
-         * quotient-ring elements. The splitting loop retries whenever a sampled element does not produce a nontrivial
-         * factor.
+         * quotient-ring elements. Cantor-Zassenhaus excludes zero and constant representatives before starting a trial
+         * because they cannot separate the irreducible factors of G.
          *
          * @throws std::invalid_argument if coefficient_count is zero.
          */
@@ -120,9 +121,10 @@ namespace nil::crypto3::math {
 
         /**
          * Try once to split a product G of distinct irreducible polynomials that all have the same degree,
-         * irreducible_factor_degree, using the odd-characteristic Cantor-Zassenhaus algorithm. One random polynomial a
-         * is sampled with degree below degree(G). If gcd(a, G) is already a proper factor, it is returned immediately.
-         * Otherwise compute
+         * irreducible_factor_degree, using the odd-characteristic Cantor-Zassenhaus algorithm. Zero and constant random
+         * candidates are discarded because they cannot separate the factors of G. The trial uses the first remaining
+         * polynomial a, whose degree is between one and degree(G) - 1. If gcd(a, G) is already a proper factor, it is
+         * returned immediately. Otherwise compute
          *
          *     quadratic_character = a^((Q^irreducible_factor_degree - 1) / 2) mod G,
          *
@@ -161,7 +163,12 @@ namespace nil::crypto3::math {
             if (group.back() != value_type::one()) {
                 throw std::invalid_argument("Cantor-Zassenhaus splitting requires a monic polynomial");
             }
-            polynomial_type random_polynomial = sample_random_polynomial<polynomial_type>(group_degree, generator);
+            polynomial_type random_polynomial;
+            // Zero and constant residues have the same value modulo every irreducible factor, so they cannot split G.
+            // Resample them before paying for either GCD or modular exponentiation.
+            do {
+                random_polynomial = sample_random_polynomial<polynomial_type>(group_degree, generator);
+            } while (random_polynomial.size() <= 1);
             gcd(factor, random_polynomial, group, arithmetic_context);
             if (factor.size() > 1 && factor.size() < group.size()) {
                 return true;
@@ -253,6 +260,48 @@ namespace nil::crypto3::math {
                                                      return factorization_control::continue_factorization;
                                                  });
             return factors;
+        }
+
+        /**
+         * Factor one group produced by distinct-degree factorization and emit its monic irreducible factors directly to
+         * factor_callback. This is the composition boundary used by full factorization: it avoids repeating the
+         * normalization and square-free GCD performed by the preceding stages, and it does not build an intermediate
+         * factorization result. The full-factorization caller can therefore attach the multiplicity inherited from the
+         * square-free stage as each irreducible factor is emitted.
+         *
+         * The inexpensive structural properties are still checked. Square-freeness and the stated common irreducible
+         * degree are trusted because verifying them would repeat the preceding factorization stages.
+         *
+         * @return stop_factorization if factor_callback requests an early stop; continue_factorization otherwise.
+         * @throws std::invalid_argument if the group is constant, nonmonic, has a zero factor degree, or its factor
+         * degree does not divide its polynomial degree.
+         * @pre group.polynomial is canonical and square-free, and all its irreducible factors have
+         * group.irreducible_factor_degree.
+         */
+        template<SupportsDivrem Backend, typename Generator, typename FactorCallback>
+        factorization_control
+            factor_distinct_degree_group(distinct_degree_factor<typename Backend::polynomial_type> group,
+                                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                         Generator &generator, FactorCallback &&factor_callback) {
+            using value_type = typename Backend::polynomial_type::value_type;
+
+            if (group.irreducible_factor_degree == 0) {
+                throw std::invalid_argument("equal-degree factorization requires a positive factor degree");
+            }
+            if (group.polynomial.size() <= 1) {
+                throw std::invalid_argument("equal-degree factorization requires a nonconstant degree group");
+            }
+            if (group.polynomial.back() != value_type::one()) {
+                throw std::invalid_argument("equal-degree factorization requires a monic degree group");
+            }
+            if ((group.polynomial.size() - 1) % group.irreducible_factor_degree != 0) {
+                throw std::invalid_argument(
+                    "equal-degree factorization requires the factor degree to divide the polynomial degree");
+            }
+
+            cantor_zassenhaus_context<Backend> split_context(group.irreducible_factor_degree);
+            return cantor_zassenhaus_split_all<Backend>(std::move(group.polynomial), split_context, arithmetic_context,
+                                                        generator, std::forward<FactorCallback>(factor_callback));
         }
 
         /**

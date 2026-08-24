@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(one_cantor_zassenhaus_trial_finds_a_proper_factor) {
     BOOST_CHECK_EQUAL(next_coefficient, coefficients.size());
 }
 
-BOOST_AUTO_TEST_CASE(one_cantor_zassenhaus_trial_reports_an_unsuccessful_sample) {
+BOOST_AUTO_TEST_CASE(one_cantor_zassenhaus_trial_rejects_zero_and_constant_samples) {
     backend_type backend;
     const polynomial_type first_factor = {-value_type::one(), value_type::one()};
     const polynomial_type second_factor = {value_type::one(), value_type::one()};
@@ -127,7 +127,10 @@ BOOST_AUTO_TEST_CASE(one_cantor_zassenhaus_trial_reports_an_unsuccessful_sample)
     math::polynomial_divisor_context<backend_type> divisor_context(group, group.size() - 1, arithmetic_context);
     math::detail::cantor_zassenhaus_context<backend_type> split_context(1);
 
-    const std::array coefficients = {value_type::one(), value_type::zero()};
+    // Zero and one are rejected before the trial. The accepted sample X + 3 is nonzero at both roots of X^2 - 1,
+    // and both residues are squares, so its quadratic character is one modulo the entire group and the trial fails.
+    const std::array coefficients = {value_type::zero(), value_type::zero(), value_type::one(),
+                                     value_type::zero(), value_type(3),      value_type::one()};
     std::size_t next_coefficient = 0;
     auto generator = [&] { return coefficients[next_coefficient++]; };
     polynomial_type factor;
@@ -193,8 +196,8 @@ BOOST_AUTO_TEST_CASE(cantor_zassenhaus_retries_and_splits_until_every_factor_has
     backend.multiply(complete_group, group, third_factor);
     group = std::move(complete_group);
 
-    // The constant samples 1 fail. The following X - 1 and X - 2 samples share a proper factor with the current
-    // subgroup, so their early GCDs split it without exponentiation.
+    // The constant samples 1 are rejected and resampled before starting a trial. The following X - 1 and X - 2
+    // samples share a proper factor with the current subgroup, so their early GCDs split it without exponentiation.
     const std::array coefficients = {
         value_type::one(),  value_type::zero(), value_type::zero(), -value_type::one(), value_type::one(),
         value_type::zero(), value_type::one(),  value_type::zero(), -value_type(2),     value_type::one(),
@@ -208,10 +211,14 @@ BOOST_AUTO_TEST_CASE(cantor_zassenhaus_retries_and_splits_until_every_factor_has
     };
 
     polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
-    math::detail::cantor_zassenhaus_context<backend_type> split_context(1);
-    const std::vector<polynomial_type> factors =
-        math::detail::cantor_zassenhaus_split_all<backend_type>(group, split_context, arithmetic_context, generator);
+    std::vector<polynomial_type> factors;
+    const auto control = math::detail::factor_distinct_degree_group<backend_type>(
+        {group, 1}, arithmetic_context, generator, [&factors](polynomial_type &&factor) {
+            factors.push_back(std::move(factor));
+            return math::factorization_control::continue_factorization;
+        });
 
+    BOOST_CHECK(control == math::factorization_control::continue_factorization);
     BOOST_REQUIRE_EQUAL(factors.size(), 3);
     polynomial_type reconstructed = {value_type::one()};
     for (const polynomial_type &factor : factors) {
