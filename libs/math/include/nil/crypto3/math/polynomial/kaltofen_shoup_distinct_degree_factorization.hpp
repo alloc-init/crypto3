@@ -378,8 +378,8 @@ namespace nil::crypto3::math {
 
         result_type result;
         polynomial_type monic_input;
-        if (!detail::prepare_distinct_degree_factorization_input<Backend>(monic_input, result.leading_coefficient,
-                                                                          input, arithmetic_context)) {
+        if (!detail::prepare_square_free_factorization_input<Backend>(monic_input, result.leading_coefficient, input,
+                                                                      arithmetic_context)) {
             return result;
         }
 
