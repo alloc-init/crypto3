@@ -29,12 +29,28 @@
 
 #include <boost/multiprecision/cpp_int.hpp>
 
+#include <nil/crypto3/algebra/type_traits.hpp>
+
 namespace nil::crypto3::algebra::fields {
+
+    template<typename FieldOrValue, bool = FieldValue<FieldOrValue>>
+    struct field_type {
+        using type = FieldOrValue;
+    };
+
+    template<typename FieldValueType>
+    struct field_type<FieldValueType, true> {
+        using type = typename FieldValueType::field_type;
+    };
+
+    template<typename FieldOrValue>
+    using field_type_t = typename field_type<FieldOrValue>::type;
 
     /** Return the characteristic of FieldType. Extension fields have the same characteristic as their prime field. */
     template<typename FieldType>
     boost::multiprecision::cpp_int field_characteristic() {
-        return boost::multiprecision::cpp_int(FieldType::modulus.backend().to_cpp_int());
+        using field_type = field_type_t<FieldType>;
+        return boost::multiprecision::cpp_int(field_type::modulus.backend().to_cpp_int());
     }
 
     /**
@@ -43,9 +59,10 @@ namespace nil::crypto3::algebra::fields {
      */
     template<typename FieldType>
     boost::multiprecision::cpp_int field_order() {
-        const boost::multiprecision::cpp_int characteristic = field_characteristic<FieldType>();
+        using field_type = field_type_t<FieldType>;
+        const boost::multiprecision::cpp_int characteristic = field_characteristic<field_type>();
         boost::multiprecision::cpp_int order = 1;
-        for (std::size_t i = 0; i < FieldType::arity; ++i) {
+        for (std::size_t i = 0; i < field_type::arity; ++i) {
             order *= characteristic;
         }
         return order;

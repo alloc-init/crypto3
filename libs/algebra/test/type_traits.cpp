@@ -165,6 +165,15 @@ BOOST_AUTO_TEST_CASE(mnt_type_traits) {
 
 BOOST_AUTO_TEST_CASE(alt_bn128_type_traits) {
     test_pairing_friendly_curve_types<curves::alt_bn128<254>>();
+    using base_field_type = curves::alt_bn128<254>::base_field_type;
+    using fp2_field_type = fields::fp2<base_field_type>;
+    using fp6_field_type = fields::fp6_3over2<base_field_type>;
+    using fp12_field_type = fields::fp12_2over3over2<base_field_type>;
+    static_assert(FieldValue<typename base_field_type::value_type>);
+    static_assert(FieldValue<typename fp2_field_type::value_type>);
+    static_assert(FieldValue<typename fp6_field_type::value_type>);
+    static_assert(FieldValue<typename fp12_field_type::value_type>);
+    static_assert(!FieldValue<base_field_type>);
 }
 
 BOOST_AUTO_TEST_CASE(jubjub_type_traits) {
@@ -219,19 +228,19 @@ BOOST_AUTO_TEST_CASE(test_extended_fields_sqrt_trait) {
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::alt_bn128_254::scalar_field_type));
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::alt_bn128_254::template g1_type<>::field_type));
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::alt_bn128_254::template g2_type<>::field_type));
-    BOOST_ASSERT(!FIELD_HAS_SQRT(curves::alt_bn128_254::gt_type));
+    BOOST_ASSERT(FIELD_HAS_SQRT(curves::alt_bn128_254::gt_type));
 
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::bls12_381::base_field_type));
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::bls12_381::scalar_field_type));
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::bls12_381::template g1_type<>::field_type));
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::bls12_381::template g2_type<>::field_type));
-    BOOST_ASSERT(!FIELD_HAS_SQRT(curves::bls12_381::gt_type));
+    BOOST_ASSERT(FIELD_HAS_SQRT(curves::bls12_381::gt_type));
 
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::bls12_377::base_field_type));
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::bls12_377::scalar_field_type));
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::bls12_377::template g1_type<>::field_type));
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::bls12_377::template g2_type<>::field_type));
-    BOOST_ASSERT(!FIELD_HAS_SQRT(curves::bls12_377::gt_type));
+    BOOST_ASSERT(FIELD_HAS_SQRT(curves::bls12_377::gt_type));
 
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::mnt4_298::base_field_type));
     BOOST_ASSERT(FIELD_HAS_SQRT(curves::mnt4_298::scalar_field_type));

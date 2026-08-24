@@ -151,6 +151,42 @@ namespace {
 
 BOOST_AUTO_TEST_SUITE(fp12_tests)
 
+BOOST_AUTO_TEST_CASE_TEMPLATE(tower_values_embed_into_fp12, Fp12Field, fp12_field_types) {
+    using fp12_value_type = typename Fp12Field::value_type;
+    using fp6_value_type = typename fp12_value_type::underlying_type;
+    using fp2_value_type = typename fp6_value_type::underlying_type;
+    using fp_value_type = typename fp2_value_type::underlying_type;
+
+    const fp_value_type fp(7);
+    const fp2_value_type fp2(fp);
+    const fp6_value_type fp6(fp2);
+
+    BOOST_CHECK_EQUAL(fp2, fp2_value_type(fp, fp_value_type::zero()));
+    BOOST_CHECK_EQUAL(fp6, fp6_value_type(fp2, fp2_value_type::zero(), fp2_value_type::zero()));
+    BOOST_CHECK_EQUAL(fp12_value_type(fp), fp12_value_type(fp6));
+    BOOST_CHECK_EQUAL(fp12_value_type(fp2), fp12_value_type(fp6));
+    BOOST_CHECK_EQUAL(fp12_value_type(fp6), fp12_value_type(fp6, fp6_value_type::zero()));
+    BOOST_CHECK_EQUAL(fp * fp12_value_type::one(), fp12_value_type(fp));
+    BOOST_CHECK_EQUAL(fp12_value_type::one() * fp, fp12_value_type(fp));
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(square_roots_round_trip, Fp12Field, fp12_field_types) {
+    using fp12_value_type = typename Fp12Field::value_type;
+    boost::random::mt19937 rng(0x5a127);
+
+    BOOST_CHECK(fp12_value_type::zero().is_square());
+    BOOST_CHECK_EQUAL(fp12_value_type::zero().sqrt(), fp12_value_type::zero());
+    BOOST_CHECK(fp12_value_type::one().is_square());
+    BOOST_CHECK_EQUAL(fp12_value_type::one().sqrt(), fp12_value_type::one());
+
+    for (std::size_t i = 0; i < 2; ++i) {
+        const fp12_value_type square = random_fp12<Fp12Field>(rng).squared();
+        BOOST_CHECK(square.is_square());
+        BOOST_CHECK_EQUAL(square.sqrt_known_square().squared(), square);
+        BOOST_CHECK_EQUAL(square.sqrt().squared(), square);
+    }
+}
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(coordinates_follow_tower_storage_order, Fp12Field, fp12_field_types) {
     using fp12_value_type = typename Fp12Field::value_type;
     using base_value_type = typename Fp12Field::base_field_type::value_type;

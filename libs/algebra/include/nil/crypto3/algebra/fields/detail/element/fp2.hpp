@@ -71,6 +71,9 @@ namespace nil {
                         constexpr element_fp2(const data_type &in_data) : data({in_data[0], in_data[1]}) {
                         }
 
+                        constexpr element_fp2(const underlying_type &in_data) : data({in_data, underlying_type::zero()}) {
+                        }
+
                         constexpr element_fp2(const underlying_type &in_data0, const underlying_type &in_data1) :
                             data({in_data0, in_data1}) {
                         }
