@@ -34,6 +34,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
+#include <nil/crypto3/algebra/fields/field_algorithms.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
 
 namespace {
@@ -185,6 +186,68 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(square_roots_round_trip, Fp12Field, fp12_field_typ
         BOOST_CHECK_EQUAL(square.sqrt_known_square().squared(), square);
         BOOST_CHECK_EQUAL(square.sqrt().squared(), square);
     }
+}
+
+BOOST_AUTO_TEST_CASE(bn254_subgroup_algorithms_match_direct_exponentiation) {
+    using field_type = alt_bn128_254_fp12;
+    using value_type = typename field_type::value_type;
+    using boost::multiprecision::cpp_int;
+
+    cpp_int odd_order = fields::field_order<field_type>() - 1;
+    std::size_t two_adicity = 0;
+    while ((odd_order & 1) == 0) {
+        odd_order >>= 1;
+        ++two_adicity;
+    }
+    boost::random::mt19937 rng(0x2a11);
+
+    for (std::size_t i = 0; i < 2; ++i) {
+        const value_type x = random_fp12<field_type>(rng);
+        BOOST_CHECK_EQUAL(fields::two_primary_component(x, odd_order, two_adicity), x.pow(odd_order));
+        BOOST_CHECK_EQUAL(fields::two_primary_component(x, odd_order + 2, two_adicity), x.pow(odd_order + 2));
+
+        const value_type odd_subgroup_value = x.pow(cpp_int(1) << two_adicity);
+        const value_type root = fields::odd_subgroup_sqrt(odd_subgroup_value, odd_order);
+        BOOST_CHECK_EQUAL(root.squared(), odd_subgroup_value);
+        BOOST_CHECK_EQUAL(root, odd_subgroup_value.pow((odd_order + 1) >> 1));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(bn254_roots_of_unity_have_order_32) {
+    using value_type = typename alt_bn128_254_fp12::value_type;
+    const value_type primitive_root = fields::primitive_two_power_root_of_unity<value_type>(5);
+    const std::vector<value_type> roots = fields::roots_of_unity<value_type>(5);
+
+    BOOST_REQUIRE_EQUAL(roots.size(), 32);
+    BOOST_CHECK_EQUAL(roots.front(), value_type::one());
+    BOOST_CHECK_EQUAL(primitive_root.pow(32), value_type::one());
+    BOOST_CHECK_NE(primitive_root.pow(16), value_type::one());
+    for (std::size_t i = 0; i < roots.size(); ++i) {
+        BOOST_CHECK_EQUAL(roots[i], primitive_root.pow(i));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(generic_subgroup_algorithms_match_direct_formulas) {
+    using field_type = bls12_381_fp12;
+    using value_type = typename field_type::value_type;
+    using boost::multiprecision::cpp_int;
+
+    cpp_int odd_order = fields::field_order<field_type>() - 1;
+    std::size_t two_adicity = 0;
+    while ((odd_order & 1) == 0) {
+        odd_order >>= 1;
+        ++two_adicity;
+    }
+    boost::random::mt19937 rng(0x3812);
+    const value_type x = random_fp12<field_type>(rng);
+    BOOST_CHECK_EQUAL(fields::two_primary_component(x, odd_order, two_adicity), x.pow(odd_order));
+
+    const value_type odd_subgroup_value = x.pow(cpp_int(1) << two_adicity);
+    BOOST_CHECK_EQUAL(fields::odd_subgroup_sqrt(odd_subgroup_value, odd_order),
+                      odd_subgroup_value.pow((odd_order + 1) >> 1));
+
+    const value_type square = x.squared();
+    BOOST_CHECK_EQUAL(fields::sqrt_known_square(square).squared(), square);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(coordinates_follow_tower_storage_order, Fp12Field, fp12_field_types) {
