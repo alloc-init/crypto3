@@ -35,6 +35,16 @@
 
 namespace nil::crypto3::math {
 
+    template<typename FieldOrValue, typename = void>
+    struct linear_variable_value_type {
+        using type = FieldOrValue;
+    };
+
+    template<typename FieldOrValue>
+    struct linear_variable_value_type<FieldOrValue, std::void_t<typename FieldOrValue::value_type>> {
+        using type = typename FieldOrValue::value_type;
+    };
+
     /********************************* Variable **********************************/
 
     /**
@@ -47,13 +57,13 @@ namespace nil::crypto3::math {
 
     public:
         using field_type = FieldType;
-        using value_type = typename FieldType::value_type;
+        using value_type = typename linear_variable_value_type<FieldType>::type;
         using index_type = std::size_t;
         std::size_t index;
 
         linear_variable(const std::size_t index = 0) : index(index) { };
 
-        linear_term<variable_type> operator*(const typename FieldType::value_type &field_coeff) const {
+        linear_term<variable_type> operator*(const value_type &field_coeff) const {
             return linear_term<variable_type>(*this) * field_coeff;
         }
 
@@ -71,7 +81,7 @@ namespace nil::crypto3::math {
         }
 
         linear_term<variable_type> operator-() const {
-            return linear_term<variable_type>(*this) * (-FieldType::value_type::one());
+            return linear_term<variable_type>(*this) * (-value_type::one());
         }
 
         bool operator==(const linear_variable &other) const {
@@ -80,20 +90,22 @@ namespace nil::crypto3::math {
     };
 
     template<typename FieldType>
-    linear_term<linear_variable<FieldType>> operator*(const typename FieldType::value_type &field_coeff,
-                                                      const linear_variable<FieldType> &var) {
+    linear_term<linear_variable<FieldType>> operator*(const typename linear_variable<FieldType>::value_type &field_coeff,
+                                                       const linear_variable<FieldType> &var) {
         return var * field_coeff;
     }
 
     template<typename FieldType>
-    linear_combination<linear_variable<FieldType>> operator+(const typename FieldType::value_type &field_coeff,
-                                                             const linear_variable<FieldType> &var) {
+    linear_combination<linear_variable<FieldType>> operator+(
+        const typename linear_variable<FieldType>::value_type &field_coeff,
+                                                              const linear_variable<FieldType> &var) {
         return var + field_coeff;
     }
 
     template<typename FieldType>
-    linear_combination<linear_variable<FieldType>> operator-(const typename FieldType::value_type &field_coeff,
-                                                             const linear_variable<FieldType> &var) {
+    linear_combination<linear_variable<FieldType>> operator-(
+        const typename linear_variable<FieldType>::value_type &field_coeff,
+                                                              const linear_variable<FieldType> &var) {
         return linear_combination<linear_variable<FieldType>>(field_coeff) - var;
     }
 

@@ -49,7 +49,8 @@ namespace nil::crypto3::algebra::fields::detail {
 
         static Value odd_subgroup_sqrt(const Value &x, const boost::multiprecision::cpp_int &odd_order) {
             assert((odd_order & 1) != 0);
-            return x.is_zero() || x.is_one() ? x : x.pow((odd_order + 1) >> 1);
+            const boost::multiprecision::cpp_int exponent = (odd_order + 1) >> 1;
+            return x.is_zero() || x.is_one() ? x : x.pow(exponent);
         }
 
         static Value sqrt_known_square(const Value &x) {
