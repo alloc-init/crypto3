@@ -42,14 +42,6 @@ namespace nil::crypto3::math {
 
     namespace detail {
 
-        /** A callback that controls staged equal-degree factorization after receiving one irreducible factor. */
-        template<typename FactorCallback, typename Polynomial>
-        concept EqualDegreeFactorCallback =
-            CoefficientPolynomial<Polynomial> &&
-            requires(FactorCallback &callback, const polynomial_factor<Polynomial> &factor) {
-                { callback(factor) } -> std::same_as<factorization_control>;
-            };
-
         /**
          * Sample a canonical polynomial whose degree is less than coefficient_count. Each coefficient is obtained
          * directly from the caller-owned generator, so the caller controls both the random source and its seed.
@@ -367,7 +359,7 @@ namespace nil::crypto3::math {
      * irreducible_factor_degree.
      */
     template<detail::SupportsDivrem Backend, typename Generator, typename FactorCallback>
-        requires detail::EqualDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
+        requires detail::PolynomialFactorCallback<FactorCallback, typename Backend::polynomial_type>
     polynomial_factorization_result<typename Backend::polynomial_type>
         equal_degree_factorization(const typename Backend::polynomial_type &input,
                                    std::size_t irreducible_factor_degree,
