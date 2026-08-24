@@ -41,6 +41,7 @@ endmacro()
 set(TESTS_NAMES
     "batch_inverse"
     "distinct_degree_factorization"
+    "equal_degree_factorization"
     "evaluation_domain"
     "geometric_sequence_domain"
     "integer_sqrt"

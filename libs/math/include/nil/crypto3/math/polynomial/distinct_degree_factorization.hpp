@@ -46,38 +46,6 @@ namespace nil::crypto3::math {
                 { callback(factor) } -> std::same_as<factorization_control>;
             };
 
-        /**
-         * Normalize a distinct-degree factorization input and verify that every irreducible factor has multiplicity
-         * one. The original leading coefficient is returned separately. Constant inputs return false; nonconstant
-         * square-free inputs return true and monic_input receives their monic form.
-         *
-         * @throws std::invalid_argument if a nonconstant input is not square-free.
-         * @pre input is a nonempty coefficient polynomial.
-         */
-        template<SupportsDivrem Backend>
-        bool prepare_distinct_degree_factorization_input(
-            typename Backend::polynomial_type &monic_input,
-            typename Backend::polynomial_type::value_type &leading_coefficient,
-            const typename Backend::polynomial_type &input,
-            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
-            monic_input = input;
-            condense(monic_input);
-            leading_coefficient = monic_input.back();
-            if (monic_input.size() == 1) {
-                return false;
-            }
-            make_monic(monic_input, monic_input);
-
-            typename Backend::polynomial_type input_derivative;
-            derivative(input_derivative, monic_input);
-            typename Backend::polynomial_type repeated_factor;
-            gcd(repeated_factor, monic_input, input_derivative, arithmetic_context);
-            if (repeated_factor.size() > 1) {
-                throw std::invalid_argument("distinct-degree factorization requires a square-free polynomial");
-            }
-            return true;
-        }
-
     }    // namespace detail
 
     /**
@@ -122,8 +90,8 @@ namespace nil::crypto3::math {
 
         result_type result;
         polynomial_type monic_input;
-        if (!detail::prepare_distinct_degree_factorization_input<Backend>(monic_input, result.leading_coefficient,
-                                                                          input, arithmetic_context)) {
+        if (!detail::prepare_square_free_factorization_input<Backend>(monic_input, result.leading_coefficient, input,
+                                                                      arithmetic_context)) {
             return result;
         }
 

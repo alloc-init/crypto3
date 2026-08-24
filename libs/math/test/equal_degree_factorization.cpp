@@ -1,0 +1,113 @@
+//---------------------------------------------------------------------------//
+// Copyright (c) 2026
+//
+// MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//---------------------------------------------------------------------------//
+
+#define BOOST_TEST_MODULE equal_degree_factorization_test
+
+#include <cstddef>
+
+#include <boost/test/unit_test.hpp>
+
+#include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
+
+#include <nil/crypto3/math/polynomial/equal_degree_factorization.hpp>
+#include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
+
+namespace {
+    namespace math = nil::crypto3::math;
+    namespace polynomial_arithmetic = math::polynomial_arithmetic;
+    namespace fields = nil::crypto3::algebra::fields;
+
+    using field_type = fields::alt_bn128_base_field<254>;
+    using value_type = field_type::value_type;
+    using backend_type = polynomial_arithmetic::schoolbook_backend<value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+}    // namespace
+
+BOOST_AUTO_TEST_SUITE(equal_degree_factorization_test_suite)
+
+BOOST_AUTO_TEST_CASE(preparation_normalizes_a_square_free_equal_degree_input) {
+    backend_type backend;
+    const polynomial_type first_factor = {-value_type(3), value_type::zero(), value_type::one()};
+    // Three is a nonsquare in BN254 Fq. Multiplying it by the nonzero square four preserves that property, so both
+    // quadratics are irreducible.
+    const polynomial_type second_factor = {-value_type(12), value_type::zero(), value_type::one()};
+    polynomial_type input;
+    backend.multiply(input, first_factor, second_factor);
+
+    const value_type leading_coefficient(11);
+    for (value_type &coefficient : input) {
+        coefficient *= leading_coefficient;
+    }
+
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    polynomial_type monic_input;
+    value_type recovered_leading_coefficient;
+    const bool has_factors = math::detail::prepare_equal_degree_factorization_input<backend_type>(
+        monic_input, recovered_leading_coefficient, input, 2, arithmetic_context);
+
+    polynomial_type expected;
+    backend.multiply(expected, first_factor, second_factor);
+    BOOST_CHECK(has_factors);
+    BOOST_CHECK(recovered_leading_coefficient == leading_coefficient);
+    BOOST_CHECK(monic_input == expected);
+}
+
+BOOST_AUTO_TEST_CASE(preparation_rejects_invalid_equal_degree_inputs) {
+    backend_type backend;
+    const polynomial_type linear_factor = {value_type(1), value_type::one()};
+    const polynomial_type quadratic_factor = {-value_type(3), value_type::zero(), value_type::one()};
+    polynomial_type mixed_degree_input;
+    backend.multiply(mixed_degree_input, linear_factor, quadratic_factor);
+
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    polynomial_type monic_input;
+    value_type leading_coefficient;
+    BOOST_CHECK_THROW(math::detail::prepare_equal_degree_factorization_input<backend_type>(
+                          monic_input, leading_coefficient, mixed_degree_input, 0, arithmetic_context),
+                      std::invalid_argument);
+    BOOST_CHECK_THROW(math::detail::prepare_equal_degree_factorization_input<backend_type>(
+                          monic_input, leading_coefficient, mixed_degree_input, 2, arithmetic_context),
+                      std::invalid_argument);
+
+    polynomial_type repeated_input;
+    backend.multiply(repeated_input, linear_factor, linear_factor);
+    BOOST_CHECK_THROW(math::detail::prepare_equal_degree_factorization_input<backend_type>(
+                          monic_input, leading_coefficient, repeated_input, 1, arithmetic_context),
+                      std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(preparation_reports_that_constants_have_no_factors) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    polynomial_type monic_input;
+    value_type leading_coefficient;
+    const bool has_factors = math::detail::prepare_equal_degree_factorization_input<backend_type>(
+        monic_input, leading_coefficient, polynomial_type {value_type(13)}, 1, arithmetic_context);
+
+    BOOST_CHECK(!has_factors);
+    BOOST_CHECK(leading_coefficient == value_type(13));
+    BOOST_CHECK(monic_input == polynomial_type({value_type(13)}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
