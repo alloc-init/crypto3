@@ -55,12 +55,17 @@ BOOST_AUTO_TEST_CASE(prime_field_order_equals_its_characteristic) {
 
 BOOST_AUTO_TEST_CASE(extension_field_order_is_characteristic_to_the_extension_degree) {
     const boost::multiprecision::cpp_int characteristic = fields::field_order<fq_field_type>();
+    boost::multiprecision::cpp_int expected_fq6_order = 1;
+    for (std::size_t i = 0; i < fq6_field_type::arity; ++i) {
+        expected_fq6_order *= characteristic;
+    }
     boost::multiprecision::cpp_int expected_fq12_order = 1;
     for (std::size_t i = 0; i < fq12_field_type::arity; ++i) {
         expected_fq12_order *= characteristic;
     }
 
     BOOST_CHECK(fields::field_order<fq2_field_type>() == characteristic * characteristic);
+    BOOST_CHECK(fields::field_order<fq6_field_type>() == expected_fq6_order);
     BOOST_CHECK(fields::field_order<fq6_field_type::value_type>() == fields::field_order<fq6_field_type>());
     BOOST_CHECK(fields::field_order<fq12_field_type>() == expected_fq12_order);
     BOOST_CHECK(fields::field_characteristic<fq12_field_type::value_type>() == characteristic);

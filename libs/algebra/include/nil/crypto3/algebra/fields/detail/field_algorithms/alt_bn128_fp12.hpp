@@ -1,7 +1,25 @@
 //---------------------------------------------------------------------------//
-// Copyright (c) 2026
+// Copyright (c) 2026 Alloc Init Labs Inc.
 //
 // MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 //---------------------------------------------------------------------------//
 
 #ifndef CRYPTO3_ALGEBRA_FIELDS_DETAIL_ALT_BN128_FP12_ALGORITHMS_HPP
@@ -48,15 +66,13 @@ namespace nil::crypto3::algebra::fields::detail {
     };
 
     inline alt_bn128_fp4_subfield_value operator*(const alt_bn128_fp4_subfield_value &a,
-                                                   const alt_bn128_fp4_subfield_value &b) {
+                                                  const alt_bn128_fp4_subfield_value &b) {
         const alt_bn128_254_fp2_value a0b0 = a.c0 * b.c0;
         const alt_bn128_254_fp2_value a1b1 = a.c1 * b.c1;
-        return {a0b0 + alt_bn128_fp4_subfield_value::non_residue() * a1b1,
-                (a.c0 + a.c1) * (b.c0 + b.c1) - a0b0 - a1b1};
+        return {a0b0 + alt_bn128_fp4_subfield_value::non_residue() * a1b1, (a.c0 + a.c1) * (b.c0 + b.c1) - a0b0 - a1b1};
     }
 
-    inline alt_bn128_fp4_subfield_value pow(alt_bn128_fp4_subfield_value x,
-                                             boost::multiprecision::cpp_int exponent) {
+    inline alt_bn128_fp4_subfield_value pow(alt_bn128_fp4_subfield_value x, boost::multiprecision::cpp_int exponent) {
         alt_bn128_fp4_subfield_value result {alt_bn128_254_fp2_value::one(), alt_bn128_254_fp2_value::zero()};
         while (exponent != 0) {
             if (boost::multiprecision::bit_test(exponent, 0)) {
@@ -90,8 +106,7 @@ namespace nil::crypto3::algebra::fields::detail {
     }
 
     inline alt_bn128_254_fp12_value fp12_norm_one_sqrt_frobenius(const alt_bn128_254_fp12_value &x) {
-        static const boost::multiprecision::cpp_int exponent =
-            (field_order<alt_bn128_254_fp2_field>() - 1) >> 2;
+        static const boost::multiprecision::cpp_int exponent = (field_order<alt_bn128_254_fp2_field>() - 1) >> 2;
         const alt_bn128_254_fp12_value y = x.pow(exponent);
         return x * y * y.Frobenius_map(2) * y.Frobenius_map(4);
     }
@@ -111,10 +126,10 @@ namespace nil::crypto3::algebra::fields::detail {
         return y * y.Frobenius_map(2) * y.Frobenius_map(4) * z4.Frobenius_map(2) * x * z8;
     }
 
-    inline alt_bn128_254_fp12_value alt_bn128_fp12_two_primary_component(
-        const alt_bn128_254_fp12_value &x,
-        const boost::multiprecision::cpp_int &odd_order,
-        std::size_t two_adicity) {
+    inline alt_bn128_254_fp12_value
+        alt_bn128_fp12_two_primary_component(const alt_bn128_254_fp12_value &x,
+                                             const boost::multiprecision::cpp_int &odd_order,
+                                             std::size_t two_adicity) {
         static const boost::multiprecision::cpp_int expected_odd_order =
             (field_order<alt_bn128_254_fp12_field>() - 1) >> 5;
         if (two_adicity != 5 || odd_order != expected_odd_order) {
@@ -132,9 +147,8 @@ namespace nil::crypto3::algebra::fields::detail {
         return fp12_from_fp4_subfield(pow(fp12_to_fp4_subfield(norm), fp4_odd_order));
     }
 
-    inline alt_bn128_254_fp12_value alt_bn128_fp12_odd_subgroup_sqrt(
-        const alt_bn128_254_fp12_value &x,
-        const boost::multiprecision::cpp_int &odd_order) {
+    inline alt_bn128_254_fp12_value alt_bn128_fp12_odd_subgroup_sqrt(const alt_bn128_254_fp12_value &x,
+                                                                     const boost::multiprecision::cpp_int &odd_order) {
         if (x.is_zero() || x.is_one()) {
             return x;
         }
@@ -162,11 +176,10 @@ namespace nil::crypto3::algebra::fields::detail {
         }
 
         static const alt_bn128_254_fp12_value root = []() {
-            const boost::multiprecision::cpp_int exponent =
-                (field_order<alt_bn128_254_fp12_field>() - 1) >> 5;
+            const boost::multiprecision::cpp_int exponent = (field_order<alt_bn128_254_fp12_field>() - 1) >> 5;
             for (unsigned candidate = 2; candidate < 64; ++candidate) {
-                const alt_bn128_254_fp12_value value(
-                    alt_bn128_254_fp6_value::zero(), alt_bn128_254_fp6_value(alt_bn128_254_fp_value(candidate)));
+                const alt_bn128_254_fp12_value value(alt_bn128_254_fp6_value::zero(),
+                                                     alt_bn128_254_fp6_value(alt_bn128_254_fp_value(candidate)));
                 const alt_bn128_254_fp12_value possible_root = value.pow(exponent);
                 if (!possible_root.is_one() && possible_root.pow(16) != alt_bn128_254_fp12_value::one() &&
                     possible_root.pow(32) == alt_bn128_254_fp12_value::one()) {
@@ -181,16 +194,14 @@ namespace nil::crypto3::algebra::fields::detail {
 
     template<>
     struct field_algorithms<alt_bn128_254_fp12_value> {
-        static alt_bn128_254_fp12_value two_primary_component(
-            const alt_bn128_254_fp12_value &x,
-            const boost::multiprecision::cpp_int &odd_order,
-            std::size_t two_adicity) {
+        static alt_bn128_254_fp12_value two_primary_component(const alt_bn128_254_fp12_value &x,
+                                                              const boost::multiprecision::cpp_int &odd_order,
+                                                              std::size_t two_adicity) {
             return alt_bn128_fp12_two_primary_component(x, odd_order, two_adicity);
         }
 
-        static alt_bn128_254_fp12_value odd_subgroup_sqrt(
-            const alt_bn128_254_fp12_value &x,
-            const boost::multiprecision::cpp_int &odd_order) {
+        static alt_bn128_254_fp12_value odd_subgroup_sqrt(const alt_bn128_254_fp12_value &x,
+                                                          const boost::multiprecision::cpp_int &odd_order) {
             return alt_bn128_fp12_odd_subgroup_sqrt(x, odd_order);
         }
 
