@@ -25,14 +25,152 @@
 #ifndef CRYPTO3_MATH_EQUAL_DEGREE_FACTORIZATION_HPP
 #define CRYPTO3_MATH_EQUAL_DEGREE_FACTORIZATION_HPP
 
+#include <concepts>
 #include <cstddef>
 #include <stdexcept>
 
+#include <boost/multiprecision/cpp_int.hpp>
+
+#include <nil/crypto3/algebra/fields/field_order.hpp>
+
 #include <nil/crypto3/math/polynomial/polynomial_factorization.hpp>
+#include <nil/crypto3/math/polynomial/polynomial_exponentiation.hpp>
 
 namespace nil::crypto3::math {
 
     namespace detail {
+
+        /**
+         * Sample a canonical polynomial whose degree is less than coefficient_count. Each coefficient is obtained
+         * directly from the caller-owned generator, so the caller controls both the random source and its seed.
+         *
+         * Cantor-Zassenhaus splits an equal-degree group G by sampling an element of the quotient ring F[X]/(G).
+         * Every quotient-ring element has a unique polynomial representative of degree below degree(G), which is why
+         * the algorithm samples this many coefficients. A random scalar is not sufficient because it has the same
+         * residue modulo every irreducible factor of G and therefore cannot generally separate those factors.
+         * The highest sampled coefficient may be zero: lower-degree and constant representatives are still valid
+         * quotient-ring elements. The splitting loop retries whenever a sampled element does not produce a nontrivial
+         * factor.
+         *
+         * @throws std::invalid_argument if coefficient_count is zero.
+         */
+        template<CoefficientPolynomial Polynomial, typename Generator>
+            requires std::constructible_from<Polynomial, std::size_t> &&
+                     requires(Polynomial &polynomial, Generator &generator) { polynomial[0] = generator(); }
+        Polynomial sample_random_polynomial(std::size_t coefficient_count, Generator &generator) {
+            if (coefficient_count == 0) {
+                throw std::invalid_argument("random polynomial sampling requires a positive coefficient count");
+            }
+
+            Polynomial result(coefficient_count);
+            for (std::size_t index = 0; index < coefficient_count; ++index) {
+                result[index] = generator();
+            }
+            condense(result);
+            return result;
+        }
+
+        /** Precompute the exponent shared by all Cantor-Zassenhaus trials for one irreducible-factor degree. */
+        template<polynomial_arithmetic::PolynomialBackend Backend>
+        class cantor_zassenhaus_context {
+        public:
+            using polynomial_type = typename Backend::polynomial_type;
+            using value_type = typename polynomial_type::value_type;
+            using field_type = typename value_type::field_type;
+
+            explicit cantor_zassenhaus_context(std::size_t irreducible_factor_degree) :
+                irreducible_factor_degree_(irreducible_factor_degree) {
+                if (irreducible_factor_degree_ == 0) {
+                    throw std::invalid_argument("Cantor-Zassenhaus splitting requires a positive factor degree");
+                }
+                if (algebra::fields::field_characteristic<field_type>() == 2) {
+                    throw std::invalid_argument(
+                        "Cantor-Zassenhaus splitting for characteristic two is not implemented");
+                }
+
+                const boost::multiprecision::cpp_int field_order = algebra::fields::field_order<field_type>();
+                exponent_ = 1;
+                for (std::size_t i = 0; i < irreducible_factor_degree_; ++i) {
+                    exponent_ *= field_order;
+                }
+                exponent_ = (exponent_ - 1) / 2;
+            }
+
+            std::size_t irreducible_factor_degree() const {
+                return irreducible_factor_degree_;
+            }
+
+            const boost::multiprecision::cpp_int &exponent() const {
+                return exponent_;
+            }
+
+        private:
+            std::size_t irreducible_factor_degree_;
+            boost::multiprecision::cpp_int exponent_;
+        };
+
+        /**
+         * Try once to split a product G of distinct irreducible polynomials that all have the same degree,
+         * irreducible_factor_degree, using the odd-characteristic Cantor-Zassenhaus algorithm. One random polynomial a
+         * is sampled with degree below degree(G). If gcd(a, G) is already a proper factor, it is returned immediately.
+         * Otherwise compute
+         *
+         *     quadratic_character = a^((Q^irreducible_factor_degree - 1) / 2) mod G,
+         *
+         * where Q is the coefficient field's order and d = irreducible_factor_degree. For every irreducible degree-d
+         * factor Qi, the quotient F[X]/(Qi) is a field with Q^d elements, and its nonzero multiplicative group has
+         * order Q^d - 1. Raising a nonzero residue to half that order gives a value whose square is 1, so in odd
+         * characteristic it is either 1 or -1. Thus, modulo each irreducible factor of G, quadratic_character is
+         * either 1 or -1, and gcd(quadratic_character - 1, G) selects the factors on which it is 1. The trial succeeds
+         * when this GCD is neither 1 nor G. A failed trial sets factor to zero and returns false; it does not sample
+         * again.
+         *
+         * cantor_zassenhaus_context supplies the factor degree and precomputed exponent shared by every trial.
+         * divisor_context is supplied separately so its polynomial inverse can be reused by subsequent trials against
+         * this particular G. Its divisor must be monic and square-free, all its irreducible factors must have the
+         * context's irreducible_factor_degree, and it must contain at least two such factors.
+         *
+         * @throws std::invalid_argument if the divisor degree is inconsistent with the requested factor degree or the
+         * divisor is not monic.
+         */
+        template<SupportsDivrem Backend, typename Generator>
+        bool try_cantor_zassenhaus_split(typename Backend::polynomial_type &factor,
+                                         const cantor_zassenhaus_context<Backend> &split_context,
+                                         const polynomial_divisor_context<Backend> &divisor_context,
+                                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                         Generator &generator) {
+            using polynomial_type = typename Backend::polynomial_type;
+            using value_type = typename polynomial_type::value_type;
+
+            const std::size_t irreducible_factor_degree = split_context.irreducible_factor_degree();
+            const std::size_t group_degree = divisor_context.degree();
+            if (group_degree <= irreducible_factor_degree || group_degree % irreducible_factor_degree != 0) {
+                throw std::invalid_argument(
+                    "Cantor-Zassenhaus splitting requires at least two factors of the requested degree");
+            }
+            const polynomial_type &group = divisor_context.divisor();
+            if (group.back() != value_type::one()) {
+                throw std::invalid_argument("Cantor-Zassenhaus splitting requires a monic polynomial");
+            }
+            polynomial_type random_polynomial = sample_random_polynomial<polynomial_type>(group_degree, generator);
+            gcd(factor, random_polynomial, group, arithmetic_context);
+            if (factor.size() > 1 && factor.size() < group.size()) {
+                return true;
+            }
+
+            polynomial_type quadratic_character;
+            powmod(quadratic_character, random_polynomial, split_context.exponent(), divisor_context,
+                   arithmetic_context);
+            quadratic_character[0] = quadratic_character[0] - value_type::one();
+            condense(quadratic_character);
+            gcd(factor, quadratic_character, group, arithmetic_context);
+            if (factor.size() > 1 && factor.size() < group.size()) {
+                return true;
+            }
+
+            factor.assign(1, value_type::zero());
+            return false;
+        }
 
         /**
          * Prepare one group produced by distinct-degree factorization for equal-degree splitting. The input is
