@@ -41,6 +41,14 @@ namespace nil::crypto3::math {
 
     namespace detail {
 
+        /** A callback that controls staged equal-degree factorization after receiving one irreducible factor. */
+        template<typename FactorCallback, typename Polynomial>
+        concept EqualDegreeFactorCallback =
+            CoefficientPolynomial<Polynomial> &&
+            requires(FactorCallback &callback, const polynomial_factor<Polynomial> &factor) {
+                { callback(factor) } -> std::same_as<factorization_control>;
+            };
+
         /**
          * Sample a canonical polynomial whose degree is less than coefficient_count. Each coefficient is obtained
          * directly from the caller-owned generator, so the caller controls both the random source and its seed.
@@ -186,13 +194,14 @@ namespace nil::crypto3::math {
          * @pre group is monic and square-free, all its irreducible factors have the context's factor degree, and
          * generator supplies independent uniformly distributed coefficient-field elements.
          */
-        template<SupportsDivrem Backend, typename Generator>
-        std::vector<typename Backend::polynomial_type> cantor_zassenhaus_split_all(
-            typename Backend::polynomial_type group, const cantor_zassenhaus_context<Backend> &split_context,
-            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, Generator &generator) {
+        template<SupportsDivrem Backend, typename Generator, typename FactorCallback>
+        factorization_control
+            cantor_zassenhaus_split_all(typename Backend::polynomial_type group,
+                                        const cantor_zassenhaus_context<Backend> &split_context,
+                                        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                        Generator &generator, FactorCallback &&factor_callback) {
             using polynomial_type = typename Backend::polynomial_type;
 
-            std::vector<polynomial_type> factors;
             std::vector<polynomial_type> pending;
             pending.push_back(std::move(group));
 
@@ -207,7 +216,9 @@ namespace nil::crypto3::math {
                         "Cantor-Zassenhaus splitting requires the factor degree to divide every pending degree");
                 }
                 if (current_degree == split_context.irreducible_factor_degree()) {
-                    factors.push_back(std::move(current));
+                    if (factor_callback(std::move(current)) == factorization_control::stop_factorization) {
+                        return factorization_control::stop_factorization;
+                    }
                     continue;
                 }
 
@@ -225,6 +236,22 @@ namespace nil::crypto3::math {
                 pending.push_back(std::move(quotient));
             }
 
+            return factorization_control::continue_factorization;
+        }
+
+        /** Split an entire equal-degree group and collect every irreducible factor. */
+        template<SupportsDivrem Backend, typename Generator>
+        std::vector<typename Backend::polynomial_type> cantor_zassenhaus_split_all(
+            typename Backend::polynomial_type group, const cantor_zassenhaus_context<Backend> &split_context,
+            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, Generator &generator) {
+            using polynomial_type = typename Backend::polynomial_type;
+
+            std::vector<polynomial_type> factors;
+            cantor_zassenhaus_split_all<Backend>(std::move(group), split_context, arithmetic_context, generator,
+                                                 [&](polynomial_type &&factor) {
+                                                     factors.push_back(std::move(factor));
+                                                     return factorization_control::continue_factorization;
+                                                 });
             return factors;
         }
 
@@ -270,6 +297,65 @@ namespace nil::crypto3::math {
         }
 
     }    // namespace detail
+
+    /**
+     * Split one square-free distinct-degree group into its monic irreducible factors using the odd-characteristic
+     * Cantor-Zassenhaus algorithm. Every irreducible input factor must have irreducible_factor_degree; callers normally
+     * obtain this pair from distinct-degree factorization. The necessary total-degree divisibility is checked, but the
+     * function does not repeat distinct-degree factorization to verify this precondition.
+     *
+     * The input is normalized to monic form and its original leading coefficient is preserved in the result. Zero and
+     * constant inputs return that coefficient and no factors. Complete results contain every irreducible factor with
+     * multiplicity one and reconstruct the input using polynomial_factorization_result's usual convention.
+     *
+     * generator must return independent uniformly distributed coefficient-field elements. After each factor is added
+     * to the result, factor_callback may request an early stop. A stopped result contains that factor, has complete set
+     * to false, and does not continue splitting pending subgroups.
+     *
+     * @throws std::invalid_argument if the factor degree is zero, a nonconstant input is not square-free, its degree is
+     * not divisible by the factor degree, or the coefficient field has characteristic two.
+     * @pre input is a nonempty coefficient polynomial whose irreducible factors all have
+     * irreducible_factor_degree.
+     */
+    template<detail::SupportsDivrem Backend, typename Generator, typename FactorCallback>
+        requires detail::EqualDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
+    polynomial_factorization_result<typename Backend::polynomial_type>
+        equal_degree_factorization(const typename Backend::polynomial_type &input,
+                                   std::size_t irreducible_factor_degree,
+                                   polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                   Generator &generator, FactorCallback &&factor_callback) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using result_type = polynomial_factorization_result<polynomial_type>;
+
+        result_type result;
+        polynomial_type monic_input;
+        if (!detail::prepare_equal_degree_factorization_input<Backend>(monic_input, result.leading_coefficient, input,
+                                                                       irreducible_factor_degree, arithmetic_context)) {
+            return result;
+        }
+
+        detail::cantor_zassenhaus_context<Backend> split_context(irreducible_factor_degree);
+        const factorization_control control = detail::cantor_zassenhaus_split_all<Backend>(
+            std::move(monic_input), split_context, arithmetic_context, generator, [&](polynomial_type &&factor) {
+                result.factors.push_back({std::move(factor), 1});
+                return factor_callback(result.factors.back());
+            });
+        if (control == factorization_control::stop_factorization) {
+            result.complete = false;
+        }
+        return result;
+    }
+
+    /** Compute the complete equal-degree factorization without a staged callback. */
+    template<detail::SupportsDivrem Backend, typename Generator>
+    polynomial_factorization_result<typename Backend::polynomial_type> equal_degree_factorization(
+        const typename Backend::polynomial_type &input, std::size_t irreducible_factor_degree,
+        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, Generator &generator) {
+        using factor_type = polynomial_factor<typename Backend::polynomial_type>;
+        return equal_degree_factorization<Backend>(
+            input, irreducible_factor_degree, arithmetic_context, generator,
+            [](const factor_type &) { return factorization_control::continue_factorization; });
+    }
 
 }    // namespace nil::crypto3::math
 

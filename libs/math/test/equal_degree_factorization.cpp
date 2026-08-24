@@ -26,6 +26,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <stdexcept>
 #include <vector>
 
@@ -135,6 +136,7 @@ BOOST_AUTO_TEST_CASE(one_cantor_zassenhaus_trial_reports_an_unsuccessful_sample)
 
     BOOST_CHECK(!split);
     BOOST_CHECK(factor == polynomial_type({value_type::zero()}));
+    BOOST_CHECK_EQUAL(next_coefficient, coefficients.size());
 }
 
 BOOST_AUTO_TEST_CASE(cantor_zassenhaus_trial_rejects_invalid_inputs_before_sampling) {
@@ -171,6 +173,10 @@ BOOST_AUTO_TEST_CASE(cantor_zassenhaus_trial_rejects_invalid_inputs_before_sampl
     math::detail::cantor_zassenhaus_context<backend_type> degree_one_split_context(1);
     BOOST_CHECK_THROW(math::detail::try_cantor_zassenhaus_split<backend_type>(
                           factor, degree_one_split_context, nonmonic_divisor, arithmetic_context, generator),
+                      std::invalid_argument);
+
+    BOOST_CHECK_THROW(math::detail::cantor_zassenhaus_split_all<backend_type>(
+                          polynomial_type {value_type::one()}, degree_one_split_context, arithmetic_context, generator),
                       std::invalid_argument);
 
     BOOST_CHECK_EQUAL(generated_coefficient_count, 0);
@@ -233,6 +239,120 @@ BOOST_AUTO_TEST_CASE(cantor_zassenhaus_does_not_sample_an_already_irreducible_gr
 
     BOOST_CHECK(factors == std::vector<polynomial_type>({group}));
     BOOST_CHECK_EQUAL(generated_coefficient_count, 0);
+}
+
+BOOST_AUTO_TEST_CASE(cantor_zassenhaus_is_deterministic_for_a_seeded_fq_generator) {
+    backend_type backend;
+    const polynomial_type first_factor = {-value_type(1), value_type::one()};
+    const polynomial_type second_factor = {-value_type(2), value_type::one()};
+    const polynomial_type third_factor = {-value_type(3), value_type::one()};
+    polynomial_type first_product;
+    backend.multiply(first_product, first_factor, second_factor);
+    polynomial_type group;
+    backend.multiply(group, first_product, third_factor);
+    const value_type leading_coefficient(7);
+    polynomial_type input(group);
+    for (value_type &coefficient : input) {
+        coefficient *= leading_coefficient;
+    }
+
+    auto factor_with_seed = [&input](std::uint32_t seed) {
+        nil::crypto3::random::algebraic_engine<field_type> generator(seed);
+        polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+        return math::equal_degree_factorization<backend_type>(input, 1, arithmetic_context, generator);
+    };
+
+    const math::polynomial_factorization_result<polynomial_type> first = factor_with_seed(41);
+    const math::polynomial_factorization_result<polynomial_type> second = factor_with_seed(41);
+    BOOST_CHECK(first == second);
+    BOOST_CHECK(first.complete);
+    BOOST_CHECK(first.leading_coefficient == leading_coefficient);
+    BOOST_REQUIRE_EQUAL(first.factors.size(), 3);
+
+    polynomial_type reconstructed = {first.leading_coefficient};
+    for (const auto &factor : first.factors) {
+        BOOST_CHECK_EQUAL(factor.polynomial.degree(), 1);
+        BOOST_CHECK_EQUAL(factor.multiplicity, 1);
+        polynomial_type product;
+        backend.multiply(product, reconstructed, factor.polynomial);
+        reconstructed = std::move(product);
+    }
+    BOOST_CHECK(reconstructed == input);
+}
+
+BOOST_AUTO_TEST_CASE(equal_degree_factorization_stops_after_the_reported_factor) {
+    backend_type backend;
+    const polynomial_type first_factor = {-value_type(1), value_type::one()};
+    const polynomial_type second_factor = {-value_type(2), value_type::one()};
+    const polynomial_type third_factor = {-value_type(3), value_type::one()};
+    polynomial_type first_product;
+    backend.multiply(first_product, first_factor, second_factor);
+    polynomial_type group;
+    backend.multiply(group, first_product, third_factor);
+
+    const std::array coefficients = {-value_type::one(), value_type::one(), value_type::zero(), -value_type(2),
+                                     value_type::one()};
+    std::size_t next_coefficient = 0;
+    auto generator = [&] { return coefficients[next_coefficient++]; };
+    std::size_t callback_count = 0;
+    auto callback = [&callback_count](const math::polynomial_factor<polynomial_type> &) {
+        ++callback_count;
+        return math::factorization_control::stop_factorization;
+    };
+
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    const auto result =
+        math::equal_degree_factorization<backend_type>(group, 1, arithmetic_context, generator, callback);
+
+    BOOST_CHECK(!result.complete);
+    BOOST_REQUIRE_EQUAL(result.factors.size(), 1);
+    BOOST_CHECK_EQUAL(result.factors.front().polynomial.degree(), 1);
+    BOOST_CHECK_EQUAL(result.factors.front().multiplicity, 1);
+    BOOST_CHECK_EQUAL(callback_count, 1);
+    BOOST_CHECK_EQUAL(next_coefficient, coefficients.size());
+}
+
+BOOST_AUTO_TEST_CASE(cantor_zassenhaus_reconstructs_native_fq12_input_deterministically) {
+    using extension_backend_type = polynomial_arithmetic::schoolbook_backend<extension_value_type>;
+    using extension_polynomial_type = typename extension_backend_type::polynomial_type;
+
+    const extension_value_type one = extension_value_type::one();
+    const extension_value_type two = one + one;
+    const extension_value_type three = two + one;
+    const extension_polynomial_type first_factor = {-one, one};
+    const extension_polynomial_type second_factor = {-two, one};
+    const extension_polynomial_type third_factor = {-three, one};
+    extension_backend_type backend;
+    extension_polynomial_type first_product;
+    backend.multiply(first_product, first_factor, second_factor);
+    extension_polynomial_type group;
+    backend.multiply(group, first_product, third_factor);
+
+    const std::array coefficients = {-one, one, extension_value_type::zero(), -two, one};
+    auto factor_group = [&] {
+        std::size_t next_coefficient = 0;
+        auto generator = [&] { return coefficients[next_coefficient++]; };
+        polynomial_arithmetic::polynomial_context<extension_backend_type> arithmetic_context;
+        auto result = math::equal_degree_factorization<extension_backend_type>(group, 1, arithmetic_context, generator);
+        BOOST_CHECK_EQUAL(next_coefficient, coefficients.size());
+        return result;
+    };
+
+    const math::polynomial_factorization_result<extension_polynomial_type> first = factor_group();
+    const math::polynomial_factorization_result<extension_polynomial_type> second = factor_group();
+    BOOST_CHECK(first == second);
+    BOOST_CHECK(first.complete);
+    BOOST_REQUIRE_EQUAL(first.factors.size(), 3);
+
+    extension_polynomial_type reconstructed = {first.leading_coefficient};
+    for (const auto &factor : first.factors) {
+        BOOST_CHECK_EQUAL(factor.polynomial.degree(), 1);
+        BOOST_CHECK_EQUAL(factor.multiplicity, 1);
+        extension_polynomial_type product;
+        backend.multiply(product, reconstructed, factor.polynomial);
+        reconstructed = std::move(product);
+    }
+    BOOST_CHECK(reconstructed == group);
 }
 
 BOOST_AUTO_TEST_CASE(preparation_normalizes_a_square_free_equal_degree_input) {
