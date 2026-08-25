@@ -27,9 +27,14 @@
 #include <cstddef>
 #include <stdexcept>
 
+#include <boost/random/mersenne_twister.hpp>
 #include <boost/test/unit_test.hpp>
 
+#include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
+#include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
+#include <nil/crypto3/algebra/random_element.hpp>
 
 #include <nil/crypto3/math/polynomial/polynomial_square_root.hpp>
 #include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
@@ -248,6 +253,95 @@ BOOST_AUTO_TEST_CASE(tonelli_shanks_recovers_square_roots_in_a_quotient_field) {
 
     BOOST_CHECK_THROW(math::square_root_mod(root, irreducible_divisor, square_root_context, arithmetic_context),
                       std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(tonelli_shanks_recovers_a_bn254_fq_square) {
+    using fq_field_type = fields::alt_bn128_base_field<254>;
+    using fq_value_type = fq_field_type::value_type;
+    using fq_backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using fq_polynomial_type = fq_backend_type::polynomial_type;
+
+    fq_value_type non_residue(2);
+    while (non_residue.is_square()) {
+        non_residue = non_residue + fq_value_type::one();
+    }
+
+    polynomial_arithmetic::polynomial_context<fq_backend_type> arithmetic_context;
+    // Modulo the linear irreducible B = X, the quotient is Fq itself. This isolates support for Fq coefficients; the
+    // earlier BabyBear test covers a nontrivial quotient extension.
+    const fq_polynomial_type divisor = {fq_value_type::zero(), fq_value_type::one()};
+    math::polynomial_divisor_context<fq_backend_type> divisor_context(divisor, 1, arithmetic_context);
+    const math::polynomial_square_root_context<fq_backend_type> square_root_context(
+        fq_polynomial_type {non_residue}, divisor_context, arithmetic_context);
+
+    const fq_polynomial_type value = {fq_value_type(7)};
+    fq_polynomial_type square;
+    math::squaremod(square, value, divisor_context, arithmetic_context);
+    fq_polynomial_type root;
+    BOOST_REQUIRE(math::square_root_mod(root, square, square_root_context, arithmetic_context));
+    fq_polynomial_type recovered_square;
+    math::squaremod(recovered_square, root, divisor_context, arithmetic_context);
+    BOOST_CHECK(recovered_square == square);
+}
+
+BOOST_AUTO_TEST_CASE(tonelli_shanks_recovers_a_bn254_fq12_square) {
+    using fq12_field_type = fields::fp12_2over3over2<fields::alt_bn128<254>>;
+    using fq12_value_type = fq12_field_type::value_type;
+    using fq12_backend_type = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using fq12_polynomial_type = fq12_backend_type::polynomial_type;
+
+    polynomial_arithmetic::polynomial_context<fq12_backend_type> arithmetic_context;
+    // Modulo the linear irreducible B = X, the quotient is Fq12 itself. This isolates support for Fq12 coefficients;
+    // the following test combines them with a nontrivial quotient extension.
+    const fq12_polynomial_type divisor = {fq12_value_type::zero(), fq12_value_type::one()};
+    math::polynomial_divisor_context<fq12_backend_type> divisor_context(divisor, 1, arithmetic_context);
+
+    boost::random::mt19937 rng(0xF012);
+    auto generator = [&] { return fq12_polynomial_type {nil::crypto3::algebra::random_element<fq12_field_type>(rng)}; };
+    const math::polynomial_square_root_context<fq12_backend_type> square_root_context(divisor_context,
+                                                                                      arithmetic_context, generator);
+
+    const fq12_polynomial_type value = {nil::crypto3::algebra::random_element<fq12_field_type>(rng)};
+    fq12_polynomial_type square;
+    math::squaremod(square, value, divisor_context, arithmetic_context);
+    fq12_polynomial_type root;
+    BOOST_REQUIRE(math::square_root_mod(root, square, square_root_context, arithmetic_context));
+    fq12_polynomial_type recovered_square;
+    math::squaremod(recovered_square, root, divisor_context, arithmetic_context);
+    BOOST_CHECK(recovered_square == square);
+}
+
+BOOST_AUTO_TEST_CASE(tonelli_shanks_recovers_a_square_in_a_quadratic_extension_of_bn254_fq12) {
+    using fq12_field_type = fields::fp12_2over3over2<fields::alt_bn128<254>>;
+    using fq12_value_type = fq12_field_type::value_type;
+    using fq12_backend_type = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using fq12_polynomial_type = fq12_backend_type::polynomial_type;
+
+    boost::random::mt19937 rng(0xF01202);
+    fq12_value_type base_non_residue = fq12_value_type::one();
+    for (std::size_t sample = 0; sample < 64 && base_non_residue.is_square(); ++sample) {
+        base_non_residue = nil::crypto3::algebra::random_element<fq12_field_type>(rng);
+    }
+    BOOST_REQUIRE(!base_non_residue.is_square());
+
+    polynomial_arithmetic::polynomial_context<fq12_backend_type> arithmetic_context;
+    // X^2 - base_non_residue is irreducible because base_non_residue is not a square in Fq12.
+    const fq12_polynomial_type divisor = {-base_non_residue, fq12_value_type::zero(), fq12_value_type::one()};
+    math::polynomial_divisor_context<fq12_backend_type> divisor_context(divisor, 1, arithmetic_context);
+    // Norm(X) = -base_non_residue. Since -1 is square in Fq12, this norm and therefore X are nonsquares.
+    const fq12_polynomial_type quotient_non_residue = {fq12_value_type::zero(), fq12_value_type::one()};
+    const math::polynomial_square_root_context<fq12_backend_type> square_root_context(
+        quotient_non_residue, divisor_context, arithmetic_context);
+
+    const fq12_polynomial_type value = {nil::crypto3::algebra::random_element<fq12_field_type>(rng),
+                                        nil::crypto3::algebra::random_element<fq12_field_type>(rng)};
+    fq12_polynomial_type square;
+    math::squaremod(square, value, divisor_context, arithmetic_context);
+    fq12_polynomial_type root;
+    BOOST_REQUIRE(math::square_root_mod(root, square, square_root_context, arithmetic_context));
+    fq12_polynomial_type recovered_square;
+    math::squaremod(recovered_square, root, divisor_context, arithmetic_context);
+    BOOST_CHECK(recovered_square == square);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
