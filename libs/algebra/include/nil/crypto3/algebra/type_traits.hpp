@@ -179,6 +179,12 @@ namespace nil {
             };
 
             template<typename T>
+            concept Field = is_field<T>::value && requires {
+                typename T::value_type;
+                requires FieldValue<typename T::value_type>;
+            };
+
+            template<typename T>
             concept FieldElementWithCoordinates =
                 is_field_element<T>::value && requires(T &value, const T &const_value, std::size_t index) {
                     value.coordinate(index);
