@@ -53,6 +53,7 @@ set(TESTS_NAMES
     "polynomial_backend"
     "polynomial_division"
     "polynomial_exponentiation"
+    "polynomial_rational_reconstruction"
     "polynomial_square_root"
     "polynomial_composition"
     "polynomial_frobenius"
