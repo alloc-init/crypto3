@@ -53,6 +53,14 @@ namespace nil {
 
                         constexpr element_fp6_3over2() = default;
 
+                        constexpr element_fp6_3over2(const underlying_type &in_data) :
+                            data({in_data, underlying_type::zero(), underlying_type::zero()}) {
+                        }
+
+                        constexpr element_fp6_3over2(const typename underlying_type::underlying_type &in_data) :
+                            element_fp6_3over2(underlying_type(in_data)) {
+                        }
+
                         constexpr element_fp6_3over2(const underlying_type &in_data0,
                                                      const underlying_type &in_data1,
                                                      const underlying_type &in_data2) :

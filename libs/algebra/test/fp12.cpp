@@ -27,6 +27,8 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <limits>
+#include <stdexcept>
 #include <string_view>
 
 #include <boost/mpl/list.hpp>
@@ -34,6 +36,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
+#include <nil/crypto3/algebra/fields/field_algorithms.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
 
 namespace {
@@ -150,6 +153,144 @@ namespace {
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(fp12_tests)
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(tower_values_embed_into_fp12, Fp12Field, fp12_field_types) {
+    using fp12_value_type = typename Fp12Field::value_type;
+    using fp6_value_type = typename fp12_value_type::underlying_type;
+    using fp2_value_type = typename fp6_value_type::underlying_type;
+    using fp_value_type = typename fp2_value_type::underlying_type;
+
+    const fp_value_type fp(7);
+    const fp2_value_type fp2(fp);
+    const fp6_value_type fp6(fp2);
+
+    BOOST_CHECK_EQUAL(fp2, fp2_value_type(fp, fp_value_type::zero()));
+    BOOST_CHECK_EQUAL(fp6, fp6_value_type(fp2, fp2_value_type::zero(), fp2_value_type::zero()));
+    BOOST_CHECK_EQUAL(fp12_value_type(fp), fp12_value_type(fp6));
+    BOOST_CHECK_EQUAL(fp12_value_type(fp2), fp12_value_type(fp6));
+    BOOST_CHECK_EQUAL(fp12_value_type(fp6), fp12_value_type(fp6, fp6_value_type::zero()));
+    BOOST_CHECK_EQUAL(fp * fp2_value_type::one(), fp2_value_type(fp));
+    BOOST_CHECK_EQUAL(fp2_value_type::one() * fp, fp2_value_type(fp));
+    BOOST_CHECK_EQUAL(fp * fp6_value_type::one(), fp6_value_type(fp));
+    BOOST_CHECK_EQUAL(fp6_value_type::one() * fp, fp6_value_type(fp));
+    BOOST_CHECK_EQUAL(fp2 * fp6_value_type::one(), fp6_value_type(fp2));
+    BOOST_CHECK_EQUAL(fp6_value_type::one() * fp2, fp6_value_type(fp2));
+    BOOST_CHECK_EQUAL(fp * fp12_value_type::one(), fp12_value_type(fp));
+    BOOST_CHECK_EQUAL(fp12_value_type::one() * fp, fp12_value_type(fp));
+    BOOST_CHECK_EQUAL(fp2 * fp12_value_type::one(), fp12_value_type(fp2));
+    BOOST_CHECK_EQUAL(fp12_value_type::one() * fp2, fp12_value_type(fp2));
+    BOOST_CHECK_EQUAL(fp6 * fp12_value_type::one(), fp12_value_type(fp6));
+    BOOST_CHECK_EQUAL(fp12_value_type::one() * fp6, fp12_value_type(fp6));
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(square_roots_round_trip, Fp12Field, fp12_field_types) {
+    using fp12_value_type = typename Fp12Field::value_type;
+    boost::random::mt19937 rng(0x5a127);
+
+    BOOST_CHECK(fp12_value_type::zero().is_square());
+    BOOST_CHECK_EQUAL(fp12_value_type::zero().sqrt(), fp12_value_type::zero());
+    BOOST_CHECK(fp12_value_type::one().is_square());
+    BOOST_CHECK_EQUAL(fp12_value_type::one().sqrt(), fp12_value_type::one());
+
+    for (std::size_t i = 0; i < 2; ++i) {
+        const fp12_value_type square = random_fp12<Fp12Field>(rng).squared();
+        BOOST_CHECK(square.is_square());
+        BOOST_CHECK_EQUAL(square.sqrt_known_square().squared(), square);
+        BOOST_CHECK_EQUAL(square.sqrt().squared(), square);
+    }
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(is_square_rejects_a_non_square, Fp12Field, fp12_field_types) {
+    using fp12_value_type = typename Fp12Field::value_type;
+    boost::random::mt19937 rng(0x1105);
+
+    for (std::size_t i = 0; i < 64; ++i) {
+        const fp12_value_type candidate = random_fp12<Fp12Field>(rng);
+        if (!candidate.is_square()) {
+            BOOST_CHECK(!candidate.is_zero());
+            return;
+        }
+    }
+    BOOST_FAIL("failed to sample an Fp12 non-square");
+}
+
+BOOST_AUTO_TEST_CASE(bn254_subgroup_algorithms_match_direct_exponentiation) {
+    using field_type = alt_bn128_254_fp12;
+    using value_type = typename field_type::value_type;
+    using boost::multiprecision::cpp_int;
+
+    cpp_int odd_order = fields::field_order<field_type>() - 1;
+    std::size_t two_adicity = 0;
+    while ((odd_order & 1) == 0) {
+        odd_order >>= 1;
+        ++two_adicity;
+    }
+    boost::random::mt19937 rng(0x2a11);
+
+    for (std::size_t i = 0; i < 2; ++i) {
+        const value_type x = random_fp12<field_type>(rng);
+        BOOST_CHECK_EQUAL(fields::two_primary_component(x, odd_order, two_adicity), x.pow(odd_order));
+        BOOST_CHECK_EQUAL(fields::two_primary_component(x, odd_order + 2, two_adicity), x.pow(odd_order + 2));
+
+        const value_type odd_subgroup_value = x.pow(cpp_int(1) << two_adicity);
+        const value_type root = fields::odd_subgroup_sqrt(odd_subgroup_value, odd_order);
+        BOOST_CHECK_EQUAL(root.squared(), odd_subgroup_value);
+        BOOST_CHECK_EQUAL(root, odd_subgroup_value.pow((odd_order + 1) >> 1));
+
+        const cpp_int fallback_order = odd_order + 2;
+        BOOST_CHECK_EQUAL(fields::odd_subgroup_sqrt(x, fallback_order), x.pow((fallback_order + 1) >> 1));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(bn254_roots_of_unity_have_order_32) {
+    using value_type = typename alt_bn128_254_fp12::value_type;
+    const value_type primitive_root = fields::primitive_two_power_root_of_unity<value_type>(5);
+    const std::vector<value_type> roots = fields::roots_of_unity<value_type>(5);
+    const std::vector<value_type> roots_from_supplied_root = fields::roots_of_unity(primitive_root, 5);
+
+    BOOST_REQUIRE_EQUAL(roots.size(), 32);
+    BOOST_CHECK_EQUAL_COLLECTIONS(roots.begin(), roots.end(), roots_from_supplied_root.begin(),
+                                  roots_from_supplied_root.end());
+    BOOST_CHECK_EQUAL(roots.front(), value_type::one());
+    BOOST_CHECK_EQUAL(primitive_root.pow(32), value_type::one());
+    BOOST_CHECK_NE(primitive_root.pow(16), value_type::one());
+    for (std::size_t i = 0; i < roots.size(); ++i) {
+        BOOST_CHECK_EQUAL(roots[i], primitive_root.pow(i));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(root_of_unity_argument_validation) {
+    using bn254_value_type = typename alt_bn128_254_fp12::value_type;
+    using bls12_value_type = typename bls12_381_fp12::value_type;
+
+    BOOST_CHECK_THROW(fields::primitive_two_power_root_of_unity<bn254_value_type>(4), std::invalid_argument);
+    BOOST_CHECK_THROW(fields::primitive_two_power_root_of_unity<bls12_value_type>(5), std::invalid_argument);
+    BOOST_CHECK_THROW(fields::roots_of_unity(bn254_value_type::one(), std::numeric_limits<std::size_t>::digits),
+                      std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(generic_subgroup_algorithms_match_direct_formulas) {
+    using field_type = bls12_381_fp12;
+    using value_type = typename field_type::value_type;
+    using boost::multiprecision::cpp_int;
+
+    cpp_int odd_order = fields::field_order<field_type>() - 1;
+    std::size_t two_adicity = 0;
+    while ((odd_order & 1) == 0) {
+        odd_order >>= 1;
+        ++two_adicity;
+    }
+    boost::random::mt19937 rng(0x3812);
+    const value_type x = random_fp12<field_type>(rng);
+    BOOST_CHECK_EQUAL(fields::two_primary_component(x, odd_order, two_adicity), x.pow(odd_order));
+
+    const value_type odd_subgroup_value = x.pow(cpp_int(1) << two_adicity);
+    BOOST_CHECK_EQUAL(fields::odd_subgroup_sqrt(odd_subgroup_value, odd_order),
+                      odd_subgroup_value.pow((odd_order + 1) >> 1));
+
+    const value_type square = x.squared();
+    BOOST_CHECK_EQUAL(fields::sqrt_known_square(square).squared(), square);
+}
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(coordinates_follow_tower_storage_order, Fp12Field, fp12_field_types) {
     using fp12_value_type = typename Fp12Field::value_type;

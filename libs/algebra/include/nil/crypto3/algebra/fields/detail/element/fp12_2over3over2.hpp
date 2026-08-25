@@ -27,8 +27,11 @@
 #ifndef CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP12_2OVER3OVER2_HPP
 #define CRYPTO3_ALGEBRA_FIELDS_ELEMENT_FP12_2OVER3OVER2_HPP
 
+#include <cassert>
+
 #include <nil/crypto3/algebra/fields/detail/exponentiation.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/operations.hpp>
+#include <nil/crypto3/algebra/fields/field_order.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -52,6 +55,19 @@ namespace nil {
                         data_type data;
 
                         constexpr element_fp12_2over3over2() = default;
+
+                        constexpr element_fp12_2over3over2(const underlying_type &in_data) :
+                            data({in_data, underlying_type::zero()}) {
+                        }
+
+                        constexpr element_fp12_2over3over2(const typename underlying_type::underlying_type &in_data) :
+                            element_fp12_2over3over2(underlying_type(in_data)) {
+                        }
+
+                        constexpr element_fp12_2over3over2(
+                            const typename underlying_type::underlying_type::underlying_type &in_data) :
+                            element_fp12_2over3over2(underlying_type(in_data)) {
+                        }
 
                         constexpr element_fp12_2over3over2(const underlying_type &in_data0,
                                                            const underlying_type &in_data1) :
@@ -190,6 +206,79 @@ namespace nil {
                             const underlying_type c1 = -(A1 * t3);
 
                             return element_fp12_2over3over2(c0, c1);
+                        }
+
+                        bool is_square() const {
+                            return is_zero() || pow((field_order<field_type>() - 1) >> 1) == one();
+                        }
+
+                        element_fp12_2over3over2 sqrt_known_square() const {
+                            if (is_zero() || is_one()) {
+                                return *this;
+                            }
+
+                            using boost::multiprecision::cpp_int;
+                            static const cpp_int order_minus_one = field_order<field_type>() - 1;
+                            static const auto parameters = []() {
+                                cpp_int odd_part = order_minus_one;
+                                std::size_t power_of_two = 0;
+                                while ((odd_part & 1) == 0) {
+                                    odd_part >>= 1;
+                                    ++power_of_two;
+                                }
+                                return std::pair<cpp_int, std::size_t>(odd_part, power_of_two);
+                            }();
+
+                            const cpp_int &odd_part = parameters.first;
+                            const std::size_t power_of_two = parameters.second;
+                            if (power_of_two == 1) {
+                                return pow((order_minus_one + 2) >> 2);
+                            }
+
+                            static const element_fp12_2over3over2 non_residue_to_odd_part = []() {
+                                using base_type = typename underlying_type::underlying_type::underlying_type;
+                                for (unsigned candidate = 1; candidate < 256; ++candidate) {
+                                    const element_fp12_2over3over2 value(underlying_type::zero(),
+                                                                         underlying_type(base_type(candidate)));
+                                    if (value.pow(order_minus_one >> 1) == -one()) {
+                                        return value.pow(parameters.first);
+                                    }
+                                }
+                                assert(false && "failed to find an Fp12 quadratic non-residue");
+                                return zero();
+                            }();
+
+                            element_fp12_2over3over2 c = non_residue_to_odd_part;
+                            element_fp12_2over3over2 t = pow(odd_part);
+                            element_fp12_2over3over2 root = pow((odd_part + 1) >> 1);
+                            std::size_t remaining_power = power_of_two;
+
+                            while (t != one()) {
+                                element_fp12_2over3over2 t_squared = t;
+                                std::size_t i = 0;
+                                for (i = 1; i < remaining_power; ++i) {
+                                    t_squared = t_squared.squared();
+                                    if (t_squared == one()) {
+                                        break;
+                                    }
+                                }
+                                assert(i < remaining_power && "Fp12 Tonelli-Shanks step failed");
+
+                                const element_fp12_2over3over2 b = c.pow(cpp_int(1) << (remaining_power - i - 1));
+                                const element_fp12_2over3over2 b_squared = b.squared();
+                                root *= b;
+                                t *= b_squared;
+                                c = b_squared;
+                                remaining_power = i;
+                            }
+
+                            assert(root.squared() == *this);
+                            return root;
+                        }
+
+                        element_fp12_2over3over2 sqrt() const {
+                            assert(is_square() && "sqrt() called on a non-square Fp12 element");
+                            return sqrt_known_square();
                         }
 
                         /** @brief Frobenius map: exponentiation by a degree of field characteristic.

@@ -35,6 +35,7 @@
 #include <boost/tti/tti.hpp>
 #include <boost/mpl/placeholders.hpp>
 #include <boost/type_traits/is_same.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -162,6 +163,19 @@ namespace nil {
             template<typename T>
             struct is_extended_field_element {
                 static const bool value = is_field_element<T>::value && has_type_underlying_type<T>::value;
+            };
+
+            template<typename T>
+            concept FieldValue = requires(const T &a, const T &b, const boost::multiprecision::cpp_int &exponent) {
+                typename T::field_type;
+                requires std::same_as<typename T::field_type::value_type, T>;
+                { T::zero() } -> std::convertible_to<const T &>;
+                { T::one() } -> std::convertible_to<const T &>;
+                { a + b } -> std::same_as<T>;
+                { a - b } -> std::same_as<T>;
+                { a * b } -> std::same_as<T>;
+                { a.inversed() } -> std::same_as<T>;
+                { a.pow(exponent) } -> std::same_as<T>;
             };
 
             template<typename T>
