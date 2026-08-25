@@ -25,6 +25,7 @@
 #ifndef CRYPTO3_MATH_POLYNOMIAL_FACTORIZATION_HPP
 #define CRYPTO3_MATH_POLYNOMIAL_FACTORIZATION_HPP
 
+#include <concepts>
 #include <cstddef>
 #include <stdexcept>
 #include <vector>
@@ -103,6 +104,14 @@ namespace nil::crypto3::math {
     };
 
     namespace detail {
+
+        /** A callback that controls staged factorization after receiving one polynomial factor. */
+        template<typename FactorCallback, typename Polynomial>
+        concept PolynomialFactorCallback =
+            CoefficientPolynomial<Polynomial> &&
+            requires(FactorCallback &callback, const polynomial_factor<Polynomial> &factor) {
+                { callback(factor) } -> std::same_as<factorization_control>;
+            };
 
         /**
          * Normalize a factorization input and verify that every irreducible factor has multiplicity one. The

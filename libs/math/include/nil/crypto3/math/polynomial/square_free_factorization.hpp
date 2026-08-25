@@ -79,10 +79,7 @@ namespace nil::crypto3::math {
      * @throws std::invalid_argument if the coefficient-field characteristic is not greater than the input degree.
      */
     template<detail::SupportsDivrem Backend, typename FactorCallback>
-        requires requires(FactorCallback &callback,
-                          const polynomial_factor<typename Backend::polynomial_type> &factor) {
-            { callback(factor) } -> std::same_as<factorization_control>;
-        }
+        requires detail::PolynomialFactorCallback<FactorCallback, typename Backend::polynomial_type>
     polynomial_factorization_result<typename Backend::polynomial_type>
         square_free_factorization(const typename Backend::polynomial_type &input,
                                   polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,

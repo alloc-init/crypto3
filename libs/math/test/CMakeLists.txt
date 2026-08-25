@@ -40,6 +40,7 @@ endmacro()
 
 set(TESTS_NAMES
     "batch_inverse"
+    "complete_factorization"
     "distinct_degree_factorization"
     "equal_degree_factorization"
     "evaluation_domain"
