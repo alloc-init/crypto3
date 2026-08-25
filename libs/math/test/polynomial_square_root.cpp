@@ -93,6 +93,68 @@ BOOST_AUTO_TEST_CASE(square_root_context_validates_and_caches_tonelli_shanks_par
                       std::invalid_argument);
 }
 
+BOOST_AUTO_TEST_CASE(square_root_context_discovers_a_nonresidue_with_injected_sampling) {
+    const value_type base_non_residue = first_quadratic_non_residue();
+    const polynomial_type irreducible_divisor = {-base_non_residue, value_type::zero(), value_type::one()};
+    const polynomial_type quotient_non_residue = {value_type::zero(), value_type::one()};
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_divisor_context<backend_type> divisor_context(irreducible_divisor, 1, arithmetic_context);
+
+    std::size_t sample_index = 0;
+    auto generator = [&] {
+        ++sample_index;
+        return sample_index == 1 ? polynomial_type {value_type::one()} : quotient_non_residue;
+    };
+    const math::polynomial_square_root_context<backend_type> square_root_context(divisor_context, arithmetic_context,
+                                                                                 generator);
+
+    BOOST_CHECK_EQUAL(sample_index, 2);
+    polynomial_type expected_non_residue_to_odd_order;
+    math::powmod(expected_non_residue_to_odd_order, quotient_non_residue, square_root_context.odd_order(),
+                 divisor_context, arithmetic_context);
+    BOOST_CHECK(square_root_context.non_residue_to_odd_order() == expected_non_residue_to_odd_order);
+
+    const polynomial_type value = {value_type(3), value_type(5)};
+    polynomial_type square;
+    math::squaremod(square, value, divisor_context, arithmetic_context);
+    polynomial_type root;
+    BOOST_REQUIRE(math::square_root_mod(root, square, square_root_context, arithmetic_context));
+    polynomial_type recovered_square;
+    math::squaremod(recovered_square, root, divisor_context, arithmetic_context);
+    BOOST_CHECK(recovered_square == square);
+}
+
+BOOST_AUTO_TEST_CASE(square_root_context_rejects_invalid_generated_representatives) {
+    const value_type base_non_residue = first_quadratic_non_residue();
+    const polynomial_type irreducible_divisor = {-base_non_residue, value_type::zero(), value_type::one()};
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_divisor_context<backend_type> divisor_context(irreducible_divisor, 1, arithmetic_context);
+
+    auto empty_generator = [] {
+        polynomial_type result;
+        result.get_storage().clear();
+        return result;
+    };
+    BOOST_CHECK_THROW(
+        (math::polynomial_square_root_context<backend_type>(divisor_context, arithmetic_context, empty_generator)),
+        std::invalid_argument);
+
+    auto noncanonical_generator = [] {
+        polynomial_type result(2);
+        result[0] = value_type::one();
+        result[1] = value_type::zero();
+        return result;
+    };
+    BOOST_CHECK_THROW((math::polynomial_square_root_context<backend_type>(divisor_context, arithmetic_context,
+                                                                          noncanonical_generator)),
+                      std::invalid_argument);
+
+    auto unreduced_generator = [&] { return irreducible_divisor; };
+    BOOST_CHECK_THROW(
+        (math::polynomial_square_root_context<backend_type>(divisor_context, arithmetic_context, unreduced_generator)),
+        std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_CASE(euler_criterion_classifies_squares_in_a_quadratic_quotient_field) {
     const value_type non_residue = first_quadratic_non_residue();
     const polynomial_type irreducible_divisor = {-non_residue, value_type::zero(), value_type::one()};

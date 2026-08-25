@@ -60,9 +60,15 @@ namespace nil::crypto3::math {
      * the order decomposition and this cached nonresidue power for every square root modulo B. Irreducibility is a
      * caller precondition and is not tested. The referenced divisor context must outlive this context.
      *
-     * @throws std::invalid_argument if B is constant, K has characteristic two, or quadratic_non_residue is not a
-     *         reduced nonsquare residue modulo B.
-     * @pre B is irreducible and quadratic_non_residue is a nonempty canonical coefficient polynomial.
+     * Tonelli-Shanks needs a nonsquare z. Whether a polynomial is a square depends on B, so the second constructor asks
+     * a caller-owned generator for candidates until one is nonsquare modulo B. Each candidate polynomial represents
+     * one element of K[X]/(B). The caller owns the generator and controls its random source and seed. The first
+     * constructor can be used when the caller already knows a suitable z.
+     *
+     * @throws std::invalid_argument if B is constant, K has characteristic two, the explicitly supplied nonresidue is
+     *         square, or a supplied or generated representative is empty, noncanonical, or not reduced modulo B.
+     * @pre B is irreducible. An explicitly supplied nonresidue is canonical. A generator returns canonical reduced
+     *      representatives and eventually returns a nonsquare.
      */
     template<detail::SupportsDivrem Backend>
         requires algebra::FieldValue<typename Backend::polynomial_type::value_type>
@@ -76,24 +82,30 @@ namespace nil::crypto3::math {
                                        const polynomial_divisor_context<Backend> &divisor_context,
                                        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) :
             divisor_context_(&divisor_context) {
-            const std::size_t extension_degree = divisor_context.degree();
-            if (extension_degree == 0) {
-                throw std::invalid_argument("polynomial square roots require a nonconstant divisor");
-            }
-            if (algebra::fields::field_characteristic<field_type>() == 2) {
-                throw std::invalid_argument("polynomial square roots in characteristic two are not implemented");
-            }
-            if (quadratic_non_residue.size() > extension_degree) {
-                throw std::invalid_argument("a polynomial square-root nonresidue must be reduced modulo the divisor");
-            }
-
-            order_decomposition_ =
-                algebra::fields::extension_field_multiplicative_group_decomposition<field_type>(extension_degree);
+            initialize_order_decomposition();
+            require_canonical_reduced(quadratic_non_residue);
             if (detail::is_square_mod_impl(quadratic_non_residue, divisor_context, arithmetic_context,
                                            &order_decomposition_)) {
                 throw std::invalid_argument("a polynomial square-root context requires a quadratic nonresidue");
             }
-            powmod(non_residue_to_odd_order_, quadratic_non_residue, odd_order(), divisor_context, arithmetic_context);
+            cache_non_residue_power(quadratic_non_residue, arithmetic_context);
+        }
+
+        template<typename Generator>
+            requires requires(Generator &generator) {
+                { generator() } -> std::convertible_to<polynomial_type>;
+            }
+        polynomial_square_root_context(const polynomial_divisor_context<Backend> &divisor_context,
+                                       polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                       Generator &generator) : divisor_context_(&divisor_context) {
+            initialize_order_decomposition();
+
+            polynomial_type candidate;
+            do {
+                candidate = generator();
+                require_canonical_reduced(candidate);
+            } while (detail::is_square_mod_impl(candidate, divisor_context, arithmetic_context, &order_decomposition_));
+            cache_non_residue_power(candidate, arithmetic_context);
         }
 
         const boost::multiprecision::cpp_int &odd_order() const {
@@ -113,6 +125,33 @@ namespace nil::crypto3::math {
         }
 
     private:
+        void initialize_order_decomposition() {
+            const std::size_t extension_degree = divisor_context().degree();
+            if (extension_degree == 0) {
+                throw std::invalid_argument("polynomial square roots require a nonconstant divisor");
+            }
+            if (algebra::fields::field_characteristic<field_type>() == 2) {
+                throw std::invalid_argument("polynomial square roots in characteristic two are not implemented");
+            }
+            order_decomposition_ =
+                algebra::fields::extension_field_multiplicative_group_decomposition<field_type>(extension_degree);
+        }
+
+        void require_canonical_reduced(const polynomial_type &candidate) const {
+            if (candidate.empty() || candidate.size() > divisor_context().degree() ||
+                (candidate.size() > 1 && candidate.back() == value_type::zero())) {
+                throw std::invalid_argument(
+                    "a polynomial square-root nonresidue candidate must be a nonempty canonical reduced "
+                    "representative");
+            }
+        }
+
+        void cache_non_residue_power(const polynomial_type &quadratic_non_residue,
+                                     polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+            powmod(non_residue_to_odd_order_, quadratic_non_residue, odd_order(), divisor_context(),
+                   arithmetic_context);
+        }
+
         const polynomial_divisor_context<Backend> *divisor_context_;
         algebra::fields::multiplicative_group_decomposition order_decomposition_;
         polynomial_type non_residue_to_odd_order_;
