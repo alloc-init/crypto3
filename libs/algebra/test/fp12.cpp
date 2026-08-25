@@ -219,12 +219,9 @@ BOOST_AUTO_TEST_CASE(bn254_subgroup_algorithms_match_direct_exponentiation) {
     using value_type = typename field_type::value_type;
     using boost::multiprecision::cpp_int;
 
-    cpp_int odd_order = fields::field_order<field_type>() - 1;
-    std::size_t two_adicity = 0;
-    while ((odd_order & 1) == 0) {
-        odd_order >>= 1;
-        ++two_adicity;
-    }
+    const auto order_decomposition = fields::field_multiplicative_group_decomposition<field_type>();
+    const cpp_int &odd_order = order_decomposition.odd_order;
+    const std::size_t two_adicity = order_decomposition.two_adicity;
     boost::random::mt19937 rng(0x2a11);
 
     for (std::size_t i = 0; i < 2; ++i) {
@@ -274,12 +271,9 @@ BOOST_AUTO_TEST_CASE(generic_subgroup_algorithms_match_direct_formulas) {
     using value_type = typename field_type::value_type;
     using boost::multiprecision::cpp_int;
 
-    cpp_int odd_order = fields::field_order<field_type>() - 1;
-    std::size_t two_adicity = 0;
-    while ((odd_order & 1) == 0) {
-        odd_order >>= 1;
-        ++two_adicity;
-    }
+    const auto order_decomposition = fields::field_multiplicative_group_decomposition<field_type>();
+    const cpp_int &odd_order = order_decomposition.odd_order;
+    const std::size_t two_adicity = order_decomposition.two_adicity;
     boost::random::mt19937 rng(0x3812);
     const value_type x = random_fp12<field_type>(rng);
     BOOST_CHECK_EQUAL(fields::two_primary_component(x, odd_order, two_adicity), x.pow(odd_order));

@@ -71,4 +71,34 @@ BOOST_AUTO_TEST_CASE(extension_field_order_is_characteristic_to_the_extension_de
     BOOST_CHECK(fields::field_characteristic<fq12_field_type::value_type>() == characteristic);
 }
 
+BOOST_AUTO_TEST_CASE(runtime_extension_field_order_is_base_field_order_to_the_requested_degree) {
+    const boost::multiprecision::cpp_int fq_order = fields::field_order<fq_field_type>();
+    const boost::multiprecision::cpp_int fq12_order = fields::field_order<fq12_field_type>();
+
+    BOOST_CHECK(fields::extension_field_order<fq_field_type>(1) == fq_order);
+    BOOST_CHECK(fields::extension_field_order<fq_field_type>(2) == fq_order * fq_order);
+    BOOST_CHECK(fields::extension_field_order<fq12_field_type>(2) == fq12_order * fq12_order);
+}
+
+BOOST_AUTO_TEST_CASE(runtime_extension_field_order_rejects_degree_zero) {
+    BOOST_CHECK_THROW(fields::extension_field_order<fq_field_type>(0), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(multiplicative_group_order_decomposition_separates_the_two_primary_part) {
+    const auto fq12_decomposition = fields::field_multiplicative_group_decomposition<fq12_field_type>();
+    BOOST_CHECK((fq12_decomposition.odd_order & 1) == 1);
+    BOOST_CHECK((fq12_decomposition.odd_order << fq12_decomposition.two_adicity) ==
+                fields::field_order<fq12_field_type>() - 1);
+
+    const auto quadratic_decomposition = fields::extension_field_multiplicative_group_decomposition<fq_field_type>(2);
+    BOOST_CHECK((quadratic_decomposition.odd_order & 1) == 1);
+    BOOST_CHECK((quadratic_decomposition.odd_order << quadratic_decomposition.two_adicity) ==
+                fields::extension_field_order<fq_field_type>(2) - 1);
+}
+
+BOOST_AUTO_TEST_CASE(multiplicative_group_order_decomposition_rejects_nonpositive_orders) {
+    BOOST_CHECK_THROW(fields::decompose_multiplicative_group_order(0), std::invalid_argument);
+    BOOST_CHECK_THROW(fields::decompose_multiplicative_group_order(-1), std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

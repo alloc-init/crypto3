@@ -90,12 +90,7 @@ namespace nil::crypto3::math {
                         "Cantor-Zassenhaus splitting for characteristic two is not implemented");
                 }
 
-                const boost::multiprecision::cpp_int field_order = algebra::fields::field_order<field_type>();
-                exponent_ = 1;
-                for (std::size_t i = 0; i < irreducible_factor_degree_; ++i) {
-                    exponent_ *= field_order;
-                }
-                exponent_ = (exponent_ - 1) / 2;
+                exponent_ = (algebra::fields::extension_field_order<field_type>(irreducible_factor_degree_) - 1) / 2;
             }
 
             std::size_t irreducible_factor_degree() const {
