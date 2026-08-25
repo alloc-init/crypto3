@@ -153,4 +153,39 @@ BOOST_AUTO_TEST_CASE(square_testing_rejects_inputs_outside_the_quotient_field_co
                       std::invalid_argument);
 }
 
+BOOST_AUTO_TEST_CASE(tonelli_shanks_recovers_square_roots_in_a_quotient_field) {
+    const value_type base_non_residue = first_quadratic_non_residue();
+    const polynomial_type irreducible_divisor = {-base_non_residue, value_type::zero(), value_type::one()};
+    const polynomial_type quotient_non_residue = {value_type::zero(), value_type::one()};
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    math::polynomial_divisor_context<backend_type> divisor_context(irreducible_divisor, 1, arithmetic_context);
+    const math::polynomial_square_root_context<backend_type> square_root_context(quotient_non_residue, divisor_context,
+                                                                                 arithmetic_context);
+
+    const polynomial_type value = {value_type(3), value_type(5)};
+    polynomial_type square;
+    math::squaremod(square, value, divisor_context, arithmetic_context);
+
+    polynomial_type root;
+    BOOST_REQUIRE(math::square_root_mod(root, square, square_root_context, arithmetic_context));
+    polynomial_type recovered_square;
+    math::squaremod(recovered_square, root, divisor_context, arithmetic_context);
+    BOOST_CHECK(recovered_square == square);
+
+    polynomial_type aliased_root = square;
+    BOOST_REQUIRE(math::square_root_mod(aliased_root, aliased_root, square_root_context, arithmetic_context));
+    math::squaremod(recovered_square, aliased_root, divisor_context, arithmetic_context);
+    BOOST_CHECK(recovered_square == square);
+
+    const polynomial_type zero = {value_type::zero()};
+    BOOST_REQUIRE(math::square_root_mod(root, zero, square_root_context, arithmetic_context));
+    BOOST_CHECK(root == zero);
+
+    BOOST_CHECK(!math::square_root_mod(root, quotient_non_residue, square_root_context, arithmetic_context));
+    BOOST_CHECK(root == zero);
+
+    BOOST_CHECK_THROW(math::square_root_mod(root, irreducible_divisor, square_root_context, arithmetic_context),
+                      std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

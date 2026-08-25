@@ -28,6 +28,7 @@
 #include <concepts>
 #include <cstddef>
 #include <stdexcept>
+#include <utility>
 
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -57,7 +58,7 @@ namespace nil::crypto3::math {
      *
      * Given a quadratic nonresidue z in that quotient field, the context also stores z^odd_order. Tonelli-Shanks reuses
      * the order decomposition and this cached nonresidue power for every square root modulo B. Irreducibility is a
-     * caller precondition and is not tested.
+     * caller precondition and is not tested. The referenced divisor context must outlive this context.
      *
      * @throws std::invalid_argument if B is constant, K has characteristic two, or quadratic_non_residue is not a
      *         reduced nonsquare residue modulo B.
@@ -73,7 +74,8 @@ namespace nil::crypto3::math {
 
         polynomial_square_root_context(const polynomial_type &quadratic_non_residue,
                                        const polynomial_divisor_context<Backend> &divisor_context,
-                                       polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                                       polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) :
+            divisor_context_(&divisor_context) {
             const std::size_t extension_degree = divisor_context.degree();
             if (extension_degree == 0) {
                 throw std::invalid_argument("polynomial square roots require a nonconstant divisor");
@@ -106,7 +108,12 @@ namespace nil::crypto3::math {
             return non_residue_to_odd_order_;
         }
 
+        const polynomial_divisor_context<Backend> &divisor_context() const {
+            return *divisor_context_;
+        }
+
     private:
+        const polynomial_divisor_context<Backend> *divisor_context_;
         algebra::fields::multiplicative_group_decomposition order_decomposition_;
         polynomial_type non_residue_to_odd_order_;
     };
@@ -200,6 +207,97 @@ namespace nil::crypto3::math {
                        const polynomial_divisor_context<Backend> &divisor_context,
                        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
         return detail::is_square_mod_impl(input, divisor_context, arithmetic_context, nullptr);
+    }
+
+    /**
+     * Compute a square root of input in K[X]/(B) with Tonelli-Shanks, using the multiplicative-group decomposition and
+     * quadratic nonresidue cached in square_root_context. The irreducible polynomial B is stored in the divisor context
+     * referenced by square_root_context. The result is canonical and may alias input.
+     *
+     * The function returns false when input is not a square. In that case output is set to the zero polynomial. Zero
+     * is its own square root.
+     *
+     * @throws std::invalid_argument if input is not a reduced quotient-field representative.
+     * @pre B is irreducible and input is a nonempty canonical coefficient polynomial.
+     */
+    template<detail::SupportsDivrem Backend>
+        requires algebra::FieldValue<typename Backend::polynomial_type::value_type>
+    bool square_root_mod(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
+                         const polynomial_square_root_context<Backend> &square_root_context,
+                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using value_type = typename polynomial_type::value_type;
+        const polynomial_divisor_context<Backend> &divisor_context = square_root_context.divisor_context();
+
+        if (input.size() > divisor_context.degree()) {
+            throw std::invalid_argument("a polynomial square root requires a reduced quotient-field representative");
+        }
+        if (input.size() == 1 && input[0] == value_type::zero()) {
+            output.assign(1, value_type::zero());
+            return true;
+        }
+
+        polynomial_type root;
+        polynomial_type input_to_odd_order;
+        polynomial_type non_residue_power = square_root_context.non_residue_to_odd_order();
+
+        // Write the quotient field's multiplicative-group order as odd_order * 2^S. For input a and the cached
+        // nonresidue z, Tonelli-Shanks starts with
+        //
+        //     input_to_odd_order = a^odd_order,
+        //     root               = a^((odd_order + 1) / 2),
+        //     non_residue_power  = z^odd_order.
+        //
+        // The first two values satisfy root^2 = a * input_to_odd_order.
+        powmod(input_to_odd_order, input, square_root_context.odd_order(), divisor_context, arithmetic_context);
+        boost::multiprecision::cpp_int root_exponent = square_root_context.odd_order() + 1;
+        root_exponent >>= 1;
+        powmod(root, input, root_exponent, divisor_context, arithmetic_context);
+
+        std::size_t remaining_two_adicity = square_root_context.two_adicity();
+        const polynomial_type one = {value_type::one()};
+        while (input_to_odd_order != one) {
+            // The odd-order exponent places this value in the power-of-two subgroup. Find the smallest i for which
+            //
+            //     input_to_odd_order^(2^i) = 1.
+            //
+            // A square must reach one for some i < M, where M = remaining_two_adicity and its current order divides
+            // 2^M.
+            polynomial_type power = input_to_odd_order;
+            std::size_t first_one_power = 0;
+            do {
+                squaremod(power, power, divisor_context, arithmetic_context);
+                ++first_one_power;
+            } while (first_one_power < remaining_two_adicity && power != one);
+
+            if (first_one_power == remaining_two_adicity) {
+                output.assign(1, value_type::zero());
+                return false;
+            }
+
+            // Set correction = non_residue_power^(2^(M - i - 1)), then update
+            //
+            //     non_residue_power = correction^2,
+            //     input_to_odd_order = input_to_odd_order * correction^2,
+            //     root               = root * correction,
+            //     M                  = i.
+            //
+            // This preserves root^2 = input * input_to_odd_order while reducing input_to_odd_order's two-power order
+            // from 2^M to 2^i.
+            // The previous nonresidue power is no longer needed, so move its storage into the correction.
+            polynomial_type correction = std::move(non_residue_power);
+            for (std::size_t i = 0; i < remaining_two_adicity - first_one_power - 1; ++i) {
+                squaremod(correction, correction, divisor_context, arithmetic_context);
+            }
+
+            squaremod(non_residue_power, correction, divisor_context, arithmetic_context);
+            mulmod(input_to_odd_order, input_to_odd_order, non_residue_power, divisor_context, arithmetic_context);
+            mulmod(root, root, correction, divisor_context, arithmetic_context);
+            remaining_two_adicity = first_one_power;
+        }
+
+        output = std::move(root);
+        return true;
     }
 
 }    // namespace nil::crypto3::math
