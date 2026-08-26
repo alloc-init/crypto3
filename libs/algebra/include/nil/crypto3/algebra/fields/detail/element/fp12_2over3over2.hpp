@@ -218,20 +218,12 @@ namespace nil {
                             }
 
                             using boost::multiprecision::cpp_int;
-                            static const cpp_int order_minus_one = field_order<field_type>() - 1;
-                            static const auto parameters = []() {
-                                cpp_int odd_part = order_minus_one;
-                                std::size_t power_of_two = 0;
-                                while ((odd_part & 1) == 0) {
-                                    odd_part >>= 1;
-                                    ++power_of_two;
-                                }
-                                return std::pair<cpp_int, std::size_t>(odd_part, power_of_two);
-                            }();
+                            static const auto parameters = field_multiplicative_group_decomposition<field_type>();
+                            static const cpp_int order_minus_one = parameters.odd_order << parameters.two_adicity;
 
-                            const cpp_int &odd_part = parameters.first;
-                            const std::size_t power_of_two = parameters.second;
-                            if (power_of_two == 1) {
+                            const cpp_int &odd_order = parameters.odd_order;
+                            const std::size_t two_adicity = parameters.two_adicity;
+                            if (two_adicity == 1) {
                                 return pow((order_minus_one + 2) >> 2);
                             }
 
@@ -241,7 +233,7 @@ namespace nil {
                                     const element_fp12_2over3over2 value(underlying_type::zero(),
                                                                          underlying_type(base_type(candidate)));
                                     if (value.pow(order_minus_one >> 1) == -one()) {
-                                        return value.pow(parameters.first);
+                                        return value.pow(parameters.odd_order);
                                     }
                                 }
                                 assert(false && "failed to find an Fp12 quadratic non-residue");
@@ -249,9 +241,9 @@ namespace nil {
                             }();
 
                             element_fp12_2over3over2 c = non_residue_to_odd_part;
-                            element_fp12_2over3over2 t = pow(odd_part);
-                            element_fp12_2over3over2 root = pow((odd_part + 1) >> 1);
-                            std::size_t remaining_power = power_of_two;
+                            element_fp12_2over3over2 t = pow(odd_order);
+                            element_fp12_2over3over2 root = pow((odd_order + 1) >> 1);
+                            std::size_t remaining_power = two_adicity;
 
                             while (t != one()) {
                                 element_fp12_2over3over2 t_squared = t;

@@ -26,12 +26,33 @@
 #define CRYPTO3_ALGEBRA_FIELDS_FIELD_ORDER_HPP
 
 #include <cstddef>
+#include <stdexcept>
+#include <utility>
 
 #include <boost/multiprecision/cpp_int.hpp>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
 
 namespace nil::crypto3::algebra::fields {
+
+    struct multiplicative_group_decomposition {
+        boost::multiprecision::cpp_int odd_order;
+        std::size_t two_adicity = 0;
+    };
+
+    /** Decompose a positive multiplicative-group order into odd_order * 2^two_adicity. */
+    inline multiplicative_group_decomposition
+        decompose_multiplicative_group_order(boost::multiprecision::cpp_int group_order) {
+        if (group_order <= 0) {
+            throw std::invalid_argument("a multiplicative-group order must be positive");
+        }
+        std::size_t two_adicity = 0;
+        while ((group_order & 1) == 0) {
+            group_order >>= 1;
+            ++two_adicity;
+        }
+        return {std::move(group_order), two_adicity};
+    }
 
     template<typename FieldOrValue, bool = FieldValue<FieldOrValue>>
     struct field_type {
@@ -66,6 +87,33 @@ namespace nil::crypto3::algebra::fields {
             order *= characteristic;
         }
         return order;
+    }
+
+    /** Return the number of elements in a positive-degree extension of FieldType. */
+    template<typename FieldType>
+    boost::multiprecision::cpp_int extension_field_order(std::size_t extension_degree) {
+        if (extension_degree == 0) {
+            throw std::invalid_argument("a field extension must have positive degree");
+        }
+        const boost::multiprecision::cpp_int base_field_order = field_order<FieldType>();
+        boost::multiprecision::cpp_int order = 1;
+        for (std::size_t i = 0; i < extension_degree; ++i) {
+            order *= base_field_order;
+        }
+        return order;
+    }
+
+    /** Decompose the multiplicative-group order of FieldType into odd_order * 2^two_adicity. */
+    template<typename FieldType>
+    multiplicative_group_decomposition field_multiplicative_group_decomposition() {
+        return decompose_multiplicative_group_order(field_order<FieldType>() - 1);
+    }
+
+    /** Decompose the multiplicative-group order of a positive-degree extension of FieldType. */
+    template<typename FieldType>
+    multiplicative_group_decomposition
+        extension_field_multiplicative_group_decomposition(std::size_t extension_degree) {
+        return decompose_multiplicative_group_order(extension_field_order<FieldType>(extension_degree) - 1);
     }
 
 }    // namespace nil::crypto3::algebra::fields
