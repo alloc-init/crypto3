@@ -10,6 +10,7 @@ Crypto3.Math consists of several parts to review:
 
 * [Manual](@ref fft_manual).
 * [Concepts](@ref fft_concepts).
+* [Exact geometric-domain Lagrange weights](@ref math_geometric_lagrange).
 * [Polynomial arithmetic infrastructure](@ref math_polynomial_arithmetic).
 * [Polynomial factorization](@ref math_polynomial_factorization).
 * [Polynomial recovery](@ref math_polynomial_recovery).
@@ -86,6 +87,9 @@ The geometric sequence domain is of size _m_ and is applied for more general cas
 conversion algorithm between the monomial and the Newton bases. The domain takes advantage of further simplications to
 Newton evaluation and interpolation by choosing sample points that form a geometric progression, _a\_n = r^(n-1)_, see
 \[BS05\].
+
+The field-element path also provides [exact geometric-domain Lagrange weights](@ref math_geometric_lagrange) with
+linear domain precomputation and linear work per evaluation point.
 
 ## Dependencies ## {#fft_dependencies}
 

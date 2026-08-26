@@ -6,6 +6,8 @@
 
 @subpage fft_concepts
 
+@subpage math_geometric_lagrange
+
 @subpage math_polynomial_arithmetic
 
 @subpage math_polynomial_factorization

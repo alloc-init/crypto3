@@ -7,8 +7,10 @@ backend-aware polynomial arithmetic. The higher-level polynomial algorithms shar
 `polynomial_arithmetic::polynomial_context<Backend>`. Reusing a context lets its multiplication backend retain plans,
 configuration, and scratch storage across an operation.
 
-The following pages describe the shared arithmetic infrastructure and the two main higher-level polynomial workflows:
+The following pages describe the optimized domain and polynomial facilities:
 
+* [Exact geometric-domain Lagrange weights](@ref math_geometric_lagrange) covers exact-size geometric points,
+  barycentric precomputation, batch inversion, vanishing polynomials, and linear-time weight evaluation.
 * [Polynomial arithmetic infrastructure](@ref math_polynomial_arithmetic) describes multiplication backends,
   reusable contexts, division, GCD, quotient-ring arithmetic, modular composition, and Frobenius maps shared by the
   higher-level algorithms.
