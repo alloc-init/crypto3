@@ -34,7 +34,7 @@
 #include <stdexcept>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
-#include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
 

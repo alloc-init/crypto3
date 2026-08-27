@@ -31,8 +31,8 @@
 #include <vector>
 
 #include <nil/crypto3/math/polynomial/concepts.hpp>
-#include <nil/crypto3/math/polynomial/gcd.hpp>
-#include <nil/crypto3/math/polynomial/polynomial_division.hpp>
+#include <nil/crypto3/math/polynomial/arithmetic/gcd.hpp>
+#include <nil/crypto3/math/polynomial/arithmetic/polynomial_division.hpp>
 
 namespace nil::crypto3::math {
 

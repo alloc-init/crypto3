@@ -42,12 +42,12 @@ maps used by these stages.
 
 | Facility | Header |
 |---|---|
-| Result and callback types | `<nil/crypto3/math/polynomial/polynomial_factorization.hpp>` |
-| Square-free factorization | `<nil/crypto3/math/polynomial/square_free_factorization.hpp>` |
-| Reference distinct-degree factorization | `<nil/crypto3/math/polynomial/distinct_degree_factorization.hpp>` |
-| Kaltofen-Shoup distinct-degree factorization | `<nil/crypto3/math/polynomial/kaltofen_shoup_distinct_degree_factorization.hpp>` |
-| Equal-degree factorization | `<nil/crypto3/math/polynomial/equal_degree_factorization.hpp>` |
-| Complete factorization | `<nil/crypto3/math/polynomial/complete_factorization.hpp>` |
+| Result and callback types | `<nil/crypto3/math/polynomial/factorization/polynomial_factorization.hpp>` |
+| Square-free factorization | `<nil/crypto3/math/polynomial/factorization/square_free_factorization.hpp>` |
+| Reference distinct-degree factorization | `<nil/crypto3/math/polynomial/factorization/distinct_degree_factorization.hpp>` |
+| Kaltofen-Shoup distinct-degree factorization | `<nil/crypto3/math/polynomial/factorization/kaltofen_shoup_distinct_degree_factorization.hpp>` |
+| Equal-degree factorization | `<nil/crypto3/math/polynomial/factorization/equal_degree_factorization.hpp>` |
+| Complete factorization | `<nil/crypto3/math/polynomial/factorization/complete_factorization.hpp>` |
 
 ## Complete factorization
 
@@ -55,8 +55,8 @@ The simplest entry point takes a polynomial arithmetic context and a caller-owne
 
 ```cpp
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
-#include <nil/crypto3/math/polynomial/complete_factorization.hpp>
-#include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
+#include <nil/crypto3/math/polynomial/factorization/complete_factorization.hpp>
+#include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/random/algebraic_engine.hpp>
 
 namespace math = nil::crypto3::math;

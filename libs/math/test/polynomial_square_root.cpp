@@ -36,8 +36,8 @@
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
 
-#include <nil/crypto3/math/polynomial/polynomial_square_root.hpp>
-#include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
+#include <nil/crypto3/math/polynomial/quotient_ring/polynomial_square_root.hpp>
+#include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 
 namespace {
     namespace math = nil::crypto3::math;

@@ -50,7 +50,7 @@
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/detail/profiling.hpp>
 
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
-#include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 #include <nil/crypto3/math/algorithms/calculate_domain_set.hpp>
 
 #include <nil/crypto3/marshalling/zk/types/commitments/eval_storage.hpp>

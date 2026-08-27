@@ -32,9 +32,9 @@
 #include <vector>
 
 #include <nil/crypto3/math/algorithms/mixed_radix_fft.hpp>
-#include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
-#include <nil/crypto3/math/polynomial/polynomial_backend.hpp>
+#include <nil/crypto3/math/polynomial/backends/polynomial_backend.hpp>
 
 namespace nil::crypto3::math::polynomial_arithmetic {
 

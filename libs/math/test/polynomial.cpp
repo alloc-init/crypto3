@@ -33,7 +33,7 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/bls12.hpp>
 
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
-#include <nil/crypto3/math/polynomial/shift.hpp>
+#include <nil/crypto3/math/polynomial/operations/shift.hpp>
 
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::math;

@@ -29,9 +29,9 @@
 #include <utility>
 #include <vector>
 
-#include <nil/crypto3/math/polynomial/equal_degree_factorization.hpp>
-#include <nil/crypto3/math/polynomial/kaltofen_shoup_distinct_degree_factorization.hpp>
-#include <nil/crypto3/math/polynomial/square_free_factorization.hpp>
+#include <nil/crypto3/math/polynomial/factorization/equal_degree_factorization.hpp>
+#include <nil/crypto3/math/polynomial/factorization/kaltofen_shoup_distinct_degree_factorization.hpp>
+#include <nil/crypto3/math/polynomial/factorization/square_free_factorization.hpp>
 
 namespace nil::crypto3::math {
 

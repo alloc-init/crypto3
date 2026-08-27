@@ -20,8 +20,8 @@ bounds, random sources, and any policy for combining or rejecting recovered repr
 |---|---|
 | Field orders and multiplicative-group decomposition | `<nil/crypto3/algebra/fields/field_order.hpp>` |
 | Coefficient-field square-root helpers | `<nil/crypto3/algebra/fields/field_algorithms.hpp>` |
-| Quotient-field square testing and roots | `<nil/crypto3/math/polynomial/polynomial_square_root.hpp>` |
-| Bounded rational reconstruction | `<nil/crypto3/math/polynomial/polynomial_rational_reconstruction.hpp>` |
+| Quotient-field square testing and roots | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_square_root.hpp>` |
+| Bounded rational reconstruction | `<nil/crypto3/math/polynomial/reconstruction/polynomial_rational_reconstruction.hpp>` |
 
 ## Field orders and coefficient square roots
 
@@ -70,7 +70,7 @@ characterize squares if the quotient has zero divisors.
 
 ```cpp
 #include <algorithm>
-#include <nil/crypto3/math/polynomial/polynomial_square_root.hpp>
+#include <nil/crypto3/math/polynomial/quotient_ring/polynomial_square_root.hpp>
 
 // B must be irreducible. Its degree is d.
 const std::size_t d = B.size() - 1;
@@ -115,7 +115,7 @@ numerator bound, while tracking the corresponding coefficient of `R`. The return
 numerator is scaled by the same field element.
 
 ```cpp
-#include <nil/crypto3/math/polynomial/polynomial_rational_reconstruction.hpp>
+#include <nil/crypto3/math/polynomial/reconstruction/polynomial_rational_reconstruction.hpp>
 
 polynomial_type numerator;
 polynomial_type denominator;

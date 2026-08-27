@@ -37,8 +37,8 @@
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
 #include <nil/crypto3/math/algorithms/mixed_radix_fft.hpp>
-#include <nil/crypto3/math/polynomial/basic_operations.hpp>
-#include <nil/crypto3/math/polynomial/mixed_radix_backend.hpp>
+#include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>
 
 namespace {
 

@@ -23,15 +23,15 @@ The main dependency chain is:
 | Facility | Header |
 |---|---|
 | Representation concepts | `<nil/crypto3/math/polynomial/concepts.hpp>` |
-| Backend concept and arithmetic context | `<nil/crypto3/math/polynomial/polynomial_backend.hpp>` |
-| Schoolbook and mixed-radix backends | `<nil/crypto3/math/polynomial/schoolbook_backend.hpp>`, `<nil/crypto3/math/polynomial/mixed_radix_backend.hpp>` |
-| Power-series inversion | `<nil/crypto3/math/polynomial/power_series.hpp>` |
-| Divisor context and division | `<nil/crypto3/math/polynomial/polynomial_division.hpp>` |
-| GCD | `<nil/crypto3/math/polynomial/gcd.hpp>` |
-| Quotient-ring multiplication | `<nil/crypto3/math/polynomial/polynomial_modular_arithmetic.hpp>` |
-| Quotient-ring exponentiation | `<nil/crypto3/math/polynomial/polynomial_exponentiation.hpp>` |
-| Modular composition | `<nil/crypto3/math/polynomial/polynomial_composition.hpp>` |
-| Frobenius maps | `<nil/crypto3/math/polynomial/polynomial_frobenius.hpp>` |
+| Backend concept and arithmetic context | `<nil/crypto3/math/polynomial/backends/polynomial_backend.hpp>` |
+| Schoolbook and mixed-radix backends | `<nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>`, `<nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>` |
+| Power-series inversion | `<nil/crypto3/math/polynomial/arithmetic/power_series.hpp>` |
+| Divisor context and division | `<nil/crypto3/math/polynomial/arithmetic/polynomial_division.hpp>` |
+| GCD | `<nil/crypto3/math/polynomial/arithmetic/gcd.hpp>` |
+| Quotient-ring multiplication | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_modular_arithmetic.hpp>` |
+| Quotient-ring exponentiation | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_exponentiation.hpp>` |
+| Modular composition | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_composition.hpp>` |
+| Frobenius maps | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_frobenius.hpp>` |
 
 ## Multiplication backends
 

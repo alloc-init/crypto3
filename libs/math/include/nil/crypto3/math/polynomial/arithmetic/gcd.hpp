@@ -30,7 +30,7 @@
 #include <cstddef>
 #include <utility>
 
-#include <nil/crypto3/math/polynomial/half_gcd.hpp>
+#include <nil/crypto3/math/polynomial/arithmetic/half_gcd.hpp>
 
 namespace nil::crypto3::math {
 

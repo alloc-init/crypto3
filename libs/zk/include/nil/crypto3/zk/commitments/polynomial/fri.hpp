@@ -34,7 +34,7 @@
 
 #include <nil/crypto3/math/polynomial/concepts.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
-#include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 
 #include <nil/crypto3/container/merkle/tree.hpp>
 #include <nil/crypto3/container/merkle/proof.hpp>

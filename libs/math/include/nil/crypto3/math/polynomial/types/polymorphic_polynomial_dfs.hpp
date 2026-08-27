@@ -34,8 +34,8 @@
 #include <variant>
 #include <vector>
 
-#include "polymorphic_polynomial.hpp"
-#include "polynomial_dfs.hpp"
+#include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
+#include <nil/crypto3/math/polynomial/types/polymorphic_polynomial.hpp>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/bench/scoped_profiler.hpp>

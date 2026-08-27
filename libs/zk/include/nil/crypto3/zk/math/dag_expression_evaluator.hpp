@@ -34,7 +34,7 @@
 #include <boost/bimap/unordered_set_of.hpp>
 #include <boost/container/small_vector.hpp>
 
-#include <nil/crypto3/math/polynomial/static_simd_vector.hpp>
+#include <nil/crypto3/math/polynomial/types/static_simd_vector.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
 
 #include <nil/crypto3/zk/math/expression.hpp>

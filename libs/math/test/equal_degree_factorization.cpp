@@ -36,8 +36,8 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 
-#include <nil/crypto3/math/polynomial/equal_degree_factorization.hpp>
-#include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
+#include <nil/crypto3/math/polynomial/factorization/equal_degree_factorization.hpp>
+#include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/random/algebraic_engine.hpp>
 
 namespace {

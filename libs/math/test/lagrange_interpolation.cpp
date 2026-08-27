@@ -35,7 +35,7 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/bls12.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
 
-#include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::math;

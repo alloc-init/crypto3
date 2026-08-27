@@ -37,7 +37,7 @@
 #include <boost/property_tree/json_parser.hpp>
 
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
-#include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 
 #include <nil/crypto3/zk/transcript/fiat_shamir.hpp>
 #include <nil/crypto3/zk/commitments/type_traits.hpp>

@@ -33,10 +33,10 @@
 #include <vector>
 
 #include <nil/crypto3/math/detail/integer_sqrt.hpp>
-#include <nil/crypto3/math/polynomial/distinct_degree_factorization.hpp>
-#include <nil/crypto3/math/polynomial/gcd.hpp>
-#include <nil/crypto3/math/polynomial/polynomial_factorization.hpp>
-#include <nil/crypto3/math/polynomial/polynomial_frobenius.hpp>
+#include <nil/crypto3/math/polynomial/factorization/distinct_degree_factorization.hpp>
+#include <nil/crypto3/math/polynomial/arithmetic/gcd.hpp>
+#include <nil/crypto3/math/polynomial/factorization/polynomial_factorization.hpp>
+#include <nil/crypto3/math/polynomial/quotient_ring/polynomial_frobenius.hpp>
 
 namespace nil::crypto3::math::detail {
 

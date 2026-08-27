@@ -39,7 +39,7 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp>
 
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
-#include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 #include <nil/crypto3/math/algorithms/calculate_domain_set.hpp>
 
 #include <nil/crypto3/hash/algorithm/hash.hpp>

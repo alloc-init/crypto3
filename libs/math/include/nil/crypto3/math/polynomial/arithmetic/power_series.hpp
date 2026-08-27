@@ -31,7 +31,7 @@
 #include <stdexcept>
 #include <utility>
 
-#include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
 
 namespace nil::crypto3::math {
 
