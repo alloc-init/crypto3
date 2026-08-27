@@ -35,9 +35,9 @@
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 #include <nil/crypto3/algebra/fields/params.hpp>
 
-#include <nil/crypto3/math/polynomial/mixed_radix_backend.hpp>
-#include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
-#include <nil/crypto3/math/polynomial/square_free_factorization.hpp>
+#include <nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>
+#include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
+#include <nil/crypto3/math/polynomial/factorization/square_free_factorization.hpp>
 
 namespace {
     namespace math = nil::crypto3::math;

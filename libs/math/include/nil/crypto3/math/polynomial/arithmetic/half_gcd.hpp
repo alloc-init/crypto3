@@ -29,8 +29,8 @@
 #include <stdexcept>
 #include <utility>
 
-#include <nil/crypto3/math/polynomial/polynomial_division.hpp>
-#include <nil/crypto3/math/polynomial/shift.hpp>
+#include <nil/crypto3/math/polynomial/arithmetic/polynomial_division.hpp>
+#include <nil/crypto3/math/polynomial/operations/shift.hpp>
 
 namespace nil::crypto3::math::detail {
 

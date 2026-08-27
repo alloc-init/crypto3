@@ -98,7 +98,7 @@ canonical storage, arithmetic operators, or alias-safe operations.
 
 The polynomial multiplication backend concept is declared in:
 
-    <nil/crypto3/math/polynomial/polynomial_backend.hpp>
+    <nil/crypto3/math/polynomial/backends/polynomial_backend.hpp>
 
 `polynomial_arithmetic::PolynomialBackend<Backend>` requires an associated `polynomial_type` that satisfies
 `CoefficientPolynomial` and three operations:

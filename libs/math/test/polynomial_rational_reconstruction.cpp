@@ -34,8 +34,8 @@
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 
-#include <nil/crypto3/math/polynomial/polynomial_rational_reconstruction.hpp>
-#include <nil/crypto3/math/polynomial/schoolbook_backend.hpp>
+#include <nil/crypto3/math/polynomial/reconstruction/polynomial_rational_reconstruction.hpp>
+#include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 
 namespace {
     namespace fields = nil::crypto3::algebra::fields;

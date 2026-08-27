@@ -37,7 +37,7 @@
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 #include <nil/crypto3/math/domains/detail/basic_radix2_domain_aux.hpp>
 #include <nil/crypto3/math/detail/field_utils.hpp>
-#include <nil/crypto3/math/polynomial/polynomial_backend.hpp>
+#include <nil/crypto3/math/polynomial/backends/polynomial_backend.hpp>
 
 namespace nil {
     namespace crypto3 {

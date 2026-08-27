@@ -35,7 +35,7 @@
 #include <nil/crypto3/algebra/fields/bls12/base_field.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/bls12.hpp>
 
-#include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
 #include <nil/crypto3/math/kronecker_substitution.hpp>
 
 using namespace nil::crypto3::algebra;

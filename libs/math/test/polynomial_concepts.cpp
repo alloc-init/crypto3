@@ -27,8 +27,8 @@
 
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/math/polynomial/concepts.hpp>
-#include <nil/crypto3/math/polynomial/polymorphic_polynomial.hpp>
-#include <nil/crypto3/math/polynomial/polymorphic_polynomial_dfs.hpp>
+#include <nil/crypto3/math/polynomial/types/polymorphic_polynomial.hpp>
+#include <nil/crypto3/math/polynomial/types/polymorphic_polynomial_dfs.hpp>
 
 namespace math = nil::crypto3::math;
 namespace fields = nil::crypto3::algebra::fields;

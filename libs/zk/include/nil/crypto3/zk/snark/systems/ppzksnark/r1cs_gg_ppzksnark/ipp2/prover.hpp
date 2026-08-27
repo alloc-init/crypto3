@@ -38,7 +38,7 @@
 #include <nil/crypto3/hash/sha2.hpp>
 
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
-#include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
 
 #include <nil/crypto3/algebra/multiexp/multiexp.hpp>
 #include <nil/crypto3/algebra/multiexp/policies.hpp>

@@ -38,7 +38,7 @@
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
-#include <nil/crypto3/math/polynomial/shift.hpp>
+#include <nil/crypto3/math/polynomial/operations/shift.hpp>
 
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::math;

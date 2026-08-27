@@ -40,7 +40,7 @@
 #include <boost/accumulators/accumulators.hpp>
 
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
-#include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 #include <nil/crypto3/algebra/type_traits.hpp>
 #include <nil/crypto3/algebra/algorithms/pair.hpp>
 #include <nil/crypto3/algebra/multiexp/multiexp.hpp>

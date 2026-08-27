@@ -25,7 +25,7 @@
 #ifndef CRYPTO3_MATH_POLYNOMIAL_MODULAR_ARITHMETIC_HPP
 #define CRYPTO3_MATH_POLYNOMIAL_MODULAR_ARITHMETIC_HPP
 
-#include <nil/crypto3/math/polynomial/polynomial_division.hpp>
+#include <nil/crypto3/math/polynomial/arithmetic/polynomial_division.hpp>
 
 namespace nil::crypto3::math {
 

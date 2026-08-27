@@ -35,8 +35,8 @@
 
 #include <nil/crypto3/algebra/fields/field_order.hpp>
 
-#include <nil/crypto3/math/polynomial/polynomial_factorization.hpp>
-#include <nil/crypto3/math/polynomial/polynomial_exponentiation.hpp>
+#include <nil/crypto3/math/polynomial/factorization/polynomial_factorization.hpp>
+#include <nil/crypto3/math/polynomial/quotient_ring/polynomial_exponentiation.hpp>
 
 namespace nil::crypto3::math {
 

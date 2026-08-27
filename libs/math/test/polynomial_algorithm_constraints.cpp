@@ -28,12 +28,12 @@
 #include <vector>
 
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
-#include <nil/crypto3/math/polynomial/basic_operations.hpp>
-#include <nil/crypto3/math/polynomial/basis_change.hpp>
-#include <nil/crypto3/math/polynomial/evaluate.hpp>
-#include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
-#include <nil/crypto3/math/polynomial/shift.hpp>
-#include <nil/crypto3/math/polynomial/xgcd.hpp>
+#include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/operations/basis_change.hpp>
+#include <nil/crypto3/math/polynomial/operations/evaluate.hpp>
+#include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/operations/shift.hpp>
+#include <nil/crypto3/math/polynomial/arithmetic/xgcd.hpp>
 
 namespace math = nil::crypto3::math;
 namespace fields = nil::crypto3::algebra::fields;

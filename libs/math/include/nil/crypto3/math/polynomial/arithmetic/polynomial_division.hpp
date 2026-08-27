@@ -31,7 +31,7 @@
 #include <stdexcept>
 #include <utility>
 
-#include <nil/crypto3/math/polynomial/power_series.hpp>
+#include <nil/crypto3/math/polynomial/arithmetic/power_series.hpp>
 
 namespace nil::crypto3::math {
 

@@ -33,14 +33,14 @@
 #include <queue>
 
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
-#include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 
 #include <nil/crypto3/container/merkle/tree.hpp>
 #include <nil/crypto3/container/merkle/proof.hpp>
 
 #include <nil/crypto3/zk/commitments/batched_commitment.hpp>
 #include <nil/crypto3/zk/commitments/detail/polynomial/basic_fri.hpp>
-#include <nil/crypto3/math/polynomial/polymorphic_polynomial_dfs.hpp>
+#include <nil/crypto3/math/polynomial/types/polymorphic_polynomial_dfs.hpp>
 
 namespace nil {
     namespace crypto3 {

@@ -30,7 +30,7 @@
 
 #include <nil/crypto3/math/domains/evaluation_domain.hpp>
 
-#include <nil/crypto3/math/polynomial/basis_change.hpp>
+#include <nil/crypto3/math/polynomial/operations/basis_change.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 
 namespace nil {

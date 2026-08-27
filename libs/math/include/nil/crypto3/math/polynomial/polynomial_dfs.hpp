@@ -37,7 +37,7 @@
 
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
 #include <nil/crypto3/math/domains/evaluation_domain.hpp>
-#include <nil/crypto3/math/polynomial/basic_operations.hpp>
+#include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
 #include <nil/crypto3/math/polynomial/concepts.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 

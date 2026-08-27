@@ -31,8 +31,8 @@
 
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
 #include <nil/crypto3/math/domains/evaluation_domain.hpp>
-#include <nil/crypto3/math/polynomial/lagrange_interpolation.hpp>
-#include <nil/crypto3/math/polynomial/polymorphic_polynomial_dfs.hpp>
+#include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
+#include <nil/crypto3/math/polynomial/types/polymorphic_polynomial_dfs.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/math/polynomial/polynomial_dfs.hpp>
 
