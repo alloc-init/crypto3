@@ -56,21 +56,28 @@ namespace nil {
                 std::vector<field_value_type> arithmetic_sequence;
                 field_value_type arithmetic_generator;
 
+            private:
+                // Queries derive domain points directly so they do not populate the transform precomputation.
+                field_value_type arithmetic_sequence_element(const std::size_t idx) const {
+                    return arithmetic_generator * field_value_type(idx);
+                }
+
+            public:
                 void do_precomputation() {
                     compute_subproduct_tree<FieldType>(this->subproduct_tree, log2(this->m));
-
-                    arithmetic_generator = field_value_type(fields::arithmetic_params<FieldType>::arithmetic_generator);
 
                     arithmetic_sequence = std::vector<field_value_type>(this->m);
 
                     for (std::size_t i = 0; i < arithmetic_sequence.size(); ++i) {
-                        this->arithmetic_sequence[i] = this->arithmetic_generator * field_value_type(i);
+                        this->arithmetic_sequence[i] = arithmetic_sequence_element(i);
                     }
 
                     precomputation_sentinel = true;
                 }
 
-                arithmetic_sequence_domain(const std::size_t m) : evaluation_domain<FieldType, ValueType>(m) {
+                arithmetic_sequence_domain(const std::size_t m) :
+                    evaluation_domain<FieldType, ValueType>(m), precomputation_sentinel(false),
+                    arithmetic_generator(field_value_type(fields::arithmetic_params<FieldType>::arithmetic_generator)) {
                     if (m <= 1) {
                         throw std::invalid_argument("arithmetic(): expected m > 1");
                     }
@@ -80,8 +87,6 @@ namespace nil {
                             "arithmetic(): expected arithmetic_params<FieldType>::arithmetic_generator.is_zero() "
                             "!= true");
                     }
-
-                    precomputation_sentinel = false;
                 }
 
                 void fft(std::vector<value_type> &a) override {
@@ -163,21 +168,18 @@ namespace nil {
                     throw std::logic_error {"Not implemented yet"};
                 }
 
-                std::vector<field_value_type> evaluate_all_lagrange_polynomials(const field_value_type &t) override {
+                std::vector<field_value_type>
+                    evaluate_all_lagrange_polynomials(const field_value_type &t) const override {
                     /* Compute Lagrange polynomial of size m, with m+1 points (x_0, y_0), ... ,(x_m, y_m) */
                     /* Evaluate for x = t */
                     /* Return coeffs for each l_j(x) = (l / l_i[j]) * w[j] */
-
-                    if (!precomputation_sentinel)
-                        do_precomputation();
 
                     /**
                      * If t equals one of the arithmetic progression values,
                      * then output 1 at the right place, and 0 elsewhere.
                      */
                     for (std::size_t i = 0; i < this->m; ++i) {
-                        if (arithmetic_sequence[i] == t)    // i.e., t equals this->arithmetic_sequence[i]
-                        {
+                        if (arithmetic_sequence_element(i) == t) {
                             std::vector<field_value_type> res(this->m, field_value_type::zero());
                             res[i] = field_value_type::one();
                             return res;
@@ -189,15 +191,15 @@ namespace nil {
                      * then compute each Lagrange coefficient.
                      */
                     std::vector<field_value_type> l(this->m);
-                    l[0] = t - this->arithmetic_sequence[0];
+                    l[0] = t - arithmetic_sequence_element(0);
 
                     field_value_type l_vanish = l[0];
                     field_value_type g_vanish = field_value_type::one();
 
                     for (std::size_t i = 1; i < this->m; i++) {
-                        l[i] = t - this->arithmetic_sequence[i];
+                        l[i] = t - arithmetic_sequence_element(i);
                         l_vanish *= l[i];
-                        g_vanish *= -this->arithmetic_sequence[i];
+                        g_vanish *= -arithmetic_sequence_element(i);
                     }
 
                     std::vector<field_value_type> w(this->m);
@@ -206,8 +208,8 @@ namespace nil {
                     l[0] = l_vanish * l[0].inversed() * w[0];
                     for (std::size_t i = 1; i < this->m; i++) {
                         field_value_type num =
-                            this->arithmetic_sequence[i - 1] - this->arithmetic_sequence[this->m - 1];
-                        w[i] = w[i - 1] * num * this->arithmetic_sequence[i].inversed();
+                            arithmetic_sequence_element(i - 1) - arithmetic_sequence_element(this->m - 1);
+                        w[i] = w[i - 1] * num * arithmetic_sequence_element(i).inversed();
                         l[i] = l_vanish * l[i].inversed() * w[i];
                     }
 
@@ -216,7 +218,7 @@ namespace nil {
 
                 std::vector<value_type> evaluate_all_lagrange_polynomials(
                     const typename std::vector<value_type>::const_iterator &t_powers_begin,
-                    const typename std::vector<value_type>::const_iterator &t_powers_end) override {
+                    const typename std::vector<value_type>::const_iterator &t_powers_end) const override {
                     if (std::size_t(std::distance(t_powers_begin, t_powers_end)) < this->m) {
                         throw std::invalid_argument(
                             "arithmetic_sequence_radix2: expected std::distance(t_powers_begin, t_powers_end) >= "
@@ -227,16 +229,12 @@ namespace nil {
                     /* Evaluate for x = t */
                     /* Return coeffs for each l_j(x) = (l / l_i[j]) * w[j] */
 
-                    if (!precomputation_sentinel)
-                        do_precomputation();
-
                     /**
                      * If t equals one of the arithmetic progression values,
                      * then output 1 at the right place, and 0 elsewhere.
                      */
                     for (std::size_t i = 0; i < this->m; ++i) {
-                        if (arithmetic_sequence[i] * t_powers_begin[0] == t_powers_begin[1])    // i.e., t equals a[i]
-                        {
+                        if (arithmetic_sequence_element(i) * t_powers_begin[0] == t_powers_begin[1]) {
                             std::vector<value_type> res(this->m, value_type::zero());
                             res[i] = t_powers_begin[0];
                             return res;
@@ -248,16 +246,16 @@ namespace nil {
                      * then compute each Lagrange coefficient.
                      */
                     std::vector<polynomial<field_value_type>> l(this->m);
-                    l[0] = polynomial<field_value_type>({-arithmetic_sequence[0], field_value_type::one()});
+                    l[0] = polynomial<field_value_type>({-arithmetic_sequence_element(0), field_value_type::one()});
                     ;
 
                     polynomial<field_value_type> l_vanish = l[0];
                     field_value_type g_vanish = field_value_type::one();
 
                     for (std::size_t i = 1; i < this->m; i++) {
-                        l[i] = polynomial<field_value_type>({-arithmetic_sequence[i], field_value_type::one()});
+                        l[i] = polynomial<field_value_type>({-arithmetic_sequence_element(i), field_value_type::one()});
                         l_vanish = l_vanish * l[i];
-                        g_vanish *= -this->arithmetic_sequence[i];
+                        g_vanish *= -arithmetic_sequence_element(i);
                     }
 
                     std::vector<field_value_type> w(this->m);
@@ -276,8 +274,8 @@ namespace nil {
 
                     for (std::size_t i = 1; i < this->m; i++) {
                         field_value_type num =
-                            this->arithmetic_sequence[i - 1] - this->arithmetic_sequence[this->m - 1];
-                        w[i] = w[i - 1] * num * this->arithmetic_sequence[i].inversed();
+                            arithmetic_sequence_element(i - 1) - arithmetic_sequence_element(this->m - 1);
+                        w[i] = w[i - 1] * num * arithmetic_sequence_element(i).inversed();
 
                         for (std::size_t j = 0; j < l[i].size(); ++j) {
                             result[i] = result[i] + t_powers_begin[j] * l[i][j];
@@ -289,36 +287,28 @@ namespace nil {
                 }
 
                 // This one is not the unity root actually, but it's ok for our purposes.
-                const field_value_type &get_unity_root() override {
+                const field_value_type &get_unity_root() const override {
                     return arithmetic_generator;
                 }
 
-                field_value_type get_domain_element(const std::size_t idx) override {
-                    if (!this->precomputation_sentinel)
-                        do_precomputation();
-
-                    return this->arithmetic_sequence[idx];
+                field_value_type get_domain_element(const std::size_t idx) const override {
+                    return arithmetic_sequence_element(idx);
                 }
 
-                field_value_type compute_vanishing_polynomial(const field_value_type &t) override {
-                    if (!this->precomputation_sentinel)
-                        do_precomputation();
-
+                field_value_type compute_vanishing_polynomial(const field_value_type &t) const override {
                     /* Notes: Z = prod_{i = 0 to m} (t - a[i]) */
                     field_value_type Z = field_value_type::one();
                     for (std::size_t i = 0; i < this->m; i++) {
-                        Z *= (t - this->arithmetic_sequence[i]);
+                        Z *= (t - arithmetic_sequence_element(i));
                     }
                     return Z;
                 }
 
-                polynomial<field_value_type> get_vanishing_polynomial() override {
-                    if (!precomputation_sentinel)
-                        do_precomputation();
-
+                polynomial<field_value_type> get_vanishing_polynomial() const override {
                     polynomial<field_value_type> z({field_value_type::one()});
                     for (std::size_t i = 0; i < this->m; i++) {
-                        z = z * polynomial<field_value_type>({-arithmetic_sequence[i], field_value_type::one()});
+                        z = z *
+                            polynomial<field_value_type>({-arithmetic_sequence_element(i), field_value_type::one()});
                     }
                     return z;
                 }

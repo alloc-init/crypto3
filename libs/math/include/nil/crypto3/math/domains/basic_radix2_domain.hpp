@@ -60,6 +60,23 @@ namespace nil {
                     detail::create_fft_cache<FieldType>(this->m, omega.inversed(), fft_cache->second);
                 }
 
+                void inverse_fft_impl(std::vector<value_type> &a) const {
+                    if (a.size() != this->m) {
+                        if (a.size() < this->m) {
+                            a.resize(this->m, value_type::zero());
+                        } else {
+                            throw std::invalid_argument("basic_radix2: expected a.size() == this->m");
+                        }
+                    }
+
+                    detail::basic_radix2_fft_cached<FieldType>(a, fft_cache->second);
+
+                    const field_value_type sconst = field_value_type(this->m).inversed();
+                    for (value_type &a_i : a) {
+                        a_i *= sconst;
+                    }
+                }
+
             public:
                 typedef FieldType field_type;
                 using evaluation_domain<FieldType, ValueType>::evaluate_all_lagrange_polynomials;
@@ -148,51 +165,39 @@ namespace nil {
                 }
 
                 void inverse_fft(std::vector<value_type> &a) override {
-                    if (a.size() != this->m) {
-                        if (a.size() < this->m) {
-                            a.resize(this->m, value_type::zero());
-                        } else {
-                            throw std::invalid_argument("basic_radix2: expected a.size() == this->m");
-                        }
-                    }
-
-                    detail::basic_radix2_fft_cached<FieldType>(a, fft_cache->second);
-
-                    const field_value_type sconst = field_value_type(this->m).inversed();
-                    for (value_type &a_i : a) {
-                        a_i *= sconst;
-                    }
+                    inverse_fft_impl(a);
                 }
 
-                std::vector<field_value_type> evaluate_all_lagrange_polynomials(const field_value_type &t) override {
+                std::vector<field_value_type>
+                    evaluate_all_lagrange_polynomials(const field_value_type &t) const override {
                     return detail::basic_radix2_evaluate_all_lagrange_polynomials<FieldType>(this->m, t);
                 }
 
                 std::vector<value_type> evaluate_all_lagrange_polynomials(
                     const typename std::vector<value_type>::const_iterator &t_powers_begin,
-                    const typename std::vector<value_type>::const_iterator &t_powers_end) override {
+                    const typename std::vector<value_type>::const_iterator &t_powers_end) const override {
                     if (std::size_t(std::distance(t_powers_begin, t_powers_end)) < this->m) {
                         throw std::invalid_argument(
                             "basic_radix2: expected std::distance(t_powers_begin, t_powers_end) >= this->m");
                     }
                     std::vector<value_type> tmp(t_powers_begin, t_powers_begin + this->m);
-                    this->inverse_fft(tmp);
+                    inverse_fft_impl(tmp);
                     return tmp;
                 }
 
-                const field_value_type &get_unity_root() override {
+                const field_value_type &get_unity_root() const override {
                     return omega;
                 }
 
-                field_value_type get_domain_element(const std::size_t idx) override {
+                field_value_type get_domain_element(const std::size_t idx) const override {
                     return omega.pow(idx);
                 }
 
-                field_value_type compute_vanishing_polynomial(const field_value_type &t) override {
+                field_value_type compute_vanishing_polynomial(const field_value_type &t) const override {
                     return (t.pow(this->m)) - field_value_type::one();
                 }
 
-                polynomial<field_value_type> get_vanishing_polynomial() override {
+                polynomial<field_value_type> get_vanishing_polynomial() const override {
                     polynomial<field_value_type> z(this->m + 1, field_value_type::zero());
                     z[this->m] = field_value_type::one();
                     z[0] = -field_value_type::one();

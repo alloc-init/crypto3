@@ -159,6 +159,34 @@ BOOST_AUTO_TEST_CASE(combined_lagrange_api_has_a_default_domain_implementation) 
     BOOST_CHECK_EQUAL(vanishing_at_t, domain.compute_vanishing_polynomial(t));
 }
 
+BOOST_AUTO_TEST_CASE(query_operations_work_through_a_const_geometric_domain) {
+    using value_type = bn254_fq::value_type;
+
+    constexpr std::size_t domain_size = 9;
+    math::geometric_sequence_domain<bn254_fq> reference_domain(domain_size);
+    const math::geometric_sequence_domain<bn254_fq> domain(domain_size);
+    const math::evaluation_domain<bn254_fq> &abstract_domain = domain;
+
+    BOOST_CHECK_EQUAL(abstract_domain.get_unity_root(), reference_domain.get_unity_root());
+
+    const std::size_t point_index = 4;
+    BOOST_CHECK_EQUAL(abstract_domain.get_domain_element(point_index),
+                      reference_domain.get_domain_element(point_index));
+
+    const value_type t = value_type(19u);
+    value_type vanishing_at_t;
+    value_type reference_vanishing_at_t;
+    const std::vector<value_type> weights = abstract_domain.evaluate_all_lagrange_polynomials(t, vanishing_at_t);
+    const std::vector<value_type> reference_weights =
+        reference_domain.evaluate_all_lagrange_polynomials(t, reference_vanishing_at_t);
+    BOOST_CHECK(weights == reference_weights);
+    BOOST_CHECK_EQUAL(vanishing_at_t, reference_vanishing_at_t);
+
+    BOOST_CHECK_EQUAL(abstract_domain.compute_vanishing_polynomial(t),
+                      reference_domain.compute_vanishing_polynomial(t));
+    BOOST_CHECK(abstract_domain.get_vanishing_polynomial() == reference_domain.get_vanishing_polynomial());
+}
+
 BOOST_AUTO_TEST_CASE(lagrange_weights_match_the_definition) {
     using value_type = bn254_fq::value_type;
 

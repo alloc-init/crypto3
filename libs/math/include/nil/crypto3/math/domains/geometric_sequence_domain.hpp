@@ -300,7 +300,7 @@ namespace nil {
                  */
                 std::vector<field_value_type>
                     evaluate_all_lagrange_polynomials(const field_value_type &t,
-                                                      field_value_type &vanishing_polynomial_at_t) override {
+                                                      field_value_type &vanishing_polynomial_at_t) const override {
                     std::vector<field_value_type> denominators(this->m, field_value_type::zero());
                     vanishing_polynomial_at_t = field_value_type::one();
                     for (std::size_t i = 0; i < this->m; ++i) {
@@ -324,14 +324,15 @@ namespace nil {
                     return result;
                 }
 
-                std::vector<field_value_type> evaluate_all_lagrange_polynomials(const field_value_type &t) override {
+                std::vector<field_value_type>
+                    evaluate_all_lagrange_polynomials(const field_value_type &t) const override {
                     field_value_type vanishing_polynomial_at_t;
                     return evaluate_all_lagrange_polynomials(t, vanishing_polynomial_at_t);
                 }
 
                 std::vector<value_type> evaluate_all_lagrange_polynomials(
                     const typename std::vector<value_type>::const_iterator &t_powers_begin,
-                    const typename std::vector<value_type>::const_iterator &t_powers_end) override {
+                    const typename std::vector<value_type>::const_iterator &t_powers_end) const override {
                     if (std::size_t(std::distance(t_powers_begin, t_powers_end)) < this->m) {
                         throw std::invalid_argument(
                             "geometric_sequence_radix2: expected std::distance(t_powers_begin, t_powers_end) >= "
@@ -417,15 +418,15 @@ namespace nil {
 
                 // The base interface requires this legacy name. Geometric domains return r, which need not be a root
                 // of unity.
-                const field_value_type &get_unity_root() override {
+                const field_value_type &get_unity_root() const override {
                     return precomputation_.generator;
                 }
 
-                field_value_type get_domain_element(const std::size_t idx) override {
+                field_value_type get_domain_element(const std::size_t idx) const override {
                     return precomputation_.geometric_sequence[idx];
                 }
 
-                field_value_type compute_vanishing_polynomial(const field_value_type &t) override {
+                field_value_type compute_vanishing_polynomial(const field_value_type &t) const override {
                     // Evaluate the domain vanishing polynomial Z(t) = product_(i=0)^(m-1) (t - x_i).
                     field_value_type Z = field_value_type::one();
                     for (std::size_t i = 0; i < this->m; i++) {
@@ -434,7 +435,7 @@ namespace nil {
                     return Z;
                 }
 
-                polynomial<field_value_type> get_vanishing_polynomial() override {
+                polynomial<field_value_type> get_vanishing_polynomial() const override {
                     return precomputation_.vanishing_polynomial;
                 }
 
