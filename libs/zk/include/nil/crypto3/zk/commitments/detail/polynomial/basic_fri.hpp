@@ -1242,7 +1242,7 @@ namespace nil {
                                 interpolation_points_l {
                                     std::make_pair(s_ch, y[2 * y_ind][0]),
                                     std::make_pair(-s_ch, y[2 * y_ind][1]),
-                            };
+                                };
                             math::polynomial<typename FRI::field_type::value_type> interpolant_l =
                                 math::lagrange_interpolation(interpolation_points_l);
 
@@ -1253,7 +1253,7 @@ namespace nil {
                                 interpolation_points_r {
                                     std::make_pair(s_ch, y[2 * y_ind + 1][0]),
                                     std::make_pair(-s_ch, y[2 * y_ind + 1][1]),
-                            };
+                                };
                             math::polynomial<typename FRI::field_type::value_type> interpolant_r =
                                 math::lagrange_interpolation(interpolation_points_r);
 
@@ -1282,7 +1282,7 @@ namespace nil {
                         interpolation_points {
                             std::make_pair(s_ch, y[0][0]),
                             std::make_pair(-s_ch, y[0][1]),
-                    };
+                        };
                     math::polynomial<typename FRI::field_type::value_type> interpolant_poly =
                         math::lagrange_interpolation(interpolation_points);
                     auto interpolant = interpolant_poly.evaluate(alphas[t]);
