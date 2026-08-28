@@ -86,9 +86,8 @@ namespace nil {
              prime q. Input: BigInteger q which is a prime. Output: A generator of prime q
              */
             template<typename IntegerType>
-                requires (!algebra::FieldValue<IntegerType>)
-            static IntegerType
-                find_generator(const IntegerType &q) {
+                requires(!algebra::FieldValue<IntegerType>)
+            static IntegerType find_generator(const IntegerType &q) {
                 std::set<IntegerType> prime_factors;
 
                 IntegerType qm1 = q - IntegerType(1);

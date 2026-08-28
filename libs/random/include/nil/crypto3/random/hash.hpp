@@ -51,9 +51,7 @@ namespace nil {
                 requires algebra::Field<typename ResultType::field_type> &&
                          (!algebra::ExtendedField<typename ResultType::field_type>) &&
                          (ResultType::field_type::value_bits <= HashType::digest_bits)
-            struct hash<HashType,
-                        ResultType,
-                        void> {
+            struct hash<HashType, ResultType, void> {
                 typedef HashType hash_type;
                 typedef ResultType result_type;
                 typedef std::uint64_t input_type;

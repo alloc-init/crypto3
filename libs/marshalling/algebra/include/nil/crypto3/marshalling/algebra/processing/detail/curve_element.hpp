@@ -47,8 +47,7 @@ namespace nil {
                 namespace detail {
                     template<typename G1FieldType>
                         requires algebra::Field<G1FieldType> && (!algebra::ExtendedField<G1FieldType>)
-                    bool
-                        sign_gf_p(const typename G1FieldType::value_type &v) {
+                    bool sign_gf_p(const typename G1FieldType::value_type &v) {
 
                         if (v > G1FieldType::group_order_minus_one_half) {
                             return true;
@@ -58,8 +57,7 @@ namespace nil {
 
                     template<typename G2FieldType>
                         requires algebra::ExtendedField<G2FieldType>
-                    bool
-                        sign_gf_p(const typename G2FieldType::value_type &v) {
+                    bool sign_gf_p(const typename G2FieldType::value_type &v) {
 
                         if (v.data[1] == 0u) {
                             return sign_gf_p<typename G2FieldType::underlying_field_type>(v.data[0]);

@@ -267,17 +267,15 @@ namespace nil {
 
                 template<typename FieldType>
                     requires algebra::Field<FieldType> && (!algebra::ExtendedField<FieldType>)
-                int
-                    compare_field_data(const typename FieldType::value_type &field_elem1,
+                int compare_field_data(const typename FieldType::value_type &field_elem1,
                                        const typename FieldType::value_type &field_elem2) {
                     return (field_elem1.data < field_elem2.data) ? -1 : ((field_elem1.data > field_elem2.data) ? 1 : 0);
                 }
 
                 template<typename FieldType>
                     requires algebra::ExtendedField<FieldType>
-                bool
-                    compare_field_data(const typename FieldType::value_type &field_elem1,
-                                       const typename FieldType::value_type &field_elem2) {
+                bool compare_field_data(const typename FieldType::value_type &field_elem1,
+                                        const typename FieldType::value_type &field_elem2) {
                     for (std::size_t i = 0; i < FieldType::arity; i++) {
 
                         int compare_result = compare_field_data<typename FieldType::underlying_field_type>(

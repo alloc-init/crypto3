@@ -253,8 +253,7 @@ namespace nil {
                         template<typename FieldValueType>
                             requires Field<typename FieldValueType::field_type> &&
                                      (!ExtendedField<typename FieldValueType::field_type>)
-                        element_edwards_g2
-                            operator*=(const FieldValueType &right) {
+                        element_edwards_g2 operator*=(const FieldValueType &right) {
                             return (*this) *= right.data;
                         }
 

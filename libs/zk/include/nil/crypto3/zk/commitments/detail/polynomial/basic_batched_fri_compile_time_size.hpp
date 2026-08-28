@@ -325,7 +325,7 @@ namespace nil {
                                         interpolation_points {
                                             std::make_pair(s[0], y[0]),
                                             std::make_pair(s[1], y[1]),
-                                        };
+                                    };
 
                                     math::polynomial<typename FieldType::value_type> interpolant =
                                         math::lagrange_interpolation(interpolation_points);
@@ -433,7 +433,7 @@ namespace nil {
                                         interpolation_points {
                                             std::make_pair(s[0], y[0]),
                                             std::make_pair(s[1], y[1]),
-                                        };
+                                    };
 
                                     math::polynomial<typename FieldType::value_type> interpolant =
                                         math::lagrange_interpolation(interpolation_points);
@@ -539,7 +539,7 @@ namespace nil {
                                         interpolation_points {
                                             std::make_pair(s[0], y[0]),
                                             std::make_pair(s[1], y[1]),
-                                        };
+                                    };
 
                                     math::polynomial<typename FieldType::value_type> interpolant =
                                         math::lagrange_interpolation(interpolation_points);

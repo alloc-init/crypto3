@@ -60,8 +60,7 @@ namespace nil {
                      *        it multiplies by the length of the field element representation.
                      */
                     static constexpr std::size_t field_element_holder_size_multiplier =
-                        std::conditional_t<algebra::FieldValue<Target>,
-                                           std::integral_constant<std::size_t, 1>,
+                        std::conditional_t<algebra::FieldValue<Target>, std::integral_constant<std::size_t, 1>,
                                            std::integral_constant<std::size_t, Marshalling::max_length()>>::value;
 
                     // Default ctor is used for single values

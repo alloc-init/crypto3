@@ -112,8 +112,7 @@ namespace nil {
                     return filled_node_value;
                 }
 
-                template<typename GroupElementType,
-                         typename Endianness>
+                template<typename GroupElementType, typename Endianness>
                     requires nil::crypto3::algebra::FieldValue<GroupElementType>
                 typename merkle_node_value<nil::marshalling::field_type<Endianness>, GroupElementType>::type
                     fill_merkle_node_value(const GroupElementType &node_value) {
@@ -172,8 +171,7 @@ namespace nil {
                     return node_value;
                 }
 
-                template<typename GroupElementType,
-                         typename Endianness>
+                template<typename GroupElementType, typename Endianness>
                     requires nil::crypto3::algebra::FieldValue<GroupElementType>
                 GroupElementType make_merkle_node_value(
                     const typename merkle_node_value<nil::marshalling::field_type<Endianness>, GroupElementType>::type

@@ -49,9 +49,8 @@ namespace nil {
                 namespace detail {
 
                     template<typename FieldValueType>
-                        requires (!algebra::ExtendedFieldValue<FieldValueType>)
-                    std::array<typename FieldValueType::field_type::integral_type,
-                               FieldValueType::field_type::arity>
+                        requires(!algebra::ExtendedFieldValue<FieldValueType>)
+                    std::array<typename FieldValueType::field_type::integral_type, FieldValueType::field_type::arity>
                         fill_field_data(const FieldValueType &field_elem) {
 
                         std::array<typename FieldValueType::field_type::integral_type,
@@ -63,8 +62,7 @@ namespace nil {
 
                     template<typename FieldValueType>
                         requires algebra::ExtendedFieldValue<FieldValueType>
-                    std::array<typename FieldValueType::field_type::integral_type,
-                               FieldValueType::field_type::arity>
+                    std::array<typename FieldValueType::field_type::integral_type, FieldValueType::field_type::arity>
                         fill_field_data(const FieldValueType &field_elem) {
 
                         std::array<typename FieldValueType::field_type::integral_type,
@@ -86,22 +84,19 @@ namespace nil {
                     }
 
                     template<typename FieldValueType>
-                        requires algebra::FieldValue<FieldValueType> &&
-                                 (!algebra::ExtendedFieldValue<FieldValueType>)
-                    FieldValueType
-                        make_field_element(
-                            typename std::array<typename FieldValueType::field_type::integral_type,
-                                                FieldValueType::field_type::arity>::iterator field_elem_data_iter) {
+                        requires algebra::FieldValue<FieldValueType> && (!algebra::ExtendedFieldValue<FieldValueType>)
+                    FieldValueType make_field_element(
+                        typename std::array<typename FieldValueType::field_type::integral_type,
+                                            FieldValueType::field_type::arity>::iterator field_elem_data_iter) {
 
                         return FieldValueType(*field_elem_data_iter);
                     }
 
                     template<typename FieldValueType>
                         requires algebra::ExtendedFieldValue<FieldValueType>
-                    FieldValueType
-                        make_field_element(
-                            typename std::array<typename FieldValueType::field_type::integral_type,
-                                                FieldValueType::field_type::arity>::iterator field_elem_data_iter) {
+                    FieldValueType make_field_element(
+                        typename std::array<typename FieldValueType::field_type::integral_type,
+                                            FieldValueType::field_type::arity>::iterator field_elem_data_iter) {
 
                         constexpr static const std::size_t cur_arity =
                             FieldValueType::field_type::arity / FieldValueType::underlying_type::field_type::arity;

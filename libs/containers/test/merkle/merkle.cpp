@@ -69,8 +69,7 @@ typename std::enable_if<std::is_unsigned<ValueType>::value, std::vector<std::arr
 
 template<typename ValueType, std::size_t N>
     requires algebra::FieldValue<ValueType>
-std::vector<std::array<ValueType, N>>
-    generate_random_data(std::size_t leaf_number) {
+std::vector<std::array<ValueType, N>> generate_random_data(std::size_t leaf_number) {
     std::vector<std::array<ValueType, N>> v;
     for (std::size_t i = 0; i < leaf_number; ++i) {
         std::array<ValueType, N> leaf {};

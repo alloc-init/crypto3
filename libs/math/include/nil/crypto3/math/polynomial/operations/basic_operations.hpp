@@ -504,8 +504,7 @@ namespace nil {
              * @pre Q and R are distinct and do not alias either input.
              */
             template<detail::MutablePolynomialCoefficientRange Range>
-                requires algebra::FieldValue<std::ranges::range_value_t<Range>> &&
-                         std::copy_constructible<Range> &&
+                requires algebra::FieldValue<std::ranges::range_value_t<Range>> && std::copy_constructible<Range> &&
                          std::constructible_from<Range, std::ranges::range_size_t<const Range>,
                                                  std::ranges::range_value_t<Range>> &&
                          std::constructible_from<Range, std::ranges::iterator_t<const Range>,

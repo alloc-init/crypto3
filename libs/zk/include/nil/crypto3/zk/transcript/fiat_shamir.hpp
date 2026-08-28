@@ -165,8 +165,7 @@ namespace nil {
                     }
 
                     template<typename element>
-                    typename std::enable_if_t<algebra::is_curve_element<element>::value ||
-                                              algebra::FieldValue<element>>
+                    typename std::enable_if_t<algebra::is_curve_element<element>::value || algebra::FieldValue<element>>
                         operator()(element const &data) {
                         nil::marshalling::status_type status;
                         std::vector<std::uint8_t> byte_data =
