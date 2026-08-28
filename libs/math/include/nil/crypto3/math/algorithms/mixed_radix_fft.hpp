@@ -59,7 +59,7 @@ namespace nil {
              */
             template<typename FieldType>
             class mixed_radix_fft_plan {
-                static_assert(algebra::is_field<FieldType>::value, "FieldType must be a field");
+                static_assert(algebra::Field<FieldType>, "FieldType must be a field");
 
                 using field_value_type = typename FieldType::value_type;
 

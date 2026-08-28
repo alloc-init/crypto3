@@ -251,10 +251,9 @@ namespace nil {
                         }
 
                         template<typename FieldValueType>
-                        typename std::enable_if<is_field<typename FieldValueType::field_type>::value &&
-                                                    !is_extended_field<typename FieldValueType::field_type>::value,
-                                                element_edwards_g2>::type
-                            operator*=(const FieldValueType &right) {
+                            requires Field<typename FieldValueType::field_type> &&
+                                     (!ExtendedField<typename FieldValueType::field_type>)
+                        element_edwards_g2 operator*=(const FieldValueType &right) {
                             return (*this) *= right.data;
                         }
 

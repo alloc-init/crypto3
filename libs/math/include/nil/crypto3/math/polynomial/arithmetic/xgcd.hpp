@@ -56,7 +56,7 @@ namespace nil {
                          std::same_as<std::ranges::range_value_t<const Range1>, std::ranges::range_value_t<Range3>> &&
                          std::same_as<std::ranges::range_value_t<const Range1>, std::ranges::range_value_t<Range4>> &&
                          std::same_as<std::ranges::range_value_t<const Range1>, std::ranges::range_value_t<Range5>> &&
-                         algebra::is_field_element<std::ranges::range_value_t<const Range1>>::value &&
+                         algebra::FieldValue<std::ranges::range_value_t<const Range1>> &&
                          requires(const Range1 &input, Range3 &g, Range4 &u, Range5 &v,
                                   const std::vector<std::ranges::range_value_t<const Range1>> &coefficients) {
                              g = input;

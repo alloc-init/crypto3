@@ -173,7 +173,7 @@ namespace nil::crypto3::math {
     // Used in the unit tests, so we can use BOOST_CHECK_EQUALS, and see
     // the values of polynomials, when the check fails.
     template<typename FieldType>
-        requires algebra::is_field<FieldType>::value
+        requires algebra::Field<FieldType>
     std::ostream& operator<<(std::ostream& os, const polymorphic_polynomial_dfs<FieldType>& poly) {
         return std::visit([&os](const auto& value) -> std::ostream& { return os << value; }, poly.val);
     }

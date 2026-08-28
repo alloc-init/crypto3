@@ -33,66 +33,66 @@ namespace nil {
         namespace algebra {
             namespace fields {
                 namespace detail {
-                    template<
-                        typename FieldElement, typename Integral,
-                        typename = typename std::enable_if<is_field_element<FieldElement>::value &&
-                                                           std::is_constructible<FieldElement, Integral>::value>::type>
+                    template<typename FieldElement, typename Integral>
+                        requires(!std::same_as<std::remove_cvref_t<Integral>, FieldElement> &&
+                                 requires { typename FieldElement::field_type; } &&
+                                 std::constructible_from<FieldElement, Integral>)
                     constexpr FieldElement operator+(const FieldElement &A, Integral B) {
                         return A + FieldElement(B);
                     }
 
-                    template<
-                        typename FieldElement, typename Integral,
-                        typename = typename std::enable_if<is_field_element<FieldElement>::value &&
-                                                           std::is_constructible<FieldElement, Integral>::value>::type>
+                    template<typename FieldElement, typename Integral>
+                        requires(!std::same_as<std::remove_cvref_t<Integral>, FieldElement> &&
+                                 requires { typename FieldElement::field_type; } &&
+                                 std::constructible_from<FieldElement, Integral>)
                     constexpr FieldElement operator-(const FieldElement &A, Integral B) {
                         return A - FieldElement(B);
                     }
 
-                    template<
-                        typename FieldElement, typename Integral,
-                        typename = typename std::enable_if<is_field_element<FieldElement>::value &&
-                                                           std::is_constructible<FieldElement, Integral>::value>::type>
+                    template<typename FieldElement, typename Integral>
+                        requires(!std::same_as<std::remove_cvref_t<Integral>, FieldElement> &&
+                                 requires { typename FieldElement::field_type; } &&
+                                 std::constructible_from<FieldElement, Integral>)
                     constexpr FieldElement operator*(const FieldElement &A, Integral B) {
                         return A * FieldElement(B);
                     }
 
-                    template<
-                        typename FieldElement, typename Integral,
-                        typename = typename std::enable_if<is_field_element<FieldElement>::value &&
-                                                           std::is_constructible<FieldElement, Integral>::value>::type>
+                    template<typename FieldElement, typename Integral>
+                        requires(!std::same_as<std::remove_cvref_t<Integral>, FieldElement> &&
+                                 requires { typename FieldElement::field_type; } &&
+                                 std::constructible_from<FieldElement, Integral>)
                     constexpr FieldElement operator/(const FieldElement &A, Integral B) {
                         return A / FieldElement(B);
                     }
 
-                    template<
-                        typename FieldElement, typename Integral,
-                        typename = typename std::enable_if<is_field_element<FieldElement>::value &&
-                                                           std::is_constructible<FieldElement, Integral>::value>::type>
+                    template<typename FieldElement, typename Integral>
+                        requires(!std::same_as<std::remove_cvref_t<Integral>, FieldElement> &&
+                                 requires { typename FieldElement::field_type; } &&
+                                 std::constructible_from<FieldElement, Integral>)
                     constexpr FieldElement operator+(Integral A, const FieldElement &B) {
                         return FieldElement(A) + B;
                     }
 
-                    template<
-                        typename FieldElement, typename Integral,
-                        typename = typename std::enable_if<is_field_element<FieldElement>::value &&
-                                                           std::is_constructible<FieldElement, Integral>::value>::type>
+                    template<typename FieldElement, typename Integral>
+                        requires(!std::same_as<std::remove_cvref_t<Integral>, FieldElement> &&
+                                 requires { typename FieldElement::field_type; } &&
+                                 std::constructible_from<FieldElement, Integral>)
                     constexpr FieldElement operator-(Integral A, const FieldElement &B) {
                         return FieldElement(A) - B;
                     }
 
-                    template<
-                        typename FieldElement, typename Integral,
-                        typename = typename std::enable_if<is_field_element<FieldElement>::value &&
-                                                           std::is_constructible<FieldElement, Integral>::value>::type>
+                    template<typename FieldElement, typename Integral>
+                        requires(!std::same_as<std::remove_cvref_t<Integral>, FieldElement> &&
+                                 requires { typename FieldElement::field_type; } &&
+                                 std::constructible_from<FieldElement, Integral>)
                     constexpr FieldElement operator*(Integral A, const FieldElement &B) {
                         return FieldElement(A) * B;
                     }
 
-                    template<
-                        typename FieldElement, typename Integral,
-                        typename = typename std::enable_if<is_field_element<FieldElement>::value &&
-                                                           std::is_constructible<FieldElement, Integral>::value>::type>
+                    template<typename FieldElement, typename Integral>
+                        requires(!std::same_as<std::remove_cvref_t<Integral>, FieldElement> &&
+                                 requires { typename FieldElement::field_type; } &&
+                                 std::constructible_from<FieldElement, Integral>)
                     constexpr FieldElement operator/(Integral A, const FieldElement &B) {
                         return FieldElement(A) / B;
                     }

@@ -46,15 +46,11 @@ namespace nil {
             BOOST_TTI_HAS_TYPE(iterator)
             BOOST_TTI_HAS_TYPE(const_iterator)
 
-            BOOST_TTI_HAS_TYPE(extension_policy)
             BOOST_TTI_HAS_TYPE(params_type)
             BOOST_TTI_HAS_TYPE(curve_type)
             BOOST_TTI_HAS_TYPE(field_type)
-            BOOST_TTI_HAS_TYPE(underlying_type)
             BOOST_TTI_HAS_TYPE(value_type)
-            BOOST_TTI_HAS_TYPE(integral_type)
             BOOST_TTI_HAS_TYPE(base_field_type)
-            BOOST_TTI_HAS_TYPE(modular_type)
             BOOST_TTI_HAS_TYPE(scalar_field_type)
             BOOST_TTI_HAS_TYPE(gt_type)
 
@@ -72,15 +68,9 @@ namespace nil {
 
             BOOST_TTI_HAS_TYPE(group_type)
 
-            BOOST_TTI_HAS_STATIC_MEMBER_DATA(value_bits)
-
-            BOOST_TTI_HAS_STATIC_MEMBER_DATA(modulus_bits)
-
             BOOST_TTI_HAS_STATIC_MEMBER_DATA(base_field_modulus)
 
             BOOST_TTI_HAS_STATIC_MEMBER_DATA(scalar_field_modulus)
-
-            BOOST_TTI_HAS_STATIC_MEMBER_DATA(arity)
 
             BOOST_TTI_HAS_STATIC_MEMBER_DATA(p)
 
@@ -91,8 +81,6 @@ namespace nil {
             BOOST_TTI_HAS_FUNCTION(to_special)
 
             BOOST_TTI_HAS_FUNCTION(is_special)
-            BOOST_TTI_HAS_FUNCTION(sqrt)
-
             BOOST_TTI_HAS_STATIC_MEMBER_FUNCTION(zero)
 
             BOOST_TTI_HAS_STATIC_MEMBER_FUNCTION(one)
@@ -104,8 +92,6 @@ namespace nil {
             BOOST_TTI_HAS_FUNCTION(double_inplace)
 
             BOOST_TTI_HAS_FUNCTION(mixed_add)
-
-            BOOST_TTI_HAS_FUNCTION(inversed)
 
             template<typename T>
             struct is_curve {
@@ -119,24 +105,6 @@ namespace nil {
                 static constexpr bool value = has_type_params_type<T>::value &&
                                               has_type_curve_type<T, is_curve<_1>>::value &&
                                               has_type_field_type<T>::value && has_type_value_type<T>::value;
-            };
-
-            /** @brief is typename T a field */
-            template<typename T>
-            struct is_field {
-                static const bool value =
-                    has_type_value_type<T>::value && has_static_member_data_value_bits<T, const std::size_t>::value &&
-                    has_type_integral_type<T>::value &&
-                    has_static_member_data_modulus_bits<T, const std::size_t>::value &&
-                    has_type_modular_type<T>::value && has_static_member_data_arity<T, const std::size_t>::value;
-                typedef T type;
-            };
-
-            /** @brief is typename T an extended field (e.g. Fp2) */
-            template<typename T>
-            struct is_extended_field {
-                static const bool value = is_field<T>::value && has_type_extension_policy<T>::value;
-                typedef T type;
             };
 
             template<typename T>
@@ -154,39 +122,40 @@ namespace nil {
             };
 
             template<typename T>
-            struct is_field_element {
-                static const bool value = has_type_field_type<T>::value && has_function_is_zero<const T, bool>::value &&
-                                          has_function_inversed<const T, T>::value &&
-                                          has_static_member_function_zero<T, const T &>::value;
-            };
-
-            template<typename T>
-            struct is_extended_field_element {
-                static const bool value = is_field_element<T>::value && has_type_underlying_type<T>::value;
-            };
-
-            template<typename T>
             concept FieldValue = requires(const T &a, const T &b, const boost::multiprecision::cpp_int &exponent) {
                 typename T::field_type;
-                requires std::same_as<typename T::field_type::value_type, T>;
-                { T::zero() } -> std::convertible_to<const T &>;
-                { T::one() } -> std::convertible_to<const T &>;
+                { T::zero() } -> std::convertible_to<T>;
+                { T::one() } -> std::convertible_to<T>;
                 { a + b } -> std::same_as<T>;
                 { a - b } -> std::same_as<T>;
                 { a * b } -> std::same_as<T>;
+                { a == b } -> std::convertible_to<bool>;
+                { a.is_zero() } -> std::convertible_to<bool>;
+                { a.is_one() } -> std::convertible_to<bool>;
                 { a.inversed() } -> std::same_as<T>;
                 { a.pow(exponent) } -> std::same_as<T>;
             };
 
             template<typename T>
-            concept Field = is_field<T>::value && requires {
+            concept Field = requires {
                 typename T::value_type;
+                typename T::integral_type;
+                typename T::modular_type;
+                { T::value_bits } -> std::convertible_to<std::size_t>;
+                { T::modulus_bits } -> std::convertible_to<std::size_t>;
+                { T::arity } -> std::convertible_to<std::size_t>;
                 requires FieldValue<typename T::value_type>;
             };
 
             template<typename T>
+            concept ExtendedField = Field<T> && requires { typename T::extension_policy; };
+
+            template<typename T>
+            concept ExtendedFieldValue = FieldValue<T> && requires { typename T::underlying_type; };
+
+            template<typename T>
             concept FieldElementWithCoordinates =
-                is_field_element<T>::value && requires(T &value, const T &const_value, std::size_t index) {
+                FieldValue<T> && requires(T &value, const T &const_value, std::size_t index) {
                     value.coordinate(index);
                     const_value.coordinate(index);
                     requires std::is_lvalue_reference_v<decltype(value.coordinate(index))>;
@@ -195,7 +164,7 @@ namespace nil {
                     requires std::is_const_v<std::remove_reference_t<decltype(const_value.coordinate(index))>>;
                     requires std::same_as<std::remove_cvref_t<decltype(value.coordinate(index))>,
                                           std::remove_cvref_t<decltype(const_value.coordinate(index))>>;
-                    requires is_field_element<std::remove_cvref_t<decltype(value.coordinate(index))>>::value;
+                    requires FieldValue<std::remove_cvref_t<decltype(value.coordinate(index))>>;
                 };
 
             template<typename T>

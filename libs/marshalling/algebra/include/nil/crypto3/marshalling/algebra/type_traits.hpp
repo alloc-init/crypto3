@@ -45,7 +45,7 @@ namespace nil {
 
                 template<typename TTypeBase, typename FieldValueType, typename... TOptions>
                 using field_element =
-                    typename std::conditional<algebra::is_extended_field_element<FieldValueType>::value,
+                    typename std::conditional<algebra::ExtendedFieldValue<FieldValueType>,
                                               extended_field_element<TTypeBase, FieldValueType, TOptions...>,
                                               pure_field_element<TTypeBase, FieldValueType, TOptions...>>::type;
             }    // namespace types
@@ -72,35 +72,31 @@ namespace nil {
         };
 
         template<typename T>
-        struct is_field_element {
-
-            static const bool value = false;
-        };
+        inline constexpr bool marshalling_field_element = false;
 
         template<typename TTypeBase, typename FieldValueType, typename... TOptions>
-        struct is_field_element<
-            nil::crypto3::marshalling::types::extended_field_element<TTypeBase, FieldValueType, TOptions...>> {
-
-            static const bool value = true;
-        };
+        inline constexpr bool marshalling_field_element<
+            nil::crypto3::marshalling::types::extended_field_element<TTypeBase, FieldValueType, TOptions...>> = true;
 
         template<typename TTypeBase, typename FieldValueType, typename... TOptions>
-        struct is_field_element<
-            nil::crypto3::marshalling::types::pure_field_element<TTypeBase, FieldValueType, TOptions...>> {
+        inline constexpr bool marshalling_field_element<
+            nil::crypto3::marshalling::types::pure_field_element<TTypeBase, FieldValueType, TOptions...>> = true;
 
-            static const bool value = true;
-        };
+        template<typename T>
+        concept MarshallingFieldElement = marshalling_field_element<T>;
 
         template<typename T, typename Enabled>
         struct is_container;
 
         template<typename T>
-        struct is_container<T, typename std::enable_if<is_curve_element<T>::value>::type> {
+            requires is_curve_element<T>::value
+        struct is_container<T, void> {
             static const bool value = false;
         };
 
         template<typename T>
-        struct is_container<T, typename std::enable_if<is_field_element<T>::value>::type> {
+            requires MarshallingFieldElement<T>
+        struct is_container<T, void> {
             static const bool value = false;
         };
 

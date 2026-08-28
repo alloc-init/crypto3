@@ -107,21 +107,6 @@ constexpr bool check_field_operations_static() {
     static_assert(-elements[e1] == elements[minus_e1], "neg error");
     static_assert(elements[e2].squared() == elements[e2_pow_2], "sqr error");
 
-    // TODO: fix this.
-    //
-    // Not all fields have .sqrt() method.
-    // The proper way to use has_function_sqrt is this:
-    //
-    // using field_value_type = fields::bls12_base_field<381>::value_type
-    // if constexpr (has_function_sqrt<const field_value_type, field_value_type>::value) {
-    // ...
-    // }
-    //
-    // This naiive approach with decltype does not work - the result is always false.
-    // We can't use direct typenames since _values_ are template arguments
-    if constexpr (has_function_sqrt<const decltype(elements[e1]), decltype(elements[e1])>::value) {
-        static_assert((elements[e2].squared()).sqrt() == elements[e2_pow_2_sqrt], "sqrt error");
-    }
     return true;
 }
 

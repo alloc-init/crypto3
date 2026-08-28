@@ -83,9 +83,9 @@ namespace nil {
 
                     template<typename TAny>
                     void operator()(TAny data) {
-                        if constexpr (algebra::is_field_element<typename hash_type::word_type>::value) {
+                        if constexpr (algebra::FieldValue<typename hash_type::word_type>) {
                             BOOST_STATIC_ASSERT_MSG(
-                                algebra::is_field_element<TAny>::value,
+                                algebra::FieldValue<TAny>,
                                 "HashType type consumes field elements, but provided value is not a field element");
                             acc(data);
                         } else {
@@ -150,7 +150,7 @@ namespace nil {
 
                     template<typename InputRange>
                     typename std::enable_if_t<!algebra::is_curve_element<InputRange>::value &&
-                                              !algebra::is_field_element<InputRange>::value>
+                                              !algebra::FieldValue<InputRange>>
                         operator()(const InputRange &r) {
                         auto acc_convertible = hash<hash_type>(state);
                         state = accumulators::extract::hash<hash_type>(
@@ -165,8 +165,7 @@ namespace nil {
                     }
 
                     template<typename element>
-                    typename std::enable_if_t<algebra::is_curve_element<element>::value ||
-                                              algebra::is_field_element<element>::value>
+                    typename std::enable_if_t<algebra::is_curve_element<element>::value || algebra::FieldValue<element>>
                         operator()(element const &data) {
                         nil::marshalling::status_type status;
                         std::vector<std::uint8_t> byte_data =

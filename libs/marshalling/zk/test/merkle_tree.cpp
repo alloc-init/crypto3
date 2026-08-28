@@ -74,7 +74,7 @@ void test_merkle_tree_marshalling(std::size_t tree_depth) {
     auto data = generate_random_data<std::uint8_t, LeafSize>(leafs_number);
     merkle_tree_type tree;
 
-    if constexpr (nil::crypto3::algebra::is_field_element<typename Hash::word_type>::value) {
+    if constexpr (nil::crypto3::algebra::FieldValue<typename Hash::word_type>) {
         // Populate the vector with wrappers, one for each block
         std::vector<nil::crypto3::hashes::block_to_field_elements_wrapper<typename Hash::word_type::field_type,
                                                                           std::array<std::uint8_t, LeafSize>>>

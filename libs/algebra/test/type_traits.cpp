@@ -66,24 +66,17 @@ void test_field_value_types() {
 
     BOOST_ASSERT(has_type_field_type<value_type>::value);
     BOOST_ASSERT((has_function_is_zero<const value_type, bool>::value));
-    BOOST_ASSERT((has_function_inversed<const value_type, value_type>::value));
     BOOST_ASSERT((has_static_member_function_zero<value_type, const value_type &>::value));
     BOOST_ASSERT((has_static_member_function_one<value_type, const value_type &>::value));
 
-    BOOST_ASSERT(is_field_element<value_type>::value);
+    BOOST_ASSERT(FieldValue<value_type>);
 }
 
 template<typename field_type>
 void test_field_types() {
     BOOST_ASSERT(has_type_value_type<field_type>::value);
-    BOOST_ASSERT(has_type_integral_type<field_type>::value);
-    BOOST_ASSERT(has_type_modular_type<field_type>::value);
 
-    BOOST_ASSERT((has_static_member_data_value_bits<field_type, const std::size_t>::value));
-    BOOST_ASSERT((has_static_member_data_modulus_bits<field_type, const std::size_t>::value));
-    BOOST_ASSERT((has_static_member_data_arity<field_type, const std::size_t>::value));
-
-    BOOST_ASSERT(is_field<field_type>::value);
+    BOOST_ASSERT(Field<field_type>);
 
     test_field_value_types<typename field_type::value_type>();
 }
@@ -92,10 +85,9 @@ template<typename field_type>
 void test_extended_field_types() {
     test_field_types<field_type>();
 
-    BOOST_ASSERT(has_type_extension_policy<field_type>::value);
-    BOOST_ASSERT(is_extended_field<field_type>::value);
+    BOOST_ASSERT(ExtendedField<field_type>);
 
-    BOOST_ASSERT(is_extended_field_element<typename field_type::value_type>::value);
+    BOOST_ASSERT(ExtendedFieldValue<typename field_type::value_type>);
 
     test_field_value_types<typename field_type::value_type>();
 }
@@ -220,7 +212,12 @@ BOOST_AUTO_TEST_CASE(ed25519_type_traits) {
     test_ordinary_curve_types<curves::ed25519>();
 }
 
-#define FIELD_HAS_SQRT(field) (has_function_sqrt<const field::value_type, field::value_type>::value)
+template<typename T>
+concept HasSqrt = requires(const T &value) {
+    { value.sqrt() } -> std::same_as<T>;
+};
+
+#define FIELD_HAS_SQRT(field) (HasSqrt<typename field::value_type>)
 
 BOOST_AUTO_TEST_CASE(test_extended_fields_sqrt_trait) {
 
@@ -280,60 +277,60 @@ BOOST_AUTO_TEST_CASE(test_extended_fields_sqrt_trait) {
 
 BOOST_AUTO_TEST_CASE(test_extended_fields_trait) {
 
-    BOOST_ASSERT(!is_extended_field_element<curves::alt_bn128_254::base_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::alt_bn128_254::scalar_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::alt_bn128_254::template g1_type<>::field_type::value_type>::value);
-    BOOST_ASSERT(is_extended_field_element<curves::alt_bn128_254::template g2_type<>::field_type::value_type>::value);
-    BOOST_ASSERT(is_extended_field_element<curves::alt_bn128_254::gt_type::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::alt_bn128_254::base_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::alt_bn128_254::scalar_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::alt_bn128_254::template g1_type<>::field_type::value_type>);
+    BOOST_ASSERT(ExtendedFieldValue<curves::alt_bn128_254::template g2_type<>::field_type::value_type>);
+    BOOST_ASSERT(ExtendedFieldValue<curves::alt_bn128_254::gt_type::value_type>);
 
-    BOOST_ASSERT(!is_extended_field_element<curves::bls12_381::base_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::bls12_381::scalar_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::bls12_381::template g1_type<>::field_type::value_type>::value);
-    BOOST_ASSERT(is_extended_field_element<curves::bls12_381::template g2_type<>::field_type::value_type>::value);
-    BOOST_ASSERT(is_extended_field_element<curves::bls12_381::gt_type::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::bls12_381::base_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::bls12_381::scalar_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::bls12_381::template g1_type<>::field_type::value_type>);
+    BOOST_ASSERT(ExtendedFieldValue<curves::bls12_381::template g2_type<>::field_type::value_type>);
+    BOOST_ASSERT(ExtendedFieldValue<curves::bls12_381::gt_type::value_type>);
 
-    BOOST_ASSERT(!is_extended_field_element<curves::bls12_377::base_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::bls12_377::scalar_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::bls12_377::template g1_type<>::field_type::value_type>::value);
-    BOOST_ASSERT(is_extended_field_element<curves::bls12_377::template g2_type<>::field_type::value_type>::value);
-    BOOST_ASSERT(is_extended_field_element<curves::bls12_377::gt_type::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::bls12_377::base_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::bls12_377::scalar_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::bls12_377::template g1_type<>::field_type::value_type>);
+    BOOST_ASSERT(ExtendedFieldValue<curves::bls12_377::template g2_type<>::field_type::value_type>);
+    BOOST_ASSERT(ExtendedFieldValue<curves::bls12_377::gt_type::value_type>);
 
-    BOOST_ASSERT(!is_extended_field_element<curves::mnt4_298::base_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::mnt4_298::scalar_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::mnt4_298::template g1_type<>::field_type::value_type>::value);
-    BOOST_ASSERT(is_extended_field_element<curves::mnt4_298::template g2_type<>::field_type::value_type>::value);
-    BOOST_ASSERT(is_extended_field_element<curves::mnt4_298::gt_type::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::mnt4_298::base_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::mnt4_298::scalar_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::mnt4_298::template g1_type<>::field_type::value_type>);
+    BOOST_ASSERT(ExtendedFieldValue<curves::mnt4_298::template g2_type<>::field_type::value_type>);
+    BOOST_ASSERT(ExtendedFieldValue<curves::mnt4_298::gt_type::value_type>);
 
-    BOOST_ASSERT(!is_extended_field_element<curves::mnt6_298::base_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::mnt6_298::scalar_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::mnt6_298::template g1_type<>::field_type::value_type>::value);
-    BOOST_ASSERT(is_extended_field_element<curves::mnt6_298::template g2_type<>::field_type::value_type>::value);
-    BOOST_ASSERT(is_extended_field_element<curves::mnt6_298::gt_type::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::mnt6_298::base_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::mnt6_298::scalar_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::mnt6_298::template g1_type<>::field_type::value_type>);
+    BOOST_ASSERT(ExtendedFieldValue<curves::mnt6_298::template g2_type<>::field_type::value_type>);
+    BOOST_ASSERT(ExtendedFieldValue<curves::mnt6_298::gt_type::value_type>);
 
-    BOOST_ASSERT(!is_extended_field_element<curves::pallas::base_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::pallas::scalar_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::pallas::template g1_type<>::field_type::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::pallas::base_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::pallas::scalar_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::pallas::template g1_type<>::field_type::value_type>);
 
-    BOOST_ASSERT(!is_extended_field_element<curves::vesta::base_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::vesta::scalar_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::vesta::template g1_type<>::field_type::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::vesta::base_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::vesta::scalar_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::vesta::template g1_type<>::field_type::value_type>);
 
-    BOOST_ASSERT(!is_extended_field_element<curves::jubjub::base_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::jubjub::scalar_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::jubjub::template g1_type<>::field_type::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::jubjub::base_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::jubjub::scalar_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::jubjub::template g1_type<>::field_type::value_type>);
 
-    BOOST_ASSERT(!is_extended_field_element<curves::babyjubjub::base_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::babyjubjub::scalar_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::babyjubjub::template g1_type<>::field_type::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::babyjubjub::base_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::babyjubjub::scalar_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::babyjubjub::template g1_type<>::field_type::value_type>);
 
-    BOOST_ASSERT(!is_extended_field_element<curves::ed25519::base_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::ed25519::scalar_field_type::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<curves::ed25519::template g1_type<>::field_type::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::ed25519::base_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::ed25519::scalar_field_type::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<curves::ed25519::template g1_type<>::field_type::value_type>);
 
-    BOOST_ASSERT(!is_extended_field_element<fields::goldilocks::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<fields::mersenne31::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<fields::koalabear::value_type>::value);
-    BOOST_ASSERT(!is_extended_field_element<fields::babybear::value_type>::value);
+    BOOST_ASSERT(!ExtendedFieldValue<fields::goldilocks::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<fields::mersenne31::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<fields::koalabear::value_type>);
+    BOOST_ASSERT(!ExtendedFieldValue<fields::babybear::value_type>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

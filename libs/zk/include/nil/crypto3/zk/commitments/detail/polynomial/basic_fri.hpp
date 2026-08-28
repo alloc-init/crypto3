@@ -381,7 +381,7 @@ namespace nil {
 
                 template<typename FRI, typename polynomial_dfs_type>
                     requires(math::EvaluationPolynomial<polynomial_dfs_type> &&
-                             algebra::is_field_element<typename polynomial_dfs_type::value_type>::value) &&
+                             algebra::FieldValue<typename polynomial_dfs_type::value_type>) &&
                             std::is_base_of_v<
                                 commitments::detail::basic_batched_fri<
                                     typename FRI::field_type, typename FRI::merkle_tree_hash_type,

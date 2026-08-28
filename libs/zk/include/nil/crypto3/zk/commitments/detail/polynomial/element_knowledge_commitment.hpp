@@ -210,8 +210,8 @@ namespace nil {
                              typename Type2,
                              typename FieldValueType,
                              typename = typename std::enable_if<
-                                 algebra::is_field<typename FieldValueType::field_type>::value &&
-                                     !algebra::is_extended_field<typename FieldValueType::field_type>::value,
+                                 algebra::Field<typename FieldValueType::field_type> &&
+                                     !algebra::ExtendedField<typename FieldValueType::field_type>,
                                  FieldValueType>::type>
                     element_kc<Type1, Type2> operator*(const FieldValueType &lhs, const element_kc<Type1, Type2> &rhs) {
 
@@ -222,8 +222,8 @@ namespace nil {
                              typename Type2,
                              typename FieldValueType,
                              typename = typename std::enable_if<
-                                 algebra::is_field<typename FieldValueType::field_type>::value &&
-                                     !algebra::is_extended_field<typename FieldValueType::field_type>::value,
+                                 algebra::Field<typename FieldValueType::field_type> &&
+                                     !algebra::ExtendedField<typename FieldValueType::field_type>,
                                  FieldValueType>::type>
                     element_kc<Type1, Type2> operator*(const element_kc<Type1, Type2> &lhs, const FieldValueType &rhs) {
 

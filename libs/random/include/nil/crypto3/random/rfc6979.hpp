@@ -56,11 +56,9 @@ namespace nil {
             struct rfc6979;
 
             template<typename ResultType, typename HashType>
-            struct rfc6979<
-                ResultType,
-                HashType,
-                typename std::enable_if<algebra::is_field<typename ResultType::field_type>::value &&
-                                        !algebra::is_extended_field<typename ResultType::field_type>::value>::type> {
+                requires algebra::Field<typename ResultType::field_type> &&
+                         (!algebra::ExtendedField<typename ResultType::field_type>)
+            struct rfc6979<ResultType, HashType, void> {
                 typedef HashType hash_type;
                 typedef mac::hmac<hash_type> hmac_policy;
                 typedef mac::mac_key<hmac_policy> key_type;

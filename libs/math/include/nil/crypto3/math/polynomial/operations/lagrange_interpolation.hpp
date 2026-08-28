@@ -52,7 +52,7 @@ namespace nil {
                          std::ranges::sized_range<const InputRange> &&
                          std::same_as<std::ranges::range_value_t<const InputRange>,
                                       std::pair<FieldValueType, FieldValueType>> &&
-                         algebra::is_field_element<FieldValueType>::value
+                         algebra::FieldValue<FieldValueType>
             polynomial<FieldValueType> lagrange_interpolation(const InputRange &points) {
                 std::size_t k = std::ranges::size(points);
                 auto first = std::ranges::begin(points);
