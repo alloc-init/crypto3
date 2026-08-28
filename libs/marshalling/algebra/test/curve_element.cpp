@@ -71,7 +71,7 @@ void test_curve_element_big_endian(T val) {
 
     using curve_element_type = types::curve_element<nil::marshalling::field_type<Endianness>, typename T::group_type>;
 
-    static_assert(nil::marshalling::is_curve_element<curve_element_type>::value);
+    static_assert(nil::crypto3::algebra::CurveElement<T>);
     static_assert(nil::marshalling::is_compatible<T>::value);
     nil::marshalling::status_type status;
 

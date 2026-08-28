@@ -135,9 +135,8 @@ namespace nil {
                 internal_generator_type gen;
             };
 
-            template<typename AlgebraicType>
-            struct algebraic_random_device<
-                AlgebraicType, typename std::enable_if<algebra::is_curve_group<AlgebraicType>::value>::type> {
+            template<algebra::CurveGroup AlgebraicType>
+            struct algebraic_random_device<AlgebraicType, void> {
             protected:
                 typedef AlgebraicType group_type;
                 typedef typename group_type::value_type group_value_type;

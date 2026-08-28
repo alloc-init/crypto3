@@ -31,95 +31,11 @@
 #include <cstddef>
 #include <type_traits>
 
-#include <boost/type_traits.hpp>
-#include <boost/tti/tti.hpp>
-#include <boost/mpl/placeholders.hpp>
-#include <boost/type_traits/is_same.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
 namespace nil {
     namespace crypto3 {
         namespace algebra {
-
-            using namespace boost::mpl::placeholders;
-
-            BOOST_TTI_HAS_TYPE(iterator)
-            BOOST_TTI_HAS_TYPE(const_iterator)
-
-            BOOST_TTI_HAS_TYPE(params_type)
-            BOOST_TTI_HAS_TYPE(curve_type)
-            BOOST_TTI_HAS_TYPE(field_type)
-            BOOST_TTI_HAS_TYPE(value_type)
-            BOOST_TTI_HAS_TYPE(base_field_type)
-            BOOST_TTI_HAS_TYPE(scalar_field_type)
-            BOOST_TTI_HAS_TYPE(gt_type)
-
-            // BOOST_TTI_HAS_TYPE(g1_type) does not work properly on g1_type since it is a template
-            template<typename, typename = std::void_t<>>
-            struct has_type_g1_type : std::false_type { };
-            template<typename T>
-            struct has_type_g1_type<T, std::void_t<typename T::template g1_type<>>> : std::true_type { };
-
-            // BOOST_TTI_HAS_TYPE(g2_type) does not work properly on g2_type since it is a template
-            template<typename, typename = std::void_t<>>
-            struct has_type_g2_type : std::false_type { };
-            template<typename T>
-            struct has_type_g2_type<T, std::void_t<typename T::template g2_type<>>> : std::true_type { };
-
-            BOOST_TTI_HAS_TYPE(group_type)
-
-            BOOST_TTI_HAS_STATIC_MEMBER_DATA(base_field_modulus)
-
-            BOOST_TTI_HAS_STATIC_MEMBER_DATA(scalar_field_modulus)
-
-            BOOST_TTI_HAS_STATIC_MEMBER_DATA(p)
-
-            BOOST_TTI_HAS_STATIC_MEMBER_DATA(q)
-
-            BOOST_TTI_HAS_FUNCTION(to_affine)
-
-            BOOST_TTI_HAS_FUNCTION(to_special)
-
-            BOOST_TTI_HAS_FUNCTION(is_special)
-            BOOST_TTI_HAS_STATIC_MEMBER_FUNCTION(zero)
-
-            BOOST_TTI_HAS_STATIC_MEMBER_FUNCTION(one)
-
-            BOOST_TTI_HAS_FUNCTION(is_zero)
-
-            BOOST_TTI_HAS_FUNCTION(is_well_formed)
-
-            BOOST_TTI_HAS_FUNCTION(double_inplace)
-
-            BOOST_TTI_HAS_FUNCTION(mixed_add)
-
-            template<typename T>
-            struct is_curve {
-                static constexpr bool value = has_type_base_field_type<T>::value &&
-                                              has_type_scalar_field_type<T>::value && has_type_g1_type<T>::value;
-            };
-
-            /** @brief is typename T either g1 or g2 group */
-            template<typename T>
-            struct is_curve_group {
-                static constexpr bool value = has_type_params_type<T>::value &&
-                                              has_type_curve_type<T, is_curve<_1>>::value &&
-                                              has_type_field_type<T>::value && has_type_value_type<T>::value;
-            };
-
-            template<typename T>
-            struct is_curve_element {
-                static const bool value =
-                    has_type_field_type<T>::value && has_type_group_type<T>::value &&
-                    has_static_member_function_zero<T, T>::value && has_static_member_function_one<T, T>::value &&
-                    has_function_is_zero<const T, bool>::value && has_function_is_well_formed<const T, bool>::value &&
-                    has_function_double_inplace<T, void>::value;
-            };
-
-            template<typename T>
-            struct has_mixed_add {
-                static const bool value = has_function_mixed_add<T, void, boost::mpl::vector<T const &>>::value;
-            };
 
             template<typename T>
             concept FieldValue = requires(const T &a, const T &b, const boost::multiprecision::cpp_int &exponent) {
@@ -166,6 +82,44 @@ namespace nil {
                                           std::remove_cvref_t<decltype(const_value.coordinate(index))>>;
                     requires FieldValue<std::remove_cvref_t<decltype(value.coordinate(index))>>;
                 };
+
+            template<typename T>
+            concept Curve = requires {
+                typename T::base_field_type;
+                typename T::scalar_field_type;
+                typename T::template g1_type<>;
+                requires Field<typename T::base_field_type>;
+                requires Field<typename T::scalar_field_type>;
+            };
+
+            template<typename T>
+            concept CurveWithG2 = Curve<T> && requires { typename T::template g2_type<>; };
+
+            template<typename T>
+            concept CurveWithTargetGroup = Curve<T> && requires { typename T::gt_type; };
+
+            template<typename T>
+            concept CurveElement = requires(T &value, const T &const_value) {
+                typename T::field_type;
+                typename T::group_type;
+                { T::zero() } -> std::convertible_to<T>;
+                { T::one() } -> std::convertible_to<T>;
+                { const_value.is_zero() } -> std::convertible_to<bool>;
+                { const_value.is_well_formed() } -> std::convertible_to<bool>;
+                { value.double_inplace() } -> std::same_as<void>;
+            };
+
+            template<typename T>
+            concept CurveGroup = requires {
+                typename T::params_type;
+                typename T::curve_type;
+                typename T::field_type;
+                typename T::value_type;
+                requires Curve<typename T::curve_type>;
+                requires Field<typename T::field_type>;
+                requires CurveElement<typename T::value_type>;
+                requires std::same_as<typename T::value_type::group_type, T>;
+            };
 
         }    // namespace algebra
     }    // namespace crypto3
