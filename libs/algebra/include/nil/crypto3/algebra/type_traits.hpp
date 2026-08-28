@@ -64,10 +64,17 @@ namespace nil {
             };
 
             template<typename T>
-            concept ExtendedField = Field<T> && requires { typename T::extension_policy; };
+            concept ExtendedField = Field<T> && requires {
+                typename T::extension_policy;
+                typename T::underlying_field_type;
+            };
 
             template<typename T>
-            concept ExtendedFieldValue = FieldValue<T> && requires { typename T::underlying_type; };
+            concept ExtendedFieldValue = FieldValue<T> && ExtendedField<typename T::field_type> && requires {
+                typename T::underlying_type;
+                requires std::same_as<typename T::underlying_type,
+                                      typename T::field_type::underlying_field_type::value_type>;
+            };
 
             template<typename T>
             concept FieldElementWithCoordinates =

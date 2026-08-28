@@ -112,6 +112,8 @@ namespace nil::crypto3::algebra::fields::detail {
 
     struct FieldArchetype {
         using value_type = FieldValueArchetype;
+        struct extension_policy { };
+        using underlying_field_type = FieldArchetype;
         constexpr static std::size_t value_bits = 10;
 
         struct integral_type { };
@@ -126,7 +128,7 @@ namespace nil::crypto3::algebra::fields::detail {
     struct BinomialFieldExtensionParamsArchetype {
         constexpr static std::size_t dimension = 3;
 
-        struct field_type { };
+        using field_type = FieldArchetype;
 
         using base_field_type = FieldArchetype;
         constexpr static base_field_type::value_type non_residue {};

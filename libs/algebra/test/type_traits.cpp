@@ -73,6 +73,7 @@ void test_field_value_types() {
 template<typename field_type>
 void test_field_types() {
     static_assert(Field<field_type>);
+    static_assert(ExtendedField<field_type> == ExtendedFieldValue<typename field_type::value_type>);
 
     test_field_value_types<typename field_type::value_type>();
 }
@@ -83,6 +84,8 @@ void test_extended_field_types() {
 
     static_assert(ExtendedField<field_type>);
     static_assert(ExtendedFieldValue<typename field_type::value_type>);
+    static_assert(std::same_as<typename field_type::value_type::underlying_type,
+                               typename field_type::underlying_field_type::value_type>);
 
     test_field_value_types<typename field_type::value_type>();
 }
