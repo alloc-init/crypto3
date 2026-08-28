@@ -64,8 +64,6 @@ namespace nil::crypto3::math {
             static_assert(sizeof...(args) == N * M, "Number of arguments must match the static_matrix size");
         }
 
-        // CRYPTO3_DETAIL_ASSERT_ARITHMETIC(T)
-
         using value_type = T;
         using size_type = std::size_t;
         constexpr static const size_type column_size = N;    ///< Number of rows
