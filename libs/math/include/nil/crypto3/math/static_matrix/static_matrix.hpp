@@ -29,8 +29,6 @@
 #include <array>
 #include <tuple>
 
-#include <nil/crypto3/detail/assert.hpp>
-
 #include <nil/crypto3/math/static_matrix/utility.hpp>
 #include <nil/crypto3/math/static_matrix/static_vector.hpp>
 
