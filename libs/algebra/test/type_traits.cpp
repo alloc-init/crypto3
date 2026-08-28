@@ -51,6 +51,7 @@
 
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/algebra/fields/goldilocks.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/goldilocks.hpp>
 #include <nil/crypto3/algebra/fields/koalabear.hpp>
 #include <nil/crypto3/algebra/fields/mersenne31.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/mersenne31.hpp>
@@ -158,6 +159,14 @@ BOOST_AUTO_TEST_CASE(babyjubjub_type_traits) {
 BOOST_AUTO_TEST_CASE(goldilocks_field_type_traits) {
     test_field_types<fields::goldilocks>();
     test_field_types<fields::goldilocks_fp2>();
+
+    using field_type = fields::goldilocks;
+    using params_type = fields::arithmetic_params<field_type>;
+
+    static_assert(field_type::modulus == 0xffffffff00000001ull);
+    static_assert(params_type::s == 32);
+    static_assert(params_type::multiplicative_generator == 7u);
+    static_assert(params_type::root_of_unity == 0x185629dcda58878cull);
 }
 
 BOOST_AUTO_TEST_CASE(mersenne31_field_type_traits) {
