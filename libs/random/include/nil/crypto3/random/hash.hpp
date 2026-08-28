@@ -48,11 +48,12 @@ namespace nil {
 
             // TODO: replace pack with marshalling
             template<typename HashType, typename ResultType>
+                requires algebra::Field<typename ResultType::field_type> &&
+                         (!algebra::ExtendedField<typename ResultType::field_type>) &&
+                         (ResultType::field_type::value_bits <= HashType::digest_bits)
             struct hash<HashType,
                         ResultType,
-                        typename std::enable_if<algebra::is_field<typename ResultType::field_type>::value &&
-                                                !algebra::is_extended_field<typename ResultType::field_type>::value &&
-                                                (ResultType::field_type::value_bits <= HashType::digest_bits)>::type> {
+                        void> {
                 typedef HashType hash_type;
                 typedef ResultType result_type;
                 typedef std::uint64_t input_type;

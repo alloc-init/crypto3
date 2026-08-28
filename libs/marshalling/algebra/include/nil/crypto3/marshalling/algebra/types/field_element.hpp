@@ -49,9 +49,9 @@ namespace nil {
                 namespace detail {
 
                     template<typename FieldValueType>
-                    typename std::enable_if<!(algebra::is_extended_field_element<FieldValueType>::value),
-                                            std::array<typename FieldValueType::field_type::integral_type,
-                                                       FieldValueType::field_type::arity>>::type
+                        requires (!algebra::ExtendedFieldValue<FieldValueType>)
+                    std::array<typename FieldValueType::field_type::integral_type,
+                               FieldValueType::field_type::arity>
                         fill_field_data(const FieldValueType &field_elem) {
 
                         std::array<typename FieldValueType::field_type::integral_type,
@@ -62,9 +62,9 @@ namespace nil {
                     }
 
                     template<typename FieldValueType>
-                    typename std::enable_if<algebra::is_extended_field_element<FieldValueType>::value,
-                                            std::array<typename FieldValueType::field_type::integral_type,
-                                                       FieldValueType::field_type::arity>>::type
+                        requires algebra::ExtendedFieldValue<FieldValueType>
+                    std::array<typename FieldValueType::field_type::integral_type,
+                               FieldValueType::field_type::arity>
                         fill_field_data(const FieldValueType &field_elem) {
 
                         std::array<typename FieldValueType::field_type::integral_type,
@@ -86,9 +86,9 @@ namespace nil {
                     }
 
                     template<typename FieldValueType>
-                    typename std::enable_if<algebra::is_field_element<FieldValueType>::value &&
-                                                !(algebra::is_extended_field_element<FieldValueType>::value),
-                                            FieldValueType>::type
+                        requires algebra::FieldValue<FieldValueType> &&
+                                 (!algebra::ExtendedFieldValue<FieldValueType>)
+                    FieldValueType
                         make_field_element(
                             typename std::array<typename FieldValueType::field_type::integral_type,
                                                 FieldValueType::field_type::arity>::iterator field_elem_data_iter) {
@@ -97,8 +97,8 @@ namespace nil {
                     }
 
                     template<typename FieldValueType>
-                    typename std::enable_if<algebra::is_extended_field_element<FieldValueType>::value,
-                                            FieldValueType>::type
+                        requires algebra::ExtendedFieldValue<FieldValueType>
+                    FieldValueType
                         make_field_element(
                             typename std::array<typename FieldValueType::field_type::integral_type,
                                                 FieldValueType::field_type::arity>::iterator field_elem_data_iter) {
@@ -122,8 +122,8 @@ namespace nil {
                                                integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
                                                TOptions...> {
 
-                    static_assert(algebra::is_field_element<FieldValueType>::value);
-                    static_assert(!algebra::is_extended_field_element<FieldValueType>::value);
+                    static_assert(algebra::FieldValue<FieldValueType>);
+                    static_assert(!algebra::ExtendedFieldValue<FieldValueType>);
 
                     using base_impl_type = ::nil::marshalling::types::detail::adapt_basic_field_type<
                         integral<TTypeBase, typename FieldValueType::field_type::integral_type>,
@@ -324,8 +324,8 @@ namespace nil {
                               nil::marshalling::option::fixed_size_storage<FieldValueType::field_type::arity>>,
                           TOptions...> {
 
-                    static_assert(algebra::is_field_element<FieldValueType>::value);
-                    static_assert(algebra::is_extended_field_element<FieldValueType>::value);
+                    static_assert(algebra::FieldValue<FieldValueType>);
+                    static_assert(algebra::ExtendedFieldValue<FieldValueType>);
 
                     using base_impl_type = ::nil::marshalling::types::detail::adapt_basic_field_type<
                         typename nil::marshalling::types::array_list<
@@ -546,7 +546,7 @@ namespace nil {
 
                 template<typename TTypeBase, typename FieldValueType, typename... TOptions>
                 using field_element =
-                    typename std::conditional<algebra::is_extended_field_element<FieldValueType>::value,
+                    typename std::conditional<algebra::ExtendedFieldValue<FieldValueType>,
                                               extended_field_element<TTypeBase, FieldValueType, TOptions...>,
                                               pure_field_element<TTypeBase, FieldValueType, TOptions...>>::type;
 
@@ -573,9 +573,9 @@ namespace nil {
                 // }
 
                 // template<typename FieldValueType>
-                // typename std::enable_if<algebra::is_field_element<FieldValueType>::value &&
-                //                             !(algebra::is_extended_field_element<FieldValueType>::value),
-                //                         int>::type
+                //     requires algebra::FieldValue<FieldValueType> &&
+                //              (!algebra::ExtendedFieldValue<FieldValueType>)
+                // int
                 //     compare_field_data(const FieldValueType &field_elem1,
                 //                        const FieldValueType &field_elem2) {
                 //     return (field_elem1.data < field_elem2.data) ? -1 : ((field_elem1.data > field_elem2.data) ? 1 :
@@ -583,7 +583,8 @@ namespace nil {
                 // }
 
                 // template<typename FieldValueType>
-                // typename std::enable_if<algebra::is_extended_field_element<FieldValueType>::value, bool>::type
+                //     requires algebra::ExtendedFieldValue<FieldValueType>
+                // bool
                 //     compare_field_data(const FieldValueType &field_elem1,
                 //                        const FieldValueType &field_elem2) {
                 //     for (std::size_t i = 0; i < FieldValueType::field_type::arity; i++) {

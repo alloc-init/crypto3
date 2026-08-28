@@ -57,12 +57,9 @@ namespace nil {
             struct algebraic_engine;
 
             template<typename AlgebraicType, typename Engine>
-            struct algebraic_engine<
-                AlgebraicType,
-                Engine,
-                typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
-                                        !algebra::is_extended_field<AlgebraicType>::value &&
-                                        boost::is_integral<typename Engine::result_type>::value>::type> {
+                requires algebra::Field<AlgebraicType> && (!algebra::ExtendedField<AlgebraicType>) &&
+                         boost::is_integral<typename Engine::result_type>::value
+            struct algebraic_engine<AlgebraicType, Engine, void> {
             protected:
                 typedef AlgebraicType field_type;
                 typedef typename field_type::value_type field_value_type;
@@ -177,12 +174,9 @@ namespace nil {
             };
 
             template<typename AlgebraicType, typename Engine>
-            struct algebraic_engine<
-                AlgebraicType,
-                Engine,
-                typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
-                                        algebra::is_extended_field<AlgebraicType>::value &&
-                                        boost::is_integral<typename Engine::result_type>::value>::type> {
+                requires algebra::Field<AlgebraicType> && algebra::ExtendedField<AlgebraicType> &&
+                         boost::is_integral<typename Engine::result_type>::value
+            struct algebraic_engine<AlgebraicType, Engine, void> {
             protected:
                 typedef AlgebraicType extended_field_type;
                 typedef typename extended_field_type::value_type extended_field_value_type;

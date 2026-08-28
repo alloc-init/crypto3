@@ -49,7 +49,7 @@ namespace nil {
 
                 template<typename TTypeBase, typename FieldValueType, typename... TOptions>
                 using field_element =
-                    typename std::conditional<algebra::is_extended_field_element<FieldValueType>::value,
+                    typename std::conditional<algebra::ExtendedFieldValue<FieldValueType>,
                                               extended_field_element<TTypeBase, FieldValueType, TOptions...>,
                                               pure_field_element<TTypeBase, FieldValueType, TOptions...>>::type;
             }    // namespace types
@@ -73,7 +73,8 @@ namespace nil {
         };
 
         template<typename T>
-        class is_compatible<T, typename std::enable_if<nil::crypto3::algebra::is_field_element<T>::value>::type> {
+            requires nil::crypto3::algebra::FieldValue<T>
+        class is_compatible<T, void> {
             using default_endianness = option::big_endian;
 
         public:

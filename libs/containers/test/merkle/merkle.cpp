@@ -68,7 +68,8 @@ typename std::enable_if<std::is_unsigned<ValueType>::value, std::vector<std::arr
 }
 
 template<typename ValueType, std::size_t N>
-typename std::enable_if<algebra::is_field_element<ValueType>::value, std::vector<std::array<ValueType, N>>>::type
+    requires algebra::FieldValue<ValueType>
+std::vector<std::array<ValueType, N>>
     generate_random_data(std::size_t leaf_number) {
     std::vector<std::array<ValueType, N>> v;
     for (std::size_t i = 0; i < leaf_number; ++i) {
@@ -308,14 +309,14 @@ BOOST_AUTO_TEST_CASE(merkletree_validate_test_1) {
     std::vector<std::array<char, 1>> v = {{'0'}, {'1'}, {'2'}, {'3'}, {'4'}, {'5'}, {'6'}, {'7'}};
     testing_validate_template<hashes::sha2<256>, 2>(v);
 
-    BOOST_STATIC_ASSERT_MSG(algebra::is_field_element<poseidon_type::word_type>::value,
+    BOOST_STATIC_ASSERT_MSG(algebra::FieldValue<poseidon_type::word_type>,
                             "Expecting Poseidon to consume field elements");
     std::vector<std::array<poseidon_type::word_type, 1>> v_field = {
         {0x0_cppui_modular255}, {0x1_cppui_modular255}, {0x2_cppui_modular255}, {0x3_cppui_modular255},
         {0x4_cppui_modular255}, {0x5_cppui_modular255}, {0x6_cppui_modular255}, {0x7_cppui_modular255}};
     testing_validate_template<poseidon_type, 2>(v_field);
 
-    BOOST_STATIC_ASSERT_MSG(algebra::is_field_element<poseidon2_type::word_type>::value,
+    BOOST_STATIC_ASSERT_MSG(algebra::FieldValue<poseidon2_type::word_type>,
                             "Expecting Poseidon2 to consume field elements");
     std::vector<std::array<poseidon2_type::word_type, 1>> poseidon2_v_field = {
         {0x0_cppui_modular254}, {0x1_cppui_modular254}, {0x2_cppui_modular254}, {0x3_cppui_modular254},

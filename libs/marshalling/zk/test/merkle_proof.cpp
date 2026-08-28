@@ -113,7 +113,7 @@ void test_merkle_proof(std::size_t tree_depth) {
     auto data = generate_random_data<std::uint8_t, LeafSize>(leafs_number);
     merkle_tree_type tree;
 
-    if constexpr (nil::crypto3::algebra::is_field_element<typename HashType::word_type>::value) {
+    if constexpr (nil::crypto3::algebra::FieldValue<typename HashType::word_type>) {
         // Populate the vector with wrappers, one for each block
         std::vector<nil::crypto3::hashes::block_to_field_elements_wrapper<typename HashType::word_type::field_type,
                                                                           std::array<std::uint8_t, LeafSize>>>

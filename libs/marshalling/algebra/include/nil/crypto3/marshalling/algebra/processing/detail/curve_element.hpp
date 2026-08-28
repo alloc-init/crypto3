@@ -46,9 +46,8 @@ namespace nil {
             namespace processing {
                 namespace detail {
                     template<typename G1FieldType>
-                    typename std::enable_if<algebra::is_field<G1FieldType>::value &&
-                                                !(algebra::is_extended_field<G1FieldType>::value),
-                                            bool>::type
+                        requires algebra::Field<G1FieldType> && (!algebra::ExtendedField<G1FieldType>)
+                    bool
                         sign_gf_p(const typename G1FieldType::value_type &v) {
 
                         if (v > G1FieldType::group_order_minus_one_half) {
@@ -58,7 +57,8 @@ namespace nil {
                     }
 
                     template<typename G2FieldType>
-                    typename std::enable_if<algebra::is_extended_field<G2FieldType>::value, bool>::type
+                        requires algebra::ExtendedField<G2FieldType>
+                    bool
                         sign_gf_p(const typename G2FieldType::value_type &v) {
 
                         if (v.data[1] == 0u) {

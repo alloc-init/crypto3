@@ -161,7 +161,7 @@ namespace nil {
                      typename Container,
                      bool OverflowOnPurpose,
                      bool Padding = true,
-                     bool = algebra::is_field_element<Output>::value>
+                     bool = algebra::FieldValue<Output>>
             struct conditional_block_to_field_elements_wrapper_helper {
                 using type = Container;
             };

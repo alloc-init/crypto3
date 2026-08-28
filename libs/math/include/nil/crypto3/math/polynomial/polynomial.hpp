@@ -530,7 +530,7 @@ namespace nil {
             };
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             polynomial<FieldValueType, Allocator> operator+(const polynomial<FieldValueType, Allocator>& A,
                                                             const FieldValueType& B) {
 
@@ -538,7 +538,7 @@ namespace nil {
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             polynomial<FieldValueType, Allocator> operator+(const FieldValueType& A,
                                                             const polynomial<FieldValueType, Allocator>& B) {
 
@@ -546,7 +546,7 @@ namespace nil {
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             polynomial<FieldValueType, Allocator> operator-(const polynomial<FieldValueType, Allocator>& A,
                                                             const FieldValueType& B) {
 
@@ -554,7 +554,7 @@ namespace nil {
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             polynomial<FieldValueType, Allocator> operator-(const FieldValueType& A,
                                                             const polynomial<FieldValueType, Allocator>& B) {
 
@@ -562,7 +562,7 @@ namespace nil {
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             polynomial<FieldValueType, Allocator> operator*(const polynomial<FieldValueType, Allocator>& A,
                                                             const FieldValueType& B) {
                 polynomial<FieldValueType, Allocator> result;
@@ -571,14 +571,14 @@ namespace nil {
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             polynomial<FieldValueType, Allocator> operator*(const FieldValueType& A,
                                                             const polynomial<FieldValueType, Allocator>& B) {
                 return B * A;
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             polynomial<FieldValueType, Allocator> operator/(const polynomial<FieldValueType, Allocator>& A,
                                                             const FieldValueType& B) {
                 polynomial<FieldValueType> result(A);
@@ -591,7 +591,7 @@ namespace nil {
             }
 
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             polynomial<FieldValueType, Allocator> operator/(const FieldValueType& A,
                                                             const polynomial<FieldValueType, Allocator>& B) {
 
@@ -601,7 +601,7 @@ namespace nil {
             // Used in the unit tests, so we can use BOOST_CHECK_EQUALS, and see
             // the values of polynomials, when the check fails.
             template<typename FieldValueType, typename Allocator = std::allocator<FieldValueType>>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             std::ostream& operator<<(std::ostream& os, const polynomial<FieldValueType, Allocator>& poly) {
                 if (poly.degree() == 0) {
                     // If all it contains is a constant, print the constant, so it's more readable.

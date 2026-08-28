@@ -46,8 +46,8 @@ namespace nil {
                     struct emsa1_encoding_policy<
                         MsgReprType, HashType,
                         typename std::enable_if<
-                            algebra::is_field<typename MsgReprType::field_type>::value &&
-                            !algebra::is_extended_field<typename MsgReprType::field_type>::value>::type> {
+                            algebra::Field<typename MsgReprType::field_type> &&
+                            !algebra::ExtendedField<typename MsgReprType::field_type>>::type> {
                         typedef HashType hash_type;
 
                     protected:
@@ -111,8 +111,8 @@ namespace nil {
                     struct emsa1_encoding_policy<
                         MsgReprType, HashType,
                         typename std::enable_if<
-                            algebra::is_field<MsgReprType>::value &&
-                            !algebra::is_extended_field<typename MsgReprType::field_type>::value>::type>
+                            algebra::Field<MsgReprType> &&
+                            !algebra::ExtendedField<MsgReprType>>::type>
                         : public emsa1_encoding_policy<typename MsgReprType::value_type, HashType> { };
 
                     template<typename MsgReprType, typename HashType, typename = void>
@@ -122,8 +122,8 @@ namespace nil {
                     struct emsa1_verification_policy<
                         MsgReprType, HashType,
                         typename std::enable_if<
-                            algebra::is_field<typename MsgReprType::field_type>::value &&
-                            !algebra::is_extended_field<typename MsgReprType::field_type>::value>::type> {
+                            algebra::Field<typename MsgReprType::field_type> &&
+                            !algebra::ExtendedField<typename MsgReprType::field_type>>::type> {
                     protected:
                         typedef typename MsgReprType::field_type field_type;
                         typedef emsa1_encoding_policy<MsgReprType, HashType> encoding_policy;
@@ -157,8 +157,8 @@ namespace nil {
                     struct emsa1_verification_policy<
                         MsgReprType, HashType,
                         typename std::enable_if<
-                            algebra::is_field<MsgReprType>::value &&
-                            !algebra::is_extended_field<typename MsgReprType::field_type>::value>::type>
+                            algebra::Field<MsgReprType> &&
+                            !algebra::ExtendedField<MsgReprType>>::type>
                         : public emsa1_verification_policy<typename MsgReprType::value_type, HashType> { };
 
                     template<typename MsgReprType, typename HashType>

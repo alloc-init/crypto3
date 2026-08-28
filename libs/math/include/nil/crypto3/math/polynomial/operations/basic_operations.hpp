@@ -352,7 +352,7 @@ namespace nil {
             template<detail::MutablePolynomialCoefficientRange AlgebraicRange,
                      detail::MutablePolynomialCoefficientRange FieldRange>
                 requires requires { typename std::ranges::range_value_t<FieldRange>::field_type; } &&
-                         algebra::is_field<typename std::ranges::range_value_t<FieldRange>::field_type>::value &&
+                         algebra::Field<typename std::ranges::range_value_t<FieldRange>::field_type> &&
                          std::same_as<typename std::ranges::range_value_t<FieldRange>::field_type::value_type,
                                       std::ranges::range_value_t<FieldRange>> &&
                          std::default_initializable<std::ranges::range_value_t<AlgebraicRange>> &&
@@ -469,7 +469,7 @@ namespace nil {
              */
             template<polynomial_arithmetic::PolynomialBackend Backend, detail::PolynomialCoefficientRange FieldRange>
                 requires std::default_initializable<typename Backend::polynomial_type> &&
-                         algebra::is_field_element<std::ranges::range_value_t<const FieldRange>>::value &&
+                         algebra::FieldValue<std::ranges::range_value_t<const FieldRange>> &&
                          requires(const std::ranges::range_value_t<const FieldRange> &field_value) {
                              {
                                  Backend::polynomial_type::value_type::one() * field_value
@@ -504,7 +504,7 @@ namespace nil {
              * @pre Q and R are distinct and do not alias either input.
              */
             template<detail::MutablePolynomialCoefficientRange Range>
-                requires algebra::is_field_element<std::ranges::range_value_t<Range>>::value &&
+                requires algebra::FieldValue<std::ranges::range_value_t<Range>> &&
                          std::copy_constructible<Range> &&
                          std::constructible_from<Range, std::ranges::range_size_t<const Range>,
                                                  std::ranges::range_value_t<Range>> &&

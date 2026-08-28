@@ -54,8 +54,8 @@ namespace nil {
                 typename FieldType,
                 typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
                 typename UniformRandomBitGenerator = boost::random::random_device>
-            typename std::enable_if<is_field<FieldType>::value && !(is_extended_field<FieldType>::value),
-                                    typename FieldType::value_type>::type
+                requires Field<FieldType> && (!ExtendedField<FieldType>)
+            typename FieldType::value_type
                 random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
 
                 using field_type = FieldType;
@@ -75,8 +75,8 @@ namespace nil {
                 typename FieldType,
                 typename DistributionType = boost::random::uniform_int_distribution<typename FieldType::integral_type>,
                 typename UniformRandomBitGenerator = boost::random::random_device>
-            typename std::enable_if<is_field<FieldType>::value && is_extended_field<FieldType>::value,
-                                    typename FieldType::value_type>::type
+                requires Field<FieldType> && ExtendedField<FieldType>
+            typename FieldType::value_type
                 random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
 
                 using field_type = FieldType;

@@ -46,7 +46,7 @@ namespace nil {
              * page 7.
              */
             template<typename FieldType>
-                requires algebra::is_field<FieldType>::value
+                requires algebra::Field<FieldType>
             void compute_subproduct_tree(std::vector<std::vector<std::vector<typename FieldType::value_type>>> &T,
                                          std::size_t m) {
 
@@ -95,7 +95,7 @@ namespace nil {
              * 12 and 14.
              */
             template<typename FieldType, detail::MutablePolynomialCoefficientRange Range>
-                requires algebra::is_field<FieldType>::value
+                requires algebra::Field<FieldType>
             void
                 monomial_to_newton_basis(Range &a,
                                          const std::vector<std::vector<std::vector<typename FieldType::value_type>>> &T,
@@ -157,7 +157,7 @@ namespace nil {
              * page 11.
              */
             template<typename FieldType, detail::MutablePolynomialCoefficientRange Range>
-                requires algebra::is_field<FieldType>::value
+                requires algebra::Field<FieldType>
             void
                 newton_to_monomial_basis(Range &a,
                                          const std::vector<std::vector<std::vector<typename FieldType::value_type>>> &T,
@@ -199,7 +199,7 @@ namespace nil {
                      detail::MutablePolynomialCoefficientRange Range1,
                      detail::PolynomialCoefficientRange Range2,
                      detail::PolynomialCoefficientRange Range3>
-                requires algebra::is_field<FieldType>::value &&
+                requires algebra::Field<FieldType> &&
                          std::same_as<std::ranges::range_value_t<const Range2>, typename FieldType::value_type> &&
                          std::same_as<std::ranges::range_value_t<const Range3>, typename FieldType::value_type>
             void monomial_to_newton_basis_geometric(Range1 &a,
@@ -252,7 +252,7 @@ namespace nil {
                      detail::MutablePolynomialCoefficientRange Range1,
                      detail::PolynomialCoefficientRange Range2,
                      detail::PolynomialCoefficientRange Range3>
-                requires algebra::is_field<FieldType>::value &&
+                requires algebra::Field<FieldType> &&
                          std::same_as<std::ranges::range_value_t<const Range2>, typename FieldType::value_type> &&
                          std::same_as<std::ranges::range_value_t<const Range3>, typename FieldType::value_type>
             void newton_to_monomial_basis_geometric(Range1 &a,

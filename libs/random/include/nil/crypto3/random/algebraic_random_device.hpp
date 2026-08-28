@@ -50,9 +50,8 @@ namespace nil {
             struct algebraic_random_device;
 
             template<typename AlgebraicType>
-            struct algebraic_random_device<
-                AlgebraicType, typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
-                                                       !algebra::is_extended_field<AlgebraicType>::value>::type> {
+                requires algebra::Field<AlgebraicType> && (!algebra::ExtendedField<AlgebraicType>)
+            struct algebraic_random_device<AlgebraicType, void> {
             protected:
                 typedef AlgebraicType field_type;
                 typedef typename field_type::value_type field_value_type;
@@ -89,9 +88,8 @@ namespace nil {
             };
 
             template<typename AlgebraicType>
-            struct algebraic_random_device<
-                AlgebraicType, typename std::enable_if<algebra::is_field<AlgebraicType>::value &&
-                                                       algebra::is_extended_field<AlgebraicType>::value>::type> {
+                requires algebra::Field<AlgebraicType> && algebra::ExtendedField<AlgebraicType>
+            struct algebraic_random_device<AlgebraicType, void> {
             protected:
                 typedef AlgebraicType extended_field_type;
                 typedef typename extended_field_type::value_type extended_field_value_type;

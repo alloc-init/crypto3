@@ -66,7 +66,7 @@ namespace nil {
                 void basic_radix2_fft_cached(Range &a, const std::vector<typename FieldType::value_type> &omega_cache) {
                     typedef typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type
                         value_type;
-                    BOOST_STATIC_ASSERT(algebra::is_field<FieldType>::value);
+                    BOOST_STATIC_ASSERT(algebra::Field<FieldType>);
 
                     // It now supports curve elements too, should probably some other assertion about the field type and
                     // value type BOOST_STATIC_ASSERT(std::is_same<typename FieldType::value_type, value_type>::value);

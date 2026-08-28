@@ -47,7 +47,7 @@ namespace nil {
              * This changes coefficient values without moving them to different degrees.
              */
             template<typename FieldValueType>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             static inline polynomial<FieldValueType> polynomial_shift(const polynomial<FieldValueType> &f,
                                                                       const FieldValueType &x) {
                 polynomial<FieldValueType> f_shifted(f);
@@ -136,7 +136,7 @@ namespace nil {
              * @pre domain_size is zero, selecting f.size(), or is a positive divisor of f.size().
              */
             template<typename FieldValueType>
-                requires algebra::is_field_element<FieldValueType>::value
+                requires algebra::FieldValue<FieldValueType>
             static inline polynomial_dfs<FieldValueType> polynomial_shift(const polynomial_dfs<FieldValueType> &f,
                                                                           const int shift,
                                                                           std::size_t domain_size = 0) {

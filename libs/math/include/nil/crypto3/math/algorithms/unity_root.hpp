@@ -86,7 +86,8 @@ namespace nil {
              prime q. Input: BigInteger q which is a prime. Output: A generator of prime q
              */
             template<typename IntegerType>
-            static typename std::enable_if<!algebra::is_field_element<IntegerType>::value, IntegerType>::type
+                requires (!algebra::FieldValue<IntegerType>)
+            static IntegerType
                 find_generator(const IntegerType &q) {
                 std::set<IntegerType> prime_factors;
 

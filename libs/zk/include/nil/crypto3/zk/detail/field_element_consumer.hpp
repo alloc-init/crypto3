@@ -40,17 +40,17 @@ namespace nil {
                  * @tparam Field
                  * @tparam Target A type that determines whether to store Field's value_type directly or as bytes.
                  *         The decision is based on whether Target is identified as a field element by the
-                 *         `algebra::is_field_element` trait.
+                 *         `algebra::FieldValue` concept.
                  * @tparam Marshalling A type of marshalled strucutre to use for serialization in case of keepeng
                  *         serialized values.
                  */
                 template<typename FieldType, typename Target, typename Marshalling>
                 class field_element_consumer
-                    : public std::vector<typename std::conditional_t<algebra::is_field_element<Target>::value,
+                    : public std::vector<typename std::conditional_t<algebra::FieldValue<Target>,
                                                                      typename FieldType::value_type, std::uint8_t>> {
                 public:    // TODO: make private
                     using base_class =
-                        std::vector<typename std::conditional_t<algebra::is_field_element<Target>::value,
+                        std::vector<typename std::conditional_t<algebra::FieldValue<Target>,
                                                                 typename FieldType::value_type, std::uint8_t>>;
                     using iterator = typename base_class::iterator;
 
@@ -60,7 +60,7 @@ namespace nil {
                      *        it multiplies by the length of the field element representation.
                      */
                     static constexpr std::size_t field_element_holder_size_multiplier =
-                        std::conditional_t<algebra::is_field_element<Target>::value,
+                        std::conditional_t<algebra::FieldValue<Target>,
                                            std::integral_constant<std::size_t, 1>,
                                            std::integral_constant<std::size_t, Marshalling::max_length()>>::value;
 
@@ -78,7 +78,7 @@ namespace nil {
 
                     void consume(const typename FieldType::value_type &field_element) {
                         BOOST_ASSERT(current_iter <= this->end() - field_element_holder_size_multiplier);
-                        if constexpr (algebra::is_field_element<Target>::value) {
+                        if constexpr (algebra::FieldValue<Target>) {
                             *current_iter++ = field_element;
                         } else {
                             Marshalling field_val(field_element);

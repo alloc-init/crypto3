@@ -84,7 +84,7 @@ namespace nil {
              */
             template<typename FieldValueType, std::random_access_iterator InputIterator>
                 requires std::same_as<std::iter_value_t<InputIterator>, FieldValueType> &&
-                         algebra::is_field_element<FieldValueType>::value
+                         algebra::FieldValue<FieldValueType>
             inline FieldValueType evaluate_lagrange_polynomial(InputIterator first, InputIterator last,
                                                                const FieldValueType &t, std::size_t m,
                                                                std::size_t idx) {
@@ -115,7 +115,7 @@ namespace nil {
             template<typename FieldValueType, typename Range>
                 requires std::ranges::random_access_range<const Range> &&
                          std::same_as<std::ranges::range_value_t<const Range>, FieldValueType> &&
-                         algebra::is_field_element<FieldValueType>::value
+                         algebra::FieldValue<FieldValueType>
             inline FieldValueType evaluate_lagrange_polynomial(const Range &domain, const FieldValueType &t,
                                                                std::size_t m, std::size_t idx) {
                 return evaluate_lagrange_polynomial(std::ranges::begin(domain), std::ranges::end(domain), t, m, idx);

@@ -39,7 +39,7 @@
 namespace nil::crypto3::marshalling::types::detail {
     template<typename FieldValueType>
     typename std::enable_if<
-        algebra::is_extended_field_element<FieldValueType>::value,
+        algebra::ExtendedFieldValue<FieldValueType>,
         std::array<typename FieldValueType::field_type::integral_type, FieldValueType::field_type::arity>>::type
         fill_field_data(const FieldValueType &field_elem);
 }
@@ -52,7 +52,7 @@ namespace nil::crypto3::algebra::fields::detail {
         typename T::base_field_type;
         { T::non_residue } -> std::convertible_to<typename T::base_field_type::value_type>;
         { T::dim_unity_root } -> std::convertible_to<typename T::base_field_type::value_type>;
-    } && is_field<typename T::base_field_type>::value;
+    } && Field<typename T::base_field_type>;
 
     struct FieldArchetype;
 
@@ -92,12 +92,20 @@ namespace nil::crypto3::algebra::fields::detail {
         constexpr self &operator+=(const self &) {
             return *this;
         }
+        constexpr self operator-(const self &) const {
+            return {};
+        }
+        constexpr bool is_zero() const {
+            return true;
+        }
+        constexpr bool is_one() const {
+            return true;
+        }
         constexpr self inversed() const {
             return *this;
         }
 
-        template<std::integral PowerType>
-        constexpr self pow(const PowerType &) const {
+        constexpr self pow(const boost::multiprecision::cpp_int &) const {
             return *this;
         }
     };
@@ -347,6 +355,10 @@ namespace nil::crypto3::algebra::fields::detail {
             return power(*this, pwr);
         }
 
+        constexpr element_fpn pow(const boost::multiprecision::cpp_int &pwr) const {
+            return power(*this, pwr);
+        }
+
         constexpr element_fpn inversed() const {
             auto f = one();
             for (std::size_t i = 1; i < dimension; ++i) {
@@ -401,7 +413,7 @@ namespace nil::crypto3::algebra::fields::detail {
 
         template<typename FieldValueType>
         friend typename std::enable_if<
-            algebra::is_extended_field_element<FieldValueType>::value,
+            algebra::ExtendedFieldValue<FieldValueType>,
             std::array<typename FieldValueType::field_type::integral_type, FieldValueType::field_type::arity>>::type
             nil::crypto3::marshalling::types::detail::fill_field_data(const FieldValueType &field_elem);
     };
@@ -432,8 +444,8 @@ namespace nil::crypto3::algebra::fields::detail {
         return element_fpn_details::one_instance<Params>;
     }
 
-    static_assert(is_field_element<element_fpn<BinomialFieldExtensionParamsArchetype>>::value);
-    static_assert(is_extended_field_element<element_fpn<BinomialFieldExtensionParamsArchetype>>::value);
+    static_assert(FieldValue<element_fpn<BinomialFieldExtensionParamsArchetype>>);
+    static_assert(ExtendedFieldValue<element_fpn<BinomialFieldExtensionParamsArchetype>>);
 }    // namespace nil::crypto3::algebra::fields::detail
 
 template<nil::crypto3::algebra::fields::detail::BinomialFieldExtensionParams Params>

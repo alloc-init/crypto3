@@ -438,23 +438,6 @@ namespace nil {
             };
 
             template<typename T>
-            struct is_field {
-                static const bool value = has_value_type<T>::value && has_value_bits<T>::value &&
-                                          has_integral_type<T>::value && has_modulus_bits<T>::value &&
-                                          has_number_type<T>::value && has_arity<T>::value;
-                typedef T type;
-            };
-
-            template<typename T>
-            struct is_extended_field {
-                static const bool value = has_value_type<T>::value && has_value_bits<T>::value &&
-                                          has_integral_type<T>::value && has_modulus_bits<T>::value &&
-                                          has_number_type<T>::value && has_arity<T>::value &&
-                                          has_extension_policy<T>::value;
-                typedef T type;
-            };
-
-            template<typename T>
             struct is_complex : std::false_type { };
             template<typename T>
             struct is_complex<std::complex<T>> : std::true_type { };

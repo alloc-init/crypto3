@@ -65,10 +65,8 @@ namespace nil {
 
                 // For Poseidon, Merkle node will contain a Group Element, not a vector of bytes.
                 template<typename TTypeBase, typename GroupElementType>
-                struct merkle_node_value<
-                    TTypeBase,
-                    GroupElementType,
-                    typename std::enable_if<nil::crypto3::algebra::is_field_element<GroupElementType>::value>::type> {
+                    requires nil::crypto3::algebra::FieldValue<GroupElementType>
+                struct merkle_node_value<TTypeBase, GroupElementType, void> {
                     using type = field_element<TTypeBase, GroupElementType>;
                 };
 
@@ -115,9 +113,8 @@ namespace nil {
                 }
 
                 template<typename GroupElementType,
-                         typename Endianness,
-                         typename std::enable_if<nil::crypto3::algebra::is_field_element<GroupElementType>::value,
-                                                 bool>::type = true>
+                         typename Endianness>
+                    requires nil::crypto3::algebra::FieldValue<GroupElementType>
                 typename merkle_node_value<nil::marshalling::field_type<Endianness>, GroupElementType>::type
                     fill_merkle_node_value(const GroupElementType &node_value) {
 
@@ -176,9 +173,8 @@ namespace nil {
                 }
 
                 template<typename GroupElementType,
-                         typename Endianness,
-                         typename std::enable_if<nil::crypto3::algebra::is_field_element<GroupElementType>::value,
-                                                 bool>::type = true>
+                         typename Endianness>
+                    requires nil::crypto3::algebra::FieldValue<GroupElementType>
                 GroupElementType make_merkle_node_value(
                     const typename merkle_node_value<nil::marshalling::field_type<Endianness>, GroupElementType>::type
                         &filled_node_value) {
