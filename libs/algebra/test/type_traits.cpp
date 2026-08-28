@@ -66,7 +66,6 @@ void test_field_value_types() {
 
     BOOST_ASSERT(has_type_field_type<value_type>::value);
     BOOST_ASSERT((has_function_is_zero<const value_type, bool>::value));
-    BOOST_ASSERT((has_function_inversed<const value_type, value_type>::value));
     BOOST_ASSERT((has_static_member_function_zero<value_type, const value_type &>::value));
     BOOST_ASSERT((has_static_member_function_one<value_type, const value_type &>::value));
 
@@ -76,12 +75,6 @@ void test_field_value_types() {
 template<typename field_type>
 void test_field_types() {
     BOOST_ASSERT(has_type_value_type<field_type>::value);
-    BOOST_ASSERT(has_type_integral_type<field_type>::value);
-    BOOST_ASSERT(has_type_modular_type<field_type>::value);
-
-    BOOST_ASSERT((has_static_member_data_value_bits<field_type, const std::size_t>::value));
-    BOOST_ASSERT((has_static_member_data_modulus_bits<field_type, const std::size_t>::value));
-    BOOST_ASSERT((has_static_member_data_arity<field_type, const std::size_t>::value));
 
     BOOST_ASSERT(Field<field_type>);
 
@@ -92,7 +85,6 @@ template<typename field_type>
 void test_extended_field_types() {
     test_field_types<field_type>();
 
-    BOOST_ASSERT(has_type_extension_policy<field_type>::value);
     BOOST_ASSERT(ExtendedField<field_type>);
 
     BOOST_ASSERT(ExtendedFieldValue<typename field_type::value_type>);
@@ -220,7 +212,12 @@ BOOST_AUTO_TEST_CASE(ed25519_type_traits) {
     test_ordinary_curve_types<curves::ed25519>();
 }
 
-#define FIELD_HAS_SQRT(field) (has_function_sqrt<const field::value_type, field::value_type>::value)
+template<typename T>
+concept HasSqrt = requires(const T &value) {
+    { value.sqrt() } -> std::same_as<T>;
+};
+
+#define FIELD_HAS_SQRT(field) (HasSqrt<typename field::value_type>)
 
 BOOST_AUTO_TEST_CASE(test_extended_fields_sqrt_trait) {
 

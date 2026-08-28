@@ -46,15 +46,11 @@ namespace nil {
             BOOST_TTI_HAS_TYPE(iterator)
             BOOST_TTI_HAS_TYPE(const_iterator)
 
-            BOOST_TTI_HAS_TYPE(extension_policy)
             BOOST_TTI_HAS_TYPE(params_type)
             BOOST_TTI_HAS_TYPE(curve_type)
             BOOST_TTI_HAS_TYPE(field_type)
-            BOOST_TTI_HAS_TYPE(underlying_type)
             BOOST_TTI_HAS_TYPE(value_type)
-            BOOST_TTI_HAS_TYPE(integral_type)
             BOOST_TTI_HAS_TYPE(base_field_type)
-            BOOST_TTI_HAS_TYPE(modular_type)
             BOOST_TTI_HAS_TYPE(scalar_field_type)
             BOOST_TTI_HAS_TYPE(gt_type)
 
@@ -72,15 +68,9 @@ namespace nil {
 
             BOOST_TTI_HAS_TYPE(group_type)
 
-            BOOST_TTI_HAS_STATIC_MEMBER_DATA(value_bits)
-
-            BOOST_TTI_HAS_STATIC_MEMBER_DATA(modulus_bits)
-
             BOOST_TTI_HAS_STATIC_MEMBER_DATA(base_field_modulus)
 
             BOOST_TTI_HAS_STATIC_MEMBER_DATA(scalar_field_modulus)
-
-            BOOST_TTI_HAS_STATIC_MEMBER_DATA(arity)
 
             BOOST_TTI_HAS_STATIC_MEMBER_DATA(p)
 
@@ -91,8 +81,6 @@ namespace nil {
             BOOST_TTI_HAS_FUNCTION(to_special)
 
             BOOST_TTI_HAS_FUNCTION(is_special)
-            BOOST_TTI_HAS_FUNCTION(sqrt)
-
             BOOST_TTI_HAS_STATIC_MEMBER_FUNCTION(zero)
 
             BOOST_TTI_HAS_STATIC_MEMBER_FUNCTION(one)
@@ -104,8 +92,6 @@ namespace nil {
             BOOST_TTI_HAS_FUNCTION(double_inplace)
 
             BOOST_TTI_HAS_FUNCTION(mixed_add)
-
-            BOOST_TTI_HAS_FUNCTION(inversed)
 
             template<typename T>
             struct is_curve {
