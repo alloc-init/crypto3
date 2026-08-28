@@ -47,6 +47,7 @@
 #include <nil/crypto3/algebra/fields/fp6_3over2.hpp>
 #include <nil/crypto3/algebra/fields/fp6_2over3.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
+#include <nil/crypto3/algebra/fields/fpn.hpp>
 
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/algebra/fields/goldilocks.hpp>
@@ -169,6 +170,19 @@ BOOST_AUTO_TEST_CASE(mersenne31_field_type_traits) {
     static_assert(field_type::modulus == 0x7fffffffu);
     static_assert(params_type::s == 1);
     static_assert(value_type(params_type::root_of_unity) == -value_type::one());
+}
+
+BOOST_AUTO_TEST_CASE(fpn_type_traits) {
+    using params_type = fields::detail::BinomialFieldExtensionParamsArchetype;
+    using field_type = fields::fpn<params_type>;
+
+    static_assert(Field<field_type>);
+    static_assert(ExtendedField<field_type>);
+    static_assert(ExtendedFieldValue<typename field_type::value_type>);
+    static_assert(std::same_as<typename field_type::underlying_field_type, typename params_type::base_field_type>);
+    static_assert(field_type::extension_degree == params_type::dimension);
+    static_assert(field_type::arity == params_type::dimension * params_type::base_field_type::arity);
+    static_assert(field_type::value_bits == field_type::arity * field_type::modulus_bits);
 }
 
 BOOST_AUTO_TEST_CASE(koalabear_field_type_traits) {
