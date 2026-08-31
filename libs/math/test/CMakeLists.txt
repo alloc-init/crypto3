@@ -55,6 +55,7 @@ set(TESTS_NAMES
     "polynomial_exponentiation"
     "polynomial_rational_reconstruction"
     "polynomial_square_root"
+    "polynomial_x_norm_reconstruction"
     "polynomial_composition"
     "polynomial_frobenius"
     "square_free_factorization"
