@@ -6,13 +6,13 @@ Crypto3.Math provides three complementary recovery facilities:
 
 * square testing and square roots in a finite polynomial quotient field;
 * bounded rational reconstruction from a residue modulo a polynomial; and
-* one-call reconstruction of the fixed `X`-norm representation of an irreducible polynomial.
+* recovery of the fixed `X`-norm representation of an irreducible polynomial.
 
 Together they can recover representations of irreducible factors by the polynomial norm form
 
     P(X)^2 - X * Q(X)^2.
 
-The one-call operation owns the degree bounds and exact normalization for this norm equation. The caller supplies the
+The recovery operation owns the degree bounds and exact normalization for this norm equation. The caller supplies the
 polynomial arithmetic context and the coefficient-field generator.
 
 ### Header map
@@ -23,7 +23,7 @@ polynomial arithmetic context and the coefficient-field generator.
 | Coefficient-field square-root helpers | `<nil/crypto3/algebra/fields/field_algorithms.hpp>` |
 | Quotient-field square testing and roots | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_square_root.hpp>` |
 | Bounded rational reconstruction | `<nil/crypto3/math/polynomial/reconstruction/polynomial_rational_reconstruction.hpp>` |
-| One-call `X`-norm reconstruction | `<nil/crypto3/math/polynomial/reconstruction/polynomial_x_norm_reconstruction.hpp>` |
+| `X`-norm reconstruction | `<nil/crypto3/math/polynomial/reconstruction/polynomial_x_norm_reconstruction.hpp>` |
 
 ## Field orders and coefficient square roots
 
@@ -148,7 +148,7 @@ reconstructs with bounds `degree(P) <= 0` and `degree(Q) <= 2` as
     P = 1,
     Q = 2 + 2X + X^2.
 
-## One-call `X`-norm reconstruction
+## `X`-norm reconstruction
 
 `recover_polynomial_x_norm_representation` composes quotient-field square roots, bounded rational reconstruction, and
 coefficient-field normalization to recover polynomials `P` and `Q` satisfying
@@ -210,7 +210,7 @@ multiplicatively:
 Consequently, a caller can factor a target polynomial, recover eligible irreducible factors independently, account for
 multiplicities and the scalar leading coefficient, and combine the local representations. Crypto3.Math deliberately
 keeps that application-level policy separate from the generic factorization, quotient-field square-root, bounded
-rational-reconstruction, and one-call `X`-norm reconstruction facilities.
+rational-reconstruction, and `X`-norm reconstruction facilities.
 
 ### Worked example over F7
 
@@ -248,14 +248,14 @@ Then the scalar is corrected exactly:
 
     P'^2 - X Q'^2 = H.
 
-The one-call API performs this square test, quotient-field square root, bounded reconstruction, scalar normalization,
+The recovery API performs this square test, quotient-field square root, bounded reconstruction, scalar normalization,
 and final exact verification using the supplied polynomial context and coefficient generator. Combining several
 eligible factors then uses the multiplicative identity above.
 
 ## Reuse and performance
 
 The [polynomial arithmetic infrastructure](@ref math_polynomial_arithmetic) describes these contexts in detail. The
-one-call API reuses the caller's polynomial arithmetic context throughout recovery. It constructs one divisor context
+recovery API reuses the caller's polynomial arithmetic context throughout recovery. It constructs one divisor context
 and one square-root context and reuses them for all operations within that call. Direct users of the lower-level APIs
 can retain those contexts across repeated operations modulo the same divisor.
 
