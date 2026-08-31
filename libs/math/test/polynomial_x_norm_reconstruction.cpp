@@ -297,6 +297,40 @@ BOOST_AUTO_TEST_CASE(high_level_recovery_handles_zero_and_constant_polynomials_w
     BOOST_CHECK_EQUAL(generator_calls, 0);
 }
 
+BOOST_AUTO_TEST_CASE(high_level_recovery_rejects_nonconstant_inputs_that_fail_necessary_square_filters) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    const value_type non_residue = first_quadratic_non_residue();
+    const value_type minus_one = value_type::zero() - value_type::one();
+    BOOST_REQUIRE(minus_one.is_square());
+    BOOST_REQUIRE(!(value_type::zero() - non_residue).is_square());
+
+    std::size_t generator_calls = 0;
+    boost::random::mt19937 rng(0x584E1000);
+    auto coefficient_generator = [&] {
+        ++generator_calls;
+        return nil::crypto3::algebra::random_element<field_type>(rng);
+    };
+
+    const polynomial_type nonsquare_constant_coefficient = {non_residue, value_type::zero(), value_type::one()};
+    const auto constant_filter_result = math::recover_polynomial_x_norm_representation<backend_type>(
+        nonsquare_constant_coefficient, arithmetic_context, coefficient_generator);
+    BOOST_CHECK(!constant_filter_result.has_value());
+
+    const polynomial_type nonsquare_even_degree_leading_coefficient = {value_type::one(), value_type::zero(),
+                                                                       non_residue};
+    const auto even_leading_filter_result = math::recover_polynomial_x_norm_representation<backend_type>(
+        nonsquare_even_degree_leading_coefficient, arithmetic_context, coefficient_generator);
+    BOOST_CHECK(!even_leading_filter_result.has_value());
+
+    const polynomial_type nonsquare_odd_degree_signed_leading_coefficient = {value_type::one(), value_type::zero(),
+                                                                             value_type::zero(), non_residue};
+    const auto odd_leading_filter_result = math::recover_polynomial_x_norm_representation<backend_type>(
+        nonsquare_odd_degree_signed_leading_coefficient, arithmetic_context, coefficient_generator);
+    BOOST_CHECK(!odd_leading_filter_result.has_value());
+
+    BOOST_CHECK_EQUAL(generator_calls, 0);
+}
+
 BOOST_AUTO_TEST_CASE(high_level_recovery_rejects_empty_and_noncanonical_polynomials) {
     polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
     auto coefficient_generator = [] { return value_type::one(); };
