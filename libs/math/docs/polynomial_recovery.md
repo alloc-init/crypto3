@@ -150,8 +150,8 @@ reconstructs with bounds `degree(P) <= 0` and `degree(Q) <= 2` as
 
 ## `X`-norm reconstruction
 
-`recover_polynomial_x_norm_representation` composes quotient-field square roots, bounded rational reconstruction, and
-coefficient-field normalization to recover polynomials `P` and `Q` satisfying
+`recover_irreducible_polynomial_x_norm_representation` composes quotient-field square roots, bounded rational
+reconstruction, and coefficient-field normalization to recover polynomials `P` and `Q` satisfying
 
     P^2 - X * Q^2 = g.
 
@@ -163,7 +163,7 @@ precondition and is not tested.
 #include <nil/crypto3/math/polynomial/reconstruction/polynomial_x_norm_reconstruction.hpp>
 
 // arithmetic_context and coefficient_generator are caller-owned.
-auto representation = math::recover_polynomial_x_norm_representation<backend_type>(
+auto representation = math::recover_irreducible_polynomial_x_norm_representation<backend_type>(
     g, arithmetic_context, coefficient_generator);
 
 if (representation) {

@@ -80,8 +80,8 @@ namespace {
         boost::random::mt19937 rng(seed);
         auto coefficient_generator = [&] { return nil::crypto3::algebra::random_element<fq12_field_type>(rng); };
 
-        const auto result =
-            math::recover_polynomial_x_norm_representation<Backend>(g, arithmetic_context, coefficient_generator);
+        const auto result = math::recover_irreducible_polynomial_x_norm_representation<Backend>(g, arithmetic_context,
+                                                                                                coefficient_generator);
         BOOST_REQUIRE(result.has_value());
         BOOST_CHECK_EQUAL(result->p.size(), 1);
         BOOST_CHECK_EQUAL(result->q.size(), 1);
@@ -105,8 +105,8 @@ BOOST_AUTO_TEST_CASE(recovers_and_normalizes_an_irreducible_quadratic_with_the_s
 
     boost::random::mt19937 rng(0x584E4F52);
     auto coefficient_generator = [&] { return nil::crypto3::algebra::random_element<field_type>(rng); };
-    const auto result =
-        math::recover_polynomial_x_norm_representation<backend_type>(g, arithmetic_context, coefficient_generator);
+    const auto result = math::recover_irreducible_polynomial_x_norm_representation<backend_type>(g, arithmetic_context,
+                                                                                                 coefficient_generator);
 
     BOOST_REQUIRE(result.has_value());
     BOOST_CHECK_LE(result->p.size() - 1, 1);
@@ -128,8 +128,8 @@ BOOST_AUTO_TEST_CASE(returns_no_value_when_x_is_nonsquare_modulo_the_irreducible
         return value_type::zero();
     };
 
-    const auto result =
-        math::recover_polynomial_x_norm_representation<backend_type>(g, arithmetic_context, coefficient_generator);
+    const auto result = math::recover_irreducible_polynomial_x_norm_representation<backend_type>(g, arithmetic_context,
+                                                                                                 coefficient_generator);
     BOOST_CHECK(!result.has_value());
     BOOST_CHECK_EQUAL(generator_calls, 0);
 }
@@ -145,8 +145,8 @@ BOOST_AUTO_TEST_CASE(returns_no_value_when_the_scalar_multiple_cannot_be_normali
     polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
     auto coefficient_generator = [&] { return non_residue; };
 
-    const auto result =
-        math::recover_polynomial_x_norm_representation<backend_type>(g, arithmetic_context, coefficient_generator);
+    const auto result = math::recover_irreducible_polynomial_x_norm_representation<backend_type>(g, arithmetic_context,
+                                                                                                 coefficient_generator);
     BOOST_CHECK(!result.has_value());
 }
 
@@ -167,21 +167,21 @@ BOOST_AUTO_TEST_CASE(rejects_malformed_zero_and_constant_inputs) {
 
     polynomial_type empty;
     empty.get_storage().clear();
-    BOOST_CHECK_THROW(
-        math::recover_polynomial_x_norm_representation<backend_type>(empty, arithmetic_context, coefficient_generator),
-        std::invalid_argument);
+    BOOST_CHECK_THROW(math::recover_irreducible_polynomial_x_norm_representation<backend_type>(
+                          empty, arithmetic_context, coefficient_generator),
+                      std::invalid_argument);
 
     polynomial_type noncanonical(2);
     noncanonical[0] = value_type::one();
     noncanonical[1] = value_type::zero();
-    BOOST_CHECK_THROW(math::recover_polynomial_x_norm_representation<backend_type>(noncanonical, arithmetic_context,
-                                                                                   coefficient_generator),
+    BOOST_CHECK_THROW(math::recover_irreducible_polynomial_x_norm_representation<backend_type>(
+                          noncanonical, arithmetic_context, coefficient_generator),
                       std::invalid_argument);
 
-    BOOST_CHECK_THROW(math::recover_polynomial_x_norm_representation<backend_type>(
+    BOOST_CHECK_THROW(math::recover_irreducible_polynomial_x_norm_representation<backend_type>(
                           polynomial_type {value_type::zero()}, arithmetic_context, coefficient_generator),
                       std::invalid_argument);
-    BOOST_CHECK_THROW(math::recover_polynomial_x_norm_representation<backend_type>(
+    BOOST_CHECK_THROW(math::recover_irreducible_polynomial_x_norm_representation<backend_type>(
                           polynomial_type {value_type::one()}, arithmetic_context, coefficient_generator),
                       std::invalid_argument);
 }

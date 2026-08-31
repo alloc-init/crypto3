@@ -112,9 +112,10 @@ namespace nil::crypto3::math {
                      { value.is_square() } -> std::convertible_to<bool>;
                  }
     std::optional<polynomial_x_norm_representation<typename Backend::polynomial_type>>
-        recover_polynomial_x_norm_representation(const typename Backend::polynomial_type &g,
-                                                 polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
-                                                 Generator &coefficient_generator) {
+        recover_irreducible_polynomial_x_norm_representation(
+            const typename Backend::polynomial_type &g,
+            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+            Generator &coefficient_generator) {
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
         using representation_type = polynomial_x_norm_representation<polynomial_type>;
