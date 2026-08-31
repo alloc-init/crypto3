@@ -65,6 +65,26 @@ namespace {
         return candidate;
     }
 
+    value_type next_quadratic_non_residue(value_type candidate) {
+        do {
+            candidate = candidate + value_type::one();
+        } while (candidate.is_square());
+        return candidate;
+    }
+
+    template<typename Backend>
+    typename Backend::polynomial_type
+        context_multiply(const typename Backend::polynomial_type &left, const typename Backend::polynomial_type &right,
+                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        typename Backend::polynomial_type product;
+        arithmetic_context.multiply(product, left, right);
+        return product;
+    }
+
+    polynomial_type representable_irreducible_quadratic() {
+        return {value_type::one(), value_type::zero() - value_type(79), value_type::one()};
+    }
+
     fq12_value_type fq12_scalar(std::size_t value) {
         fq12_value_type result = fq12_value_type::zero();
         result.coordinate(0) = fq_value_type(value);
@@ -88,6 +108,27 @@ namespace {
         BOOST_CHECK(result->p[0] * result->p[0] == fq12_scalar(9));
         BOOST_CHECK(result->q[0] * result->q[0] == fq12_scalar(4));
         BOOST_CHECK(math::evaluate_polynomial_x_norm<Backend>(*result, arithmetic_context) == g);
+    }
+
+    template<typename Backend>
+    void check_bn254_fq12_high_level_recovery(polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                              std::size_t seed) {
+        using extension_polynomial_type = typename Backend::polynomial_type;
+
+        const extension_polynomial_type odd_factor = {-fq12_scalar(9), fq12_value_type::one()};
+        const extension_polynomial_type even_multiplicity_factor = {-fq12_scalar(4), fq12_value_type::one()};
+        extension_polynomial_type even_factor_squared;
+        arithmetic_context.square(even_factor_squared, even_multiplicity_factor);
+        extension_polynomial_type h = context_multiply<Backend>(odd_factor, even_factor_squared, arithmetic_context);
+        math::scalar_multiplication(h, h, fq12_scalar(25));
+
+        boost::random::mt19937 rng(seed);
+        auto coefficient_generator = [&] { return nil::crypto3::algebra::random_element<fq12_field_type>(rng); };
+        const auto result =
+            math::recover_polynomial_x_norm_representation<Backend>(h, arithmetic_context, coefficient_generator);
+
+        BOOST_REQUIRE(result.has_value());
+        BOOST_CHECK(math::evaluate_polynomial_x_norm<Backend>(*result, arithmetic_context) == h);
     }
 }    // namespace
 
@@ -222,6 +263,151 @@ BOOST_AUTO_TEST_CASE(rejects_malformed_zero_and_constant_inputs) {
     BOOST_CHECK_THROW(math::recover_irreducible_polynomial_x_norm_representation<backend_type>(
                           polynomial_type {value_type::one()}, arithmetic_context, coefficient_generator),
                       std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(high_level_recovery_handles_zero_and_constant_polynomials_without_factorization) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    std::size_t generator_calls = 0;
+    auto coefficient_generator = [&] {
+        ++generator_calls;
+        return value_type::one();
+    };
+
+    const auto zero = math::recover_polynomial_x_norm_representation<backend_type>(
+        polynomial_type {value_type::zero()}, arithmetic_context, coefficient_generator);
+    BOOST_REQUIRE(zero.has_value());
+    BOOST_CHECK(zero->p == polynomial_type({value_type::zero()}));
+    BOOST_CHECK(zero->q == polynomial_type({value_type::zero()}));
+    BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*zero, arithmetic_context) ==
+                polynomial_type({value_type::zero()}));
+
+    const polynomial_type square_constant = {value_type(9)};
+    const auto square = math::recover_polynomial_x_norm_representation<backend_type>(
+        square_constant, arithmetic_context, coefficient_generator);
+    BOOST_REQUIRE(square.has_value());
+    BOOST_CHECK(square->p.size() == 1);
+    BOOST_CHECK(square->p[0] * square->p[0] == square_constant[0]);
+    BOOST_CHECK(square->q == polynomial_type({value_type::zero()}));
+    BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*square, arithmetic_context) == square_constant);
+
+    const polynomial_type nonsquare_constant = {first_quadratic_non_residue()};
+    const auto nonsquare = math::recover_polynomial_x_norm_representation<backend_type>(
+        nonsquare_constant, arithmetic_context, coefficient_generator);
+    BOOST_CHECK(!nonsquare.has_value());
+    BOOST_CHECK_EQUAL(generator_calls, 0);
+}
+
+BOOST_AUTO_TEST_CASE(high_level_recovery_rejects_empty_and_noncanonical_polynomials) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    auto coefficient_generator = [] { return value_type::one(); };
+
+    polynomial_type empty;
+    empty.get_storage().clear();
+    BOOST_CHECK_THROW(
+        math::recover_polynomial_x_norm_representation<backend_type>(empty, arithmetic_context, coefficient_generator),
+        std::invalid_argument);
+
+    polynomial_type noncanonical(2);
+    noncanonical[0] = value_type::one();
+    noncanonical[1] = value_type::zero();
+    BOOST_CHECK_THROW(math::recover_polynomial_x_norm_representation<backend_type>(noncanonical, arithmetic_context,
+                                                                                   coefficient_generator),
+                      std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(high_level_recovery_lifts_an_even_multiplicity_without_recovering_the_factor) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    const value_type non_residue = first_quadratic_non_residue();
+    const polynomial_type unrepresentable_factor = {value_type::zero() - non_residue, value_type::one()};
+    polynomial_type h;
+    arithmetic_context.square(h, unrepresentable_factor);
+
+    boost::random::mt19937 rng(0x584E1001);
+    auto coefficient_generator = [&] { return nil::crypto3::algebra::random_element<field_type>(rng); };
+    const auto result =
+        math::recover_polynomial_x_norm_representation<backend_type>(h, arithmetic_context, coefficient_generator);
+
+    BOOST_REQUIRE(result.has_value());
+    BOOST_CHECK(result->q == polynomial_type({value_type::zero()}));
+    BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*result, arithmetic_context) == h);
+}
+
+BOOST_AUTO_TEST_CASE(high_level_recovery_recovers_an_odd_multiplicity_representable_factor) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    const polynomial_type h = representable_irreducible_quadratic();
+
+    boost::random::mt19937 rng(0x584E1002);
+    auto coefficient_generator = [&] { return nil::crypto3::algebra::random_element<field_type>(rng); };
+    const auto result =
+        math::recover_polynomial_x_norm_representation<backend_type>(h, arithmetic_context, coefficient_generator);
+
+    BOOST_REQUIRE(result.has_value());
+    BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*result, arithmetic_context) == h);
+}
+
+BOOST_AUTO_TEST_CASE(high_level_recovery_combines_distinct_even_and_odd_factor_multiplicities) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    const value_type non_residue = first_quadratic_non_residue();
+    const polynomial_type even_factor = {value_type::zero() - non_residue, value_type::one()};
+    polynomial_type even_factor_squared;
+    arithmetic_context.square(even_factor_squared, even_factor);
+    const polynomial_type odd_factor = representable_irreducible_quadratic();
+    const polynomial_type h = context_multiply<backend_type>(even_factor_squared, odd_factor, arithmetic_context);
+
+    boost::random::mt19937 rng(0x584E1003);
+    auto coefficient_generator = [&] { return nil::crypto3::algebra::random_element<field_type>(rng); };
+    const auto result =
+        math::recover_polynomial_x_norm_representation<backend_type>(h, arithmetic_context, coefficient_generator);
+
+    BOOST_REQUIRE(result.has_value());
+    BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*result, arithmetic_context) == h);
+}
+
+BOOST_AUTO_TEST_CASE(high_level_recovery_incorporates_a_square_leading_scalar) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    const polynomial_type monic = representable_irreducible_quadratic();
+    polynomial_type h;
+    math::scalar_multiplication(h, monic, value_type(9));
+
+    boost::random::mt19937 rng(0x584E1004);
+    auto coefficient_generator = [&] { return nil::crypto3::algebra::random_element<field_type>(rng); };
+    const auto result =
+        math::recover_polynomial_x_norm_representation<backend_type>(h, arithmetic_context, coefficient_generator);
+
+    BOOST_REQUIRE(result.has_value());
+    BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*result, arithmetic_context) == h);
+}
+
+BOOST_AUTO_TEST_CASE(high_level_recovery_rejects_an_unrepresentable_odd_factor_after_necessary_filters_pass) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    const value_type first_non_residue = first_quadratic_non_residue();
+    const value_type second_non_residue = next_quadratic_non_residue(first_non_residue);
+    const polynomial_type first_factor = {value_type::zero() - first_non_residue, value_type::one()};
+    const polynomial_type second_factor = {value_type::zero() - second_non_residue, value_type::one()};
+    const polynomial_type h = context_multiply<backend_type>(first_factor, second_factor, arithmetic_context);
+
+    BOOST_REQUIRE(h[0].is_square());
+    BOOST_REQUIRE(h[h.size() - 1].is_square());
+    boost::random::mt19937 rng(0x584E1005);
+    auto coefficient_generator = [&] { return nil::crypto3::algebra::random_element<field_type>(rng); };
+    const auto result =
+        math::recover_polynomial_x_norm_representation<backend_type>(h, arithmetic_context, coefficient_generator);
+
+    BOOST_CHECK(!result.has_value());
+}
+
+BOOST_AUTO_TEST_CASE(high_level_recovery_supports_bn254_fq12_with_the_schoolbook_backend) {
+    polynomial_arithmetic::polynomial_context<fq12_schoolbook_backend> arithmetic_context;
+    check_bn254_fq12_high_level_recovery(arithmetic_context, 0xF0125101);
+}
+
+BOOST_AUTO_TEST_CASE(high_level_recovery_supports_bn254_fq12_with_the_mixed_radix_backend) {
+    polynomial_arithmetic::polynomial_context_options options;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<fq12_mixed_radix_backend> arithmetic_context(fq12_mixed_radix_backend(18),
+                                                                                           options);
+    check_bn254_fq12_high_level_recovery(arithmetic_context, 0xF0125102);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

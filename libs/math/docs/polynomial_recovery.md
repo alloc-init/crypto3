@@ -2,13 +2,14 @@
 
 @tableofcontents
 
-Crypto3.Math provides three complementary recovery facilities:
+Crypto3.Math provides four complementary recovery facilities:
 
 * square testing and square roots in a finite polynomial quotient field;
-* bounded rational reconstruction from a residue modulo a polynomial; and
-* recovery of the fixed `X`-norm representation of an irreducible polynomial.
+* bounded rational reconstruction from a residue modulo a polynomial;
+* recovery of the fixed `X`-norm representation of an irreducible polynomial; and
+* factorization-aware recovery of the same representation for a general polynomial.
 
-Together they can recover representations of irreducible factors by the polynomial norm form
+Together they can recover representations by the polynomial norm form
 
     P(X)^2 - X * Q(X)^2.
 
@@ -209,10 +210,59 @@ This is the local representation of `g` by the norm from adjoining a square root
 
 All four polynomial products use the supplied arithmetic context, while multiplication by `X` is a coefficient shift.
 
-Consequently, a caller can factor a target polynomial, recover eligible irreducible factors independently, account for
-multiplicities and the scalar leading coefficient, and combine the local representations. Crypto3.Math deliberately
-keeps that application-level policy separate from the generic factorization, quotient-field square-root, bounded
-rational-reconstruction, and `X`-norm reconstruction facilities.
+### General polynomial recovery
+
+`recover_polynomial_x_norm_representation` applies the same norm construction to a canonical polynomial `H` without
+requiring the caller to decompose it first:
+
+```cpp
+// arithmetic_context and coefficient_generator are caller-owned.
+auto representation = math::recover_polynomial_x_norm_representation<backend_type>(
+    H, arithmetic_context, coefficient_generator);
+
+if (representation) {
+    polynomial_type exact_norm = math::evaluate_polynomial_x_norm<backend_type>(
+        *representation, arithmetic_context);
+    // exact_norm == H
+}
+```
+
+Zero is represented by `(0, 0)`. A constant `c` is represented by `(sqrt(c), 0)` when `c` is square and otherwise has
+no result. These cases do not invoke factorization or consume the coefficient generator.
+
+For a nonconstant input, the constant coefficient must be square. Its leading coefficient must be square when the
+degree is even, while the negated leading coefficient must be square when the degree is odd. These necessary tests
+reject impossible inputs before factorization, but passing them does not guarantee recovery.
+
+Complete factorization writes the remaining input as
+
+    H = c * product(g^e),
+
+where `c` is the leading coefficient and each `g` is monic and irreducible. An even factor power `g^(2r)` has the
+immediate representation `(g^r, 0)`. For an odd power `g^(2r+1)`, irreducible recovery first obtains `(P_g, Q_g)` for
+the unpaired copy of `g`; scaling both components by `g^r` then represents the complete factor power. Factor recovery
+stops as soon as an odd-multiplicity factor cannot be represented.
+
+The factor-power representations are combined with `multiply_polynomial_x_norm_representations` in a balanced product
+tree. Finally, both components are scaled by `sqrt(c)` to incorporate the factorization's leading coefficient. A
+nonsquare required scalar produces no result. Every successful path evaluates the completed norm and compares it
+exactly with `H` before returning.
+
+The coefficient generator is shared by complete factorization and odd-factor recovery. It must meet the factorization
+generator contract and must allow each square-root context to find a quotient-field nonsquare. All polynomial products
+and squares use the caller's compile-time-selected arithmetic context; no polynomial backend or random engine is
+constructed internally.
+
+| Outcome | Contract |
+|---|---|
+| Representation returned | `evaluate_polynomial_x_norm(result, context) == H` exactly. |
+| No value returned | A special-case or necessary square test fails, an odd factor is unrepresentable, bounded recovery fails, or scalar normalization is impossible. |
+| `std::invalid_argument` | `H` is empty or noncanonical, or a composed API contract is violated. |
+| `std::logic_error` | Completed factorization, recovery, combination, normalization, or final verification is internally inconsistent. |
+
+This factorization and factor-combination behavior is a generic polynomial operation: it depends only on finite-field
+polynomial arithmetic and the fixed norm map `P^2 - X * Q^2`. The API returns the two coefficient polynomials and does
+not impose a representation or policy beyond that algebraic identity.
 
 ### Worked example over F7
 
