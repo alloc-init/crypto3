@@ -48,6 +48,21 @@ namespace nil::crypto3::math {
         Polynomial q;
     };
 
+    namespace detail {
+
+        template<CoefficientPolynomial Polynomial>
+        bool is_canonical_polynomial_x_norm_representation(
+            const polynomial_x_norm_representation<Polynomial> &representation) {
+            using value_type = typename Polynomial::value_type;
+            const auto is_canonical = [](const Polynomial &polynomial) {
+                return !polynomial.empty() &&
+                       (polynomial.size() == 1 || polynomial[polynomial.size() - 1] != value_type {});
+            };
+            return is_canonical(representation.p) && is_canonical(representation.q);
+        }
+
+    }    // namespace detail
+
     /**
      * Evaluate the polynomial norm of P + Q * sqrt(X):
      *
@@ -63,13 +78,7 @@ namespace nil::crypto3::math {
         const polynomial_x_norm_representation<typename Backend::polynomial_type> &representation,
         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
-        using value_type = typename polynomial_type::value_type;
-
-        const auto is_canonical = [](const polynomial_type &polynomial) {
-            return !polynomial.empty() &&
-                   (polynomial.size() == 1 || polynomial[polynomial.size() - 1] != value_type {});
-        };
-        if (!is_canonical(representation.p) || !is_canonical(representation.q)) {
+        if (!detail::is_canonical_polynomial_x_norm_representation(representation)) {
             throw std::invalid_argument("polynomial X-norm evaluation requires canonical nonempty inputs");
         }
 
@@ -82,6 +91,49 @@ namespace nil::crypto3::math {
         shift_left(x_q_squared, q_squared, 1);
         subtraction(norm, p_squared, x_q_squared);
         return norm;
+    }
+
+    /**
+     * Multiply two polynomial X-norm representations using
+     *
+     *     P = P1 * P2 + X * Q1 * Q2,
+     *     Q = P1 * Q2 + Q1 * P2.
+     *
+     * The returned representation has norm equal to the product of the input norms. Every polynomial product uses the
+     * caller-owned arithmetic context; multiplication by X is a coefficient shift.
+     *
+     * @throws std::invalid_argument if an input polynomial is empty or noncanonical.
+     */
+    template<polynomial_arithmetic::PolynomialBackend Backend>
+    polynomial_x_norm_representation<typename Backend::polynomial_type> multiply_polynomial_x_norm_representations(
+        const polynomial_x_norm_representation<typename Backend::polynomial_type> &left,
+        const polynomial_x_norm_representation<typename Backend::polynomial_type> &right,
+        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using representation_type = polynomial_x_norm_representation<polynomial_type>;
+
+        if (!detail::is_canonical_polynomial_x_norm_representation(left) ||
+            !detail::is_canonical_polynomial_x_norm_representation(right)) {
+            throw std::invalid_argument("polynomial X-norm multiplication requires canonical nonempty inputs");
+        }
+
+        polynomial_type p_product;
+        polynomial_type q_product;
+        polynomial_type shifted_q_product;
+        polynomial_type result_p;
+        arithmetic_context.multiply(p_product, left.p, right.p);
+        arithmetic_context.multiply(q_product, left.q, right.q);
+        shift_left(shifted_q_product, q_product, 1);
+        addition(result_p, p_product, shifted_q_product);
+
+        polynomial_type left_p_right_q;
+        polynomial_type left_q_right_p;
+        polynomial_type result_q;
+        arithmetic_context.multiply(left_p_right_q, left.p, right.q);
+        arithmetic_context.multiply(left_q_right_p, left.q, right.p);
+        addition(result_q, left_p_right_q, left_q_right_p);
+
+        return representation_type {std::move(result_p), std::move(result_q)};
     }
 
     /**

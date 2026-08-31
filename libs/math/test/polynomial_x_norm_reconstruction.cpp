@@ -93,6 +93,44 @@ namespace {
 
 BOOST_AUTO_TEST_SUITE(polynomial_x_norm_reconstruction_test_suite)
 
+BOOST_AUTO_TEST_CASE(multiplies_x_norm_representations_and_preserves_the_exact_norm_product) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    const math::polynomial_x_norm_representation<polynomial_type> left = {
+        polynomial_type {value_type::one(), value_type(2)}, polynomial_type {value_type(3)}};
+    const math::polynomial_x_norm_representation<polynomial_type> right = {
+        polynomial_type {value_type(4), value_type(5)}, polynomial_type {value_type(6), value_type(7)}};
+
+    const auto product =
+        math::multiply_polynomial_x_norm_representations<backend_type>(left, right, arithmetic_context);
+    BOOST_CHECK(product.p == polynomial_type({value_type(4), value_type(31), value_type(31)}));
+    BOOST_CHECK(product.q == polynomial_type({value_type(18), value_type(34), value_type(14)}));
+
+    const polynomial_type left_norm = math::evaluate_polynomial_x_norm<backend_type>(left, arithmetic_context);
+    const polynomial_type right_norm = math::evaluate_polynomial_x_norm<backend_type>(right, arithmetic_context);
+    polynomial_type expected_norm_product;
+    arithmetic_context.multiply(expected_norm_product, left_norm, right_norm);
+    BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(product, arithmetic_context) == expected_norm_product);
+
+    const math::polynomial_x_norm_representation<polynomial_type> zero = {polynomial_type {value_type::zero()},
+                                                                          polynomial_type {value_type::zero()}};
+    const auto zero_product =
+        math::multiply_polynomial_x_norm_representations<backend_type>(zero, right, arithmetic_context);
+    BOOST_CHECK(zero_product.p == polynomial_type({value_type::zero()}));
+    BOOST_CHECK(zero_product.q == polynomial_type({value_type::zero()}));
+}
+
+BOOST_AUTO_TEST_CASE(x_norm_representation_multiplication_rejects_malformed_inputs) {
+    polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
+    const math::polynomial_x_norm_representation<polynomial_type> valid = {polynomial_type {value_type::one()},
+                                                                           polynomial_type {value_type::zero()}};
+    math::polynomial_x_norm_representation<polynomial_type> malformed = valid;
+    malformed.q.get_storage().clear();
+
+    BOOST_CHECK_THROW(
+        math::multiply_polynomial_x_norm_representations<backend_type>(valid, malformed, arithmetic_context),
+        std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_CASE(recovers_and_normalizes_an_irreducible_quadratic_with_the_stated_degree_bounds) {
     polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
     const math::polynomial_x_norm_representation<polynomial_type> original = {

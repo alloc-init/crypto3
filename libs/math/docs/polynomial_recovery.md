@@ -201,11 +201,13 @@ Both polynomial squares use the caller's arithmetic context; multiplication by `
 | `std::invalid_argument` | The input is empty, noncanonical, zero, or constant, or a composed API contract is violated. |
 | `std::logic_error` | An operation reported success but a required modular, scalar-multiple, or final exact identity is inconsistent. |
 
-This is the local representation of `g` by the norm from adjoining a square root of `X`. Representations compose
-multiplicatively:
+This is the local representation of `g` by the norm from adjoining a square root of `X`.
+`multiply_polynomial_x_norm_representations(left, right, context)` composes two representations using
 
     (P1^2 - X Q1^2) * (P2^2 - X Q2^2)
       = (P1 P2 + X Q1 Q2)^2 - X * (P1 Q2 + P2 Q1)^2.
+
+All four polynomial products use the supplied arithmetic context, while multiplication by `X` is a coefficient shift.
 
 Consequently, a caller can factor a target polynomial, recover eligible irreducible factors independently, account for
 multiplicities and the scalar leading coefficient, and combine the local representations. Crypto3.Math deliberately
