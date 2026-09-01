@@ -286,7 +286,19 @@ namespace nil {
                         z[i] = -z[i];
                 }
 
-                w = transpose_multiplication(n - 1, w, u);
+                /*
+                 * This transposed product reverses the fixed Newton-basis kernel u, not the dynamic coefficients w.
+                 * Keep w as the algebraic multiplication operand so this legacy path continues to support
+                 * extension-field and group-valued coefficients scaled by base-field elements.
+                 */
+                std::vector<field_value_type> reversed_u(u);
+                reverse(reversed_u, n);
+                std::vector<value_type> product;
+                multiplication(product, w, reversed_u);
+                product.resize(2 * n - 1, value_type::zero());
+                for (std::size_t i = 0; i < n; ++i) {
+                    w[i] = product[n - 1 + i];
+                }
 
                 for (std::size_t i = 0; i < n; i++) {
                     a[i] = w[i] * z[i];

@@ -32,6 +32,7 @@
 #include <nil/crypto3/math/algorithms/batch_inverse.hpp>
 #include <nil/crypto3/math/domains/evaluation_domain.hpp>
 
+#include <nil/crypto3/math/polynomial/backends/polynomial_backend.hpp>
 #include <nil/crypto3/math/polynomial/operations/basis_change.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 
@@ -53,8 +54,14 @@ namespace nil {
              * and one field inversion. Therefore, after constructing one reusable domain, evaluating the weights at k
              * points takes O(m * k), not quadratic work per point.
              *
-             * This complexity guarantee applies to constructor precomputation and the field-element Lagrange
-             * overloads. The legacy transforms and powers-based overload are documented separately below.
+             * The concrete interpolate overload reconstructs a degree-below-m polynomial from exactly one evaluation
+             * at each domain point. Its evaluations and coefficients may belong to a compatible extension field. It
+             * reuses cached geometric factors, performs no interpolation-time field inversions, and routes both
+             * polynomial products through the caller's reusable polynomial context.
+             *
+             * These guarantees apply to constructor precomputation, the field-element Lagrange overloads, and the
+             * context-based interpolation overload. The legacy transforms and powers-based overload are documented
+             * separately below.
              */
             template<typename FieldType, typename ValueType = typename FieldType::value_type>
             class geometric_sequence_domain : public evaluation_domain<FieldType, ValueType> {
@@ -65,6 +72,10 @@ namespace nil {
                     field_value_type generator;
                     std::vector<field_value_type> geometric_sequence;
                     std::vector<field_value_type> geometric_triangular_sequence;
+                    std::vector<field_value_type> inverse_geometric_triangular_sequence;
+                    std::vector<field_value_type> interpolation_denominator_products;
+                    std::vector<field_value_type> inverse_interpolation_denominator_products;
+                    std::vector<field_value_type> interpolation_kernel;
                     std::vector<field_value_type> barycentric_weights;
                     polynomial<field_value_type> vanishing_polynomial;
 
@@ -72,13 +83,14 @@ namespace nil {
                      * Here m is the exact domain size: there are m points x_0, ..., x_(m-1), and transforms consume
                      * exactly m coefficients or evaluations.
                      *
-                     * Build the reusable field data once, in four linear stages:
+                     * Build the reusable field data once, in five linear stages:
                      *   1. Generate r^i and r^(i(i-1)/2), while validating that the domain points are distinct.
                      *   2. Batch-invert a packed denominator vector using one field inversion. Its first entry is r,
                      *      and entry i > 0 is 1 - r^i, so the result supplies both r^-1 and every inverse needed by
                      *      the recurrences below.
-                     *   3. Derive the barycentric weights by recurrence.
-                     *   4. Derive the coefficients of Z(X) = product_(i=0)^(m-1) (X - r^i) by recurrence.
+                     *   3. Derive the geometric interpolation factors by recurrence.
+                     *   4. Derive the barycentric weights by recurrence.
+                     *   5. Derive the coefficients of Z(X) = product_(i=0)^(m-1) (X - r^i) by recurrence.
                      *
                      * The completed object is immutable and constructor-only scratch remains local, so concurrent
                      * Lagrange evaluations share only read-only state.
@@ -87,6 +99,10 @@ namespace nil {
                         generator(fields::arithmetic_params<FieldType>::geometric_generator),
                         geometric_sequence(m, field_value_type::zero()),
                         geometric_triangular_sequence(m, field_value_type::zero()),
+                        inverse_geometric_triangular_sequence(m, field_value_type::zero()),
+                        interpolation_denominator_products(m, field_value_type::zero()),
+                        inverse_interpolation_denominator_products(m, field_value_type::zero()),
+                        interpolation_kernel(m, field_value_type::zero()),
                         barycentric_weights(m, field_value_type::zero()),
                         vanishing_polynomial(m + 1, field_value_type::zero()) {
                         if (generator.is_zero()) {
@@ -127,6 +143,29 @@ namespace nil {
                             inverse_geometric_sequence[i] = inverse_geometric_sequence[i - 1] * inverse_denominators[0];
                         }
 
+                        /*
+                         * Cache every base-field factor used by geometric interpolation. With
+                         *
+                         *   D_i = product_(j=1)^i (1 - r^j),
+                         *
+                         * inverse_denominators supplies the recurrence for 1 / D_i without any further field
+                         * inversions. The interpolation kernel is reused for both products; the second product embeds
+                         * it in reverse order with alternating signs.
+                         */
+                        inverse_geometric_triangular_sequence[0] = field_value_type::one();
+                        interpolation_denominator_products[0] = field_value_type::one();
+                        inverse_interpolation_denominator_products[0] = field_value_type::one();
+                        interpolation_kernel[0] = field_value_type::one();
+                        for (std::size_t i = 1; i < m; ++i) {
+                            inverse_geometric_triangular_sequence[i] =
+                                inverse_geometric_triangular_sequence[i - 1] * inverse_geometric_sequence[i - 1];
+                            interpolation_denominator_products[i] =
+                                interpolation_denominator_products[i - 1] * denominators[i];
+                            inverse_interpolation_denominator_products[i] =
+                                inverse_interpolation_denominator_products[i - 1] * inverse_denominators[i];
+                            interpolation_kernel[i] =
+                                geometric_triangular_sequence[i] * inverse_interpolation_denominator_products[i];
+                        }
                         /*
                          * Let Z(X) = product_(j=0)^(m-1) (X - x_j) be the domain's vanishing polynomial and let
                          * Z'(X) be its formal derivative. At a domain point,
@@ -197,6 +236,84 @@ namespace nil {
 
                 explicit geometric_sequence_domain(const std::size_t m) :
                     evaluation_domain<FieldType, ValueType>(validate_size(m)), precomputation_(m) {
+                }
+
+                /**
+                 * Interpolate one value at each geometric domain point using the caller's multiplication context.
+                 * Domain-dependent factors remain in the base field while polynomial coefficients may belong to an
+                 * extension field. Both convolutions use the same compile-time-selected backend instance.
+                 *
+                 * The implementation proceeds in seven stages:
+                 *   1. Validate that there is exactly one evaluation per domain point.
+                 *   2. Scale the evaluations and embed the fixed evaluation-to-Newton kernel.
+                 *   3. Convolve them to recover the scaled Newton coefficients.
+                 *   4. Remove the geometric triangular scaling and prepare the dynamic Newton input.
+                 *   5. Embed the fixed Newton-to-monomial kernel in signed reverse order.
+                 *   6. Convolve the reversed fixed kernel with the dynamic Newton input.
+                 *   7. Extract and scale the transposed-product coefficients into canonical monomial form.
+                 */
+                template<polynomial_arithmetic::PolynomialBackend Backend>
+                typename Backend::polynomial_type
+                    interpolate(const std::vector<typename Backend::polynomial_type::value_type> &evaluations,
+                                polynomial_arithmetic::polynomial_context<Backend> &context) const {
+                    using polynomial_type = typename Backend::polynomial_type;
+                    using coefficient_type = typename polynomial_type::value_type;
+
+                    // 1. Validate the exact evaluation count.
+                    if (evaluations.size() != this->m) {
+                        throw std::invalid_argument("geometric: expected one evaluation per domain point");
+                    }
+
+                    // 2. Scale the evaluations and embed the fixed evaluation-to-Newton kernel.
+                    polynomial_type scaled_evaluations(this->m, coefficient_type::zero());
+                    polynomial_type embedded_interpolation_kernel(this->m, coefficient_type::zero());
+                    for (std::size_t i = 0; i < this->m; ++i) {
+                        const field_value_type evaluation_factor =
+                            i % 2 == 0 ? precomputation_.inverse_interpolation_denominator_products[i] :
+                                         -precomputation_.inverse_interpolation_denominator_products[i];
+                        scaled_evaluations[i] = evaluations[i] * evaluation_factor;
+                        embedded_interpolation_kernel[i] =
+                            coefficient_type::one() * precomputation_.interpolation_kernel[i];
+                    }
+                    condense(scaled_evaluations);
+
+                    // 3. Recover the scaled Newton coefficients with the first convolution.
+                    polynomial_type interpolation_convolution;
+                    context.multiply(interpolation_convolution, scaled_evaluations, embedded_interpolation_kernel);
+                    interpolation_convolution.resize(this->m, coefficient_type::zero());
+
+                    // 4. Remove the triangular scaling and prepare the dynamic Newton input.
+                    polynomial_type newton_input(this->m, coefficient_type::zero());
+                    for (std::size_t i = 0; i < this->m; ++i) {
+                        const coefficient_type newton_coefficient =
+                            interpolation_convolution[i] * precomputation_.inverse_geometric_triangular_sequence[i];
+                        newton_input[i] = newton_coefficient * precomputation_.interpolation_denominator_products[i];
+                    }
+                    condense(newton_input);
+
+                    // 5. Embed the fixed Newton-to-monomial kernel in signed reverse order.
+                    polynomial_type reversed_newton_basis_kernel(this->m, coefficient_type::zero());
+                    for (std::size_t i = 0; i < this->m; ++i) {
+                        const std::size_t kernel_index = this->m - 1 - i;
+                        const field_value_type kernel_value = kernel_index % 2 == 0 ?
+                                                                  precomputation_.interpolation_kernel[kernel_index] :
+                                                                  -precomputation_.interpolation_kernel[kernel_index];
+                        reversed_newton_basis_kernel[i] = coefficient_type::one() * kernel_value;
+                    }
+
+                    // 6. Perform the transposed product, reversing the fixed kernel rather than the dynamic input.
+                    polynomial_type monomial_convolution;
+                    context.multiply(monomial_convolution, reversed_newton_basis_kernel, newton_input);
+                    monomial_convolution.resize(2 * this->m - 1, coefficient_type::zero());
+
+                    // 7. Extract, scale, and normalize the monomial coefficients.
+                    polynomial_type result(this->m, coefficient_type::zero());
+                    for (std::size_t i = 0; i < this->m; ++i) {
+                        result[i] = monomial_convolution[this->m - 1 + i] *
+                                    precomputation_.inverse_interpolation_denominator_products[i];
+                    }
+                    condense(result);
+                    return result;
                 }
 
                 /*
