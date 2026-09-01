@@ -53,24 +53,6 @@ namespace nil {
     }    // namespace crypto3
     namespace marshalling {
 
-        /// @brief Compile time check function of whether a provided type is any
-        ///     variant of nil::crypto3::marshalling::types::curve_element.
-        /// @tparam T Any type.
-        /// @return true in case provided type is any variant of @ref curve_element
-        /// @related nil::crypto3::marshalling::types::curve_element
-        template<typename T>
-        struct is_curve_element {
-
-            static const bool value = false;
-        };
-
-        template<typename TTypeBase, typename CurveGroupType, typename... TOptions>
-        struct is_curve_element<
-            nil::crypto3::marshalling::types::curve_element<TTypeBase, CurveGroupType, TOptions...>> {
-
-            static const bool value = true;
-        };
-
         template<typename T>
         inline constexpr bool marshalling_field_element = false;
 
@@ -88,9 +70,9 @@ namespace nil {
         template<typename T, typename Enabled>
         struct is_container;
 
-        template<typename T>
-            requires is_curve_element<T>::value
-        struct is_container<T, void> {
+        template<typename TTypeBase, typename CurveGroupType, typename... TOptions>
+        struct is_container<nil::crypto3::marshalling::types::curve_element<TTypeBase, CurveGroupType, TOptions...>,
+                            void> {
             static const bool value = false;
         };
 

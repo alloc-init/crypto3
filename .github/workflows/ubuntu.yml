@@ -91,7 +91,7 @@ jobs:
 
     - name: Compile tests
       run: |
-        cmake --build "${{ matrix.build_dir }}" --target tests --parallel "$(( $(nproc) / 2 ))"
+        cmake --build "${{ matrix.build_dir }}" --target tests --parallel "$(( $(nproc) / 4 ))"
 
     - name: Run tests
       env:

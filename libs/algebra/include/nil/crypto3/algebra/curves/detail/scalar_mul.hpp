@@ -112,23 +112,20 @@ namespace nil {
                         return res;
                     }
 
-                    template<typename CurveElementType>
-                    std::enable_if_t<is_curve_element<CurveElementType>::value, CurveElementType> constexpr
-                        operator*(const CurveElementType &point, const std::size_t &multiplier) {
+                    template<CurveElement CurveElementType>
+                    constexpr CurveElementType operator*(const CurveElementType &point, const std::size_t &multiplier) {
                         typename CurveElementType::params_type::scalar_field_type::value_type scalar(multiplier);
                         return point * scalar;
                     }
 
-                    template<typename CurveElementType>
-                    std::enable_if_t<is_curve_element<CurveElementType>::value, CurveElementType> constexpr
-                        operator*(const std::size_t &multiplier, const CurveElementType &point) {
+                    template<CurveElement CurveElementType>
+                    constexpr CurveElementType operator*(const std::size_t &multiplier, const CurveElementType &point) {
                         typename CurveElementType::params_type::scalar_field_type::value_type scalar(multiplier);
                         return point * scalar;
                     }
 
-                    template<typename CurveElementType>
-                    std::enable_if_t<is_curve_element<CurveElementType>::value, bool>
-                        subgroup_check(CurveElementType point) {
+                    template<CurveElement CurveElementType>
+                    bool subgroup_check(CurveElementType point) {
                         auto scalar_modulus = CurveElementType::group_type::curve_type::scalar_field_type::modulus;
                         scalar_mul_inplace(point, scalar_modulus);
                         return point.is_zero();

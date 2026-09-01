@@ -149,9 +149,8 @@ namespace nil {
                     }
 
                     template<typename InputRange>
-                    typename std::enable_if_t<!algebra::is_curve_element<InputRange>::value &&
-                                              !algebra::FieldValue<InputRange>>
-                        operator()(const InputRange &r) {
+                        requires(!algebra::CurveElement<InputRange> && !algebra::FieldValue<InputRange>)
+                    void operator()(const InputRange &r) {
                         auto acc_convertible = hash<hash_type>(state);
                         state = accumulators::extract::hash<hash_type>(
                             hash<hash_type>(r, static_cast<accumulator_set<hash_type> &>(acc_convertible)));
@@ -165,8 +164,8 @@ namespace nil {
                     }
 
                     template<typename element>
-                    typename std::enable_if_t<algebra::is_curve_element<element>::value || algebra::FieldValue<element>>
-                        operator()(element const &data) {
+                        requires(algebra::CurveElement<element> || algebra::FieldValue<element>)
+                    void operator()(element const &data) {
                         nil::marshalling::status_type status;
                         std::vector<std::uint8_t> byte_data =
                             nil::marshalling::pack<nil::marshalling::option::big_endian>(data, status);
@@ -282,14 +281,14 @@ namespace nil {
                     }
 
                     template<typename InputRange>
-                    typename std::enable_if_t<!algebra::is_curve_element<InputRange>::value>
-                        operator()(const InputRange &r) {
+                        requires(!algebra::CurveElement<InputRange>)
+                    void operator()(const InputRange &r) {
                         absorb(static_cast<typename hash_type::digest_type>(hash<hash_type>(r)));
                     }
 
                     template<typename element>
-                    typename std::enable_if_t<algebra::is_curve_element<element>::value>
-                        operator()(element const &data) {
+                        requires algebra::CurveElement<element>
+                    void operator()(element const &data) {
                         auto affine = data.to_affine();
                         absorb(affine.X);
                         absorb(affine.Y);

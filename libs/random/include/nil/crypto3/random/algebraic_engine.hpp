@@ -300,11 +300,8 @@ namespace nil {
             };
 
             template<typename AlgebraicType, typename Engine>
-            struct algebraic_engine<
-                AlgebraicType,
-                Engine,
-                typename std::enable_if<algebra::is_curve_group<AlgebraicType>::value &&
-                                        boost::is_integral<typename Engine::result_type>::value>::type> {
+                requires algebra::CurveGroup<AlgebraicType> && boost::is_integral<typename Engine::result_type>::value
+            struct algebraic_engine<AlgebraicType, Engine, void> {
             protected:
                 typedef AlgebraicType group_type;
                 typedef typename group_type::value_type group_value_type;

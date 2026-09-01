@@ -29,8 +29,6 @@
 #include <array>
 #include <tuple>
 
-#include <nil/crypto3/detail/assert.hpp>
-
 #include <nil/crypto3/math/static_matrix/utility.hpp>
 #include <nil/crypto3/math/static_matrix/static_vector.hpp>
 
@@ -63,8 +61,6 @@ namespace nil::crypto3::math {
         constexpr static_matrix(Args... args) : arrays {std::forward<Args>(args)...} {
             static_assert(sizeof...(args) == N * M, "Number of arguments must match the static_matrix size");
         }
-
-        // CRYPTO3_DETAIL_ASSERT_ARITHMETIC(T)
 
         using value_type = T;
         using size_type = std::size_t;

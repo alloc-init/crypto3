@@ -1,4 +1,4 @@
-# [[alloc] init] C++ Cryptography Suite 
+# [[alloc] init] C++ Cryptography Suite
 
 [![Twitter](https://img.shields.io/twitter/follow/alloc_init_)](https://twitter.com/alloc_init_)
 [![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=flat-square&logo=telegram&logoColor=dark)](https://t.me/alloc_init)

@@ -230,8 +230,6 @@ namespace nil::crypto3::math {
     /// @private
     template<typename T, std::size_t M, std::size_t N>
     constexpr std::tuple<static_matrix<T, M, N>, std::size_t, T> gauss_jordan_impl(static_matrix<T, M, N> m) {
-        // CRYPTO3_DETAIL_ASSERT_FLOATING_POINT(T)
-        // CRYPTO3_DETAIL_ASSERT_REAL(T)
 
         auto negligible = [](const T &v) { return v == T::zero(); };
 
