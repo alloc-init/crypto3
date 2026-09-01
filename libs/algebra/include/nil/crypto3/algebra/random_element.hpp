@@ -92,12 +92,12 @@ namespace nil {
                 return typename field_type::value_type(data);
             }
 
-            template<typename CurveGroupType,
+            template<CurveGroup CurveGroupType,
                      typename DistributionType =
                          boost::random::uniform_int_distribution<typename CurveGroupType::field_type::integral_type>,
                      typename UniformRandomBitGenerator = boost::random::random_device>
-            typename std::enable_if<is_curve_group<CurveGroupType>::value, typename CurveGroupType::value_type>::
-                type constexpr random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
+            constexpr typename CurveGroupType::value_type
+                random_element(UniformRandomBitGenerator &&rng = UniformRandomBitGenerator()) {
 
                 using curve_type = typename CurveGroupType::curve_type;
                 using field_type = typename curve_type::scalar_field_type;

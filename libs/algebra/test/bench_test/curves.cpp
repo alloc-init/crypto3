@@ -98,7 +98,7 @@ void benchmark_curve_operations(std::string const& curve_name) {
         bench_name("G1 scalar multiplication"),
         [](typename g1_type::value_type& A, typename scalar_field::value_type const& B) { return A *= B; });
 
-    if constexpr (has_type_g2_type<curve_type>::value) {
+    if constexpr (CurveWithG2<curve_type>) {
         using g2_type = typename curve_type::template g2_type<>;
 
         using g2_field = typename g2_type::field_type;
@@ -131,7 +131,7 @@ void benchmark_curve_operations(std::string const& curve_name) {
         std::cout << "Curve " << curve_name << " does not have G2, skipping benchmarks" << std::endl;
     }
 
-    if constexpr (has_type_gt_type<curve_type>::value) {
+    if constexpr (CurveWithTargetGroup<curve_type>) {
         using gt_type = typename curve_type::gt_type;
 
         run_benchmark<gt_type, gt_type>(

@@ -64,19 +64,12 @@ template<typename value_type>
 void test_field_value_types() {
     static_assert(FieldElementWithCoordinates<value_type>);
 
-    BOOST_ASSERT(has_type_field_type<value_type>::value);
-    BOOST_ASSERT((has_function_is_zero<const value_type, bool>::value));
-    BOOST_ASSERT((has_static_member_function_zero<value_type, const value_type &>::value));
-    BOOST_ASSERT((has_static_member_function_one<value_type, const value_type &>::value));
-
-    BOOST_ASSERT(FieldValue<value_type>);
+    static_assert(FieldValue<value_type>);
 }
 
 template<typename field_type>
 void test_field_types() {
-    BOOST_ASSERT(has_type_value_type<field_type>::value);
-
-    BOOST_ASSERT(Field<field_type>);
+    static_assert(Field<field_type>);
 
     test_field_value_types<typename field_type::value_type>();
 }
@@ -85,58 +78,42 @@ template<typename field_type>
 void test_extended_field_types() {
     test_field_types<field_type>();
 
-    BOOST_ASSERT(ExtendedField<field_type>);
-
-    BOOST_ASSERT(ExtendedFieldValue<typename field_type::value_type>);
+    static_assert(ExtendedField<field_type>);
+    static_assert(ExtendedFieldValue<typename field_type::value_type>);
 
     test_field_value_types<typename field_type::value_type>();
 }
 
 template<typename curve_group_type>
 void test_curve_group_types() {
-    BOOST_ASSERT(is_curve_group<curve_group_type>::value);
-    BOOST_ASSERT(has_type_curve_type<curve_group_type>::value);
-
-    BOOST_ASSERT(has_type_value_type<curve_group_type>::value);
+    static_assert(CurveGroup<curve_group_type>);
     using value_type = typename curve_group_type::value_type;
 
-    BOOST_ASSERT(has_type_field_type<value_type>::value);
-    BOOST_ASSERT(has_type_group_type<value_type>::value);
-
-    BOOST_ASSERT((has_static_member_function_zero<value_type, value_type>::value));
-    BOOST_ASSERT((has_static_member_function_one<value_type, value_type>::value));
-    BOOST_ASSERT((has_function_is_zero<const value_type, bool>::value));
-    BOOST_ASSERT((has_function_is_well_formed<const value_type, bool>::value));
-    BOOST_ASSERT((has_function_double_inplace<value_type, void>::value));
-
-    BOOST_ASSERT(is_curve_element<value_type>::value);
+    static_assert(CurveElement<value_type>);
 }
 
 template<typename curve_type>
 void test_ordinary_curve_types() {
-    BOOST_ASSERT(has_type_base_field_type<curve_type>::value);
     test_field_types<typename curve_type::base_field_type>();
 
-    BOOST_ASSERT(has_type_scalar_field_type<curve_type>::value);
     test_field_types<typename curve_type::scalar_field_type>();
 
-    BOOST_ASSERT(has_type_g1_type<curve_type>::value);
     test_curve_group_types<typename curve_type::template g1_type<>>();
 
-    BOOST_ASSERT(is_curve<curve_type>::value);
+    static_assert(Curve<curve_type>);
 }
 
 template<typename curve_type>
 void test_pairing_friendly_curve_types() {
     test_ordinary_curve_types<curve_type>();
 
-    BOOST_ASSERT(has_type_g2_type<curve_type>::value);
+    static_assert(CurveWithG2<curve_type>);
     test_curve_group_types<typename curve_type::template g2_type<>>();
 
     using g2_base_field = typename curve_type::template g2_type<>::params_type::field_type;
     test_extended_field_types<g2_base_field>();
 
-    BOOST_ASSERT(has_type_gt_type<curve_type>::value);
+    static_assert(CurveWithTargetGroup<curve_type>);
     test_extended_field_types<typename curve_type::gt_type>();
 }
 

@@ -296,43 +296,15 @@ namespace nil {
 
             GENERATE_HAS_MEMBER_TYPE(extension_policy)
 
-            GENERATE_HAS_MEMBER_TYPE(curve_type)
-
-            GENERATE_HAS_MEMBER_TYPE(underlying_field_type)
-
             GENERATE_HAS_MEMBER_TYPE(value_type)
 
             GENERATE_HAS_MEMBER_TYPE(integral_type)
-
-            GENERATE_HAS_MEMBER_TYPE(base_field_type)
-
-            GENERATE_HAS_MEMBER_TYPE(number_type)
-
-            GENERATE_HAS_MEMBER_TYPE(scalar_field_type)
-
-            GENERATE_HAS_MEMBER_TYPE(g1_type)
-
-            GENERATE_HAS_MEMBER_TYPE(g2_type)
-
-            GENERATE_HAS_MEMBER_TYPE(gt_type)
 
             GENERATE_HAS_MEMBER(value_bits)
 
             GENERATE_HAS_MEMBER(modulus_bits)
 
-            GENERATE_HAS_MEMBER(base_field_bits)
-
-            GENERATE_HAS_MEMBER(base_field_modulus)
-
-            GENERATE_HAS_MEMBER(scalar_field_bits)
-
-            GENERATE_HAS_MEMBER(scalar_field_modulus)
-
             GENERATE_HAS_MEMBER(arity)
-
-            GENERATE_HAS_MEMBER(p)
-
-            GENERATE_HAS_MEMBER(q)
 
             GENERATE_HAS_MEMBER_FUNCTION(to_affine_coordinates)
 
@@ -419,41 +391,6 @@ namespace nil {
                 typedef T type;
             };
 
-            template<typename T>
-            struct is_curve {
-                static const bool value =
-                    has_base_field_bits<T>::value && has_base_field_type<T>::value && has_number_type<T>::value &&
-                    has_base_field_modulus<T>::value && has_scalar_field_bits<T>::value &&
-                    has_scalar_field_type<T>::value && has_scalar_field_modulus<T>::value && has_g1_type<T>::value &&
-                    has_g2_type<T>::value && has_gt_type<T>::value && has_p<T>::value && has_q<T>::value;
-                typedef T type;
-            };
-
-            template<typename T>    // TODO: we should add some other params to curve group policy to identify it more
-                                    // clearly
-            struct is_curve_group {
-                static const bool value = has_value_type<T>::value && has_underlying_field_type<T>::value &&
-                                          has_value_bits<T>::value && has_curve_type<T>::value;
-                typedef T type;
-            };
-
-            template<typename T>
-            struct is_complex : std::false_type { };
-            template<typename T>
-            struct is_complex<std::complex<T>> : std::true_type { };
-            template<typename T>
-            constexpr bool is_complex_v = is_complex<T>::value;
-
-            template<typename T>
-            struct remove_complex {
-                using type = T;
-            };
-            template<typename T>
-            struct remove_complex<std::complex<T>> {
-                using type = T;
-            };
-            template<typename T>
-            using remove_complex_t = typename remove_complex<T>::type;
         }    // namespace detail
     }    // namespace crypto3
 }    // namespace nil
