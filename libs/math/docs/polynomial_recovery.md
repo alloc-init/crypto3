@@ -2,17 +2,19 @@
 
 @tableofcontents
 
-Crypto3.Math provides two complementary recovery primitives:
+Crypto3.Math provides four complementary recovery facilities:
 
-* square testing and square roots in a finite polynomial quotient field; and
-* bounded rational reconstruction from a residue modulo a polynomial.
+* square testing and square roots in a finite polynomial quotient field;
+* bounded rational reconstruction from a residue modulo a polynomial;
+* recovery of the fixed `X`-norm representation of an irreducible polynomial; and
+* factorization-aware recovery of the same representation for a general polynomial.
 
-Together they can recover representations of irreducible factors by the polynomial norm form
+Together they can recover representations by the polynomial norm form
 
     P(X)^2 - X * Q(X)^2.
 
-The library exposes the generic arithmetic operations. Applications remain responsible for selecting factors, degree
-bounds, random sources, and any policy for combining or rejecting recovered representations.
+The recovery operation owns the degree bounds and exact normalization for this norm equation. The caller supplies the
+polynomial arithmetic context and the coefficient-field generator.
 
 ### Header map
 
@@ -22,6 +24,7 @@ bounds, random sources, and any policy for combining or rejecting recovered repr
 | Coefficient-field square-root helpers | `<nil/crypto3/algebra/fields/field_algorithms.hpp>` |
 | Quotient-field square testing and roots | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_square_root.hpp>` |
 | Bounded rational reconstruction | `<nil/crypto3/math/polynomial/reconstruction/polynomial_rational_reconstruction.hpp>` |
+| `X`-norm reconstruction | `<nil/crypto3/math/polynomial/reconstruction/polynomial_x_norm_reconstruction.hpp>` |
 
 ## Field orders and coefficient square roots
 
@@ -64,9 +67,9 @@ characterize squares if the quotient has zero divisors.
 
 `square_root_mod` uses Tonelli-Shanks in `K[X]/(B)`. Repeated calls should share two immutable precomputations:
 
-1. `polynomial_divisor_context<Backend>` caches the divisor and the inverse needed for modular reduction.
-2. `polynomial_square_root_context<Backend>` caches the decomposition
-   `order(K)^d - 1 = odd_order * 2^two_adicity` and a suitable quadratic nonresidue raised to `odd_order`.
+* `polynomial_divisor_context<Backend>` caches the divisor and the inverse needed for modular reduction.
+* `polynomial_square_root_context<Backend>` caches the decomposition
+  `order(K)^d - 1 = odd_order * 2^two_adicity` and a suitable quadratic nonresidue raised to `odd_order`.
 
 ```cpp
 #include <algorithm>
@@ -146,34 +149,120 @@ reconstructs with bounds `degree(P) <= 0` and `degree(Q) <= 2` as
     P = 1,
     Q = 2 + 2X + X^2.
 
-## Recovering a polynomial norm representation
+## `X`-norm reconstruction
 
-The square-root and reconstruction APIs fit together as follows. For one irreducible factor `B` of degree `d`:
+`recover_irreducible_polynomial_x_norm_representation` composes quotient-field square roots, bounded rational
+reconstruction, and coefficient-field normalization to recover polynomials `P` and `Q` satisfying
 
-1. Represent the indeterminate by `x = {0, 1}` and test whether it is a square modulo `B`.
-2. If it is square, compute `R` such that `R^2 = X mod B`.
-3. Rationally reconstruct `R` with
+    P^2 - X * Q^2 = g.
 
-       maximum_numerator_degree   = floor(d / 2),
-       maximum_denominator_degree = floor((d - 1) / 2).
+The name explicitly identifies `X` as the quadratic element: the represented element is `P + Q * sqrt(X)`, whose norm
+is `P^2 - X * Q^2`. The input `g` must be a canonical nonconstant irreducible polynomial. Irreducibility is a caller
+precondition and is not tested.
 
-   This produces `P = R * Q mod B`.
-4. Squaring the congruence gives
+```cpp
+#include <nil/crypto3/math/polynomial/reconstruction/polynomial_x_norm_reconstruction.hpp>
 
-       P^2 - X * Q^2 = 0 mod B.
+// arithmetic_context and coefficient_generator are caller-owned.
+auto representation = math::recover_irreducible_polynomial_x_norm_representation<backend_type>(
+    g, arithmetic_context, coefficient_generator);
 
-   The degree bounds make the left side have degree at most `d`, so it is a scalar multiple of `B`.
+if (representation) {
+    polynomial_type exact_norm = math::evaluate_polynomial_x_norm<backend_type>(
+        *representation, arithmetic_context);
+    // exact_norm == g
+}
+```
 
-This is the local representation of `B` by the norm from adjoining a square root of `X`. Representations compose
-multiplicatively:
+The coefficient generator returns coefficient-field values. The recovery operation adapts those values into canonical
+degree-below-`degree(g)` representatives of `K[X]/(g)`. The generator remains caller-owned and must eventually supply
+coefficients forming a quotient-field nonsquare.
+
+On success, the optional contains `polynomial_x_norm_representation<polynomial_type>`. Its `p` and `q` members hold the
+two recovered coefficient polynomials.
+
+The function reduces `{0, 1}` modulo `g`, including when `g` is linear, and recovers `R` with `R^2 = X mod g`. It then
+reconstructs `P = R * Q mod g` with
+
+    degree(P) <= floor(degree(g) / 2),
+    degree(Q) <= floor((degree(g) - 1) / 2).
+
+These bounds imply
+
+    P^2 - X * Q^2 = lambda * g
+
+for a coefficient-field scalar `lambda`. A nonzero square `lambda` is removed by scaling both outputs by
+`sqrt(lambda^-1)`. The normalized norm is evaluated again and compared exactly with `g` before success is returned.
+Both polynomial squares use the caller's arithmetic context; multiplication by `X` is a coefficient shift.
+
+| Outcome | Contract |
+|---|---|
+| Representation returned | The degree bounds hold and `evaluate_polynomial_x_norm(result, context) == g`. |
+| No value returned | `X` is nonsquare modulo `g`, bounded reconstruction fails, or `lambda` is zero or nonsquare. |
+| `std::invalid_argument` | The input is empty, noncanonical, zero, or constant, or a composed API contract is violated. |
+| `std::logic_error` | An operation reported success but a required modular, scalar-multiple, or final exact identity is inconsistent. |
+
+This is the local representation of `g` by the norm from adjoining a square root of `X`.
+`multiply_polynomial_x_norm_representations(left, right, context)` composes two representations using
 
     (P1^2 - X Q1^2) * (P2^2 - X Q2^2)
       = (P1 P2 + X Q1 Q2)^2 - X * (P1 Q2 + P2 Q1)^2.
 
-Consequently, a caller can factor a target polynomial, recover eligible irreducible factors independently, account for
-multiplicities and the scalar leading coefficient, and combine the local representations. Crypto3.Math deliberately
-keeps that application-level policy separate from the generic factorization, quotient-field square-root, and bounded
-rational-reconstruction primitives.
+All four polynomial products use the supplied arithmetic context, while multiplication by `X` is a coefficient shift.
+
+### General polynomial recovery
+
+`recover_polynomial_x_norm_representation` applies the same norm construction to a canonical polynomial `H` without
+requiring the caller to decompose it first:
+
+```cpp
+// arithmetic_context and coefficient_generator are caller-owned.
+auto representation = math::recover_polynomial_x_norm_representation<backend_type>(
+    H, arithmetic_context, coefficient_generator);
+
+if (representation) {
+    polynomial_type exact_norm = math::evaluate_polynomial_x_norm<backend_type>(
+        *representation, arithmetic_context);
+    // exact_norm == H
+}
+```
+
+Zero is represented by `(0, 0)`. A constant `c` is represented by `(sqrt(c), 0)` when `c` is square and otherwise has
+no result. These cases do not invoke factorization or consume the coefficient generator.
+
+For a nonconstant input, the constant coefficient must be square. Its leading coefficient must be square when the
+degree is even, while the negated leading coefficient must be square when the degree is odd. These necessary tests
+reject impossible inputs before factorization, but passing them does not guarantee recovery.
+
+Complete factorization writes the remaining input as
+
+    H = c * product(g^e),
+
+where `c` is the leading coefficient and each `g` is monic and irreducible. An even factor power `g^(2r)` has the
+immediate representation `(g^r, 0)`. For an odd power `g^(2r+1)`, irreducible recovery first obtains `(P_g, Q_g)` for
+the unpaired copy of `g`; scaling both components by `g^r` then represents the complete factor power. Factor recovery
+stops as soon as an odd-multiplicity factor cannot be represented.
+
+The factor-power representations are combined with `multiply_polynomial_x_norm_representations` in a balanced product
+tree. Finally, both components are scaled by `sqrt(c)` to incorporate the factorization's leading coefficient. A
+nonsquare required scalar produces no result. Every successful path evaluates the completed norm and compares it
+exactly with `H` before returning.
+
+The coefficient generator is shared by complete factorization and odd-factor recovery. It must meet the factorization
+generator contract and must allow each square-root context to find a quotient-field nonsquare. All polynomial products
+and squares use the caller's compile-time-selected arithmetic context; no polynomial backend or random engine is
+constructed internally.
+
+| Outcome | Contract |
+|---|---|
+| Representation returned | `evaluate_polynomial_x_norm(result, context) == H` exactly. |
+| No value returned | A special-case or necessary square test fails, an odd factor is unrepresentable, bounded recovery fails, or scalar normalization is impossible. |
+| `std::invalid_argument` | `H` is empty or noncanonical, or a composed API contract is violated. |
+| `std::logic_error` | Completed factorization, recovery, combination, normalization, or final verification is internally inconsistent. |
+
+This factorization and factor-combination behavior is a generic polynomial operation: it depends only on finite-field
+polynomial arithmetic and the fixed norm map `P^2 - X * Q^2`. The API returns the two coefficient polynomials and does
+not impose a representation or policy beyond that algebraic identity.
 
 ### Worked example over F7
 
@@ -211,16 +300,16 @@ Then the scalar is corrected exactly:
 
     P'^2 - X Q'^2 = H.
 
-This example performs the same local steps required for a higher-degree factor: factor, test whether `X` is square in
-the quotient, compute its root, reconstruct bounded `P` and `Q`, and normalize the remaining coefficient-field
-scalar. Combining several eligible factors then uses the multiplicative identity above.
+The recovery API performs this square test, quotient-field square root, bounded reconstruction, scalar normalization,
+and final exact verification using the supplied polynomial context and coefficient generator. Combining several
+eligible factors then uses the multiplicative identity above.
 
 ## Reuse and performance
 
-The [polynomial arithmetic infrastructure](@ref math_polynomial_arithmetic) describes these contexts in detail. Reuse
-one polynomial arithmetic context throughout a recovery, one divisor context for every operation modulo the same `B`,
-and one square-root context for repeated roots modulo that divisor. This avoids rebuilding divisor inverses,
-multiplicative-group decompositions, nonresidue powers, backend plans, and scratch storage.
+The [polynomial arithmetic infrastructure](@ref math_polynomial_arithmetic) describes these contexts in detail. The
+recovery API reuses the caller's polynomial arithmetic context throughout recovery. It constructs one divisor context
+and one square-root context and reuses them for all operations within that call. Direct users of the lower-level APIs
+can retain those contexts across repeated operations modulo the same divisor.
 
 Let `Q` be the coefficient-field order, `d` the irreducible divisor degree, and `s` the two-adicity of `Q^d - 1`.
 The current implementations have the rough bounds shown below.

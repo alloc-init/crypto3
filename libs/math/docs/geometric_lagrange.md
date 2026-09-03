@@ -1,4 +1,4 @@
-# Exact geometric-domain Lagrange weights {#math_geometric_lagrange}
+# Exact geometric domains and interpolation {#math_geometric_lagrange}
 
 @tableofcontents
 
@@ -7,7 +7,8 @@
     x_i = r^i,  0 <= i < m,
 
 where `r` is the field's configured geometric generator. The domain provides a linear-time field-element API for
-evaluating every Lagrange basis polynomial at an arbitrary point.
+evaluating every Lagrange basis polynomial at an arbitrary point and a context-based API for exact geometric
+interpolation.
 
 The relevant headers are:
 
@@ -16,6 +17,9 @@ The relevant headers are:
 | Montgomery batch inversion | `<nil/crypto3/math/algorithms/batch_inverse.hpp>` |
 | Evaluation-domain interface | `<nil/crypto3/math/domains/evaluation_domain.hpp>` |
 | Exact geometric domain | `<nil/crypto3/math/domains/geometric_sequence_domain.hpp>` |
+| Polynomial context | `<nil/crypto3/math/polynomial/backends/polynomial_backend.hpp>` |
+| Schoolbook backend | `<nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>` |
+| Mixed-radix backend | `<nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>` |
 
 ## Domain precomputation
 
@@ -29,6 +33,13 @@ For the Lagrange path, the constructor precomputes:
 * the coefficients of the vanishing polynomial
 
       Z(X) = product(X - x_i, i = 0 .. m - 1).
+
+For exact geometric interpolation, it also precomputes:
+
+* the triangular powers `T_i = r^(i * (i - 1) / 2)` and their inverses;
+* the denominator products `D_0 = 1` and `D_i = product(1 - r^j, j = 1 .. i)`;
+* the inverses `1 / D_i`; and
+* the fixed interpolation kernel `T_i / D_i`.
 
 For general points, constructing every `w_i` from pairwise differences would take quadratic work. Geometric points
 instead satisfy the recurrence
@@ -52,6 +63,59 @@ If `r` has exact order `m`, the final denominator vanishes and the implementatio
 `Z(X) = X^m - 1`.
 
 Construction therefore takes `O(m)` field operations, one field inversion, and `O(m)` stored field elements.
+
+## Exact geometric interpolation
+
+The concrete geometric domain provides a non-virtual, compile-time backend-selected API:
+
+```cpp
+template<polynomial_arithmetic::PolynomialBackend Backend>
+typename Backend::polynomial_type interpolate(
+    const std::vector<typename Backend::polynomial_type::value_type>& evaluations,
+    polynomial_arithmetic::polynomial_context<Backend>& context
+) const;
+```
+
+The input must contain exactly one evaluation for each point `1, r, ..., r^(m-1)`. Any other count throws
+`std::invalid_argument`. The domain points remain `FieldType::value_type`, while the evaluations and returned
+coefficients may belong to a compatible extension field such as Fq12.
+
+Interpolation proceeds in seven stages:
+
+1. Validate that the input contains exactly `m` evaluations.
+2. Build `scaled[i] = evaluations[i] * (-1)^i / D_i` and embed the fixed kernel `T_i / D_i` into the backend's
+   coefficient field.
+3. Multiply `scaled` by the fixed kernel through the supplied context and retain coefficients `0` through `m-1`.
+4. Recover each Newton coefficient by multiplying convolution coefficient `i` by `1 / T_i`, then form the dynamic
+   Newton input by multiplying it by `D_i`.
+5. Form the fixed Newton-to-monomial kernel `(-1)^i * T_i / D_i` and embed it in reverse order.
+6. Multiply the reversed fixed kernel by the dynamic Newton input through the same supplied context.
+7. Set output coefficient `i` to product coefficient `m - 1 + i` multiplied by `1 / D_i`, then remove trailing
+   zeros.
+
+The second product is transposed multiplication: the fixed Newton-to-monomial kernel is reversed, not the dynamic
+Newton input.
+
+A schoolbook context requires no transform configuration:
+
+```cpp
+using backend_type = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+polynomial_arithmetic::polynomial_context<backend_type> context;
+
+const auto coefficients = domain.interpolate(evaluations, context);
+```
+
+A mixed-radix context must use a valid transform order supporting at least `2 * m - 1` product coefficients:
+
+```cpp
+using backend_type = polynomial_arithmetic::mixed_radix_backend<fq_field_type, fq12_value_type>;
+polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(transform_order)};
+
+const auto coefficients = domain.interpolate(evaluations, context);
+```
+
+Both products use the caller's context. Interpolation does not construct a backend, invoke the legacy transform, or
+perform field inversions.
 
 ## Evaluating all weights
 
@@ -89,9 +153,11 @@ a compatible extension field.
 | Operation | Rough current cost |
 |---|---|
 | Construct a size-`m` domain | `O(m)` field operations and one inversion |
+| Interpolate `m` evaluations | Two backend products, `O(m)` additional field operations, and no inversions |
 | Evaluate all weights at one off-domain point | `O(m)` field operations and one inversion |
 | Evaluate at a domain point | `O(m)` work and no inversion |
 | Evaluate all weights at `k` independent points | `O(k * m)` field operations and at most `k` inversions |
 
-Returning `m` weights already requires linear output work. All scratch storage used by an evaluation is local, while
-the domain precomputation is immutable, so concurrent weight evaluations on one domain do not share mutable scratch.
+Returning `m` weights already requires linear output work. All scratch storage used by an evaluation or interpolation
+is local, while the domain precomputation is immutable. Concurrent interpolation calls may share one domain, but each
+call requires a separate polynomial context because backends may reuse mutable plans, caches, or scratch storage.
