@@ -31,21 +31,30 @@
 #include <boost/test/unit_test.hpp>
 
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
+#include <nil/crypto3/algebra/fields/alt_bn128/scalar_field.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/mersenne31.hpp>
+#include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 #include <nil/crypto3/algebra/fields/mersenne31.hpp>
 #include <nil/crypto3/math/domains/basic_radix2_domain.hpp>
 #include <nil/crypto3/math/domains/geometric_sequence_domain.hpp>
+#include <nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>
+#include <nil/crypto3/math/polynomial/backends/polynomial_backend.hpp>
+#include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 
 using namespace nil::crypto3;
 
 namespace {
 
     using bn254_fq = algebra::fields::alt_bn128<254>;
+    using bn254_fq12 = algebra::fields::fp12_2over3over2<bn254_fq>;
+    using fq_value_type = bn254_fq::value_type;
+    using fq12_value_type = bn254_fq12::value_type;
 
-    template<typename Coefficients, typename ValueType>
-    ValueType evaluate(const Coefficients &coefficients, const ValueType &point) {
-        ValueType result = ValueType::zero();
+    template<typename Coefficients, typename PointType>
+    typename Coefficients::value_type evaluate(const Coefficients &coefficients, const PointType &point) {
+        using coefficient_type = typename Coefficients::value_type;
+        coefficient_type result = coefficient_type::zero();
         for (auto it = coefficients.rbegin(); it != coefficients.rend(); ++it) {
             result = result * point + *it;
         }
@@ -66,6 +75,43 @@ namespace {
             result[0] = -(point * result[0]);
         }
         return result;
+    }
+
+    fq12_value_type fq12_value(std::size_t first_coordinate) {
+        fq12_value_type value = fq12_value_type::zero();
+        for (std::size_t i = 0; i < bn254_fq12::arity; ++i) {
+            value.coordinate(i) = fq_value_type(first_coordinate + i);
+        }
+        return value;
+    }
+
+    template<math::polynomial_arithmetic::PolynomialBackend Backend>
+    void check_backend_aware_interpolation(math::polynomial_arithmetic::polynomial_context<Backend> &context) {
+        using polynomial_type = typename Backend::polynomial_type;
+
+        constexpr std::size_t domain_size = 5;
+        const math::geometric_sequence_domain<bn254_fq> domain(domain_size);
+        const std::vector<std::vector<fq12_value_type>> coefficient_cases = {
+            {fq12_value(1), fq12_value(13), fq12_value(25), fq12_value(37), fq12_value(49)},
+            {fq12_value(7), fq12_value(19), fq12_value(31), fq12_value_type::zero(), fq12_value_type::zero()},
+            std::vector<fq12_value_type>(domain_size, fq12_value_type::zero())};
+
+        for (const std::vector<fq12_value_type> &coefficients : coefficient_cases) {
+            std::vector<fq12_value_type> evaluations(domain_size, fq12_value_type::zero());
+            for (std::size_t i = 0; i < domain_size; ++i) {
+                evaluations[i] = evaluate(coefficients, domain.get_domain_element(i));
+            }
+
+            polynomial_type expected(coefficients.begin(), coefficients.end());
+            math::condense(expected);
+            const polynomial_type actual = domain.interpolate(evaluations, context);
+            BOOST_CHECK(actual == expected);
+        }
+
+        const std::vector<fq12_value_type> too_few(domain_size - 1, fq12_value_type::zero());
+        const std::vector<fq12_value_type> too_many(domain_size + 1, fq12_value_type::zero());
+        BOOST_CHECK_THROW(domain.interpolate(too_few, context), std::invalid_argument);
+        BOOST_CHECK_THROW(domain.interpolate(too_many, context), std::invalid_argument);
     }
 
 }    // namespace
@@ -246,6 +292,40 @@ BOOST_AUTO_TEST_CASE(lagrange_weights_interpolate_and_are_unit_vectors_on_the_do
             BOOST_CHECK_EQUAL(unit_weights[i], i == point_index ? value_type::one() : value_type::zero());
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(backend_aware_interpolation_supports_fq12_coefficients) {
+    using schoolbook_backend = math::polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using mixed_radix_backend = math::polynomial_arithmetic::mixed_radix_backend<bn254_fq, fq12_value_type>;
+
+    BOOST_TEST_CONTEXT("schoolbook") {
+        math::polynomial_arithmetic::polynomial_context<schoolbook_backend> context;
+        check_backend_aware_interpolation(context);
+    }
+    BOOST_TEST_CONTEXT("mixed radix") {
+        // A size-five interpolation performs two length-five products, each requiring nine coefficients.
+        math::polynomial_arithmetic::polynomial_context<mixed_radix_backend> context {mixed_radix_backend(9)};
+        check_backend_aware_interpolation(context);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(legacy_inverse_fft_retains_the_correct_newton_basis_orientation) {
+    using field_type = algebra::fields::alt_bn128_scalar_field<254>;
+    using value_type = field_type::value_type;
+
+    constexpr std::size_t domain_size = 5;
+    math::geometric_sequence_domain<field_type> domain(domain_size);
+    math::evaluation_domain<field_type> &abstract_domain = domain;
+    const std::vector<value_type> coefficients = {value_type(3u), value_type(5u), value_type(7u), value_type(11u),
+                                                  value_type(13u)};
+    std::vector<value_type> evaluations(domain_size, value_type::zero());
+    for (std::size_t i = 0; i < domain_size; ++i) {
+        evaluations[i] = evaluate(coefficients, domain.get_domain_element(i));
+    }
+
+    abstract_domain.inverse_fft(evaluations);
+
+    BOOST_CHECK(evaluations == coefficients);
 }
 
 BOOST_AUTO_TEST_CASE(add_poly_z_adds_the_scaled_vanishing_polynomial) {
