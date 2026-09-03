@@ -34,6 +34,9 @@ namespace nil::crypto3::algebra::fields {
     class fpn {
     public:
         using base_field_type = Params::base_field_type;
+        using policy_type = base_field_type;
+        using extension_policy = Params;
+        using underlying_field_type = base_field_type;
 
         constexpr static const std::size_t modulus_bits = base_field_type::modulus_bits;
         using integral_type = typename base_field_type::integral_type;
@@ -45,9 +48,12 @@ namespace nil::crypto3::algebra::fields {
 
         using value_type = typename detail::element_fpn<Params>;
 
-        constexpr static const std::size_t arity = Params::dimension;
+        constexpr static const std::size_t extension_degree = Params::dimension;
+        constexpr static const std::size_t arity = extension_degree * underlying_field_type::arity;
         constexpr static const std::size_t value_bits = arity * modulus_bits;
     };
+
+    static_assert(ExtendedField<fpn<detail::BinomialFieldExtensionParamsArchetype>>);
 }    // namespace nil::crypto3::algebra::fields
 
 #endif    // CRYPTO3_ALGEBRA_FIELDS_FPN_EXTENSION_HPP

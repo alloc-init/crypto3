@@ -47,11 +47,14 @@
 #include <nil/crypto3/algebra/fields/fp6_3over2.hpp>
 #include <nil/crypto3/algebra/fields/fp6_2over3.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
+#include <nil/crypto3/algebra/fields/fpn.hpp>
 
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/algebra/fields/goldilocks.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/goldilocks.hpp>
 #include <nil/crypto3/algebra/fields/koalabear.hpp>
 #include <nil/crypto3/algebra/fields/mersenne31.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/mersenne31.hpp>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
 
@@ -70,6 +73,7 @@ void test_field_value_types() {
 template<typename field_type>
 void test_field_types() {
     static_assert(Field<field_type>);
+    static_assert(ExtendedField<field_type> == ExtendedFieldValue<typename field_type::value_type>);
 
     test_field_value_types<typename field_type::value_type>();
 }
@@ -80,6 +84,8 @@ void test_extended_field_types() {
 
     static_assert(ExtendedField<field_type>);
     static_assert(ExtendedFieldValue<typename field_type::value_type>);
+    static_assert(std::same_as<typename field_type::value_type::underlying_type,
+                               typename field_type::underlying_field_type::value_type>);
 
     test_field_value_types<typename field_type::value_type>();
 }
@@ -156,10 +162,39 @@ BOOST_AUTO_TEST_CASE(babyjubjub_type_traits) {
 BOOST_AUTO_TEST_CASE(goldilocks_field_type_traits) {
     test_field_types<fields::goldilocks>();
     test_field_types<fields::goldilocks_fp2>();
+
+    using field_type = fields::goldilocks;
+    using params_type = fields::arithmetic_params<field_type>;
+
+    static_assert(field_type::modulus == 0xffffffff00000001ull);
+    static_assert(params_type::s == 32);
+    static_assert(params_type::multiplicative_generator == 7u);
+    static_assert(params_type::root_of_unity == 0x185629dcda58878cull);
 }
 
 BOOST_AUTO_TEST_CASE(mersenne31_field_type_traits) {
     test_field_types<fields::mersenne31>();
+
+    using field_type = fields::mersenne31;
+    using value_type = field_type::value_type;
+    using params_type = fields::arithmetic_params<field_type>;
+
+    static_assert(field_type::modulus == 0x7fffffffu);
+    static_assert(params_type::s == 1);
+    static_assert(value_type(params_type::root_of_unity) == -value_type::one());
+}
+
+BOOST_AUTO_TEST_CASE(fpn_type_traits) {
+    using params_type = fields::detail::BinomialFieldExtensionParamsArchetype;
+    using field_type = fields::fpn<params_type>;
+
+    static_assert(Field<field_type>);
+    static_assert(ExtendedField<field_type>);
+    static_assert(ExtendedFieldValue<typename field_type::value_type>);
+    static_assert(std::same_as<typename field_type::underlying_field_type, typename params_type::base_field_type>);
+    static_assert(field_type::extension_degree == params_type::dimension);
+    static_assert(field_type::arity == params_type::dimension * params_type::base_field_type::arity);
+    static_assert(field_type::value_bits == field_type::arity * field_type::modulus_bits);
 }
 
 BOOST_AUTO_TEST_CASE(koalabear_field_type_traits) {
