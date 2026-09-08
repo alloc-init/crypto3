@@ -68,12 +68,11 @@ namespace {
 
     constexpr std::size_t random_samples = 32;
 
-    // element_fp12_2over3over2::operator* uses policy_type::multiply when the
-    // policy provides it; otherwise it falls back to the generic Fp12 tower
-    // multiplication in the element class. This test-only policy reuses the
-    // real field parameters but intentionally omits multiply, so the expected
-    // value is produced by the generic implementation rather than by a
-    // duplicated reference formula in this file.
+    // element_fp12_2over3over2 uses policy hooks for optimized multiplication
+    // and squaring when the policy provides them. This test-only policy reuses
+    // the real field parameters but intentionally omits both hooks, so the
+    // expected value is produced by the generic implementation rather than by
+    // a duplicated reference formula in this file.
     template<typename Fp12Field>
     struct generic_fp12_policy {
         using optimized_policy = typename Fp12Field::extension_policy;
@@ -348,7 +347,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(square_matches_generic_implementation, Fp12Field, 
     }
 }
 
-BOOST_AUTO_TEST_CASE(adversarial_bls12_377_multiplication_matches_generic_implementation) {
+BOOST_AUTO_TEST_CASE(adversarial_bls12_377_multiplication_and_square_match_generic_implementation) {
     using fp12_field_type = bls12_377_fp12;
     using fp12_value_type = fp12_field_type::value_type;
 
@@ -358,6 +357,7 @@ BOOST_AUTO_TEST_CASE(adversarial_bls12_377_multiplication_matches_generic_implem
     }
 
     for (const fp12_value_type &x : values) {
+        BOOST_CHECK_EQUAL(x.squared(), generic_fp12_mul<fp12_field_type>(x, x));
         for (const fp12_value_type &y : values) {
             BOOST_CHECK_EQUAL(x * y, generic_fp12_mul<fp12_field_type>(x, y));
         }
