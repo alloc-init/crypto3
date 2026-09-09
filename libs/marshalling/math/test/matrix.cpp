@@ -1,6 +1,5 @@
 #define BOOST_TEST_MODULE crypto3_marshalling_matrix_test
 
-#include <algorithm>
 #include <cstdint>
 #include <iterator>
 #include <limits>
@@ -137,6 +136,31 @@ namespace {
         auto output = bytes.begin();
         BOOST_REQUIRE(filled.write(output, bytes.size()) == nil::marshalling::status_type::success);
         return bytes;
+    }
+
+    template<typename Endianness, typename MatrixType>
+    void check_incremental_regular_matrix_round_trip(const MatrixType &matrix) {
+        std::size_t encoded_size = 0;
+        BOOST_REQUIRE((types::regular_matrix_encoded_size<Endianness, MatrixType>(
+                           matrix.rows(), matrix.columns(), encoded_size) == nil::marshalling::status_type::success));
+        std::vector<std::uint8_t> bytes(encoded_size);
+        auto output = bytes.begin();
+        BOOST_REQUIRE((types::write_regular_matrix<Endianness>(matrix, output, bytes.size()) ==
+                       nil::marshalling::status_type::success));
+        BOOST_REQUIRE(output == bytes.end());
+
+        MatrixType decoded(0, 0);
+        auto input = bytes.begin();
+        BOOST_REQUIRE((types::read_regular_matrix<Endianness>(decoded, input, bytes.size()) ==
+                       nil::marshalling::status_type::success));
+        BOOST_REQUIRE(input == bytes.end());
+        BOOST_REQUIRE_EQUAL(decoded.rows(), matrix.rows());
+        BOOST_REQUIRE_EQUAL(decoded.columns(), matrix.columns());
+        for (std::size_t row = 0; row < matrix.rows(); ++row) {
+            for (std::size_t column = 0; column < matrix.columns(); ++column) {
+                BOOST_CHECK(decoded(row, column) == matrix(row, column));
+            }
+        }
     }
 
     class counting_byte_output_iterator {
@@ -421,11 +445,15 @@ BOOST_AUTO_TEST_CASE(incremental_regular_matrix_decoding_rejects_noncanonical_fi
     using endianness = nil::marshalling::option::big_endian;
     using type_base = nil::marshalling::field_type<endianness>;
     using marshalling_type = types::regular_matrix<type_base, base_regular_matrix_type>;
+    using component_type = types::integral<type_base, typename base_field_type::field_type::integral_type>;
     const base_regular_matrix_type matrix(1, 1);
     std::vector<std::uint8_t> bytes = encode_regular_matrix<endianness>(matrix);
     constexpr std::size_t header_length =
         2 * marshalling_type::index_type::max_length() + marshalling_type::element_count_type::max_length();
-    std::fill(bytes.begin() + header_length, bytes.end(), 0xff);
+    const component_type modulus_component(base_field_type::field_type::modulus);
+    auto modulus_output = bytes.begin() + header_length;
+    BOOST_REQUIRE(modulus_component.write(modulus_output, modulus_component.length()) ==
+                  nil::marshalling::status_type::success);
 
     auto input = bytes.begin();
     std::size_t rows = 0;
@@ -436,4 +464,71 @@ BOOST_AUTO_TEST_CASE(incremental_regular_matrix_decoding_rejects_noncanonical_fi
                          ++visits;
                      }) == nil::marshalling::status_type::invalid_msg_data));
     BOOST_CHECK_EQUAL(visits, 0);
+
+    bytes = encode_regular_matrix<endianness>(matrix);
+    bytes[header_length] = 0x40;
+    input = bytes.begin();
+    BOOST_CHECK((types::read_regular_matrix<endianness, base_regular_matrix_type>(
+                     input, bytes.size(), rows, columns, [&visits](std::size_t, std::size_t, const base_field_type &) {
+                         ++visits;
+                     }) == nil::marshalling::status_type::invalid_msg_data));
+    BOOST_CHECK_EQUAL(visits, 0);
+
+    using little_endianness = nil::marshalling::option::little_endian;
+    std::vector<std::uint8_t> little_endian_bytes = encode_regular_matrix<little_endianness>(matrix);
+    little_endian_bytes[header_length + marshalling_type::value_type::max_length() - 1] = 0x40;
+    auto little_endian_input = little_endian_bytes.begin();
+    BOOST_CHECK((types::read_regular_matrix<little_endianness, base_regular_matrix_type>(
+                     little_endian_input, little_endian_bytes.size(), rows, columns,
+                     [&visits](std::size_t, std::size_t, const base_field_type &) { ++visits; }) ==
+                 nil::marshalling::status_type::invalid_msg_data));
+    BOOST_CHECK_EQUAL(visits, 0);
+}
+
+BOOST_AUTO_TEST_CASE(incremental_regular_matrix_convenience_decoding_round_trips_base_and_extension_fields) {
+    base_regular_matrix_type base_matrix(2, 3);
+    base_field_type base_value = base_field_type::one();
+    for (std::size_t row = 0; row < base_matrix.rows(); ++row) {
+        for (std::size_t column = 0; column < base_matrix.columns(); ++column) {
+            base_matrix(row, column) = base_value;
+            base_value += base_field_type::one();
+        }
+    }
+    check_incremental_regular_matrix_round_trip<nil::marshalling::option::big_endian>(base_matrix);
+
+    regular_matrix_type extension_matrix(3, 2);
+    fp12_type extension_value = fp12_type::one();
+    for (std::size_t row = 0; row < extension_matrix.rows(); ++row) {
+        for (std::size_t column = 0; column < extension_matrix.columns(); ++column) {
+            extension_matrix(row, column) = extension_value;
+            extension_value += fp12_type::one();
+        }
+    }
+    check_incremental_regular_matrix_round_trip<nil::marshalling::option::little_endian>(extension_matrix);
+
+    const regular_matrix_type empty_matrix(0, 7);
+    check_incremental_regular_matrix_round_trip<nil::marshalling::option::big_endian>(empty_matrix);
+}
+
+BOOST_AUTO_TEST_CASE(incremental_regular_matrix_convenience_decoding_preserves_the_destination_on_failure) {
+    using endianness = nil::marshalling::option::big_endian;
+    const base_regular_matrix_type encoded_matrix(1, 1);
+    std::size_t encoded_size = 0;
+    BOOST_REQUIRE((types::regular_matrix_encoded_size<endianness, base_regular_matrix_type>(1, 1, encoded_size) ==
+                   nil::marshalling::status_type::success));
+    std::vector<std::uint8_t> bytes(encoded_size);
+    auto output = bytes.begin();
+    BOOST_REQUIRE((types::write_regular_matrix<endianness>(encoded_matrix, output, bytes.size()) ==
+                   nil::marshalling::status_type::success));
+
+    base_regular_matrix_type destination(1, 2);
+    destination(0, 0) = base_field_type::one();
+    destination(0, 1) = base_field_type::one() + base_field_type::one();
+    auto input = bytes.begin();
+    BOOST_CHECK((types::read_regular_matrix<endianness>(destination, input, bytes.size() - 1) ==
+                 nil::marshalling::status_type::not_enough_data));
+    BOOST_CHECK_EQUAL(destination.rows(), 1);
+    BOOST_CHECK_EQUAL(destination.columns(), 2);
+    BOOST_CHECK(destination(0, 0) == base_field_type::one());
+    BOOST_CHECK(destination(0, 1) == base_field_type::one() + base_field_type::one());
 }

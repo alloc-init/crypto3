@@ -10,11 +10,13 @@
 #include <cstdint>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
+#include <nil/marshalling/endianness.hpp>
 #include <nil/marshalling/field_type.hpp>
 #include <nil/marshalling/options.hpp>
 #include <nil/marshalling/status_type.hpp>
@@ -57,6 +59,41 @@ namespace nil::crypto3::marshalling::types {
             TTypeBase, FieldValueType,
             nil::marshalling::option::contents_validator<canonical_field_element_validator<FieldValueType>>>;
 
+        struct accept_any_marshaled_encoding {
+            template<typename InputIterator>
+            constexpr bool operator()(const InputIterator &) const {
+                return true;
+            }
+        };
+
+        /** Reject nonzero high padding bits before a fixed-width integer decoder can discard them. */
+        template<typename TTypeBase, typename FieldValueType>
+        struct canonical_field_element_encoding_validator {
+            template<typename RandomAccessIterator>
+            bool operator()(RandomAccessIterator input) const {
+                constexpr std::size_t component_bits = FieldValueType::field_type::modulus_bits;
+                constexpr std::size_t component_length = (component_bits + 7) / 8;
+                constexpr std::size_t unused_high_bits = component_length * 8 - component_bits;
+                if constexpr (unused_high_bits == 0) {
+                    return true;
+                } else {
+                    constexpr std::uint8_t unused_high_bits_mask =
+                        static_cast<std::uint8_t>(0xffU << (8 - unused_high_bits));
+                    for (std::size_t component = 0; component < FieldValueType::field_type::arity; ++component) {
+                        std::size_t high_byte_offset = component * component_length;
+                        if constexpr (std::is_same_v<typename TTypeBase::endian_type,
+                                                     nil::marshalling::endian::little_endian>) {
+                            high_byte_offset += component_length - 1;
+                        }
+                        if ((static_cast<std::uint8_t>(input[high_byte_offset]) & unused_high_bits_mask) != 0) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            }
+        };
+
         /**
          * Existing marshalling value writers require a random-access output buffer, but incremental serialization must
          * also support sequential output iterators such as stream and back-insert iterators. Serialize one value into a
@@ -83,9 +120,11 @@ namespace nil::crypto3::marshalling::types {
          * Read one fixed-length value directly when the input is random-access. For a sequential input iterator, copy
          * one value into a local fixed-size array required by the existing marshalling reader.
          */
-        template<typename MarshalledType, typename InputIterator>
+        template<typename MarshalledType, typename InputIterator,
+                 typename EncodingValidator = accept_any_marshaled_encoding>
         nil::marshalling::status_type read_marshaled_value(MarshalledType &value, InputIterator &input,
-                                                           std::size_t &available_size) {
+                                                           std::size_t &available_size,
+                                                           EncodingValidator encoding_validator = {}) {
             constexpr std::size_t length = MarshalledType::max_length();
             if (available_size < length) {
                 return nil::marshalling::status_type::not_enough_data;
@@ -93,8 +132,11 @@ namespace nil::crypto3::marshalling::types {
 
             using iterator_category = typename std::iterator_traits<std::decay_t<InputIterator>>::iterator_category;
             nil::marshalling::status_type read_status;
+            bool encoding_is_valid = true;
             if constexpr (std::is_base_of_v<std::random_access_iterator_tag, iterator_category>) {
+                const InputIterator encoded_value = input;
                 read_status = value.read(input, length);
+                encoding_is_valid = encoding_validator(encoded_value);
             } else {
                 std::array<std::uint8_t, length> scratch;
                 for (std::size_t index = 0; index < length; ++index) {
@@ -103,12 +145,13 @@ namespace nil::crypto3::marshalling::types {
                 }
                 auto scratch_input = scratch.begin();
                 read_status = value.read(scratch_input, length);
+                encoding_is_valid = encoding_validator(scratch.begin());
             }
             if (read_status != nil::marshalling::status_type::success) {
                 return read_status;
             }
             available_size -= length;
-            if (!value.valid() || value.length() != length) {
+            if (!encoding_is_valid || !value.valid() || value.length() != length) {
                 return nil::marshalling::status_type::invalid_msg_data;
             }
             return nil::marshalling::status_type::success;
@@ -273,13 +316,43 @@ namespace nil::crypto3::marshalling::types {
         for (std::size_t row = 0; row < decoded_rows; ++row) {
             for (std::size_t column = 0; column < decoded_columns; ++column) {
                 detail::validated_field_element<TTypeBase, typename MatrixType::value_type> value;
-                status = detail::read_marshaled_value(value, input, remaining_size);
+                status = detail::read_marshaled_value(
+                    value, input, remaining_size,
+                    detail::canonical_field_element_encoding_validator<TTypeBase, typename MatrixType::value_type>());
                 if (status != nil::marshalling::status_type::success) {
                     return status;
                 }
                 visitor(row, column, value.value());
             }
         }
+        return nil::marshalling::status_type::success;
+    }
+
+    /**
+     * Read a regular matrix directly into MatrixType without constructing a marshalled element list.
+     * The destination matrix is modified only after the complete matrix encoding has been decoded and validated.
+     */
+    template<typename Endianness, typename MatrixType, typename InputIterator>
+    nil::marshalling::status_type read_regular_matrix(MatrixType &matrix, InputIterator &input,
+                                                      std::size_t available_size) {
+        std::size_t rows = 0;
+        std::size_t columns = 0;
+        std::optional<MatrixType> decoded_matrix;
+        const nil::marshalling::status_type status = read_regular_matrix<Endianness, MatrixType>(
+            input, available_size, rows, columns,
+            [&](std::size_t row, std::size_t column, const typename MatrixType::value_type &value) {
+                if (!decoded_matrix.has_value()) {
+                    decoded_matrix.emplace(rows, columns);
+                }
+                (*decoded_matrix)(row, column) = value;
+            });
+        if (status != nil::marshalling::status_type::success) {
+            return status;
+        }
+        if (!decoded_matrix.has_value()) {
+            decoded_matrix.emplace(rows, columns);
+        }
+        matrix = std::move(*decoded_matrix);
         return nil::marshalling::status_type::success;
     }
 
