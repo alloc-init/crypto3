@@ -103,16 +103,25 @@ static void print_stage(std::string_view operation, const bench_result &result) 
 template<typename Fp12Field>
 static void run_field_benchmark(const std::string &name, const bench_config &config) {
     using base_field_type = typename Fp12Field::base_field_type;
+    using base_value_type = typename base_field_type::value_type;
     using value_type = typename Fp12Field::value_type;
 
     boost::random::mt19937 rng(1234);
 
     std::vector<value_type> xs(config.poolN);
     std::vector<value_type> ys(config.poolN);
+    std::vector<base_value_type> scalars(config.poolN);
 
     for (std::size_t i = 0; i < config.poolN; ++i) {
         xs[i] = nil::crypto3::algebra::random_element<Fp12Field>(rng);
         ys[i] = nil::crypto3::algebra::random_element<Fp12Field>(rng);
+
+        if (xs[i].is_zero()) {
+            xs[i] = value_type::one();
+        }
+    }
+    for (std::size_t i = 0; i < config.poolN; ++i) {
+        scalars[i] = nil::crypto3::algebra::random_element<base_field_type>(rng);
     }
 
     value_type acc;
@@ -123,6 +132,24 @@ static void run_field_benchmark(const std::string &name, const bench_config &con
     print_stage("Fp12 mul", run_stage(config.iters, config.warmup, config.samples, [&](std::size_t i) {
                     const std::size_t idx = i % config.poolN;
                     acc = xs[idx] * ys[idx];
+                    do_not_optimize(&acc);
+                }));
+
+    print_stage("Fp12 square", run_stage(config.iters, config.warmup, config.samples, [&](std::size_t i) {
+                    const std::size_t idx = i % config.poolN;
+                    acc = xs[idx].squared();
+                    do_not_optimize(&acc);
+                }));
+
+    print_stage("Fp12 inverse", run_stage(config.iters, config.warmup, config.samples, [&](std::size_t i) {
+                    const std::size_t idx = i % config.poolN;
+                    acc = xs[idx].inversed();
+                    do_not_optimize(&acc);
+                }));
+
+    print_stage("Fp x Fp12", run_stage(config.iters, config.warmup, config.samples, [&](std::size_t i) {
+                    const std::size_t idx = i % config.poolN;
+                    acc = scalars[idx] * xs[idx];
                     do_not_optimize(&acc);
                 }));
 }
@@ -143,7 +170,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    std::cout << "Fp12 multiplication benchmark (crypto3)\n";
+    std::cout << "Fp12 operations benchmark (crypto3)\n";
     std::cout << "iters=" << config.iters << " poolN=" << config.poolN << " warmup=" << config.warmup
               << " samples=" << config.samples << "\n";
 
