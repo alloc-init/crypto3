@@ -160,6 +160,10 @@ The name explicitly identifies `X` as the quadratic element: the represented ele
 is `P^2 - X * Q^2`. The input `g` must be a canonical nonconstant irreducible polynomial. Irreducibility is a caller
 precondition and is not tested.
 
+The coefficient field `K` must be finite and have odd characteristic. Subject to the generator and polynomial
+arithmetic contracts, this irreducible-only operation is complete: `std::nullopt` means no exact representation
+exists. It does not require `-1` to be square in `K`.
+
 ```cpp
 #include <nil/crypto3/math/polynomial/reconstruction/polynomial_x_norm_reconstruction.hpp>
 
@@ -230,6 +234,16 @@ if (representation) {
 Zero is represented by `(0, 0)`. A constant `c` is represented by `(sqrt(c), 0)` when `c` is square and otherwise has
 no result. These cases do not invoke factorization or consume the coefficient generator.
 
+The coefficient field `K` must be finite and have odd characteristic. Nonconstant inputs must satisfy
+`degree(H) < characteristic(K)`, as required by complete factorization. For extension fields, this bound uses the
+prime characteristic, not the number of field elements.
+
+Subject to these restrictions and the generator and arithmetic contracts, general recovery is complete when `-1` is
+square in `K`, including BabyBear and BN254 Fq12: `std::nullopt` then means no exact representation exists. When `-1`
+is nonsquare, successful results are still exact, but recovery is incomplete and `std::nullopt` does not imply
+nonexistence. This limitation belongs to the general algorithm, not the irreducible-only API or quotient-field
+square roots.
+
 For a nonconstant input, the constant coefficient must be square. Its leading coefficient must be square when the
 degree is even, while the negated leading coefficient must be square when the degree is odd. These necessary tests
 reject impossible inputs before factorization, but passing them does not guarantee recovery.
@@ -248,6 +262,11 @@ tree. Finally, both components are scaled by `sqrt(c)` to incorporate the factor
 nonsquare required scalar produces no result. Every successful path evaluates the completed norm and compares it
 exactly with `H` before returning.
 
+When `-1` is square, separate normalization loses no representations: every monic odd-multiplicity factor with square
+`X mod g` can be normalized, and the parity-adjusted leading-coefficient test makes `c` square. When `-1` is nonsquare,
+scalar obstructions in individual factors and the leading scalar can cancel in `H`; the algorithm does not exploit
+such cancellation.
+
 The coefficient generator is shared by complete factorization and odd-factor recovery. It must meet the factorization
 generator contract and must allow each square-root context to find a quotient-field nonsquare. All polynomial products
 and squares use the caller's compile-time-selected arithmetic context; no polynomial backend or random engine is
@@ -265,6 +284,10 @@ polynomial arithmetic and the fixed norm map `P^2 - X * Q^2`. The API returns th
 not impose a representation or policy beyond that algebraic identity.
 
 ### Worked example over F7
+
+This is a successful case for both recovery APIs, not a completeness guarantee for general recovery over F7. Here
+`-1` is nonsquare: the general API rejects `1-X` despite its representation `P = Q = 1`, because its monic factor
+`X-1` cannot be normalized separately. The irreducible-only API recovers `1-X` directly.
 
 Consider
 
