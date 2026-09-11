@@ -150,6 +150,10 @@ namespace nil::crypto3::math {
      * Irreducibility of g is a caller precondition and is not tested. The coefficient generator must eventually produce
      * coefficients forming a nonsquare canonical representative of degree below degree(g).
      *
+     * K must be a finite field of odd characteristic. Under these preconditions and the composed arithmetic contracts,
+     * recovery is complete: no value means no exact representation exists. This irreducible-only operation does not
+     * require -1 to be square in K.
+     *
      * @return a normalized representation whose evaluated norm is exactly g; no value if X is nonsquare modulo g,
      *         bounded rational reconstruction fails, or the resulting nonzero scalar multiple of g cannot be
      * normalized.
@@ -389,6 +393,12 @@ namespace nil::crypto3::math {
      *
      * The coefficient generator remains caller-owned and is shared by complete factorization and irreducible-factor
      * recovery. It must satisfy the documented requirements of both operations.
+     *
+     * K must be a finite field of odd characteristic. Nonconstant h must satisfy degree(h) < characteristic(K), as
+     * required by complete factorization. Under the generator and arithmetic contracts, recovery is complete when -1
+     * is square in K, including BabyBear and BN254 Fq12: no value then means no exact representation exists. When -1 is
+     * nonsquare, successful results are still exact, but separately normalizing monic factors can reject representable
+     * inputs. No value does not imply nonexistence in that case.
      *
      * @return a representation whose evaluated norm is exactly h; no value if a necessary coefficient square test,
      *         odd-factor recovery, or leading-scalar normalization fails.
