@@ -223,6 +223,35 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         }
     }
 
+    template<Fp12FastParams Params>
+    inline void subtract_low_limbs_mod_portable(limb *z, const limb *x, const limb *y) {
+        constexpr size_t N = Params::base_value_limb_count;
+        const bool borrow = subtract_limbs_portable<N>(z, x, y);
+        if (borrow) {
+            static const auto p = modulus_limbs<Params>();
+            add_limbs_portable<N>(z, z, p.data());
+        }
+    }
+
+    template<Fp12FastParams Params>
+    inline void mul_low_limbs_by_5_mod_portable(limb *z, const limb *x) {
+        constexpr size_t N = Params::base_value_limb_count;
+        std::array<limb, N> doubled, quadrupled;
+        add_low_limbs_mod_portable<Params>(doubled.data(), x, x);
+        add_low_limbs_mod_portable<Params>(quadrupled.data(), doubled.data(), doubled.data());
+        add_low_limbs_mod_portable<Params>(z, quadrupled.data(), x);
+    }
+
+    template<Fp12FastParams Params>
+    inline void mul_low_limbs_by_9_mod_portable(limb *z, const limb *x) {
+        constexpr size_t N = Params::base_value_limb_count;
+        std::array<limb, N> doubled, quadrupled, octupled;
+        add_low_limbs_mod_portable<Params>(doubled.data(), x, x);
+        add_low_limbs_mod_portable<Params>(quadrupled.data(), doubled.data(), doubled.data());
+        add_low_limbs_mod_portable<Params>(octupled.data(), quadrupled.data(), quadrupled.data());
+        add_low_limbs_mod_portable<Params>(z, octupled.data(), x);
+    }
+
     // fp2_base values are two contiguous 4-limb coefficients; each output
     // coefficient is normalized modulo p.
     template<Fp12FastParams Params>

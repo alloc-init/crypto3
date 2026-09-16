@@ -182,8 +182,10 @@ namespace nil {
                         }
 
                         element_fp12_2over3over2 squared() const {
-
-                            return (*this) * (*this);    // maybe can be done more effective
+                            if constexpr (requires { policy_type::square(*this); }) {
+                                return policy_type::square(*this);
+                            }
+                            return (*this) * (*this);
                         }
 
                         template<typename PowerType>

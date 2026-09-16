@@ -120,6 +120,11 @@ namespace nil::crypto3::algebra::fields::detail {
         static Fp12Value multiply(const Fp12Value &x, const Fp12Value &y) {
             return fp12_fast::fp12_fast<fast_params>::multiply(x, y);
         }
+
+        template<typename Fp12Value>
+        static Fp12Value square(const Fp12Value &x) {
+            return fp12_fast::fp12_fast<fast_params>::square(x);
+        }
     };
 
     template<size_t Version>

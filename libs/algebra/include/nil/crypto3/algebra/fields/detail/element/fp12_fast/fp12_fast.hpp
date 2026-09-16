@@ -33,6 +33,32 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                 fp2_base_add_mod<Params>(z.data, x.data, y.data);
             }
 
+            static void mul_xi(fp2_base &z, const fp2_base &x) {
+                constexpr size_t N = Params::base_value_limb_count;
+                limb_array result {};
+                if constexpr (Params::xi == std::array {9, 1} && Params::u_squared == -1) {
+                    std::array<limb, N> a_times_9, b_times_9;
+                    mul_low_limbs_by_9_mod_portable<Params>(a_times_9.data(), x.data.data());
+                    mul_low_limbs_by_9_mod_portable<Params>(b_times_9.data(), x.data.data() + N);
+                    subtract_low_limbs_mod_portable<Params>(result.data(), a_times_9.data(), x.data.data() + N);
+                    add_low_limbs_mod_portable<Params>(result.data() + N, x.data.data(), b_times_9.data());
+                } else if constexpr (Params::xi == std::array {1, 1} && Params::u_squared == -1) {
+                    subtract_low_limbs_mod_portable<Params>(result.data(), x.data.data(), x.data.data() + N);
+                    add_low_limbs_mod_portable<Params>(result.data() + N, x.data.data(), x.data.data() + N);
+                } else if constexpr (Params::xi == std::array {0, 1} && Params::u_squared == -5) {
+                    std::array<limb, N> b_times_5;
+                    const std::array<limb, N> zero {};
+                    mul_low_limbs_by_5_mod_portable<Params>(b_times_5.data(), x.data.data() + N);
+                    subtract_low_limbs_mod_portable<Params>(result.data(), zero.data(), b_times_5.data());
+                    for (size_t i = 0; i < N; ++i) {
+                        result[i + N] = x.data[i];
+                    }
+                } else {
+                    static_assert(Params::xi != Params::xi, "unsupported Fp2 non-residue");
+                }
+                z.data = result;
+            }
+
             fp2_base &operator+=(const fp2_base &other) {
                 fp2_base::add_mod(*this, *this, other);
                 return *this;
@@ -116,6 +142,12 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                 fp2_base::add_mod(z.data[0], x.data[0], y.data[0]);
                 fp2_base::add_mod(z.data[1], x.data[1], y.data[1]);
                 fp2_base::add_mod(z.data[2], x.data[2], y.data[2]);
+            }
+
+            static fp6_base mul_v(const fp6_base &x) {
+                fp2_base c0;
+                fp2_base::mul_xi(c0, x.data[2]);
+                return fp6_base(c0, x.data[0], x.data[1]);
             }
 
             fp6_base operator+(const fp6_base &other) const {
@@ -229,7 +261,45 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                 z.data[2] = x.data[1];
                 z.data[2] += y.data[2];
             }
+
+            static void mul_v(fp6_dbl &z, const fp6_dbl &x) {
+                fp2_dbl zero;
+                zero.data = {};
+                fp2_dbl::mul_xi_add(z.data[0], x.data[2], zero);
+                z.data[1] = x.data[0];
+                z.data[2] = x.data[1];
+            }
         };
+
+        template<typename Fp12Value>
+        static Fp12Value square(const Fp12Value &x) {
+            // Write x = a + b*w in Fp6[w]/(w^2 - v). The quadratic-extension
+            // squaring formula
+            //
+            //   ab = a*b
+            //   c0 = (a + b)(a + v*b) - ab - v*ab = a^2 + v*b^2
+            //   c1 = 2*ab
+            //
+            // needs two Fp6 products instead of the three used by generic
+            // Fp12 multiplication. Keep both products in the lazy doubled
+            // representation until the two final Montgomery reductions.
+            const fp6_base a(x.data[0]);
+            const fp6_base b(x.data[1]);
+            const fp6_base vb = fp6_base::mul_v(b);
+
+            fp6_dbl ab, c0, v_ab;
+            fp6_dbl::mul_pre(ab, a, b);
+            fp6_dbl::add_mul_pre(c0, a, b, a, vb);
+            fp6_dbl::mul_v(v_ab, ab);
+            c0 -= ab;
+            c0 -= v_ab;
+            ab += ab;
+
+            Fp12Value ret;
+            c0.to_underlying(ret.data[0]);
+            ab.to_underlying(ret.data[1]);
+            return ret;
+        }
 
         template<typename Fp12Value>
         static Fp12Value multiply(const Fp12Value &x, const Fp12Value &y) {
