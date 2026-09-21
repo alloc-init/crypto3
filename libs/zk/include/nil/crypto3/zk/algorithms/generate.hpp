@@ -27,6 +27,8 @@
 #ifndef CRYPTO3_ZK_SNARK_ALGORITHMS_GENERATE_HPP
 #define CRYPTO3_ZK_SNARK_ALGORITHMS_GENERATE_HPP
 
+#include <cstddef>
+
 namespace nil {
     namespace crypto3 {
         namespace zk {
@@ -34,6 +36,15 @@ namespace nil {
             KeyPairType generate(const typename ProofSystemType::constraint_system_type &constraint_system) {
 
                 return ProofSystemType::generate(constraint_system);
+            }
+
+            template<typename ProofSystemType,
+                     typename KeyPairType = typename ProofSystemType::keypair_type,
+                     typename RandomSource>
+            KeyPairType generate(const typename ProofSystemType::constraint_system_type &constraint_system,
+                                 RandomSource &random_source) {
+
+                return ProofSystemType::generate(constraint_system, random_source);
             }
 
             template<typename ProofSystemType, typename KeyPairType = typename ProofSystemType::keypair_type>
