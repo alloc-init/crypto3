@@ -35,7 +35,9 @@
 #include <vector>
 
 #include <nil/crypto3/algebra/fields/params.hpp>
+#include <nil/crypto3/math/coset.hpp>
 #include <nil/crypto3/math/domains/basic_radix2_domain.hpp>
+#include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/modified_sqap.hpp>
 
 namespace nil {
@@ -55,6 +57,29 @@ namespace nil {
                         using constraint_system_type = modified_sqap_constraint_system<field_type>;
                         using constraint_type = typename constraint_system_type::constraint_type;
                         using domain_type = math::basic_radix2_domain<field_type>;
+                        using polynomial_type = math::polynomial<field_value_type>;
+
+                        /**
+                         * Circuit basis evaluations At[i] = A^i(t), Ct[i] = C^i(t), and Zt = Z(t).
+                         * Both vectors have one entry per witness slot (the source constraint system's witness_size),
+                         * including slot zero.
+                         */
+                        struct instance_evaluation {
+                            std::vector<field_value_type> At;
+                            std::vector<field_value_type> Ct;
+                            field_value_type Zt;
+                        };
+
+                        /**
+                         * Witness polynomials with coefficients in ascending powers.
+                         * A and C retain the domain size in coefficients; H retains one fewer, including trailing
+                         * zeros.
+                         */
+                        struct witness_polynomials {
+                            polynomial_type A;
+                            polynomial_type C;
+                            polynomial_type H;
+                        };
 
                         /**
                          * Smallest supported power of two >= max(2, logical_rows), without allocation.
@@ -106,6 +131,94 @@ namespace nil {
                             const auto binding = normalized.constraints.front();
                             normalized.constraints.resize(m, binding);
                             return std::move(normalized.constraints);
+                        }
+
+                        /**
+                         * Evaluate the circuit basis polynomials using sparse Lagrange accumulation.
+                         * The point t may be any field value, including zero and domain elements.
+                         * Invalid circuit structure or unsupported dimensions throw std::invalid_argument.
+                         */
+                        static instance_evaluation instance_map_with_evaluation(const constraint_system_type &cs,
+                                                                                const field_value_type &t) {
+                            const std::size_t n = cs.num_variables();
+                            if (n > std::vector<field_value_type>().max_size()) {
+                                throw std::invalid_argument("modified_sqap: basis evaluation size overflow");
+                            }
+                            const auto domain = get_domain(cs);
+                            instance_evaluation result {std::vector<field_value_type>(n, field_value_type::zero()),
+                                                        std::vector<field_value_type>(n, field_value_type::zero()),
+                                                        field_value_type::zero()};
+                            // TODO: Optimize the radix-two Lagrange evaluator with math::batch_inverse_nonzero()
+                            // and cached weights, preserving this domain and Z(X) = X^m - 1. Benchmark the change.
+                            const auto lagrange = domain->evaluate_all_lagrange_polynomials(t, result.Zt);
+
+                            for (std::size_t j = 0; j < cs.num_constraints(); ++j) {
+                                for (const auto &term : cs.constraints[j].a) {
+                                    result.At[term.index] += lagrange[j] * term.coeff;
+                                }
+                                for (const auto &term : cs.constraints[j].c) {
+                                    result.Ct[term.index] += lagrange[j] * term.coeff;
+                                }
+                            }
+                            // Each padding row has a = 0 and c = -w[0].
+                            for (std::size_t j = cs.num_constraints(); j < domain->size(); ++j) {
+                                result.Ct[0] -= lagrange[j];
+                            }
+                            return result;
+                        }
+
+                        /**
+                         * Interpolate A and C from a satisfying witness using the domain's inverse FFT.
+                         * Compute H = (A^2 - C - u) / (X^m - 1) on a disjoint coset, where m is the domain size.
+                         * The canonical integer representative of u must be odd, and witness[0] must equal u.
+                         * Invalid circuit structure, dimensions, public input or witness throw std::invalid_argument.
+                         * An unsupported coset or a quotient exceeding degree m - 2 also throws std::invalid_argument.
+                         * The caller's constraint system and witness are not modified.
+                         */
+                        static witness_polynomials witness_map(const constraint_system_type &cs,
+                                                               const field_value_type &u,
+                                                               const std::vector<field_value_type> &witness) {
+                            if (!cs.is_satisfied(u, witness)) {
+                                throw std::invalid_argument("modified_sqap: invalid or unsatisfied witness");
+                            }
+                            const auto domain = get_domain(cs);
+                            const std::size_t m = domain->size();
+                            // divide_by_z_on_coset uses this same multiplicative generator.
+                            const field_value_type coset(
+                                algebra::fields::arithmetic_params<field_type>::multiplicative_generator);
+                            if (coset.is_zero() || domain->compute_vanishing_polynomial(coset).is_zero()) {
+                                throw std::invalid_argument("modified_sqap: unsupported quotient coset");
+                            }
+                            // Padding copies the binding row, whose evaluations are a = 0 and c = -u.
+                            witness_polynomials result {
+                                polynomial_type(m, field_value_type::zero()), polynomial_type(m, -u), {}};
+                            for (std::size_t j = 0; j < cs.num_constraints(); ++j) {
+                                result.A[j] = cs.constraints[j].a.evaluate(witness);
+                                result.C[j] = cs.constraints[j].c.evaluate(witness);
+                            }
+                            domain->inverse_fft(result.A.get_storage());
+                            domain->inverse_fft(result.C.get_storage());
+
+                            // The row checks ensure exact divisibility, so H has degree at most m - 2.
+                            // Evaluate A and C at coset * D while preserving their coefficient representations.
+                            result.H = result.A;
+                            auto c_on_coset = result.C;
+                            math::multiply_by_coset(result.H, coset);
+                            math::multiply_by_coset(c_on_coset, coset);
+                            domain->fft(result.H.get_storage());
+                            domain->fft(c_on_coset.get_storage());
+                            for (std::size_t j = 0; j < m; ++j) {
+                                result.H[j] = result.H[j].squared() - c_on_coset[j] - u;
+                            }
+                            // Z(coset * D[j]) = coset^m - 1 is the same nonzero value at every coset point.
+                            domain->divide_by_z_on_coset(result.H.get_storage());
+                            domain->inverse_fft(result.H.get_storage());
+                            math::multiply_by_coset(result.H, coset.inversed());
+                            if (!result.H[m - 1].is_zero()) {
+                                throw std::invalid_argument("modified_sqap: quotient exceeds degree bound");
+                            }
+                            result.H.resize(m - 1);
+                            return result;
                         }
                     };
 
