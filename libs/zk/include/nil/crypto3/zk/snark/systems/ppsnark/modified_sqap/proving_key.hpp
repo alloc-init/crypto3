@@ -22,12 +22,12 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SAP_PROVING_KEY_HPP
-#define CRYPTO3_ZK_MODIFIED_SAP_PROVING_KEY_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SQAP_PROVING_KEY_HPP
+#define CRYPTO3_ZK_MODIFIED_SQAP_PROVING_KEY_HPP
 
 #include <vector>
 
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/verification_key.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/verification_key.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -35,20 +35,20 @@ namespace nil {
             namespace snark {
 
                 template<typename FieldType>
-                struct modified_sap_constraint_system;
+                struct modified_sqap_constraint_system;
 
                 /**
-                 * Owned proving parameters for the modified SAP SNARK.
+                 * Owned proving parameters for the modified SQAP SNARK.
                  * Default construction does not produce a valid proving key.
                  */
                 template<typename CurveType, typename ConstraintSystem =
-                                                 modified_sap_constraint_system<typename CurveType::scalar_field_type>>
-                struct modified_sap_proving_key {
+                                                 modified_sqap_constraint_system<typename CurveType::scalar_field_type>>
+                struct modified_sqap_proving_key {
                     using curve_type = CurveType;
                     using g1_type = typename curve_type::template g1_type<>;
                     using g1_value_type = typename g1_type::value_type;
                     using constraint_system_type = ConstraintSystem;
-                    using verification_key_type = modified_sap_verification_key<curve_type>;
+                    using verification_key_type = modified_sqap_verification_key<curve_type>;
 
                     // n = verification_key.num_variables; m = verification_key.domain_size.
                     std::vector<g1_value_type> W;          // n mixed witness bases.
@@ -62,7 +62,7 @@ namespace nil {
                     constraint_system_type constraint_system;
                     verification_key_type verification_key;
 
-                    bool operator==(const modified_sap_proving_key &other) const = default;
+                    bool operator==(const modified_sqap_proving_key &other) const = default;
                 };
 
             }    // namespace snark
@@ -70,4 +70,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SAP_PROVING_KEY_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SQAP_PROVING_KEY_HPP

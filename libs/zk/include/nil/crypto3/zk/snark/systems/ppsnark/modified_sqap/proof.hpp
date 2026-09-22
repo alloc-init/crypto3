@@ -22,8 +22,8 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SAP_PROOF_HPP
-#define CRYPTO3_ZK_MODIFIED_SAP_PROOF_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SQAP_PROOF_HPP
+#define CRYPTO3_ZK_MODIFIED_SQAP_PROOF_HPP
 
 namespace nil {
     namespace crypto3 {
@@ -31,10 +31,10 @@ namespace nil {
             namespace snark {
 
                 /**
-                 * A modified SAP proof. The public input is supplied separately.
+                 * A modified SQAP proof. The public input is supplied separately.
                  */
                 template<typename CurveType>
-                struct modified_sap_proof {
+                struct modified_sqap_proof {
                     using curve_type = CurveType;
                     using scalar_field_type = typename curve_type::scalar_field_type;
                     using scalar_value_type = typename scalar_field_type::value_type;
@@ -48,7 +48,7 @@ namespace nil {
                     scalar_value_type v_H = scalar_value_type::zero();
                     scalar_value_type v_Z = scalar_value_type::zero();
 
-                    bool operator==(const modified_sap_proof &other) const = default;
+                    bool operator==(const modified_sqap_proof &other) const = default;
                 };
 
             }    // namespace snark
@@ -56,4 +56,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SAP_PROOF_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SQAP_PROOF_HPP

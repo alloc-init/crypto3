@@ -1,9 +1,9 @@
-# Modified SAP SNARK: protocol specification
+# Modified SQAP SNARK: protocol specification
 
 ## 1. Scope
 
-This specification defines the standalone SNARK `modified_sap_snark`.
-SAP means Square Arithmetic Program. Its three operations are `SNARK.Setup`,
+This specification defines the standalone SNARK `modified_sqap_snark`.
+SQAP means Squaring QAP (Quadratic Arithmetic Program). Its three operations are `SNARK.Setup`,
 `SNARK.Prove` and `SNARK.Verify`, defined by the relations, key structures and
 equations below.
 
@@ -239,13 +239,13 @@ proof under a key supplied by the prover alone does not establish that binding.
 
 ## 6. Native API
 
-The scheme facade is `snark::modified_sap_snark<Policy>`, under
-`snark/systems/ppsnark/modified_sap_snark.hpp`. The compile-time policy identifies
+The scheme facade is `snark::modified_sqap_snark<Policy>`, under
+`snark/systems/ppsnark/modified_sqap_snark.hpp`. The compile-time policy identifies
 the curve, exact pairing convention and transcript profile. There is no runtime
 switch between transcript conventions. The interface contract is:
 
 ```cpp
-using scheme = snark::modified_sap_snark<policy>;
+using scheme = snark::modified_sqap_snark<policy>;
 auto keys = scheme::generate(constraint_system, random_source);
 auto proof = scheme::prove(keys.first, u, witness);
 bool valid = scheme::verify(keys.second, u, proof);
@@ -255,7 +255,7 @@ The scheme exposes these aliases:
 
 | Alias | Contract |
 | --- | --- |
-| `constraint_system_type` | The modified-SAP constraint system over Fr |
+| `constraint_system_type` | The modified-SQAP constraint system over Fr |
 | `primary_input_type` | One Fr value, `u` |
 | `auxiliary_input_type` | A vector of Fr values: the full explicitly indexed witness, including `w[0]` |
 | `proof_type` | The two G1 points and four Fr evaluations in section 5 |

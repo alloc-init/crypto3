@@ -22,8 +22,8 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SAP_VERIFICATION_KEY_HPP
-#define CRYPTO3_ZK_MODIFIED_SAP_VERIFICATION_KEY_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SQAP_VERIFICATION_KEY_HPP
+#define CRYPTO3_ZK_MODIFIED_SQAP_VERIFICATION_KEY_HPP
 
 #include <array>
 #include <cstddef>
@@ -34,11 +34,11 @@ namespace nil {
             namespace snark {
 
                 /**
-                 * Verification parameters and circuit binding for the modified SAP SNARK.
+                 * Verification parameters and circuit binding for the modified SQAP SNARK.
                  * Default construction does not produce a valid verification key.
                  */
                 template<typename CurveType>
-                struct modified_sap_verification_key {
+                struct modified_sqap_verification_key {
                     using curve_type = CurveType;
                     using base_field_type = typename curve_type::base_field_type;
                     using base_value_type = typename base_field_type::value_type;
@@ -60,7 +60,7 @@ namespace nil {
                     std::size_t domain_size = 0;
                     base_value_type circuit_digest = base_value_type::zero();
 
-                    bool operator==(const modified_sap_verification_key &other) const = default;
+                    bool operator==(const modified_sqap_verification_key &other) const = default;
                 };
 
             }    // namespace snark
@@ -68,4 +68,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SAP_VERIFICATION_KEY_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SQAP_VERIFICATION_KEY_HPP

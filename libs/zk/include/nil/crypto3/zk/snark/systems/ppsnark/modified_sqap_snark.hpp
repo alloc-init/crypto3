@@ -22,10 +22,10 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SAP_SNARK_HPP
-#define CRYPTO3_ZK_MODIFIED_SAP_SNARK_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SQAP_SNARK_HPP
+#define CRYPTO3_ZK_MODIFIED_SQAP_SNARK_HPP
 
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/policy.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -37,7 +37,7 @@ namespace nil {
                  * Policy selects the curve, exact pairing convention and transcript.
                  */
                 template<typename Policy>
-                class modified_sap_snark {
+                class modified_sqap_snark {
                 public:
                     using policy_type = Policy;
                     using constraint_system_type = typename policy_type::constraint_system_type;
@@ -69,4 +69,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SAP_SNARK_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SQAP_SNARK_HPP

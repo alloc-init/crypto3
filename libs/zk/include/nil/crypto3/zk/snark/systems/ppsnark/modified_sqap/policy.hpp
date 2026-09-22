@@ -22,15 +22,15 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SAP_POLICY_HPP
-#define CRYPTO3_ZK_MODIFIED_SAP_POLICY_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SQAP_POLICY_HPP
+#define CRYPTO3_ZK_MODIFIED_SQAP_POLICY_HPP
 
 #include <utility>
 #include <vector>
 
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/proof.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/proving_key.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/verification_key.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/proof.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/proving_key.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/verification_key.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -38,12 +38,12 @@ namespace nil {
             namespace snark {
 
                 /**
-                 * Compile-time types for the modified SAP SNARK.
+                 * Compile-time types for the modified SQAP SNARK.
                  * PairingPolicy must use the exact final exponent (p^12 - 1) / r.
                  * TranscriptPolicy specifies the protocol transcript.
                  */
                 template<typename CurveType, typename PairingPolicy, typename TranscriptPolicy>
-                struct modified_sap_policy {
+                struct modified_sqap_policy {
                     using curve_type = CurveType;
                     using base_field_type = typename curve_type::base_field_type;
                     using scalar_field_type = typename curve_type::scalar_field_type;
@@ -57,10 +57,10 @@ namespace nil {
                     using primary_input_type = typename scalar_field_type::value_type;
                     // The full explicitly indexed witness, including u at index zero.
                     using auxiliary_input_type = std::vector<primary_input_type>;
-                    using constraint_system_type = modified_sap_constraint_system<scalar_field_type>;
-                    using proof_type = modified_sap_proof<curve_type>;
-                    using proving_key_type = modified_sap_proving_key<curve_type, constraint_system_type>;
-                    using verification_key_type = modified_sap_verification_key<curve_type>;
+                    using constraint_system_type = modified_sqap_constraint_system<scalar_field_type>;
+                    using proof_type = modified_sqap_proof<curve_type>;
+                    using proving_key_type = modified_sqap_proving_key<curve_type, constraint_system_type>;
+                    using verification_key_type = modified_sqap_verification_key<curve_type>;
                     using keypair_type = std::pair<proving_key_type, verification_key_type>;
                 };
 
@@ -69,4 +69,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SAP_POLICY_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SQAP_POLICY_HPP
