@@ -104,6 +104,31 @@ namespace nil {
                     }
 
                     /**
+                     * Check the full witness against the public input and every logical row.
+                     * The canonical integer representative of u must be odd, and witness[0] must equal u.
+                     * Invalid structure, witness length, public input or row evaluation returns false.
+                     */
+                    bool is_satisfied(const field_value_type &u, const std::vector<field_value_type> &witness) const {
+                        if (witness.size() != witness_size || !is_valid()) {
+                            return false;
+                        }
+
+                        // Parity belongs to the canonical integer, not the field's internal representation.
+                        if ((u.to_integral() & 1) == 0 || witness[0] != u) {
+                            return false;
+                        }
+
+                        for (const auto &constraint : constraints) {
+                            const auto a = constraint.a.evaluate(witness);
+                            const auto c = constraint.c.evaluate(witness);
+                            if (a.squared() - c != u) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+
+                    /**
                      * Return an owned canonical copy, preserving row order and witness dimension.
                      * Invalid structure throws std::invalid_argument; the source is not modified.
                      */
