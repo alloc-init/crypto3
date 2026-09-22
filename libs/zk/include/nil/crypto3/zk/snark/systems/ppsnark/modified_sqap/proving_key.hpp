@@ -27,15 +27,13 @@
 
 #include <vector>
 
+#include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/modified_sqap.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/verification_key.hpp>
 
 namespace nil {
     namespace crypto3 {
         namespace zk {
             namespace snark {
-
-                template<typename FieldType>
-                struct modified_sqap_constraint_system;
 
                 /**
                  * Owned proving parameters for the modified SQAP SNARK.

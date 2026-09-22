@@ -69,6 +69,7 @@ set(TESTS_NAMES
 
         "relations/numeric/qap"
         "relations/numeric/sap"
+        "relations/numeric/modified_sqap"
 
         "systems/plonk/placeholder/placeholder_circuits"
         "systems/plonk/placeholder/placeholder_circuits_dFRI"
