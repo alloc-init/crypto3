@@ -74,6 +74,7 @@ set(TESTS_NAMES
         "systems/ppsnark/modified_sqap_generator"
         "systems/ppsnark/modified_sqap_pairing_policy"
         "systems/ppsnark/modified_sqap_transcript"
+        "systems/ppsnark/modified_sqap_verifier"
 
         "systems/plonk/placeholder/placeholder_circuits"
         "systems/plonk/placeholder/placeholder_circuits_dFRI"

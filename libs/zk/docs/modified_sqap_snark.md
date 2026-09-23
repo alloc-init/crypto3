@@ -237,10 +237,11 @@ by this verification equation even though native code could evaluate `X^m - 1`.
 
 Validate curve and order-`r` subgroup membership of proof points and verification
 key points before pairing. GT constants must be nonzero and satisfy `x^r == 1`.
-The stored G2 generator must equal the fixed generator, and `gamma_inverse_g2`
-must be nonidentity. Do not blanket-reject identity proof points: valid
-commitments can cancel. Group-order checks must use integer multiplication by
-`r`, not a conversion to an Fr scalar that would reduce `r` to zero.
+The stored G2 generator must equal the fixed generator, and `tau_g2` and
+`gamma_inverse_g2` must be nonidentity. Do not blanket-reject identity proof
+points: valid commitments can cancel. Group-order checks must use integer
+multiplication by `r`, not a conversion to an Fr scalar that would reduce `r`
+to zero.
 
 Structural and membership checks do not certify an honestly generated CRS.
 The caller selects the trusted circuit-specific verification key; verifying a

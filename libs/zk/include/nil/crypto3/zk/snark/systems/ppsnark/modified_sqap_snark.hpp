@@ -26,6 +26,7 @@
 #define CRYPTO3_ZK_MODIFIED_SQAP_SNARK_HPP
 
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/generator.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/verifier.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -63,7 +64,9 @@ namespace nil {
                     // primary_input is the caller's expected public input.
                     static bool verify(const verification_key_type &vk,
                                        const primary_input_type &primary_input,
-                                       const proof_type &proof);
+                                       const proof_type &proof) {
+                        return modified_sqap_verifier<policy_type>::process(vk, primary_input, proof);
+                    }
                 };
 
             }    // namespace snark
