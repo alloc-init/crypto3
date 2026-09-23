@@ -37,6 +37,7 @@
 
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/prover.hpp>
 
+#include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 #include <nil/crypto3/random/chacha_urbg.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/generator.hpp>
@@ -409,6 +410,139 @@ BOOST_AUTO_TEST_CASE(commitment_rejects_invalid_public_inputs_and_witnesses) {
     const auto binding_key = generate_proving_key({1, {binding_row()}});
     for (const auto &even_u : {scalar_value_type::zero(), scalar_value_type(2), scalar_value_type(4)}) {
         BOOST_CHECK_THROW(prover_type::commit(binding_key, even_u, {even_u}), std::invalid_argument);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(opening_matches_explicit_cubic_example) {
+    // U(X) = 5 + 2X + 3X^2 + 4X^3.
+    const polynomial_type polynomial {scalar_value_type(5), scalar_value_type(2), scalar_value_type(3),
+                                      scalar_value_type(4)};
+    const auto original = polynomial;
+    for (const auto &z :
+         {scalar_value_type::zero(), scalar_value_type::one(), scalar_value_type(2), -scalar_value_type(2)}) {
+        BOOST_TEST_CONTEXT("challenge: " << z) {
+            const auto result = prover_type::open_polynomial(polynomial, z);
+            const auto expected_evaluation = scalar_value_type(5) + scalar_value_type(2) * z +
+                                             scalar_value_type(3) * z.squared() +
+                                             scalar_value_type(4) * z.squared() * z;
+            const polynomial_type expected_quotient {
+                scalar_value_type(2) + scalar_value_type(3) * z + scalar_value_type(4) * z.squared(),
+                scalar_value_type(3) + scalar_value_type(4) * z, scalar_value_type(4)};
+            BOOST_CHECK_EQUAL(result.evaluation, expected_evaluation);
+            BOOST_CHECK(result.quotient == expected_quotient);
+            BOOST_CHECK(polynomial == original);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(opening_of_constant_and_zero_polynomials_has_zero_quotient) {
+    for (const auto &constant : {scalar_value_type::zero(), scalar_value_type(7)}) {
+        for (const std::size_t coefficient_count : {1, 5}) {
+            polynomial_type polynomial(coefficient_count, scalar_value_type::zero());
+            polynomial[0] = constant;
+            const auto original = polynomial;
+            for (const auto &z : {scalar_value_type::zero(), scalar_value_type::one(), scalar_value_type(2)}) {
+                BOOST_TEST_CONTEXT("constant: " << constant << ", coefficient count: " << coefficient_count
+                                                << ", challenge: " << z) {
+                    const auto result = prover_type::open_polynomial(polynomial, z);
+                    BOOST_CHECK_EQUAL(result.evaluation, constant);
+                    BOOST_REQUIRE_EQUAL(result.quotient.size(), 1);
+                    BOOST_CHECK(result.quotient[0].is_zero());
+                    BOOST_CHECK(polynomial == original);
+                }
+            }
+        }
+    }
+
+    polynomial_type empty;
+    empty.clear();
+    const auto result = prover_type::open_polynomial(empty, scalar_value_type::zero());
+    BOOST_CHECK(result.evaluation.is_zero());
+    BOOST_REQUIRE_EQUAL(result.quotient.size(), 1);
+    BOOST_CHECK(result.quotient[0].is_zero());
+    BOOST_CHECK(empty.empty());
+}
+
+BOOST_AUTO_TEST_CASE(opening_preserves_trailing_zero_storage) {
+    polynomial_type polynomial {scalar_value_type(5), scalar_value_type(2), scalar_value_type(3), scalar_value_type(4)};
+    polynomial.resize(8, scalar_value_type::zero());
+    const auto original = polynomial;
+
+    const auto result = prover_type::open_polynomial(polynomial, scalar_value_type(2));
+    const polynomial_type expected_quotient {scalar_value_type(24), scalar_value_type(11), scalar_value_type(4)};
+    BOOST_CHECK_EQUAL(result.evaluation, scalar_value_type(53));
+    BOOST_CHECK(result.quotient == expected_quotient);
+    BOOST_CHECK_EQUAL(polynomial.size(), 8);
+    BOOST_CHECK(polynomial == original);
+}
+
+BOOST_AUTO_TEST_CASE(openings_satisfy_coefficient_identities_at_zero_and_domain_points) {
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    const nil::crypto3::math::polynomial_arithmetic::schoolbook_backend<scalar_value_type> reference;
+
+    for (const std::size_t logical_rows : {1, 2, 3, 5}) {
+        auto source = test_system();
+        source.constraints.resize(logical_rows, binding_row());
+        const auto key = generate_proving_key(source);
+        const auto committed = prover_type::commit(key, u, witness);
+        const auto domain = reduction_type::get_domain(source);
+        const auto m = domain->size();
+        std::vector<scalar_value_type> challenges {scalar_value_type::zero(), scalar_value_type(2)};
+        for (std::size_t j = 0; j < m; ++j) {
+            challenges.push_back(domain->get_domain_element(j));
+        }
+        const std::array polynomials = {&committed.polynomials.A, &committed.polynomials.C, &committed.polynomials.H,
+                                        &committed.Z};
+        const std::array<const char *, 4> names = {"A", "C", "H", "Z"};
+        const std::array<std::size_t, 4> quotient_lengths = {m - 1, m - 1, m - 2, m};
+
+        for (const auto &z : challenges) {
+            for (std::size_t i = 0; i < polynomials.size(); ++i) {
+                BOOST_TEST_CONTEXT("logical rows: " << logical_rows << ", polynomial: " << names[i]
+                                                    << ", challenge: " << z) {
+                    const auto original = *polynomials[i];
+                    const auto result = prover_type::open_polynomial(*polynomials[i], z);
+                    if (result.quotient.is_zero()) {
+                        BOOST_CHECK_EQUAL(result.quotient.size(), 1);
+                    } else {
+                        BOOST_CHECK_LE(result.quotient.size(), quotient_lengths[i]);
+                        BOOST_CHECK(!result.quotient.back().is_zero());
+                    }
+
+                    // Independently reconstruct U = (X - z) * quotient + evaluation by coefficient multiplication.
+                    const polynomial_type divisor {-z, scalar_value_type::one()};
+                    polynomial_type reconstructed;
+                    reference.multiply(reconstructed, divisor, result.quotient);
+                    reconstructed[0] += result.evaluation;
+                    reconstructed.condense();
+                    auto expected = original;
+                    expected.condense();
+                    BOOST_CHECK(reconstructed == expected);
+                    BOOST_CHECK(*polynomials[i] == original);
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(minimum_domain_h_opening_has_zero_quotient) {
+    auto source = test_system();
+    source.constraints.resize(2);
+    const auto key = generate_proving_key(source);
+    const scalar_value_type u(3);
+    const auto committed = prover_type::commit(key, u, {u, scalar_value_type(2), scalar_value_type(1)});
+    BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, 2);
+    BOOST_REQUIRE(key.T_H.empty());
+    BOOST_REQUIRE_EQUAL(committed.polynomials.H.size(), 1);
+    BOOST_REQUIRE_EQUAL(committed.polynomials.H[0], scalar_value_type::one());
+
+    for (const auto &z :
+         {scalar_value_type::zero(), scalar_value_type::one(), -scalar_value_type::one(), scalar_value_type(2)}) {
+        const auto result = prover_type::open_polynomial(committed.polynomials.H, z);
+        BOOST_CHECK_EQUAL(result.evaluation, scalar_value_type::one());
+        BOOST_REQUIRE_EQUAL(result.quotient.size(), 1);
+        BOOST_CHECK(result.quotient[0].is_zero());
     }
 }
 

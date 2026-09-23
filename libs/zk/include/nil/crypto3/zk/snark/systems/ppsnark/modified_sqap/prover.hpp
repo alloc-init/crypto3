@@ -29,6 +29,7 @@
 #include <stdexcept>
 
 #include <nil/crypto3/algebra/multiexp/multiexp.hpp>
+#include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
 #include <nil/crypto3/zk/snark/reductions/modified_sqap_to_polynomials.hpp>
 
 namespace nil {
@@ -43,9 +44,11 @@ namespace nil {
                 class modified_sqap_prover {
                     using policy_type = Policy;
                     using scalar_field_type = typename policy_type::scalar_field_type;
+                    using scalar_value_type = typename scalar_field_type::value_type;
                     using g1_value_type = typename policy_type::g1_type::value_type;
                     using transcript_policy_type = typename policy_type::transcript_policy_type;
                     using reduction_type = reductions::modified_sqap_to_polynomials<scalar_field_type>;
+                    using polynomial_type = typename reduction_type::polynomial_type;
 
                 public:
                     using primary_input_type = typename policy_type::primary_input_type;
@@ -57,8 +60,17 @@ namespace nil {
                      */
                     struct commitment_result {
                         typename reduction_type::witness_polynomials polynomials;
-                        typename reduction_type::polynomial_type Z;
+                        polynomial_type Z;
                         g1_value_type P;
+                    };
+
+                    /**
+                     * Evaluation U(z) and the canonical coefficient polynomial (U(X) - U(z)) / (X - z).
+                     * The zero quotient has one zero coefficient.
+                     */
+                    struct polynomial_opening {
+                        scalar_value_type evaluation;
+                        polynomial_type quotient;
                     };
 
                     /**
@@ -111,6 +123,29 @@ namespace nil {
                         result.P += algebra::multiexp<algebra::policies::multiexp_method_BDLO12>(
                             proving_key.H_query.begin(), proving_key.H_query.end(), result.polynomials.H.begin(),
                             result.polynomials.H.end(), 1);
+                        return result;
+                    }
+
+                    /**
+                     * Evaluate and construct an opening quotient for any challenge, including zero and domain points.
+                     * Normalize a temporary copy; the source polynomial's coefficient storage is preserved.
+                     * A nonzero division remainder signals an internal inconsistency and throws std::logic_error.
+                     */
+                    static polynomial_opening open_polynomial(const polynomial_type &polynomial,
+                                                              const scalar_value_type &challenge) {
+                        auto numerator = polynomial;
+                        // Division requires canonical, nonempty coefficients; condense also maps empty storage to [0].
+                        numerator.condense();
+                        polynomial_opening result {numerator.evaluate(challenge), {}};
+                        numerator[0] -= result.evaluation;
+
+                        // Coefficients are in ascending powers: {-z, 1} represents X - z.
+                        const polynomial_type divisor {-challenge, scalar_value_type::one()};
+                        polynomial_type remainder;
+                        math::division(result.quotient, remainder, numerator, divisor);
+                        if (!remainder.is_zero()) {
+                            throw std::logic_error("modified_sqap: opening quotient has a nonzero remainder");
+                        }
                         return result;
                     }
                 };
