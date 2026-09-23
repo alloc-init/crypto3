@@ -33,11 +33,19 @@
 
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/transcript.hpp>
 
+#include <nil/crypto3/algebra/algorithms/pair.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
+
 namespace {
 
     using curve_type = nil::crypto3::algebra::curves::alt_bn128_254;
     using scalar_field_type = curve_type::scalar_field_type;
     using scalar_value_type = scalar_field_type::value_type;
+    using base_value_type = curve_type::base_field_type::value_type;
+    using g1_value_type = curve_type::g1_type<>::value_type;
+    using g2_value_type = curve_type::g2_type<>::value_type;
+    using gt_value_type = curve_type::gt_type::value_type;
+    using pairing_policy_type = nil::crypto3::zk::snark::modified_sqap_bn254_exact_pairing_policy;
     using transcript_policy_type = nil::crypto3::zk::snark::modified_sqap_bn254_poseidon_transcript_policy;
     using system_type = transcript_policy_type::constraint_system_type;
     using constraint_type = system_type::constraint_type;
@@ -62,6 +70,43 @@ namespace {
                  {raw_combination({{2, 2}, {1, 3}, {2, 0}, {1, -2}}),
                   raw_combination({{2, 4}, {0, 4}, {0, -1}})},
                  {raw_combination({{1, 5}}), raw_combination({{2, 6}})}}};
+    }
+
+    gt_value_type gt_generator() {
+        const auto result = nil::crypto3::algebra::pair_reduced<curve_type, pairing_policy_type>(
+            g1_value_type::one(), g2_value_type::one());
+        if (!result) {
+            throw std::runtime_error("modified SQAP test pairing failed");
+        }
+        return *result;
+    }
+
+    transcript_policy_type::verification_key_type test_verification_key() {
+        const auto gT = gt_generator();
+        transcript_policy_type::verification_key_type result;
+        result.g2_one = g2_value_type::one();
+        result.tau_g2 = scalar_value_type(2) * g2_value_type::one();
+        result.gamma_inverse_g2 = scalar_value_type(3) * g2_value_type::one();
+        result.alpha_z_vanishing_gt = gT.pow(5);
+        result.alpha_gt = {gT.pow(7), gT.pow(11), gT.pow(13), gT.pow(17)};
+        result.num_variables = 3;
+        result.domain_size = 4;
+        result.circuit_digest = transcript_policy_type::circuit_digest(test_system());
+        return result;
+    }
+
+    g1_value_type alternate_coordinates(const g1_value_type &point) {
+        const auto affine = point.to_affine();
+        const base_value_type scale(2);
+        const auto scale_squared = scale.squared();
+        return {affine.X * scale_squared, affine.Y * scale_squared * scale, scale};
+    }
+
+    g2_value_type alternate_coordinates(const g2_value_type &point) {
+        const auto affine = point.to_affine();
+        const typename g2_value_type::field_type::value_type scale(base_value_type(2));
+        const auto scale_squared = scale.squared();
+        return {affine.X * scale_squared, affine.Y * scale_squared * scale, scale};
     }
 
 }    // namespace
@@ -112,6 +157,101 @@ BOOST_AUTO_TEST_CASE(circuit_digest_binds_structure_and_domain) {
 
 BOOST_AUTO_TEST_CASE(circuit_digest_rejects_an_invalid_system) {
     BOOST_CHECK_THROW(transcript_policy_type::circuit_digest(system_type()), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(proof_challenge_matches_fixed_vector) {
+    const auto challenge = transcript_policy_type::proof_challenge(
+        test_verification_key(), scalar_value_type(19) * g1_value_type::one(), scalar_value_type(23));
+    const scalar_value_type expected(
+        0x0c595cdf3ddc42067b5fc09469e52ed4ab69027a611bd512d3e5796aad270ca8_cppui_modular254);
+    BOOST_CHECK_EQUAL(challenge, expected);
+}
+
+BOOST_AUTO_TEST_CASE(proof_challenge_is_coordinate_independent) {
+    const auto verification_key = test_verification_key();
+    const auto P = scalar_value_type(19) * g1_value_type::one();
+    const auto expected = transcript_policy_type::proof_challenge(verification_key, P, scalar_value_type(23));
+
+    const auto alternate_P = alternate_coordinates(P);
+    BOOST_REQUIRE(alternate_P == P);
+    BOOST_CHECK_EQUAL(transcript_policy_type::proof_challenge(verification_key, alternate_P, scalar_value_type(23)),
+                      expected);
+
+    auto alternate_key = verification_key;
+    alternate_key.g2_one = alternate_coordinates(verification_key.g2_one);
+    alternate_key.tau_g2 = alternate_coordinates(verification_key.tau_g2);
+    alternate_key.gamma_inverse_g2 = alternate_coordinates(verification_key.gamma_inverse_g2);
+    BOOST_REQUIRE(alternate_key.g2_one == verification_key.g2_one);
+    BOOST_REQUIRE(alternate_key.tau_g2 == verification_key.tau_g2);
+    BOOST_REQUIRE(alternate_key.gamma_inverse_g2 == verification_key.gamma_inverse_g2);
+    BOOST_CHECK_EQUAL(transcript_policy_type::proof_challenge(alternate_key, P, scalar_value_type(23)), expected);
+}
+
+BOOST_AUTO_TEST_CASE(proof_challenge_handles_identity_points) {
+    transcript_policy_type::verification_key_type identity_key;
+    identity_key.g2_one = g2_value_type::zero();
+    identity_key.tau_g2 = g2_value_type::zero();
+    identity_key.gamma_inverse_g2 = g2_value_type::zero();
+    identity_key.num_variables = 1;
+    identity_key.domain_size = 2;
+
+    const auto challenge = transcript_policy_type::proof_challenge(
+        identity_key, g1_value_type::zero(), scalar_value_type::one());
+    BOOST_CHECK_EQUAL(challenge,
+                      transcript_policy_type::proof_challenge(
+                          identity_key, g1_value_type::zero(), scalar_value_type::one()));
+}
+
+BOOST_AUTO_TEST_CASE(proof_challenge_binds_every_input) {
+    const auto verification_key = test_verification_key();
+    const auto P = scalar_value_type(19) * g1_value_type::one();
+    const scalar_value_type u(23);
+    const auto expected = transcript_policy_type::proof_challenge(verification_key, P, u);
+    const auto gT = gt_generator();
+
+    const auto check_key_change = [&](const auto &changed_key) {
+        BOOST_CHECK_NE(transcript_policy_type::proof_challenge(changed_key, P, u), expected);
+    };
+
+    auto changed_key = verification_key;
+    changed_key.circuit_digest += base_value_type::one();
+    check_key_change(changed_key);
+
+    changed_key = verification_key;
+    ++changed_key.num_variables;
+    check_key_change(changed_key);
+
+    changed_key = verification_key;
+    changed_key.domain_size *= 2;
+    check_key_change(changed_key);
+
+    changed_key = verification_key;
+    changed_key.g2_one += g2_value_type::one();
+    check_key_change(changed_key);
+
+    changed_key = verification_key;
+    changed_key.tau_g2 += g2_value_type::one();
+    check_key_change(changed_key);
+
+    changed_key = verification_key;
+    changed_key.gamma_inverse_g2 += g2_value_type::one();
+    check_key_change(changed_key);
+
+    changed_key = verification_key;
+    changed_key.alpha_z_vanishing_gt *= gT;
+    check_key_change(changed_key);
+
+    for (std::size_t i = 0; i < verification_key.alpha_gt.size(); ++i) {
+        changed_key = verification_key;
+        changed_key.alpha_gt[i] *= gT;
+        check_key_change(changed_key);
+    }
+
+    BOOST_CHECK_NE(transcript_policy_type::proof_challenge(verification_key, P + g1_value_type::one(), u),
+                   expected);
+    BOOST_CHECK_NE(transcript_policy_type::proof_challenge(
+                       verification_key, P, u + scalar_value_type::one()),
+                   expected);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
