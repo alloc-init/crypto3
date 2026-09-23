@@ -26,6 +26,7 @@
 #define CRYPTO3_ZK_MODIFIED_SQAP_SNARK_HPP
 
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/generator.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/prover.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/verifier.hpp>
 
 namespace nil {
@@ -59,7 +60,9 @@ namespace nil {
                     // auxiliary_input is the full witness, including primary_input at index zero.
                     static proof_type prove(const proving_key_type &pk,
                                             const primary_input_type &primary_input,
-                                            const auxiliary_input_type &auxiliary_input);
+                                            const auxiliary_input_type &auxiliary_input) {
+                        return modified_sqap_prover<policy_type>::process(pk, primary_input, auxiliary_input);
+                    }
 
                     // primary_input is the caller's expected public input.
                     static bool verify(const verification_key_type &vk,

@@ -55,6 +55,7 @@ namespace nil {
                     using primary_input_type = typename policy_type::primary_input_type;
                     using auxiliary_input_type = typename policy_type::auxiliary_input_type;
                     using proving_key_type = typename policy_type::proving_key_type;
+                    using proof_type = typename policy_type::proof_type;
 
                     /**
                      * Owned witness polynomials, vanishing polynomial and mixed-basis commitment.
@@ -190,6 +191,20 @@ namespace nil {
                                 opening.quotient.end(), 1);
                         }
                         return result;
+                    }
+
+                    /**
+                     * Construct a complete proof deterministically, without modifying the key or inputs.
+                     * Validation and computation failures propagate; no partial proof is returned.
+                     */
+                    static proof_type process(const proving_key_type &proving_key,
+                                              const primary_input_type &primary_input,
+                                              const auxiliary_input_type &auxiliary_input) {
+                        const auto committed = commit(proving_key, primary_input, auxiliary_input);
+                        const auto opened = open(proving_key, primary_input, committed);
+                        return {committed.P,           opened.Q,
+                                opened.evaluations[0], opened.evaluations[1],
+                                opened.evaluations[2], opened.evaluations[3]};
                     }
                 };
 

@@ -40,9 +40,13 @@
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 #include <nil/crypto3/random/chacha_urbg.hpp>
+#include <nil/crypto3/zk/algorithms/generate.hpp>
+#include <nil/crypto3/zk/algorithms/prove.hpp>
+#include <nil/crypto3/zk/algorithms/verify.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/generator.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/transcript.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap_snark.hpp>
 
 namespace {
 
@@ -55,6 +59,7 @@ namespace {
     using policy_type =
         nil::crypto3::zk::snark::modified_sqap_policy<curve_type, pairing_policy_type, transcript_policy_type>;
     using prover_type = nil::crypto3::zk::snark::modified_sqap_prover<policy_type>;
+    using scheme_type = nil::crypto3::zk::snark::modified_sqap_snark<policy_type>;
     using generator_type = nil::crypto3::zk::snark::modified_sqap_generator<policy_type>;
     using deterministic_generator_type =
         nil::crypto3::zk::snark::detail::modified_sqap_deterministic_generator<policy_type>;
@@ -63,6 +68,7 @@ namespace {
     using polynomial_type = reduction_type::polynomial_type;
     using auxiliary_input_type = policy_type::auxiliary_input_type;
     using proving_key_type = policy_type::proving_key_type;
+    using proof_type = policy_type::proof_type;
     using system_type = policy_type::constraint_system_type;
     using constraint_type = system_type::constraint_type;
     using variable_type = constraint_type::variable_type;
@@ -773,6 +779,280 @@ BOOST_AUTO_TEST_CASE(opening_commitment_rejects_shortened_queries) {
             BOOST_CHECK_THROW(controlled_prover_type::open(key, u, committed), std::invalid_argument);
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(process_matches_scalar_reference) {
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    const auto trapdoor = test_trapdoor();
+
+    for (const std::size_t logical_rows : {1, 2, 3, 5}) {
+        BOOST_TEST_CONTEXT("logical rows: " << logical_rows) {
+            auto source = test_system();
+            source.constraints.resize(logical_rows, binding_row());
+            const auto key =
+                deterministic_generator_type::process(source, transcript_policy_type::circuit_digest(source), trapdoor)
+                    .first;
+            const auto proof = prover_type::process(key, u, witness);
+
+            // Derive expected commitments from scalar evaluations, without commit(), open() or MSMs.
+            const auto polynomials = reduction_type::witness_map(source, u, witness);
+            const auto Z = reduction_type::get_domain(source)->get_vanishing_polynomial();
+            const auto p_scalar = trapdoor.gamma * (trapdoor.alpha[0] * polynomials.A.evaluate(trapdoor.tau) +
+                                                    trapdoor.alpha[1] * polynomials.C.evaluate(trapdoor.tau) +
+                                                    trapdoor.alpha[2] * polynomials.H.evaluate(trapdoor.tau));
+            const auto expected_P = p_scalar * g1_value_type::one();
+            const auto z = transcript_policy_type::proof_challenge(key.verification_key, expected_P, u);
+            auto q_scalar = scalar_value_type::zero();
+            const std::array opened_polynomials = {&polynomials.A, &polynomials.C, &polynomials.H, &Z};
+            for (std::size_t i = 0; i < opened_polynomials.size(); ++i) {
+                q_scalar += trapdoor.alpha[i] * reference_quotient_at_tau(*opened_polynomials[i], z, trapdoor.tau);
+            }
+
+            BOOST_CHECK_EQUAL(proof.P, expected_P);
+            BOOST_CHECK_EQUAL(proof.Q, q_scalar * g1_value_type::one());
+            BOOST_CHECK_EQUAL(proof.v_A, polynomials.A.evaluate(z));
+            BOOST_CHECK_EQUAL(proof.v_C, polynomials.C.evaluate(z));
+            BOOST_CHECK_EQUAL(proof.v_H, polynomials.H.evaluate(z));
+            BOOST_CHECK_EQUAL(proof.v_Z, Z.evaluate(z));
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(prove_entry_points_are_deterministic_and_preserve_inputs) {
+    const auto key = generate_proving_key(test_system());
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    const auto original_key = key;
+    const auto original_u = u;
+    const auto original_witness = witness;
+
+    const auto proof = prover_type::process(key, u, witness);
+    BOOST_CHECK(prover_type::process(key, u, witness) == proof);
+    BOOST_CHECK(scheme_type::prove(key, u, witness) == proof);
+    BOOST_CHECK(nil::crypto3::zk::prove<scheme_type>(key, u, witness) == proof);
+    BOOST_CHECK(key == original_key);
+    BOOST_CHECK_EQUAL(u, original_u);
+    BOOST_CHECK(witness == original_witness);
+}
+
+BOOST_AUTO_TEST_CASE(prove_entry_points_reject_invalid_inputs_without_replacing_a_proof) {
+    const auto key = generate_proving_key(test_system());
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    const auto original_proof = prover_type::process(key, u, witness);
+
+    const auto expect_rejection = [&](const proving_key_type &supplied_key,
+                                      const scalar_value_type &supplied_u,
+                                      const auxiliary_input_type &supplied_witness) {
+        const auto original_key = supplied_key;
+        const auto original_u = supplied_u;
+        const auto original_witness = supplied_witness;
+        auto proof = original_proof;
+        BOOST_CHECK_THROW(proof = prover_type::process(supplied_key, supplied_u, supplied_witness),
+                          std::invalid_argument);
+        BOOST_CHECK(proof == original_proof);
+        BOOST_CHECK_THROW(proof = scheme_type::prove(supplied_key, supplied_u, supplied_witness),
+                          std::invalid_argument);
+        BOOST_CHECK(proof == original_proof);
+        BOOST_CHECK_THROW(proof = nil::crypto3::zk::prove<scheme_type>(supplied_key, supplied_u, supplied_witness),
+                          std::invalid_argument);
+        BOOST_CHECK(proof == original_proof);
+        BOOST_CHECK(supplied_key == original_key);
+        BOOST_CHECK_EQUAL(supplied_u, original_u);
+        BOOST_CHECK(supplied_witness == original_witness);
+    };
+
+    auto shortened_key = key;
+    shortened_key.T_Z.pop_back();
+    expect_rejection(shortened_key, u, witness);
+
+    auto changed_digest = key;
+    changed_digest.verification_key.circuit_digest += base_value_type::one();
+    expect_rejection(changed_digest, u, witness);
+
+    auto short_witness = witness;
+    short_witness.pop_back();
+    expect_rejection(key, u, short_witness);
+
+    auto wrong_binding = witness;
+    wrong_binding[0] = scalar_value_type(5);
+    expect_rejection(key, u, wrong_binding);
+
+    auto unsatisfied = witness;
+    unsatisfied[1] += scalar_value_type::one();
+    expect_rejection(key, u, unsatisfied);
+
+    const auto binding_key = generate_proving_key({1, {binding_row()}});
+    const scalar_value_type even_u(2);
+    expect_rejection(binding_key, even_u, {even_u});
+}
+
+BOOST_AUTO_TEST_CASE(prove_propagates_opening_failure_without_replacing_a_proof) {
+    struct throwing_transcript_policy : transcript_policy_type {
+        static challenge_type
+            proof_challenge(const verification_key_type &, const commitment_type &, const challenge_type &) {
+            throw std::runtime_error("test transcript failure");
+        }
+    };
+    using throwing_policy_type =
+        nil::crypto3::zk::snark::modified_sqap_policy<curve_type, pairing_policy_type, throwing_transcript_policy>;
+    using throwing_scheme_type = nil::crypto3::zk::snark::modified_sqap_snark<throwing_policy_type>;
+
+    const auto key = generate_proving_key(test_system());
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    const auto original_key = key;
+    const auto original_u = u;
+    const auto original_witness = witness;
+    const auto original_proof = prover_type::process(key, u, witness);
+    auto proof = original_proof;
+
+    BOOST_CHECK_THROW(proof = nil::crypto3::zk::prove<throwing_scheme_type>(key, u, witness), std::runtime_error);
+    BOOST_CHECK(proof == original_proof);
+    BOOST_CHECK(key == original_key);
+    BOOST_CHECK_EQUAL(u, original_u);
+    BOOST_CHECK(witness == original_witness);
+}
+
+BOOST_AUTO_TEST_CASE(generated_proofs_verify_across_domain_sizes_and_setup_seeds) {
+    const scalar_value_type u(3);
+    const std::array sizes = {std::pair {1, 2}, std::pair {2, 2}, std::pair {3, 4}, std::pair {4, 4},
+                              std::pair {5, 8}, std::pair {8, 8}, std::pair {9, 16}};
+    for (const unsigned seed_tag : {0, 1}) {
+        // Reproducible streams exercise the production randomized setup.
+        std::array<std::uint8_t, 32> seed = {};
+        seed[0] = static_cast<std::uint8_t>(seed_tag);
+        nil::crypto3::random::chacha_urbg<> random_source(seed);
+        for (const auto &[logical_rows, domain_size] : sizes) {
+            BOOST_TEST_CONTEXT("seed: " << seed_tag << ", logical rows: " << logical_rows) {
+                auto source = test_system();
+                source.constraints.resize(logical_rows, binding_row());
+                auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+                if (logical_rows == 1) {
+                    // The minimum circuit has only the public-input binding row and witness entry.
+                    source.witness_size = 1;
+                    witness.resize(1);
+                }
+                const auto keys = nil::crypto3::zk::generate<scheme_type>(source, random_source);
+                BOOST_REQUIRE_EQUAL(keys.second.domain_size, domain_size);
+                if (domain_size == 2) {
+                    BOOST_REQUIRE(keys.first.T_H.empty());
+                }
+
+                const auto proof = nil::crypto3::zk::prove<scheme_type>(keys.first, u, witness);
+                BOOST_REQUIRE(scheme_type::verify(keys.second, u, proof));
+                if (seed_tag == 0 && logical_rows == 1) {
+                    // Exercise the generic verification adapter once.
+                    BOOST_CHECK(nil::crypto3::zk::verify<scheme_type>(keys.second, u, proof));
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(generated_proofs_verify_with_zero_private_witness_and_zero_h) {
+    system_type source {2, {binding_row(), {combination_type(variable_type(1)), combination_type(-variable_type(0))}}};
+    source.constraints.resize(5, binding_row());
+    const auto key = generate_proving_key(source);
+
+    for (const auto &u : {scalar_value_type(1), scalar_value_type(3), scalar_value_type(5), -scalar_value_type(2)}) {
+        BOOST_TEST_CONTEXT("public input: " << u) {
+            // The canonical representative of -2 is r - 2, which is odd.
+            const auto proof = scheme_type::prove(key, u, {u, scalar_value_type::zero()});
+            // Every row has A = 0 and C = -u, so the quotient H is zero.
+            BOOST_CHECK(proof.v_A.is_zero());
+            BOOST_CHECK_EQUAL(proof.v_C, -u);
+            BOOST_CHECK(proof.v_H.is_zero());
+            BOOST_CHECK(scheme_type::verify(key.verification_key, u, proof));
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(generated_proofs_reject_changed_commitments_and_evaluations) {
+    const auto key = generate_proving_key(test_system());
+    const scalar_value_type u(3);
+    const auto proof = scheme_type::prove(key, u, {u, scalar_value_type(2), scalar_value_type(1)});
+    BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
+
+    const std::array commitments = {std::pair {"P", &proof_type::P}, std::pair {"Q", &proof_type::Q}};
+    for (const auto &[name, member] : commitments) {
+        BOOST_TEST_CONTEXT("commitment: " << name) {
+            auto changed = proof;
+            changed.*member += g1_value_type::one();
+            BOOST_CHECK(!scheme_type::verify(key.verification_key, u, changed));
+        }
+    }
+    const std::array evaluations = {std::pair {"v_A", &proof_type::v_A}, std::pair {"v_C", &proof_type::v_C},
+                                    std::pair {"v_H", &proof_type::v_H}, std::pair {"v_Z", &proof_type::v_Z}};
+    for (const auto &[name, member] : evaluations) {
+        BOOST_TEST_CONTEXT("evaluation: " << name) {
+            auto changed = proof;
+            changed.*member += scalar_value_type::one();
+            BOOST_CHECK(!scheme_type::verify(key.verification_key, u, changed));
+        }
+    }
+
+    // Changing C and H together preserves the arithmetic equation but invalidates the opening commitment.
+    auto changed = proof;
+    changed.v_H += scalar_value_type::one();
+    changed.v_C -= proof.v_Z;
+    BOOST_REQUIRE_EQUAL(changed.v_A.squared() - changed.v_C, changed.v_H * changed.v_Z + u);
+    BOOST_CHECK(!scheme_type::verify(key.verification_key, u, changed));
+}
+
+BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_expected_public_input) {
+    const auto key = generate_proving_key(test_system());
+    const scalar_value_type u(3);
+    const auto proof = scheme_type::prove(key, u, {u, scalar_value_type(2), scalar_value_type(1)});
+    BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
+
+    for (const auto &changed_u : {scalar_value_type(1), scalar_value_type(5)}) {
+        BOOST_TEST_CONTEXT("changed public input: " << changed_u) {
+            BOOST_CHECK(!scheme_type::verify(key.verification_key, changed_u, proof));
+
+            // Restore the arithmetic equation for the new public input; the transcript and openings still bind u.
+            auto changed = proof;
+            changed.v_C += u - changed_u;
+            BOOST_REQUIRE_EQUAL(changed.v_A.squared() - changed.v_C, changed.v_H * changed.v_Z + changed_u);
+            BOOST_CHECK(!scheme_type::verify(key.verification_key, changed_u, changed));
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_circuit_and_setup) {
+    const auto source = test_system();
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    const std::array<std::uint8_t, 32> seed = {};
+    nil::crypto3::random::chacha_urbg<> random_source(seed);
+    const auto keys = scheme_type::generate(source, random_source);
+    const auto proof = scheme_type::prove(keys.first, u, witness);
+    BOOST_REQUIRE(scheme_type::verify(keys.second, u, proof));
+
+    // A second setup for the same circuit uses fresh draws from the ChaCha stream.
+    const auto fresh_keys = scheme_type::generate(source, random_source);
+    const auto fresh_proof = scheme_type::prove(fresh_keys.first, u, witness);
+    BOOST_REQUIRE(scheme_type::verify(fresh_keys.second, u, fresh_proof));
+    BOOST_REQUIRE(!(fresh_keys.second == keys.second));
+    BOOST_CHECK(!scheme_type::verify(fresh_keys.second, u, proof));
+    BOOST_CHECK(!scheme_type::verify(keys.second, u, fresh_proof));
+
+    // Negating A in one row preserves satisfaction but changes the circuit digest.
+    auto changed_source = source;
+    changed_source.constraints[1].a = combination_type(-variable_type(1));
+    nil::crypto3::random::chacha_urbg<> repeated_random_source(seed);
+    const auto changed_keys = scheme_type::generate(changed_source, repeated_random_source);
+    const auto changed_proof = scheme_type::prove(changed_keys.first, u, witness);
+    BOOST_REQUIRE(scheme_type::verify(changed_keys.second, u, changed_proof));
+    BOOST_REQUIRE_NE(changed_keys.second.circuit_digest, keys.second.circuit_digest);
+
+    // Equal dimensions and identical setup draws make the verification keys differ only in their circuit digest.
+    auto matching_parameters = changed_keys.second;
+    matching_parameters.circuit_digest = keys.second.circuit_digest;
+    BOOST_REQUIRE(matching_parameters == keys.second);
+    BOOST_CHECK(!scheme_type::verify(changed_keys.second, u, proof));
+    BOOST_CHECK(!scheme_type::verify(keys.second, u, changed_proof));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

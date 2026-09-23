@@ -278,6 +278,10 @@ The generic adapter contract is `zk::generate<scheme>(cs, rng)`,
 forwarding to the corresponding scheme operation. Setup requires an explicit
 randomness source.
 
+Proving is deterministic for a fixed key, public input and witness. It consumes
+no additional randomness and leaves those inputs unchanged. A complete proof is
+returned only after both commitment and opening computation succeed.
+
 Failure behavior:
 
 | Operation | Failure behavior |
