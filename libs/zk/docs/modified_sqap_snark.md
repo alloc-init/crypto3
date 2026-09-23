@@ -140,14 +140,23 @@ affine conversion that divides by zero.
 
 `SNARK.Setup` takes the circuit, not a particular witness or value of `u`.
 It samples independent secret scalars `tau`, `gamma`, and
-`alpha_A, alpha_C, alpha_H, alpha_Z` from Fr. At minimum, resample `gamma == 0`
-before inversion. Additional rejection rules for degenerate samples are
-unspecified; see section 9.
+`alpha_A, alpha_C, alpha_H, alpha_Z` from Fr. Resample `tau` until it is nonzero
+and `Z(tau) != 0`, and resample `gamma` until it is nonzero. Additional rejection
+rules for degenerate samples are unspecified; see section 9.
+
+These checks prevent a degenerate reference string. If `tau == 0`, every positive
+power of `tau` vanishes, most polynomial-query entries collapse to the group
+identity, and `tau_g2` exposes the degeneration. If `Z(tau) == 0`, `tau` lies in
+the SQAP evaluation domain and `alpha_z_vanishing_gt` becomes the GT identity.
+A zero `gamma` has no inverse, so `gamma_inverse_g2` could not be constructed.
 
 The supplied randomness source is consumed by reference and is not retained.
 Production callers must supply cryptographically secure randomness; deterministic
-sources are for reproducible checks. Sampling must be uniform over the chosen
-sets. Keys contain group encodings, never the secret scalars themselves.
+sources are for reproducible checks. The source must satisfy the uniform random
+bit generator requirements. Setup samples canonical integers uniformly from
+`[0, r - 1]` in `tau, gamma, alpha_A, alpha_C, alpha_H, alpha_Z` order. It finishes
+resampling `tau` before sampling `gamma`, then samples the four alphas. Keys contain
+group encodings, never the secret scalars themselves.
 
 Setup constructs the following G1 query vectors for the proving key:
 
@@ -333,7 +342,7 @@ knowledge-soundness proof.
 
 | Area | Unspecified details |
 | --- | --- |
-| Setup sampling | Rejection rules beyond `gamma != 0` and the mapping from randomness-source output to uniformly sampled scalars. |
+| Setup sampling | Rejection rules beyond `tau != 0`, `Z(tau) != 0`, and `gamma != 0`. |
 | Transcript | Exact Poseidon parameters, domain separators, digest construction, absorption order, framing, coordinate/component encodings and fixed vectors. |
 | R1CS conversion | Full variable-index mapping and constraint construction for canonical constant recovery. |
 | Serialization | Wire format, version identifiers, byte order, canonical decoding and resource limits. |

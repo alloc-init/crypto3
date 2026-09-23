@@ -28,6 +28,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <initializer_list>
 #include <stdexcept>
 #include <utility>
@@ -38,8 +39,11 @@
 #include <nil/crypto3/algebra/pairing/alt_bn128.hpp>
 #include <nil/crypto3/math/linear_combination.hpp>
 
+#include <nil/crypto3/random/chacha_urbg.hpp>
+#include <nil/crypto3/zk/algorithms/generate.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/generator.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap_snark.hpp>
 
 namespace {
 
@@ -51,7 +55,27 @@ namespace {
     using exact_pairing_policy_type =
         nil::crypto3::zk::snark::modified_sqap_bn254_exact_pairing_policy;
 
-    struct transcript_policy;
+    struct transcript_policy {
+        template<typename ConstraintSystem>
+        static base_value_type circuit_digest(const ConstraintSystem &constraint_system) {
+            const auto check_combination = [](const auto &combination) {
+                std::size_t previous_index = 0;
+                bool has_previous = false;
+                for (const auto &term : combination) {
+                    if (term.coeff.is_zero() || (has_previous && term.index <= previous_index)) {
+                        throw std::logic_error("test transcript received a noncanonical circuit");
+                    }
+                    previous_index = term.index;
+                    has_previous = true;
+                }
+            };
+            for (const auto &constraint : constraint_system.constraints) {
+                check_combination(constraint.a);
+                check_combination(constraint.c);
+            }
+            return base_value_type(31 * constraint_system.num_variables() + constraint_system.num_constraints());
+        }
+    };
 
     using exact_policy_type = nil::crypto3::zk::snark::modified_sqap_policy<
         curve_type, exact_pairing_policy_type, transcript_policy>;
@@ -61,6 +85,7 @@ namespace {
         nil::crypto3::zk::snark::detail::modified_sqap_deterministic_generator<exact_policy_type>;
     using native_generator_type =
         nil::crypto3::zk::snark::detail::modified_sqap_deterministic_generator<native_policy_type>;
+    using scheme_type = nil::crypto3::zk::snark::modified_sqap_snark<exact_policy_type>;
     using system_type = exact_policy_type::constraint_system_type;
     using constraint_type = system_type::constraint_type;
     using variable_type = constraint_type::variable_type;
@@ -93,6 +118,43 @@ namespace {
                 scalar_value_type(3),
                 {scalar_value_type(5), scalar_value_type(7), scalar_value_type(11), scalar_value_type(13)}};
     }
+
+    class scripted_random_source {
+    public:
+        using result_type = scalar_field_type::integral_type;
+
+        explicit scripted_random_source(std::initializer_list<unsigned int> values) {
+            for (const auto value : values) {
+                values_.emplace_back(value);
+            }
+        }
+
+        scripted_random_source(const scripted_random_source &) = delete;
+        scripted_random_source &operator=(const scripted_random_source &) = delete;
+
+        static result_type min() {
+            return result_type(0);
+        }
+
+        static result_type max() {
+            return scalar_field_type::modulus - 1;
+        }
+
+        result_type operator()() {
+            if (position_ == values_.size()) {
+                throw std::runtime_error("scripted random source exhausted");
+            }
+            return values_[position_++];
+        }
+
+        std::size_t consumed() const {
+            return position_;
+        }
+
+    private:
+        std::vector<result_type> values_;
+        std::size_t position_ = 0;
+    };
 
 }    // namespace
 
@@ -193,9 +255,55 @@ BOOST_AUTO_TEST_CASE(rejects_invalid_circuits_and_zero_gamma) {
     BOOST_CHECK_THROW(generator_type::process(two_row_system(), base_value_type::zero(), zero_gamma),
                       std::invalid_argument);
 
+    auto zero_tau = test_trapdoor();
+    zero_tau.tau = scalar_value_type::zero();
+    BOOST_CHECK_THROW(generator_type::process(two_row_system(), base_value_type::zero(), zero_tau),
+                      std::invalid_argument);
+
+    auto domain_tau = test_trapdoor();
+    domain_tau.tau = scalar_value_type::one();
+    BOOST_CHECK_THROW(generator_type::process(two_row_system(), base_value_type::zero(), domain_tau),
+                      std::invalid_argument);
+
     const system_type invalid_system;
     BOOST_CHECK_THROW(generator_type::process(invalid_system, base_value_type::zero(), test_trapdoor()),
                       std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(randomized_setup_uses_caller_source_and_delegates_to_deterministic_core) {
+    const auto source = two_row_system();
+    scripted_random_source random_source {0, 1, 2, 0, 3, 5, 7, 11, 13};
+    const auto generated = nil::crypto3::zk::generate<scheme_type>(source, random_source);
+    const auto canonical = source.normalized();
+    const auto expected = generator_type::process(
+        canonical, transcript_policy::circuit_digest(canonical), test_trapdoor());
+
+    BOOST_CHECK(generated == expected);
+    BOOST_CHECK_EQUAL(random_source.consumed(), 9);
+}
+
+BOOST_AUTO_TEST_CASE(randomized_setup_validates_before_consuming_randomness) {
+    const system_type invalid_system;
+    scripted_random_source random_source {};
+
+    BOOST_CHECK_THROW(scheme_type::generate(invalid_system, random_source), std::invalid_argument);
+    BOOST_CHECK_EQUAL(random_source.consumed(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(randomized_setup_supports_crypto3_chacha) {
+    const std::array<std::uint8_t, 32> seed = {
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+        16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
+    nil::crypto3::random::chacha_urbg<> first_source(seed);
+    nil::crypto3::random::chacha_urbg<> second_source(seed);
+
+    const auto first = scheme_type::generate(two_row_system(), first_source);
+    const auto second = scheme_type::generate(two_row_system(), second_source);
+
+    BOOST_CHECK(first == second);
+    BOOST_CHECK_EQUAL(first.second.num_variables, 3);
+    BOOST_CHECK_EQUAL(first.second.domain_size, 2);
+    BOOST_CHECK(!first.second.gamma_inverse_g2.is_zero());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -25,7 +25,7 @@
 #ifndef CRYPTO3_ZK_MODIFIED_SQAP_SNARK_HPP
 #define CRYPTO3_ZK_MODIFIED_SQAP_SNARK_HPP
 
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/generator.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -51,7 +51,9 @@ namespace nil {
                     // The randomness source is consumed by reference and is not retained.
                     template<typename RandomSource>
                     static keypair_type generate(const constraint_system_type &constraint_system,
-                                                 RandomSource &random_source);
+                                                 RandomSource &random_source) {
+                        return modified_sqap_generator<policy_type>::process(constraint_system, random_source);
+                    }
 
                     // auxiliary_input is the full witness, including primary_input at index zero.
                     static proof_type prove(const proving_key_type &pk,

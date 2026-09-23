@@ -32,6 +32,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/random/uniform_int_distribution.hpp>
+
 #include <nil/crypto3/algebra/algorithms/pair.hpp>
 #include <nil/crypto3/algebra/multiexp/multiexp.hpp>
 #include <nil/crypto3/zk/snark/reductions/modified_sqap_to_polynomials.hpp>
@@ -66,7 +68,6 @@ namespace nil {
                         using g1_type = typename policy_type::g1_type;
                         using g1_value_type = typename g1_type::value_type;
                         using g2_value_type = typename policy_type::g2_type::value_type;
-                        using gt_value_type = typename policy_type::gt_type::value_type;
                         using reduction_type = reductions::modified_sqap_to_polynomials<scalar_field_type>;
 
                         static constexpr std::size_t alpha_a_index = 0;
@@ -94,9 +95,15 @@ namespace nil {
                             if (trapdoor.gamma.is_zero()) {
                                 throw std::invalid_argument("modified_sqap: setup gamma must be nonzero");
                             }
+                            if (trapdoor.tau.is_zero()) {
+                                throw std::invalid_argument("modified_sqap: setup tau must be nonzero");
+                            }
 
                             const auto evaluation = reduction_type::instance_map_with_evaluation(
                                 canonical_constraint_system, trapdoor.tau);
+                            if (evaluation.Zt.is_zero()) {
+                                throw std::invalid_argument("modified_sqap: setup tau must lie outside the domain");
+                            }
                             const std::size_t n = canonical_constraint_system.num_variables();
                             const std::size_t m = reduction_type::get_domain_size(
                                 canonical_constraint_system.num_constraints());
@@ -171,6 +178,57 @@ namespace nil {
                     };
 
                 }    // namespace detail
+
+                /**
+                 * Randomized circuit-specific setup for the modified SQAP SNARK.
+                 */
+                template<typename Policy>
+                class modified_sqap_generator {
+                    using policy_type = Policy;
+                    using scalar_field_type = typename policy_type::scalar_field_type;
+                    using scalar_value_type = typename scalar_field_type::value_type;
+                    using scalar_integral_type = typename scalar_field_type::integral_type;
+                    using transcript_policy_type = typename policy_type::transcript_policy_type;
+                    using reduction_type = reductions::modified_sqap_to_polynomials<scalar_field_type>;
+                    using deterministic_generator_type = detail::modified_sqap_deterministic_generator<policy_type>;
+
+                    template<typename RandomSource>
+                    static scalar_value_type sample_scalar(RandomSource &random_source) {
+                        boost::random::uniform_int_distribution<scalar_integral_type> distribution(
+                            scalar_integral_type(0), scalar_field_type::modulus - 1);
+                        return scalar_value_type(distribution(random_source));
+                    }
+
+                public:
+                    using constraint_system_type = typename policy_type::constraint_system_type;
+                    using keypair_type = typename policy_type::keypair_type;
+
+                    template<typename RandomSource>
+                    static keypair_type process(const constraint_system_type &constraint_system,
+                                                RandomSource &random_source) {
+                        const auto canonical_constraint_system = constraint_system.normalized();
+                        // Validate the padded domain before consuming caller-owned randomness.
+                        const auto domain = reduction_type::get_domain(canonical_constraint_system);
+                        const auto circuit_digest =
+                            transcript_policy_type::circuit_digest(canonical_constraint_system);
+
+                        typename deterministic_generator_type::trapdoor_type trapdoor;
+                        do {
+                            trapdoor.tau = sample_scalar(random_source);
+                        } while (trapdoor.tau.is_zero() ||
+                                 domain->compute_vanishing_polynomial(trapdoor.tau).is_zero());
+                        do {
+                            trapdoor.gamma = sample_scalar(random_source);
+                        } while (trapdoor.gamma.is_zero());
+                        for (auto &alpha : trapdoor.alpha) {
+                            alpha = sample_scalar(random_source);
+                        }
+
+                        return deterministic_generator_type::process(
+                            canonical_constraint_system, circuit_digest, trapdoor);
+                    }
+                };
+
             }    // namespace snark
         }    // namespace zk
     }    // namespace crypto3
