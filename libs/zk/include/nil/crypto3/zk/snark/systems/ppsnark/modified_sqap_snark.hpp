@@ -34,7 +34,7 @@ namespace nil {
 
                 /**
                  * Preprocessing SNARK for A(X)^2 - C(X) = Z(X)*H(X) + u.
-                 * Policy selects the curve, exact pairing convention and transcript.
+                 * Policy selects the curve, pairing convention and transcript.
                  */
                 template<typename Policy>
                 class modified_sqap_snark {

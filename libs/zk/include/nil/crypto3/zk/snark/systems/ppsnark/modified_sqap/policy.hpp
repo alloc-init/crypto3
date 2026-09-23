@@ -25,8 +25,13 @@
 #ifndef CRYPTO3_ZK_MODIFIED_SQAP_POLICY_HPP
 #define CRYPTO3_ZK_MODIFIED_SQAP_POLICY_HPP
 
+#include <optional>
 #include <utility>
 #include <vector>
+
+#include <nil/crypto3/algebra/curves/alt_bn128.hpp>
+#include <nil/crypto3/algebra/pairing/alt_bn128.hpp>
+#include <nil/crypto3/algebra/pairing/detail/alt_bn128/params.hpp>
 
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/proof.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/proving_key.hpp>
@@ -37,9 +42,57 @@ namespace nil {
         namespace zk {
             namespace snark {
 
+                namespace detail {
+
+                    /**
+                     * Convert Crypto3's optimized BN254 final exponentiation to
+                     * the exact exponent (p^12 - 1) / r.
+                     */
+                    class modified_sqap_bn254_exact_final_exponentiation {
+                        using curve_type = algebra::curves::alt_bn128_254;
+                        using native_pairing_policy_type = algebra::pairing::pairing_policy<curve_type>;
+                        using pairing_params_type = algebra::pairing::detail::pairing_params<curve_type>;
+                        using scalar_value_type = typename curve_type::scalar_field_type::value_type;
+                        using scalar_integral_type = typename curve_type::scalar_field_type::integral_type;
+                        using gt_value_type = typename curve_type::gt_type::value_type;
+
+                        static const scalar_integral_type &normalization_exponent() {
+                            static const scalar_integral_type exponent = []() {
+                                const scalar_value_type t(pairing_params_type::final_exponent_z);
+                                const scalar_value_type c =
+                                    scalar_value_type(2) * t *
+                                    (scalar_value_type(6) * t.squared() + scalar_value_type(3) * t +
+                                     scalar_value_type::one());
+                                return c.inversed().to_integral();
+                            }();
+                            return exponent;
+                        }
+
+                    public:
+                        static std::optional<gt_value_type> process(const gt_value_type &element) {
+                            auto optimized_result = native_pairing_policy_type::final_exponentiation::process(element);
+                            if (!optimized_result) {
+                                return std::nullopt;
+                            }
+                            return optimized_result->pow(normalization_exponent());
+                        }
+                    };
+
+                }    // namespace detail
+
+                /**
+                 * Crypto3's BN254 pairing with the exact final exponent.
+                 * Selecting algebra::pairing::pairing_policy<curve_type> instead
+                 * restores Crypto3's native optimized convention.
+                 */
+                struct modified_sqap_bn254_exact_pairing_policy :
+                    algebra::pairing::pairing_policy<algebra::curves::alt_bn128_254> {
+                    using final_exponentiation = detail::modified_sqap_bn254_exact_final_exponentiation;
+                };
+
                 /**
                  * Compile-time types for the modified SQAP SNARK.
-                 * PairingPolicy must use the exact final exponent (p^12 - 1) / r.
+                 * PairingPolicy fixes the pairing convention for all scheme operations.
                  * TranscriptPolicy specifies the protocol transcript.
                  */
                 template<typename CurveType, typename PairingPolicy, typename TranscriptPolicy>
