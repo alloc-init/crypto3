@@ -25,6 +25,7 @@
 #ifndef CRYPTO3_ZK_MODIFIED_SQAP_PROVER_HPP
 #define CRYPTO3_ZK_MODIFIED_SQAP_PROVER_HPP
 
+#include <array>
 #include <cstddef>
 #include <stdexcept>
 
@@ -71,6 +72,14 @@ namespace nil {
                     struct polynomial_opening {
                         scalar_value_type evaluation;
                         polynomial_type quotient;
+                    };
+
+                    /**
+                     * Evaluations in A, C, H, Z order and their mixed opening commitment.
+                     */
+                    struct opening_result {
+                        std::array<scalar_value_type, 4> evaluations;
+                        g1_value_type Q;
                     };
 
                     /**
@@ -145,6 +154,40 @@ namespace nil {
                         math::division(result.quotient, remainder, numerator, divisor);
                         if (!remainder.is_zero()) {
                             throw std::logic_error("modified_sqap: opening quotient has a nonzero remainder");
+                        }
+                        return result;
+                    }
+
+                    /**
+                     * Derive the transcript challenge and commit to the four opening quotients.
+                     * Requires the validated key and matching public input and result from commit().
+                     * A nonzero quotient exceeding its query length throws std::invalid_argument.
+                     */
+                    static opening_result open(const proving_key_type &proving_key,
+                                               const primary_input_type &primary_input,
+                                               const commitment_result &committed) {
+                        const auto challenge = transcript_policy_type::proof_challenge(proving_key.verification_key,
+                                                                                       committed.P, primary_input);
+                        const std::array polynomials = {&committed.polynomials.A, &committed.polynomials.C,
+                                                        &committed.polynomials.H, &committed.Z};
+                        const std::array queries = {&proving_key.T_A, &proving_key.T_C, &proving_key.T_H,
+                                                    &proving_key.T_Z};
+
+                        opening_result result {{}, g1_value_type::zero()};
+                        for (std::size_t i = 0; i < polynomials.size(); ++i) {
+                            const auto opening = open_polynomial(*polynomials[i], challenge);
+                            result.evaluations[i] = opening.evaluation;
+                            // The canonical zero quotient is [0]; it needs no bases, even when T_H is empty.
+                            if (opening.quotient.is_zero()) {
+                                continue;
+                            }
+                            const auto &query = *queries[i];
+                            if (opening.quotient.size() > query.size()) {
+                                throw std::invalid_argument("modified_sqap: opening quotient exceeds query length");
+                            }
+                            result.Q += algebra::multiexp<algebra::policies::multiexp_method_BDLO12>(
+                                query.begin(), query.begin() + opening.quotient.size(), opening.quotient.begin(),
+                                opening.quotient.end(), 1);
                         }
                         return result;
                     }

@@ -68,6 +68,28 @@ namespace {
     using variable_type = constraint_type::variable_type;
     using combination_type = constraint_type::linear_combination_type;
 
+    struct controlled_transcript_policy : transcript_policy_type {
+        inline static challenge_type forced_challenge = challenge_type::zero();
+        inline static std::size_t calls = 0;
+        inline static verification_key_type last_verification_key;
+        inline static commitment_type last_commitment = commitment_type::zero();
+        inline static challenge_type last_public_input = challenge_type::zero();
+
+        static challenge_type proof_challenge(const verification_key_type &verification_key,
+                                              const commitment_type &P,
+                                              const challenge_type &u) {
+            ++calls;
+            last_verification_key = verification_key;
+            last_commitment = P;
+            last_public_input = u;
+            return forced_challenge;
+        }
+    };
+
+    using controlled_policy_type =
+        nil::crypto3::zk::snark::modified_sqap_policy<curve_type, pairing_policy_type, controlled_transcript_policy>;
+    using controlled_prover_type = nil::crypto3::zk::snark::modified_sqap_prover<controlled_policy_type>;
+
     combination_type raw_combination(std::initializer_list<std::pair<std::size_t, int>> terms) {
         combination_type result;
         for (const auto &[index, coefficient] : terms) {
@@ -98,6 +120,21 @@ namespace {
         return {scalar_value_type(2),
                 scalar_value_type(3),
                 {scalar_value_type(5), scalar_value_type(7), scalar_value_type(11), scalar_value_type(13)}};
+    }
+
+    scalar_value_type reference_quotient_at_tau(const polynomial_type &polynomial,
+                                                const scalar_value_type &z,
+                                                const scalar_value_type &tau) {
+        // (X^j - z^j) / (X - z) = sum_(k=0..j-1) X^(j-1-k) * z^k, also valid at X = z.
+        auto result = scalar_value_type::zero();
+        for (std::size_t j = 1; j < polynomial.size(); ++j) {
+            auto monomial_quotient = scalar_value_type::zero();
+            for (std::size_t k = 0; k < j; ++k) {
+                monomial_quotient += tau.pow(j - 1 - k) * z.pow(k);
+            }
+            result += polynomial[j] * monomial_quotient;
+        }
+        return result;
     }
 
 }    // namespace
@@ -543,6 +580,198 @@ BOOST_AUTO_TEST_CASE(minimum_domain_h_opening_has_zero_quotient) {
         BOOST_CHECK_EQUAL(result.evaluation, scalar_value_type::one());
         BOOST_REQUIRE_EQUAL(result.quotient.size(), 1);
         BOOST_CHECK(result.quotient[0].is_zero());
+    }
+}
+
+BOOST_AUTO_TEST_CASE(opening_commitment_matches_poseidon_and_scalar_reference) {
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    const auto trapdoor = test_trapdoor();
+
+    for (const std::size_t logical_rows : {1, 2, 3, 5}) {
+        BOOST_TEST_CONTEXT("logical rows: " << logical_rows) {
+            auto source = test_system();
+            source.constraints.resize(logical_rows, binding_row());
+            const auto key =
+                deterministic_generator_type::process(source, transcript_policy_type::circuit_digest(source), trapdoor)
+                    .first;
+            const auto original_key = key;
+            const auto committed = prover_type::commit(key, u, witness);
+            const auto original_committed = committed;
+            const auto z = transcript_policy_type::proof_challenge(key.verification_key, committed.P, u);
+            const auto result = prover_type::open(key, u, committed);
+
+            const std::array polynomials = {&committed.polynomials.A, &committed.polynomials.C,
+                                            &committed.polynomials.H, &committed.Z};
+            const std::array original_polynomials = {&original_committed.polynomials.A,
+                                                     &original_committed.polynomials.C,
+                                                     &original_committed.polynomials.H, &original_committed.Z};
+            auto expected_scalar = scalar_value_type::zero();
+            for (std::size_t i = 0; i < polynomials.size(); ++i) {
+                BOOST_CHECK_EQUAL(result.evaluations[i], polynomials[i]->evaluate(z));
+                expected_scalar += trapdoor.alpha[i] * reference_quotient_at_tau(*polynomials[i], z, trapdoor.tau);
+                BOOST_CHECK(*polynomials[i] == *original_polynomials[i]);
+            }
+            // Q contains the alpha weights encoded in the T queries, with no gamma factor.
+            BOOST_CHECK_EQUAL(result.Q, expected_scalar * g1_value_type::one());
+            BOOST_CHECK(key == original_key);
+            BOOST_CHECK_EQUAL(committed.P, original_committed.P);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(opening_commitment_uses_transcript_inputs_and_accepts_edge_challenges) {
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    const auto trapdoor = test_trapdoor();
+
+    for (const std::size_t logical_rows : {2, 3, 5}) {
+        auto source = test_system();
+        source.constraints.resize(logical_rows, binding_row());
+        const auto key =
+            deterministic_generator_type::process(source, transcript_policy_type::circuit_digest(source), trapdoor)
+                .first;
+        const auto committed = controlled_prover_type::commit(key, u, witness);
+        const auto domain = reduction_type::get_domain(source);
+        std::vector<scalar_value_type> challenges {scalar_value_type::zero(), trapdoor.tau};
+        for (std::size_t j = 0; j < domain->size(); ++j) {
+            challenges.push_back(domain->get_domain_element(j));
+        }
+        const std::array polynomials = {&committed.polynomials.A, &committed.polynomials.C, &committed.polynomials.H,
+                                        &committed.Z};
+
+        for (const auto &z : challenges) {
+            BOOST_TEST_CONTEXT("logical rows: " << logical_rows << ", challenge: " << z) {
+                controlled_transcript_policy::forced_challenge = z;
+                const auto calls_before = controlled_transcript_policy::calls;
+                const auto result = controlled_prover_type::open(key, u, committed);
+                BOOST_CHECK_EQUAL(controlled_transcript_policy::calls, calls_before + 1);
+                BOOST_CHECK(controlled_transcript_policy::last_verification_key == key.verification_key);
+                BOOST_CHECK_EQUAL(controlled_transcript_policy::last_commitment, committed.P);
+                BOOST_CHECK_EQUAL(controlled_transcript_policy::last_public_input, u);
+
+                auto expected_scalar = scalar_value_type::zero();
+                for (std::size_t i = 0; i < polynomials.size(); ++i) {
+                    BOOST_CHECK_EQUAL(result.evaluations[i], polynomials[i]->evaluate(z));
+                    expected_scalar += trapdoor.alpha[i] * reference_quotient_at_tau(*polynomials[i], z, trapdoor.tau);
+                }
+                BOOST_CHECK_EQUAL(result.Q, expected_scalar * g1_value_type::one());
+                if (domain->size() == 2) {
+                    // H = 1: its canonical zero quotient must be skipped before accessing the empty T_H.
+                    BOOST_REQUIRE(key.T_H.empty());
+                    BOOST_CHECK_EQUAL(result.evaluations[2], scalar_value_type::one());
+                    BOOST_CHECK_EQUAL(result.Q,
+                                      (scalar_value_type(7) + scalar_value_type(13) * z) * g1_value_type::one());
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(opening_commitment_uses_query_prefixes_for_lower_degree_polynomials) {
+    const auto u = scalar_value_type::one();
+    const auto trapdoor = test_trapdoor();
+    controlled_transcript_policy::forced_challenge = scalar_value_type::one();
+
+    for (const std::size_t m : {4, 8}) {
+        BOOST_TEST_CONTEXT("domain size: " << m) {
+            system_type source {1, std::vector<constraint_type>(m, binding_row())};
+            const auto domain = reduction_type::get_domain(source);
+            // Prescribe A = X - 1 and C = A^2 - 1 = X^2 - 2X, giving H = 0.
+            for (std::size_t j = 1; j < m; ++j) {
+                const auto a = domain->get_domain_element(j) - scalar_value_type::one();
+                source.constraints[j] = {combination_type(a), combination_type(a.squared() - u)};
+            }
+            const auto key =
+                deterministic_generator_type::process(source, transcript_policy_type::circuit_digest(source), trapdoor)
+                    .first;
+            const auto committed = controlled_prover_type::commit(key, u, {u});
+            BOOST_REQUIRE(committed.polynomials.H.is_zero());
+
+            const auto result = controlled_prover_type::open(key, u, committed);
+            // At z = 1, Q_A = 1, Q_C = X - 1, Q_H = 0 and Q_Z = 1 + X + ... + X^(m-1).
+            const auto expected_scalar = trapdoor.alpha[0] + trapdoor.alpha[1] * (trapdoor.tau - u) +
+                                         trapdoor.alpha[3] * (trapdoor.tau.pow(m) - u) * (trapdoor.tau - u).inversed();
+            BOOST_CHECK_EQUAL(result.Q, expected_scalar * g1_value_type::one());
+            BOOST_CHECK(result.evaluations[0].is_zero());
+            BOOST_CHECK_EQUAL(result.evaluations[1], -u);
+            BOOST_CHECK(result.evaluations[2].is_zero());
+            BOOST_CHECK(result.evaluations[3].is_zero());
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(opening_commitment_accepts_identity_bases_and_cancellation) {
+    auto source = test_system();
+    source.constraints.resize(2);
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    controlled_transcript_policy::forced_challenge = scalar_value_type::zero();
+
+    for (const bool cancellation : {false, true}) {
+        BOOST_TEST_CONTEXT("cancellation: " << cancellation) {
+            auto trapdoor = test_trapdoor();
+            if (cancellation) {
+                // At z = 0, Q_A = -1, Q_C = -2 and Q_Z(tau) = tau, so all three contributions cancel.
+                trapdoor.alpha[3] =
+                    (trapdoor.alpha[0] + scalar_value_type(2) * trapdoor.alpha[1]) * trapdoor.tau.inversed();
+            } else {
+                trapdoor.alpha.fill(scalar_value_type::zero());
+            }
+            const auto key =
+                deterministic_generator_type::process(source, transcript_policy_type::circuit_digest(source), trapdoor)
+                    .first;
+            for (const auto *query : {&key.T_A, &key.T_C, &key.T_Z}) {
+                for (const auto &point : *query) {
+                    BOOST_REQUIRE(point.is_zero() == !cancellation);
+                }
+            }
+            const auto committed = controlled_prover_type::commit(key, u, witness);
+            const auto result = controlled_prover_type::open(key, u, committed);
+            BOOST_CHECK(result.Q.is_zero());
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(opening_commitment_rejects_quotients_exceeding_query_lengths) {
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    controlled_transcript_policy::forced_challenge = scalar_value_type::zero();
+    const std::array<const char *, 4> names = {"A", "C", "H", "Z"};
+
+    for (const std::size_t logical_rows : {2, 3}) {
+        auto source = test_system();
+        source.constraints.resize(logical_rows);
+        const auto key = generate_proving_key(source);
+        const auto committed = controlled_prover_type::commit(key, u, witness);
+        const std::array queries = {&key.T_A, &key.T_C, &key.T_H, &key.T_Z};
+        for (std::size_t i = 0; i < queries.size(); ++i) {
+            BOOST_TEST_CONTEXT("logical rows: " << logical_rows << ", polynomial: " << names[i]) {
+                auto changed = committed;
+                const std::array polynomials = {&changed.polynomials.A, &changed.polynomials.C, &changed.polynomials.H,
+                                                &changed.Z};
+                // At z = 0 this monomial has a nonzero quotient one coefficient longer than its query.
+                *polynomials[i] = polynomial_type(queries[i]->size() + 2, scalar_value_type::zero());
+                polynomials[i]->back() = scalar_value_type::one();
+                BOOST_CHECK_THROW(controlled_prover_type::open(key, u, changed), std::invalid_argument);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(opening_commitment_rejects_shortened_queries) {
+    const auto original = generate_proving_key(test_system());
+    const scalar_value_type u(3);
+    const auto committed = controlled_prover_type::commit(original, u, {u, scalar_value_type(2), scalar_value_type(1)});
+    controlled_transcript_policy::forced_challenge = scalar_value_type::zero();
+    const std::array queries = {std::pair {"T_A", &proving_key_type::T_A}, std::pair {"T_C", &proving_key_type::T_C},
+                                std::pair {"T_H", &proving_key_type::T_H}, std::pair {"T_Z", &proving_key_type::T_Z}};
+    for (const auto &[name, member] : queries) {
+        BOOST_TEST_CONTEXT("query: " << name) {
+            auto key = original;
+            (key.*member).clear();
+            BOOST_CHECK_THROW(controlled_prover_type::open(key, u, committed), std::invalid_argument);
+        }
     }
 }
 
