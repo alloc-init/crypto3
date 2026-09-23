@@ -292,26 +292,163 @@ out-of-range integer before constructing a field value and losing that evidence.
 
 ## 7. Transcript requirements
 
-The transcript uses Poseidon1 over Fp. It binds an explicit
-protocol/version identifier, the curve and pairing convention, the canonical
-circuit digest and dimensions, every G2/GT verification parameter, `P`, and `u`.
-Binding metadata is fixed by the key and profile, not caller-supplied arbitrary
-tags. A proof under different parameters must not silently reuse the transcript.
+### 7.1 Poseidon profile
 
-The circuit digest is computed from the canonical circuit and domain data in
-sections 2 and 4. A verification-parameter digest, if used, must be derived from
-the actual key fields; an unchecked cached digest cannot replace their binding.
-Setup and proving must agree on the verification data retained in the proving key.
+Both the circuit digest and proof challenge use Crypto3 Poseidon1 over BN254's
+base field Fp. The exact Crypto3 type is:
 
-Points must have canonical, coordinate-system-independent encodings, including
-an explicit identity encoding. Scalar and extension-field encodings must be
-unambiguous. After hashing, derive `z` by reducing the full canonical Fp output
-modulo `r`. This is not bit truncation or an exactly uniform Fr sampler.
+```cpp
+hashes::poseidon1<
+    hashes::detail::poseidon1_policy<
+        algebra::fields::alt_bn128_base_field<254>, 128, 2>>
+```
 
-The exact Poseidon parameters, separators, absorption order, length framing,
-coordinate/component encoding and fixed transcript vectors are unspecified.
-An interoperable transcript requires a single definition of each of these
-details in addition to the binding requirements above.
+This selects a width-three state, rate two, capacity one, an `x^5` S-box, eight
+full rounds and 56 partial rounds. The round schedule is four full rounds, 56
+partial rounds, then four full rounds. Each ordinary round adds its round
+constants, applies the S-box to every cell in a full round or only cell zero in
+a partial round, then multiplies by the checked-in dense MDS matrix. The selected
+`hashes::poseidon1` type executes Crypto3's optimized partial-round permutation.
+It is algebraically equivalent to the dense schedule described above and produces
+the same digest using the same checked-in BN254 base-field constants. The dense
+schedule defines the canonical result; implementations may use either equivalent
+permutation.
+
+Hash one complete field-element sequence as one message. Initialize the state to
+`[0, 0, 0]`, use overwrite absorption, and apply Crypto3's `pad10` mode. Each
+non-final pair replaces state cells zero and one and is followed by a permutation.
+For a final one-element block, overwrite cell zero with the element and cell one
+with `1`, then permute. For a final full pair, overwrite cells zero and one, add
+`1` to capacity cell two, then permute. An empty message sets cells zero and one
+to `1` and `0` before the permutation. The digest is cell zero after the final
+permutation. No transcript operation performs a separate hash per absorbed item.
+
+### 7.2 Tags and primitive encodings
+
+`tag(s)` is the nonnegative integer represented by the ASCII bytes of `s` in
+big-endian order, embedded into Fp. Every tag below is shorter than the Fp
+modulus width.
+
+| Meaning | String | Canonical integer |
+| --- | --- | --- |
+| Protocol | `modified-sqap-snark` | `0x6d6f6469666965642d737161702d736e61726b` |
+| Version | `v1` | `0x7631` |
+| Curve | `bn254` | `0x626e323534` |
+| Poseidon profile | `poseidon1-fp-128-r2-c1` | `0x706f736569646f6e312d66702d3132382d72322d6331` |
+| Pairing convention | `pairing-exact-e` | `0x70616972696e672d65786163742d65` |
+| Circuit digest | `circuit-digest` | `0x636972637569742d646967657374` |
+| Proof challenge | `proof-challenge` | `0x70726f6f662d6368616c6c656e6765` |
+| Circuit row | `row` | `0x726f77` |
+| A combination | `A` | `0x41` |
+| C combination | `C` | `0x43` |
+
+Encode a nonnegative size or index as one Fp element with the same integer value.
+Reject values greater than or equal to `p`; native `size_t` values are always
+smaller for BN254. Encode an Fr element as its canonical integer in `[0, r - 1]`,
+embedded unchanged into Fp. In particular, the Fr value `-1` is encoded as
+`r - 1`, rather than `p - 1`. BN254 has `r < p`, so this embedding is injective.
+
+Encode a G1 point as three Fp elements. The identity is `[0, 0, 0]`. For a
+nonidentity point, convert it to affine coordinates and encode `[1, x, y]`.
+
+Encode a G2 point as five Fp elements. The identity is `[0, 0, 0, 0, 0]`. For a
+nonidentity point with affine Fp2 coordinates, encode:
+
+```text
+[1, x.c0, x.c1, y.c0, y.c1]
+```
+
+Here `c0` and `c1` are the extension components in Crypto3 `data[0]`, `data[1]`
+order. Test identity before affine conversion so identity encoding never performs
+an inversion.
+
+Encode a GT element as its 12 Fp components in Crypto3 tower order:
+
+```text
+for outer in 0..1:
+    for middle in 0..2:
+        for inner in 0..1:
+            value.data[outer].data[middle].data[inner]
+```
+
+This is a fixed-width encoding and therefore needs no identity flag. Verification
+rejects a zero GT value before deriving the challenge.
+
+### 7.3 Circuit digest
+
+Normalize the logical constraint system before hashing. Preserve logical row
+order; within each A or C combination, combine duplicate indices, remove zero
+coefficients and sort terms by increasing witness index. Let `n` be the witness
+size including slot zero, `logical_rows` the logical row count, and `m` the padded
+radix-two domain size. Hash the following single Fp sequence:
+
+```text
+tag("modified-sqap-snark")
+tag("v1")
+tag("bn254")
+tag("poseidon1-fp-128-r2-c1")
+tag("circuit-digest")
+n
+logical_rows
+m
+
+for each logical row j in source order:
+    tag("row")
+    j
+    tag("A")
+    number of A terms
+    for each A term:
+        witness index
+        coefficient encoded from Fr into Fp
+    tag("C")
+    number of C terms
+    for each C term:
+        witness index
+        coefficient encoded from Fr into Fp
+```
+
+The resulting Fp digest is stored in the verification key. Padding rows are not
+absorbed individually: their convention is fixed by this protocol version, and
+`logical_rows` and `m` bind their number. No witness or public input is part of
+this digest.
+
+### 7.4 Proof challenge
+
+Validate the proof and verification-key group elements before encoding them.
+Hash the following single Fp sequence in exactly this order:
+
+```text
+tag("modified-sqap-snark")
+tag("v1")
+tag("bn254")
+tag("poseidon1-fp-128-r2-c1")
+tag("pairing-exact-e")
+tag("proof-challenge")
+circuit_digest
+num_variables
+domain_size
+3
+encode_G2(g2_one)
+encode_G2(tau_g2)
+encode_G2(gamma_inverse_g2)
+5
+encode_GT(alpha_z_vanishing_gt)
+encode_GT(alpha_gt[A])
+encode_GT(alpha_gt[C])
+encode_GT(alpha_gt[H])
+encode_GT(alpha_gt[Z])
+encode_G1(P)
+u encoded from Fr into Fp
+```
+
+The literal `3` and `5` frame the G2 and GT lists. The challenge does not absorb
+`Q` or the claimed evaluations because they are computed after `z`. Every actual
+verification-key field is absorbed directly; there is no cached
+verification-parameter digest.
+
+Let `h` be the canonical integer representative of the resulting Fp digest.
+The verifier and prover derive the challenge as `z = Fr(h mod r)`. This uses the
+full Fp output. It is reduction rather than bit truncation or rejection sampling.
 
 ## 8. Correctness
 
@@ -343,6 +480,5 @@ knowledge-soundness proof.
 | Area | Unspecified details |
 | --- | --- |
 | Setup sampling | Rejection rules beyond `tau != 0`, `Z(tau) != 0`, and `gamma != 0`. |
-| Transcript | Exact Poseidon parameters, domain separators, digest construction, absorption order, framing, coordinate/component encodings and fixed vectors. |
 | R1CS conversion | Full variable-index mapping and constraint construction for canonical constant recovery. |
 | Serialization | Wire format, version identifiers, byte order, canonical decoding and resource limits. |
