@@ -30,6 +30,8 @@
 #include <vector>
 
 #include <nil/crypto3/algebra/curves/alt_bn128.hpp>
+#include <nil/crypto3/algebra/curves/params/multiexp/alt_bn128.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/algebra/pairing/alt_bn128.hpp>
 #include <nil/crypto3/algebra/pairing/detail/alt_bn128/params.hpp>
 

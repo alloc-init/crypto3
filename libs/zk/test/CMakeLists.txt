@@ -71,6 +71,7 @@ set(TESTS_NAMES
         "relations/numeric/sap"
         "relations/numeric/modified_sqap"
 
+        "systems/ppsnark/modified_sqap_generator"
         "systems/ppsnark/modified_sqap_pairing_policy"
 
         "systems/plonk/placeholder/placeholder_circuits"
