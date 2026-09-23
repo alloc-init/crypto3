@@ -33,9 +33,11 @@
 #include <limits>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/prover.hpp>
 
+#include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 #include <nil/crypto3/random/chacha_urbg.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/generator.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
@@ -53,6 +55,12 @@ namespace {
         nil::crypto3::zk::snark::modified_sqap_policy<curve_type, pairing_policy_type, transcript_policy_type>;
     using prover_type = nil::crypto3::zk::snark::modified_sqap_prover<policy_type>;
     using generator_type = nil::crypto3::zk::snark::modified_sqap_generator<policy_type>;
+    using deterministic_generator_type =
+        nil::crypto3::zk::snark::detail::modified_sqap_deterministic_generator<policy_type>;
+    using reduction_type =
+        nil::crypto3::zk::snark::reductions::modified_sqap_to_polynomials<curve_type::scalar_field_type>;
+    using polynomial_type = reduction_type::polynomial_type;
+    using auxiliary_input_type = policy_type::auxiliary_input_type;
     using proving_key_type = policy_type::proving_key_type;
     using system_type = policy_type::constraint_system_type;
     using constraint_type = system_type::constraint_type;
@@ -83,6 +91,12 @@ namespace {
         const std::array<std::uint8_t, 32> seed = {};
         nil::crypto3::random::chacha_urbg<> random_source(seed);
         return generator_type::process(source, random_source).first;
+    }
+
+    deterministic_generator_type::trapdoor_type test_trapdoor() {
+        return {scalar_value_type(2),
+                scalar_value_type(3),
+                {scalar_value_type(5), scalar_value_type(7), scalar_value_type(11), scalar_value_type(13)}};
     }
 
 }    // namespace
@@ -221,6 +235,181 @@ BOOST_AUTO_TEST_CASE(digest_binds_logical_rows_and_witness_dimension) {
     more_variables.W.push_back(g1_value_type::zero());
     BOOST_REQUIRE(more_variables.constraint_system.is_valid());
     BOOST_CHECK_THROW(prover_type::validate(more_variables), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(commitment_matches_independent_scalar_reference) {
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    const auto original_witness = witness;
+    const auto trapdoor = test_trapdoor();
+
+    for (const std::size_t logical_rows : {1, 2, 3, 4, 5}) {
+        BOOST_TEST_CONTEXT("logical rows: " << logical_rows) {
+            auto source = test_system();
+            source.constraints.resize(logical_rows, binding_row());
+            const auto key =
+                deterministic_generator_type::process(source, transcript_policy_type::circuit_digest(source), trapdoor)
+                    .first;
+            const auto original_key = key;
+            const auto result = prover_type::commit(key, u, witness);
+
+            const auto domain = reduction_type::get_domain(source);
+            const auto m = domain->size();
+            BOOST_REQUIRE_EQUAL(result.polynomials.A.size(), m);
+            BOOST_REQUIRE_EQUAL(result.polynomials.C.size(), m);
+            BOOST_REQUIRE_EQUAL(result.polynomials.H.size(), m - 1);
+
+            // Reference interpolation uses products of linear factors instead of inverse FFTs.
+            std::vector<std::pair<scalar_value_type, scalar_value_type>> a_points, c_points;
+            for (std::size_t j = 0; j < m; ++j) {
+                const auto x = domain->get_domain_element(j);
+                const auto a = j < logical_rows ? source.constraints[j].a.evaluate(witness) : scalar_value_type::zero();
+                const auto c = j < logical_rows ? source.constraints[j].c.evaluate(witness) : -u;
+                a_points.emplace_back(x, a);
+                c_points.emplace_back(x, c);
+            }
+            auto expected_a = nil::crypto3::math::lagrange_interpolation(a_points);
+            auto expected_c = nil::crypto3::math::lagrange_interpolation(c_points);
+            expected_a.resize(m, scalar_value_type::zero());
+            expected_c.resize(m, scalar_value_type::zero());
+            BOOST_CHECK(result.polynomials.A == expected_a);
+            BOOST_CHECK(result.polynomials.C == expected_c);
+
+            polynomial_type expected_z(m + 1, scalar_value_type::zero());
+            expected_z[0] = -scalar_value_type::one();
+            expected_z[m] = scalar_value_type::one();
+            BOOST_CHECK(result.Z == expected_z);
+
+            // Recover H(tau) directly from the relation, without using the computed H coefficients or queries.
+            const auto a_at_tau = expected_a.evaluate(trapdoor.tau);
+            const auto c_at_tau = expected_c.evaluate(trapdoor.tau);
+            const auto h_at_tau =
+                (a_at_tau.squared() - c_at_tau - u) * (trapdoor.tau.pow(m) - scalar_value_type::one()).inversed();
+            BOOST_CHECK_EQUAL(result.polynomials.H.evaluate(trapdoor.tau), h_at_tau);
+            const auto expected_scalar = trapdoor.gamma * (trapdoor.alpha[0] * a_at_tau + trapdoor.alpha[1] * c_at_tau +
+                                                           trapdoor.alpha[2] * h_at_tau);
+            BOOST_CHECK_EQUAL(result.P, expected_scalar * g1_value_type::one());
+            BOOST_CHECK(key == original_key);
+            BOOST_CHECK(witness == original_witness);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(commitment_handles_zero_witness_entries_and_zero_h) {
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type::zero()};
+    const auto trapdoor = test_trapdoor();
+    for (const std::size_t logical_rows : {2, 3, 5}) {
+        BOOST_TEST_CONTEXT("logical rows: " << logical_rows) {
+            system_type source {2, {binding_row(), {raw_combination({{1, 1}}), raw_combination({{0, -1}})}}};
+            source.constraints.resize(logical_rows, binding_row());
+            const auto key =
+                deterministic_generator_type::process(source, transcript_policy_type::circuit_digest(source), trapdoor)
+                    .first;
+            BOOST_REQUIRE(!key.W[1].is_zero());
+            BOOST_REQUIRE(!key.H_query.front().is_zero());
+
+            const auto result = prover_type::commit(key, u, witness);
+            BOOST_CHECK(result.polynomials.A.is_zero());
+            BOOST_CHECK(result.polynomials.H.is_zero());
+            // Every row evaluates to A = 0 and C = -u, so H = 0 and P = [-gamma * alpha_C * u]_1.
+            const auto expected_scalar = -trapdoor.gamma * trapdoor.alpha[1] * u;
+            BOOST_CHECK_EQUAL(result.P, expected_scalar * g1_value_type::one());
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(commitment_accepts_identity_query_points) {
+    const auto source = test_system();
+    auto trapdoor = test_trapdoor();
+    trapdoor.alpha[0] = scalar_value_type::zero();
+    trapdoor.alpha[1] = scalar_value_type::zero();
+    trapdoor.alpha[2] = scalar_value_type::zero();
+    const auto key =
+        deterministic_generator_type::process(source, transcript_policy_type::circuit_digest(source), trapdoor).first;
+    for (const auto &point : key.W) {
+        BOOST_REQUIRE(point.is_zero());
+    }
+    for (const auto &point : key.H_query) {
+        BOOST_REQUIRE(point.is_zero());
+    }
+
+    const scalar_value_type u(3);
+    const auto result = prover_type::commit(key, u, {u, scalar_value_type(2), scalar_value_type(1)});
+    BOOST_REQUIRE(!result.polynomials.H.is_zero());
+    BOOST_CHECK(result.P.is_zero());
+}
+
+BOOST_AUTO_TEST_CASE(commitment_allows_cancellation_to_identity) {
+    auto source = test_system();
+    source.constraints.resize(2);
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+
+    // A = 1 - X, C = -1 - 2X and H = 1. At tau = 2 the commitment scalar is
+    // gamma * (-alpha_A - 5 * alpha_C + alpha_H).
+    const std::array weights = {
+        std::pair {scalar_value_type(7), scalar_value_type(40)},     // The W and H sums cancel.
+        std::pair {-scalar_value_type(1), scalar_value_type(0)}};    // The W sum cancels internally.
+    for (const auto &[alpha_c, alpha_h] : weights) {
+        BOOST_TEST_CONTEXT("alpha_C: " << alpha_c << ", alpha_H: " << alpha_h) {
+            auto trapdoor = test_trapdoor();
+            trapdoor.alpha[1] = alpha_c;
+            trapdoor.alpha[2] = alpha_h;
+            const auto key =
+                deterministic_generator_type::process(source, transcript_policy_type::circuit_digest(source), trapdoor)
+                    .first;
+            for (const auto &point : key.W) {
+                BOOST_REQUIRE(!point.is_zero());
+            }
+
+            const auto result = prover_type::commit(key, u, witness);
+            BOOST_REQUIRE_EQUAL(result.polynomials.H.size(), 1);
+            BOOST_CHECK_EQUAL(result.polynomials.H[0], scalar_value_type::one());
+            BOOST_CHECK(result.P.is_zero());
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(commitment_rejects_inconsistent_keys) {
+    const auto original = generate_proving_key(test_system());
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    for (const auto member : {&proving_key_type::W, &proving_key_type::H_query}) {
+        auto key = original;
+        (key.*member).pop_back();
+        BOOST_CHECK_THROW(prover_type::commit(key, u, witness), std::invalid_argument);
+    }
+
+    auto changed_digest = original;
+    changed_digest.verification_key.circuit_digest += base_value_type::one();
+    BOOST_CHECK_THROW(prover_type::commit(changed_digest, u, witness), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(commitment_rejects_invalid_public_inputs_and_witnesses) {
+    const auto key = generate_proving_key(test_system());
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+
+    for (const std::size_t size : {0, 2, 4}) {
+        auto wrong_length = witness;
+        wrong_length.resize(size, scalar_value_type::zero());
+        BOOST_CHECK_THROW(prover_type::commit(key, u, wrong_length), std::invalid_argument);
+    }
+    auto wrong_binding = witness;
+    wrong_binding[0] = scalar_value_type(5);
+    BOOST_CHECK_THROW(prover_type::commit(key, u, wrong_binding), std::invalid_argument);
+    BOOST_CHECK_THROW(prover_type::commit(key, scalar_value_type(5), witness), std::invalid_argument);
+
+    auto unsatisfied = witness;
+    unsatisfied[1] += scalar_value_type::one();
+    BOOST_CHECK_THROW(prover_type::commit(key, u, unsatisfied), std::invalid_argument);
+
+    // Binding-only witnesses satisfy the rows for any u, isolating the canonical parity check.
+    const auto binding_key = generate_proving_key({1, {binding_row()}});
+    for (const auto &even_u : {scalar_value_type::zero(), scalar_value_type(2), scalar_value_type(4)}) {
+        BOOST_CHECK_THROW(prover_type::commit(binding_key, even_u, {even_u}), std::invalid_argument);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

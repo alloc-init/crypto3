@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <stdexcept>
 
+#include <nil/crypto3/algebra/multiexp/multiexp.hpp>
 #include <nil/crypto3/zk/snark/reductions/modified_sqap_to_polynomials.hpp>
 
 namespace nil {
@@ -42,11 +43,23 @@ namespace nil {
                 class modified_sqap_prover {
                     using policy_type = Policy;
                     using scalar_field_type = typename policy_type::scalar_field_type;
+                    using g1_value_type = typename policy_type::g1_type::value_type;
                     using transcript_policy_type = typename policy_type::transcript_policy_type;
                     using reduction_type = reductions::modified_sqap_to_polynomials<scalar_field_type>;
 
                 public:
+                    using primary_input_type = typename policy_type::primary_input_type;
+                    using auxiliary_input_type = typename policy_type::auxiliary_input_type;
                     using proving_key_type = typename policy_type::proving_key_type;
+
+                    /**
+                     * Owned witness polynomials, vanishing polynomial and mixed-basis commitment.
+                     */
+                    struct commitment_result {
+                        typename reduction_type::witness_polynomials polynomials;
+                        typename reduction_type::polynomial_type Z;
+                        g1_value_type P;
+                    };
 
                     /**
                      * Check circuit structure, metadata, query lengths and circuit-digest consistency.
@@ -75,6 +88,30 @@ namespace nil {
                             transcript_policy_type::circuit_digest(constraint_system)) {
                             throw std::invalid_argument("modified_sqap: proving-key circuit digest mismatch");
                         }
+                    }
+
+                    /**
+                     * Validate the key and witness, derive A, C, H, Z, and compute
+                     * P = sum_i w[i] * W[i] + sum_i h[i] * H_query[i].
+                     * Invalid inputs throw std::invalid_argument; inputs are not modified.
+                     */
+                    static commitment_result commit(const proving_key_type &proving_key,
+                                                    const primary_input_type &primary_input,
+                                                    const auxiliary_input_type &auxiliary_input) {
+                        validate(proving_key);
+                        commitment_result result {
+                            reduction_type::witness_map(proving_key.constraint_system, primary_input, auxiliary_input),
+                            reduction_type::get_domain(proving_key.constraint_system)->get_vanishing_polynomial(),
+                            g1_value_type::zero()};
+
+                        // Validated ranges match in length and are nonempty: n >= 1 and m - 1 >= 1.
+                        result.P = algebra::multiexp<algebra::policies::multiexp_method_BDLO12>(
+                            proving_key.W.begin(), proving_key.W.end(), auxiliary_input.begin(), auxiliary_input.end(),
+                            1);
+                        result.P += algebra::multiexp<algebra::policies::multiexp_method_BDLO12>(
+                            proving_key.H_query.begin(), proving_key.H_query.end(), result.polynomials.H.begin(),
+                            result.polynomials.H.end(), 1);
+                        return result;
                     }
                 };
 
