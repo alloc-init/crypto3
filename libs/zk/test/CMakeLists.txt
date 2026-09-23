@@ -73,6 +73,7 @@ set(TESTS_NAMES
 
         "systems/ppsnark/modified_sqap_generator"
         "systems/ppsnark/modified_sqap_pairing_policy"
+        "systems/ppsnark/modified_sqap_prover"
         "systems/ppsnark/modified_sqap_transcript"
         "systems/ppsnark/modified_sqap_verifier"
 
