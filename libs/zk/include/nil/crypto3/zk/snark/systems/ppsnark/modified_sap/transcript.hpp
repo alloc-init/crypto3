@@ -76,8 +76,7 @@ namespace nil {
                     using g2_value_type = typename curve_type::template g2_type<>::value_type;
                     using gt_value_type = typename curve_type::gt_type::value_type;
 
-                    static void append_g1(std::vector<base_value_type> &input,
-                                          const g1_value_type &point) {
+                    static void append_g1(std::vector<base_value_type> &input, const g1_value_type &point) {
                         if (point.is_zero()) {
                             input.insert(input.end(), 3, base_value_type::zero());
                             return;
@@ -88,8 +87,7 @@ namespace nil {
                         input.push_back(affine.Y);
                     }
 
-                    static void append_g2(std::vector<base_value_type> &input,
-                                          const g2_value_type &point) {
+                    static void append_g2(std::vector<base_value_type> &input, const g2_value_type &point) {
                         if (point.is_zero()) {
                             input.insert(input.end(), 5, base_value_type::zero());
                             return;
@@ -102,8 +100,7 @@ namespace nil {
                         input.push_back(affine.Y.data[1]);
                     }
 
-                    static void append_gt(std::vector<base_value_type> &input,
-                                          const gt_value_type &value) {
+                    static void append_gt(std::vector<base_value_type> &input, const gt_value_type &value) {
                         for (std::size_t outer = 0; outer < 2; ++outer) {
                             for (std::size_t middle = 0; middle < 3; ++middle) {
                                 for (std::size_t inner = 0; inner < 2; ++inner) {

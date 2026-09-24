@@ -67,14 +67,13 @@ namespace {
     system_type test_system() {
         return {3,
                 {binding_row(),
-                 {raw_combination({{2, 2}, {1, 3}, {2, 0}, {1, -2}}),
-                  raw_combination({{2, 4}, {0, 4}, {0, -1}})},
+                 {raw_combination({{2, 2}, {1, 3}, {2, 0}, {1, -2}}), raw_combination({{2, 4}, {0, 4}, {0, -1}})},
                  {raw_combination({{1, 5}}), raw_combination({{2, 6}})}}};
     }
 
     gt_value_type gt_generator() {
-        const auto result = nil::crypto3::algebra::pair_reduced<curve_type, pairing_policy_type>(
-            g1_value_type::one(), g2_value_type::one());
+        const auto result = nil::crypto3::algebra::pair_reduced<curve_type, pairing_policy_type>(g1_value_type::one(),
+                                                                                                 g2_value_type::one());
         if (!result) {
             throw std::runtime_error("modified SAP test pairing failed");
         }
@@ -195,11 +194,11 @@ BOOST_AUTO_TEST_CASE(proof_challenge_handles_identity_points) {
     identity_key.num_variables = 1;
     identity_key.domain_size = 2;
 
-    const auto challenge = transcript_policy_type::proof_challenge(
-        identity_key, g1_value_type::zero(), scalar_value_type::one());
-    BOOST_CHECK_EQUAL(challenge,
-                      transcript_policy_type::proof_challenge(
-                          identity_key, g1_value_type::zero(), scalar_value_type::one()));
+    const auto challenge =
+        transcript_policy_type::proof_challenge(identity_key, g1_value_type::zero(), scalar_value_type::one());
+    BOOST_CHECK_EQUAL(
+        challenge,
+        transcript_policy_type::proof_challenge(identity_key, g1_value_type::zero(), scalar_value_type::one()));
 }
 
 BOOST_AUTO_TEST_CASE(proof_challenge_binds_every_input) {
@@ -247,10 +246,8 @@ BOOST_AUTO_TEST_CASE(proof_challenge_binds_every_input) {
         check_key_change(changed_key);
     }
 
-    BOOST_CHECK_NE(transcript_policy_type::proof_challenge(verification_key, P + g1_value_type::one(), u),
-                   expected);
-    BOOST_CHECK_NE(transcript_policy_type::proof_challenge(
-                       verification_key, P, u + scalar_value_type::one()),
+    BOOST_CHECK_NE(transcript_policy_type::proof_challenge(verification_key, P + g1_value_type::one(), u), expected);
+    BOOST_CHECK_NE(transcript_policy_type::proof_challenge(verification_key, P, u + scalar_value_type::one()),
                    expected);
 }
 

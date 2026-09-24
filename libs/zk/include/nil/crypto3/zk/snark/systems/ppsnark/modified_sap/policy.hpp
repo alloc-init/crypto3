@@ -61,10 +61,9 @@ namespace nil {
                         static const scalar_integral_type &normalization_exponent() {
                             static const scalar_integral_type exponent = []() {
                                 const scalar_value_type t(pairing_params_type::final_exponent_z);
-                                const scalar_value_type c =
-                                    scalar_value_type(2) * t *
-                                    (scalar_value_type(6) * t.squared() + scalar_value_type(3) * t +
-                                     scalar_value_type::one());
+                                const scalar_value_type c = scalar_value_type(2) * t *
+                                                            (scalar_value_type(6) * t.squared() +
+                                                             scalar_value_type(3) * t + scalar_value_type::one());
                                 return c.inversed().to_integral();
                             }();
                             return exponent;
@@ -87,8 +86,8 @@ namespace nil {
                  * Selecting algebra::pairing::pairing_policy<curve_type> instead
                  * restores Crypto3's native optimized convention.
                  */
-                struct modified_sap_bn254_exact_pairing_policy :
-                    algebra::pairing::pairing_policy<algebra::curves::alt_bn128_254> {
+                struct modified_sap_bn254_exact_pairing_policy
+                    : algebra::pairing::pairing_policy<algebra::curves::alt_bn128_254> {
                     using final_exponentiation = detail::modified_sap_bn254_exact_final_exponentiation;
                 };
 

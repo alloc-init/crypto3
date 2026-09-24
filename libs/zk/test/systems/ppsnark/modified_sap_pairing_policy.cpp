@@ -37,8 +37,7 @@ namespace {
 
     using curve_type = nil::crypto3::algebra::curves::alt_bn128_254;
     using native_pairing_policy_type = nil::crypto3::algebra::pairing::pairing_policy<curve_type>;
-    using exact_pairing_policy_type =
-        nil::crypto3::zk::snark::modified_sap_bn254_exact_pairing_policy;
+    using exact_pairing_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_exact_pairing_policy;
     using pairing_params_type = nil::crypto3::algebra::pairing::detail::pairing_params<curve_type>;
     using g1_value_type = typename curve_type::g1_type<>::value_type;
     using g2_value_type = typename curve_type::g2_type<>::value_type;
@@ -63,10 +62,10 @@ BOOST_AUTO_TEST_CASE(exact_result_matches_direct_final_exponentiation) {
 }
 
 BOOST_AUTO_TEST_CASE(zero_identity_and_pairing_identity_follow_existing_contracts) {
-    const auto zero_result = nil::crypto3::algebra::final_exponentiation<curve_type, exact_pairing_policy_type>(
-        gt_value_type::zero());
-    const auto one_result = nil::crypto3::algebra::final_exponentiation<curve_type, exact_pairing_policy_type>(
-        gt_value_type::one());
+    const auto zero_result =
+        nil::crypto3::algebra::final_exponentiation<curve_type, exact_pairing_policy_type>(gt_value_type::zero());
+    const auto one_result =
+        nil::crypto3::algebra::final_exponentiation<curve_type, exact_pairing_policy_type>(gt_value_type::one());
     const auto identity_pairing = nil::crypto3::algebra::pair_reduced<curve_type, exact_pairing_policy_type>(
         g1_value_type::zero(), g2_value_type::one());
 

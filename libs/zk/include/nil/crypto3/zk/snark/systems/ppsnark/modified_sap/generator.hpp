@@ -75,10 +75,9 @@ namespace nil {
                         static constexpr std::size_t alpha_h_index = 2;
                         static constexpr std::size_t alpha_z_index = 3;
 
-                        static std::vector<g1_value_type>
-                            encode_g1(const std::vector<scalar_value_type> &scalars,
-                                      const algebra::window_table<g1_type> &window_table,
-                                      std::size_t window_size) {
+                        static std::vector<g1_value_type> encode_g1(const std::vector<scalar_value_type> &scalars,
+                                                                    const algebra::window_table<g1_type> &window_table,
+                                                                    std::size_t window_size) {
                             return algebra::batch_exp<g1_type, scalar_field_type>(
                                 scalar_field_type::value_bits, window_size, window_table, scalars);
                         }
@@ -99,14 +98,14 @@ namespace nil {
                                 throw std::invalid_argument("modified_sap: setup tau must be nonzero");
                             }
 
-                            const auto evaluation = reduction_type::instance_map_with_evaluation(
-                                canonical_constraint_system, trapdoor.tau);
+                            const auto evaluation =
+                                reduction_type::instance_map_with_evaluation(canonical_constraint_system, trapdoor.tau);
                             if (evaluation.Zt.is_zero()) {
                                 throw std::invalid_argument("modified_sap: setup tau must lie outside the domain");
                             }
                             const std::size_t n = canonical_constraint_system.num_variables();
-                            const std::size_t m = reduction_type::get_domain_size(
-                                canonical_constraint_system.num_constraints());
+                            const std::size_t m =
+                                reduction_type::get_domain_size(canonical_constraint_system.num_constraints());
 
                             std::vector<scalar_value_type> tau_powers(m, scalar_value_type::one());
                             for (std::size_t i = 1; i < m; ++i) {
@@ -115,10 +114,8 @@ namespace nil {
 
                             std::vector<scalar_value_type> w_scalars(n);
                             for (std::size_t i = 0; i < n; ++i) {
-                                w_scalars[i] =
-                                    trapdoor.gamma *
-                                    (trapdoor.alpha[alpha_a_index] * evaluation.At[i] +
-                                     trapdoor.alpha[alpha_c_index] * evaluation.Ct[i]);
+                                w_scalars[i] = trapdoor.gamma * (trapdoor.alpha[alpha_a_index] * evaluation.At[i] +
+                                                                 trapdoor.alpha[alpha_c_index] * evaluation.Ct[i]);
                             }
 
                             const auto scaled_powers = [&tau_powers](const scalar_value_type &scale,
@@ -130,16 +127,14 @@ namespace nil {
                                 return result;
                             };
 
-                            const auto h_scalars = scaled_powers(
-                                trapdoor.gamma * trapdoor.alpha[alpha_h_index], m - 1);
+                            const auto h_scalars = scaled_powers(trapdoor.gamma * trapdoor.alpha[alpha_h_index], m - 1);
                             const auto t_a_scalars = scaled_powers(trapdoor.alpha[alpha_a_index], m - 1);
                             const auto t_c_scalars = scaled_powers(trapdoor.alpha[alpha_c_index], m - 1);
                             const auto t_h_scalars = scaled_powers(trapdoor.alpha[alpha_h_index], m - 2);
                             const auto t_z_scalars = scaled_powers(trapdoor.alpha[alpha_z_index], m);
 
                             const g1_value_type g1_generator = g1_value_type::one();
-                            const std::size_t window_size =
-                                algebra::get_exp_window_size<g1_type>(std::max(n, m));
+                            const std::size_t window_size = algebra::get_exp_window_size<g1_type>(std::max(n, m));
                             const auto window_table = algebra::get_window_table<g1_type>(
                                 scalar_field_type::value_bits, window_size, g1_generator);
 
@@ -153,8 +148,8 @@ namespace nil {
                             proving_key.constraint_system = canonical_constraint_system;
 
                             const g2_value_type g2_generator = g2_value_type::one();
-                            const auto gt_generator = algebra::pair_reduced<curve_type, pairing_policy_type>(
-                                g1_generator, g2_generator);
+                            const auto gt_generator =
+                                algebra::pair_reduced<curve_type, pairing_policy_type>(g1_generator, g2_generator);
                             if (!gt_generator) {
                                 throw std::logic_error("modified_sap: pairing generators produced no GT value");
                             }
@@ -163,8 +158,8 @@ namespace nil {
                             verification_key.g2_one = g2_generator;
                             verification_key.tau_g2 = trapdoor.tau * g2_generator;
                             verification_key.gamma_inverse_g2 = trapdoor.gamma.inversed() * g2_generator;
-                            verification_key.alpha_z_vanishing_gt = gt_generator->pow(
-                                (trapdoor.alpha[alpha_z_index] * evaluation.Zt).to_integral());
+                            verification_key.alpha_z_vanishing_gt =
+                                gt_generator->pow((trapdoor.alpha[alpha_z_index] * evaluation.Zt).to_integral());
                             for (std::size_t i = 0; i < verification_key.alpha_gt.size(); ++i) {
                                 verification_key.alpha_gt[i] = gt_generator->pow(trapdoor.alpha[i].to_integral());
                             }
@@ -209,8 +204,7 @@ namespace nil {
                         const auto canonical_constraint_system = constraint_system.normalized();
                         // Validate the padded domain before consuming caller-owned randomness.
                         const auto domain = reduction_type::get_domain(canonical_constraint_system);
-                        const auto circuit_digest =
-                            transcript_policy_type::circuit_digest(canonical_constraint_system);
+                        const auto circuit_digest = transcript_policy_type::circuit_digest(canonical_constraint_system);
 
                         typename deterministic_generator_type::trapdoor_type trapdoor;
                         do {

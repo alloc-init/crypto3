@@ -52,8 +52,7 @@ namespace {
     using scalar_value_type = scalar_field_type::value_type;
     using base_value_type = curve_type::base_field_type::value_type;
     using native_pairing_policy_type = nil::crypto3::algebra::pairing::pairing_policy<curve_type>;
-    using exact_pairing_policy_type =
-        nil::crypto3::zk::snark::modified_sap_bn254_exact_pairing_policy;
+    using exact_pairing_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_exact_pairing_policy;
 
     struct transcript_policy {
         template<typename ConstraintSystem>
@@ -77,12 +76,11 @@ namespace {
         }
     };
 
-    using exact_policy_type = nil::crypto3::zk::snark::modified_sap_policy<
-        curve_type, exact_pairing_policy_type, transcript_policy>;
-    using native_policy_type = nil::crypto3::zk::snark::modified_sap_policy<
-        curve_type, native_pairing_policy_type, transcript_policy>;
-    using generator_type =
-        nil::crypto3::zk::snark::detail::modified_sap_deterministic_generator<exact_policy_type>;
+    using exact_policy_type =
+        nil::crypto3::zk::snark::modified_sap_policy<curve_type, exact_pairing_policy_type, transcript_policy>;
+    using native_policy_type =
+        nil::crypto3::zk::snark::modified_sap_policy<curve_type, native_pairing_policy_type, transcript_policy>;
+    using generator_type = nil::crypto3::zk::snark::detail::modified_sap_deterministic_generator<exact_policy_type>;
     using native_generator_type =
         nil::crypto3::zk::snark::detail::modified_sap_deterministic_generator<native_policy_type>;
     using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<exact_policy_type>;
@@ -107,10 +105,9 @@ namespace {
     }
 
     system_type two_row_system() {
-        return {3,
-                {binding_row(),
-                 {raw_combination({{1, 3}, {1, -2}, {2, 2}}),
-                  raw_combination({{0, 4}, {0, -1}, {2, 4}})}}};
+        return {
+            3,
+            {binding_row(), {raw_combination({{1, 3}, {1, -2}, {2, 2}}), raw_combination({{0, 4}, {0, -1}, {2, 4}})}}};
     }
 
     generator_type::trapdoor_type test_trapdoor() {
@@ -179,12 +176,10 @@ BOOST_AUTO_TEST_CASE(deterministic_setup_matches_small_independent_example) {
     const scalar_value_type two_inverse = scalar_value_type(2).inversed();
     const scalar_value_type lagrange_0 = (trapdoor.tau + scalar_value_type::one()) * two_inverse;
     const scalar_value_type lagrange_1 = (scalar_value_type::one() - trapdoor.tau) * two_inverse;
-    const std::array<scalar_value_type, 3> at = {
-        scalar_value_type::zero(), lagrange_1, scalar_value_type(2) * lagrange_1};
-    const std::array<scalar_value_type, 3> ct = {
-        -lagrange_0 + scalar_value_type(3) * lagrange_1,
-        scalar_value_type::zero(),
-        scalar_value_type(4) * lagrange_1};
+    const std::array<scalar_value_type, 3> at = {scalar_value_type::zero(), lagrange_1,
+                                                 scalar_value_type(2) * lagrange_1};
+    const std::array<scalar_value_type, 3> ct = {-lagrange_0 + scalar_value_type(3) * lagrange_1,
+                                                 scalar_value_type::zero(), scalar_value_type(4) * lagrange_1};
     for (std::size_t i = 0; i < pk.W.size(); ++i) {
         const auto expected_scalar = trapdoor.gamma * (trapdoor.alpha[0] * at[i] + trapdoor.alpha[1] * ct[i]);
         BOOST_CHECK_EQUAL(pk.W[i], expected_scalar * g1_value_type::one());
@@ -203,8 +198,7 @@ BOOST_AUTO_TEST_CASE(deterministic_setup_matches_small_independent_example) {
     BOOST_CHECK_EQUAL(vk.g2_one, g2_value_type::one());
     BOOST_CHECK_EQUAL(vk.tau_g2, trapdoor.tau * g2_value_type::one());
     BOOST_CHECK_EQUAL(vk.gamma_inverse_g2, trapdoor.gamma.inversed() * g2_value_type::one());
-    BOOST_CHECK_EQUAL(vk.alpha_z_vanishing_gt,
-                      gt_generator->pow((trapdoor.alpha[3] * z_at_tau).to_integral()));
+    BOOST_CHECK_EQUAL(vk.alpha_z_vanishing_gt, gt_generator->pow((trapdoor.alpha[3] * z_at_tau).to_integral()));
     for (std::size_t i = 0; i < vk.alpha_gt.size(); ++i) {
         BOOST_CHECK_EQUAL(vk.alpha_gt[i], gt_generator->pow(trapdoor.alpha[i].to_integral()));
     }
@@ -275,8 +269,8 @@ BOOST_AUTO_TEST_CASE(randomized_setup_uses_caller_source_and_delegates_to_determ
     scripted_random_source random_source {0, 1, 2, 0, 3, 5, 7, 11, 13};
     const auto generated = nil::crypto3::zk::generate<scheme_type>(source, random_source);
     const auto canonical = source.normalized();
-    const auto expected = generator_type::process(
-        canonical, transcript_policy::circuit_digest(canonical), test_trapdoor());
+    const auto expected =
+        generator_type::process(canonical, transcript_policy::circuit_digest(canonical), test_trapdoor());
 
     BOOST_CHECK(generated == expected);
     BOOST_CHECK_EQUAL(random_source.consumed(), 9);
@@ -291,9 +285,8 @@ BOOST_AUTO_TEST_CASE(randomized_setup_validates_before_consuming_randomness) {
 }
 
 BOOST_AUTO_TEST_CASE(randomized_setup_supports_crypto3_chacha) {
-    const std::array<std::uint8_t, 32> seed = {
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-        16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
+    const std::array<std::uint8_t, 32> seed = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
+                                               16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
     nil::crypto3::random::chacha_urbg<> first_source(seed);
     nil::crypto3::random::chacha_urbg<> second_source(seed);
 
