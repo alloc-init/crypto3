@@ -25,6 +25,7 @@
 #ifndef CRYPTO3_ZK_R1CS_TO_MODIFIED_SAP_HPP
 #define CRYPTO3_ZK_R1CS_TO_MODIFIED_SAP_HPP
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <optional>
@@ -36,7 +37,9 @@
 
 #include <nil/crypto3/zk/snark/arithmetization/bit_comparison.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/modified_sap.hpp>
+#include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/r1cs.hpp>
 #include <nil/crypto3/zk/snark/reductions/detail/r1cs_to_sap.hpp>
+#include <nil/crypto3/zk/snark/reductions/modified_sap_to_polynomials.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -188,6 +191,122 @@ namespace nil {
                         };
 
                     }    // namespace detail
+
+                    /**
+                     * Convert ordinary R1CS with one public input into modified squaring constraints.
+                     * The source constant is represented by the recovered lowest bit of the odd public input.
+                     */
+                    template<typename FieldType>
+                    class r1cs_to_modified_sap {
+                    public:
+                        using field_type = FieldType;
+                        using field_value_type = typename field_type::value_type;
+                        using constraint_system_type = modified_sap_constraint_system<field_type>;
+
+                        /**
+                         * Return owned, normalized logical rows: binding, constant recovery, then two rows
+                         * per source multiplication in source order. No witness values or domain padding
+                         * enter the conversion. The source is preserved and no references to it are retained.
+                         *
+                         * With N source variables excluding the implicit one and M source constraints,
+                         * witness entries are the N source values, the recovery block, then M auxiliaries.
+                         * Source index 0 maps to recovered one at N; source index i >= 1 maps to i - 1.
+                         *
+                         * Reject invalid public-input counts, raw indices, size overflows and unsupported
+                         * domain dimensions with std::invalid_argument. Unsorted and repeated terms are
+                         * accepted; check indices before normalization, including zero and cancelling terms.
+                         */
+                        static constraint_system_type instance_map(const r1cs_constraint_system<field_type> &cs) {
+                            using recovery_type = detail::modified_sap_constant_recovery<field_type>;
+                            using constraint_type = typename constraint_system_type::constraint_type;
+                            using variable_type = typename constraint_type::variable_type;
+                            using combination_type = typename constraint_type::linear_combination_type;
+
+                            if (cs.primary_input_size != 1) {
+                                throw std::invalid_argument("modified_sap: R1CS requires exactly one public input");
+                            }
+                            const auto max_witness_size = std::vector<field_value_type>().max_size();
+                            if (recovery_type::witness_size >= max_witness_size ||
+                                cs.auxiliary_input_size > max_witness_size - recovery_type::witness_size - 1) {
+                                throw std::invalid_argument("modified_sap: R1CS witness size overflow");
+                            }
+                            const std::size_t source_variables = cs.num_variables();
+                            const std::size_t first_auxiliary = source_variables + recovery_type::witness_size;
+                            if (cs.num_constraints() > max_witness_size - first_auxiliary) {
+                                throw std::invalid_argument("modified_sap: R1CS witness size overflow");
+                            }
+
+                            constraint_system_type result;
+                            const auto max_rows = result.constraints.max_size();
+                            if (recovery_type::constraint_count >= max_rows ||
+                                cs.num_constraints() > (max_rows - recovery_type::constraint_count - 1) / 2) {
+                                throw std::invalid_argument("modified_sap: R1CS row size overflow");
+                            }
+                            const std::size_t logical_rows =
+                                1 + recovery_type::constraint_count + 2 * cs.num_constraints();
+                            // Discard the size: this only validates domain support. The polynomial reduction
+                            // creates the domain and pads the rows later.
+                            modified_sap_to_polynomials<field_type>::get_domain_size(logical_rows);
+
+                            // Ordinary R1CS validation also requires sorted, unique terms. Here only raw
+                            // index validity is required; the resulting rows are normalized below.
+                            const auto in_range = [source_variables](const auto &term) {
+                                return term.index <= source_variables;
+                            };
+                            const auto max_terms = combination_type().terms.max_size();
+                            for (const auto &constraint : cs.constraints) {
+                                if (!std::all_of(constraint.a.begin(), constraint.a.end(), in_range) ||
+                                    !std::all_of(constraint.b.begin(), constraint.b.end(), in_range) ||
+                                    !std::all_of(constraint.c.begin(), constraint.c.end(), in_range)) {
+                                    throw std::invalid_argument("modified_sap: R1CS term index out of range");
+                                }
+                                // Each A contains all left/right terms. The first C contains all output
+                                // terms, plus the auxiliary and -w[0].
+                                if (max_terms < 2 ||
+                                    constraint.a.terms.size() > max_terms - constraint.b.terms.size() ||
+                                    constraint.c.terms.size() > max_terms - 2) {
+                                    throw std::invalid_argument("modified_sap: R1CS row term size overflow");
+                                }
+                            }
+
+                            result.witness_size = first_auxiliary + cs.num_constraints();
+                            result.constraints.reserve(logical_rows);
+                            // binding row
+                            result.constraints.push_back({{}, -variable_type(0)});
+                            recovery_type::append_constraints(result.constraints, source_variables);
+
+                            const auto minus_one = -field_value_type::one();
+                            for (std::size_t i = 0; i < cs.num_constraints(); ++i) {
+                                const auto auxiliary = first_auxiliary + i;
+                                const auto remap_index = [source_variables, auxiliary](std::size_t index) {
+                                    // Source index 0 (implicit one) maps to the recovered bit at source_variables;
+                                    // source index j >= 1 maps to j - 1, putting the public input at w[0].
+                                    // The helper also emits the new auxiliary's index, already in target indexing.
+                                    // It lies beyond all validated source indices, so it is left unchanged.
+                                    if (index == auxiliary) {
+                                        return index;
+                                    }
+                                    return index == 0 ? source_variables : index - 1;
+                                };
+                                std::array<constraint_type, 2> rows;
+                                const auto &source = cs.constraints[i];
+                                detail::r1cs_to_sap_constraint(
+                                    source.a, source.b, source.c, auxiliary,
+                                    [&](std::size_t row, std::size_t index, const auto &coefficient) {
+                                        rows[row].a.add_term(variable_type(remap_index(index)), coefficient);
+                                    },
+                                    [&](std::size_t row, std::size_t index, const auto &coefficient) {
+                                        rows[row].c.add_term(variable_type(remap_index(index)), coefficient);
+                                    });
+                                for (auto &row : rows) {
+                                    row.c.add_term(variable_type(0), minus_one);
+                                    result.constraints.push_back(std::move(row));
+                                }
+                            }
+                            return result.normalized();
+                        }
+                    };
+
                 }    // namespace reductions
             }    // namespace snark
         }    // namespace zk

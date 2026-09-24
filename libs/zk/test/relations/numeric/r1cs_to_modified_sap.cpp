@@ -27,12 +27,17 @@
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
+#include <initializer_list>
 #include <limits>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
+#include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/algebra/fields/alt_bn128/scalar_field.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/zk/snark/reductions/r1cs_to_modified_sap.hpp>
 
 namespace {
@@ -41,6 +46,29 @@ namespace {
     using field_type = fields::alt_bn128_scalar_field<254>;
     using value_type = field_type::value_type;
     using recovery_type = snark::reductions::detail::modified_sap_constant_recovery<field_type>;
+    using reduction_type = snark::reductions::r1cs_to_modified_sap<field_type>;
+    using source_system_type = snark::r1cs_constraint_system<field_type>;
+    using source_constraint_type = snark::r1cs_constraint<field_type>;
+    using variable_type = recovery_type::variable_type;
+
+    source_system_type source_example() {
+        source_system_type cs;
+        cs.primary_input_size = 1;
+        cs.auxiliary_input_size = 2;
+        // Source indices are 0 = one, 1 = u, 2 = x, 3 = y; enforce (x + 1)*y = u.
+        source_constraint_type row {variable_type(0), variable_type(3), variable_type(1)};
+        row.a.add_term(variable_type(2));
+        cs.add_constraint(row);
+        return cs;
+    }
+
+    recovery_type::combination_type target_combination(std::initializer_list<std::pair<std::size_t, int>> terms) {
+        recovery_type::combination_type result;
+        for (const auto &[index, coefficient] : terms) {
+            result.add_term(variable_type(index), value_type(coefficient));
+        }
+        return result;
+    }
 
     // Use Crypto3's prime-field arithmetic with small moduli for exhaustive checks.
     template<unsigned Modulus>
@@ -297,6 +325,172 @@ BOOST_AUTO_TEST_CASE(exhaustive_bits_and_marker_over_field_seven) {
             }
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(instance_map_matches_fixed_rows_and_supports_multiple_public_inputs) {
+    const auto source = source_example();
+    const auto original = source;
+    BOOST_REQUIRE(source.is_valid());
+    const auto converted = reduction_type::instance_map(source);
+    BOOST_CHECK(source == original);
+    BOOST_REQUIRE(converted.is_valid());
+    BOOST_CHECK_EQUAL(converted.num_variables(), 510);
+    BOOST_CHECK_EQUAL(converted.num_constraints(), 564);
+
+    // N = 3. The recovered one is w[3], and the source product's auxiliary is w[509].
+    auto expected = recovery_system<field_type>(3).normalized();
+    ++expected.witness_size;
+    expected.constraints.push_back(
+        {target_combination({{1, 1}, {2, 1}, {3, 1}}), target_combination({{0, 3}, {509, 1}})});
+    expected.constraints.push_back(
+        {target_combination({{1, 1}, {2, -1}, {3, 1}}), target_combination({{0, -1}, {509, 1}})});
+    BOOST_CHECK(converted == expected);
+    BOOST_CHECK(converted.normalized() == converted);
+
+    // The same circuit accepts several odd public inputs; x = u - 1 and y = 1.
+    for (const auto &u : {value_type(3), value_type(5), value_type(field_type::modulus - 2)}) {
+        const value_type x = u - value_type::one();
+        BOOST_REQUIRE(source.is_satisfied({u}, {x, value_type::one()}));
+        std::vector<value_type> witness = {u, x, value_type::one()};
+        recovery_type::append_witness(witness);
+        witness.push_back(x.squared());    // ((x + 1) - y)^2 = x^2.
+        BOOST_CHECK(converted.is_satisfied(u, witness));
+        witness.back() += value_type::one();
+        BOOST_CHECK(!converted.is_satisfied(u, witness));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(instance_map_normalizes_raw_terms_without_changing_the_source) {
+    auto source = source_example();
+    auto &row = source.constraints.front();
+    row.a.terms.clear();
+    row.a.add_term(variable_type(2), value_type(3));
+    row.a.add_term(variable_type(0), value_type(2));
+    row.a.add_term(variable_type(2), -value_type(2));
+    row.a.add_term(variable_type(0), -value_type::one());
+    row.a.add_term(variable_type(1), value_type::zero());
+    row.b.terms.clear();
+    row.b.add_term(variable_type(3), value_type(2));
+    row.b.add_term(variable_type(2), value_type(7));
+    row.b.add_term(variable_type(3), -value_type::one());
+    row.b.add_term(variable_type(2), -value_type(7));
+    row.b.add_term(variable_type(0), value_type::zero());
+    row.c.terms.clear();
+    row.c.add_term(variable_type(1), value_type(4));
+    row.c.add_term(variable_type(0), value_type(9));
+    row.c.add_term(variable_type(1), -value_type(3));
+    row.c.add_term(variable_type(0), -value_type(9));
+
+    BOOST_CHECK(!source.is_valid());    // Ordinary validation requires sorted, unique indices.
+    const auto original = source;
+    BOOST_CHECK(reduction_type::instance_map(source) == reduction_type::instance_map(source_example()));
+    BOOST_CHECK(source == original);
+}
+
+BOOST_AUTO_TEST_CASE(instance_map_empty_sources_keep_binding_recovery_and_unused_variables) {
+    for (const std::size_t auxiliary_size : {0, 3}) {
+        source_system_type source;
+        source.primary_input_size = 1;
+        source.auxiliary_input_size = auxiliary_size;
+        const auto converted = reduction_type::instance_map(source);
+        BOOST_CHECK(converted == recovery_system<field_type>(source.num_variables()).normalized());
+        BOOST_CHECK_EQUAL(converted.num_variables(), source.num_variables() + 506);
+        BOOST_CHECK_EQUAL(converted.num_constraints(), 562);
+        std::vector<value_type> witness(source.num_variables(), value_type(13));
+        witness[0] = value_type(3);
+        recovery_type::append_witness(witness);
+        BOOST_CHECK(converted.is_satisfied(value_type(3), witness));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(instance_map_preserves_empty_and_constant_products_in_source_order) {
+    source_system_type source;
+    source.primary_input_size = 1;
+    source.auxiliary_input_size = 2;
+    source.add_constraint({{}, variable_type(2), {}});                                // 0*x = 0.
+    source.add_constraint({variable_type(0), variable_type(0), variable_type(0)});    // 1*1 = 1.
+    source.add_constraint(source_constraint_type());                                  // 0*0 = 0.
+    const auto converted = reduction_type::instance_map(source);
+    BOOST_REQUIRE(converted.is_valid());
+    BOOST_CHECK_EQUAL(converted.num_variables(), 512);
+    BOOST_CHECK_EQUAL(converted.num_constraints(), 568);
+
+    const std::vector<recovery_type::constraint_type> expected_rows = {
+        {target_combination({{1, 1}}), target_combination({{0, -1}, {509, 1}})},
+        {target_combination({{1, -1}}), target_combination({{0, -1}, {509, 1}})},
+        {target_combination({{3, 2}}), target_combination({{0, -1}, {3, 4}, {510, 1}})},
+        {{}, target_combination({{0, -1}, {510, 1}})},
+        {{}, target_combination({{0, -1}, {511, 1}})},
+        {{}, target_combination({{0, -1}, {511, 1}})},
+    };
+    const std::vector<recovery_type::constraint_type> source_rows(converted.constraints.begin() + 562,
+                                                                  converted.constraints.end());
+    BOOST_CHECK(source_rows == expected_rows);
+    std::vector<value_type> witness = {value_type(3), value_type(4), value_type(7)};
+    recovery_type::append_witness(witness);
+    witness.insert(witness.end(), {value_type(16), value_type::zero(), value_type::zero()});
+    BOOST_CHECK(converted.is_satisfied(value_type(3), witness));
+
+    // Structurally valid, unsatisfiable rows are converted too: changing the last row to 0*0 = 1 must reject.
+    source.constraints.back().c.add_term(variable_type(0));
+    const auto impossible = reduction_type::instance_map(source);
+    BOOST_CHECK(impossible.is_valid());
+    BOOST_CHECK(!impossible.is_satisfied(value_type(3), witness));
+}
+
+BOOST_AUTO_TEST_CASE(instance_map_rejects_invalid_public_input_counts) {
+    for (const auto public_size : {std::size_t(0), std::size_t(2), std::numeric_limits<std::size_t>::max()}) {
+        auto source = source_example();
+        source.primary_input_size = public_size;
+        const auto original = source;
+        BOOST_CHECK_THROW(reduction_type::instance_map(source), std::invalid_argument);
+        BOOST_CHECK(source == original);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(instance_map_checks_every_raw_source_index_before_normalization) {
+    using source_combination_type = nil::crypto3::math::linear_combination<variable_type>;
+    const std::array<source_combination_type source_constraint_type::*, 3> combinations = {
+        &source_constraint_type::a, &source_constraint_type::b, &source_constraint_type::c};
+    // With N = 3, even index 4 is invalid. Index 509 could otherwise alias the newly introduced auxiliary.
+    for (const auto index : {std::size_t(4), std::size_t(509), std::numeric_limits<std::size_t>::max()}) {
+        for (std::size_t combination = 0; combination < combinations.size(); ++combination) {
+            for (unsigned form = 0; form < 3; ++form) {
+                BOOST_TEST_CONTEXT("index=" << index << ", combination=" << combination << ", form=" << form) {
+                    auto source = source_example();
+                    auto &terms = source.constraints.front().*combinations[combination];
+                    terms.add_term(variable_type(index), form == 0 ? value_type::zero() : value_type::one());
+                    if (form == 2) {
+                        terms.add_term(variable_type(index), -value_type::one());
+                    }
+                    const auto original = source;
+                    BOOST_CHECK_THROW(reduction_type::instance_map(source), std::invalid_argument);
+                    BOOST_CHECK(source == original);
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(instance_map_rejects_witness_size_overflow_without_allocation) {
+    const auto max_size = std::numeric_limits<std::size_t>::max();
+    const auto max_witness_size = std::vector<value_type>().max_size();
+    for (const auto auxiliary_size : {max_size, max_size - 1, max_witness_size - recovery_type::witness_size,
+                                      max_witness_size - recovery_type::witness_size - 1}) {
+        auto source = source_example();
+        source.auxiliary_input_size = auxiliary_size;
+        const auto original = source;
+        BOOST_CHECK_THROW(reduction_type::instance_map(source), std::invalid_argument);
+        BOOST_CHECK(source == original);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(instance_map_rejects_unsupported_domain) {
+    // The BN254 base field supports only a size-two radix-two domain, smaller than constant recovery needs.
+    using base_field = fields::alt_bn128_base_field<254>;
+    snark::r1cs_constraint_system<base_field> source;
+    source.primary_input_size = 1;
+    BOOST_CHECK_THROW(snark::reductions::r1cs_to_modified_sap<base_field>::instance_map(source), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
