@@ -1229,8 +1229,9 @@ BOOST_AUTO_TEST_CASE(r1cs_bitcoin_amount_range_proofs) {
                 marker_value *= auxiliary[1 + bit];
                 auxiliary.push_back(marker_value);
             },
-            // No range check here: the circuit must reject out-of-range assignments itself.
-            [](std::size_t, std::size_t) { });
+            [](std::size_t, std::size_t) {
+                // No range check here: the circuit must reject out-of-range assignments itself.
+            });
         return auxiliary;
     };
 
