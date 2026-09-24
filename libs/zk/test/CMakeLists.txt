@@ -67,6 +67,7 @@ set(TESTS_NAMES
 
         "routing_algorithms/test_routing_algorithms"
 
+        "relations/numeric/r1cs"
         "relations/numeric/qap"
         "relations/numeric/sap"
         "relations/numeric/modified_sap"
