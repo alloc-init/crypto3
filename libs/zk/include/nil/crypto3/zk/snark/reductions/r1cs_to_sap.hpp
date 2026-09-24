@@ -49,12 +49,12 @@
 #ifndef CRYPTO3_ZK_R1CS_TO_SAP_BASIC_POLICY_HPP
 #define CRYPTO3_ZK_R1CS_TO_SAP_BASIC_POLICY_HPP
 
-#include <nil/crypto3/math/coset.hpp>
 #include <nil/crypto3/math/algorithms/make_evaluation_domain.hpp>
 #include <nil/crypto3/math/domains/evaluation_domain.hpp>
 
 #include <nil/crypto3/zk/snark/arithmetization/arithmetic_programs/sap.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/r1cs.hpp>
+#include <nil/crypto3/zk/snark/reductions/detail/sap_quotient.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -396,21 +396,6 @@ namespace nil {
                             coefficients_for_H[0] -= d2;
                             domain->add_poly_z(d1 * d1, coefficients_for_H);
 
-                            math::multiply_by_coset(
-                                aA,
-                                typename FieldType::value_type(
-                                    algebra::fields::arithmetic_params<FieldType>::multiplicative_generator));
-                            domain->fft(aA);
-
-                            std::vector<typename FieldType::value_type> &H_tmp =
-                                aA;    // can overwrite aA because it is not used later
-#ifdef MULTICORE
-#pragma omp parallel for
-#endif
-                            for (std::size_t i = 0; i < domain->m; ++i) {
-                                H_tmp[i] = aA[i] * aA[i];
-                            }
-
                             std::vector<typename FieldType::value_type> aC(domain->m, FieldType::value_type::zero());
                             /* again, accounting for all constraints */
                             std::size_t extra_var_offset = cs.num_variables() + 1;
@@ -434,33 +419,13 @@ namespace nil {
 
                             domain->inverse_fft(aC);
 
-                            math::multiply_by_coset(
-                                aC,
-                                typename FieldType::value_type(
-                                    algebra::fields::arithmetic_params<FieldType>::multiplicative_generator));
-                            domain->fft(aC);
+                            detail::compute_sap_quotient(*domain, aA, aC);
 
 #ifdef MULTICORE
 #pragma omp parallel for
 #endif
                             for (std::size_t i = 0; i < domain->m; ++i) {
-                                H_tmp[i] = (H_tmp[i] - aC[i]);
-                            }
-
-                            domain->divide_by_z_on_coset(H_tmp);
-
-                            domain->inverse_fft(H_tmp);
-                            multiply_by_coset(
-                                H_tmp,
-                                typename FieldType::value_type(
-                                    algebra::fields::arithmetic_params<FieldType>::multiplicative_generator)
-                                    .inversed());
-
-#ifdef MULTICORE
-#pragma omp parallel for
-#endif
-                            for (std::size_t i = 0; i < domain->m; ++i) {
-                                coefficients_for_H[i] += H_tmp[i];
+                                coefficients_for_H[i] += aA[i];
                             }
 
                             return sap_witness<FieldType>(sap_num_variables,

@@ -35,10 +35,10 @@
 #include <vector>
 
 #include <nil/crypto3/algebra/fields/params.hpp>
-#include <nil/crypto3/math/coset.hpp>
 #include <nil/crypto3/math/domains/basic_radix2_domain.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/modified_sap.hpp>
+#include <nil/crypto3/zk/snark/reductions/detail/sap_quotient.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -200,20 +200,11 @@ namespace nil {
                             domain->inverse_fft(result.C.get_storage());
 
                             // The row checks ensure exact divisibility, so H has degree at most m - 2.
-                            // Evaluate A and C at coset * D while preserving their coefficient representations.
+                            // The shared quotient routine consumes coefficients of A and C + u.
                             result.H = result.A;
-                            auto c_on_coset = result.C;
-                            math::multiply_by_coset(result.H, coset);
-                            math::multiply_by_coset(c_on_coset, coset);
-                            domain->fft(result.H.get_storage());
-                            domain->fft(c_on_coset.get_storage());
-                            for (std::size_t j = 0; j < m; ++j) {
-                                result.H[j] = result.H[j].squared() - c_on_coset[j] - u;
-                            }
-                            // Z(coset * D[j]) = coset^m - 1 is the same nonzero value at every coset point.
-                            domain->divide_by_z_on_coset(result.H.get_storage());
-                            domain->inverse_fft(result.H.get_storage());
-                            math::multiply_by_coset(result.H, coset.inversed());
+                            auto c_for_quotient = result.C;
+                            c_for_quotient[0] += u;
+                            detail::compute_sap_quotient(*domain, result.H.get_storage(), c_for_quotient.get_storage());
                             if (!result.H[m - 1].is_zero()) {
                                 throw std::invalid_argument("modified_sap: quotient exceeds degree bound");
                             }
