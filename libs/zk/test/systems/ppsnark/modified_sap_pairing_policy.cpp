@@ -22,7 +22,7 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#define BOOST_TEST_MODULE modified_sqap_pairing_policy_test
+#define BOOST_TEST_MODULE modified_sap_pairing_policy_test
 
 #include <boost/test/unit_test.hpp>
 
@@ -31,14 +31,14 @@
 #include <nil/crypto3/algebra/pairing/alt_bn128.hpp>
 #include <nil/crypto3/algebra/pairing/detail/alt_bn128/params.hpp>
 
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/policy.hpp>
 
 namespace {
 
     using curve_type = nil::crypto3::algebra::curves::alt_bn128_254;
     using native_pairing_policy_type = nil::crypto3::algebra::pairing::pairing_policy<curve_type>;
     using exact_pairing_policy_type =
-        nil::crypto3::zk::snark::modified_sqap_bn254_exact_pairing_policy;
+        nil::crypto3::zk::snark::modified_sap_bn254_exact_pairing_policy;
     using pairing_params_type = nil::crypto3::algebra::pairing::detail::pairing_params<curve_type>;
     using g1_value_type = typename curve_type::g1_type<>::value_type;
     using g2_value_type = typename curve_type::g2_type<>::value_type;
@@ -46,7 +46,7 @@ namespace {
 
 }    // namespace
 
-BOOST_AUTO_TEST_SUITE(modified_sqap_pairing_policy_test_suite)
+BOOST_AUTO_TEST_SUITE(modified_sap_pairing_policy_test_suite)
 
 BOOST_AUTO_TEST_CASE(exact_result_matches_direct_final_exponentiation) {
     const auto miller_result = nil::crypto3::algebra::pair<curve_type>(g1_value_type::one(), g2_value_type::one());

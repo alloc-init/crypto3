@@ -22,8 +22,8 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SQAP_TRANSCRIPT_HPP
-#define CRYPTO3_ZK_MODIFIED_SQAP_TRANSCRIPT_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SAP_TRANSCRIPT_HPP
+#define CRYPTO3_ZK_MODIFIED_SAP_TRANSCRIPT_HPP
 
 #include <cstddef>
 #include <string_view>
@@ -34,8 +34,8 @@
 #include <nil/crypto3/hash/algorithm/hash.hpp>
 #include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>
 #include <nil/crypto3/hash/poseidon.hpp>
-#include <nil/crypto3/zk/snark/reductions/modified_sqap_to_polynomials.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/verification_key.hpp>
+#include <nil/crypto3/zk/snark/reductions/modified_sap_to_polynomials.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/verification_key.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -43,15 +43,15 @@ namespace nil {
             namespace snark {
 
                 /**
-                 * Standalone BN254 Poseidon1 transcript profile for the modified SQAP SNARK.
+                 * Standalone BN254 Poseidon1 transcript profile for the modified SAP SNARK.
                  */
-                class modified_sqap_bn254_poseidon_transcript_policy {
+                class modified_sap_bn254_poseidon_transcript_policy {
                     using curve_type = algebra::curves::alt_bn128_254;
                     using base_field_type = typename curve_type::base_field_type;
                     using base_value_type = typename base_field_type::value_type;
                     using base_integral_type = typename base_field_type::integral_type;
                     using scalar_field_type = typename curve_type::scalar_field_type;
-                    using reduction_type = reductions::modified_sqap_to_polynomials<scalar_field_type>;
+                    using reduction_type = reductions::modified_sap_to_polynomials<scalar_field_type>;
                     using poseidon_policy_type = hashes::detail::poseidon1_policy<base_field_type, 128, 2>;
                     using poseidon_type = hashes::poseidon1<poseidon_policy_type>;
 
@@ -116,7 +116,7 @@ namespace nil {
                 public:
                     using constraint_system_type = typename reduction_type::constraint_system_type;
                     using digest_type = base_value_type;
-                    using verification_key_type = modified_sqap_verification_key<curve_type>;
+                    using verification_key_type = modified_sap_verification_key<curve_type>;
                     using commitment_type = g1_value_type;
                     using challenge_type = typename scalar_field_type::value_type;
 
@@ -125,7 +125,7 @@ namespace nil {
                         const std::size_t domain_size = reduction_type::get_domain_size(canonical.num_constraints());
 
                         std::vector<digest_type> input;
-                        input.push_back(tag("modified-sqap-snark"));
+                        input.push_back(tag("modified-sap-snark"));
                         input.push_back(tag("v1"));
                         input.push_back(tag("bn254"));
                         input.push_back(tag("poseidon1-fp-128-r2-c1"));
@@ -159,7 +159,7 @@ namespace nil {
                                                           const commitment_type &P,
                                                           const challenge_type &u) {
                         std::vector<digest_type> input;
-                        input.push_back(tag("modified-sqap-snark"));
+                        input.push_back(tag("modified-sap-snark"));
                         input.push_back(tag("v1"));
                         input.push_back(tag("bn254"));
                         input.push_back(tag("poseidon1-fp-128-r2-c1"));
@@ -194,4 +194,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SQAP_TRANSCRIPT_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SAP_TRANSCRIPT_HPP

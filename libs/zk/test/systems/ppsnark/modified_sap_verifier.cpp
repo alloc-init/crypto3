@@ -22,7 +22,7 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#define BOOST_TEST_MODULE modified_sqap_verifier_test
+#define BOOST_TEST_MODULE modified_sap_verifier_test
 
 #include <boost/test/unit_test.hpp>
 
@@ -35,24 +35,24 @@
 #include <nil/crypto3/algebra/curves/detail/scalar_mul.hpp>
 
 #include <nil/crypto3/zk/algorithms/verify.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/transcript.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/verifier.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap_snark.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/policy.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/transcript.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/verifier.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap_snark.hpp>
 
 namespace {
 
     using curve_type = nil::crypto3::algebra::curves::alt_bn128_254;
     using native_pairing_policy_type = nil::crypto3::algebra::pairing::pairing_policy<curve_type>;
-    using pairing_policy_type = nil::crypto3::zk::snark::modified_sqap_bn254_exact_pairing_policy;
-    using transcript_policy_type = nil::crypto3::zk::snark::modified_sqap_bn254_poseidon_transcript_policy;
+    using pairing_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_exact_pairing_policy;
+    using transcript_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_poseidon_transcript_policy;
     using policy_type =
-        nil::crypto3::zk::snark::modified_sqap_policy<curve_type, pairing_policy_type, transcript_policy_type>;
-    using verifier_type = nil::crypto3::zk::snark::modified_sqap_verifier<policy_type>;
-    using scheme_type = nil::crypto3::zk::snark::modified_sqap_snark<policy_type>;
+        nil::crypto3::zk::snark::modified_sap_policy<curve_type, pairing_policy_type, transcript_policy_type>;
+    using verifier_type = nil::crypto3::zk::snark::modified_sap_verifier<policy_type>;
+    using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<policy_type>;
     using native_policy_type =
-        nil::crypto3::zk::snark::modified_sqap_policy<curve_type, native_pairing_policy_type, transcript_policy_type>;
-    using native_verifier_type = nil::crypto3::zk::snark::modified_sqap_verifier<native_policy_type>;
+        nil::crypto3::zk::snark::modified_sap_policy<curve_type, native_pairing_policy_type, transcript_policy_type>;
+    using native_verifier_type = nil::crypto3::zk::snark::modified_sap_verifier<native_policy_type>;
     using scalar_field_type = curve_type::scalar_field_type;
     using scalar_value_type = scalar_field_type::value_type;
     using base_value_type = curve_type::base_field_type::value_type;
@@ -65,7 +65,7 @@ namespace {
         const auto result = nil::crypto3::algebra::pair_reduced<curve_type, pairing_policy_type>(g1_value_type::one(),
                                                                                                  g2_value_type::one());
         if (!result) {
-            throw std::runtime_error("modified SQAP test pairing failed");
+            throw std::runtime_error("modified SAP test pairing failed");
         }
         return *result;
     }
@@ -125,7 +125,7 @@ namespace {
         result.proof.v_Z = scalar_value_type(5);
         // Fixed q solving the target-group exponent equation for this transcript vector.
         result.proof.Q =
-            scalar_value_type(0x17ddd51cdda737ec0aaf444ade4255bc615ea43a962a40ffff006ec8c0b3d498_cppui_modular254) *
+            scalar_value_type(0x0a91ceaa34d1bc72e8a7707e083fe3f3aea4127294778619ed36a148ef36374e_cppui_modular254) *
             g1_value_type::one();
         return result;
     }
@@ -142,12 +142,12 @@ namespace {
                 return point;
             }
         }
-        throw std::runtime_error("modified SQAP test could not construct a non-subgroup G2 point");
+        throw std::runtime_error("modified SAP test could not construct a non-subgroup G2 point");
     }
 
 }    // namespace
 
-BOOST_AUTO_TEST_SUITE(modified_sqap_verifier_test_suite)
+BOOST_AUTO_TEST_SUITE(modified_sap_verifier_test_suite)
 
 BOOST_AUTO_TEST_CASE(accepts_valid_shapes_and_identity_proof_points) {
     const auto verification_key = valid_verification_key();
@@ -266,8 +266,8 @@ BOOST_AUTO_TEST_CASE(rejects_malformed_proof_points) {
 BOOST_AUTO_TEST_CASE(verifies_an_independently_constructed_equation_vector) {
     const auto vector = independent_verifier_vector();
     const scalar_value_type expected_challenge(
-        0x1827917e94f73fe7f62006ac599fda58cf5b4cf7bcb92aa4b273bc926df13a03_cppui_modular254);
-    const scalar_value_type q(0x17ddd51cdda737ec0aaf444ade4255bc615ea43a962a40ffff006ec8c0b3d498_cppui_modular254);
+        0x23c9f909c9627ebe6e047c9d238fe7b429aa3ee6131b4ebab795dab7a975ada1_cppui_modular254);
+    const scalar_value_type q(0x0a91ceaa34d1bc72e8a7707e083fe3f3aea4127294778619ed36a148ef36374e_cppui_modular254);
     const scalar_value_type expected_left =
         scalar_value_type(17) * scalar_value_type(3) + scalar_value_type(13) * scalar_value_type(15);
     const scalar_value_type expected_evaluations =

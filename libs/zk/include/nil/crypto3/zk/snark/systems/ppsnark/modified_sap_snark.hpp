@@ -22,12 +22,12 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SQAP_SNARK_HPP
-#define CRYPTO3_ZK_MODIFIED_SQAP_SNARK_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SAP_SNARK_HPP
+#define CRYPTO3_ZK_MODIFIED_SAP_SNARK_HPP
 
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/generator.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/prover.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/verifier.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/generator.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/prover.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/verifier.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -39,7 +39,7 @@ namespace nil {
                  * Policy selects the curve, pairing convention and transcript.
                  */
                 template<typename Policy>
-                class modified_sqap_snark {
+                class modified_sap_snark {
                 public:
                     using policy_type = Policy;
                     using constraint_system_type = typename policy_type::constraint_system_type;
@@ -54,21 +54,21 @@ namespace nil {
                     template<typename RandomSource>
                     static keypair_type generate(const constraint_system_type &constraint_system,
                                                  RandomSource &random_source) {
-                        return modified_sqap_generator<policy_type>::process(constraint_system, random_source);
+                        return modified_sap_generator<policy_type>::process(constraint_system, random_source);
                     }
 
                     // auxiliary_input is the full witness, including primary_input at index zero.
                     static proof_type prove(const proving_key_type &pk,
                                             const primary_input_type &primary_input,
                                             const auxiliary_input_type &auxiliary_input) {
-                        return modified_sqap_prover<policy_type>::process(pk, primary_input, auxiliary_input);
+                        return modified_sap_prover<policy_type>::process(pk, primary_input, auxiliary_input);
                     }
 
                     // primary_input is the caller's expected public input.
                     static bool verify(const verification_key_type &vk,
                                        const primary_input_type &primary_input,
                                        const proof_type &proof) {
-                        return modified_sqap_verifier<policy_type>::process(vk, primary_input, proof);
+                        return modified_sap_verifier<policy_type>::process(vk, primary_input, proof);
                     }
                 };
 
@@ -77,4 +77,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SQAP_SNARK_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SAP_SNARK_HPP

@@ -22,7 +22,7 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#define BOOST_TEST_MODULE modified_sqap_transcript_test
+#define BOOST_TEST_MODULE modified_sap_transcript_test
 
 #include <boost/test/unit_test.hpp>
 
@@ -31,10 +31,10 @@
 #include <stdexcept>
 #include <utility>
 
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/transcript.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/transcript.hpp>
 
 #include <nil/crypto3/algebra/algorithms/pair.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/policy.hpp>
 
 namespace {
 
@@ -45,8 +45,8 @@ namespace {
     using g1_value_type = curve_type::g1_type<>::value_type;
     using g2_value_type = curve_type::g2_type<>::value_type;
     using gt_value_type = curve_type::gt_type::value_type;
-    using pairing_policy_type = nil::crypto3::zk::snark::modified_sqap_bn254_exact_pairing_policy;
-    using transcript_policy_type = nil::crypto3::zk::snark::modified_sqap_bn254_poseidon_transcript_policy;
+    using pairing_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_exact_pairing_policy;
+    using transcript_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_poseidon_transcript_policy;
     using system_type = transcript_policy_type::constraint_system_type;
     using constraint_type = system_type::constraint_type;
     using variable_type = constraint_type::variable_type;
@@ -76,7 +76,7 @@ namespace {
         const auto result = nil::crypto3::algebra::pair_reduced<curve_type, pairing_policy_type>(
             g1_value_type::one(), g2_value_type::one());
         if (!result) {
-            throw std::runtime_error("modified SQAP test pairing failed");
+            throw std::runtime_error("modified SAP test pairing failed");
         }
         return *result;
     }
@@ -111,12 +111,12 @@ namespace {
 
 }    // namespace
 
-BOOST_AUTO_TEST_SUITE(modified_sqap_transcript_test_suite)
+BOOST_AUTO_TEST_SUITE(modified_sap_transcript_test_suite)
 
 BOOST_AUTO_TEST_CASE(circuit_digest_matches_fixed_vector) {
     const auto digest = transcript_policy_type::circuit_digest(test_system());
     const transcript_policy_type::digest_type expected(
-        0x29c79eb7645dd1169cd6c49be2583b99df91b4415a9b86dfeeb04749ec696e4f_cppui_modular254);
+        0x304c9ffefccc2d862eacb58cd202a7aa62596aed78f08c394c4e2f35b01935c1_cppui_modular254);
     BOOST_CHECK_EQUAL(digest, expected);
 }
 
@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(proof_challenge_matches_fixed_vector) {
     const auto challenge = transcript_policy_type::proof_challenge(
         test_verification_key(), scalar_value_type(19) * g1_value_type::one(), scalar_value_type(23));
     const scalar_value_type expected(
-        0x0c595cdf3ddc42067b5fc09469e52ed4ab69027a611bd512d3e5796aad270ca8_cppui_modular254);
+        0x06b57277e5dacbb0f3e4959c180b6e8b28e8bbe1f9d0765e1256265265595941_cppui_modular254);
     BOOST_CHECK_EQUAL(challenge, expected);
 }
 

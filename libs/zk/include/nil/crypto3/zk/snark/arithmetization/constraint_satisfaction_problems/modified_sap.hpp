@@ -22,8 +22,8 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SQAP_CONSTRAINT_SYSTEM_HPP
-#define CRYPTO3_ZK_MODIFIED_SQAP_CONSTRAINT_SYSTEM_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SAP_CONSTRAINT_SYSTEM_HPP
+#define CRYPTO3_ZK_MODIFIED_SAP_CONSTRAINT_SYSTEM_HPP
 
 #include <algorithm>
 #include <cstddef>
@@ -43,7 +43,7 @@ namespace nil {
                  * Every term index directly addresses the witness, including u at index zero.
                  */
                 template<typename FieldType>
-                struct modified_sqap_constraint {
+                struct modified_sap_constraint {
                     using field_type = FieldType;
                     using variable_type = math::linear_variable<field_type>;
                     using linear_combination_type =
@@ -52,7 +52,7 @@ namespace nil {
                     linear_combination_type a;
                     linear_combination_type c;
 
-                    bool operator==(const modified_sqap_constraint &other) const = default;
+                    bool operator==(const modified_sap_constraint &other) const = default;
                 };
 
                 /**
@@ -60,10 +60,10 @@ namespace nil {
                  * Default construction does not produce a valid constraint system.
                  */
                 template<typename FieldType>
-                struct modified_sqap_constraint_system {
+                struct modified_sap_constraint_system {
                     using field_type = FieldType;
                     using field_value_type = typename field_type::value_type;
-                    using constraint_type = modified_sqap_constraint<field_type>;
+                    using constraint_type = modified_sap_constraint<field_type>;
                     using linear_combination_type = typename constraint_type::linear_combination_type;
 
                     // Total number of witness entries, including the public input at index zero.
@@ -132,12 +132,12 @@ namespace nil {
                      * Return an owned canonical copy, preserving row order and witness dimension.
                      * Invalid structure throws std::invalid_argument; the source is not modified.
                      */
-                    modified_sqap_constraint_system normalized() const {
+                    modified_sap_constraint_system normalized() const {
                         if (!is_valid()) {
-                            throw std::invalid_argument("modified_sqap: invalid dimensions, term index or binding row");
+                            throw std::invalid_argument("modified_sap: invalid dimensions, term index or binding row");
                         }
 
-                        modified_sqap_constraint_system result;
+                        modified_sap_constraint_system result;
                         result.witness_size = witness_size;
                         result.constraints.reserve(constraints.size());
                         for (const auto &constraint : constraints) {
@@ -147,7 +147,7 @@ namespace nil {
                         return result;
                     }
 
-                    bool operator==(const modified_sqap_constraint_system &other) const = default;
+                    bool operator==(const modified_sap_constraint_system &other) const = default;
 
                 private:
                     static linear_combination_type
@@ -164,4 +164,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SQAP_CONSTRAINT_SYSTEM_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SAP_CONSTRAINT_SYSTEM_HPP

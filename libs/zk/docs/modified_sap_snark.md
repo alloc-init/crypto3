@@ -1,9 +1,9 @@
-# Modified SQAP SNARK: protocol specification
+# Modified SAP SNARK: protocol specification
 
 ## 1. Scope
 
-This specification defines the standalone SNARK `modified_sqap_snark`.
-SQAP means Squaring QAP (Quadratic Arithmetic Program). Its three operations are `SNARK.Setup`,
+This specification defines the standalone SNARK `modified_sap_snark`.
+SAP means Square Arithmetic Program. Its three operations are `SNARK.Setup`,
 `SNARK.Prove` and `SNARK.Verify`, defined by the relations, key structures and
 equations below.
 
@@ -147,7 +147,7 @@ rules for degenerate samples are unspecified; see section 9.
 These checks prevent a degenerate reference string. If `tau == 0`, every positive
 power of `tau` vanishes, most polynomial-query entries collapse to the group
 identity, and `tau_g2` exposes the degeneration. If `Z(tau) == 0`, `tau` lies in
-the SQAP evaluation domain and `alpha_z_vanishing_gt` becomes the GT identity.
+the SAP evaluation domain and `alpha_z_vanishing_gt` becomes the GT identity.
 A zero `gamma` has no inverse, so `gamma_inverse_g2` could not be constructed.
 
 The supplied randomness source is consumed by reference and is not retained.
@@ -249,13 +249,13 @@ proof under a key supplied by the prover alone does not establish that binding.
 
 ## 6. Native API
 
-The scheme facade is `snark::modified_sqap_snark<Policy>`, under
-`snark/systems/ppsnark/modified_sqap_snark.hpp`. The compile-time policy identifies
+The scheme facade is `snark::modified_sap_snark<Policy>`, under
+`snark/systems/ppsnark/modified_sap_snark.hpp`. The compile-time policy identifies
 the curve, exact pairing convention and transcript profile. There is no runtime
 switch between transcript conventions. The interface contract is:
 
 ```cpp
-using scheme = snark::modified_sqap_snark<policy>;
+using scheme = snark::modified_sap_snark<policy>;
 auto keys = scheme::generate(constraint_system, random_source);
 auto proof = scheme::prove(keys.first, u, witness);
 bool valid = scheme::verify(keys.second, u, proof);
@@ -265,7 +265,7 @@ The scheme exposes these aliases:
 
 | Alias | Contract |
 | --- | --- |
-| `constraint_system_type` | The modified-SQAP constraint system over Fr |
+| `constraint_system_type` | The modified-SAP constraint system over Fr |
 | `primary_input_type` | One Fr value, `u` |
 | `auxiliary_input_type` | A vector of Fr values: the full explicitly indexed witness, including `w[0]` |
 | `proof_type` | The two G1 points and four Fr evaluations in section 5 |
@@ -336,7 +336,7 @@ modulus width.
 
 | Meaning | String | Canonical integer |
 | --- | --- | --- |
-| Protocol | `modified-sqap-snark` | `0x6d6f6469666965642d737161702d736e61726b` |
+| Protocol | `modified-sap-snark` | `0x6d6f6469666965642d7361702d736e61726b` |
 | Version | `v1` | `0x7631` |
 | Curve | `bn254` | `0x626e323534` |
 | Poseidon profile | `poseidon1-fp-128-r2-c1` | `0x706f736569646f6e312d66702d3132382d72322d6331` |
@@ -388,7 +388,7 @@ size including slot zero, `logical_rows` the logical row count, and `m` the padd
 radix-two domain size. Hash the following single Fp sequence:
 
 ```text
-tag("modified-sqap-snark")
+tag("modified-sap-snark")
 tag("v1")
 tag("bn254")
 tag("poseidon1-fp-128-r2-c1")
@@ -423,7 +423,7 @@ Validate the proof and verification-key group elements before encoding them.
 Hash the following single Fp sequence in exactly this order:
 
 ```text
-tag("modified-sqap-snark")
+tag("modified-sap-snark")
 tag("v1")
 tag("bn254")
 tag("poseidon1-fp-128-r2-c1")

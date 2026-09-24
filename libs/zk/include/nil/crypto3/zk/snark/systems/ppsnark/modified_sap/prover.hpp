@@ -22,8 +22,8 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SQAP_PROVER_HPP
-#define CRYPTO3_ZK_MODIFIED_SQAP_PROVER_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SAP_PROVER_HPP
+#define CRYPTO3_ZK_MODIFIED_SAP_PROVER_HPP
 
 #include <array>
 #include <cstddef>
@@ -31,7 +31,7 @@
 
 #include <nil/crypto3/algebra/multiexp/multiexp.hpp>
 #include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
-#include <nil/crypto3/zk/snark/reductions/modified_sqap_to_polynomials.hpp>
+#include <nil/crypto3/zk/snark/reductions/modified_sap_to_polynomials.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -39,16 +39,16 @@ namespace nil {
             namespace snark {
 
                 /**
-                 * Prover for the modified SQAP SNARK.
+                 * Prover for the modified SAP SNARK.
                  */
                 template<typename Policy>
-                class modified_sqap_prover {
+                class modified_sap_prover {
                     using policy_type = Policy;
                     using scalar_field_type = typename policy_type::scalar_field_type;
                     using scalar_value_type = typename scalar_field_type::value_type;
                     using g1_value_type = typename policy_type::g1_type::value_type;
                     using transcript_policy_type = typename policy_type::transcript_policy_type;
-                    using reduction_type = reductions::modified_sqap_to_polynomials<scalar_field_type>;
+                    using reduction_type = reductions::modified_sap_to_polynomials<scalar_field_type>;
                     using polynomial_type = typename reduction_type::polynomial_type;
 
                 public:
@@ -90,25 +90,25 @@ namespace nil {
                     static void validate(const proving_key_type &proving_key) {
                         const auto &constraint_system = proving_key.constraint_system;
                         if (!constraint_system.is_valid()) {
-                            throw std::invalid_argument("modified_sqap: invalid proving-key constraint system");
+                            throw std::invalid_argument("modified_sap: invalid proving-key constraint system");
                         }
 
                         const std::size_t n = constraint_system.num_variables();
                         const std::size_t m = reduction_type::get_domain_size(constraint_system.num_constraints());
                         const auto &verification_key = proving_key.verification_key;
                         if (verification_key.num_variables != n || verification_key.domain_size != m) {
-                            throw std::invalid_argument("modified_sqap: inconsistent proving-key dimensions");
+                            throw std::invalid_argument("modified_sap: inconsistent proving-key dimensions");
                         }
 
                         if (proving_key.W.size() != n || proving_key.H_query.size() != m - 1 ||
                             proving_key.T_A.size() != m - 1 || proving_key.T_C.size() != m - 1 ||
                             proving_key.T_H.size() != m - 2 || proving_key.T_Z.size() != m) {
-                            throw std::invalid_argument("modified_sqap: inconsistent proving-key query lengths");
+                            throw std::invalid_argument("modified_sap: inconsistent proving-key query lengths");
                         }
 
                         if (verification_key.circuit_digest !=
                             transcript_policy_type::circuit_digest(constraint_system)) {
-                            throw std::invalid_argument("modified_sqap: proving-key circuit digest mismatch");
+                            throw std::invalid_argument("modified_sap: proving-key circuit digest mismatch");
                         }
                     }
 
@@ -154,7 +154,7 @@ namespace nil {
                         polynomial_type remainder;
                         math::division(result.quotient, remainder, numerator, divisor);
                         if (!remainder.is_zero()) {
-                            throw std::logic_error("modified_sqap: opening quotient has a nonzero remainder");
+                            throw std::logic_error("modified_sap: opening quotient has a nonzero remainder");
                         }
                         return result;
                     }
@@ -184,7 +184,7 @@ namespace nil {
                             }
                             const auto &query = *queries[i];
                             if (opening.quotient.size() > query.size()) {
-                                throw std::invalid_argument("modified_sqap: opening quotient exceeds query length");
+                                throw std::invalid_argument("modified_sap: opening quotient exceeds query length");
                             }
                             result.Q += algebra::multiexp<algebra::policies::multiexp_method_BDLO12>(
                                 query.begin(), query.begin() + opening.quotient.size(), opening.quotient.begin(),
@@ -213,4 +213,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SQAP_PROVER_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SAP_PROVER_HPP

@@ -22,8 +22,8 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SQAP_GENERATOR_HPP
-#define CRYPTO3_ZK_MODIFIED_SQAP_GENERATOR_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SAP_GENERATOR_HPP
+#define CRYPTO3_ZK_MODIFIED_SAP_GENERATOR_HPP
 
 #include <algorithm>
 #include <array>
@@ -36,8 +36,8 @@
 
 #include <nil/crypto3/algebra/algorithms/pair.hpp>
 #include <nil/crypto3/algebra/multiexp/multiexp.hpp>
-#include <nil/crypto3/zk/snark/reductions/modified_sqap_to_polynomials.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
+#include <nil/crypto3/zk/snark/reductions/modified_sap_to_polynomials.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/policy.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -46,7 +46,7 @@ namespace nil {
                 namespace detail {
 
                     template<typename ScalarValueType>
-                    struct modified_sqap_setup_trapdoor {
+                    struct modified_sap_setup_trapdoor {
                         ScalarValueType tau;
                         ScalarValueType gamma;
                         // A, C, H, Z order.
@@ -54,11 +54,11 @@ namespace nil {
                     };
 
                     /**
-                     * Deterministic core of circuit-specific modified SQAP setup.
+                     * Deterministic core of circuit-specific modified SAP setup.
                      * Random sampling and circuit-digest construction are caller responsibilities.
                      */
                     template<typename Policy>
-                    class modified_sqap_deterministic_generator {
+                    class modified_sap_deterministic_generator {
                         using policy_type = Policy;
                         using curve_type = typename policy_type::curve_type;
                         using pairing_policy_type = typename policy_type::pairing_policy_type;
@@ -68,7 +68,7 @@ namespace nil {
                         using g1_type = typename policy_type::g1_type;
                         using g1_value_type = typename g1_type::value_type;
                         using g2_value_type = typename policy_type::g2_type::value_type;
-                        using reduction_type = reductions::modified_sqap_to_polynomials<scalar_field_type>;
+                        using reduction_type = reductions::modified_sap_to_polynomials<scalar_field_type>;
 
                         static constexpr std::size_t alpha_a_index = 0;
                         static constexpr std::size_t alpha_c_index = 1;
@@ -86,23 +86,23 @@ namespace nil {
                     public:
                         using constraint_system_type = typename policy_type::constraint_system_type;
                         using keypair_type = typename policy_type::keypair_type;
-                        using trapdoor_type = modified_sqap_setup_trapdoor<scalar_value_type>;
+                        using trapdoor_type = modified_sap_setup_trapdoor<scalar_value_type>;
 
                         static keypair_type process(const constraint_system_type &constraint_system,
                                                     const base_value_type &circuit_digest,
                                                     const trapdoor_type &trapdoor) {
                             const auto canonical_constraint_system = constraint_system.normalized();
                             if (trapdoor.gamma.is_zero()) {
-                                throw std::invalid_argument("modified_sqap: setup gamma must be nonzero");
+                                throw std::invalid_argument("modified_sap: setup gamma must be nonzero");
                             }
                             if (trapdoor.tau.is_zero()) {
-                                throw std::invalid_argument("modified_sqap: setup tau must be nonzero");
+                                throw std::invalid_argument("modified_sap: setup tau must be nonzero");
                             }
 
                             const auto evaluation = reduction_type::instance_map_with_evaluation(
                                 canonical_constraint_system, trapdoor.tau);
                             if (evaluation.Zt.is_zero()) {
-                                throw std::invalid_argument("modified_sqap: setup tau must lie outside the domain");
+                                throw std::invalid_argument("modified_sap: setup tau must lie outside the domain");
                             }
                             const std::size_t n = canonical_constraint_system.num_variables();
                             const std::size_t m = reduction_type::get_domain_size(
@@ -156,7 +156,7 @@ namespace nil {
                             const auto gt_generator = algebra::pair_reduced<curve_type, pairing_policy_type>(
                                 g1_generator, g2_generator);
                             if (!gt_generator) {
-                                throw std::logic_error("modified_sqap: pairing generators produced no GT value");
+                                throw std::logic_error("modified_sap: pairing generators produced no GT value");
                             }
 
                             typename policy_type::verification_key_type verification_key;
@@ -180,17 +180,17 @@ namespace nil {
                 }    // namespace detail
 
                 /**
-                 * Randomized circuit-specific setup for the modified SQAP SNARK.
+                 * Randomized circuit-specific setup for the modified SAP SNARK.
                  */
                 template<typename Policy>
-                class modified_sqap_generator {
+                class modified_sap_generator {
                     using policy_type = Policy;
                     using scalar_field_type = typename policy_type::scalar_field_type;
                     using scalar_value_type = typename scalar_field_type::value_type;
                     using scalar_integral_type = typename scalar_field_type::integral_type;
                     using transcript_policy_type = typename policy_type::transcript_policy_type;
-                    using reduction_type = reductions::modified_sqap_to_polynomials<scalar_field_type>;
-                    using deterministic_generator_type = detail::modified_sqap_deterministic_generator<policy_type>;
+                    using reduction_type = reductions::modified_sap_to_polynomials<scalar_field_type>;
+                    using deterministic_generator_type = detail::modified_sap_deterministic_generator<policy_type>;
 
                     template<typename RandomSource>
                     static scalar_value_type sample_scalar(RandomSource &random_source) {
@@ -234,4 +234,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SQAP_GENERATOR_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SAP_GENERATOR_HPP

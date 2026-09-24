@@ -22,7 +22,7 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#define BOOST_TEST_MODULE modified_sqap_prover_test
+#define BOOST_TEST_MODULE modified_sap_prover_test
 
 #include <boost/test/unit_test.hpp>
 
@@ -35,7 +35,7 @@
 #include <utility>
 #include <vector>
 
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/prover.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/prover.hpp>
 
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
@@ -43,10 +43,10 @@
 #include <nil/crypto3/zk/algorithms/generate.hpp>
 #include <nil/crypto3/zk/algorithms/prove.hpp>
 #include <nil/crypto3/zk/algorithms/verify.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/generator.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/transcript.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap_snark.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/generator.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/policy.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/transcript.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap_snark.hpp>
 
 namespace {
 
@@ -54,17 +54,17 @@ namespace {
     using scalar_value_type = curve_type::scalar_field_type::value_type;
     using base_value_type = curve_type::base_field_type::value_type;
     using g1_value_type = curve_type::g1_type<>::value_type;
-    using pairing_policy_type = nil::crypto3::zk::snark::modified_sqap_bn254_exact_pairing_policy;
-    using transcript_policy_type = nil::crypto3::zk::snark::modified_sqap_bn254_poseidon_transcript_policy;
+    using pairing_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_exact_pairing_policy;
+    using transcript_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_poseidon_transcript_policy;
     using policy_type =
-        nil::crypto3::zk::snark::modified_sqap_policy<curve_type, pairing_policy_type, transcript_policy_type>;
-    using prover_type = nil::crypto3::zk::snark::modified_sqap_prover<policy_type>;
-    using scheme_type = nil::crypto3::zk::snark::modified_sqap_snark<policy_type>;
-    using generator_type = nil::crypto3::zk::snark::modified_sqap_generator<policy_type>;
+        nil::crypto3::zk::snark::modified_sap_policy<curve_type, pairing_policy_type, transcript_policy_type>;
+    using prover_type = nil::crypto3::zk::snark::modified_sap_prover<policy_type>;
+    using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<policy_type>;
+    using generator_type = nil::crypto3::zk::snark::modified_sap_generator<policy_type>;
     using deterministic_generator_type =
-        nil::crypto3::zk::snark::detail::modified_sqap_deterministic_generator<policy_type>;
+        nil::crypto3::zk::snark::detail::modified_sap_deterministic_generator<policy_type>;
     using reduction_type =
-        nil::crypto3::zk::snark::reductions::modified_sqap_to_polynomials<curve_type::scalar_field_type>;
+        nil::crypto3::zk::snark::reductions::modified_sap_to_polynomials<curve_type::scalar_field_type>;
     using polynomial_type = reduction_type::polynomial_type;
     using auxiliary_input_type = policy_type::auxiliary_input_type;
     using proving_key_type = policy_type::proving_key_type;
@@ -93,8 +93,8 @@ namespace {
     };
 
     using controlled_policy_type =
-        nil::crypto3::zk::snark::modified_sqap_policy<curve_type, pairing_policy_type, controlled_transcript_policy>;
-    using controlled_prover_type = nil::crypto3::zk::snark::modified_sqap_prover<controlled_policy_type>;
+        nil::crypto3::zk::snark::modified_sap_policy<curve_type, pairing_policy_type, controlled_transcript_policy>;
+    using controlled_prover_type = nil::crypto3::zk::snark::modified_sap_prover<controlled_policy_type>;
 
     combination_type raw_combination(std::initializer_list<std::pair<std::size_t, int>> terms) {
         combination_type result;
@@ -145,7 +145,7 @@ namespace {
 
 }    // namespace
 
-BOOST_AUTO_TEST_SUITE(modified_sqap_prover_test_suite)
+BOOST_AUTO_TEST_SUITE(modified_sap_prover_test_suite)
 
 BOOST_AUTO_TEST_CASE(generated_keys_validate_without_modification) {
     for (const std::size_t logical_rows : {1, 2, 3, 4, 5}) {
@@ -896,8 +896,8 @@ BOOST_AUTO_TEST_CASE(prove_propagates_opening_failure_without_replacing_a_proof)
         }
     };
     using throwing_policy_type =
-        nil::crypto3::zk::snark::modified_sqap_policy<curve_type, pairing_policy_type, throwing_transcript_policy>;
-    using throwing_scheme_type = nil::crypto3::zk::snark::modified_sqap_snark<throwing_policy_type>;
+        nil::crypto3::zk::snark::modified_sap_policy<curve_type, pairing_policy_type, throwing_transcript_policy>;
+    using throwing_scheme_type = nil::crypto3::zk::snark::modified_sap_snark<throwing_policy_type>;
 
     const auto key = generate_proving_key(test_system());
     const scalar_value_type u(3);

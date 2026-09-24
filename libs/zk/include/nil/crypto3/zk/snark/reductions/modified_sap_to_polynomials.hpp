@@ -22,8 +22,8 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SQAP_TO_POLYNOMIALS_HPP
-#define CRYPTO3_ZK_MODIFIED_SQAP_TO_POLYNOMIALS_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SAP_TO_POLYNOMIALS_HPP
+#define CRYPTO3_ZK_MODIFIED_SAP_TO_POLYNOMIALS_HPP
 
 #include <algorithm>
 #include <bit>
@@ -38,7 +38,7 @@
 #include <nil/crypto3/math/coset.hpp>
 #include <nil/crypto3/math/domains/basic_radix2_domain.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
-#include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/modified_sqap.hpp>
+#include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/modified_sap.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -50,11 +50,11 @@ namespace nil {
                      * Reduction of modified squaring constraints to polynomials on a radix-two domain.
                      */
                     template<typename FieldType>
-                    class modified_sqap_to_polynomials {
+                    class modified_sap_to_polynomials {
                     public:
                         using field_type = FieldType;
                         using field_value_type = typename field_type::value_type;
-                        using constraint_system_type = modified_sqap_constraint_system<field_type>;
+                        using constraint_system_type = modified_sap_constraint_system<field_type>;
                         using constraint_type = typename constraint_system_type::constraint_type;
                         using domain_type = math::basic_radix2_domain<field_type>;
                         using polynomial_type = math::polynomial<field_value_type>;
@@ -87,24 +87,24 @@ namespace nil {
                          */
                         static std::size_t get_domain_size(std::size_t logical_rows) {
                             if (logical_rows == 0) {
-                                throw std::invalid_argument("modified_sqap: expected at least one logical row");
+                                throw std::invalid_argument("modified_sap: expected at least one logical row");
                             }
 
                             const std::size_t log_m = std::max<std::size_t>(1, std::bit_width(logical_rows - 1));
                             if (log_m >= std::numeric_limits<std::size_t>::digits) {
-                                throw std::invalid_argument("modified_sqap: domain size overflow");
+                                throw std::invalid_argument("modified_sap: domain size overflow");
                             }
                             // Existing unity-root and radix-two FFT helpers use shifts of 1u.
                             if (log_m > algebra::fields::arithmetic_params<field_type>::s ||
                                 log_m >= std::numeric_limits<unsigned int>::digits) {
-                                throw std::invalid_argument("modified_sqap: unsupported radix-two domain size");
+                                throw std::invalid_argument("modified_sap: unsupported radix-two domain size");
                             }
 
                             const std::size_t m = std::size_t(1) << log_m;
                             // Z needs m + 1 coefficients; padding needs m constraint rows.
                             if (m >= std::vector<field_value_type>().max_size() ||
                                 m > std::vector<constraint_type>().max_size()) {
-                                throw std::invalid_argument("modified_sqap: domain storage size overflow");
+                                throw std::invalid_argument("modified_sap: domain storage size overflow");
                             }
                             return m;
                         }
@@ -116,7 +116,7 @@ namespace nil {
                         static std::shared_ptr<domain_type> get_domain(const constraint_system_type &cs) {
                             const std::size_t m = get_domain_size(cs.num_constraints());
                             if (!cs.is_valid()) {
-                                throw std::invalid_argument("modified_sqap: invalid constraint system");
+                                throw std::invalid_argument("modified_sap: invalid constraint system");
                             }
                             return std::make_shared<domain_type>(m);
                         }
@@ -142,7 +142,7 @@ namespace nil {
                                                                                 const field_value_type &t) {
                             const std::size_t n = cs.num_variables();
                             if (n > std::vector<field_value_type>().max_size()) {
-                                throw std::invalid_argument("modified_sqap: basis evaluation size overflow");
+                                throw std::invalid_argument("modified_sap: basis evaluation size overflow");
                             }
                             const auto domain = get_domain(cs);
                             instance_evaluation result {std::vector<field_value_type>(n, field_value_type::zero()),
@@ -179,7 +179,7 @@ namespace nil {
                                                                const field_value_type &u,
                                                                const std::vector<field_value_type> &witness) {
                             if (!cs.is_satisfied(u, witness)) {
-                                throw std::invalid_argument("modified_sqap: invalid or unsatisfied witness");
+                                throw std::invalid_argument("modified_sap: invalid or unsatisfied witness");
                             }
                             const auto domain = get_domain(cs);
                             const std::size_t m = domain->size();
@@ -187,7 +187,7 @@ namespace nil {
                             const field_value_type coset(
                                 algebra::fields::arithmetic_params<field_type>::multiplicative_generator);
                             if (coset.is_zero() || domain->compute_vanishing_polynomial(coset).is_zero()) {
-                                throw std::invalid_argument("modified_sqap: unsupported quotient coset");
+                                throw std::invalid_argument("modified_sap: unsupported quotient coset");
                             }
                             // Padding copies the binding row, whose evaluations are a = 0 and c = -u.
                             witness_polynomials result {
@@ -215,7 +215,7 @@ namespace nil {
                             domain->inverse_fft(result.H.get_storage());
                             math::multiply_by_coset(result.H, coset.inversed());
                             if (!result.H[m - 1].is_zero()) {
-                                throw std::invalid_argument("modified_sqap: quotient exceeds degree bound");
+                                throw std::invalid_argument("modified_sap: quotient exceeds degree bound");
                             }
                             result.H.resize(m - 1);
                             return result;
@@ -228,4 +228,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SQAP_TO_POLYNOMIALS_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SAP_TO_POLYNOMIALS_HPP

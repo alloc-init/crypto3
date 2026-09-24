@@ -22,8 +22,8 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SQAP_POLICY_HPP
-#define CRYPTO3_ZK_MODIFIED_SQAP_POLICY_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SAP_POLICY_HPP
+#define CRYPTO3_ZK_MODIFIED_SAP_POLICY_HPP
 
 #include <optional>
 #include <utility>
@@ -35,9 +35,9 @@
 #include <nil/crypto3/algebra/pairing/alt_bn128.hpp>
 #include <nil/crypto3/algebra/pairing/detail/alt_bn128/params.hpp>
 
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/proof.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/proving_key.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/verification_key.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/proof.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/proving_key.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/verification_key.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -50,7 +50,7 @@ namespace nil {
                      * Convert Crypto3's optimized BN254 final exponentiation to
                      * the exact exponent (p^12 - 1) / r.
                      */
-                    class modified_sqap_bn254_exact_final_exponentiation {
+                    class modified_sap_bn254_exact_final_exponentiation {
                         using curve_type = algebra::curves::alt_bn128_254;
                         using native_pairing_policy_type = algebra::pairing::pairing_policy<curve_type>;
                         using pairing_params_type = algebra::pairing::detail::pairing_params<curve_type>;
@@ -87,18 +87,18 @@ namespace nil {
                  * Selecting algebra::pairing::pairing_policy<curve_type> instead
                  * restores Crypto3's native optimized convention.
                  */
-                struct modified_sqap_bn254_exact_pairing_policy :
+                struct modified_sap_bn254_exact_pairing_policy :
                     algebra::pairing::pairing_policy<algebra::curves::alt_bn128_254> {
-                    using final_exponentiation = detail::modified_sqap_bn254_exact_final_exponentiation;
+                    using final_exponentiation = detail::modified_sap_bn254_exact_final_exponentiation;
                 };
 
                 /**
-                 * Compile-time types for the modified SQAP SNARK.
+                 * Compile-time types for the modified SAP SNARK.
                  * PairingPolicy fixes the pairing convention for all scheme operations.
                  * TranscriptPolicy specifies the protocol transcript.
                  */
                 template<typename CurveType, typename PairingPolicy, typename TranscriptPolicy>
-                struct modified_sqap_policy {
+                struct modified_sap_policy {
                     using curve_type = CurveType;
                     using base_field_type = typename curve_type::base_field_type;
                     using scalar_field_type = typename curve_type::scalar_field_type;
@@ -112,10 +112,10 @@ namespace nil {
                     using primary_input_type = typename scalar_field_type::value_type;
                     // The full explicitly indexed witness, including u at index zero.
                     using auxiliary_input_type = std::vector<primary_input_type>;
-                    using constraint_system_type = modified_sqap_constraint_system<scalar_field_type>;
-                    using proof_type = modified_sqap_proof<curve_type>;
-                    using proving_key_type = modified_sqap_proving_key<curve_type, constraint_system_type>;
-                    using verification_key_type = modified_sqap_verification_key<curve_type>;
+                    using constraint_system_type = modified_sap_constraint_system<scalar_field_type>;
+                    using proof_type = modified_sap_proof<curve_type>;
+                    using proving_key_type = modified_sap_proving_key<curve_type, constraint_system_type>;
+                    using verification_key_type = modified_sap_verification_key<curve_type>;
                     using keypair_type = std::pair<proving_key_type, verification_key_type>;
                 };
 
@@ -124,4 +124,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SQAP_POLICY_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SAP_POLICY_HPP

@@ -22,8 +22,8 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#ifndef CRYPTO3_ZK_MODIFIED_SQAP_VERIFIER_HPP
-#define CRYPTO3_ZK_MODIFIED_SQAP_VERIFIER_HPP
+#ifndef CRYPTO3_ZK_MODIFIED_SAP_VERIFIER_HPP
+#define CRYPTO3_ZK_MODIFIED_SAP_VERIFIER_HPP
 
 #include <bit>
 #include <cstddef>
@@ -38,10 +38,10 @@ namespace nil {
             namespace snark {
 
                 /**
-                 * Native verifier for the modified SQAP SNARK.
+                 * Native verifier for the modified SAP SNARK.
                  */
                 template<typename Policy>
-                class modified_sqap_verifier {
+                class modified_sap_verifier {
                     using policy_type = Policy;
                     using curve_type = typename policy_type::curve_type;
                     using pairing_policy_type = typename policy_type::pairing_policy_type;
@@ -134,4 +134,4 @@ namespace nil {
     }    // namespace crypto3
 }    // namespace nil
 
-#endif    // CRYPTO3_ZK_MODIFIED_SQAP_VERIFIER_HPP
+#endif    // CRYPTO3_ZK_MODIFIED_SAP_VERIFIER_HPP

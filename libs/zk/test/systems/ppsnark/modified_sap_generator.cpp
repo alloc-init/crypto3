@@ -22,7 +22,7 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#define BOOST_TEST_MODULE modified_sqap_generator_test
+#define BOOST_TEST_MODULE modified_sap_generator_test
 
 #include <boost/test/unit_test.hpp>
 
@@ -41,9 +41,9 @@
 
 #include <nil/crypto3/random/chacha_urbg.hpp>
 #include <nil/crypto3/zk/algorithms/generate.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/generator.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap/policy.hpp>
-#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sqap_snark.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/generator.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/policy.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap_snark.hpp>
 
 namespace {
 
@@ -53,7 +53,7 @@ namespace {
     using base_value_type = curve_type::base_field_type::value_type;
     using native_pairing_policy_type = nil::crypto3::algebra::pairing::pairing_policy<curve_type>;
     using exact_pairing_policy_type =
-        nil::crypto3::zk::snark::modified_sqap_bn254_exact_pairing_policy;
+        nil::crypto3::zk::snark::modified_sap_bn254_exact_pairing_policy;
 
     struct transcript_policy {
         template<typename ConstraintSystem>
@@ -77,15 +77,15 @@ namespace {
         }
     };
 
-    using exact_policy_type = nil::crypto3::zk::snark::modified_sqap_policy<
+    using exact_policy_type = nil::crypto3::zk::snark::modified_sap_policy<
         curve_type, exact_pairing_policy_type, transcript_policy>;
-    using native_policy_type = nil::crypto3::zk::snark::modified_sqap_policy<
+    using native_policy_type = nil::crypto3::zk::snark::modified_sap_policy<
         curve_type, native_pairing_policy_type, transcript_policy>;
     using generator_type =
-        nil::crypto3::zk::snark::detail::modified_sqap_deterministic_generator<exact_policy_type>;
+        nil::crypto3::zk::snark::detail::modified_sap_deterministic_generator<exact_policy_type>;
     using native_generator_type =
-        nil::crypto3::zk::snark::detail::modified_sqap_deterministic_generator<native_policy_type>;
-    using scheme_type = nil::crypto3::zk::snark::modified_sqap_snark<exact_policy_type>;
+        nil::crypto3::zk::snark::detail::modified_sap_deterministic_generator<native_policy_type>;
+    using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<exact_policy_type>;
     using system_type = exact_policy_type::constraint_system_type;
     using constraint_type = system_type::constraint_type;
     using variable_type = constraint_type::variable_type;
@@ -158,7 +158,7 @@ namespace {
 
 }    // namespace
 
-BOOST_AUTO_TEST_SUITE(modified_sqap_generator_test_suite)
+BOOST_AUTO_TEST_SUITE(modified_sap_generator_test_suite)
 
 BOOST_AUTO_TEST_CASE(deterministic_setup_matches_small_independent_example) {
     const auto source = two_row_system();

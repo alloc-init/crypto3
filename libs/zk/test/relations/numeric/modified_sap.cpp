@@ -22,7 +22,7 @@
 // SOFTWARE.
 //---------------------------------------------------------------------------//
 
-#define BOOST_TEST_MODULE modified_sqap_test
+#define BOOST_TEST_MODULE modified_sap_test
 
 #include <boost/test/unit_test.hpp>
 
@@ -37,17 +37,17 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
-#include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/modified_sqap.hpp>
-#include <nil/crypto3/zk/snark/reductions/modified_sqap_to_polynomials.hpp>
+#include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/modified_sap.hpp>
+#include <nil/crypto3/zk/snark/reductions/modified_sap_to_polynomials.hpp>
 
 namespace {
     using field_type = nil::crypto3::algebra::curves::alt_bn128_254::scalar_field_type;
     using value_type = field_type::value_type;
-    using system_type = nil::crypto3::zk::snark::modified_sqap_constraint_system<field_type>;
+    using system_type = nil::crypto3::zk::snark::modified_sap_constraint_system<field_type>;
     using constraint_type = system_type::constraint_type;
     using variable_type = constraint_type::variable_type;
     using combination_type = constraint_type::linear_combination_type;
-    using reduction_type = nil::crypto3::zk::snark::reductions::modified_sqap_to_polynomials<field_type>;
+    using reduction_type = nil::crypto3::zk::snark::reductions::modified_sap_to_polynomials<field_type>;
     using polynomial_type = reduction_type::polynomial_type;
     using reference_backend_type = nil::crypto3::math::polynomial_arithmetic::schoolbook_backend<value_type>;
 
@@ -89,7 +89,7 @@ namespace {
     }
 }    // namespace
 
-BOOST_AUTO_TEST_SUITE(modified_sqap_test_suite)
+BOOST_AUTO_TEST_SUITE(modified_sap_test_suite)
 
 BOOST_AUTO_TEST_CASE(valid_structure_and_index_boundaries) {
     const system_type minimum {1, {binding_row()}};
@@ -393,7 +393,7 @@ BOOST_AUTO_TEST_CASE(radix2_domain_respects_field_capacity) {
     // BN254's base field supports radix-two size 2 only, allowing a small unsupported-size fixture.
     using base_field_type = nil::crypto3::algebra::curves::alt_bn128_254::base_field_type;
     using base_value_type = base_field_type::value_type;
-    using base_reduction_type = nil::crypto3::zk::snark::reductions::modified_sqap_to_polynomials<base_field_type>;
+    using base_reduction_type = nil::crypto3::zk::snark::reductions::modified_sap_to_polynomials<base_field_type>;
     using base_system_type = base_reduction_type::constraint_system_type;
     using base_constraint_type = base_system_type::constraint_type;
     const base_constraint_type binding {{}, base_constraint_type::linear_combination_type(-base_value_type::one())};
