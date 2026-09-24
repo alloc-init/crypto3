@@ -49,6 +49,8 @@ namespace {
     using reduction_type = snark::reductions::r1cs_to_modified_sap<field_type>;
     using source_system_type = snark::r1cs_constraint_system<field_type>;
     using source_constraint_type = snark::r1cs_constraint<field_type>;
+    using primary_input_type = snark::r1cs_primary_input<field_type>;
+    using auxiliary_input_type = snark::r1cs_auxiliary_input<field_type>;
     using variable_type = recovery_type::variable_type;
 
     source_system_type source_example() {
@@ -438,17 +440,19 @@ BOOST_AUTO_TEST_CASE(instance_map_preserves_empty_and_constant_products_in_sourc
     BOOST_CHECK(!impossible.is_satisfied(value_type(3), witness));
 }
 
-BOOST_AUTO_TEST_CASE(instance_map_rejects_invalid_public_input_counts) {
+BOOST_AUTO_TEST_CASE(maps_reject_invalid_public_input_counts) {
     for (const auto public_size : {std::size_t(0), std::size_t(2), std::numeric_limits<std::size_t>::max()}) {
         auto source = source_example();
         source.primary_input_size = public_size;
         const auto original = source;
         BOOST_CHECK_THROW(reduction_type::instance_map(source), std::invalid_argument);
+        BOOST_CHECK_THROW(reduction_type::witness_map(source, {value_type(3)}, {value_type(2), value_type(1)}),
+                          std::invalid_argument);
         BOOST_CHECK(source == original);
     }
 }
 
-BOOST_AUTO_TEST_CASE(instance_map_checks_every_raw_source_index_before_normalization) {
+BOOST_AUTO_TEST_CASE(maps_check_every_raw_source_index_before_normalization_or_evaluation) {
     using source_combination_type = nil::crypto3::math::linear_combination<variable_type>;
     const std::array<source_combination_type source_constraint_type::*, 3> combinations = {
         &source_constraint_type::a, &source_constraint_type::b, &source_constraint_type::c};
@@ -465,6 +469,9 @@ BOOST_AUTO_TEST_CASE(instance_map_checks_every_raw_source_index_before_normaliza
                     }
                     const auto original = source;
                     BOOST_CHECK_THROW(reduction_type::instance_map(source), std::invalid_argument);
+                    BOOST_CHECK_THROW(
+                        reduction_type::witness_map(source, {value_type(3)}, {value_type(2), value_type(1)}),
+                        std::invalid_argument);
                     BOOST_CHECK(source == original);
                 }
             }
@@ -472,7 +479,7 @@ BOOST_AUTO_TEST_CASE(instance_map_checks_every_raw_source_index_before_normaliza
     }
 }
 
-BOOST_AUTO_TEST_CASE(instance_map_rejects_witness_size_overflow_without_allocation) {
+BOOST_AUTO_TEST_CASE(maps_reject_witness_size_overflow_without_allocation) {
     const auto max_size = std::numeric_limits<std::size_t>::max();
     const auto max_witness_size = std::vector<value_type>().max_size();
     for (const auto auxiliary_size : {max_size, max_size - 1, max_witness_size - recovery_type::witness_size,
@@ -481,16 +488,185 @@ BOOST_AUTO_TEST_CASE(instance_map_rejects_witness_size_overflow_without_allocati
         source.auxiliary_input_size = auxiliary_size;
         const auto original = source;
         BOOST_CHECK_THROW(reduction_type::instance_map(source), std::invalid_argument);
+        BOOST_CHECK_THROW(reduction_type::witness_map(source, {value_type(3)}, {value_type(2), value_type(1)}),
+                          std::invalid_argument);
         BOOST_CHECK(source == original);
     }
 }
 
-BOOST_AUTO_TEST_CASE(instance_map_rejects_unsupported_domain) {
+BOOST_AUTO_TEST_CASE(maps_reject_unsupported_domain) {
     // The BN254 base field supports only a size-two radix-two domain, smaller than constant recovery needs.
     using base_field = fields::alt_bn128_base_field<254>;
     snark::r1cs_constraint_system<base_field> source;
     source.primary_input_size = 1;
     BOOST_CHECK_THROW(snark::reductions::r1cs_to_modified_sap<base_field>::instance_map(source), std::invalid_argument);
+    BOOST_CHECK_THROW(
+        snark::reductions::r1cs_to_modified_sap<base_field>::witness_map(source, {base_field::value_type(3)}, {}),
+        std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(witness_map_matches_reference_and_preserves_inputs) {
+    const auto source = source_example();
+    const auto original = source;
+    const auto converted = reduction_type::instance_map(source);
+    const auto recovery = recovery_system<field_type>(3);
+    for (const auto &u : {value_type(1), value_type(3), value_type(5), value_type(field_type::modulus - 2)}) {
+        const value_type x = u - value_type::one();
+        const primary_input_type primary = {u};
+        const auxiliary_input_type auxiliary = {x, value_type::one()};
+        const auto original_primary = primary;
+        const auto original_auxiliary = auxiliary;
+        const auto witness = reduction_type::witness_map(source, primary, auxiliary);
+
+        // Use the independent recovery reference and the known source auxiliary ((x + 1) - 1)^2.
+        auto expected = witness_from_integer(recovery, u.to_integral(), 3);
+        expected[1] = x;
+        expected[2] = value_type::one();
+        expected.push_back(x.squared());
+        BOOST_CHECK(witness == expected);
+        BOOST_CHECK_EQUAL(witness.size(), converted.num_variables());
+        BOOST_CHECK(converted.is_satisfied(u, witness));
+        BOOST_CHECK(source == original);
+        BOOST_CHECK(primary == original_primary);
+        BOOST_CHECK(auxiliary == original_auxiliary);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(witness_map_preserves_product_order_and_unused_variables) {
+    auto source = source_example();
+    source.auxiliary_input_size = 3;                      // The last original auxiliary is unused.
+    source.add_constraint({{}, variable_type(2), {}});    // 0*x = 0.
+    source.add_constraint({variable_type(0), variable_type(0), variable_type(0)});    // 1*1 = 1.
+    source.add_constraint(source_constraint_type());                                  // 0*0 = 0.
+    source_constraint_type signed_product {variable_type(0), variable_type(3), -variable_type(1)};
+    signed_product.a.add_term(variable_type(2), -value_type(2));    // (1 - 2*x)*y = -u.
+    source.add_constraint(signed_product);
+
+    const primary_input_type primary = {value_type(3)};
+    const auxiliary_input_type auxiliary = {value_type(2), value_type(1), value_type(7)};
+    BOOST_REQUIRE(source.is_satisfied(primary, auxiliary));
+    const auto converted = reduction_type::instance_map(source);
+    const auto witness = reduction_type::witness_map(source, primary, auxiliary);
+    BOOST_REQUIRE_EQUAL(witness.size(), 515);
+    const std::vector<value_type> prefix = {value_type(3), value_type(2), value_type(1), value_type(7)};
+    BOOST_CHECK_EQUAL_COLLECTIONS(witness.begin(), witness.begin() + 4, prefix.begin(), prefix.end());
+    BOOST_CHECK(witness[4].is_one());    // Recovery starts after all original variables, including unused ones.
+    const std::vector<value_type> products = {value_type(4), value_type(4), value_type(0), value_type(0),
+                                              value_type(16)};
+    BOOST_CHECK_EQUAL_COLLECTIONS(witness.end() - 5, witness.end(), products.begin(), products.end());
+    BOOST_CHECK(converted.is_satisfied(primary[0], witness));
+}
+
+BOOST_AUTO_TEST_CASE(witness_map_accepts_unsorted_and_repeated_terms) {
+    auto source = source_example();
+    auto &row = source.constraints.front();
+    for (auto *combination : {&row.a, &row.b, &row.c}) {
+        std::reverse(combination->terms.begin(), combination->terms.end());
+        combination->add_term(variable_type(0), value_type(9));
+        combination->add_term(variable_type(0), -value_type(9));
+        combination->add_term(variable_type(2), value_type::zero());
+    }
+    BOOST_CHECK(!source.is_valid());    // Raw terms need not satisfy the ordinary ordering requirement.
+    const auto original = source;
+    const primary_input_type primary = {value_type(3)};
+    const auxiliary_input_type auxiliary = {value_type(2), value_type(1)};
+    const auto witness = reduction_type::witness_map(source, primary, auxiliary);
+    BOOST_CHECK(witness == reduction_type::witness_map(source_example(), primary, auxiliary));
+    BOOST_CHECK(reduction_type::instance_map(source).is_satisfied(primary[0], witness));
+    BOOST_CHECK(source == original);
+}
+
+BOOST_AUTO_TEST_CASE(witness_map_handles_sources_without_constraints) {
+    for (const std::size_t auxiliary_size : {0, 3}) {
+        source_system_type source;
+        source.primary_input_size = 1;
+        source.auxiliary_input_size = auxiliary_size;
+        const primary_input_type primary = {value_type(3)};
+        const auxiliary_input_type auxiliary(auxiliary_size, value_type(13));
+        const auto witness = reduction_type::witness_map(source, primary, auxiliary);
+        BOOST_REQUIRE_EQUAL(witness.size(), source.num_variables() + recovery_type::witness_size);
+        BOOST_CHECK(witness[0] == primary[0]);
+        BOOST_CHECK_EQUAL_COLLECTIONS(witness.begin() + 1, witness.begin() + source.num_variables(), auxiliary.begin(),
+                                      auxiliary.end());
+        BOOST_CHECK(witness[source.num_variables()].is_one());
+        BOOST_CHECK(reduction_type::instance_map(source).is_satisfied(primary[0], witness));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(witness_map_rejects_input_length_mismatches) {
+    const auto source = source_example();
+    const auto original = source;
+    for (const std::size_t primary_size : {0, 1, 2}) {
+        for (const std::size_t auxiliary_size : {0, 1, 2, 3}) {
+            if (primary_size == 1 && auxiliary_size == 2) {
+                continue;
+            }
+            BOOST_TEST_CONTEXT("primary size " << primary_size << ", auxiliary size " << auxiliary_size) {
+                const primary_input_type primary(primary_size, value_type(3));
+                auxiliary_input_type auxiliary(auxiliary_size, value_type(1));
+                if (!auxiliary.empty()) {
+                    auxiliary[0] = value_type(2);
+                }
+                const auto original_primary = primary;
+                const auto original_auxiliary = auxiliary;
+                BOOST_CHECK_THROW(reduction_type::witness_map(source, primary, auxiliary), std::invalid_argument);
+                BOOST_CHECK(source == original);
+                BOOST_CHECK(primary == original_primary);
+                BOOST_CHECK(auxiliary == original_auxiliary);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(witness_map_rejects_even_canonical_public_inputs) {
+    const auto source = source_example();
+    const auto original = source;
+    for (const auto &u : {value_type(0), value_type(2), value_type(field_type::modulus - 1)}) {
+        const primary_input_type primary = {u};
+        const auxiliary_input_type auxiliary = {u - value_type::one(), value_type::one()};
+        const auto original_primary = primary;
+        const auto original_auxiliary = auxiliary;
+        BOOST_REQUIRE(source.is_satisfied(primary, auxiliary));
+        BOOST_CHECK_THROW(reduction_type::witness_map(source, primary, auxiliary), std::invalid_argument);
+        BOOST_CHECK(source == original);
+        BOOST_CHECK(primary == original_primary);
+        BOOST_CHECK(auxiliary == original_auxiliary);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(witness_map_agrees_with_source_on_small_assignments) {
+    const auto source = source_example();
+    const auto converted = reduction_type::instance_map(source);
+    for (const unsigned u : {1, 3, 5, 7}) {
+        for (unsigned x = 0; x < 5; ++x) {
+            for (unsigned y = 0; y < 5; ++y) {
+                BOOST_TEST_CONTEXT("u=" << u << ", x=" << x << ", y=" << y) {
+                    const primary_input_type primary = {value_type(u)};
+                    const auxiliary_input_type auxiliary = {value_type(x), value_type(y)};
+                    const bool satisfied = (x + 1) * y == u;
+                    BOOST_CHECK_EQUAL(source.is_satisfied(primary, auxiliary), satisfied);
+                    if (satisfied) {
+                        const auto witness = reduction_type::witness_map(source, primary, auxiliary);
+                        BOOST_CHECK(converted.is_satisfied(primary[0], witness));
+                    } else {
+                        BOOST_CHECK_THROW(reduction_type::witness_map(source, primary, auxiliary),
+                                          std::invalid_argument);
+                    }
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(witness_map_checks_later_source_rows) {
+    auto source = source_example();
+    source.add_constraint({variable_type(0), variable_type(0), {}});    // Unsatisfiable: 1*1 = 0.
+    const auto original = source;
+    const primary_input_type primary = {value_type(3)};
+    const auxiliary_input_type auxiliary = {value_type(2), value_type(1)};
+    BOOST_REQUIRE(!source.is_satisfied(primary, auxiliary));
+    BOOST_CHECK_THROW(reduction_type::witness_map(source, primary, auxiliary), std::invalid_argument);
+    BOOST_CHECK(source == original);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

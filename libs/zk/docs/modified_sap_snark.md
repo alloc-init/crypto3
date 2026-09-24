@@ -500,6 +500,55 @@ into proof rejection. Validation is not conditional on assertions or debug mode.
 Native field values already denote residues; decoding must reject an
 out-of-range integer before constructing a field value and losing that evidence.
 
+### 6.1 Ordinary R1CS example
+
+Supply a Crypto3 ChaCha generator seeded from cryptographic entropy. This example
+converts `(x + 1) * y = u` and runs setup once, then proves the assignments
+`(u, x, y) = (3, 2, 1)` and `(5, 4, 1)` with the same keys. The frontend accepts
+the ordinary public and private input vectors; the SNARK receives the scalar
+`u` and the complete converted witness.
+
+```cpp
+#include <nil/crypto3/algebra/curves/alt_bn128.hpp>
+#include <nil/crypto3/math/linear_variable.hpp>
+#include <nil/crypto3/random/chacha_urbg.hpp>
+#include <nil/crypto3/zk/snark/reductions/r1cs_to_modified_sap.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/policy.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/transcript.hpp>
+#include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap_snark.hpp>
+
+bool prove_r1cs_assignments(nil::crypto3::random::chacha_urbg<> &random_source) {
+    namespace snark = nil::crypto3::zk::snark;
+    using curve_type = nil::crypto3::algebra::curves::alt_bn128_254;
+    using field_type = curve_type::scalar_field_type;
+    using value_type = field_type::value_type;
+    using variable_type = nil::crypto3::math::linear_variable<field_type>;
+    using policy = snark::modified_sap_policy<curve_type, snark::modified_sap_bn254_exact_pairing_policy,
+                                              snark::modified_sap_bn254_poseidon_transcript_policy>;
+    using scheme = snark::modified_sap_snark<policy>;
+    using frontend = snark::reductions::r1cs_to_modified_sap<field_type>;
+
+    snark::r1cs_constraint_system<field_type> source;
+    source.primary_input_size = 1;
+    source.auxiliary_input_size = 2;
+    // Source indices: 0 = one, 1 = u, 2 = x, 3 = y.
+    snark::r1cs_constraint<field_type> row {variable_type(0), variable_type(3), variable_type(1)};
+    row.a.add_term(variable_type(2));    // (1 + x)*y = u.
+    source.add_constraint(row);
+
+    const auto constraint_system = frontend::instance_map(source);
+    const auto keys = scheme::generate(constraint_system, random_source);
+    for (const auto &u : {value_type(3), value_type(5)}) {
+        const auto witness = frontend::witness_map(source, {u}, {u - value_type::one(), value_type::one()});
+        const auto proof = scheme::prove(keys.first, u, witness);
+        if (!scheme::verify(keys.second, u, proof)) {
+            return false;
+        }
+    }
+    return true;
+}
+```
+
 ## 7. Transcript requirements
 
 ### 7.1 Poseidon profile

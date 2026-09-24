@@ -24,6 +24,7 @@
 
 #define BOOST_TEST_MODULE modified_sap_prover_test
 
+#include <boost/multiprecision/integer.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <array>
@@ -43,6 +44,8 @@
 #include <nil/crypto3/zk/algorithms/generate.hpp>
 #include <nil/crypto3/zk/algorithms/prove.hpp>
 #include <nil/crypto3/zk/algorithms/verify.hpp>
+#include <nil/crypto3/zk/snark/arithmetization/bit_comparison.hpp>
+#include <nil/crypto3/zk/snark/reductions/r1cs_to_modified_sap.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/generator.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/policy.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/transcript.hpp>
@@ -60,11 +63,14 @@ namespace {
         nil::crypto3::zk::snark::modified_sap_policy<curve_type, pairing_policy_type, transcript_policy_type>;
     using prover_type = nil::crypto3::zk::snark::modified_sap_prover<policy_type>;
     using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<policy_type>;
-    using generator_type = nil::crypto3::zk::snark::modified_sap_generator<policy_type>;
     using deterministic_generator_type =
         nil::crypto3::zk::snark::detail::modified_sap_deterministic_generator<policy_type>;
     using reduction_type =
         nil::crypto3::zk::snark::reductions::modified_sap_to_polynomials<curve_type::scalar_field_type>;
+    using r1cs_reduction_type =
+        nil::crypto3::zk::snark::reductions::r1cs_to_modified_sap<curve_type::scalar_field_type>;
+    using r1cs_system_type = nil::crypto3::zk::snark::r1cs_constraint_system<curve_type::scalar_field_type>;
+    using r1cs_constraint_type = nil::crypto3::zk::snark::r1cs_constraint<curve_type::scalar_field_type>;
     using polynomial_type = reduction_type::polynomial_type;
     using auxiliary_input_type = policy_type::auxiliary_input_type;
     using proving_key_type = policy_type::proving_key_type;
@@ -115,11 +121,22 @@ namespace {
                  {raw_combination({{2, 1}}), raw_combination({{2, -2}})}}};
     }
 
+    r1cs_system_type r1cs_test_system() {
+        r1cs_system_type source;
+        source.primary_input_size = 1;
+        source.auxiliary_input_size = 2;
+        // Source indices: 0 = one, 1 = u, 2 = x, 3 = y. Enforce (x + 1)*y = u.
+        r1cs_constraint_type row {variable_type(0), variable_type(3), variable_type(1)};
+        row.a.add_term(variable_type(2));
+        source.add_constraint(row);
+        return source;
+    }
+
     proving_key_type generate_proving_key(const system_type &source) {
         // Fixed seed for reproducible tests with the production setup and transcript.
         const std::array<std::uint8_t, 32> seed = {};
         nil::crypto3::random::chacha_urbg<> random_source(seed);
-        return generator_type::process(source, random_source).first;
+        return scheme_type::generate(source, random_source).first;
     }
 
     deterministic_generator_type::trapdoor_type test_trapdoor() {
@@ -890,8 +907,8 @@ BOOST_AUTO_TEST_CASE(prove_entry_points_reject_invalid_inputs_without_replacing_
 
 BOOST_AUTO_TEST_CASE(prove_propagates_opening_failure_without_replacing_a_proof) {
     struct throwing_transcript_policy : transcript_policy_type {
-        static challenge_type
-            proof_challenge(const verification_key_type &, const commitment_type &, const challenge_type &) {
+        static challenge_type proof_challenge(const verification_key_type &, const commitment_type &,
+                                              const challenge_type &) {
             throw std::runtime_error("test transcript failure");
         }
     };
@@ -1053,6 +1070,223 @@ BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_circuit_and_setup) {
     BOOST_REQUIRE(matching_parameters == keys.second);
     BOOST_CHECK(!scheme_type::verify(changed_keys.second, u, proof));
     BOOST_CHECK(!scheme_type::verify(keys.second, u, changed_proof));
+}
+
+BOOST_AUTO_TEST_CASE(r1cs_frontend_reuses_setup_for_multiple_assignments) {
+    // One public input u and two private variables x, y, constrained by (x + 1)*y = u.
+    const auto source = r1cs_test_system();
+    const auto converted = r1cs_reduction_type::instance_map(source);
+    const auto key = generate_proving_key(converted);
+    BOOST_REQUIRE_EQUAL(key.constraint_system.num_constraints(), 564);
+    BOOST_REQUIRE_EQUAL(key.verification_key.num_variables, 510);
+    BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, 1024);
+
+    // Equivalent unsorted, repeated, zero and cancelling terms use the same converted circuit and key.
+    auto raw_source = source;
+    raw_source.constraints[0].a.add_term(variable_type(2), scalar_value_type(2));
+    raw_source.constraints[0].a.add_term(variable_type(0), scalar_value_type::zero());
+    raw_source.constraints[0].a.add_term(variable_type(2), -scalar_value_type(2));
+    BOOST_REQUIRE(r1cs_reduction_type::instance_map(raw_source) == converted);
+
+    for (const auto &u : {scalar_value_type(1), scalar_value_type(3), scalar_value_type(5), -scalar_value_type(2)}) {
+        BOOST_TEST_CONTEXT("public input: " << u) {
+            const auto witness = r1cs_reduction_type::witness_map(
+                raw_source, {u}, {u - scalar_value_type::one(), scalar_value_type::one()});
+            const auto proof = nil::crypto3::zk::prove<scheme_type>(key, u, witness);
+            BOOST_REQUIRE(nil::crypto3::zk::verify<scheme_type>(key.verification_key, u, proof));
+            const auto changed_u = u == scalar_value_type(3) ? scalar_value_type(5) : scalar_value_type(3);
+            BOOST_CHECK(!scheme_type::verify(key.verification_key, changed_u, proof));
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(r1cs_frontend_prover_rejects_changed_witness_entries) {
+    const auto source = r1cs_test_system();
+    const auto key = generate_proving_key(r1cs_reduction_type::instance_map(source));
+    const scalar_value_type u(3);
+    const auto witness = r1cs_reduction_type::witness_map(source, {u}, {scalar_value_type(2), scalar_value_type(1)});
+    const auto proof = scheme_type::prove(key, u, witness);
+    BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
+
+    // N = 3; recovery has 254 bits, 99 new markers and 153 comparison auxiliaries.
+    const std::array changes = {
+        std::pair {"public-input entry", std::size_t(0)},     std::pair {"source variable", std::size_t(1)},
+        std::pair {"recovered one", std::size_t(3)},          std::pair {"comparison marker", std::size_t(257)},
+        std::pair {"comparison auxiliary", std::size_t(356)}, std::pair {"source auxiliary", std::size_t(509)}};
+    BOOST_REQUIRE_EQUAL(witness.size(), 510);
+    for (const auto &[name, index] : changes) {
+        BOOST_TEST_CONTEXT("changed entry: " << name) {
+            auto changed = witness;
+            // Keep the recovered bit Boolean when changing the source's constant-one wire.
+            changed[index] = index == 3 ? scalar_value_type::zero() : changed[index] + scalar_value_type::one();
+            BOOST_CHECK_THROW(scheme_type::prove(key, u, changed), std::invalid_argument);
+        }
+    }
+    BOOST_CHECK_THROW(scheme_type::prove(key, scalar_value_type(5), witness), std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(r1cs_frontend_proofs_cover_empty_sources_and_domain_boundaries) {
+    const scalar_value_type u(3);
+    const std::array sizes = {std::pair {0, 1024}, std::pair {231, 1024}, std::pair {232, 2048}};
+    for (const auto &[source_rows, domain_size] : sizes) {
+        BOOST_TEST_CONTEXT("source rows: " << source_rows << ", domain size: " << domain_size) {
+            auto source = r1cs_test_system();
+            const auto multiplication = source.constraints.front();
+            source.constraints.resize(source_rows, multiplication);
+            const auto converted = r1cs_reduction_type::instance_map(source);
+            BOOST_REQUIRE_EQUAL(converted.num_constraints(), 562 + 2 * source_rows);
+            const auto key = generate_proving_key(converted);
+            BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, domain_size);
+            // Setup keeps the logical rows; polynomial construction supplies binding-row padding.
+            BOOST_CHECK_EQUAL(key.constraint_system.num_constraints(), converted.num_constraints());
+
+            const auto witness =
+                r1cs_reduction_type::witness_map(source, {u}, {scalar_value_type(2), scalar_value_type(1)});
+            const auto proof = scheme_type::prove(key, u, witness);
+            BOOST_CHECK(scheme_type::verify(key.verification_key, u, proof));
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(r1cs_bitcoin_amount_range_proofs) {
+    // Bitcoin amounts satisfy 0 <= amount <= MAX_MONEY, measured in satoshis.
+    constexpr std::uint64_t satoshis_per_bitcoin = 100'000'000;
+    constexpr std::uint64_t max_money = 21'000'000 * satoshis_per_bitcoin;
+    constexpr std::uint64_t bound = max_money + 1;
+    const std::size_t bit_count = boost::multiprecision::msb(bound) + 1;
+    BOOST_REQUIRE_EQUAL(bit_count, 51);
+
+    r1cs_system_type source;
+    source.primary_input_size = 1;
+    source.auxiliary_input_size = 1 + bit_count;
+    // Source indices: 0 = one, 1 = u, 2 = amount, then little-endian bits and comparison markers.
+    const variable_type amount_variable(2);
+    constexpr std::size_t first_bit = 3;
+    for (std::size_t bit = 0; bit < bit_count; ++bit) {
+        // b*(b - 1) = 0.
+        r1cs_constraint_type boolean;
+        boolean.a.add_term(variable_type(first_bit + bit));
+        boolean.b.add_term(variable_type(0), -scalar_value_type::one());
+        boolean.b.add_term(variable_type(first_bit + bit));
+        source.add_constraint(boolean);
+    }
+
+    // The 51-bit sum is smaller than the scalar-field modulus, so packing cannot wrap.
+    r1cs_constraint_type packing;
+    packing.b.add_term(variable_type(0));
+    packing.c.add_term(amount_variable);
+    auto weight = scalar_value_type::one();
+    for (std::size_t bit = 0; bit < bit_count; ++bit) {
+        packing.a.add_term(variable_type(first_bit + bit), weight);
+        weight += weight;
+    }
+    source.add_constraint(packing);
+
+    // u = 2*amount + 1 satisfies the inner SNARK's odd-public-input rule for every valid amount.
+    r1cs_constraint_type public_binding {variable_type(0), variable_type(0), variable_type(1)};
+    public_binding.a.add_term(amount_variable, scalar_value_type(2));
+    source.add_constraint(public_binding);
+
+    // The shared comparator enforces amount < MAX_MONEY + 1, including the upper endpoint.
+    variable_type marker(0);
+    nil::crypto3::zk::snark::for_each_bit_comparison(
+        bound, bit_count, curve_type::scalar_field_type::modulus,
+        [&](std::size_t bit) { marker = variable_type(first_bit + bit); },
+        [&](std::size_t bit) {
+            const variable_type next_marker(source.num_variables() + 1);
+            ++source.auxiliary_input_size;
+            source.add_constraint({marker, variable_type(first_bit + bit), next_marker});
+            marker = next_marker;
+        },
+        [&](std::size_t begin, std::size_t end) {
+            r1cs_constraint_type zero_product;
+            zero_product.a.add_term(marker);
+            for (std::size_t bit = begin; bit < end; ++bit) {
+                zero_product.b.add_term(variable_type(first_bit + bit));
+            }
+            source.add_constraint(zero_product);
+        });
+    BOOST_REQUIRE(source.is_valid());
+
+    // 1 public input + 1 amount + 51 bits + 19 comparison markers; the implicit one is excluded.
+    BOOST_REQUIRE_EQUAL(source.num_variables(), 72);
+    BOOST_REQUIRE_EQUAL(source.auxiliary_input_size, 71);
+    // 51 Booleanity + 1 packing + 1 public binding + 29 comparison constraints.
+    BOOST_REQUIRE_EQUAL(source.num_constraints(), 82);
+
+    const auto make_auxiliary = [&](const scalar_value_type &amount) {
+        std::vector<scalar_value_type> auxiliary = {amount};
+        auxiliary.reserve(source.auxiliary_input_size);
+        const auto integer = amount.to_integral();
+        for (std::size_t bit = 0; bit < bit_count; ++bit) {
+            auxiliary.emplace_back(boost::multiprecision::bit_test(integer, bit));
+        }
+        auto marker_value = scalar_value_type::one();
+        nil::crypto3::zk::snark::for_each_bit_comparison(
+            bound, bit_count, curve_type::scalar_field_type::modulus,
+            [&](std::size_t bit) { marker_value = auxiliary[1 + bit]; },
+            [&](std::size_t bit) {
+                marker_value *= auxiliary[1 + bit];
+                auxiliary.push_back(marker_value);
+            },
+            // No range check here: the circuit must reject out-of-range assignments itself.
+            [](std::size_t, std::size_t) { });
+        return auxiliary;
+    };
+
+    // One public-API setup serves zero, one satoshi, one BTC and both upper-bound cases.
+    const auto converted = r1cs_reduction_type::instance_map(source);
+    // 72 source values + 506 constant-recovery values + 82 multiplication auxiliaries.
+    BOOST_REQUIRE_EQUAL(converted.num_variables(), 660);
+    // 1 public binding + 561 constant-recovery rows + 2*82 source rows, before padding.
+    BOOST_REQUIRE_EQUAL(converted.num_constraints(), 726);
+    const auto key = generate_proving_key(converted);
+    BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, 1024);
+    const std::array<std::uint64_t, 5> valid_amounts = {0, 1, satoshis_per_bitcoin, max_money - 1, max_money};
+    for (const auto amount : valid_amounts) {
+        BOOST_TEST_CONTEXT("satoshis: " << amount) {
+            const auto u = scalar_value_type(2 * amount + 1);
+            const auto auxiliary = make_auxiliary(scalar_value_type(amount));
+            BOOST_REQUIRE(source.is_satisfied({u}, auxiliary));
+            const auto witness = r1cs_reduction_type::witness_map(source, {u}, auxiliary);
+            BOOST_REQUIRE(converted.is_satisfied(u, witness));
+            const auto proof = scheme_type::prove(key, u, witness);
+            BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
+            BOOST_CHECK(!scheme_type::verify(key.verification_key, u + scalar_value_type(2), proof));
+        }
+    }
+
+    // MAX_MONEY + 1 and 2^51 - 1 fit the bit width: rejection must come from the comparison.
+    auto without_comparison = source;
+    without_comparison.constraints.resize(bit_count + 2);
+    const std::uint64_t above_bit_width = std::uint64_t(1) << bit_count;
+    for (const auto amount : {max_money + 1, above_bit_width - 1}) {
+        const auto u = scalar_value_type(2 * amount + 1);
+        BOOST_REQUIRE(without_comparison.is_satisfied({u}, make_auxiliary(scalar_value_type(amount))));
+    }
+    const std::array invalid_amounts = {-scalar_value_type::one(), scalar_value_type(max_money + 1),
+                                        scalar_value_type(above_bit_width - 1), scalar_value_type(above_bit_width)};
+    for (const auto &amount : invalid_amounts) {
+        BOOST_TEST_CONTEXT("out-of-range amount: " << amount) {
+            const auto u = scalar_value_type(2) * amount + scalar_value_type::one();
+            const auto auxiliary = make_auxiliary(amount);
+            BOOST_CHECK(!source.is_satisfied({u}, auxiliary));
+            BOOST_CHECK_THROW(r1cs_reduction_type::witness_map(source, {u}, auxiliary), std::invalid_argument);
+        }
+    }
+
+    // Replace bits [0, 1] by [2, 0]: the packed amount stays 2, but Booleanity must fail.
+    const scalar_value_type u(5);
+    auto auxiliary = make_auxiliary(scalar_value_type(2));
+    auto witness = r1cs_reduction_type::witness_map(source, {u}, auxiliary);
+    auxiliary[1] = scalar_value_type(2);
+    auxiliary[2] = scalar_value_type::zero();
+    BOOST_CHECK(!source.is_satisfied({u}, auxiliary));
+    BOOST_CHECK_THROW(r1cs_reduction_type::witness_map(source, {u}, auxiliary), std::invalid_argument);
+    // Also reject a modified-SAP witness supplied directly to the public prover.
+    witness[first_bit - 1] = auxiliary[1];
+    witness[first_bit] = auxiliary[2];
+    BOOST_CHECK_THROW(scheme_type::prove(key, u, witness), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
