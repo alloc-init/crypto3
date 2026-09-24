@@ -54,6 +54,7 @@
 
 #include <nil/crypto3/zk/snark/arithmetization/arithmetic_programs/sap.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/constraint_satisfaction_problems/r1cs.hpp>
+#include <nil/crypto3/zk/snark/reductions/detail/r1cs_to_sap.hpp>
 #include <nil/crypto3/zk/snark/reductions/detail/sap_quotient.hpp>
 
 namespace nil {
@@ -64,14 +65,6 @@ namespace nil {
                     template<typename FieldType>
                     class r1cs_to_sap {
                         typedef FieldType field_type;
-
-                        /**
-                         * Helper function to multiply a field element by 4 efficiently
-                         */
-                        static typename FieldType::value_type times_four(typename FieldType::value_type x) {
-                            typename FieldType::value_type times_two = x + x;
-                            return times_two + times_two;
-                        }
 
                     public:
                         /**
@@ -121,27 +114,14 @@ namespace nil {
                              */
                             std::size_t extra_var_offset = cs.num_variables() + 1;
                             for (std::size_t i = 0; i < cs.num_constraints(); ++i) {
-                                for (std::size_t j = 0; j < cs.constraints[i].a.terms.size(); ++j) {
-                                    A_in_Lagrange_basis[cs.constraints[i].a.terms[j].index][2 * i] +=
-                                        cs.constraints[i].a.terms[j].coeff;
-                                    A_in_Lagrange_basis[cs.constraints[i].a.terms[j].index][2 * i + 1] +=
-                                        cs.constraints[i].a.terms[j].coeff;
-                                }
-
-                                for (std::size_t j = 0; j < cs.constraints[i].b.terms.size(); ++j) {
-                                    A_in_Lagrange_basis[cs.constraints[i].b.terms[j].index][2 * i] +=
-                                        cs.constraints[i].b.terms[j].coeff;
-                                    A_in_Lagrange_basis[cs.constraints[i].b.terms[j].index][2 * i + 1] -=
-                                        cs.constraints[i].b.terms[j].coeff;
-                                }
-
-                                for (std::size_t j = 0; j < cs.constraints[i].c.terms.size(); ++j) {
-                                    C_in_Lagrange_basis[cs.constraints[i].c.terms[j].index][2 * i] +=
-                                        times_four(cs.constraints[i].c.terms[j].coeff);
-                                }
-
-                                C_in_Lagrange_basis[extra_var_offset + i][2 * i] += FieldType::value_type::one();
-                                C_in_Lagrange_basis[extra_var_offset + i][2 * i + 1] += FieldType::value_type::one();
+                                detail::r1cs_to_sap_constraint(
+                                    cs.constraints[i].a, cs.constraints[i].b, cs.constraints[i].c, extra_var_offset + i,
+                                    [&](std::size_t row, std::size_t index, const auto &coefficient) {
+                                        A_in_Lagrange_basis[index][2 * i + row] += coefficient;
+                                    },
+                                    [&](std::size_t row, std::size_t index, const auto &coefficient) {
+                                        C_in_Lagrange_basis[index][2 * i + row] += coefficient;
+                                    });
                             }
 
                             /**
@@ -179,7 +159,7 @@ namespace nil {
                                 A_in_Lagrange_basis[i][extra_constr_offset + 2 * i - 1] += FieldType::value_type::one();
                                 A_in_Lagrange_basis[0][extra_constr_offset + 2 * i - 1] += FieldType::value_type::one();
                                 C_in_Lagrange_basis[i][extra_constr_offset + 2 * i - 1] +=
-                                    times_four(FieldType::value_type::one());
+                                    detail::times_four<FieldType>(FieldType::value_type::one());
                                 C_in_Lagrange_basis[extra_var_offset2 + i][extra_constr_offset + 2 * i - 1] +=
                                     FieldType::value_type::one();
 
@@ -224,27 +204,14 @@ namespace nil {
                              */
                             std::size_t extra_var_offset = cs.num_variables() + 1;
                             for (std::size_t i = 0; i < cs.num_constraints(); ++i) {
-                                for (std::size_t j = 0; j < cs.constraints[i].a.terms.size(); ++j) {
-                                    At[cs.constraints[i].a.terms[j].index] +=
-                                        u[2 * i] * cs.constraints[i].a.terms[j].coeff;
-                                    At[cs.constraints[i].a.terms[j].index] +=
-                                        u[2 * i + 1] * cs.constraints[i].a.terms[j].coeff;
-                                }
-
-                                for (std::size_t j = 0; j < cs.constraints[i].b.terms.size(); ++j) {
-                                    At[cs.constraints[i].b.terms[j].index] +=
-                                        u[2 * i] * cs.constraints[i].b.terms[j].coeff;
-                                    At[cs.constraints[i].b.terms[j].index] -=
-                                        u[2 * i + 1] * cs.constraints[i].b.terms[j].coeff;
-                                }
-
-                                for (std::size_t j = 0; j < cs.constraints[i].c.terms.size(); ++j) {
-                                    Ct[cs.constraints[i].c.terms[j].index] +=
-                                        times_four(u[2 * i] * cs.constraints[i].c.terms[j].coeff);
-                                }
-
-                                Ct[extra_var_offset + i] += u[2 * i];
-                                Ct[extra_var_offset + i] += u[2 * i + 1];
+                                detail::r1cs_to_sap_constraint(
+                                    cs.constraints[i].a, cs.constraints[i].b, cs.constraints[i].c, extra_var_offset + i,
+                                    [&](std::size_t row, std::size_t index, const auto &coefficient) {
+                                        At[index] += u[2 * i + row] * coefficient;
+                                    },
+                                    [&](std::size_t row, std::size_t index, const auto &coefficient) {
+                                        Ct[index] += u[2 * i + row] * coefficient;
+                                    });
                             }
 
                             std::size_t extra_constr_offset = 2 * cs.num_constraints();
@@ -256,7 +223,7 @@ namespace nil {
                             for (std::size_t i = 1; i <= cs.num_inputs(); ++i) {
                                 At[i] += u[extra_constr_offset + 2 * i - 1];
                                 At[0] += u[extra_constr_offset + 2 * i - 1];
-                                Ct[i] += times_four(u[extra_constr_offset + 2 * i - 1]);
+                                Ct[i] += detail::times_four<FieldType>(u[extra_constr_offset + 2 * i - 1]);
                                 Ct[extra_var_offset2 + i] += u[extra_constr_offset + 2 * i - 1];
 
                                 At[i] += u[extra_constr_offset + 2 * i];
@@ -324,8 +291,8 @@ namespace nil {
                             std::size_t sap_num_variables = cs.num_variables() + cs.num_constraints() + cs.num_inputs();
 
                             r1cs_variable_assignment<FieldType> full_variable_assignment = primary_input;
-                            full_variable_assignment.insert(
-                                full_variable_assignment.end(), auxiliary_input.begin(), auxiliary_input.end());
+                            full_variable_assignment.insert(full_variable_assignment.end(), auxiliary_input.begin(),
+                                                            auxiliary_input.end());
                             /**
                              * we need to generate values of all the extra variables that we added
                              * during the reduction
@@ -341,11 +308,8 @@ namespace nil {
                                  * we introduced that is not present in the input.
                                  * its value is (a - b)^2
                                  */
-                                typename FieldType::value_type extra_var =
-                                    cs.constraints[i].a.evaluate(full_variable_assignment) -
-                                    cs.constraints[i].b.evaluate(full_variable_assignment);
-                                extra_var = extra_var * extra_var;
-                                full_variable_assignment.push_back(extra_var);
+                                full_variable_assignment.push_back(detail::r1cs_to_sap_auxiliary(
+                                    cs.constraints[i].a, cs.constraints[i].b, full_variable_assignment));
                             }
                             for (std::size_t i = 1; i <= cs.num_inputs(); ++i) {
                                 /**
@@ -400,7 +364,8 @@ namespace nil {
                             /* again, accounting for all constraints */
                             std::size_t extra_var_offset = cs.num_variables() + 1;
                             for (std::size_t i = 0; i < cs.num_constraints(); ++i) {
-                                aC[2 * i] += times_four(cs.constraints[i].c.evaluate(full_variable_assignment));
+                                aC[2 * i] += detail::times_four<FieldType>(
+                                    cs.constraints[i].c.evaluate(full_variable_assignment));
 
                                 aC[2 * i] += full_variable_assignment[extra_var_offset + i - 1];
                                 aC[2 * i + 1] += full_variable_assignment[extra_var_offset + i - 1];
@@ -410,7 +375,8 @@ namespace nil {
                             aC[extra_constr_offset] += FieldType::value_type::one();
 
                             for (std::size_t i = 1; i <= cs.num_inputs(); ++i) {
-                                aC[extra_constr_offset + 2 * i - 1] += times_four(full_variable_assignment[i - 1]);
+                                aC[extra_constr_offset + 2 * i - 1] +=
+                                    detail::times_four<FieldType>(full_variable_assignment[i - 1]);
 
                                 aC[extra_constr_offset + 2 * i - 1] +=
                                     full_variable_assignment[extra_var_offset2 + i - 1];

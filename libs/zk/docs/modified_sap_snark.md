@@ -100,6 +100,211 @@ The verifier's oddness check then guarantees `b[0] == 1`. The circuit must enfor
 both the field reconstruction and the integer range; field equality alone would
 permit a noncanonical representative with different parity.
 
+### 2.1 Ordinary R1CS frontend
+
+The frontend is `snark::reductions::r1cs_to_modified_sap<FieldType>`, under
+`snark/reductions/r1cs_to_modified_sap.hpp`. For this protocol, `FieldType` is
+`Fr`. It accepts Crypto3's existing `r1cs_constraint_system<FieldType>` with
+exactly one public input. Its interface contract is:
+
+```cpp
+using reduction = snark::reductions::r1cs_to_modified_sap<Fr>;
+auto constraint_system = reduction::instance_map(r1cs);
+auto witness = reduction::witness_map(r1cs, primary_input, auxiliary_input);
+```
+
+`instance_map` returns an owned `modified_sap_constraint_system<FieldType>`.
+`witness_map` takes the existing `r1cs_primary_input<FieldType>` and
+`r1cs_auxiliary_input<FieldType>` vectors and returns
+`std::vector<typename FieldType::value_type>`, containing the complete modified
+SAP witness. Both operations borrow their inputs as const references, preserve
+them, and retain no references to them.
+
+The source public-input vector contains exactly one element, `u`; the native
+SNARK operations receive that element as a scalar. Circuit conversion depends
+only on the source constraints, declared dimensions, and field modulus. The same
+converted circuit and setup serve every satisfying assignment with an admissible
+odd `u`. Polynomial construction and domain padding use the reduction defined
+earlier in this section.
+
+#### Source indexing and witness layout
+
+Let `N = 1 + r1cs.auxiliary_input_size` be the number of source variables,
+excluding its implicit constant, and let `M` be its number of constraints.
+Source index zero means one, index one is `u`, and indices `2..N` are the source
+auxiliaries in their original order. Let:
+
+```text
+k = bit_length(r)
+h = number of 1 bits of r, excluding its most and least significant bits
+g = number of maximal consecutive runs of 0 bits of r
+s = h + g + 1
+```
+
+Since `r` is odd, its most and least significant bits are both one. The constant
+recovery below uses `k` bits, `h` new prefix markers and `s` multiplication
+constraints. Each multiplication introduces one additional square-conversion
+variable. All witness ranges below are half-open:
+
+| Witness range | Contents and order |
+| --- | --- |
+| `[0, N)` | Source assignment: `u`, then the original auxiliaries |
+| `[N, N + k)` | Bits `b[0]..b[k-1]` of `canonical(u)`, least significant first |
+| `[N + k, N + k + h)` | New comparison prefix markers, in most-to-least-significant traversal order |
+| `[N + k + h, N + k + h + s)` | Square-conversion variables for the comparison products, in emission order |
+| `[N + k + h + s, N + k + h + s + M)` | Square-conversion variables for the source constraints, in source row order |
+
+Remap each source term without changing its coefficient:
+
+```text
+source index 0       -> witness index N       // recovered one: b[0]
+source index i >= 1  -> witness index i - 1
+```
+
+In particular, a source constant coefficient becomes a coefficient of `w[N]`,
+not `w[0]`. Scalar coefficients in linear combinations remain fixed field
+elements; they do not require a witness variable of their own.
+
+#### Multiplication and square conversion
+
+Reuse the R1CS-to-SAP conversion for each multiplication `L * R = O`, where
+`L`, `R` and `O` are the left, right and output linear combinations over the
+explicit witness indices, respectively.
+Introduce one variable `t`, whose honest value is `(L(w) - R(w))^2`, and emit
+these two modified SAP rows, in this order:
+
+```text
+a = L + R,    c = 4*O + t - w[0]
+a = L - R,    c = t - w[0]
+```
+
+With the binding row enforcing `w[0] = u`, these rows state
+`(L + R)^2 = 4*O + t` and `(L - R)^2 = t`. Subtraction gives `4*L*R = 4*O`,
+which is equivalent to the source multiplication because `r` is odd. Use this
+same conversion for comparison products and source constraints. It adds two
+rows and one variable for each product, including products with empty or
+constant linear combinations.
+
+More generally, an ordinary square equation `a(w)^2 = d(w)` becomes the modified
+row `(a, d - w[0])`. The frontend returns canonical sparse rows: combine
+duplicate indices, remove zero coefficients, and sort terms, preserving every
+row and its position. Only the modified SAP binding and constant-recovery rows
+are added to the converted source rows; ordinary SAP's additional public-input
+independence rows belong to that separate reduction.
+
+#### Canonical constant recovery
+
+Write `r[j]` for bit `j` of the integer modulus. First constrain each witness bit
+to be Boolean by emitting `(a, c) = (b[j], b[j] - w[0])` for `j = 0..k-1`.
+Then emit one reconstruction row:
+
+```text
+B = sum_(j=0..k-1) 2^j * b[j]
+a = 0,    c = -B
+```
+
+This row enforces `B = u` in Fr. Its coefficients `2^j` are field elements.
+The integer represented by these bits must additionally satisfy `B < r`.
+Enforce this bound by comparing from the most significant bit downward:
+
+1. Start with marker `e = b[k-1]`, reusing that bit's witness slot. For a prefix
+   that has passed the comparison, `e = 1` means it equals the corresponding
+   prefix of `r`; `e = 0` means it is already smaller.
+2. Traverse positions `k-2` down to `1`. At each maximal run of zero bits of
+   `r`, emit `e * sum_(j in run) b[j] = 0`, leaving `e` unchanged. At each one
+   bit, allocate a new marker `e_next`, emit `e * b[j] = e_next`, and replace
+   `e` with `e_next`.
+3. At position zero, emit `e * b[0] = 0`. Because `r[0] = 1`, this requires a
+   strict decrease at that position or an earlier one, excluding equality.
+
+Emit the two square-conversion rows for each product immediately in traversal
+order. Every marker is Boolean by induction from the input bits and the product
+equations. Each zero run contains fewer than `r` bits, so a sum of Boolean ones
+cannot wrap to zero in Fr. Thus a zero-run check with `e = 1` forces every bit in
+that run to zero; with `e = 0`, lower bits are unrestricted by the comparison.
+
+These constraints require no constant-one witness: they use only bit variables,
+prefix markers, zero linear combinations, fixed coefficients, and the binding
+to `u`. Booleanity, reconstruction and the bound together force the bits to be
+the canonical representation of `u`. Its required oddness then establishes
+`b[0] = 1`, making the source constant remapping sound. In particular, bits of
+`u + r` cannot substitute for those of `u`, even when both fit in `k` bits and
+give the same field value.
+
+The witness map computes the bits from `u.to_integral()`, each new prefix marker
+as the product of the preceding marker and the corresponding bit, and each
+square-conversion variable as `(L(w) - R(w))^2`. It then computes the source
+square-conversion variables in source row order. These computations provide
+witness values; the emitted equations independently enforce their correctness.
+
+#### Row order and dimensions
+
+The logical rows are ordered as follows:
+
+| Row range | Contents |
+| --- | --- |
+| `[0, 1)` | Public-input binding: `(a, c) = (0, -w[0])` |
+| `[1, k + 1)` | Booleanity of `b[0]..b[k-1]` |
+| `[k + 1, k + 2)` | Reconstruction of `u` from the bits |
+| `[k + 2, k + 2 + 2*s)` | Comparison products, two rows per product |
+| `[k + 2 + 2*s, k + 2 + 2*s + 2*M)` | Source products, two rows per original constraint |
+
+Consequently:
+
+```text
+n = N + k + h + s + M
+q = k + 2 + 2*s + 2*M
+```
+
+For BN254 Fr, `k = 254`, `h = 99`, `g = 53` and `s = 153`. The frontend
+therefore produces `n = N + 506 + M` witness entries and `q = 562 + 2*M` logical
+rows. These counts exclude domain padding. The radix-two domain size `m` is
+determined from `q` as above. Even a source with no multiplication constraints
+retains the binding and constant-recovery rows.
+
+#### Validation and failure behavior
+
+Both maps throw `std::invalid_argument` for a source public-input count other
+than one, out-of-range source indices, size arithmetic or container-size
+overflow, or dimensions unsupported by the modified SAP domain. Check every
+raw source index against `0..N`, including zero-coefficient and cancelling
+terms, before normalization or evaluation. Unsorted and repeated terms with
+valid indices are accepted and normalized using the existing linear-combination
+operations. Empty combinations and unused source variables are allowed.
+
+The witness map additionally requires `primary_input.size() == 1`,
+`auxiliary_input.size() == r1cs.auxiliary_input_size`, an odd canonical `u`, and
+satisfaction of every source row under the ordinary implicit-one convention.
+Otherwise it throws `std::invalid_argument` and returns no witness. Check all
+dimensions and indices before invoking source evaluation. Validation applies in
+release builds as well as debug builds. Allocation failures propagate.
+
+For a structurally valid source and admissible `u`, every satisfying source
+assignment has the extension described above. Conversely, any assignment
+satisfying the converted relation has `w[0] = u` and `w[N] = 1`; projecting its
+first `N` entries recovers a satisfying source assignment. This converse applies
+to arbitrary supplied witnesses, independently of the witness map.
+
+#### Worked example
+
+Take the source constraint `(x + 1) * y = u`, with public input `[3]` and
+auxiliaries `[2, 1]`. Source indices are `0 = one`, `1 = u`, `2 = x`, `3 = y`,
+so `N = 3` and `M = 1`. The modified witness begins with `[3, 2, 1]`, followed
+by the bits of 3: `b[0] = w[3] = 1`, `b[1] = w[4] = 1`, and all other bits zero.
+
+The source row becomes `L = w[1] + w[3]`, `R = w[2]`, `O = w[0]`.
+Its square-conversion variable is `t = (3 - 1)^2 = 4`. The two rows evaluate to:
+
+```text
+(3 + 1)^2 - (4*3 + 4 - 3) = 16 - 13 = 3
+(3 - 1)^2 - (4 - 3)       =  4 -  1 = 3
+```
+
+Over BN254 Fr, `t` occupies witness slot 509, the total witness size is 510,
+the logical row count is 564, and the padded domain size is 1024. Changing the
+public input to 5 and the auxiliaries to `[4, 1]` uses the same converted circuit;
+only the witness values change.
+
 ## 3. Groups and pairing convention
 
 Use `algebra::curves::alt_bn128_254` and its `g1_type<>`, `g2_type<>`, scalar,
@@ -485,5 +690,4 @@ knowledge-soundness proof.
 | Area | Unspecified details |
 | --- | --- |
 | Setup sampling | Rejection rules beyond `tau != 0`, `Z(tau) != 0`, and `gamma != 0`. |
-| R1CS conversion | Full variable-index mapping and constraint construction for canonical constant recovery. |
 | Serialization | Wire format, version identifiers, byte order, canonical decoding and resource limits. |
