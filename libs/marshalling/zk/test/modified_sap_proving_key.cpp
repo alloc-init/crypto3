@@ -35,7 +35,6 @@
 #include <limits>
 #include <stdexcept>
 #include <tuple>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -45,9 +44,14 @@
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/transcript.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap_snark.hpp>
 
+#include "detail/marshalling.hpp"
+
 namespace {
     namespace types = nil::crypto3::marshalling::types;
     namespace snark = nil::crypto3::zk::snark;
+    namespace test_tools = nil::crypto3::marshalling::test_tools;
+    using test_tools::encode;
+    using test_tools::write_integer;
     using curve_type = nil::crypto3::algebra::curves::alt_bn128_254;
     using scalar_field_type = curve_type::scalar_field_type;
     using scalar_type = scalar_field_type::value_type;
@@ -129,31 +133,9 @@ namespace {
         return offsets;
     }
 
-    template<typename Marshalled>
-    std::vector<std::uint8_t> encode(const Marshalled &filled) {
-        std::vector<std::uint8_t> bytes(filled.length());
-        auto output = bytes.begin();
-        BOOST_REQUIRE(filled.write(output, bytes.size()) == status_type::success);
-        BOOST_CHECK(output == bytes.end());
-        return bytes;
-    }
-
     key_type decode(const std::vector<std::uint8_t> &bytes) {
-        marshalled_type filled;
-        auto input = bytes.begin();
-        BOOST_REQUIRE(filled.read(input, bytes.size()) == status_type::success);
-        BOOST_CHECK(input == bytes.end());
-        return types::make_modified_sap_proving_key<policy_type, endianness>(filled);
-    }
-
-    template<typename Integral>
-    void write_integer(std::vector<std::uint8_t> &bytes, std::size_t offset, const Integral &value) {
-        using integral_type = std::conditional_t<std::is_integral_v<Integral>,
-                                                 nil::marshalling::types::integral<type_base, Integral>,
-                                                 types::integral<type_base, Integral>>;
-        const integral_type raw(value);
-        auto output = bytes.begin() + offset;
-        BOOST_REQUIRE(raw.write(output, bytes.size() - offset) == status_type::success);
+        return types::make_modified_sap_proving_key<policy_type, endianness>(
+            test_tools::decode<marshalled_type>(bytes));
     }
 
     void check_invalid_key(const key_type &key, const marshalled_type &filled) {
@@ -290,7 +272,8 @@ BOOST_AUTO_TEST_CASE(proving_key_rejects_invalid_query_points) {
             if (bad_flags) {
                 bytes[offsets[i] + S] = 0xc0;    // Infinity cannot also carry a sign bit.
             } else {
-                write_integer(bytes, offsets[i] + S, base_field_type::integral_type(base_field_type::modulus));
+                write_integer<endianness>(
+                    bytes, offsets[i] + S, base_field_type::integral_type(base_field_type::modulus));
             }
             marshalled_type decoded;
             auto input = bytes.begin();
@@ -318,7 +301,7 @@ BOOST_AUTO_TEST_CASE(proving_key_reuses_nested_verification_key_validation) {
     // Even a directly assembled raw digest must be rejected before conversion reduces it modulo p.
     filled = canonical;
     std::vector<std::uint8_t> raw(32);
-    write_integer(raw, 0, base_field_type::integral_type(base_field_type::modulus));
+    write_integer<endianness>(raw, 0, base_field_type::integral_type(base_field_type::modulus));
     auto input = raw.begin();
     BOOST_REQUIRE(std::get<7>(std::get<7>(filled.value()).value()).read(input, raw.size()) == status_type::success);
     BOOST_CHECK_THROW((types::make_modified_sap_proving_key<policy_type, endianness>(filled)), std::invalid_argument);
@@ -332,9 +315,9 @@ BOOST_AUTO_TEST_CASE(proving_key_reader_checks_nested_encodings) {
     for (std::size_t offset : {system_offset + 5 * S, vk_offset + 192, canonical.size() - 32}) {
         auto bytes = canonical;
         if (offset == system_offset + 5 * S) {
-            write_integer(bytes, offset, scalar_field_type::integral_type(scalar_field_type::modulus));
+            write_integer<endianness>(bytes, offset, scalar_field_type::integral_type(scalar_field_type::modulus));
         } else {
-            write_integer(bytes, offset, base_field_type::integral_type(base_field_type::modulus));
+            write_integer<endianness>(bytes, offset, base_field_type::integral_type(base_field_type::modulus));
         }
         marshalled_type decoded;
         auto input = bytes.begin();
@@ -348,7 +331,7 @@ BOOST_AUTO_TEST_CASE(proving_key_reader_bounds_counts_and_preserves_nested_bytes
     for (std::size_t offset : query_offsets(filled)) {
         for (std::size_t count : {std::numeric_limits<std::size_t>::max(), canonical.size()}) {
             auto bytes = canonical;
-            write_integer(bytes, offset, count);
+            write_integer<endianness>(bytes, offset, count);
             marshalled_type decoded;
             auto input = bytes.begin();
             const auto expected =
@@ -358,7 +341,7 @@ BOOST_AUTO_TEST_CASE(proving_key_reader_bounds_counts_and_preserves_nested_bytes
     }
     // One query point would leave one byte too few for the later prefixes and nested objects.
     std::vector<std::uint8_t> bytes(8 * S + verification_key_size + 32 - 1, 0);
-    write_integer(bytes, 0, std::size_t(1));
+    write_integer<endianness>(bytes, 0, std::size_t(1));
     marshalled_type decoded;
     auto input = bytes.begin();
     BOOST_CHECK(decoded.read(input, bytes.size()) == status_type::not_enough_data);
@@ -368,9 +351,9 @@ BOOST_AUTO_TEST_CASE(proving_key_reader_bounds_counts_and_preserves_nested_bytes
     // Six empty queries, then n = q = 1, empty a and one advertised c term with no term bytes.
     // The system reader must not consume bytes reserved for the following verification key.
     bytes.assign(10 * S + verification_key_size, 0);
-    write_integer(bytes, 6 * S, std::size_t(1));
-    write_integer(bytes, 7 * S, std::size_t(1));
-    write_integer(bytes, 9 * S, std::size_t(1));
+    write_integer<endianness>(bytes, 6 * S, std::size_t(1));
+    write_integer<endianness>(bytes, 7 * S, std::size_t(1));
+    write_integer<endianness>(bytes, 9 * S, std::size_t(1));
     input = bytes.begin();
     BOOST_CHECK(decoded.read(input, bytes.size()) == status_type::not_enough_data);
     BOOST_CHECK(input == bytes.begin() + 10 * S);

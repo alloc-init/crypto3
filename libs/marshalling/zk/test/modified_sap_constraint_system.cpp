@@ -41,8 +41,13 @@
 #include <nil/crypto3/algebra/curves/alt_bn128.hpp>
 #include <nil/crypto3/marshalling/zk/types/modified_sap/constraint_system.hpp>
 
+#include "detail/marshalling.hpp"
+
 namespace {
     namespace types = nil::crypto3::marshalling::types;
+    namespace test_tools = nil::crypto3::marshalling::test_tools;
+    using test_tools::encode;
+    using test_tools::write_integer;
     using field_type = nil::crypto3::algebra::curves::alt_bn128_254::scalar_field_type;
     using value_type = field_type::value_type;
     using system_type = nil::crypto3::zk::snark::modified_sap_constraint_system<field_type>;
@@ -79,33 +84,10 @@ namespace {
                  {combination({{1, 1}}), combination({{2, 1}})}}};
     }
 
-    template<typename Marshalled>
-    std::vector<std::uint8_t> encode(const Marshalled &filled) {
-        std::vector<std::uint8_t> bytes(filled.length());
-        auto output = bytes.begin();
-        BOOST_REQUIRE(filled.write(output, bytes.size()) == status_type::success);
-        BOOST_CHECK(output == bytes.end());
-        return bytes;
-    }
-
     template<typename Endianness>
     system_type decode(const std::vector<std::uint8_t> &bytes) {
-        codec<Endianness> filled;
-        auto input = bytes.begin();
-        BOOST_REQUIRE(filled.read(input, bytes.size()) == status_type::success);
-        BOOST_CHECK(input == bytes.end());
-        return types::make_modified_sap_constraint_system<system_type, Endianness>(filled);
-    }
-
-    template<typename Endianness, typename Integral>
-    void write_integer(std::vector<std::uint8_t> &bytes, std::size_t offset, const Integral &value) {
-        using type_base = nil::marshalling::field_type<Endianness>;
-        using integral_type =
-            std::conditional_t<std::is_integral_v<Integral>, nil::marshalling::types::integral<type_base, Integral>,
-                               types::integral<type_base, Integral>>;
-        const integral_type raw(value);
-        auto output = bytes.begin() + offset;
-        BOOST_REQUIRE(raw.write(output, bytes.size() - offset) == status_type::success);
+        return types::make_modified_sap_constraint_system<system_type, Endianness>(
+            test_tools::decode<codec<Endianness>>(bytes));
     }
 
     template<typename Endianness>

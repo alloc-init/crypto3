@@ -40,9 +40,13 @@
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/transcript.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap_snark.hpp>
 
+#include "detail/marshalling.hpp"
+
 namespace {
     namespace types = nil::crypto3::marshalling::types;
     namespace snark = nil::crypto3::zk::snark;
+    namespace test_tools = nil::crypto3::marshalling::test_tools;
+    using test_tools::write_integer;
     using curve_type = nil::crypto3::algebra::curves::alt_bn128_254;
     using scalar_field_type = curve_type::scalar_field_type;
     using scalar_type = scalar_field_type::value_type;
@@ -60,20 +64,11 @@ namespace {
     }
 
     std::vector<std::uint8_t> encode(const proof_type &proof) {
-        const auto filled = types::fill_modified_sap_proof<proof_type, endianness>(proof);
-        std::vector<std::uint8_t> bytes(filled.length());
-        auto output = bytes.begin();
-        BOOST_REQUIRE(filled.write(output, bytes.size()) == status_type::success);
-        BOOST_CHECK(output == bytes.end());
-        return bytes;
+        return test_tools::encode(types::fill_modified_sap_proof<proof_type, endianness>(proof));
     }
 
     proof_type decode(const std::vector<std::uint8_t> &bytes) {
-        marshalled_type filled;
-        auto input = bytes.begin();
-        BOOST_REQUIRE(filled.read(input, bytes.size()) == status_type::success);
-        BOOST_CHECK(input == bytes.end());
-        return types::make_modified_sap_proof<proof_type, endianness>(filled);
+        return types::make_modified_sap_proof<proof_type, endianness>(test_tools::decode<marshalled_type>(bytes));
     }
 
     void check_invalid_encoding(const std::vector<std::uint8_t> &bytes) {
@@ -83,12 +78,6 @@ namespace {
         // A failed read must not be followed by make_modified_sap_proof.
     }
 
-    template<typename Integral>
-    void write_raw_integer(std::vector<std::uint8_t> &bytes, std::size_t offset, const Integral &value) {
-        const types::integral<type_base, Integral> raw(value);
-        auto output = bytes.begin() + offset;
-        BOOST_REQUIRE(raw.write(output, bytes.size() - offset) == status_type::success);
-    }
 }    // namespace
 
 BOOST_AUTO_TEST_CASE(proof_wire_format_and_round_trip) {
@@ -147,7 +136,7 @@ BOOST_AUTO_TEST_CASE(proof_rejects_noncanonical_scalars) {
             for (const integral_type &raw :
                  {integral_type(scalar_field_type::modulus), integral_type(scalar_field_type::modulus + 1)}) {
                 auto bytes = canonical;
-                write_raw_integer(bytes, offset, raw);
+                write_integer<endianness>(bytes, offset, raw);
                 check_invalid_encoding(bytes);
             }
             // Fixed-width integer decoding could discard either of these unused high bits.
@@ -175,10 +164,10 @@ BOOST_AUTO_TEST_CASE(proof_rejects_malformed_points) {
     for (std::size_t offset : {0, 32}) {
         BOOST_TEST_CONTEXT("point at byte " << offset) {
             auto bytes = canonical;
-            write_raw_integer(bytes, offset, base_field_type::integral_type(base_field_type::modulus));
+            write_integer<endianness>(bytes, offset, base_field_type::integral_type(base_field_type::modulus));
             check_invalid_encoding(bytes);
             bytes = canonical;
-            write_raw_integer(bytes, offset, nonresidue_x.to_integral());
+            write_integer<endianness>(bytes, offset, nonresidue_x.to_integral());
             check_invalid_encoding(bytes);
             bytes = canonical;
             bytes[offset] |= 0x80;    // Both finite fixture points have a nonzero infinity payload.
@@ -209,7 +198,7 @@ BOOST_AUTO_TEST_CASE(proof_conversions_reject_invalid_assembled_values) {
     });
 
     std::vector<std::uint8_t> noncanonical(32);
-    write_raw_integer(noncanonical, 0, scalar_field_type::integral_type(scalar_field_type::modulus));
+    write_integer<endianness>(noncanonical, 0, scalar_field_type::integral_type(scalar_field_type::modulus));
     nil::marshalling::processing::tuple_for_each_from<2>(filled.value(), [&](auto &member) {
         const auto original = member;
         auto input = noncanonical.begin();

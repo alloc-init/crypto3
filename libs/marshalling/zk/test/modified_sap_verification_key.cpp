@@ -45,9 +45,14 @@
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/transcript.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap_snark.hpp>
 
+#include "detail/marshalling.hpp"
+
 namespace {
     namespace types = nil::crypto3::marshalling::types;
     namespace snark = nil::crypto3::zk::snark;
+    namespace test_tools = nil::crypto3::marshalling::test_tools;
+    using test_tools::encode;
+    using test_tools::write_integer;
     using curve_type = nil::crypto3::algebra::curves::alt_bn128_254;
     using scalar_field_type = curve_type::scalar_field_type;
     using scalar_type = scalar_field_type::value_type;
@@ -82,28 +87,9 @@ namespace {
         return key;
     }
 
-    template<typename Marshalled>
-    std::vector<std::uint8_t> encode(const Marshalled &filled) {
-        std::vector<std::uint8_t> bytes(filled.length());
-        auto output = bytes.begin();
-        BOOST_REQUIRE(filled.write(output, bytes.size()) == status_type::success);
-        BOOST_CHECK(output == bytes.end());
-        return bytes;
-    }
-
     key_type decode(const std::vector<std::uint8_t> &bytes) {
-        marshalled_type filled;
-        auto input = bytes.begin();
-        BOOST_REQUIRE(filled.read(input, bytes.size()) == status_type::success);
-        BOOST_CHECK(input == bytes.end());
-        return types::make_modified_sap_verification_key<policy_type, endianness>(filled);
-    }
-
-    template<typename Integral>
-    void write_raw_integer(std::vector<std::uint8_t> &bytes, std::size_t offset, const Integral &value) {
-        const types::integral<type_base, Integral> raw(value);
-        auto output = bytes.begin() + offset;
-        BOOST_REQUIRE(raw.write(output, bytes.size() - offset) == status_type::success);
+        return types::make_modified_sap_verification_key<policy_type, endianness>(
+            test_tools::decode<marshalled_type>(bytes));
     }
 
     void check_invalid_encoding(const std::vector<std::uint8_t> &bytes) {
@@ -165,7 +151,7 @@ BOOST_AUTO_TEST_CASE(verification_key_preserves_gt_component_and_alpha_order) {
         for (const auto &outer : value.data) {
             for (const auto &middle : outer.data) {
                 for (const auto &component : middle.data) {
-                    write_raw_integer(expected, offset, component.to_integral());
+                    write_integer<endianness>(expected, offset, component.to_integral());
                     offset += 32;
                 }
             }
@@ -216,7 +202,7 @@ BOOST_AUTO_TEST_CASE(verification_key_rejects_noncanonical_components) {
             for (const integral_type &raw :
                  {integral_type(base_field_type::modulus), integral_type(base_field_type::modulus + 1)}) {
                 auto bytes = canonical;
-                write_raw_integer(bytes, offset, raw);
+                write_integer<endianness>(bytes, offset, raw);
                 check_invalid_encoding(bytes);
             }
             for (std::uint8_t padding : {0x40, 0x80}) {
@@ -234,7 +220,7 @@ BOOST_AUTO_TEST_CASE(verification_key_rejects_malformed_g2_encodings) {
         BOOST_TEST_CONTEXT("G2 at byte " << offset) {
             for (std::size_t component : {0, 32}) {
                 auto bytes = canonical;
-                write_raw_integer(bytes, offset + component, integral_type(base_field_type::modulus));
+                write_integer<endianness>(bytes, offset + component, integral_type(base_field_type::modulus));
                 check_invalid_encoding(bytes);
             }
             auto bytes = canonical;
@@ -330,7 +316,7 @@ BOOST_AUTO_TEST_CASE(verification_key_rejects_invalid_assembled_field_storage) {
                           std::invalid_argument);
 
         std::vector<std::uint8_t> raw(384, 0);
-        write_raw_integer(raw, 11 * 32, integral_type(base_field_type::modulus));
+        write_integer<endianness>(raw, 11 * 32, integral_type(base_field_type::modulus));
         auto input = raw.begin();
         BOOST_REQUIRE(field.read(input, raw.size()) == status_type::success);
         BOOST_CHECK(!filled.valid());
@@ -339,7 +325,7 @@ BOOST_AUTO_TEST_CASE(verification_key_rejects_invalid_assembled_field_storage) {
     }
     auto filled = original;
     std::vector<std::uint8_t> raw(32);
-    write_raw_integer(raw, 0, integral_type(base_field_type::modulus));
+    write_integer<endianness>(raw, 0, integral_type(base_field_type::modulus));
     auto input = raw.begin();
     BOOST_REQUIRE(std::get<7>(filled.value()).read(input, raw.size()) == status_type::success);
     BOOST_CHECK_THROW((types::make_modified_sap_verification_key<policy_type, endianness>(filled)),
@@ -385,10 +371,8 @@ BOOST_AUTO_TEST_CASE(generated_key_and_proof_survive_round_trip) {
     const auto restored_key =
         decode(encode(types::fill_modified_sap_verification_key<policy_type, endianness>(keys.second)));
     const auto proof_bytes = encode(types::fill_modified_sap_proof<policy_type::proof_type, endianness>(proof));
-    types::modified_sap_proof<type_base, policy_type::proof_type> filled_proof;
-    auto input = proof_bytes.begin();
-    BOOST_REQUIRE(filled_proof.read(input, proof_bytes.size()) == status_type::success);
-    BOOST_CHECK(input == proof_bytes.end());
+    const auto filled_proof =
+        test_tools::decode<types::modified_sap_proof<type_base, policy_type::proof_type>>(proof_bytes);
     const auto restored_proof = types::make_modified_sap_proof<policy_type::proof_type, endianness>(filled_proof);
     BOOST_CHECK(restored_key == keys.second);
     BOOST_CHECK(restored_proof == proof);

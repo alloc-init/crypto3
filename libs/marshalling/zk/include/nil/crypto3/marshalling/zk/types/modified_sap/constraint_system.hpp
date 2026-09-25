@@ -25,6 +25,7 @@
 #ifndef CRYPTO3_MARSHALLING_MODIFIED_SAP_CONSTRAINT_SYSTEM_HPP
 #define CRYPTO3_MARSHALLING_MODIFIED_SAP_CONSTRAINT_SYSTEM_HPP
 
+#include <algorithm>
 #include <cstddef>
 #include <initializer_list>
 #include <stdexcept>
@@ -195,15 +196,11 @@ namespace nil::crypto3::marshalling::types {
             });
         for (const auto &row : system.constraints) {
             for (const auto *combination : {&row.a, &row.c}) {
-                bool first = true;
-                std::size_t previous_index = 0;
-                for (const auto &term : combination->terms) {
-                    // Preserve the received representation: reject duplicates, disorder, and zero coefficients.
-                    if (term.coeff.is_zero() || (!first && term.index <= previous_index)) {
-                        throw std::invalid_argument("noncanonical modified SAP linear combination");
-                    }
-                    first = false;
-                    previous_index = term.index;
+                // is_valid() checks strict index order and bounds; the encoding also excludes zero coefficients.
+                if (!combination->is_valid(system.witness_size) ||
+                    std::any_of(combination->terms.begin(), combination->terms.end(),
+                                [](const auto &term) { return term.coeff.is_zero(); })) {
+                    throw std::invalid_argument("noncanonical modified SAP linear combination");
                 }
             }
         }
