@@ -26,12 +26,17 @@
 #define BOOST_TEST_MODULE crypto3_marshalling_curve_element_test
 
 #include <boost/test/unit_test.hpp>
+#include <boost/mpl/list.hpp>
+#include <boost/algorithm/hex.hpp>
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
 #include <iostream>
 #include <iomanip>
+#include <iterator>
+#include <limits>
+#include <vector>
 #include <boost/multiprecision/number.hpp>
 
 #include <nil/marshalling/status_type.hpp>
@@ -104,7 +109,233 @@ void test_curve_element() {
     }
 }
 
+namespace {
+    using bn254 = nil::crypto3::algebra::curves::alt_bn128_254;
+    using bn254_groups = boost::mpl::list<bn254::g1_type<>, bn254::g2_type<>>;
+    using status_type = nil::marshalling::status_type;
+    using type_base = nil::marshalling::field_type<nil::marshalling::option::big_endian>;
+    namespace types = nil::crypto3::marshalling::types;
+    namespace processing = nil::crypto3::marshalling::processing;
+
+    template<typename Group>
+    using bn254_codec = types::curve_element<type_base, Group>;
+
+    template<typename Group>
+    std::vector<std::uint8_t> encode_bn254_point(const typename Group::value_type &point) {
+        const bn254_codec<Group> encoded(point);
+        std::vector<std::uint8_t> bytes(encoded.length());
+        auto output = bytes.begin();
+        BOOST_REQUIRE(encoded.write(output, bytes.size()) == status_type::success);
+        BOOST_CHECK(output == bytes.end());
+        return bytes;
+    }
+
+    template<typename Group>
+    void check_bn254_read(const std::vector<std::uint8_t> &bytes, status_type expected_status,
+                          const typename Group::value_type &expected_point = Group::value_type::one()) {
+        BOOST_REQUIRE_EQUAL(bytes.size(), bn254_codec<Group>::max_length());
+        bn254_codec<Group> decoded(Group::value_type::one());
+        auto input = bytes.begin();
+        BOOST_CHECK(decoded.read(input, bytes.size()) == expected_status);
+        BOOST_CHECK(input == bytes.end());
+        // Failure must preserve the destination; successful reads must recover the expected point.
+        BOOST_CHECK(decoded.value() == expected_point);
+    }
+
+    // Construct coordinate bytes directly for malformed-point fixtures, bypassing point validation.
+    template<typename Group>
+    std::vector<std::uint8_t> encode_bn254_x(typename Group::field_type::value_type x) {
+        if constexpr (Group::field_type::arity == 2) {
+            std::swap(x.data[0], x.data[1]);    // The point codec writes x[1] before x[0].
+        }
+        const types::field_element<type_base, typename Group::field_type::value_type> encoded(x);
+        std::vector<std::uint8_t> bytes(encoded.length());
+        auto output = bytes.begin();
+        BOOST_REQUIRE(encoded.write(output, bytes.size()) == status_type::success);
+        return bytes;
+    }
+}    // namespace
+
 BOOST_AUTO_TEST_SUITE(curve_element_test_suite)
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(bn254_generator_encoding_and_sign, Group, bn254_groups) {
+    using point_type = typename Group::value_type;
+    std::vector<std::uint8_t> expected;
+    if constexpr (Group::field_type::arity == 1) {
+        expected.resize(32, 0);
+        expected.back() = 1;    // G1 generator is (1, 2), with a clear sign bit.
+    } else {
+        // G2 generator's x[1], then x[0], with a clear sign bit.
+        boost::algorithm::unhex(std::string("198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2"
+                                            "1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed"),
+                                std::back_inserter(expected));
+    }
+    BOOST_CHECK(encode_bn254_point<Group>(point_type::one()) == expected);
+    check_bn254_read<Group>(expected, status_type::success, point_type::one());
+
+    expected.front() |= 0x40;
+    BOOST_CHECK(encode_bn254_point<Group>(-point_type::one()) == expected);
+    check_bn254_read<Group>(expected, status_type::success, -point_type::one());
+
+    // A byte pointer is also a valid iterator; leave following data for the next field.
+    expected.push_back(0xa5);
+    const auto *input = expected.data();
+    bn254_codec<Group> decoded;
+    BOOST_REQUIRE(decoded.read(input, expected.size()) == status_type::success);
+    BOOST_CHECK(decoded.value() == -point_type::one());
+    BOOST_CHECK(input == expected.data() + expected.size() - 1);
+    BOOST_CHECK_EQUAL(*input, 0xa5);
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(bn254_infinity_has_one_encoding, Group, bn254_groups) {
+    using point_type = typename Group::value_type;
+    std::vector<std::uint8_t> canonical(bn254_codec<Group>::max_length(), 0);
+    canonical.front() = 0x80;
+    BOOST_CHECK(encode_bn254_point<Group>(point_type::zero()) == canonical);
+    check_bn254_read<Group>(canonical, status_type::success, point_type::zero());
+
+    auto bytes = canonical;
+    bytes.front() |= 0x40;
+    check_bn254_read<Group>(bytes, status_type::invalid_msg_data);
+    for (std::size_t i = 0; i < canonical.size(); ++i) {
+        BOOST_TEST_CONTEXT("nonzero infinity payload byte " << i) {
+            bytes = canonical;
+            bytes[i] |= 1;
+            check_bn254_read<Group>(bytes, status_type::invalid_msg_data);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(bn254_rejects_noncanonical_coordinates, Group, bn254_groups) {
+    using field_type = typename Group::field_type;
+    using integral_type = typename field_type::integral_type;
+    using component_type = types::integral<type_base, integral_type>;
+    for (std::size_t component = 0; component < field_type::arity; ++component) {
+        BOOST_TEST_CONTEXT("coordinate component " << component) {
+            auto point = Group::value_type::one();
+            integral_type coordinate;
+            bool found = false;
+            for (std::size_t attempt = 0; attempt < 128; ++attempt) {
+                const auto components = types::detail::fill_field_data(point.to_affine().X);
+                coordinate = components[field_type::arity - 1 - component];
+                if (coordinate <= std::numeric_limits<integral_type>::max() - field_type::modulus) {
+                    found = true;
+                    break;
+                }
+                point += Group::value_type::one();
+            }
+            BOOST_REQUIRE(found);
+            const auto canonical = encode_bn254_point<Group>(point);
+            check_bn254_read<Group>(canonical, status_type::success, point);
+
+            // The last case would reduce to this valid point if the raw modulus check were missing.
+            for (const integral_type &raw_value :
+                 {integral_type(field_type::modulus), integral_type(field_type::modulus + 1),
+                  integral_type(field_type::modulus + coordinate)}) {
+                auto bytes = canonical;
+                auto output = bytes.begin() + component * component_type::max_length();
+                const component_type raw_component(raw_value);
+                BOOST_REQUIRE(raw_component.write(output, raw_component.length()) == status_type::success);
+                bytes.front() |= canonical.front() & 0xc0;    // Preserve the point flags.
+                check_bn254_read<Group>(bytes, status_type::invalid_msg_data);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(bn254_g2_rejects_padding_bits_in_second_component) {
+    using group = bn254::g2_type<>;
+    for (const auto &point : {group::value_type::zero(), group::value_type::one()}) {
+        const auto canonical = encode_bn254_point<group>(point);
+        for (std::uint8_t bit : {0x40, 0x80}) {
+            auto bytes = canonical;
+            bytes[32] |= bit;
+            check_bn254_read<group>(bytes, status_type::invalid_msg_data);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(bn254_rejects_coordinates_without_a_curve_point, Group, bn254_groups) {
+    using field_value_type = typename Group::field_type::value_type;
+    auto x = field_value_type::zero();
+    bool found = false;
+    for (std::size_t attempt = 0; attempt < 128; ++attempt) {
+        if (!(x.pow(3) + Group::params_type::b).is_square()) {
+            found = true;
+            break;
+        }
+        x += field_value_type::one();
+    }
+    BOOST_REQUIRE(found);
+    auto bytes = encode_bn254_x<Group>(x);
+    check_bn254_read<Group>(bytes, status_type::invalid_msg_data);
+    bytes.front() |= 0x40;
+    check_bn254_read<Group>(bytes, status_type::invalid_msg_data);
+}
+
+BOOST_AUTO_TEST_CASE(bn254_g2_rejects_points_outside_the_prime_order_subgroup) {
+    using group = bn254::g2_type<>;
+    using field_value_type = group::field_type::value_type;
+    auto x = field_value_type::zero();
+    group::value_type point;
+    bool found = false;
+    for (std::size_t attempt = 0; attempt < 128; ++attempt) {
+        const auto rhs = x.pow(3) + group::params_type::b;
+        if (rhs.is_square()) {
+            point = group::value_type(x, rhs.sqrt(), field_value_type::one());
+            if (!nil::crypto3::algebra::curves::detail::subgroup_check(point)) {
+                found = true;
+                break;
+            }
+        }
+        x += field_value_type::one();
+    }
+    BOOST_REQUIRE(found);
+    BOOST_REQUIRE(point.is_well_formed());
+    auto bytes = encode_bn254_x<group>(point.X);
+    check_bn254_read<group>(bytes, status_type::invalid_msg_data);
+    bytes.front() |= 0x40;
+    check_bn254_read<group>(bytes, status_type::invalid_msg_data);
+
+    const bn254_codec<group> encoded(point);
+    std::vector<std::uint8_t> output_bytes(encoded.length(), 0xa5);
+    const auto original = output_bytes;
+    auto output = output_bytes.begin();
+    BOOST_CHECK(encoded.write(output, output_bytes.size()) == status_type::invalid_msg_data);
+    BOOST_CHECK(output_bytes == original);
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(bn254_writer_rejects_points_off_the_curve, Group, bn254_groups) {
+    using field_value_type = typename Group::field_type::value_type;
+    const typename Group::value_type point(field_value_type::zero(), field_value_type::zero(), field_value_type::one());
+    BOOST_REQUIRE(!point.is_well_formed());
+    const bn254_codec<Group> encoded(point);
+    std::vector<std::uint8_t> bytes(encoded.length(), 0xa5);
+    const auto original = bytes;
+    auto output = bytes.begin();
+    BOOST_CHECK(encoded.write(output, bytes.size()) == status_type::invalid_msg_data);
+    BOOST_CHECK(bytes == original);
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(bn254_rejects_short_buffers_before_access, Group, bn254_groups) {
+    using point_type = typename Group::value_type;
+    for (std::size_t size = 0; size < bn254_codec<Group>::max_length(); ++size) {
+        BOOST_TEST_CONTEXT("buffer length " << size) {
+            std::vector<std::uint8_t> bytes(size, 0xa5);
+            auto input = bytes.begin();
+            bn254_codec<Group> decoded(point_type::one());
+            BOOST_CHECK(decoded.read(input, size) == status_type::not_enough_data);
+            BOOST_CHECK(input == bytes.begin());
+            BOOST_CHECK(decoded.value() == point_type::one());
+
+            const auto original = bytes;
+            auto output = bytes.begin();
+            BOOST_CHECK(decoded.write(output, size) == status_type::buffer_overflow);
+            BOOST_CHECK(output == bytes.begin());
+            BOOST_CHECK(bytes == original);
+        }
+    }
+}
 
 BOOST_AUTO_TEST_CASE(curve_element_bn254_g1) {
     std::cout << "BN254 g1 group test started" << std::endl;
@@ -253,8 +484,8 @@ BOOST_AUTO_TEST_CASE(curve_element_ed25519_g1) {
     using base_field_type = typename group_type::params_type::base_field_type;
     using base_integral_type = typename base_field_type::integral_type;
 
-    using curve_element_type = nil::crypto3::marshalling::types::
-        curve_element<nil::marshalling::field_type<nil::marshalling::option::little_endian>, group_type>;
+    using curve_element_type = nil::crypto3::marshalling::types::curve_element<
+        nil::marshalling::field_type<nil::marshalling::option::little_endian>, group_type>;
 
     curve_element_type test_val = curve_element_type(group_value_type::one());
 

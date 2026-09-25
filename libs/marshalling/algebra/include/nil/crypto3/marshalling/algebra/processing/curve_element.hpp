@@ -41,12 +41,14 @@
 #include <nil/crypto3/algebra/curves/curve25519.hpp>
 #include <nil/crypto3/algebra/curves/jubjub.hpp>
 #include <nil/crypto3/algebra/curves/alt_bn128.hpp>
+#include <nil/crypto3/algebra/curves/detail/scalar_mul.hpp>
 #include <nil/crypto3/algebra/curves/mnt4.hpp>
 #include <nil/crypto3/algebra/curves/mnt6.hpp>
 
 #include <nil/crypto3/marshalling/multiprecision/processing/integral.hpp>
 
 #include <nil/crypto3/marshalling/algebra/processing/detail/curve_element.hpp>
+#include <nil/crypto3/marshalling/algebra/types/detail/checked_field_element.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -263,12 +265,17 @@ namespace nil {
 
                     template<typename TIter>
                     static nil::marshalling::status_type process(const group_value_type &point, TIter &iter) {
+                        // Compression stores only X and a sign, so it cannot preserve an off-curve Y.
+                        // Validate the native point and require the same subgroup membership as the reader.
+                        if (!point.is_well_formed() || !algebra::curves::detail::subgroup_check(point)) {
+                            return nil::marshalling::status_type::invalid_msg_data;
+                        }
 
                         /* Point is always encoded in compressed form, only X coordinate.
                          * Highest bit is Infinity flag
                          * Second highest bit is sign of Y coordinate */
 
-                        using chunk_type = typename TIter::value_type;
+                        using chunk_type = typename std::iterator_traits<TIter>::value_type;
                         constexpr static const chunk_type I_bit = 0x80;
                         constexpr static const chunk_type S_bit = 0x40;
 
@@ -307,17 +314,23 @@ namespace nil {
 
                     template<typename TIter>
                     static nil::marshalling::status_type process(const group_value_type &point, TIter &iter) {
+                        // Compression stores only X and a sign, so it cannot preserve an off-curve Y.
+                        // Validate the native point and require the same subgroup membership as the reader.
+                        if (!point.is_well_formed() || !algebra::curves::detail::subgroup_check(point)) {
+                            return nil::marshalling::status_type::invalid_msg_data;
+                        }
 
                         /* Point is always encoded in compressed form, only X coordinate.
                          * Highest bit is Infinity flag
                          * Second highest bit is sign of Y coordinate */
 
-                        using chunk_type = typename TIter::value_type;
+                        using chunk_type = typename std::iterator_traits<TIter>::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
                             params_type::bit_length() / (group_value_type::field_type::arity);
                         constexpr static const std::size_t units_bits = 8;
-                        constexpr static const std::size_t chunk_bits = sizeof(typename TIter::value_type) * units_bits;
+                        constexpr static const std::size_t chunk_bits =
+                            sizeof(typename std::iterator_traits<TIter>::value_type) * units_bits;
                         constexpr static const std::size_t sizeof_field_element_chunks_count =
                             (sizeof_field_element / chunk_bits) + ((sizeof_field_element % chunk_bits) ? 1 : 0);
 
@@ -807,7 +820,7 @@ namespace nil {
 
                     template<typename TIter>
                     static nil::marshalling::status_type process(group_value_type &point, TIter &iter) {
-                        using chunk_type = typename TIter::value_type;
+                        using chunk_type = typename std::iterator_traits<TIter>::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
                             params_type::bit_length() / (group_value_type::field_type::arity);
@@ -822,25 +835,42 @@ namespace nil {
                         integral_type x = read_data<sizeof_field_element, integral_type, endianness>(iter);
 
                         if (I_bit) {
-                            // point at infinity
-                            point = g1_value_type();
+                            // Enforce the unique infinity encoding: 0x80 followed by zero bytes.
+                            // A sign bit or nonzero coordinate would give an alternative encoding.
+                            if (S_bit || x != 0) {
+                                return nil::marshalling::status_type::invalid_msg_data;
+                            }
+                            point = g1_value_type::zero();
                             return nil::marshalling::status_type::success;
+                        }
+                        // Reject noncanonical integers before field construction can reduce them modulo p.
+                        // Otherwise, for example, p + 1 would be accepted as another encoding of 1.
+                        if (x >= g1_field_type::modulus) {
+                            return nil::marshalling::status_type::invalid_msg_data;
                         }
 
                         g1_field_value_type x_mod(x);
                         g1_field_value_type y2_mod = x_mod.pow(3) + group_type::params_type::b;
-                        BOOST_ASSERT(y2_mod.is_square());
-                        g1_field_value_type y_mod = y2_mod.sqrt();
-                        bool Y_bit = detail::sign_gf_p<g1_field_type>(y_mod);
-                        if (Y_bit == bool(S_bit)) {
-                            g1_value_type result(x_mod, y_mod, g1_field_value_type::one());
-                            BOOST_ASSERT(result.is_well_formed());
-                            point = result;
-                        } else {
-                            g1_value_type result(x_mod, -y_mod, g1_field_value_type::one());
-                            BOOST_ASSERT(result.is_well_formed());
-                            point = result;
+                        // X must admit a Y coordinate. Check before sqrt(), including in release builds.
+                        if (!y2_mod.is_square()) {
+                            return nil::marshalling::status_type::invalid_msg_data;
                         }
+                        g1_field_value_type y_mod = y2_mod.sqrt();
+                        // sqrt() may return either root; choose Y or -Y to match the encoded sign.
+                        if (detail::sign_gf_p<g1_field_type>(y_mod) != bool(S_bit)) {
+                            y_mod = -y_mod;
+                        }
+                        // Reject a sign that cannot describe the recovered Y: negating zero leaves its sign clear.
+                        if (detail::sign_gf_p<g1_field_type>(y_mod) != bool(S_bit)) {
+                            return nil::marshalling::status_type::invalid_msg_data;
+                        }
+                        const g1_value_type result(x_mod, y_mod, g1_field_value_type::one());
+                        // Validate curve and subgroup membership at runtime before publishing the point.
+                        // Assigning only after success preserves the caller's destination on failure.
+                        if (!result.is_well_formed() || !algebra::curves::detail::subgroup_check(result)) {
+                            return nil::marshalling::status_type::invalid_msg_data;
+                        }
+                        point = result;
 
                         return nil::marshalling::status_type::success;
                     }
@@ -861,7 +891,7 @@ namespace nil {
 
                     template<typename TIter>
                     static nil::marshalling::status_type process(group_value_type &point, TIter &iter) {
-                        using chunk_type = typename TIter::value_type;
+                        using chunk_type = typename std::iterator_traits<TIter>::value_type;
 
                         constexpr static const std::size_t sizeof_field_element =
                             params_type::bit_length() / (group_value_type::field_type::arity);
@@ -880,28 +910,54 @@ namespace nil {
                         TIter read_iter = iter;
                         integral_type x_1 = read_data<sizeof_field_element, integral_type, endianness>(read_iter);
                         read_iter += sizeof_field_element_chunks_count;
+                        // Only the first component carries flags. Check the second component's unused high
+                        // bits before the fixed-width integer decoder can discard them.
+                        using type_base = nil::marshalling::field_type<nil::marshalling::option::big_endian>;
+                        using base_field_value_type = typename g2_field_type::underlying_field_type::value_type;
+                        if (!types::detail::canonical_field_element_encoding_validator<type_base,
+                                                                                       base_field_value_type>()(
+                                read_iter)) {
+                            return nil::marshalling::status_type::invalid_msg_data;
+                        }
                         integral_type x_0 = read_data<sizeof_field_element, integral_type, endianness>(read_iter);
 
                         if (I_bit) {
-                            // point at infinity
-                            point = group_value_type();
+                            // Enforce the unique infinity encoding: 0x80 followed by zero bytes.
+                            // The sign and both coordinate components must be zero.
+                            if (S_bit || x_0 != 0 || x_1 != 0) {
+                                return nil::marshalling::status_type::invalid_msg_data;
+                            }
+                            point = group_value_type::zero();
                             return nil::marshalling::status_type::success;
+                        }
+                        // Both raw components must be canonical before field construction can reduce them
+                        // modulo p and erase the distinction between different integer encodings.
+                        if (x_0 >= g2_field_type::modulus || x_1 >= g2_field_type::modulus) {
+                            return nil::marshalling::status_type::invalid_msg_data;
                         }
 
                         g2_field_value_type x_mod(x_0, x_1);
                         g2_field_value_type y2_mod = x_mod.pow(3) + group_type::params_type::b;
-                        BOOST_ASSERT(y2_mod.is_square());
-                        g2_field_value_type y_mod = y2_mod.sqrt();
-                        bool Y_bit = detail::sign_gf_p<g2_field_type>(y_mod);
-                        if (Y_bit == bool(S_bit)) {
-                            g2_value_type result(x_mod, y_mod, g2_field_value_type::one());
-                            BOOST_ASSERT(result.is_well_formed());
-                            point = result;
-                        } else {
-                            g2_value_type result(x_mod, -y_mod, g2_field_value_type::one());
-                            BOOST_ASSERT(result.is_well_formed());
-                            point = result;
+                        // X must admit a Y coordinate. Check before sqrt(), including in release builds.
+                        if (!y2_mod.is_square()) {
+                            return nil::marshalling::status_type::invalid_msg_data;
                         }
+                        g2_field_value_type y_mod = y2_mod.sqrt();
+                        // sqrt() may return either root; choose Y or -Y to match the encoded sign.
+                        if (detail::sign_gf_p<g2_field_type>(y_mod) != bool(S_bit)) {
+                            y_mod = -y_mod;
+                        }
+                        // Reject a sign that cannot describe the recovered Y: negating zero leaves its sign clear.
+                        if (detail::sign_gf_p<g2_field_type>(y_mod) != bool(S_bit)) {
+                            return nil::marshalling::status_type::invalid_msg_data;
+                        }
+                        const g2_value_type result(x_mod, y_mod, g2_field_value_type::one());
+                        // Validate curve and subgroup membership at runtime before publishing the point.
+                        // Assigning only after success preserves the caller's destination on failure.
+                        if (!result.is_well_formed() || !algebra::curves::detail::subgroup_check(result)) {
+                            return nil::marshalling::status_type::invalid_msg_data;
+                        }
+                        point = result;
 
                         return nil::marshalling::status_type::success;
                     }

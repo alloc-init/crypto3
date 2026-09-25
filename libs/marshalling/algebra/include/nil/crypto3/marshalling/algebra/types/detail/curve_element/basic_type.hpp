@@ -108,6 +108,11 @@ namespace nil {
 
                         template<typename TIter>
                         nil::marshalling::status_type read(TIter &iter, std::size_t size) {
+                            // Curve-specific readers receive no buffer size; require the full encoding here
+                            // before they access bytes or modify the destination point.
+                            if (size < max_length()) {
+                                return nil::marshalling::status_type::not_enough_data;
+                            }
                             nil::marshalling::status_type status = reader_type::process(value(), iter);
                             iter += max_length();
                             return status;
@@ -120,6 +125,11 @@ namespace nil {
 
                         template<typename TIter>
                         nil::marshalling::status_type write(TIter &iter, std::size_t size) const {
+                            // Writers assume a full fixed-length buffer. Reject insufficient capacity before
+                            // any bytes are written, preserving both the buffer and the iterator.
+                            if (size < max_length()) {
+                                return nil::marshalling::status_type::buffer_overflow;
+                            }
                             nil::marshalling::status_type status = writer_type::process(value(), iter);
                             iter += max_length();
                             return status;
