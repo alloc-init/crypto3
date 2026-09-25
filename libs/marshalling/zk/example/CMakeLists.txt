@@ -39,8 +39,18 @@ macro(define_marshalling_example name)
 endmacro()
 
 set(EXAMPLES_NAMES
-        "r1cs")
+        "r1cs"
+        "modified_sap")
 
 foreach(EXAMPLE_NAME ${EXAMPLES_NAMES})
     define_marshalling_example(${EXAMPLE_NAME})
 endforeach()
+
+target_link_libraries(marshalling_modified_sap_example PRIVATE crypto3::random)
+
+# Match the constexpr budget used by the ZK tests for the Poseidon parameters.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(marshalling_modified_sap_example PRIVATE "-fconstexpr-steps=2147483647")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(marshalling_modified_sap_example PRIVATE "-fconstexpr-ops-limit=4294967295")
+endif()

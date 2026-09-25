@@ -12,7 +12,10 @@ public scalar, evaluation order `A, C, H, Z`, and exact pairing normalization.
 
 The construction uses a circuit-specific trusted setup and a Fiat-Shamir
 challenge. It includes no zero-knowledge blinding and makes no zero-knowledge
-claim. Unspecified protocol details are listed in section 9.
+claim. Unspecified protocol details are listed in section 10.
+
+For a runnable example covering ordinary R1CS, setup, proving, serialization
+and verification, see [Complete marshalling example](#98-complete-marshalling-example).
 
 ## 2. Relation, assignment and polynomial domain
 
@@ -311,7 +314,7 @@ affine conversion that divides by zero.
 It samples independent secret scalars `tau`, `gamma`, and
 `alpha_A, alpha_C, alpha_H, alpha_Z` from Fr. Resample `tau` until it is nonzero
 and `Z(tau) != 0`, and resample `gamma` until it is nonzero. Additional rejection
-rules for degenerate samples are unspecified; see section 9.
+rules for degenerate samples are unspecified; see section 10.
 
 These checks prevent a degenerate reference string. If `tau == 0`, every positive
 power of `tau` vanishes, most polynomial-query entries collapse to the group
@@ -698,9 +701,295 @@ proof satisfies the pairing equation. This argument also covers `tau == z`
 without dividing by `tau - z`. It establishes algebraic correctness, not a
 knowledge-soundness proof.
 
-## 9. Unspecified protocol details
+## 9. Serialization
+
+This section specifies the marshalling representation of proofs, verification
+keys, logical constraint systems and proving keys. It follows the existing
+[Crypto3 marshalling model](../../marshalling/readme.md) and the
+[R1CS marshalling example](../../marshalling/zk/example/r1cs.cpp): native objects
+are converted to fields composed from bundles, arrays and algebra elements.
+
+### 9.1 Marshalling conventions and compatibility
+
+Use `nil::crypto3::marshalling::types` for the object field types and their
+`fill_*` / `make_*` conversions. Fields take `TTypeBase`, an instantiation of
+`nil::marshalling::field_type<Endianness>`, and the relevant native type. The
+conversion flow is:
+
+```text
+native object -> fill_* -> marshalling field -> write(iterator, size) -> bytes
+bytes -> read(iterator, size) -> marshalling field -> make_* -> native object
+```
+
+`fill_*` and `make_*` return objects by value, following the existing ZK
+marshalling APIs. `length()`, `read()` and `write()` belong to the marshalling
+field; byte I/O uses `nil::marshalling::status_type`. Key conversions use the
+selected scheme policy for native validation and circuit-digest checks. The
+policy remains caller-supplied compile-time information.
+
+Represent tuples with `bundle`, variable-length vectors with
+`standard_array_list`, and the fixed four-element `alpha_gt` array with a
+fixed-size array field. Reuse `field_element`, `curve_element`, and the existing
+linear-term and linear-combination representation. A variable-length list has
+one element-count prefix; fixed-size arrays have no count prefix. Bundles
+concatenate their member fields without alignment padding or member tags.
+
+This is a typed payload, following the existing ZK serializers. It adds no magic
+bytes, object-kind tag, format-version prefix or scheme-profile header. The
+caller chooses the object type and agrees on the format version, curve, pairing
+policy, transcript policy and integer-width convention. A file or network
+protocol that requires self-identification provides that framing separately.
+The payload layout described here is version 1; incompatible layout changes
+require the enclosing protocol to distinguish versions.
+
+Byte order is supplied through `TTypeBase`, not detected from the input. The
+BN254 point codecs used here support big-endian encoding. The concrete byte
+counts below use `option::big_endian` and eight-byte `std::size_t`, matching
+Crypto3's existing size-prefixed list convention on 64-bit platforms.
+Sizes and indices use `integral<TTypeBase, std::size_t>`; they are not replaced
+with a new scheme-specific integer codec. Consequently, these variable-size
+payloads are not portable between different `size_t` widths without an agreed
+compatible representation. Let `S = sizeof(std::size_t)` in the formulas below.
+
+The binary representation is separate from the field-element transcript in
+section 7. Hashing uses the decoded mathematical objects and the existing
+transcript rules, not these serialized bytes.
+
+### 9.2 Algebra element encodings
+
+An Fr element occupies 32 bytes holding its canonical integer in `[0, r)`;
+an Fp element occupies 32 bytes holding its canonical integer in `[0, p)`.
+Integers are big-endian and include leading zero bytes. The two unused high
+bits must be zero. Reject an integer at or above its modulus before conversion
+to a field element can reduce it; also reject high bits that a fixed-width
+integer reader could discard. For example, an Fr encoding of `r + 1` is invalid
+and must not be decoded as one. Apply these checks to every base-field component
+of an extension element. Reuse the raw-component and padding-bit checks used by
+the checked matrix marshalling readers.
+
+Use the existing compressed BN254 `curve_element` representation:
+
+| Group | Length | Coordinate bytes |
+| --- | --- | --- |
+| G1 | 32 | Affine `x` in Fp |
+| G2 | 64 | Affine `x.data[1]`, then `x.data[0]`, each in Fp |
+
+Bit `0x80` of the first byte is the infinity flag; bit `0x40` is the sign of
+`y`. For a finite G1 point, the sign is one exactly when
+`canonical(y) > (p - 1)/2`. For G2, use that sign on `y.data[1]` when it is
+nonzero, otherwise on `y.data[0]`, matching `sign_gf_p`. These are sign choices,
+not least-significant-bit parity. G2's coordinate order here differs from its
+transcript component order.
+
+The unique infinity encoding is `0x80` followed by zero bytes, with the sign
+bit clear. Reject every other encoding with the infinity flag set. For finite
+points, remove only the two defined flags before checking the first coordinate
+component. G2's second component has no flag bits and must have zero high
+padding bits. Require canonical coordinates, a square curve-equation right
+side, the requested sign, a well-formed recovered point and membership in the
+prime-order subgroup. A sign that cannot describe the recovered point is
+invalid. These are runtime checks, including in release builds.
+
+A GT element occupies 384 bytes: twelve canonical Fp components in the existing
+`field_element` tower order, without a length prefix:
+
+```text
+for outer in 0..1:
+    for middle in 0..2:
+        for inner in 0..1:
+            value.data[outer].data[middle].data[inner]
+```
+
+Require a nonzero field element whose r-th power is one. The GT identity is
+allowed and has first component one followed by eleven zero components. Curve
+point identities are allowed in proofs and G1 query vectors; the verification
+key's G2 restrictions are specified below. Native projective coordinates and
+Miller-loop caches are not serialized.
+
+### 9.3 Object layouts
+
+The lists below specify bundle member order. Nested objects use exactly the
+same payload fields as their standalone representation, without extra framing.
+
+| Object | Ordered fields |
+| --- | --- |
+| Proof | `P`, `Q`, `v_A`, `v_C`, `v_H`, `v_Z` |
+| Verification key | `g2_one`, `tau_g2`, `gamma_inverse_g2`, `alpha_z_vanishing_gt`, `alpha_gt[A,C,H,Z]`, `num_variables`, `domain_size`, `circuit_digest` |
+| Constraint system | `witness_size`, list of logical constraints |
+| Proving key | `W`, `H_query`, `T_A`, `T_C`, `T_H`, `T_Z`, `constraint_system`, `verification_key` |
+
+The proof contains two G1 points and four Fr elements. Its public input `u` is
+supplied separately, as in the native API. Any separately serialized public
+scalar uses the same canonical Fr decoding rule and must satisfy the odd-input
+contract before proving or verification.
+
+The verification key contains three G2 points, five GT elements, two `size_t`
+dimensions and one Fp digest. `alpha_gt` is exactly four GT elements, without a
+count prefix. The digest is encoded as Fp, not Fr. A standalone verification key
+does not contain the circuit, so decoding alone cannot recompute its digest.
+
+Each of the proving key's six query vectors is a `standard_array_list` of G1
+points, including a count prefix for an empty vector. Its nested verification
+key is stored once. Neither a witness nor an additional keypair wrapper is part
+of this representation.
+
+### 9.4 Constraint rows and canonical form
+
+Reuse the existing linear-term bundle `(index, coefficient)` and the
+size-prefixed linear-combination list, with the modified SAP's explicitly
+indexed combination type. An index is `size_t`, a coefficient is Fr, and a
+constraint is the bundle `(a, c)`. The constraint-system list prefix gives the
+number `q` of logical rows; there is no additional row-count field. Row and
+term counts are element counts, not byte lengths.
+
+The serialized system has `n >= 1` witness entries and `q >= 1` rows. In each
+combination, indices are strictly increasing, every index is less than `n`, and
+every coefficient is nonzero. Empty combinations have a zero count. The first
+row is exactly the canonical binding row: empty `a`, and `c` containing only
+index zero with coefficient `-1` in Fr. Preserve all row positions, including
+repeated rows. No domain padding is serialized.
+
+When filling from a native system, validate every raw index before normalizing
+an owned copy, as in the polynomial reduction. Never mutate the caller's system.
+When making a system from a marshalled object, reject unsorted, repeated or
+zero-coefficient terms instead of silently changing the received representation.
+Reuse the existing normalization and structural validation operations. Ordinary
+R1CS retains its implicit-one indexing and its existing marshalling layout.
+
+### 9.5 Key validation
+
+After canonical element decoding, apply the native verification-key invariants:
+`num_variables >= 1`; `domain_size` is a supported power of two at least two;
+`g2_one` is the standard generator; and `tau_g2` and `gamma_inverse_g2` are
+nonidentity subgroup points. All five GT elements satisfy the membership rule
+above. Identity GT values remain allowed by the native contract.
+
+A proving key must contain a canonical, structurally valid constraint system.
+Its nested verification key must pass the same checks as a standalone key.
+With `n = constraint_system.witness_size` and `m` derived from its logical row
+count, require:
+
+| Query | Encoded element count |
+| --- | --- |
+| `W` | `n` |
+| `H_query`, `T_A`, `T_C` | `m - 1` each |
+| `T_H` | `m - 2`, including zero when `m = 2` |
+| `T_Z` | `m` |
+
+Require equality with the nested key's `num_variables` and `domain_size`, and
+recompute `circuit_digest` with the selected transcript policy. Every query
+element must be a valid G1 subgroup point. Reuse the native prover's dimension,
+query-length and digest validation and the verifier's group and parameter
+validation rules. A matching digest does not certify the setup's secret-scalar
+relationships; setup remains a separate operation.
+
+Decoding a proof checks its representation and group membership. It does not
+establish its arithmetic or pairing equations: the caller still invokes native
+verification with the expected public input and verification key.
+
+### 9.6 Bounds and failures
+
+The `read(iterator, size)` interface receives the available byte count. Before
+reading an untrusted object, the caller must bound that count and choose resource
+limits appropriate to its application. In particular, limit witness dimensions,
+domain size, logical rows, total sparse terms and query-vector elements before
+using them to allocate native data or construct polynomial domains. The wire
+format does not prescribe a universal memory budget or serialize these limits.
+
+For each length prefix, check representability and container limits; guard every
+addition and multiplication used to calculate byte or element counts. Reject
+counts that cannot fit in the remaining bytes, using division or checked
+arithmetic. A field reader must not reserve an attacker-declared vector length
+before checking its bounds against the available input. For nested variable-size
+rows, include the minimum bytes for each remaining row's two list prefixes.
+Check actual query counts against the key dimensions before publishing the key.
+
+Use the existing marshalling status values: `not_enough_data` for truncated
+input, `buffer_overflow` for insufficient output space, and `invalid_msg_data`
+for malformed encodings. `fill_*` / `make_*` reject invalid native or assembled
+marshalling objects with `std::invalid_argument`, following the checked
+conversions already used in the library. Allocation failures propagate.
+Do not call `make_*` after a failed read or use unchecked `read_no_status` on
+untrusted data. Validation must not depend on assertions.
+
+Decode into a temporary marshalling object and publish a native result only
+after all checks succeed. Failed operations may advance the byte iterator or
+partially fill the temporary object. A generic field read can leave bytes for
+the next field in an enclosing bundle; a caller decoding exactly one standalone
+object must additionally require complete consumption of its supplied frame.
+
+### 9.7 Encoded sizes
+
+Let `T` be the total number of nonzero terms across all `a` and `c` combinations
+in the canonical logical system. For the component encodings above:
+
+```text
+proof_bytes = 192
+verification_key_bytes = 2144 + 2*S
+constraint_system_bytes = 2*S + 2*q*S + (S + 32)*T
+proving_key_bytes = 6*S + 32*(n + 5*m - 5)
+                  + constraint_system_bytes + verification_key_bytes
+```
+
+On the documented 64-bit profile, a proof is 192 bytes and a verification key
+is 2160 bytes. These are raw payload sizes, excluding application framing.
+Use each marshalling field's `length()` when allocating its output buffer;
+the formulas describe the representation and provide independent size checks.
+
+### 9.8 Complete marshalling example
+
+The [modified SAP example](../../marshalling/zk/example/modified_sap.cpp) is a
+complete executable using the public scheme API and the four existing codecs.
+It converts `(x + 1) * y = u` from ordinary R1CS and round-trips the converted
+constraint system before setup. It then round-trips both keys, generates a proof
+for `(u, x, y) = (3, 2, 1)` with the restored proving key, and round-trips the
+proof before verification with the restored verification key.
+
+Build and run it from the repository root:
+
+```sh
+cmake -S . -B build -DBUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target marshalling_modified_sap_example --parallel
+./build/libs/marshalling/zk/example/marshalling_modified_sap_example
+```
+
+The example uses Crypto3's `chacha_urbg` with a fixed seed for reproducibility.
+Its setup keys are insecure because the seed is public. A real setup must use
+cryptographic entropy and protect the seed and setup secrets. Proving requires
+no additional randomness.
+
+The source has one public input, two private inputs and one R1CS constraint.
+Its converted circuit has six witness entries, five logical rows and a domain
+of size eight. On the 64-bit big-endian profile, each proof occupies 192 bytes
+and the verification key occupies 2160 bytes. The executable prints the sizes
+of all four encoded objects and exits with a nonzero status on failure.
+
+The codecs are headers under
+`nil/crypto3/marshalling/zk/types/modified_sap/`. Each has the corresponding
+`fill_*` and `make_*` functions in `nil::crypto3::marshalling::types`:
+
+| Header | Conversion names | Explicit template arguments |
+| --- | --- | --- |
+| `constraint_system.hpp` | `fill_modified_sap_constraint_system`, `make_modified_sap_constraint_system` | `scheme::constraint_system_type, Endianness` |
+| `proving_key.hpp` | `fill_modified_sap_proving_key`, `make_modified_sap_proving_key` | `Policy, Endianness` |
+| `verification_key.hpp` | `fill_modified_sap_verification_key`, `make_modified_sap_verification_key` | `Policy, Endianness` |
+| `proof.hpp` | `fill_modified_sap_proof`, `make_modified_sap_proof` | `scheme::proof_type, Endianness` |
+
+The example allocates each output buffer with `length()`, checks every
+`write()` and `read()` status, and requires full consumption because each buffer
+holds one standalone object. It calls `make_*` only after a successful read
+and catches conversion exceptions. These checks remain active in Release builds.
+For external input, enforce the application limits described in section 9.6
+before decoding; the example uses buffers it has just produced itself.
+
+The expected `u` comes from the verifier's caller and stays outside the proof
+bytes. The example verifies the restored proof against that `u` and prints the
+result. Successful deserialization alone does not establish proof validity.
+Applications must also obtain the expected verification key from a trusted
+source; decoding a key does not authenticate its origin.
+
+## 10. Unspecified protocol details
 
 | Area | Unspecified details |
 | --- | --- |
 | Setup sampling | Rejection rules beyond `tau != 0`, `Z(tau) != 0`, and `gamma != 0`. |
-| Serialization | Wire format, version identifiers, byte order, canonical decoding and resource limits. |

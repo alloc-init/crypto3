@@ -53,8 +53,12 @@ macro(define_marshalling_test test)
 
 endmacro()
 
-# r1cs tests are failing compilation, turning them off for now.
 set(TESTS_NAMES
+        "r1cs"
+        "modified_sap_proof"
+        "modified_sap_verification_key"
+        "modified_sap_constraint_system"
+        "modified_sap_proving_key"
         "merkle_proof"
         "merkle_tree"
         "accumulation_vector"

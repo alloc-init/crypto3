@@ -15,9 +15,10 @@ Crypto3.ZK is a header-only C++ library. Its public API is under
 | [Algorithms](include/nil/crypto3/zk/algorithms/) | Generic `generate`, `prove`, `verify`, and `aggregate` adapters for proof systems. |
 | [Polynomial commitments](include/nil/crypto3/zk/commitments/polynomial/) | FRI, LPC, KZG (including batched, v2, and IPP2 variants), and Pedersen commitments; Powers of Tau, proof-of-knowledge, proof-of-work, and MPC support. |
 | [R1CS proof systems](include/nil/crypto3/zk/snark/systems/ppzksnark/) | Pairing-based R1CS ppzkSNARK and Groth16-style R1CS GG-ppzkSNARK implementations. The GG implementation includes basic, proof-aggregation, and encrypted-input modes. |
+| [Modified SAP SNARK](docs/modified_sap_snark.md) | Standalone BN254 argument with an ordinary R1CS frontend, one odd canonical public scalar, circuit-specific trusted setup, and proof/key marshalling. It includes no zero-knowledge blinding. |
 | [Placeholder](include/nil/crypto3/zk/snark/systems/plonk/placeholder/) | PLONK Placeholder preprocessing, proving, verification, permutation, gate, lookup, and dFRI argument components, with LPC/FRI and KZG commitment backends. |
-| [Arithmetization](include/nil/crypto3/zk/snark/arithmetization/) | R1CS constraints; QAP and SAP arithmetic programs; PLONK variables, constraints, gates, lookup tables, assignment tables, and polynomial tables. |
-| [Reductions](include/nil/crypto3/zk/snark/reductions/) | R1CS-to-QAP and R1CS-to-SAP instance and witness mappings. |
+| [Arithmetization](include/nil/crypto3/zk/snark/arithmetization/) | R1CS constraints; QAP, SAP and modified SAP arithmetic programs; PLONK variables, constraints, gates, lookup tables, assignment tables, and polynomial tables. |
+| [Reductions](include/nil/crypto3/zk/snark/reductions/) | Instance and witness mappings from R1CS to QAP, SAP and modified SAP. |
 | [Transcripts](include/nil/crypto3/zk/transcript/) | Sequential and accumulative Fiat-Shamir transcripts for byte- and field-oriented hash functions. |
 | [Expressions](include/nil/crypto3/zk/math/) | Constraint expressions, visitors, DAG conversion, cached evaluation, and permutation utilities. |
 | [Routing](include/nil/crypto3/zk/snark/routing/) | Benes and AS-Waksman routing-network construction and validation. |
@@ -48,6 +49,10 @@ bool valid = nil::crypto3::zk::verify<proof_system>(
 
 Complete demonstrations are available for [FRI](example/fri.cpp),
 [KZG](example/kzg.cpp), and [Fiat-Shamir transcripts](example/transcript.cpp).
+The [modified SAP example](../marshalling/zk/example/modified_sap.cpp) covers
+R1CS conversion, setup, proving, serialization and verification; its
+[usage instructions](docs/modified_sap_snark.md#98-complete-marshalling-example)
+include the CMake target and marshalling APIs.
 The [tests](test/) contain end-to-end examples for the R1CS and Placeholder
 proof systems, commitment schemes, reductions, expressions, and routing.
 
