@@ -86,13 +86,13 @@ namespace {
     };
 
     template<typename FieldType>
-    snark::modified_sap_constraint_system<FieldType> recovery_system(std::size_t first_bit) {
+    snark::modified_sap_constraint_system<FieldType> recovery_system(std::size_t constant_index) {
         using recovery = snark::reductions::detail::modified_sap_constant_recovery<FieldType>;
         using variable = typename recovery::variable_type;
         snark::modified_sap_constraint_system<FieldType> cs;
-        cs.witness_size = first_bit + recovery::witness_size;
+        cs.witness_size = constant_index + recovery::witness_size;
         cs.constraints.push_back({{}, -variable(0)});
-        recovery::append_constraints(cs.constraints, first_bit);
+        recovery::append_constraints(cs.constraints, constant_index);
         return cs;
     }
 
@@ -109,67 +109,31 @@ namespace {
         return true;
     }
 
-    template<typename FieldType>
-    void complete_product_auxiliaries(const snark::modified_sap_constraint_system<FieldType> &cs,
-                                      std::vector<typename FieldType::value_type> &witness,
-                                      std::size_t first_bit) {
-        using recovery = snark::reductions::detail::modified_sap_constant_recovery<FieldType>;
-        std::size_t auxiliary = first_bit + recovery::bit_count + recovery::marker_count;
-        // Every second product row forces t = A(w)^2 when w[0] = u. Satisfy it even for forged bits/markers.
-        for (std::size_t row = recovery::bit_count + 3; row < cs.constraints.size(); row += 2) {
-            witness[auxiliary++] = cs.constraints[row].a.evaluate(witness).squared();
-        }
-    }
-
-    template<typename FieldType>
-    void complete_comparison_witness(const snark::modified_sap_constraint_system<FieldType> &cs,
-                                     std::vector<typename FieldType::value_type> &witness,
-                                     std::size_t first_bit) {
-        using recovery = snark::reductions::detail::modified_sap_constant_recovery<FieldType>;
-        auto marker = witness[first_bit + recovery::bit_count - 1];
-        std::size_t next_marker = first_bit + recovery::bit_count;
-        // Reference markers are prefix products over the modulus's internal one bits.
-        for (std::size_t bit = recovery::bit_count - 1; bit > 1;) {
-            --bit;
-            if (boost::multiprecision::bit_test(FieldType::modulus, bit)) {
-                marker *= witness[first_bit + bit];
-                witness[next_marker++] = marker;
-            }
-        }
-        complete_product_auxiliaries(cs, witness, first_bit);
-    }
-
-    template<typename FieldType>
-    std::vector<typename FieldType::value_type>
-        witness_from_integer(const snark::modified_sap_constraint_system<FieldType> &cs,
-                             const typename FieldType::integral_type &integer, std::size_t first_bit) {
-        using recovery = snark::reductions::detail::modified_sap_constant_recovery<FieldType>;
-        using value = typename FieldType::value_type;
-        std::vector<value> witness(cs.witness_size, value::zero());
-        witness[0] = value(integer);
-        for (std::size_t bit = 0; bit < recovery::bit_count; ++bit) {
-            witness[first_bit + bit] = value(boost::multiprecision::bit_test(integer, bit));
-        }
-        complete_comparison_witness(cs, witness, first_bit);
-        return witness;
-    }
-
     template<unsigned Modulus>
-    void test_all_bit_patterns() {
+    void test_all_recovery_assignments() {
         using field = test_prime_field<Modulus>;
         using value = typename field::value_type;
         using recovery = snark::reductions::detail::modified_sap_constant_recovery<field>;
         const auto cs = recovery_system<field>(1);
         BOOST_REQUIRE(cs.is_valid());
-        for (unsigned integer = 0; integer < (1u << recovery::bit_count); ++integer) {
-            BOOST_TEST_CONTEXT("modulus " << Modulus << ", integer " << integer) {
-                const auto witness = witness_from_integer(cs, typename field::integral_type(integer), 1);
-                BOOST_CHECK_EQUAL(rows_satisfied(cs, witness[0], witness, 0, cs.constraints.size()), integer < Modulus);
-                BOOST_CHECK_EQUAL(cs.is_satisfied(witness[0], witness), integer < Modulus && (integer & 1) != 0);
-                if (integer < Modulus && (integer & 1) != 0) {
-                    std::vector<value> generated = {value(integer)};
-                    recovery::append_witness(generated);
-                    BOOST_CHECK(generated == witness);
+        for (unsigned u = 0; u < Modulus; ++u) {
+            const auto honest_auxiliary = (value::one() - value(u)).squared();
+            if ((u & 1) != 0) {
+                std::vector<value> generated = {value(u)};
+                recovery::append_witness(generated);
+                const std::vector<value> expected = {value(u), value::one(), honest_auxiliary};
+                BOOST_CHECK(generated == expected);
+            }
+            for (unsigned e = 0; e < Modulus; ++e) {
+                for (unsigned t = 0; t < Modulus; ++t) {
+                    BOOST_TEST_CONTEXT("modulus " << Modulus << ", u " << u << ", e " << e << ", t " << t) {
+                        const std::vector<value> witness = {value(u), value(e), value(t)};
+                        // At u = 0, the rows permit any e with t = e^2; the public-input rule excludes this case.
+                        const bool valid_rows =
+                            u == 0 ? value(t) == value(e).squared() : e == 1 && value(t) == honest_auxiliary;
+                        BOOST_CHECK_EQUAL(rows_satisfied(cs, value(u), witness, 0, cs.constraints.size()), valid_rows);
+                        BOOST_CHECK_EQUAL(cs.is_satisfied(value(u), witness), valid_rows && (u & 1) != 0);
+                    }
                 }
             }
         }
@@ -179,96 +143,81 @@ namespace {
 BOOST_AUTO_TEST_SUITE(r1cs_to_modified_sap_test_suite)
 
 BOOST_AUTO_TEST_CASE(recovery_dimensions_and_source_prefix) {
-    BOOST_CHECK_EQUAL(recovery_type::bit_count, 254);
-    BOOST_CHECK_EQUAL(recovery_type::marker_count, 99);
-    BOOST_CHECK_EQUAL(recovery_type::product_count, 153);
-    BOOST_CHECK_EQUAL(recovery_type::witness_size, 506);
-    BOOST_CHECK_EQUAL(recovery_type::constraint_count, 561);
-    for (const std::size_t first_bit : {1, 3}) {
-        const auto cs = recovery_system<field_type>(first_bit);
-        BOOST_CHECK_EQUAL(cs.num_variables(), first_bit + 506);
-        BOOST_CHECK_EQUAL(cs.num_constraints(), 562);
+    BOOST_CHECK_EQUAL(recovery_type::witness_size, 2);
+    BOOST_CHECK_EQUAL(recovery_type::constraint_count, 2);
+    for (const std::size_t constant_index : {1, 3}) {
+        const auto cs = recovery_system<field_type>(constant_index);
+        BOOST_CHECK_EQUAL(cs.num_variables(), constant_index + 2);
+        BOOST_CHECK_EQUAL(cs.num_constraints(), 3);
         BOOST_REQUIRE(cs.is_valid());
         const auto normalized = cs.normalized();
+        const std::vector<recovery_type::constraint_type> expected_rows = {
+            {{}, target_combination({{0, -1}})},
+            {target_combination({{0, 1}, {constant_index, 1}}), target_combination({{0, 3}, {constant_index + 1, 1}})},
+            {target_combination({{0, -1}, {constant_index, 1}}),
+             target_combination({{0, -1}, {constant_index + 1, 1}})},
+        };
+        BOOST_CHECK(normalized.constraints == expected_rows);
         for (const auto &u : {value_type(1), value_type(3), value_type(field_type::modulus - 2)}) {
-            std::vector<value_type> witness(first_bit, value_type(13));
+            std::vector<value_type> witness(constant_index, value_type(13));
             witness[0] = u;
             const auto prefix = witness;
             recovery_type::append_witness(witness);
-            auto expected = witness_from_integer(cs, u.to_integral(), first_bit);
-            std::copy(prefix.begin(), prefix.end(), expected.begin());
+            auto expected = prefix;
+            expected.push_back(value_type::one());
+            expected.push_back((value_type::one() - u).squared());
             BOOST_CHECK(witness == expected);
-            BOOST_CHECK_EQUAL_COLLECTIONS(witness.begin(), witness.begin() + first_bit, prefix.begin(), prefix.end());
+            BOOST_CHECK_EQUAL_COLLECTIONS(witness.begin(), witness.begin() + constant_index, prefix.begin(),
+                                          prefix.end());
             BOOST_CHECK_EQUAL(witness.size(), cs.num_variables());
-            BOOST_CHECK(witness[first_bit].is_one());
             BOOST_CHECK(cs.is_satisfied(u, witness));
             BOOST_CHECK(normalized.is_satisfied(u, witness));
         }
     }
 }
 
-BOOST_AUTO_TEST_CASE(rejects_noncanonical_representatives_even_when_reconstruction_passes) {
+BOOST_AUTO_TEST_CASE(rejects_forged_constant_even_with_adapted_auxiliary) {
     const auto cs = recovery_system<field_type>(1);
-    for (const unsigned offset : {0, 1, 3}) {
-        BOOST_TEST_CONTEXT("modulus plus " << offset) {
-            const field_type::integral_type integer = field_type::modulus + offset;
-            const auto witness = witness_from_integer(cs, integer, 1);
-            BOOST_CHECK(witness[0] == value_type(offset));
-            // Binding, Booleanity and field reconstruction all hold; comparison must reject the lift.
-            BOOST_CHECK(rows_satisfied(cs, witness[0], witness, 0, recovery_type::bit_count + 2));
-            BOOST_CHECK(!rows_satisfied(cs, witness[0], witness, recovery_type::bit_count + 2, cs.constraints.size()));
-            BOOST_CHECK(!cs.is_satisfied(witness[0], witness));
-            if (offset != 0) {
-                BOOST_CHECK(witness[1].is_zero());
-            }
+    for (const auto &u : {value_type(1), value_type(3), value_type(field_type::modulus - 2)}) {
+        for (const auto &e : {value_type(0), value_type(2), -value_type::one()}) {
+            // Satisfy the second row with a forged e and its matching auxiliary: the first row must reject.
+            std::vector<value_type> witness = {u, e, (e - u).squared()};
+            BOOST_CHECK(rows_satisfied(cs, u, witness, 2, 3));
+            BOOST_CHECK(!rows_satisfied(cs, u, witness, 1, 2));
+            BOOST_CHECK(!cs.is_satisfied(u, witness));
+            // Satisfying the first row instead must leave the second row unsatisfied.
+            witness[2] = (e + u).squared() - value_type(4) * u;
+            BOOST_CHECK(rows_satisfied(cs, u, witness, 1, 2));
+            BOOST_CHECK(!rows_satisfied(cs, u, witness, 2, 3));
+            BOOST_CHECK(!cs.is_satisfied(u, witness));
         }
     }
 }
 
-BOOST_AUTO_TEST_CASE(rejects_nonboolean_bits_even_when_reconstruction_and_comparison_pass) {
-    const auto cs = recovery_system<field_type>(1);
-    std::vector<value_type> witness(cs.num_variables(), value_type::zero());
-    witness[0] = value_type(3);
-    witness[1] = value_type(3);    // Represents 3 through a non-Boolean low bit.
-    complete_comparison_witness(cs, witness, 1);
-    BOOST_CHECK(rows_satisfied(cs, witness[0], witness, recovery_type::bit_count + 1, cs.constraints.size()));
-    BOOST_CHECK(!rows_satisfied(cs, witness[0], witness, 1, recovery_type::bit_count + 1));
-    BOOST_CHECK(!cs.is_satisfied(witness[0], witness));
-}
-
-BOOST_AUTO_TEST_CASE(rejects_changed_bits_markers_and_product_auxiliaries) {
+BOOST_AUTO_TEST_CASE(rejects_changed_recovery_auxiliary_and_public_input) {
     const auto cs = recovery_system<field_type>(1);
     const value_type u(field_type::modulus - 2);
     std::vector<value_type> witness = {u};
     recovery_type::append_witness(witness);
     BOOST_REQUIRE(cs.is_satisfied(u, witness));
 
-    for (const std::size_t bit : {0, 1, 127, 253}) {
-        auto changed = witness;
-        changed[1 + bit] = value_type::one() - changed[1 + bit];
-        complete_comparison_witness(cs, changed, 1);
-        BOOST_CHECK(!cs.is_satisfied(u, changed));
-    }
-    for (std::size_t marker = 0; marker < recovery_type::marker_count; ++marker) {
-        BOOST_TEST_CONTEXT("marker " << marker) {
-            auto changed = witness;
-            changed[1 + recovery_type::bit_count + marker] += value_type::one();
-            complete_product_auxiliaries(cs, changed, 1);
-            BOOST_CHECK(!cs.is_satisfied(u, changed));
-        }
-    }
-    for (std::size_t auxiliary = 0; auxiliary < recovery_type::product_count; ++auxiliary) {
-        BOOST_TEST_CONTEXT("product auxiliary " << auxiliary) {
-            auto changed = witness;
-            changed[1 + recovery_type::bit_count + recovery_type::marker_count + auxiliary] += value_type::one();
-            BOOST_CHECK(!cs.is_satisfied(u, changed));
-        }
-    }
     auto changed = witness;
+    changed[2] += value_type::one();
+    BOOST_CHECK(!cs.is_satisfied(u, changed));
+    changed = witness;
     changed[0] += value_type::one();
     BOOST_CHECK(!rows_satisfied(cs, u, changed, 0, 1));
     BOOST_CHECK(!cs.is_satisfied(u, changed));
     BOOST_CHECK(!cs.is_satisfied(value_type(1), witness));
+}
+
+BOOST_AUTO_TEST_CASE(zero_input_does_not_recover_one_and_is_rejected) {
+    const auto cs = recovery_system<field_type>(1);
+    for (const auto &e : {value_type(0), value_type(1), value_type(2)}) {
+        const std::vector<value_type> witness = {value_type::zero(), e, e.squared()};
+        BOOST_CHECK(rows_satisfied(cs, value_type::zero(), witness, 0, cs.constraints.size()));
+        BOOST_CHECK(!cs.is_satisfied(value_type::zero(), witness));
+    }
 }
 
 BOOST_AUTO_TEST_CASE(invalid_inputs_fail_before_mutation) {
@@ -285,48 +234,21 @@ BOOST_AUTO_TEST_CASE(invalid_inputs_fail_before_mutation) {
     auto cs = recovery_system<field_type>(1);
     const auto original = cs.constraints;
     const auto max_size = std::numeric_limits<std::size_t>::max();
-    for (const auto first_bit : {std::size_t(0), max_size, max_size - recovery_type::witness_size + 1,
-                                 std::vector<value_type>().max_size() - recovery_type::witness_size + 1}) {
-        BOOST_CHECK_THROW(recovery_type::append_constraints(cs.constraints, first_bit), std::invalid_argument);
+    for (const auto constant_index : {std::size_t(0), max_size, max_size - recovery_type::witness_size + 1,
+                                      std::vector<value_type>().max_size() - recovery_type::witness_size + 1}) {
+        BOOST_CHECK_THROW(recovery_type::append_constraints(cs.constraints, constant_index), std::invalid_argument);
         BOOST_CHECK(cs.constraints == original);
     }
 }
 
-BOOST_AUTO_TEST_CASE(exhaustive_small_field_bit_patterns) {
-    test_all_bit_patterns<3>();
-    test_all_bit_patterns<5>();
-    test_all_bit_patterns<7>();
-    test_all_bit_patterns<11>();
-    test_all_bit_patterns<13>();
-    test_all_bit_patterns<17>();
-    test_all_bit_patterns<31>();
-}
-
-BOOST_AUTO_TEST_CASE(exhaustive_bits_and_marker_over_field_seven) {
-    using field = test_prime_field<7>;
-    using value = field::value_type;
-    const auto cs = recovery_system<field>(1);
-    // Exhaust field values for all three bits and the single marker; product auxiliaries are forced by the minus rows.
-    for (unsigned b0 = 0; b0 < 7; ++b0) {
-        for (unsigned b1 = 0; b1 < 7; ++b1) {
-            for (unsigned b2 = 0; b2 < 7; ++b2) {
-                for (unsigned marker = 0; marker < 7; ++marker) {
-                    BOOST_TEST_CONTEXT("bits " << b0 << ',' << b1 << ',' << b2 << ", marker " << marker) {
-                        std::vector<value> witness(cs.num_variables(), value::zero());
-                        witness[0] = value(b0 + 2 * b1 + 4 * b2);
-                        witness[1] = value(b0);
-                        witness[2] = value(b1);
-                        witness[3] = value(b2);
-                        witness[4] = value(marker);
-                        complete_product_auxiliaries(cs, witness, 1);
-                        const bool valid =
-                            b0 <= 1 && b1 <= 1 && b2 <= 1 && b0 + 2 * b1 + 4 * b2 < 7 && marker == b2 * b1;
-                        BOOST_CHECK_EQUAL(rows_satisfied(cs, witness[0], witness, 0, cs.constraints.size()), valid);
-                    }
-                }
-            }
-        }
-    }
+BOOST_AUTO_TEST_CASE(exhaustive_small_field_recovery_assignments) {
+    test_all_recovery_assignments<3>();
+    test_all_recovery_assignments<5>();
+    test_all_recovery_assignments<7>();
+    test_all_recovery_assignments<11>();
+    test_all_recovery_assignments<13>();
+    test_all_recovery_assignments<17>();
+    test_all_recovery_assignments<31>();
 }
 
 BOOST_AUTO_TEST_CASE(instance_map_matches_fixed_rows_and_supports_multiple_public_inputs) {
@@ -336,16 +258,16 @@ BOOST_AUTO_TEST_CASE(instance_map_matches_fixed_rows_and_supports_multiple_publi
     const auto converted = reduction_type::instance_map(source);
     BOOST_CHECK(source == original);
     BOOST_REQUIRE(converted.is_valid());
-    BOOST_CHECK_EQUAL(converted.num_variables(), 510);
-    BOOST_CHECK_EQUAL(converted.num_constraints(), 564);
+    BOOST_CHECK_EQUAL(converted.num_variables(), 6);
+    BOOST_CHECK_EQUAL(converted.num_constraints(), 5);
 
-    // N = 3. The recovered one is w[3], and the source product's auxiliary is w[509].
+    // N = 3. The recovered one is w[3], and the source product's auxiliary is w[5].
     auto expected = recovery_system<field_type>(3).normalized();
     ++expected.witness_size;
     expected.constraints.push_back(
-        {target_combination({{1, 1}, {2, 1}, {3, 1}}), target_combination({{0, 3}, {509, 1}})});
+        {target_combination({{1, 1}, {2, 1}, {3, 1}}), target_combination({{0, 3}, {5, 1}})});
     expected.constraints.push_back(
-        {target_combination({{1, 1}, {2, -1}, {3, 1}}), target_combination({{0, -1}, {509, 1}})});
+        {target_combination({{1, 1}, {2, -1}, {3, 1}}), target_combination({{0, -1}, {5, 1}})});
     BOOST_CHECK(converted == expected);
     BOOST_CHECK(converted.normalized() == converted);
 
@@ -396,8 +318,8 @@ BOOST_AUTO_TEST_CASE(instance_map_empty_sources_keep_binding_recovery_and_unused
         source.auxiliary_input_size = auxiliary_size;
         const auto converted = reduction_type::instance_map(source);
         BOOST_CHECK(converted == recovery_system<field_type>(source.num_variables()).normalized());
-        BOOST_CHECK_EQUAL(converted.num_variables(), source.num_variables() + 506);
-        BOOST_CHECK_EQUAL(converted.num_constraints(), 562);
+        BOOST_CHECK_EQUAL(converted.num_variables(), source.num_variables() + 2);
+        BOOST_CHECK_EQUAL(converted.num_constraints(), 3);
         std::vector<value_type> witness(source.num_variables(), value_type(13));
         witness[0] = value_type(3);
         recovery_type::append_witness(witness);
@@ -414,18 +336,18 @@ BOOST_AUTO_TEST_CASE(instance_map_preserves_empty_and_constant_products_in_sourc
     source.add_constraint(source_constraint_type());                                  // 0*0 = 0.
     const auto converted = reduction_type::instance_map(source);
     BOOST_REQUIRE(converted.is_valid());
-    BOOST_CHECK_EQUAL(converted.num_variables(), 512);
-    BOOST_CHECK_EQUAL(converted.num_constraints(), 568);
+    BOOST_CHECK_EQUAL(converted.num_variables(), 8);
+    BOOST_CHECK_EQUAL(converted.num_constraints(), 9);
 
     const std::vector<recovery_type::constraint_type> expected_rows = {
-        {target_combination({{1, 1}}), target_combination({{0, -1}, {509, 1}})},
-        {target_combination({{1, -1}}), target_combination({{0, -1}, {509, 1}})},
-        {target_combination({{3, 2}}), target_combination({{0, -1}, {3, 4}, {510, 1}})},
-        {{}, target_combination({{0, -1}, {510, 1}})},
-        {{}, target_combination({{0, -1}, {511, 1}})},
-        {{}, target_combination({{0, -1}, {511, 1}})},
+        {target_combination({{1, 1}}), target_combination({{0, -1}, {5, 1}})},
+        {target_combination({{1, -1}}), target_combination({{0, -1}, {5, 1}})},
+        {target_combination({{3, 2}}), target_combination({{0, -1}, {3, 4}, {6, 1}})},
+        {{}, target_combination({{0, -1}, {6, 1}})},
+        {{}, target_combination({{0, -1}, {7, 1}})},
+        {{}, target_combination({{0, -1}, {7, 1}})},
     };
-    const std::vector<recovery_type::constraint_type> source_rows(converted.constraints.begin() + 562,
+    const std::vector<recovery_type::constraint_type> source_rows(converted.constraints.begin() + 3,
                                                                   converted.constraints.end());
     BOOST_CHECK(source_rows == expected_rows);
     std::vector<value_type> witness = {value_type(3), value_type(4), value_type(7)};
@@ -456,8 +378,8 @@ BOOST_AUTO_TEST_CASE(maps_check_every_raw_source_index_before_normalization_or_e
     using source_combination_type = nil::crypto3::math::linear_combination<variable_type>;
     const std::array<source_combination_type source_constraint_type::*, 3> combinations = {
         &source_constraint_type::a, &source_constraint_type::b, &source_constraint_type::c};
-    // With N = 3, even index 4 is invalid. Index 509 could otherwise alias the newly introduced auxiliary.
-    for (const auto index : {std::size_t(4), std::size_t(509), std::numeric_limits<std::size_t>::max()}) {
+    // With N = 3, even index 4 is invalid. Index 5 could otherwise alias the newly introduced auxiliary.
+    for (const auto index : {std::size_t(4), std::size_t(5), std::numeric_limits<std::size_t>::max()}) {
         for (std::size_t combination = 0; combination < combinations.size(); ++combination) {
             for (unsigned form = 0; form < 3; ++form) {
                 BOOST_TEST_CONTEXT("index=" << index << ", combination=" << combination << ", form=" << form) {
@@ -509,7 +431,6 @@ BOOST_AUTO_TEST_CASE(witness_map_matches_reference_and_preserves_inputs) {
     const auto source = source_example();
     const auto original = source;
     const auto converted = reduction_type::instance_map(source);
-    const auto recovery = recovery_system<field_type>(3);
     for (const auto &u : {value_type(1), value_type(3), value_type(5), value_type(field_type::modulus - 2)}) {
         const value_type x = u - value_type::one();
         const primary_input_type primary = {u};
@@ -518,11 +439,9 @@ BOOST_AUTO_TEST_CASE(witness_map_matches_reference_and_preserves_inputs) {
         const auto original_auxiliary = auxiliary;
         const auto witness = reduction_type::witness_map(source, primary, auxiliary);
 
-        // Use the independent recovery reference and the known source auxiliary ((x + 1) - 1)^2.
-        auto expected = witness_from_integer(recovery, u.to_integral(), 3);
-        expected[1] = x;
-        expected[2] = value_type::one();
-        expected.push_back(x.squared());
+        // Independently compute recovery and the source auxiliary ((x + 1) - 1)^2.
+        const std::vector<value_type> expected = {
+            u, x, value_type::one(), value_type::one(), (value_type::one() - u).squared(), x.squared()};
         BOOST_CHECK(witness == expected);
         BOOST_CHECK_EQUAL(witness.size(), converted.num_variables());
         BOOST_CHECK(converted.is_satisfied(u, witness));
@@ -547,7 +466,7 @@ BOOST_AUTO_TEST_CASE(witness_map_preserves_product_order_and_unused_variables) {
     BOOST_REQUIRE(source.is_satisfied(primary, auxiliary));
     const auto converted = reduction_type::instance_map(source);
     const auto witness = reduction_type::witness_map(source, primary, auxiliary);
-    BOOST_REQUIRE_EQUAL(witness.size(), 515);
+    BOOST_REQUIRE_EQUAL(witness.size(), 11);
     const std::vector<value_type> prefix = {value_type(3), value_type(2), value_type(1), value_type(7)};
     BOOST_CHECK_EQUAL_COLLECTIONS(witness.begin(), witness.begin() + 4, prefix.begin(), prefix.end());
     BOOST_CHECK(witness[4].is_one());    // Recovery starts after all original variables, including unused ones.

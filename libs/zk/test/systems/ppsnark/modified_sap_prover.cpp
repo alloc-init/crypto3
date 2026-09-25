@@ -1077,9 +1077,9 @@ BOOST_AUTO_TEST_CASE(r1cs_frontend_reuses_setup_for_multiple_assignments) {
     const auto source = r1cs_test_system();
     const auto converted = r1cs_reduction_type::instance_map(source);
     const auto key = generate_proving_key(converted);
-    BOOST_REQUIRE_EQUAL(key.constraint_system.num_constraints(), 564);
-    BOOST_REQUIRE_EQUAL(key.verification_key.num_variables, 510);
-    BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, 1024);
+    BOOST_REQUIRE_EQUAL(key.constraint_system.num_constraints(), 5);
+    BOOST_REQUIRE_EQUAL(key.verification_key.num_variables, 6);
+    BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, 8);
 
     // Equivalent unsorted, repeated, zero and cancelling terms use the same converted circuit and key.
     auto raw_source = source;
@@ -1108,33 +1108,51 @@ BOOST_AUTO_TEST_CASE(r1cs_frontend_prover_rejects_changed_witness_entries) {
     const auto proof = scheme_type::prove(key, u, witness);
     BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
 
-    // N = 3; recovery has 254 bits, 99 new markers and 153 comparison auxiliaries.
+    // N = 3; recovery adds the constant one and its square-conversion auxiliary.
     const std::array changes = {
-        std::pair {"public-input entry", std::size_t(0)},     std::pair {"source variable", std::size_t(1)},
-        std::pair {"recovered one", std::size_t(3)},          std::pair {"comparison marker", std::size_t(257)},
-        std::pair {"comparison auxiliary", std::size_t(356)}, std::pair {"source auxiliary", std::size_t(509)}};
-    BOOST_REQUIRE_EQUAL(witness.size(), 510);
+        std::pair {"public-input entry", std::size_t(0)}, std::pair {"source variable", std::size_t(1)},
+        std::pair {"recovered one", std::size_t(3)}, std::pair {"recovery auxiliary", std::size_t(4)},
+        std::pair {"source auxiliary", std::size_t(5)}};
+    BOOST_REQUIRE_EQUAL(witness.size(), 6);
     for (const auto &[name, index] : changes) {
         BOOST_TEST_CONTEXT("changed entry: " << name) {
             auto changed = witness;
-            // Keep the recovered bit Boolean when changing the source's constant-one wire.
             changed[index] = index == 3 ? scalar_value_type::zero() : changed[index] + scalar_value_type::one();
             BOOST_CHECK_THROW(scheme_type::prove(key, u, changed), std::invalid_argument);
         }
     }
     BOOST_CHECK_THROW(scheme_type::prove(key, scalar_value_type(5), witness), std::invalid_argument);
+    BOOST_CHECK(!scheme_type::verify(key.verification_key, scalar_value_type::zero(), proof));
+}
+
+BOOST_AUTO_TEST_CASE(r1cs_frontend_zero_input_cannot_bypass_constant_recovery) {
+    const auto source = r1cs_test_system();
+    const auto converted = r1cs_reduction_type::instance_map(source);
+    const auto key = generate_proving_key(converted);
+    const auto zero = scalar_value_type::zero();
+    const auto one = scalar_value_type::one();
+    // At u = 0, e = 0 can make the converted rows hold for a false source assignment (x + 1)*y = 0.
+    // Layout: u, x, y, e, recovery auxiliary, source auxiliary.
+    const std::vector<scalar_value_type> forged = {zero, zero, one, zero, zero, one};
+    BOOST_REQUIRE(!source.is_satisfied({zero}, {zero, one}));
+    for (const auto &row : converted.constraints) {
+        BOOST_REQUIRE(row.a.evaluate(forged).squared() - row.c.evaluate(forged) == zero);
+    }
+    // The odd-public-input contract must reject this at the relation and public prover boundaries.
+    BOOST_CHECK(!converted.is_satisfied(zero, forged));
+    BOOST_CHECK_THROW(scheme_type::prove(key, zero, forged), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(r1cs_frontend_proofs_cover_empty_sources_and_domain_boundaries) {
     const scalar_value_type u(3);
-    const std::array sizes = {std::pair {0, 1024}, std::pair {231, 1024}, std::pair {232, 2048}};
+    const std::array sizes = {std::pair {0, 4}, std::pair {2, 8}, std::pair {3, 16}};
     for (const auto &[source_rows, domain_size] : sizes) {
         BOOST_TEST_CONTEXT("source rows: " << source_rows << ", domain size: " << domain_size) {
             auto source = r1cs_test_system();
             const auto multiplication = source.constraints.front();
             source.constraints.resize(source_rows, multiplication);
             const auto converted = r1cs_reduction_type::instance_map(source);
-            BOOST_REQUIRE_EQUAL(converted.num_constraints(), 562 + 2 * source_rows);
+            BOOST_REQUIRE_EQUAL(converted.num_constraints(), 3 + 2 * source_rows);
             const auto key = generate_proving_key(converted);
             BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, domain_size);
             // Setup keeps the logical rows; polynomial construction supplies binding-row padding.
@@ -1237,12 +1255,12 @@ BOOST_AUTO_TEST_CASE(r1cs_bitcoin_amount_range_proofs) {
 
     // One public-API setup serves zero, one satoshi, one BTC and both upper-bound cases.
     const auto converted = r1cs_reduction_type::instance_map(source);
-    // 72 source values + 506 constant-recovery values + 82 multiplication auxiliaries.
-    BOOST_REQUIRE_EQUAL(converted.num_variables(), 660);
-    // 1 public binding + 561 constant-recovery rows + 2*82 source rows, before padding.
-    BOOST_REQUIRE_EQUAL(converted.num_constraints(), 726);
+    // 72 source values + 2 constant-recovery values + 82 multiplication auxiliaries.
+    BOOST_REQUIRE_EQUAL(converted.num_variables(), 156);
+    // 1 public binding + 2 constant-recovery rows + 2*82 source rows, before padding.
+    BOOST_REQUIRE_EQUAL(converted.num_constraints(), 167);
     const auto key = generate_proving_key(converted);
-    BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, 1024);
+    BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, 256);
     const std::array<std::uint64_t, 5> valid_amounts = {0, 1, satoshis_per_bitcoin, max_money - 1, max_money};
     for (const auto amount : valid_amounts) {
         BOOST_TEST_CONTEXT("satoshis: " << amount) {
