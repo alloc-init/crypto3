@@ -56,6 +56,8 @@ endmacro()
 set(TESTS_NAMES
         "r1cs"
         "modified_sap_proof"
+        "modified_sap_verification_key"
+        "modified_sap_constraint_system"
         "merkle_proof"
         "merkle_tree"
         "accumulation_vector"

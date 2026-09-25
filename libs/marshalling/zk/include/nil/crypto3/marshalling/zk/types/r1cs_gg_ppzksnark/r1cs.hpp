@@ -50,6 +50,7 @@ namespace nil {
     namespace crypto3 {
         namespace marshalling {
             namespace types {
+                // Keep the original coefficient codec by default; checked callers can select a validated field.
                 template<typename TTypeBase,
                          typename LT,
                          typename = typename std::enable_if<
@@ -57,6 +58,7 @@ namespace nil {
                                           nil::crypto3::math::linear_term<
                                               nil::crypto3::math::linear_variable<typename LT::field_type>>>::value,
                              bool>::type,
+                         typename CoefficientField = field_element<TTypeBase, typename LT::field_type::value_type>,
                          typename... TOptions>
                 using linear_term = nil::marshalling::types::bundle<
                     TTypeBase,
@@ -66,7 +68,7 @@ namespace nil {
                             TTypeBase,
                             typename nil::crypto3::math::linear_variable<typename LT::field_type>::index_type>,
                         // coeff
-                        field_element<TTypeBase, typename LT::field_type::value_type>>>;
+                        CoefficientField>>;
 
                 // Both assignment layouts use the same index/coefficient encoding. The native LC type
                 // determines whether index zero is implicit one or an explicitly supplied assignment entry.
@@ -81,12 +83,15 @@ namespace nil {
                                                   nil::crypto3::math::linear_variable<typename LC::field_type>,
                                                   nil::crypto3::math::assignment_layout::explicit_constant>>::value,
                              bool>::type,
+                         typename CoefficientField = field_element<TTypeBase, typename LC::field_type::value_type>,
                          typename... TOptions>
                 using linear_combination = nil::marshalling::types::array_list<
                     TTypeBase,
                     linear_term<
                         TTypeBase,
-                        nil::crypto3::math::linear_term<nil::crypto3::math::linear_variable<typename LC::field_type>>>,
+                        nil::crypto3::math::linear_term<nil::crypto3::math::linear_variable<typename LC::field_type>>,
+                        bool,
+                        CoefficientField>,
                     nil::marshalling::option::sequence_size_field_prefix<
                         nil::marshalling::types::integral<TTypeBase, std::size_t>>>;
 
@@ -133,32 +138,46 @@ namespace nil {
                             nil::marshalling::option::sequence_size_field_prefix<
                                 nil::marshalling::types::integral<TTypeBase, std::size_t>>>>>;
 
-                template<typename LT, typename Endianness>
-                linear_term<nil::marshalling::field_type<Endianness>, LT> fill_linear_term(const LT &lt) {
+                template<typename LT,
+                         typename Endianness,
+                         typename CoefficientField = field_element<nil::marshalling::field_type<Endianness>,
+                                                                   typename LT::field_type::value_type>>
+                linear_term<nil::marshalling::field_type<Endianness>, LT, bool, CoefficientField>
+                    fill_linear_term(const LT &lt) {
 
                     using TTypeBase = nil::marshalling::field_type<Endianness>;
                     using integral_type = nil::marshalling::types::integral<
                         TTypeBase,
                         typename nil::crypto3::math::linear_variable<typename LT::field_type>::index_type>;
-                    using field_element_type = field_element<TTypeBase, typename LT::field_type::value_type>;
-
-                    return linear_term<TTypeBase, LT>(
-                        std::make_tuple(integral_type(lt.index), field_element_type(lt.coeff)));
+                    return linear_term<TTypeBase, LT, bool, CoefficientField>(
+                        std::make_tuple(integral_type(lt.index), CoefficientField(lt.coeff)));
                 }
 
-                template<typename LT, typename Endianness>
-                LT make_linear_term(const linear_term<nil::marshalling::field_type<Endianness>, LT> &filled_lt) {
+                template<typename LT,
+                         typename Endianness,
+                         typename CoefficientField = field_element<nil::marshalling::field_type<Endianness>,
+                                                                   typename LT::field_type::value_type>>
+                LT make_linear_term(
+                    const linear_term<nil::marshalling::field_type<Endianness>, LT, bool, CoefficientField>
+                        &filled_lt) {
                     return typename LT::variable_type(std::move(std::get<0>(filled_lt.value()).value())) *
                            std::move(std::get<1>(filled_lt.value()).value());
                 }
 
-                template<typename LC, typename Endianness>
-                linear_combination<nil::marshalling::field_type<Endianness>, LC> fill_linear_combination(const LC &lc) {
+                template<typename LC,
+                         typename Endianness,
+                         typename CoefficientField = field_element<nil::marshalling::field_type<Endianness>,
+                                                                   typename LC::field_type::value_type>>
+                linear_combination<nil::marshalling::field_type<Endianness>, LC, bool, CoefficientField>
+                    fill_linear_combination(const LC &lc) {
 
                     using lt_type = linear_term<
                         nil::marshalling::field_type<Endianness>,
-                        nil::crypto3::math::linear_term<nil::crypto3::math::linear_variable<typename LC::field_type>>>;
-                    using lc_type = linear_combination<nil::marshalling::field_type<Endianness>, LC>;
+                        nil::crypto3::math::linear_term<nil::crypto3::math::linear_variable<typename LC::field_type>>,
+                        bool,
+                        CoefficientField>;
+                    using lc_type =
+                        linear_combination<nil::marshalling::field_type<Endianness>, LC, bool, CoefficientField>;
 
                     lc_type result;
                     std::vector<lt_type> &val = result.value();
@@ -166,27 +185,34 @@ namespace nil {
                         val.push_back(
                             fill_linear_term<nil::crypto3::math::linear_term<
                                                  nil::crypto3::math::linear_variable<typename LC::field_type>>,
-                                             Endianness>(lc.terms[i]));
+                                             Endianness,
+                                             CoefficientField>(lc.terms[i]));
                     }
 
                     return result;
                 }
 
-                template<typename LC, typename Endianness>
+                template<typename LC,
+                         typename Endianness,
+                         typename CoefficientField = field_element<nil::marshalling::field_type<Endianness>,
+                                                                   typename LC::field_type::value_type>>
                 LC make_linear_combination(
-                    const linear_combination<nil::marshalling::field_type<Endianness>, LC> &filled_lc) {
+                    const linear_combination<nil::marshalling::field_type<Endianness>, LC, bool, CoefficientField>
+                        &filled_lc) {
 
                     LC result;
                     const std::vector<linear_term<
                         nil::marshalling::field_type<Endianness>,
-                        nil::crypto3::math::linear_term<nil::crypto3::math::linear_variable<typename LC::field_type>>>>
-                        &values = filled_lc.value();
+                        nil::crypto3::math::linear_term<nil::crypto3::math::linear_variable<typename LC::field_type>>,
+                        bool,
+                        CoefficientField>> &values = filled_lc.value();
                     std::size_t size = values.size();
                     for (std::size_t i = 0; i < size; i++) {
                         result.add_term(
                             make_linear_term<nil::crypto3::math::linear_term<
                                                  nil::crypto3::math::linear_variable<typename LC::field_type>>,
-                                             Endianness>(values[i]));
+                                             Endianness,
+                                             CoefficientField>(values[i]));
                     }
 
                     return result;

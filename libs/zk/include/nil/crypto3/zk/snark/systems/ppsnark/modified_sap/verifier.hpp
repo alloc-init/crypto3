@@ -63,13 +63,8 @@ namespace nil {
                     using verification_key_type = typename policy_type::verification_key_type;
                     using proof_type = typename policy_type::proof_type;
 
-                    static bool validate(const verification_key_type &verification_key,
-                                         const primary_input_type &primary_input,
-                                         const proof_type &proof) {
-                        if ((primary_input.to_integral() & 1) == 0) {
-                            return false;
-                        }
-
+                    // Key validation is also used when reconstructing a key from its marshalled representation.
+                    static bool validate_verification_key(const verification_key_type &verification_key) {
                         constexpr std::size_t max_domain_log = algebra::fields::arithmetic_params<scalar_field_type>::s;
                         if (verification_key.num_variables == 0 || verification_key.domain_size < 2 ||
                             !std::has_single_bit(verification_key.domain_size) ||
@@ -94,7 +89,17 @@ namespace nil {
                             }
                         }
 
-                        return is_valid_group_element(proof.P) && is_valid_group_element(proof.Q);
+                        return true;
+                    }
+
+                    static bool validate(const verification_key_type &verification_key,
+                                         const primary_input_type &primary_input,
+                                         const proof_type &proof) {
+                        if ((primary_input.to_integral() & 1) == 0) {
+                            return false;
+                        }
+                        return validate_verification_key(verification_key) && is_valid_group_element(proof.P) &&
+                               is_valid_group_element(proof.Q);
                     }
 
                     static bool process(const verification_key_type &verification_key,
