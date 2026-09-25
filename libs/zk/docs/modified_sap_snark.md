@@ -14,6 +14,9 @@ The construction uses a circuit-specific trusted setup and a Fiat-Shamir
 challenge. It includes no zero-knowledge blinding and makes no zero-knowledge
 claim. Unspecified protocol details are listed in section 10.
 
+For a runnable example covering ordinary R1CS, setup, proving, serialization
+and verification, see [Complete marshalling example](#98-complete-marshalling-example).
+
 ## 2. Relation, assignment and polynomial domain
 
 All circuit coefficients, witness entries, polynomial coefficients and
@@ -932,6 +935,58 @@ On the documented 64-bit profile, a proof is 192 bytes and a verification key
 is 2160 bytes. These are raw payload sizes, excluding application framing.
 Use each marshalling field's `length()` when allocating its output buffer;
 the formulas describe the representation and provide independent size checks.
+
+### 9.8 Complete marshalling example
+
+The [modified SAP example](../../marshalling/zk/example/modified_sap.cpp) is a
+complete executable using the public scheme API and the four existing codecs.
+It converts `(x + 1) * y = u` from ordinary R1CS and round-trips the converted
+constraint system before setup. It then round-trips both keys, generates a proof
+for `(u, x, y) = (3, 2, 1)` with the restored proving key, and round-trips the
+proof before verification with the restored verification key.
+
+Build and run it from the repository root:
+
+```sh
+cmake -S . -B build -DBUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target marshalling_modified_sap_example --parallel
+./build/libs/marshalling/zk/example/marshalling_modified_sap_example
+```
+
+The example uses Crypto3's `chacha_urbg` with a fixed seed for reproducibility.
+Its setup keys are insecure because the seed is public. A real setup must use
+cryptographic entropy and protect the seed and setup secrets. Proving requires
+no additional randomness.
+
+The source has one public input, two private inputs and one R1CS constraint.
+Its converted circuit has six witness entries, five logical rows and a domain
+of size eight. On the 64-bit big-endian profile, each proof occupies 192 bytes
+and the verification key occupies 2160 bytes. The executable prints the sizes
+of all four encoded objects and exits with a nonzero status on failure.
+
+The codecs are headers under
+`nil/crypto3/marshalling/zk/types/modified_sap/`. Each has the corresponding
+`fill_*` and `make_*` functions in `nil::crypto3::marshalling::types`:
+
+| Header | Conversion names | Explicit template arguments |
+| --- | --- | --- |
+| `constraint_system.hpp` | `fill_modified_sap_constraint_system`, `make_modified_sap_constraint_system` | `scheme::constraint_system_type, Endianness` |
+| `proving_key.hpp` | `fill_modified_sap_proving_key`, `make_modified_sap_proving_key` | `Policy, Endianness` |
+| `verification_key.hpp` | `fill_modified_sap_verification_key`, `make_modified_sap_verification_key` | `Policy, Endianness` |
+| `proof.hpp` | `fill_modified_sap_proof`, `make_modified_sap_proof` | `scheme::proof_type, Endianness` |
+
+The example allocates each output buffer with `length()`, checks every
+`write()` and `read()` status, and requires full consumption because each buffer
+holds one standalone object. It calls `make_*` only after a successful read
+and catches conversion exceptions. These checks remain active in Release builds.
+For external input, enforce the application limits described in section 9.6
+before decoding; the example uses buffers it has just produced itself.
+
+The expected `u` comes from the verifier's caller and stays outside the proof
+bytes. The example verifies the restored proof against that `u` and prints the
+result. Successful deserialization alone does not establish proof validity.
+Applications must also obtain the expected verification key from a trusted
+source; decoding a key does not authenticate its origin.
 
 ## 10. Unspecified protocol details
 
