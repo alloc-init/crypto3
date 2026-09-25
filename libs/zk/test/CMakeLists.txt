@@ -67,8 +67,18 @@ set(TESTS_NAMES
 
         "routing_algorithms/test_routing_algorithms"
 
+        "relations/numeric/bit_comparison"
+        "relations/numeric/r1cs"
+        "relations/numeric/r1cs_to_modified_sap"
         "relations/numeric/qap"
         "relations/numeric/sap"
+        "relations/numeric/modified_sap"
+
+        "systems/ppsnark/modified_sap_generator"
+        "systems/ppsnark/modified_sap_pairing_policy"
+        "systems/ppsnark/modified_sap_prover"
+        "systems/ppsnark/modified_sap_transcript"
+        "systems/ppsnark/modified_sap_verifier"
 
         "systems/plonk/placeholder/placeholder_circuits"
         "systems/plonk/placeholder/placeholder_circuits_dFRI"

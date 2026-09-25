@@ -35,6 +35,7 @@
 #define CRYPTO3_ZK_R1CS_CONSTRAINT_SYSTEM_HPP
 
 #include <cstdlib>
+#include <limits>
 #include <vector>
 
 #include <nil/crypto3/math/linear_variable.hpp>
@@ -146,13 +147,17 @@ namespace nil {
                     }
 
                     bool is_valid() const {
-                        if (this->num_inputs() > this->num_variables())
+                        // Reserve one entry for the implicit constant before adding the dimensions.
+                        if (auxiliary_input_size >= std::numeric_limits<std::size_t>::max() - primary_input_size) {
                             return false;
+                        }
+                        // Linear-combination validation takes an exclusive bound; R1CS indices are 0..N.
+                        const std::size_t variable_bound = this->num_variables() + 1;
 
                         for (std::size_t c = 0; c < constraints.size(); ++c) {
-                            if (!(constraints[c].a.is_valid(this->num_variables()) &&
-                                  constraints[c].b.is_valid(this->num_variables()) &&
-                                  constraints[c].c.is_valid(this->num_variables()))) {
+                            if (!(constraints[c].a.is_valid(variable_bound) &&
+                                  constraints[c].b.is_valid(variable_bound) &&
+                                  constraints[c].c.is_valid(variable_bound))) {
                                 return false;
                             }
                         }
