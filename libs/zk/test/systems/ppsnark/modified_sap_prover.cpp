@@ -38,6 +38,10 @@
 
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/prover.hpp>
 
+#include <nil/crypto3/marshalling/zk/types/modified_sap/constraint_system.hpp>
+#include <nil/crypto3/marshalling/zk/types/modified_sap/proof.hpp>
+#include <nil/crypto3/marshalling/zk/types/modified_sap/proving_key.hpp>
+#include <nil/crypto3/marshalling/zk/types/modified_sap/verification_key.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/math/polynomial/operations/lagrange_interpolation.hpp>
 #include <nil/crypto3/random/chacha_urbg.hpp>
@@ -53,6 +57,8 @@
 
 namespace {
 
+    namespace marshalling_types = nil::crypto3::marshalling::types;
+    using endianness = nil::marshalling::option::big_endian;
     using curve_type = nil::crypto3::algebra::curves::alt_bn128_254;
     using scalar_value_type = curve_type::scalar_field_type::value_type;
     using base_value_type = curve_type::base_field_type::value_type;
@@ -137,6 +143,27 @@ namespace {
         const std::array<std::uint8_t, 32> seed = {};
         nil::crypto3::random::chacha_urbg<> random_source(seed);
         return scheme_type::generate(source, random_source).first;
+    }
+
+    template<typename Marshalled>
+    Marshalled round_trip_marshaled(const Marshalled &filled) {
+        using status_type = nil::marshalling::status_type;
+        std::vector<std::uint8_t> bytes(filled.length());
+        auto output = bytes.begin();
+        BOOST_REQUIRE(filled.write(output, bytes.size()) == status_type::success);
+        BOOST_REQUIRE(output == bytes.end());
+
+        Marshalled restored;
+        auto input = bytes.cbegin();
+        BOOST_REQUIRE(restored.read(input, bytes.size()) == status_type::success);
+        // These buffers hold one standalone object, so successful decoding must consume the entire frame.
+        BOOST_REQUIRE(input == bytes.cend());
+        std::vector<std::uint8_t> reencoded(restored.length());
+        output = reencoded.begin();
+        BOOST_REQUIRE(restored.write(output, reencoded.size()) == status_type::success);
+        BOOST_REQUIRE(output == reencoded.end());
+        BOOST_CHECK(reencoded == bytes);
+        return restored;
     }
 
     deterministic_generator_type::trapdoor_type test_trapdoor() {
@@ -991,6 +1018,16 @@ BOOST_AUTO_TEST_CASE(generated_proofs_reject_changed_commitments_and_evaluations
     const scalar_value_type u(3);
     const auto proof = scheme_type::prove(key, u, {u, scalar_value_type(2), scalar_value_type(1)});
     BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
+    const auto restored_vk =
+        marshalling_types::make_modified_sap_verification_key<policy_type, endianness>(round_trip_marshaled(
+            marshalling_types::fill_modified_sap_verification_key<policy_type, endianness>(key.verification_key)));
+    const auto verify_after_serialization = [&](const proof_type &candidate) {
+        const auto restored = marshalling_types::make_modified_sap_proof<proof_type, endianness>(
+            round_trip_marshaled(marshalling_types::fill_modified_sap_proof<proof_type, endianness>(candidate)));
+        BOOST_CHECK(restored == candidate);
+        return scheme_type::verify(restored_vk, u, restored);
+    };
+    BOOST_REQUIRE(verify_after_serialization(proof));
 
     const std::array commitments = {std::pair {"P", &proof_type::P}, std::pair {"Q", &proof_type::Q}};
     for (const auto &[name, member] : commitments) {
@@ -998,6 +1035,7 @@ BOOST_AUTO_TEST_CASE(generated_proofs_reject_changed_commitments_and_evaluations
             auto changed = proof;
             changed.*member += g1_value_type::one();
             BOOST_CHECK(!scheme_type::verify(key.verification_key, u, changed));
+            BOOST_CHECK(!verify_after_serialization(changed));
         }
     }
     const std::array evaluations = {std::pair {"v_A", &proof_type::v_A}, std::pair {"v_C", &proof_type::v_C},
@@ -1007,6 +1045,7 @@ BOOST_AUTO_TEST_CASE(generated_proofs_reject_changed_commitments_and_evaluations
             auto changed = proof;
             changed.*member += scalar_value_type::one();
             BOOST_CHECK(!scheme_type::verify(key.verification_key, u, changed));
+            BOOST_CHECK(!verify_after_serialization(changed));
         }
     }
 
@@ -1016,6 +1055,8 @@ BOOST_AUTO_TEST_CASE(generated_proofs_reject_changed_commitments_and_evaluations
     changed.v_C -= proof.v_Z;
     BOOST_REQUIRE_EQUAL(changed.v_A.squared() - changed.v_C, changed.v_H * changed.v_Z + u);
     BOOST_CHECK(!scheme_type::verify(key.verification_key, u, changed));
+    // These mutations have valid encodings; their rejection must still come from native verification.
+    BOOST_CHECK(!verify_after_serialization(changed));
 }
 
 BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_expected_public_input) {
@@ -1023,16 +1064,26 @@ BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_expected_public_input) {
     const scalar_value_type u(3);
     const auto proof = scheme_type::prove(key, u, {u, scalar_value_type(2), scalar_value_type(1)});
     BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
+    const auto restored_vk =
+        marshalling_types::make_modified_sap_verification_key<policy_type, endianness>(round_trip_marshaled(
+            marshalling_types::fill_modified_sap_verification_key<policy_type, endianness>(key.verification_key)));
+    const auto restored_proof = marshalling_types::make_modified_sap_proof<proof_type, endianness>(
+        round_trip_marshaled(marshalling_types::fill_modified_sap_proof<proof_type, endianness>(proof)));
+    BOOST_REQUIRE(scheme_type::verify(restored_vk, u, restored_proof));
 
     for (const auto &changed_u : {scalar_value_type(1), scalar_value_type(5)}) {
         BOOST_TEST_CONTEXT("changed public input: " << changed_u) {
             BOOST_CHECK(!scheme_type::verify(key.verification_key, changed_u, proof));
+            BOOST_CHECK(!scheme_type::verify(restored_vk, changed_u, restored_proof));
 
             // Restore the arithmetic equation for the new public input; the transcript and openings still bind u.
             auto changed = proof;
             changed.v_C += u - changed_u;
             BOOST_REQUIRE_EQUAL(changed.v_A.squared() - changed.v_C, changed.v_H * changed.v_Z + changed_u);
             BOOST_CHECK(!scheme_type::verify(key.verification_key, changed_u, changed));
+            const auto restored_changed = marshalling_types::make_modified_sap_proof<proof_type, endianness>(
+                round_trip_marshaled(marshalling_types::fill_modified_sap_proof<proof_type, endianness>(changed)));
+            BOOST_CHECK(!scheme_type::verify(restored_vk, changed_u, restored_changed));
         }
     }
 }
@@ -1046,14 +1097,28 @@ BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_circuit_and_setup) {
     const auto keys = scheme_type::generate(source, random_source);
     const auto proof = scheme_type::prove(keys.first, u, witness);
     BOOST_REQUIRE(scheme_type::verify(keys.second, u, proof));
+    const auto verify_after_serialization = [&](const policy_type::verification_key_type &vk,
+                                                const proof_type &candidate) {
+        const auto restored_vk = marshalling_types::make_modified_sap_verification_key<policy_type, endianness>(
+            round_trip_marshaled(marshalling_types::fill_modified_sap_verification_key<policy_type, endianness>(vk)));
+        const auto restored_proof = marshalling_types::make_modified_sap_proof<proof_type, endianness>(
+            round_trip_marshaled(marshalling_types::fill_modified_sap_proof<proof_type, endianness>(candidate)));
+        BOOST_CHECK(restored_vk == vk);
+        BOOST_CHECK(restored_proof == candidate);
+        return scheme_type::verify(restored_vk, u, restored_proof);
+    };
+    BOOST_REQUIRE(verify_after_serialization(keys.second, proof));
 
     // A second setup for the same circuit uses fresh draws from the ChaCha stream.
     const auto fresh_keys = scheme_type::generate(source, random_source);
     const auto fresh_proof = scheme_type::prove(fresh_keys.first, u, witness);
     BOOST_REQUIRE(scheme_type::verify(fresh_keys.second, u, fresh_proof));
+    BOOST_REQUIRE(verify_after_serialization(fresh_keys.second, fresh_proof));
     BOOST_REQUIRE(!(fresh_keys.second == keys.second));
     BOOST_CHECK(!scheme_type::verify(fresh_keys.second, u, proof));
     BOOST_CHECK(!scheme_type::verify(keys.second, u, fresh_proof));
+    BOOST_CHECK(!verify_after_serialization(fresh_keys.second, proof));
+    BOOST_CHECK(!verify_after_serialization(keys.second, fresh_proof));
 
     // Negating A in one row preserves satisfaction but changes the circuit digest.
     auto changed_source = source;
@@ -1062,6 +1127,7 @@ BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_circuit_and_setup) {
     const auto changed_keys = scheme_type::generate(changed_source, repeated_random_source);
     const auto changed_proof = scheme_type::prove(changed_keys.first, u, witness);
     BOOST_REQUIRE(scheme_type::verify(changed_keys.second, u, changed_proof));
+    BOOST_REQUIRE(verify_after_serialization(changed_keys.second, changed_proof));
     BOOST_REQUIRE_NE(changed_keys.second.circuit_digest, keys.second.circuit_digest);
 
     // Equal dimensions and identical setup draws make the verification keys differ only in their circuit digest.
@@ -1070,13 +1136,27 @@ BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_circuit_and_setup) {
     BOOST_REQUIRE(matching_parameters == keys.second);
     BOOST_CHECK(!scheme_type::verify(changed_keys.second, u, proof));
     BOOST_CHECK(!scheme_type::verify(keys.second, u, changed_proof));
+    BOOST_CHECK(!verify_after_serialization(changed_keys.second, proof));
+    BOOST_CHECK(!verify_after_serialization(keys.second, changed_proof));
 }
 
 BOOST_AUTO_TEST_CASE(r1cs_frontend_reuses_setup_for_multiple_assignments) {
     // One public input u and two private variables x, y, constrained by (x + 1)*y = u.
     const auto source = r1cs_test_system();
     const auto converted = r1cs_reduction_type::instance_map(source);
-    const auto key = generate_proving_key(converted);
+    const auto restored_system =
+        marshalling_types::make_modified_sap_constraint_system<system_type, endianness>(round_trip_marshaled(
+            marshalling_types::fill_modified_sap_constraint_system<system_type, endianness>(converted)));
+    BOOST_REQUIRE(restored_system == converted);
+    const auto key = generate_proving_key(restored_system);
+    const auto restored_key = marshalling_types::make_modified_sap_proving_key<policy_type, endianness>(
+        round_trip_marshaled(marshalling_types::fill_modified_sap_proving_key<policy_type, endianness>(key)));
+    const auto restored_vk =
+        marshalling_types::make_modified_sap_verification_key<policy_type, endianness>(round_trip_marshaled(
+            marshalling_types::fill_modified_sap_verification_key<policy_type, endianness>(key.verification_key)));
+    BOOST_REQUIRE(restored_key == key);
+    BOOST_REQUIRE(restored_vk == key.verification_key);
+    BOOST_CHECK(restored_key.verification_key == restored_vk);
     BOOST_REQUIRE_EQUAL(key.constraint_system.num_constraints(), 5);
     BOOST_REQUIRE_EQUAL(key.verification_key.num_variables, 6);
     BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, 8);
@@ -1094,8 +1174,14 @@ BOOST_AUTO_TEST_CASE(r1cs_frontend_reuses_setup_for_multiple_assignments) {
                 raw_source, {u}, {u - scalar_value_type::one(), scalar_value_type::one()});
             const auto proof = nil::crypto3::zk::prove<scheme_type>(key, u, witness);
             BOOST_REQUIRE(nil::crypto3::zk::verify<scheme_type>(key.verification_key, u, proof));
+            const auto restored_proof = marshalling_types::make_modified_sap_proof<proof_type, endianness>(
+                round_trip_marshaled(marshalling_types::fill_modified_sap_proof<proof_type, endianness>(
+                    nil::crypto3::zk::prove<scheme_type>(restored_key, u, witness))));
+            BOOST_CHECK(restored_proof == proof);
+            BOOST_REQUIRE(nil::crypto3::zk::verify<scheme_type>(restored_vk, u, restored_proof));
             const auto changed_u = u == scalar_value_type(3) ? scalar_value_type(5) : scalar_value_type(3);
             BOOST_CHECK(!scheme_type::verify(key.verification_key, changed_u, proof));
+            BOOST_CHECK(!scheme_type::verify(restored_vk, changed_u, restored_proof));
         }
     }
 }
@@ -1153,7 +1239,18 @@ BOOST_AUTO_TEST_CASE(r1cs_frontend_proofs_cover_empty_sources_and_domain_boundar
             source.constraints.resize(source_rows, multiplication);
             const auto converted = r1cs_reduction_type::instance_map(source);
             BOOST_REQUIRE_EQUAL(converted.num_constraints(), 3 + 2 * source_rows);
-            const auto key = generate_proving_key(converted);
+            const auto restored_system =
+                marshalling_types::make_modified_sap_constraint_system<system_type, endianness>(round_trip_marshaled(
+                    marshalling_types::fill_modified_sap_constraint_system<system_type, endianness>(converted)));
+            BOOST_REQUIRE(restored_system == converted);
+            const auto key = generate_proving_key(restored_system);
+            const auto restored_key = marshalling_types::make_modified_sap_proving_key<policy_type, endianness>(
+                round_trip_marshaled(marshalling_types::fill_modified_sap_proving_key<policy_type, endianness>(key)));
+            const auto restored_vk = marshalling_types::make_modified_sap_verification_key<policy_type, endianness>(
+                round_trip_marshaled(marshalling_types::fill_modified_sap_verification_key<policy_type, endianness>(
+                    key.verification_key)));
+            BOOST_REQUIRE(restored_key == key);
+            BOOST_REQUIRE(restored_vk == key.verification_key);
             BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, domain_size);
             // Setup keeps the logical rows; polynomial construction supplies binding-row padding.
             BOOST_CHECK_EQUAL(key.constraint_system.num_constraints(), converted.num_constraints());
@@ -1162,6 +1259,11 @@ BOOST_AUTO_TEST_CASE(r1cs_frontend_proofs_cover_empty_sources_and_domain_boundar
                 r1cs_reduction_type::witness_map(source, {u}, {scalar_value_type(2), scalar_value_type(1)});
             const auto proof = scheme_type::prove(key, u, witness);
             BOOST_CHECK(scheme_type::verify(key.verification_key, u, proof));
+            const auto restored_proof = marshalling_types::make_modified_sap_proof<proof_type, endianness>(
+                round_trip_marshaled(marshalling_types::fill_modified_sap_proof<proof_type, endianness>(
+                    scheme_type::prove(restored_key, u, witness))));
+            BOOST_CHECK(restored_proof == proof);
+            BOOST_CHECK(scheme_type::verify(restored_vk, u, restored_proof));
         }
     }
 }
@@ -1259,7 +1361,18 @@ BOOST_AUTO_TEST_CASE(r1cs_bitcoin_amount_range_proofs) {
     BOOST_REQUIRE_EQUAL(converted.num_variables(), 156);
     // 1 public binding + 2 constant-recovery rows + 2*82 source rows, before padding.
     BOOST_REQUIRE_EQUAL(converted.num_constraints(), 167);
-    const auto key = generate_proving_key(converted);
+    const auto restored_system =
+        marshalling_types::make_modified_sap_constraint_system<system_type, endianness>(round_trip_marshaled(
+            marshalling_types::fill_modified_sap_constraint_system<system_type, endianness>(converted)));
+    BOOST_REQUIRE(restored_system == converted);
+    const auto key = generate_proving_key(restored_system);
+    const auto restored_key = marshalling_types::make_modified_sap_proving_key<policy_type, endianness>(
+        round_trip_marshaled(marshalling_types::fill_modified_sap_proving_key<policy_type, endianness>(key)));
+    const auto restored_vk =
+        marshalling_types::make_modified_sap_verification_key<policy_type, endianness>(round_trip_marshaled(
+            marshalling_types::fill_modified_sap_verification_key<policy_type, endianness>(key.verification_key)));
+    BOOST_REQUIRE(restored_key == key);
+    BOOST_REQUIRE(restored_vk == key.verification_key);
     BOOST_REQUIRE_EQUAL(key.verification_key.domain_size, 256);
     const std::array<std::uint64_t, 5> valid_amounts = {0, 1, satoshis_per_bitcoin, max_money - 1, max_money};
     for (const auto amount : valid_amounts) {
@@ -1271,7 +1384,13 @@ BOOST_AUTO_TEST_CASE(r1cs_bitcoin_amount_range_proofs) {
             BOOST_REQUIRE(converted.is_satisfied(u, witness));
             const auto proof = scheme_type::prove(key, u, witness);
             BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
+            const auto restored_proof = marshalling_types::make_modified_sap_proof<proof_type, endianness>(
+                round_trip_marshaled(marshalling_types::fill_modified_sap_proof<proof_type, endianness>(
+                    scheme_type::prove(restored_key, u, witness))));
+            BOOST_CHECK(restored_proof == proof);
+            BOOST_REQUIRE(scheme_type::verify(restored_vk, u, restored_proof));
             BOOST_CHECK(!scheme_type::verify(key.verification_key, u + scalar_value_type(2), proof));
+            BOOST_CHECK(!scheme_type::verify(restored_vk, u + scalar_value_type(2), restored_proof));
         }
     }
 
@@ -1306,6 +1425,7 @@ BOOST_AUTO_TEST_CASE(r1cs_bitcoin_amount_range_proofs) {
     witness[first_bit - 1] = auxiliary[1];
     witness[first_bit] = auxiliary[2];
     BOOST_CHECK_THROW(scheme_type::prove(key, u, witness), std::invalid_argument);
+    BOOST_CHECK_THROW(scheme_type::prove(restored_key, u, witness), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
