@@ -53,8 +53,8 @@ macro(define_marshalling_test test)
 
 endmacro()
 
-# r1cs tests are failing compilation, turning them off for now.
 set(TESTS_NAMES
+        "r1cs"
         "merkle_proof"
         "merkle_tree"
         "accumulation_vector"

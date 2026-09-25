@@ -68,12 +68,18 @@ namespace nil {
                         // coeff
                         field_element<TTypeBase, typename LT::field_type::value_type>>>;
 
+                // Both assignment layouts use the same index/coefficient encoding. The native LC type
+                // determines whether index zero is implicit one or an explicitly supplied assignment entry.
                 template<typename TTypeBase,
                          typename LC,
                          typename = typename std::enable_if<
                              std::is_same<LC,
                                           nil::crypto3::math::linear_combination<
-                                              nil::crypto3::math::linear_variable<typename LC::field_type>>>::value,
+                                              nil::crypto3::math::linear_variable<typename LC::field_type>>>::value ||
+                                 std::is_same<LC,
+                                              nil::crypto3::math::linear_combination<
+                                                  nil::crypto3::math::linear_variable<typename LC::field_type>,
+                                                  nil::crypto3::math::assignment_layout::explicit_constant>>::value,
                              bool>::type,
                          typename... TOptions>
                 using linear_combination = nil::marshalling::types::array_list<
