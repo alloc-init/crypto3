@@ -170,7 +170,20 @@ namespace nil {
 
                 std::vector<field_value_type>
                     evaluate_all_lagrange_polynomials(const field_value_type &t) const override {
-                    return detail::basic_radix2_evaluate_all_lagrange_polynomials<FieldType>(this->m, t);
+                    field_value_type vanishing_polynomial_at_t;
+                    return evaluate_all_lagrange_polynomials(t, vanishing_polynomial_at_t);
+                }
+
+                std::vector<field_value_type>
+                    evaluate_all_lagrange_polynomials(const field_value_type &t,
+                                                      field_value_type &vanishing_polynomial_at_t) const override {
+                    // Reuse the FFT's natural-order domain powers and compute Z(t) only once.
+                    field_value_type vanishing_at_t;
+                    auto result = detail::basic_radix2_evaluate_all_lagrange_polynomials<FieldType>(fft_cache->first, t,
+                                                                                                    vanishing_at_t);
+                    // Assign the output after evaluation because it may refer to the same value as t.
+                    vanishing_polynomial_at_t = vanishing_at_t;
+                    return result;
                 }
 
                 std::vector<value_type> evaluate_all_lagrange_polynomials(
