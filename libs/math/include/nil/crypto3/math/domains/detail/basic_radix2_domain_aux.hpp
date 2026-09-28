@@ -28,11 +28,14 @@
 #define CRYPTO3_MATH_BASIC_RADIX2_DOMAIN_AUX_HPP
 
 #include <algorithm>
+#include <bit>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 #include <nil/crypto3/algebra/type_traits.hpp>
 
+#include <nil/crypto3/math/algorithms/batch_inverse.hpp>
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
 #include <nil/crypto3/math/detail/field_utils.hpp>
 
@@ -116,8 +119,55 @@ namespace nil {
                 }
 
                 /**
-                 * Compute the m Lagrange coefficients, relative to the set S={omega^{0},...,omega^{m-1}}, at the
-                 * field element t.
+                 * Compute the Lagrange coefficients and Z(t) from precomputed domain powers.
+                 *
+                 * @pre omega_powers contains (1, omega, ..., omega^(m-1)) for a primitive m-th root of unity.
+                 */
+                template<typename FieldType>
+                std::vector<typename FieldType::value_type> basic_radix2_evaluate_all_lagrange_polynomials(
+                    const std::vector<typename FieldType::value_type> &omega_powers,
+                    const typename FieldType::value_type &t,
+                    typename FieldType::value_type &vanishing_polynomial_at_t) {
+                    typedef typename FieldType::value_type value_type;
+
+                    const std::size_t m = omega_powers.size();
+                    if (!std::has_single_bit(m)) {
+                        throw std::invalid_argument("expected a nonzero power-of-two domain size");
+                    }
+
+                    vanishing_polynomial_at_t = t.pow(m) - value_type::one();
+                    if (m == 1) {
+                        return std::vector<value_type>(1, value_type::one());
+                    }
+
+                    std::vector<value_type> denominators;
+                    denominators.reserve(m + 1);
+                    for (std::size_t i = 0; i < m; ++i) {
+                        const value_type denominator = t - omega_powers[i];
+                        if (denominator.is_zero()) {
+                            // A domain point selects one basis polynomial; do not try to invert zero.
+                            std::vector<value_type> result(m, value_type::zero());
+                            result[i] = value_type::one();
+                            return result;
+                        }
+                        denominators.push_back(denominator);
+                    }
+
+                    // Include m so normalization by 1/m uses the same single field inversion.
+                    denominators.emplace_back(m);
+                    auto result = batch_inverse_nonzero(denominators);
+                    const value_type scale = vanishing_polynomial_at_t * result.back();
+                    result.pop_back();
+                    // L_i(t) = Z(t) * omega^i / (m * (t - omega^i)). Reuse the inverse vector for the result.
+                    for (std::size_t i = 0; i < m; ++i) {
+                        result[i] *= scale * omega_powers[i];
+                    }
+
+                    return result;
+                }
+
+                /**
+                 * Compute the m Lagrange coefficients for S = (1, omega, ..., omega^(m-1)) at t.
                  */
                 template<typename FieldType>
                 std::vector<typename FieldType::value_type>
@@ -125,54 +175,18 @@ namespace nil {
                                                                    const typename FieldType::value_type &t) {
                     typedef typename FieldType::value_type value_type;
 
+                    if (!std::has_single_bit(m)) {
+                        throw std::invalid_argument("expected a nonzero power-of-two domain size");
+                    }
                     if (m == 1) {
                         return std::vector<value_type>(1, value_type::one());
                     }
 
-                    if (m != (1u << static_cast<std::size_t>(std::ceil(std::log2(m)))))
-                        throw std::invalid_argument("expected m == (1u << log2(m))");
-
-                    const value_type omega = unity_root<FieldType>(m);
-
-                    std::vector<value_type> u(m, value_type::zero());
-
-                    /*
-                     If t equals one of the roots of unity in S={omega^{0},...,omega^{m-1}}
-                     then output 1 at the right place, and 0 elsewhere
-                     */
-
-                    if (t.pow(m) == value_type::one()) {
-                        value_type omega_i = value_type::one();
-                        for (std::size_t i = 0; i < m; ++i) {
-                            if (omega_i == t)    // i.e., t equals omega^i
-                            {
-                                u[i] = value_type::one();
-                                return u;
-                            }
-
-                            omega_i *= omega;
-                        }
-                    }
-
-                    /*
-                     Otherwise, if t does not equal any of the roots of unity in S,
-                     then compute each L_{i,S}(t) as Z_{S}(t) * v_i / (t-\omega^i)
-                     where:
-                     - Z_{S}(t) = \prod_{j} (t-\omega^j) = (t^m-1), and
-                     - v_{i} = 1 / \prod_{j \neq i} (\omega^i-\omega^j).
-                     Below we use the fact that v_{0} = 1/m and v_{i+1} = \omega * v_{i}.
-                     */
-
-                    const value_type Z = (t.pow(m)) - value_type::one();
-                    value_type l = Z * value_type(m).inversed();
-                    value_type r = value_type::one();
-                    for (std::size_t i = 0; i < m; ++i) {
-                        u[i] = l * (t - r).inversed();
-                        l *= omega;
-                        r *= omega;
-                    }
-
-                    return u;
+                    std::vector<value_type> omega_powers;
+                    create_fft_cache<FieldType>(m, unity_root<FieldType>(m), omega_powers);
+                    value_type vanishing_polynomial_at_t;
+                    return basic_radix2_evaluate_all_lagrange_polynomials<FieldType>(omega_powers, t,
+                                                                                     vanishing_polynomial_at_t);
                 }
             }    // namespace detail
         }    // namespace math

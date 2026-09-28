@@ -148,8 +148,6 @@ namespace nil {
                             instance_evaluation result {std::vector<field_value_type>(n, field_value_type::zero()),
                                                         std::vector<field_value_type>(n, field_value_type::zero()),
                                                         field_value_type::zero()};
-                            // TODO: Optimize the radix-two Lagrange evaluator with math::batch_inverse_nonzero()
-                            // and cached weights, preserving this domain and Z(X) = X^m - 1. Benchmark the change.
                             const auto lagrange = domain->evaluate_all_lagrange_polynomials(t, result.Zt);
 
                             for (std::size_t j = 0; j < cs.num_constraints(); ++j) {
