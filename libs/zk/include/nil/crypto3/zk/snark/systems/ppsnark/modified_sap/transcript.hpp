@@ -26,6 +26,7 @@
 #define CRYPTO3_ZK_MODIFIED_SAP_TRANSCRIPT_HPP
 
 #include <cstddef>
+#include <stdexcept>
 #include <string_view>
 #include <vector>
 
@@ -62,6 +63,13 @@ namespace nil {
                             value += byte;
                         }
                         return base_value_type(value);
+                    }
+
+                    static void append_common_tags(std::vector<base_value_type> &input) {
+                        input.push_back(tag("modified-sap-snark"));
+                        input.push_back(tag("v1"));
+                        input.push_back(tag("bn254"));
+                        input.push_back(tag("poseidon1-fp-128-r2-c1"));
                     }
 
                     static base_value_type encode_size(std::size_t value) {
@@ -110,9 +118,33 @@ namespace nil {
                         }
                     }
 
+                    static std::vector<base_value_type>
+                        encode_proof_prefix(const modified_sap_verification_key<curve_type> &verification_key) {
+                        std::vector<base_value_type> input;
+                        append_common_tags(input);
+                        input.push_back(tag("pairing-exact-e"));
+                        input.push_back(tag("proof-challenge"));
+                        input.push_back(verification_key.circuit_digest);
+                        input.push_back(encode_size(verification_key.num_variables));
+                        input.push_back(encode_size(verification_key.domain_size));
+
+                        input.push_back(encode_size(3));
+                        append_g2(input, verification_key.g2_one);
+                        append_g2(input, verification_key.tau_g2);
+                        append_g2(input, verification_key.gamma_inverse_g2);
+
+                        input.push_back(encode_size(5));
+                        append_gt(input, verification_key.alpha_z_vanishing_gt);
+                        for (const auto &alpha : verification_key.alpha_gt) {
+                            append_gt(input, alpha);
+                        }
+                        return input;
+                    }
+
                 public:
                     using constraint_system_type = typename reduction_type::constraint_system_type;
                     using digest_type = base_value_type;
+                    using state_type = typename poseidon_policy_type::state_type;
                     using verification_key_type = modified_sap_verification_key<curve_type>;
                     using commitment_type = g1_value_type;
                     using challenge_type = typename scalar_field_type::value_type;
@@ -122,10 +154,7 @@ namespace nil {
                         const std::size_t domain_size = reduction_type::get_domain_size(canonical.num_constraints());
 
                         std::vector<digest_type> input;
-                        input.push_back(tag("modified-sap-snark"));
-                        input.push_back(tag("v1"));
-                        input.push_back(tag("bn254"));
-                        input.push_back(tag("poseidon1-fp-128-r2-c1"));
+                        append_common_tags(input);
                         input.push_back(tag("circuit-digest"));
                         input.push_back(encode_size(canonical.num_variables()));
                         input.push_back(encode_size(canonical.num_constraints()));
@@ -152,35 +181,45 @@ namespace nil {
                         return hash<poseidon_type>(input);
                     }
 
+                    /**
+                     * Return the Poseidon state after the fixed proof-transcript prefix, ending at alpha_gt[Z].
+                     * Its 86 Fp elements are processed as 43 nonfinal rate-two blocks. P and u have not been
+                     * absorbed; no padding or finalization has been applied, including to the last full block.
+                     */
+                    static state_type prepare_proof_prefix(const verification_key_type &verification_key) {
+                        static_assert(poseidon_policy_type::block_words == 2 && poseidon_policy_type::state_words == 3,
+                                      "modified SAP proof prefixes require rate two and capacity one");
+                        const auto input = encode_proof_prefix(verification_key);
+                        // Continuation starts at a block boundary because the returned state carries no partial block.
+                        // Checking alignment also keeps the paired reads below safe without duplicating the prefix
+                        // length.
+                        if (input.size() % poseidon_type::block_words != 0) {
+                            throw std::logic_error("modified_sap: proof prefix must contain complete Poseidon blocks");
+                        }
+                        typename poseidon_type::construction::type sponge;
+                        for (std::size_t i = 0; i < input.size(); i += poseidon_type::block_words) {
+                            sponge.absorb({input[i], input[i + 1]});
+                        }
+                        // absorb() buffers the latest full block; include it without treating it as final.
+                        return sponge.state_after_nonfinal_prefix();
+                    }
+
+                    /**
+                     * Hash the complete proof transcript and return its raw Fp digest, before conversion to Fr.
+                     */
+                    static digest_type proof_digest(const verification_key_type &verification_key,
+                                                    const commitment_type &P,
+                                                    const challenge_type &u) {
+                        auto input = encode_proof_prefix(verification_key);
+                        append_g1(input, P);
+                        input.push_back(encode_scalar(u));
+                        return hash<poseidon_type>(input);
+                    }
+
                     static challenge_type proof_challenge(const verification_key_type &verification_key,
                                                           const commitment_type &P,
                                                           const challenge_type &u) {
-                        std::vector<digest_type> input;
-                        input.push_back(tag("modified-sap-snark"));
-                        input.push_back(tag("v1"));
-                        input.push_back(tag("bn254"));
-                        input.push_back(tag("poseidon1-fp-128-r2-c1"));
-                        input.push_back(tag("pairing-exact-e"));
-                        input.push_back(tag("proof-challenge"));
-                        input.push_back(verification_key.circuit_digest);
-                        input.push_back(encode_size(verification_key.num_variables));
-                        input.push_back(encode_size(verification_key.domain_size));
-
-                        input.push_back(encode_size(3));
-                        append_g2(input, verification_key.g2_one);
-                        append_g2(input, verification_key.tau_g2);
-                        append_g2(input, verification_key.gamma_inverse_g2);
-
-                        input.push_back(encode_size(5));
-                        append_gt(input, verification_key.alpha_z_vanishing_gt);
-                        for (const auto &alpha : verification_key.alpha_gt) {
-                            append_gt(input, alpha);
-                        }
-
-                        append_g1(input, P);
-                        input.push_back(encode_scalar(u));
-
-                        const digest_type digest = hash<poseidon_type>(input);
+                        const digest_type digest = proof_digest(verification_key, P, u);
                         // Constructing an Fr element reduces the canonical Fp representative modulo r.
                         return challenge_type(digest.to_integral());
                     }
