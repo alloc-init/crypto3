@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <stdexcept>
 #include <type_traits>
 
 #include <boost/assert.hpp>
@@ -124,6 +125,23 @@ namespace nil {
 
                     const state_type &state() const {
                         return state_;
+                    }
+
+                    /**
+                     * Return the state after all absorbed full blocks have been processed as nonfinal.
+                     * The latest buffered block is processed in a copy, without padding or finalization.
+                     * The original sponge keeps its state and pending block, so it can continue or finalize
+                     * normally. The returned state is for a prefix followed by further message input.
+                     *
+                     * @throws std::logic_error if the sponge has already been finalized.
+                     */
+                    state_type state_after_nonfinal_prefix() const {
+                        if (finalized_) {
+                            throw std::logic_error("Cannot snapshot a finalized Poseidon sponge as a nonfinal prefix.");
+                        }
+                        auto snapshot = *this;
+                        snapshot.flush_pending_full_block();
+                        return snapshot.state_;
                     }
 
                 private:

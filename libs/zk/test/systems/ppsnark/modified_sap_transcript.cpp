@@ -34,6 +34,8 @@
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/transcript.hpp>
 
 #include <nil/crypto3/algebra/algorithms/pair.hpp>
+#include <nil/crypto3/hash/detail/poseidon1/poseidon1_policy.hpp>
+#include <nil/crypto3/hash/poseidon.hpp>
 #include <nil/crypto3/zk/snark/systems/ppsnark/modified_sap/policy.hpp>
 
 namespace {
@@ -47,6 +49,8 @@ namespace {
     using gt_value_type = curve_type::gt_type::value_type;
     using pairing_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_exact_pairing_policy;
     using transcript_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_poseidon_transcript_policy;
+    using poseidon_policy_type = nil::crypto3::hashes::detail::poseidon1_policy<curve_type::base_field_type, 128, 2>;
+    using poseidon_type = nil::crypto3::hashes::poseidon1<poseidon_policy_type>;
     using system_type = transcript_policy_type::constraint_system_type;
     using constraint_type = system_type::constraint_type;
     using variable_type = constraint_type::variable_type;
@@ -108,6 +112,30 @@ namespace {
         return {affine.X * scale_squared, affine.Y * scale_squared * scale, scale};
     }
 
+    // Apply the two suffix permutations directly, independently of the full-message sponge path.
+    // Copy the prepared state so it can be reused for subsequent commitments and public inputs.
+    base_value_type continue_proof_prefix(transcript_policy_type::state_type state,
+                                          const g1_value_type &P,
+                                          const scalar_value_type &u) {
+        base_value_type y = base_value_type::zero();
+        if (P.is_zero()) {
+            state[0] = base_value_type::zero();
+            state[1] = base_value_type::zero();
+        } else {
+            const auto affine = P.to_affine();
+            state[0] = base_value_type::one();
+            state[1] = affine.X;
+            y = affine.Y;
+        }
+        poseidon_type::permutation_type::permute(state);
+
+        state[0] = y;
+        state[1] = base_value_type(u.to_integral());
+        state[2] += base_value_type::one();    // Existing final-full-block padding in the capacity cell.
+        poseidon_type::permutation_type::permute(state);
+        return state[0];
+    }
+
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(modified_sap_transcript_test_suite)
@@ -166,6 +194,37 @@ BOOST_AUTO_TEST_CASE(proof_challenge_matches_fixed_vector) {
     BOOST_CHECK_EQUAL(challenge, expected);
 }
 
+BOOST_AUTO_TEST_CASE(prepared_prefix_matches_fixed_vector) {
+    const auto prefix = transcript_policy_type::prepare_proof_prefix(test_verification_key());
+    // Derived independently from the documented 86-element encoding using the dense Poseidon1 permutation,
+    // without padding. Pin all three cells: continuation overwrites the rate cells before reading them.
+    const transcript_policy_type::state_type expected = {
+        base_value_type(0x2116e8d872a53ebf26737b7c35555afb17724b900c10359f92277eb799198c30_cppui_modular254),
+        base_value_type(0x1cd453dc71eecee560f98da448f773187e0929a3e8ec258412c751a8d217e193_cppui_modular254),
+        base_value_type(0x072ec2ca101c92aae4ad233485d5d9c4e475312b241de2c8f33ec3bf46b5d0e6_cppui_modular254)};
+    for (std::size_t i = 0; i < prefix.size(); ++i) {
+        BOOST_CHECK_EQUAL(prefix[i], expected[i]);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(prepared_prefix_matches_complete_message_digest) {
+    const auto verification_key = test_verification_key();
+    const auto prefix = transcript_policy_type::prepare_proof_prefix(verification_key);
+    const auto original_prefix = prefix;
+
+    for (const auto &P : {g1_value_type::zero(), g1_value_type::one(), scalar_value_type(19) * g1_value_type::one()}) {
+        for (const auto &u :
+             {scalar_value_type::zero(), scalar_value_type::one(), scalar_value_type(23), -scalar_value_type::one()}) {
+            // proof_digest uses ordinary full-message hashing of all 90 Fp elements, not this continuation.
+            const auto digest = transcript_policy_type::proof_digest(verification_key, P, u);
+            BOOST_CHECK_EQUAL(continue_proof_prefix(prefix, P, u), digest);
+            BOOST_CHECK_EQUAL(transcript_policy_type::proof_challenge(verification_key, P, u),
+                              scalar_value_type(digest.to_integral()));
+            BOOST_CHECK(prefix == original_prefix);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(proof_challenge_is_coordinate_independent) {
     const auto verification_key = test_verification_key();
     const auto P = scalar_value_type(19) * g1_value_type::one();
@@ -184,6 +243,8 @@ BOOST_AUTO_TEST_CASE(proof_challenge_is_coordinate_independent) {
     BOOST_REQUIRE(alternate_key.tau_g2 == verification_key.tau_g2);
     BOOST_REQUIRE(alternate_key.gamma_inverse_g2 == verification_key.gamma_inverse_g2);
     BOOST_CHECK_EQUAL(transcript_policy_type::proof_challenge(alternate_key, P, scalar_value_type(23)), expected);
+    BOOST_CHECK(transcript_policy_type::prepare_proof_prefix(alternate_key) ==
+                transcript_policy_type::prepare_proof_prefix(verification_key));
 }
 
 BOOST_AUTO_TEST_CASE(proof_challenge_handles_identity_points) {
@@ -196,9 +257,11 @@ BOOST_AUTO_TEST_CASE(proof_challenge_handles_identity_points) {
 
     const auto challenge =
         transcript_policy_type::proof_challenge(identity_key, g1_value_type::zero(), scalar_value_type::one());
-    BOOST_CHECK_EQUAL(
-        challenge,
-        transcript_policy_type::proof_challenge(identity_key, g1_value_type::zero(), scalar_value_type::one()));
+    const auto prefix = transcript_policy_type::prepare_proof_prefix(identity_key);
+    const auto digest =
+        transcript_policy_type::proof_digest(identity_key, g1_value_type::zero(), scalar_value_type::one());
+    BOOST_CHECK_EQUAL(continue_proof_prefix(prefix, g1_value_type::zero(), scalar_value_type::one()), digest);
+    BOOST_CHECK_EQUAL(challenge, scalar_value_type(digest.to_integral()));
 }
 
 BOOST_AUTO_TEST_CASE(proof_challenge_binds_every_input) {
@@ -206,10 +269,12 @@ BOOST_AUTO_TEST_CASE(proof_challenge_binds_every_input) {
     const auto P = scalar_value_type(19) * g1_value_type::one();
     const scalar_value_type u(23);
     const auto expected = transcript_policy_type::proof_challenge(verification_key, P, u);
+    const auto prefix = transcript_policy_type::prepare_proof_prefix(verification_key);
     const auto gT = gt_generator();
 
     const auto check_key_change = [&](const auto &changed_key) {
         BOOST_CHECK_NE(transcript_policy_type::proof_challenge(changed_key, P, u), expected);
+        BOOST_CHECK(transcript_policy_type::prepare_proof_prefix(changed_key) != prefix);
     };
 
     auto changed_key = verification_key;

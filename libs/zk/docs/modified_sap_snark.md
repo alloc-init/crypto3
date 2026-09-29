@@ -676,6 +676,51 @@ Let `h` be the canonical integer representative of the resulting Fp digest.
 The verifier and prover derive the challenge as `z = Fr(h mod r)`. This uses the
 full Fp output. It is reduction rather than bit truncation or rejection sampling.
 
+### 7.5 Prepared proof prefix and raw digest
+
+`modified_sap_bn254_poseidon_transcript_policy` exposes the existing Poseidon
+`state_type` (three Fp elements) and two operations:
+
+```cpp
+using transcript_policy = nil::crypto3::zk::snark::modified_sap_bn254_poseidon_transcript_policy;
+const auto prefix = transcript_policy::prepare_proof_prefix(verification_key);
+const auto raw_digest = transcript_policy::proof_digest(verification_key, P, u);
+```
+
+`prepare_proof_prefix` processes exactly the sequence in section 7.4 from the
+first protocol tag through `encode_GT(alpha_gt[Z])`, including all six tags,
+the circuit digest, dimensions, and both list counts. This is 86 Fp elements,
+processed as 43 full rate-two **nonfinal** blocks. The returned state precedes
+`encode_G1(P)` and the encoded scalar `u`. It has **not been finalized or padded**
+and is not a hash of the prefix. The sponge's last buffered full block has been
+processed as nonfinal in a copy via `state_after_nonfinal_prefix() const`.
+Taking this snapshot leaves the original sponge's state and pending block
+unchanged, so ordinary continuation and finalization retain their behavior.
+The snapshot method throws `std::logic_error` if the sponge has already been
+finalized, including in release builds. Prefix preparation checks that the
+encoded prefix ends on a complete rate block and throws `std::logic_error`
+if it does not; its rate-two, capacity-one profile is checked at compile time.
+Fixed transcript vectors detect unintended encoding changes.
+
+A fixed verification key therefore needs this preparation only once. To continue
+from a copy of the state for nonidentity `P`, apply the existing overwrite rules:
+
+1. Overwrite rate cells zero and one with `[1, P.x]` in affine coordinates,
+   preserve the capacity cell, and permute.
+2. Overwrite the rate cells with `[P.y, Fp(u.to_integral())]`, add `1` to capacity
+   cell two for the existing final-full-block padding, and permute.
+3. Read cell zero as the raw Fp digest.
+
+For identity `P`, use `[0, 0]` in the first block and `0` instead of `P.y` in
+the second. Keep the prepared state unchanged and start from a copy for each
+new `P` and `u`. The point validation requirements in section 7.4 still apply.
+
+`proof_digest` hashes the complete 90-element message using the ordinary sponge
+and returns `digest_type`, an Fp element. `proof_challenge(verification_key, P, u)`
+retains its existing interface and returns `challenge_type`, an Fr element,
+constructed as `challenge_type(raw_digest.to_integral())`. Preparing a prefix
+does not insert a prefix hash, another tag, or any padding into that message.
+
 ## 8. Correctness
 
 For a satisfying assignment, the polynomial identity in section 2 holds for all

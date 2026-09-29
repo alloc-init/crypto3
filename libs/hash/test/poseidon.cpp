@@ -10,6 +10,7 @@
 #define BOOST_TEST_MODULE poseidon_test
 
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 #include <type_traits>
 
@@ -231,6 +232,53 @@ BOOST_AUTO_TEST_CASE(poseidon1_pad10_sponge_two_full_blocks_pads_only_the_final_
         test_hash_field_elements<hash_type>({word_type(0u), word_type(1u), word_type(2u), word_type(3u)});
 
     BOOST_CHECK_EQUAL(accumulator_digest, expected_state[0]);
+}
+
+BOOST_AUTO_TEST_CASE(poseidon1_nonfinal_prefix_snapshot_preserves_the_stream) {
+    using policy = poseidon1_policy<fields::alt_bn128_base_field<254>, 128, 2>;
+    using hash_type = hashes::poseidon1<policy>;
+    using sponge_type = typename hash_type::construction::type;
+    using permutation = typename hash_type::permutation_type;
+    using word_type = typename policy::word_type;
+
+    for (const std::size_t prefix_blocks : {0, 1, 2}) {
+        BOOST_TEST_CONTEXT("prefix blocks " << prefix_blocks) {
+            sponge_type sponge;
+            std::vector<word_type> input;
+            auto expected_state = policy::iv_generator::generate();
+            for (std::size_t i = 0; i < prefix_blocks; ++i) {
+                const typename policy::block_type block = {word_type(2 * i + 1), word_type(2 * i + 2)};
+                sponge.absorb(block);
+                input.insert(input.end(), block.begin(), block.end());
+                expected_state[0] = block[0];
+                expected_state[1] = block[1];
+                permutation::permute(expected_state);
+            }
+
+            const auto state_before = sponge.state();
+            const sponge_type &read_only_sponge = sponge;
+            const auto snapshot = read_only_sponge.state_after_nonfinal_prefix();
+            BOOST_CHECK_EQUAL(snapshot, expected_state);
+            BOOST_CHECK_EQUAL(read_only_sponge.state_after_nonfinal_prefix(), snapshot);
+            BOOST_CHECK_EQUAL(sponge.state(), state_before);
+
+            // Taking a snapshot must leave the pending block available for ordinary final-block padding.
+            auto finalizing_sponge = sponge;
+            BOOST_CHECK_EQUAL(finalizing_sponge.digest(), test_hash_field_elements<hash_type>(input));
+            BOOST_CHECK_THROW(finalizing_sponge.state_after_nonfinal_prefix(), std::logic_error);
+
+            // The same original sponge must also remain usable when more input follows the snapshot.
+            const typename policy::block_type suffix = {word_type(7u), word_type(8u)};
+            sponge.absorb(suffix);
+            input.insert(input.end(), suffix.begin(), suffix.end());
+            BOOST_CHECK_EQUAL(sponge.digest(), test_hash_field_elements<hash_type>(input));
+            BOOST_CHECK_THROW(sponge.state_after_nonfinal_prefix(), std::logic_error);
+            BOOST_CHECK_EQUAL(snapshot, expected_state);
+
+            sponge.reset();
+            BOOST_CHECK_EQUAL(sponge.state_after_nonfinal_prefix(), policy::iv_generator::generate());
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(poseidon1_pad10_sponge_supports_bit_based_multi_word_digest) {
