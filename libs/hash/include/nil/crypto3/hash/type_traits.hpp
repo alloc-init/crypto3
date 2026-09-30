@@ -300,10 +300,14 @@ namespace nil {
             template<typename PolicyType>
             class poseidon;
 
-            template<typename PolicyType>
+            namespace detail {
+                enum class poseidon_sponge_absorb_mode;
+            }
+
+            template<typename PolicyType, detail::poseidon_sponge_absorb_mode AbsorbMode>
             class poseidon1;
 
-            template<typename PolicyType>
+            template<typename PolicyType, detail::poseidon_sponge_absorb_mode AbsorbMode>
             class poseidon1_dense;
 
             template<typename PolicyType>
@@ -372,9 +376,6 @@ namespace nil {
                 HashType,
                 typename std::enable_if_t<
                     std::is_same<nil::crypto3::hashes::poseidon<typename HashType::policy_type>, HashType>::value ||
-                    std::is_same<nil::crypto3::hashes::poseidon1<typename HashType::policy_type>, HashType>::value ||
-                    std::is_same<nil::crypto3::hashes::poseidon1_dense<typename HashType::policy_type>,
-                                 HashType>::value ||
                     std::is_same<nil::crypto3::hashes::poseidon1_padding_free<typename HashType::policy_type>,
                                  HashType>::value ||
                     std::is_same<nil::crypto3::hashes::poseidon2<typename HashType::policy_type>, HashType>::value ||
@@ -383,6 +384,21 @@ namespace nil {
             public:
                 constexpr static const bool value = true;
                 typedef HashType type;
+            };
+
+            // Recognize the Poseidon1 types for either compile-time absorption mode.
+            template<typename PolicyType, detail::poseidon_sponge_absorb_mode AbsorbMode>
+            struct is_poseidon<poseidon1<PolicyType, AbsorbMode>> {
+            public:
+                constexpr static const bool value = true;
+                using type = poseidon1<PolicyType, AbsorbMode>;
+            };
+
+            template<typename PolicyType, detail::poseidon_sponge_absorb_mode AbsorbMode>
+            struct is_poseidon<poseidon1_dense<PolicyType, AbsorbMode>> {
+            public:
+                constexpr static const bool value = true;
+                using type = poseidon1_dense<PolicyType, AbsorbMode>;
             };
 
             template<template<typename...> class PrimaryTemplate, typename T>

@@ -14,6 +14,7 @@
 #include <vector>
 #include <type_traits>
 
+#include <boost/mpl/list.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <nil/crypto3/hash/algorithm/hash.hpp>
@@ -33,6 +34,10 @@
 using namespace nil::crypto3;
 using namespace nil::crypto3::algebra;
 using namespace nil::crypto3::hashes::detail;
+
+using poseidon_absorb_modes =
+    boost::mpl::list<std::integral_constant<poseidon_sponge_absorb_mode, poseidon_sponge_absorb_mode::overwrite>,
+                     std::integral_constant<poseidon_sponge_absorb_mode, poseidon_sponge_absorb_mode::add>>;
 
 template<typename PolicyType,
          typename PermutationType,
@@ -234,9 +239,11 @@ BOOST_AUTO_TEST_CASE(poseidon1_pad10_sponge_two_full_blocks_pads_only_the_final_
     BOOST_CHECK_EQUAL(accumulator_digest, expected_state[0]);
 }
 
-BOOST_AUTO_TEST_CASE(poseidon1_nonfinal_prefix_snapshot_preserves_the_stream) {
+BOOST_AUTO_TEST_CASE_TEMPLATE(poseidon1_nonfinal_prefix_snapshot_preserves_the_stream,
+                              AbsorbMode,
+                              poseidon_absorb_modes) {
     using policy = poseidon1_policy<fields::alt_bn128_base_field<254>, 128, 2>;
-    using hash_type = hashes::poseidon1<policy>;
+    using hash_type = hashes::poseidon1<policy, AbsorbMode::value>;
     using sponge_type = typename hash_type::construction::type;
     using permutation = typename hash_type::permutation_type;
     using word_type = typename policy::word_type;
@@ -250,8 +257,13 @@ BOOST_AUTO_TEST_CASE(poseidon1_nonfinal_prefix_snapshot_preserves_the_stream) {
                 const typename policy::block_type block = {word_type(2 * i + 1), word_type(2 * i + 2)};
                 sponge.absorb(block);
                 input.insert(input.end(), block.begin(), block.end());
-                expected_state[0] = block[0];
-                expected_state[1] = block[1];
+                if constexpr (AbsorbMode::value == poseidon_sponge_absorb_mode::overwrite) {
+                    expected_state[0] = block[0];
+                    expected_state[1] = block[1];
+                } else {
+                    expected_state[0] += block[0];
+                    expected_state[1] += block[1];
+                }
                 permutation::permute(expected_state);
             }
 
@@ -414,6 +426,35 @@ BOOST_AUTO_TEST_CASE(poseidon1_public_wrapper_defaults_to_optimized_pad10) {
     BOOST_CHECK_EQUAL(poseidon_digest, public_digest);
     BOOST_CHECK_EQUAL(public_digest, optimized_digest);
     BOOST_CHECK_EQUAL(public_digest, dense_public_digest);
+}
+
+BOOST_AUTO_TEST_CASE(poseidon1_public_additive_mode_matches_existing_sponge) {
+    using policy = poseidon1_policy<fields::alt_bn128_base_field<254>, 128, 2>;
+    using word_type = typename policy::word_type;
+    using reference_hash_type = poseidon_add_pad10_test_hash<policy, poseidon1_permutation<policy>>;
+    using public_hash_type = hashes::poseidon1<policy, poseidon_sponge_absorb_mode::add>;
+    using dense_public_hash_type = hashes::poseidon1_dense<policy, poseidon_sponge_absorb_mode::add>;
+
+    BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<public_hash_type>::value,
+                            "Additive Poseidon1 must be recognized by the hash type trait");
+    BOOST_STATIC_ASSERT_MSG(hashes::is_poseidon<dense_public_hash_type>::value,
+                            "Additive dense Poseidon1 must be recognized by the hash type trait");
+
+    // Cover empty input, partial/full final blocks, and multiple blocks with nonzero prior state.
+    std::vector<word_type> input;
+    for (std::size_t size = 0; size <= 7; ++size) {
+        BOOST_TEST_CONTEXT("input elements " << size) {
+            const auto expected = test_hash_field_elements<reference_hash_type>(input);
+            const auto digest = test_hash_field_elements<public_hash_type>(input);
+            BOOST_CHECK_EQUAL(digest, expected);
+            BOOST_CHECK_EQUAL(test_hash_field_elements<dense_public_hash_type>(input), expected);
+            if (size > policy::block_words) {
+                // After the first permutation, addition must retain rate values that overwrite discards.
+                BOOST_CHECK_NE(digest, test_hash_field_elements<hashes::poseidon1<policy>>(input));
+            }
+        }
+        input.emplace_back(size + 1);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(poseidon1_padding_free_overwrite_handles_empty_input_without_permutation) {
