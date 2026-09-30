@@ -125,7 +125,7 @@ namespace {
         result.proof.v_Z = scalar_value_type(5);
         // Fixed q solving the target-group exponent equation for this transcript vector.
         result.proof.Q =
-            scalar_value_type(0x0a91ceaa34d1bc72e8a7707e083fe3f3aea4127294778619ed36a148ef36374e_cppui_modular254) *
+            scalar_value_type(0x143e4f07dfa530b4806abb87be08826def21db35e1764932e758fbbddc30198a_cppui_modular254) *
             g1_value_type::one();
         return result;
     }
@@ -265,9 +265,10 @@ BOOST_AUTO_TEST_CASE(rejects_malformed_proof_points) {
 
 BOOST_AUTO_TEST_CASE(verifies_an_independently_constructed_equation_vector) {
     const auto vector = independent_verifier_vector();
+    // Derived from the manually encoded transcript with additive absorption and the dense Poseidon1 permutation.
     const scalar_value_type expected_challenge(
-        0x23c9f909c9627ebe6e047c9d238fe7b429aa3ee6131b4ebab795dab7a975ada1_cppui_modular254);
-    const scalar_value_type q(0x0a91ceaa34d1bc72e8a7707e083fe3f3aea4127294778619ed36a148ef36374e_cppui_modular254);
+        0x1091892a99e266601c974755304da79a2e16c3bf34449c4479fb329b1f92f10d_cppui_modular254);
+    const scalar_value_type q(0x143e4f07dfa530b4806abb87be08826def21db35e1764932e758fbbddc30198a_cppui_modular254);
     const scalar_value_type expected_left =
         scalar_value_type(17) * scalar_value_type(3) + scalar_value_type(13) * scalar_value_type(15);
     const scalar_value_type expected_evaluations =

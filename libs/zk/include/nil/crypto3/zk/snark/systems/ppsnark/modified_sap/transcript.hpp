@@ -45,7 +45,7 @@ namespace nil {
 
                 namespace detail {
 
-                    // Both public profiles share the encoding and sponge implementation. Truncate selects
+                    // Both public profiles share the encoding and additive sponge implementation. Truncate selects
                     // the conversion and its domain separation at compile time.
                     template<bool Truncate, std::size_t ChallengeBits>
                     class modified_sap_bn254_poseidon_transcript {
@@ -56,7 +56,8 @@ namespace nil {
                         using scalar_field_type = typename curve_type::scalar_field_type;
                         using reduction_type = reductions::modified_sap_to_polynomials<scalar_field_type>;
                         using poseidon_policy_type = hashes::detail::poseidon1_policy<base_field_type, 128, 2>;
-                        using poseidon_type = hashes::poseidon1<poseidon_policy_type>;
+                        using poseidon_type =
+                            hashes::poseidon1<poseidon_policy_type, hashes::detail::poseidon_sponge_absorb_mode::add>;
 
                         // Every truncated integer must fit in Fr without a subsequent modular reduction.
                         static_assert(!Truncate ||
@@ -199,8 +200,8 @@ namespace nil {
 
                         /**
                          * Return the Poseidon state after the fixed proof-transcript prefix, ending at alpha_gt[Z].
-                         * The original profile has 86 Fp elements; truncation profiles have 88. All blocks are
-                         * processed as nonfinal rate-two blocks. P and u have not been
+                         * The modulo-r profile has 86 Fp elements; truncation profiles have 88. All blocks use
+                         * additive absorption and are processed as nonfinal rate-two blocks. P and u have not been
                          * absorbed; no padding or finalization has been applied, including to the last full block.
                          */
                         static state_type prepare_proof_prefix(const verification_key_type &verification_key) {
@@ -253,14 +254,14 @@ namespace nil {
                 }    // namespace detail
 
                 /**
-                 * Original BN254 Poseidon1 transcript, with the canonical Fp digest reduced modulo r.
+                 * BN254 Poseidon1 transcript with additive absorption and the canonical Fp digest reduced modulo r.
                  */
                 using modified_sap_bn254_poseidon_transcript_policy = detail::modified_sap_bn254_poseidon_transcript<
                     false,
                     algebra::curves::alt_bn128_254::scalar_field_type::modulus_bits>;
 
                 /**
-                 * BN254 Poseidon1 transcript with a domain-separated, low-bit challenge.
+                 * BN254 Poseidon1 transcript with additive absorption and a domain-separated, low-bit challenge.
                  * ChallengeBits is an explicit bit count in [1, 253], not a claimed security level.
                  */
                 template<std::size_t ChallengeBits>
