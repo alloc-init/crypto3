@@ -62,7 +62,9 @@ namespace {
     static_assert(truncated_128_policy::challenge_bits == 128);
     static_assert(truncated_192_policy::challenge_bits == 192);
     using poseidon_policy_type = nil::crypto3::hashes::detail::poseidon1_policy<curve_type::base_field_type, 128, 2>;
-    using poseidon_type = nil::crypto3::hashes::poseidon1<poseidon_policy_type>;
+    using poseidon_type =
+        nil::crypto3::hashes::poseidon1<poseidon_policy_type,
+                                        nil::crypto3::hashes::detail::poseidon_sponge_absorb_mode::add>;
     using system_type = transcript_policy_type::constraint_system_type;
     using constraint_type = system_type::constraint_type;
     using variable_type = constraint_type::variable_type;
@@ -131,19 +133,17 @@ namespace {
                                           const g1_value_type &P,
                                           const scalar_value_type &u) {
         base_value_type y = base_value_type::zero();
-        if (P.is_zero()) {
-            state[0] = base_value_type::zero();
-            state[1] = base_value_type::zero();
-        } else {
+        // Identity P adds [0, 0] in the first block, leaving the rate cells unchanged before permutation.
+        if (!P.is_zero()) {
             const auto affine = P.to_affine();
-            state[0] = base_value_type::one();
-            state[1] = affine.X;
+            state[0] += base_value_type::one();
+            state[1] += affine.X;
             y = affine.Y;
         }
         poseidon_type::permutation_type::permute(state);
 
-        state[0] = y;
-        state[1] = base_value_type(u.to_integral());
+        state[0] += y;
+        state[1] += base_value_type(u.to_integral());
         state[2] += base_value_type::one();    // Existing final-full-block padding in the capacity cell.
         poseidon_type::permutation_type::permute(state);
         return state[0];
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_SUITE(modified_sap_transcript_test_suite)
 BOOST_AUTO_TEST_CASE(circuit_digest_matches_fixed_vector) {
     const auto digest = transcript_policy_type::circuit_digest(test_system());
     const transcript_policy_type::digest_type expected(
-        0x304c9ffefccc2d862eacb58cd202a7aa62596aed78f08c394c4e2f35b01935c1_cppui_modular254);
+        0x1dd66465c0ef90f835ff6802eb43c08196de27caad2e42193b48ffe12b2d90ff_cppui_modular254);
     BOOST_CHECK_EQUAL(digest, expected);
 }
 
@@ -208,18 +208,18 @@ BOOST_AUTO_TEST_CASE(proof_challenge_matches_fixed_vector) {
     const auto challenge = transcript_policy_type::proof_challenge(
         test_verification_key(), scalar_value_type(19) * g1_value_type::one(), scalar_value_type(23));
     const scalar_value_type expected(
-        0x06b57277e5dacbb0f3e4959c180b6e8b28e8bbe1f9d0765e1256265265595941_cppui_modular254);
+        0x036ddc184eed74665072ad74e2d68f5bf7981ab412b79cac071ccb50ab0475b0_cppui_modular254);
     BOOST_CHECK_EQUAL(challenge, expected);
 }
 
 BOOST_AUTO_TEST_CASE(prepared_prefix_matches_fixed_vector) {
     const auto prefix = transcript_policy_type::prepare_proof_prefix(test_verification_key());
     // Derived independently from the documented 86-element encoding using the dense Poseidon1 permutation,
-    // without padding. Pin all three cells: continuation overwrites the rate cells before reading them.
+    // with additive absorption and no padding. Continuation retains and uses all three prefix cells.
     const transcript_policy_type::state_type expected = {
-        base_value_type(0x2116e8d872a53ebf26737b7c35555afb17724b900c10359f92277eb799198c30_cppui_modular254),
-        base_value_type(0x1cd453dc71eecee560f98da448f773187e0929a3e8ec258412c751a8d217e193_cppui_modular254),
-        base_value_type(0x072ec2ca101c92aae4ad233485d5d9c4e475312b241de2c8f33ec3bf46b5d0e6_cppui_modular254)};
+        base_value_type(0x0b78d98049bbc147717fee4f557fd1299c5a190e6176eb730ff45eb449070920_cppui_modular254),
+        base_value_type(0x0089b0e2bf34de4c87f3c4f0083449d37f183b1f44c6285981b0e96faa244386_cppui_modular254),
+        base_value_type(0x140303c7c99e9be5d5e9d346fae955601d207c842aa2e49deb7f425222b671c7_cppui_modular254)};
     for (std::size_t i = 0; i < prefix.size(); ++i) {
         BOOST_CHECK_EQUAL(prefix[i], expected[i]);
     }
@@ -364,8 +364,8 @@ BOOST_AUTO_TEST_CASE(truncation_profile_and_width_bind_both_digests) {
 }
 
 BOOST_AUTO_TEST_CASE(truncated_transcripts_match_fixed_vectors) {
-    // Independently derived from the normalized circuit and VK encodings with the dense Poseidon1
-    // schedule. The reference also reproduces the original profile's unchanged fixed vectors.
+    // Independently derived from the normalized circuit and VK encodings with additive absorption
+    // and the dense Poseidon1 schedule, using the same reference as the modulo-r profile's vectors.
     const auto check = []<typename TranscriptPolicy>(const base_value_type &expected_circuit,
                                                      const poseidon_policy_type::state_type &expected_prefix,
                                                      const base_value_type &expected_digest,
@@ -384,19 +384,19 @@ BOOST_AUTO_TEST_CASE(truncated_transcripts_match_fixed_vectors) {
         }
     };
     check.template operator()<truncated_128_policy>(
-        base_value_type(0x037d8fb7bad20135a91cd03e865df8b78a7a6dffc0ddd90e7c10544264551aed_cppui_modular254),
-        {base_value_type(0x23f659e5b2e16cc6207244689cd307da933a50ed8fb8061cb411c1e6a792de2_cppui_modular254),
-         base_value_type(0x13bb63bdb8ba6057e4947f449cb6281efd8431dfea8478370e245645c2e1fb1f_cppui_modular254),
-         base_value_type(0x178a4657899a6fd19b37234c7b30cfcfc0efb816ba32b7a1d61bb9dfdda622a1_cppui_modular254)},
-        base_value_type(0x2f65370367edf0565b37a6930518c290443c2397f4b1631b9610ee4f1f015483_cppui_modular254),
-        scalar_value_type(0x443c2397f4b1631b9610ee4f1f015483_cppui_modular254));
+        base_value_type(0x08bf66f52f352e481ae3d63d8a705d4939a391ad64a6f630960f1fdc76e1a816_cppui_modular254),
+        {base_value_type(0x2708248efd2278314833ae5ac193281c5a76ccdf649f89856582e02b8fe48ce9_cppui_modular254),
+         base_value_type(0x094cdbb29640f62919e6100156039a573b660a1d467a19461fc2c8feaaddf2d9_cppui_modular254),
+         base_value_type(0x2603706f3924d7962ce583211e04eb503b5928ca3b6d6a733d593edc9fac27bd_cppui_modular254)},
+        base_value_type(0x02e64b98f94dd2b90e04b3e1cb889c54de19dc33577c0aa9c8221f144d5898e9_cppui_modular254),
+        scalar_value_type(0x00000000000000000000000000000000de19dc33577c0aa9c8221f144d5898e9_cppui_modular254));
     check.template operator()<truncated_192_policy>(
-        base_value_type(0x2a2e9a1308d3d4321f1ecfca712f47e69670238e67a8ea4c2e4ab628626ebf8f_cppui_modular254),
-        {base_value_type(0x1394c0d81987a073ad5752b65f1a6f76eff4f2bb97a8ff1df996a714201a6724_cppui_modular254),
-         base_value_type(0x1e90ca47b1ab99dc5c569eb1edde1eecf0c43bda430761393842cfb9d0486baf_cppui_modular254),
-         base_value_type(0x15b3b079f37f44b3b77d678dc7e73302e21b4a3e767493b7eeb525e75cc53892_cppui_modular254)},
-        base_value_type(0x2a8b320b844036ae4a193e34ac353c7df7a20dd64dcc274582a94984692345e9_cppui_modular254),
-        scalar_value_type(0x4a193e34ac353c7df7a20dd64dcc274582a94984692345e9_cppui_modular254));
+        base_value_type(0x0fa6bd46a98e38f0c6b7b96f0254332a6151d6eb180d9dd29e23df2d22d7f94c_cppui_modular254),
+        {base_value_type(0x1b1eaf312751c7ee60b813155095cb0e3b122241ce6c5ad06e26b6f4c9e06442_cppui_modular254),
+         base_value_type(0x19b180cb7439b240a93d9b908af602fa32d7c5c39db19c7befb2970c77c60486_cppui_modular254),
+         base_value_type(0x0dbbdbfaa7e45d738c2bf35f3560995a46b2117e30b18d2138a575286947319f_cppui_modular254)},
+        base_value_type(0x2adcb0f80e0a46287041210442f75cd91026887d707a703149aa531535d8e988_cppui_modular254),
+        scalar_value_type(0x00000000000000007041210442f75cd91026887d707a703149aa531535d8e988_cppui_modular254));
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(truncated_challenge_accepts_boundary_widths, TranscriptPolicy, boundary_policies) {

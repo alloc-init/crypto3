@@ -518,10 +518,11 @@ bool prove_r1cs_assignments(nil::crypto3::random::chacha_urbg<> &random_source) 
 
 ## 7. Transcript requirements
 
-The original `modified_sap_bn254_poseidon_transcript_policy` retains its existing
-encoding and modulo-r challenge conversion. Sections 7.3-7.5 describe that
-profile. Section 7.6 defines the optional, compile-time truncation profile;
-both profiles share the Poseidon parameters and primitive encodings below.
+The `modified_sap_bn254_poseidon_transcript_policy` uses modulo-r challenge
+conversion. Sections 7.3-7.5 describe that profile. Section 7.6 defines the
+optional, compile-time truncation profile;
+both profiles use additive absorption and share the Poseidon parameters and
+primitive encodings below.
 
 ### 7.1 Poseidon profile
 
@@ -531,7 +532,8 @@ base field Fp. The exact Crypto3 type is:
 ```cpp
 hashes::poseidon1<
     hashes::detail::poseidon1_policy<
-        algebra::fields::alt_bn128_base_field<254>, 128, 2>>
+        algebra::fields::alt_bn128_base_field<254>, 128, 2>,
+    hashes::detail::poseidon_sponge_absorb_mode::add>
 ```
 
 This selects a width-three state, rate two, capacity one, an `x^5` S-box, eight
@@ -546,12 +548,12 @@ schedule defines the canonical result; implementations may use either equivalent
 permutation.
 
 Hash one complete field-element sequence as one message. Initialize the state to
-`[0, 0, 0]`, use overwrite absorption, and apply Crypto3's `pad10` mode. Each
-non-final pair replaces state cells zero and one and is followed by a permutation.
-For a final one-element block, overwrite cell zero with the element and cell one
-with `1`, then permute. For a final full pair, overwrite cells zero and one, add
-`1` to capacity cell two, then permute. An empty message sets cells zero and one
-to `1` and `0` before the permutation. The digest is cell zero after the final
+`[0, 0, 0]`, use additive absorption, and apply Crypto3's `pad10` mode. Each
+non-final pair is added to state cells zero and one and is followed by a permutation.
+For a final one-element block, add the element to cell zero and `1` to cell one,
+then permute. For a final full pair, add its elements to cells zero and one, add
+`1` to capacity cell two, then permute. An empty message adds `1` to cell zero
+of the initial state before the permutation. The digest is cell zero after the final
 permutation. No transcript operation performs a separate hash per absorbed item.
 
 ### 7.2 Tags and primitive encodings
@@ -709,17 +711,19 @@ if it does not; its rate-two, capacity-one profile is checked at compile time.
 Fixed transcript vectors detect unintended encoding changes.
 
 A fixed verification key therefore needs this preparation only once. To continue
-from a copy of the state for nonidentity `P`, apply the existing overwrite rules:
+from a copy of the state for nonidentity `P`, apply additive absorption:
 
-1. Overwrite rate cells zero and one with `[1, P.x]` in affine coordinates,
+1. Add `[1, P.x]` in affine coordinates to rate cells zero and one,
    preserve the capacity cell, and permute.
-2. Overwrite the rate cells with `[P.y, Fp(u.to_integral())]`, add `1` to capacity
+2. Add `[P.y, Fp(u.to_integral())]` to the rate cells, add `1` to capacity
    cell two for the existing final-full-block padding, and permute.
 3. Read cell zero as the raw Fp digest.
 
-For identity `P`, use `[0, 0]` in the first block and `0` instead of `P.y` in
-the second. Keep the prepared state unchanged and start from a copy for each
-new `P` and `u`. The point validation requirements in section 7.4 still apply.
+For identity `P`, add `[0, 0]` in the first block and use `0` instead of `P.y`
+in the second. The first block leaves the rate cells unchanged before its
+permutation; it does not clear them. Keep the prepared state unchanged and
+start from a copy for each new `P` and `u`. The point validation requirements
+in section 7.4 still apply.
 
 `proof_digest` hashes the complete 90-element message using the ordinary sponge
 and returns `digest_type`, an Fp element. `proof_challenge(verification_key, P, u)`
@@ -756,7 +760,7 @@ ChallengeBits encoded as one Fp element
 The marker and count bind the conversion rule and exact width into both hashes.
 They change the circuit digest stored in the verification key, as well as the
 proof transcript directly. Keys and proofs must use the same selected profile.
-The original profile inserts neither element and keeps all its existing results.
+The modulo-r profile inserts neither element.
 
 The key and proof wire formats are unchanged and do not carry a separate profile
 identifier or bit count. Applications select the same transcript policy when

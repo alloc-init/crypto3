@@ -19,7 +19,8 @@
 namespace nil {
     namespace crypto3 {
         namespace hashes {
-            template<typename PolicyType, typename PermutationType, detail::poseidon_sponge_padding_mode PaddingMode>
+            template<typename PolicyType, typename PermutationType, detail::poseidon_sponge_padding_mode PaddingMode,
+                     detail::poseidon_sponge_absorb_mode AbsorbMode = detail::poseidon_sponge_absorb_mode::overwrite>
             class basic_poseidon1 {
             public:
                 using policy_type = PolicyType;
@@ -39,21 +40,23 @@ namespace nil {
                         // This is required by the hash concept.
                     };
 
-                    using type = detail::poseidon_sponge_construction<
-                        policy_type, permutation_type, detail::poseidon_sponge_absorb_mode::overwrite, PaddingMode>;
+                    using type =
+                        detail::poseidon_sponge_construction<policy_type, permutation_type, AbsorbMode, PaddingMode>;
                 };
 
                 constexpr static detail::stream_processor_type stream_processor = detail::stream_processor_type::raw;
-                using accumulator_tag =
-                    accumulators::tag::algebraic_hash<basic_poseidon1<policy_type, permutation_type, PaddingMode>>;
+                using accumulator_tag = accumulators::tag::algebraic_hash<
+                    basic_poseidon1<policy_type, permutation_type, PaddingMode, AbsorbMode>>;
             };
 
-            template<typename PolicyType>
+            // Absorption is selected at compile time; existing callers retain overwrite mode.
+            template<typename PolicyType,
+                     detail::poseidon_sponge_absorb_mode AbsorbMode = detail::poseidon_sponge_absorb_mode::overwrite>
             class poseidon1 : public basic_poseidon1<PolicyType, detail::poseidon1_optimized_permutation<PolicyType>,
-                                                     detail::poseidon_sponge_padding_mode::pad10> {
+                                                     detail::poseidon_sponge_padding_mode::pad10, AbsorbMode> {
             public:
                 using policy_type = PolicyType;
-                using accumulator_tag = accumulators::tag::algebraic_hash<poseidon1<policy_type>>;
+                using accumulator_tag = accumulators::tag::algebraic_hash<poseidon1<policy_type, AbsorbMode>>;
             };
 
             template<typename PolicyType>
@@ -63,12 +66,13 @@ namespace nil {
                 using accumulator_tag = accumulators::tag::algebraic_hash<poseidon<policy_type>>;
             };
 
-            template<typename PolicyType>
+            template<typename PolicyType,
+                     detail::poseidon_sponge_absorb_mode AbsorbMode = detail::poseidon_sponge_absorb_mode::overwrite>
             class poseidon1_dense : public basic_poseidon1<PolicyType, detail::poseidon1_permutation<PolicyType>,
-                                                           detail::poseidon_sponge_padding_mode::pad10> {
+                                                           detail::poseidon_sponge_padding_mode::pad10, AbsorbMode> {
             public:
                 using policy_type = PolicyType;
-                using accumulator_tag = accumulators::tag::algebraic_hash<poseidon1_dense<policy_type>>;
+                using accumulator_tag = accumulators::tag::algebraic_hash<poseidon1_dense<policy_type, AbsorbMode>>;
             };
 
             template<typename PolicyType>
