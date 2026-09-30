@@ -518,6 +518,11 @@ bool prove_r1cs_assignments(nil::crypto3::random::chacha_urbg<> &random_source) 
 
 ## 7. Transcript requirements
 
+The original `modified_sap_bn254_poseidon_transcript_policy` retains its existing
+encoding and modulo-r challenge conversion. Sections 7.3-7.5 describe that
+profile. Section 7.6 defines the optional, compile-time truncation profile;
+both profiles share the Poseidon parameters and primitive encodings below.
+
 ### 7.1 Poseidon profile
 
 Both the circuit digest and proof challenge use Crypto3 Poseidon1 over BN254's
@@ -561,6 +566,7 @@ modulus width.
 | Version | `v1` | `0x7631` |
 | Curve | `bn254` | `0x626e323534` |
 | Poseidon profile | `poseidon1-fp-128-r2-c1` | `0x706f736569646f6e312d66702d3132382d72322d6331` |
+| Truncation profile (section 7.6 only) | `challenge-lsb-v1` | `0x6368616c6c656e67652d6c73622d7631` |
 | Pairing convention | `pairing-exact-e` | `0x70616972696e672d65786163742d65` |
 | Circuit digest | `circuit-digest` | `0x636972637569742d646967657374` |
 | Proof challenge | `proof-challenge` | `0x70726f6f662d6368616c6c656e6765` |
@@ -720,6 +726,64 @@ and returns `digest_type`, an Fp element. `proof_challenge(verification_key, P, 
 retains its existing interface and returns `challenge_type`, an Fr element,
 constructed as `challenge_type(raw_digest.to_integral())`. Preparing a prefix
 does not insert a prefix hash, another tag, or any padding into that message.
+
+### 7.6 Parameterized low-bit challenges
+
+Select a truncated challenge through the existing transcript-policy parameter
+of `modified_sap_policy`:
+
+```cpp
+using transcript_policy =
+    nil::crypto3::zk::snark::modified_sap_bn254_poseidon_truncated_transcript_policy<128>;
+static_assert(transcript_policy::challenge_bits == 128);
+```
+
+`ChallengeBits` is an explicit number of low bits, with no default. Instantiating
+the policy with a value outside `[1, 253]` fails at compile time. This range
+ensures every selected integer is below BN254's scalar modulus `r`. The original
+modulo-r policy exposes `challenge_bits = 254`, the full scalar representation
+width; it retains its original conversion rather than selecting low bits.
+
+The new profile inserts exactly these two Fp elements immediately after
+`tag("poseidon1-fp-128-r2-c1")` in **both** the circuit-digest sequence in section
+7.3 and the proof-transcript sequence in section 7.4:
+
+```text
+tag("challenge-lsb-v1")
+ChallengeBits encoded as one Fp element
+```
+
+The marker and count bind the conversion rule and exact width into both hashes.
+They change the circuit digest stored in the verification key, as well as the
+proof transcript directly. Keys and proofs must use the same selected profile.
+The original profile inserts neither element and keeps all its existing results.
+
+`prepare_proof_prefix` includes the two additional elements, so it processes
+88 Fp elements as 44 full nonfinal blocks, still ending after `alpha_gt[Z]`.
+The state is neither padded nor finalized. Continue with the same two suffix
+blocks described in section 7.5. `proof_digest` hashes the complete 92-element
+message and returns the full Fp output. `circuit_digest` also remains a full Fp
+value; neither digest is truncated.
+
+Only `proof_challenge` selects low bits. If `h` is the canonical integer
+representative of the new profile's raw Fp digest, its result is:
+
+```text
+z = Fr(h mod 2^ChallengeBits)
+```
+
+Exactly bits `0` through `ChallengeBits - 1` are retained. Truncate the canonical
+Fp integer before constructing an Fr value; reducing modulo `r` first defines
+a different conversion. Circuit implementations must enforce the canonical
+digest representation before selecting bits, so an alternative representative
+such as `h + p` cannot change the challenge.
+
+Changing `ChallengeBits` selects a different transcript domain. It does not
+change Poseidon's parameters: the `128` in the Poseidon profile identifies its
+hash parameter, independently of the chosen challenge width. The bit count is
+not a security-level guarantee; its selection must account for the protocol's
+soundness bounds, polynomial degrees, and challenge distribution. The value
+`128` above illustrates policy selection rather than choosing a default.
 
 ## 8. Correctness
 
