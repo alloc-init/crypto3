@@ -24,6 +24,7 @@
 
 #define BOOST_TEST_MODULE modified_sap_prover_test
 
+#include <boost/mpl/list.hpp>
 #include <boost/multiprecision/integer.hpp>
 #include <boost/test/unit_test.hpp>
 
@@ -33,6 +34,7 @@
 #include <initializer_list>
 #include <limits>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -67,6 +69,13 @@ namespace {
     using transcript_policy_type = nil::crypto3::zk::snark::modified_sap_bn254_poseidon_transcript_policy;
     using policy_type =
         nil::crypto3::zk::snark::modified_sap_policy<curve_type, pairing_policy_type, transcript_policy_type>;
+    using truncated_128_policy = nil::crypto3::zk::snark::modified_sap_policy<
+        curve_type, pairing_policy_type,
+        nil::crypto3::zk::snark::modified_sap_bn254_poseidon_truncated_transcript_policy<128>>;
+    using truncated_192_policy = nil::crypto3::zk::snark::modified_sap_policy<
+        curve_type, pairing_policy_type,
+        nil::crypto3::zk::snark::modified_sap_bn254_poseidon_truncated_transcript_policy<192>>;
+    using integration_policies = boost::mpl::list<policy_type, truncated_128_policy, truncated_192_policy>;
     using prover_type = nil::crypto3::zk::snark::modified_sap_prover<policy_type>;
     using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<policy_type>;
     using deterministic_generator_type =
@@ -138,11 +147,12 @@ namespace {
         return source;
     }
 
-    proving_key_type generate_proving_key(const system_type &source) {
+    template<typename Policy = policy_type>
+    typename Policy::proving_key_type generate_proving_key(const system_type &source) {
         // Fixed seed for reproducible tests with the production setup and transcript.
         const std::array<std::uint8_t, 32> seed = {};
         nil::crypto3::random::chacha_urbg<> random_source(seed);
-        return scheme_type::generate(source, random_source).first;
+        return nil::crypto3::zk::snark::modified_sap_snark<Policy>::generate(source, random_source).first;
     }
 
     template<typename Marshalled>
@@ -959,7 +969,9 @@ BOOST_AUTO_TEST_CASE(prove_propagates_opening_failure_without_replacing_a_proof)
     BOOST_CHECK(witness == original_witness);
 }
 
-BOOST_AUTO_TEST_CASE(generated_proofs_verify_across_domain_sizes_and_setup_seeds) {
+BOOST_AUTO_TEST_CASE_TEMPLATE(generated_proofs_verify_across_domain_sizes_and_setup_seeds, Policy,
+                              integration_policies) {
+    using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<Policy>;
     const scalar_value_type u(3);
     const std::array sizes = {std::pair {1, 2}, std::pair {2, 2}, std::pair {3, 4}, std::pair {4, 4},
                               std::pair {5, 8}, std::pair {8, 8}, std::pair {9, 16}};
@@ -1013,8 +1025,11 @@ BOOST_AUTO_TEST_CASE(generated_proofs_verify_with_zero_private_witness_and_zero_
     }
 }
 
-BOOST_AUTO_TEST_CASE(generated_proofs_reject_changed_commitments_and_evaluations) {
-    const auto key = generate_proving_key(test_system());
+BOOST_AUTO_TEST_CASE_TEMPLATE(generated_proofs_reject_changed_commitments_and_evaluations, Policy,
+                              integration_policies) {
+    using policy_type = Policy;
+    using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<policy_type>;
+    const auto key = generate_proving_key<policy_type>(test_system());
     const scalar_value_type u(3);
     const auto proof = scheme_type::prove(key, u, {u, scalar_value_type(2), scalar_value_type(1)});
     BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
@@ -1059,8 +1074,10 @@ BOOST_AUTO_TEST_CASE(generated_proofs_reject_changed_commitments_and_evaluations
     BOOST_CHECK(!verify_after_serialization(changed));
 }
 
-BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_expected_public_input) {
-    const auto key = generate_proving_key(test_system());
+BOOST_AUTO_TEST_CASE_TEMPLATE(generated_proofs_are_bound_to_the_expected_public_input, Policy, integration_policies) {
+    using policy_type = Policy;
+    using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<policy_type>;
+    const auto key = generate_proving_key<policy_type>(test_system());
     const scalar_value_type u(3);
     const auto proof = scheme_type::prove(key, u, {u, scalar_value_type(2), scalar_value_type(1)});
     BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
@@ -1088,7 +1105,9 @@ BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_expected_public_input) {
     }
 }
 
-BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_circuit_and_setup) {
+BOOST_AUTO_TEST_CASE_TEMPLATE(generated_proofs_are_bound_to_the_circuit_and_setup, Policy, integration_policies) {
+    using policy_type = Policy;
+    using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<policy_type>;
     const auto source = test_system();
     const scalar_value_type u(3);
     const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
@@ -1097,7 +1116,7 @@ BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_circuit_and_setup) {
     const auto keys = scheme_type::generate(source, random_source);
     const auto proof = scheme_type::prove(keys.first, u, witness);
     BOOST_REQUIRE(scheme_type::verify(keys.second, u, proof));
-    const auto verify_after_serialization = [&](const policy_type::verification_key_type &vk,
+    const auto verify_after_serialization = [&](const typename policy_type::verification_key_type &vk,
                                                 const proof_type &candidate) {
         const auto restored_vk = marshalling_types::make_modified_sap_verification_key<policy_type, endianness>(
             round_trip_marshaled(marshalling_types::fill_modified_sap_verification_key<policy_type, endianness>(vk)));
@@ -1140,7 +1159,56 @@ BOOST_AUTO_TEST_CASE(generated_proofs_are_bound_to_the_circuit_and_setup) {
     BOOST_CHECK(!verify_after_serialization(keys.second, changed_proof));
 }
 
-BOOST_AUTO_TEST_CASE(r1cs_frontend_reuses_setup_for_multiple_assignments) {
+BOOST_AUTO_TEST_CASE_TEMPLATE(generated_keys_and_proofs_reject_mismatched_transcript_policies,
+                              Policy,
+                              integration_policies) {
+    using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<Policy>;
+    const auto key = generate_proving_key<Policy>(test_system());
+    const scalar_value_type u(3);
+    const auxiliary_input_type witness = {u, scalar_value_type(2), scalar_value_type(1)};
+    const auto proof = scheme_type::prove(key, u, witness);
+    BOOST_REQUIRE(scheme_type::verify(key.verification_key, u, proof));
+
+    const auto marshalled_key =
+        round_trip_marshaled(marshalling_types::fill_modified_sap_proving_key<Policy, endianness>(key));
+    BOOST_REQUIRE((marshalling_types::make_modified_sap_proving_key<Policy, endianness>(marshalled_key) == key));
+    const auto marshalled_vk = round_trip_marshaled(
+        marshalling_types::fill_modified_sap_verification_key<Policy, endianness>(key.verification_key));
+    const auto restored_proof = marshalling_types::make_modified_sap_proof<proof_type, endianness>(
+        round_trip_marshaled(marshalling_types::fill_modified_sap_proof<proof_type, endianness>(proof)));
+    BOOST_REQUIRE(restored_proof == proof);
+
+    const auto check_other_policy = [&]<typename OtherPolicy>() {
+        if constexpr (!std::is_same_v<Policy, OtherPolicy>) {
+            using other_scheme_type = nil::crypto3::zk::snark::modified_sap_snark<OtherPolicy>;
+            using other_transcript_type = typename OtherPolicy::transcript_policy_type;
+            BOOST_TEST_CONTEXT("other challenge bits: " << other_transcript_type::challenge_bits) {
+                // Keep the same key and proof: only the caller's selected transcript changes.
+                BOOST_CHECK(!other_scheme_type::verify(key.verification_key, u, proof));
+                BOOST_CHECK_THROW(other_scheme_type::prove(key, u, witness), std::invalid_argument);
+
+                // The proving key contains the circuit, so its decoder can reject a digest-policy mismatch.
+                BOOST_CHECK_THROW(
+                    (marshalling_types::make_modified_sap_proving_key<OtherPolicy, endianness>(marshalled_key)),
+                    std::invalid_argument);
+
+                // A standalone VK has no circuit or profile identifier to check. Its encoding remains valid;
+                // verification must reject the proof under the different transcript after decoding as well.
+                const auto restored_vk =
+                    marshalling_types::make_modified_sap_verification_key<OtherPolicy, endianness>(marshalled_vk);
+                BOOST_REQUIRE(restored_vk == key.verification_key);
+                BOOST_CHECK(!other_scheme_type::verify(restored_vk, u, restored_proof));
+            }
+        }
+    };
+    check_other_policy.template operator()<policy_type>();
+    check_other_policy.template operator()<truncated_128_policy>();
+    check_other_policy.template operator()<truncated_192_policy>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(r1cs_frontend_reuses_setup_for_multiple_assignments, Policy, integration_policies) {
+    using policy_type = Policy;
+    using scheme_type = nil::crypto3::zk::snark::modified_sap_snark<policy_type>;
     // One public input u and two private variables x, y, constrained by (x + 1)*y = u.
     const auto source = r1cs_test_system();
     const auto converted = r1cs_reduction_type::instance_map(source);
@@ -1148,7 +1216,7 @@ BOOST_AUTO_TEST_CASE(r1cs_frontend_reuses_setup_for_multiple_assignments) {
         marshalling_types::make_modified_sap_constraint_system<system_type, endianness>(round_trip_marshaled(
             marshalling_types::fill_modified_sap_constraint_system<system_type, endianness>(converted)));
     BOOST_REQUIRE(restored_system == converted);
-    const auto key = generate_proving_key(restored_system);
+    const auto key = generate_proving_key<policy_type>(restored_system);
     const auto restored_key = marshalling_types::make_modified_sap_proving_key<policy_type, endianness>(
         round_trip_marshaled(marshalling_types::fill_modified_sap_proving_key<policy_type, endianness>(key)));
     const auto restored_vk =

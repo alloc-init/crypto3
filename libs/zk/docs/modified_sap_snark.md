@@ -758,6 +758,14 @@ They change the circuit digest stored in the verification key, as well as the
 proof transcript directly. Keys and proofs must use the same selected profile.
 The original profile inserts neither element and keeps all its existing results.
 
+The key and proof wire formats are unchanged and do not carry a separate profile
+identifier or bit count. Applications select the same transcript policy when
+loading and using these objects. Proving-key conversion checks the stored circuit
+digest against the included circuit under that policy. A standalone verification
+key or proof has no circuit to recompute, so decoding validates its representation
+without establishing which transcript profile produced it; proof verification
+uses the caller's selected policy.
+
 `prepare_proof_prefix` includes the two additional elements, so it processes
 88 Fp elements as 44 full nonfinal blocks, still ending after `alpha_gt[Z]`.
 The state is neither padded nor finalized. Continue with the same two suffix
