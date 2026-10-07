@@ -85,9 +85,8 @@ namespace nil::crypto3::math {
         static polynomial_type
             compute_x_to_field_order(const polynomial_divisor_context<backend_type> &divisor_context,
                                      polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) {
-            const polynomial_type x = {value_type {}, value_type::one()};
             polynomial_type result;
-            powmod(result, x, algebra::fields::field_order<field_type>(), divisor_context, arithmetic_context);
+            powmod_x(result, algebra::fields::field_order<field_type>(), divisor_context, arithmetic_context);
             return result;
         }
 
