@@ -27,6 +27,8 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <limits>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -53,6 +55,41 @@ namespace nil::crypto3::math::polynomial_arithmetic {
     public:
         using value_type = ValueType;
         using polynomial_type = math::polynomial<value_type>;
+
+        /**
+         * Owned, immutable preparation of a fixed operand for multiply_low. The spectrum contains the FFT of
+         * the first min(fixed.size(), coefficient_count) coefficients, with enough zero padding for a linear
+         * product. It does not refer to the source polynomial, backend, FFT plan, or scratch storage.
+         */
+        class prepared_low_product_type {
+        public:
+            std::size_t coefficient_count() const {
+                return coefficient_count_;
+            }
+
+            // Zero means the requested fixed prefix is zero, so no transform was needed.
+            std::size_t transform_size() const {
+                return spectrum_.size();
+            }
+
+            std::size_t storage_bytes() const {
+                return spectrum_.capacity() * sizeof(value_type);
+            }
+
+        private:
+            friend class mixed_radix_backend;
+
+            prepared_low_product_type(std::size_t coefficient_count, std::size_t prefix_size, bool zero,
+                                      std::vector<value_type> spectrum = {}) :
+                coefficient_count_(coefficient_count), prefix_size_(prefix_size), zero_(zero),
+                spectrum_(std::move(spectrum)) {
+            }
+
+            std::size_t coefficient_count_;
+            std::size_t prefix_size_;
+            bool zero_;
+            std::vector<value_type> spectrum_;
+        };
 
         explicit mixed_radix_backend(std::size_t transform_size) {
             // Every divisor of a valid transform order also has a root of unity. Caching those plans lets algorithms
@@ -113,6 +150,88 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             multiply_prefixes(output, left, left_size, right, right_size, result_size);
         }
 
+        /**
+         * Prepare a fixed right operand for a low product with a variable operand of variable_coefficient_count
+         * coefficients. This uses the same prefixes and smallest fitting transform as multiply_low.
+         * Returns nullopt if a positive precision has no variable coefficients or no plan can hold the complete
+         * prefix product. Zero precision and a zero fixed prefix need no FFT and produce a zero preparation.
+         *
+         * @pre fixed is a nonempty canonical coefficient polynomial.
+         */
+        std::optional<prepared_low_product_type> prepare_low_product(const polynomial_type &fixed,
+                                                                     std::size_t variable_coefficient_count,
+                                                                     std::size_t coefficient_count) {
+            const std::size_t prefix_size = std::min(fixed.size(), coefficient_count);
+            if (coefficient_count == 0) {
+                return prepared_low_product_type(coefficient_count, prefix_size, true);
+            }
+            const std::size_t variable_size = std::min(variable_coefficient_count, coefficient_count);
+            if (variable_size == 0) {
+                return std::nullopt;
+            }
+            if (math::is_zero(fixed.begin(), fixed.begin() + prefix_size)) {
+                return prepared_low_product_type(coefficient_count, prefix_size, true);
+            }
+            if (variable_size > std::numeric_limits<std::size_t>::max() - (prefix_size - 1)) {
+                return std::nullopt;
+            }
+            const auto *plan = find_plan(variable_size + prefix_size - 1);
+            if (!plan) {
+                return std::nullopt;
+            }
+
+            std::vector<value_type> spectrum(fixed.begin(), fixed.begin() + prefix_size);
+            plan->fft(spectrum, workspace_);
+            // FFT exchanges buffers with workspace_. A preceding larger transform can therefore leave this
+            // smaller spectrum with a large allocation. Detach that excess capacity once during preparation.
+            if (spectrum.capacity() > spectrum.size()) {
+                std::vector<value_type>(spectrum.begin(), spectrum.end()).swap(spectrum);
+            }
+            return prepared_low_product_type(coefficient_count, prefix_size, false, std::move(spectrum));
+        }
+
+        /**
+         * Compute left * fixed mod X^coefficient_count using an existing preparation. Returns false, leaving
+         * output unchanged, if the precision differs or the current backend would select a different FFT length.
+         * Different variable-operand lengths and backend instances are compatible when that selected length
+         * agrees. Zero products need no matching FFT plan. Successful output is canonical and may alias left;
+         * the preparation is never modified.
+         *
+         * @pre left is a nonempty canonical coefficient polynomial.
+         */
+        bool try_multiply_low_prepared(polynomial_type &output, const polynomial_type &left,
+                                       const prepared_low_product_type &prepared, std::size_t coefficient_count) {
+            if (coefficient_count != prepared.coefficient_count_) {
+                return false;
+            }
+            if (prepared.zero_) {
+                set_zero(output);
+                return true;
+            }
+            // A moved-from nonzero preparation no longer owns a spectrum.
+            if (prepared.spectrum_.empty()) {
+                return false;
+            }
+            const std::size_t left_size = std::min(left.size(), coefficient_count);
+            if (math::is_zero(left.begin(), left.begin() + left_size)) {
+                set_zero(output);
+                return true;
+            }
+            if (left_size > std::numeric_limits<std::size_t>::max() - (prepared.prefix_size_ - 1)) {
+                return false;
+            }
+            const std::size_t product_size = left_size + prepared.prefix_size_ - 1;
+            const auto *plan = find_plan(product_size);
+            if (!plan || plan->size() != prepared.transform_size()) {
+                return false;
+            }
+
+            polynomial_type transformed(left.begin(), left.begin() + left_size);
+            plan->fft(transformed.get_storage(), workspace_);
+            finish_product(output, transformed, prepared.spectrum_, std::min(coefficient_count, product_size), *plan);
+            return true;
+        }
+
     private:
         static std::vector<std::size_t> divisor_transform_sizes(std::size_t transform_size) {
             if (transform_size == 0) {
@@ -148,12 +267,17 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             output.assign(1, value_type::zero());
         }
 
-        const mixed_radix_fft_plan<RootFieldType> &plan_for(std::size_t result_size) const {
+        const mixed_radix_fft_plan<RootFieldType> *find_plan(std::size_t result_size) const {
             // Plans are sorted by order, so the first plan large enough for the product introduces the least padding.
             const auto plan = std::lower_bound(plans_.begin(), plans_.end(), result_size,
                                                [](const mixed_radix_fft_plan<RootFieldType> &candidate,
                                                   std::size_t size) { return candidate.size() < size; });
-            if (plan == plans_.end()) {
+            return plan == plans_.end() ? nullptr : &*plan;
+        }
+
+        const mixed_radix_fft_plan<RootFieldType> &plan_for(std::size_t result_size) const {
+            const auto *plan = find_plan(result_size);
+            if (!plan) {
                 throw std::invalid_argument("mixed_radix_backend: transform is too small for the product");
             }
             return *plan;
@@ -168,6 +292,12 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             plan.fft(transformed_left.get_storage(), workspace_);
             plan.fft(transformed_right.get_storage(), workspace_);
 
+            finish_product(output, transformed_left, transformed_right.get_storage(), result_size, plan);
+        }
+
+        void finish_product(polynomial_type &output, polynomial_type &transformed_left,
+                            const std::vector<value_type> &transformed_right, std::size_t result_size,
+                            const mixed_radix_fft_plan<RootFieldType> &plan) {
             for (std::size_t i = 0; i < plan.size(); ++i) {
                 transformed_left[i] = transformed_left[i] * transformed_right[i];
             }

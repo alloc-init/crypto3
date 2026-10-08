@@ -119,6 +119,28 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             backend_.multiply_low(output, left, right, coefficient_count);
         }
 
+        // Optional capabilities: backends without prepared low products still satisfy PolynomialBackend.
+        // Forward the backend's owned preparation without adding another context or exposing its scratch storage.
+        auto prepare_low_product(const polynomial_type &fixed, std::size_t variable_coefficient_count,
+                                 std::size_t coefficient_count)
+            requires requires(backend_type &backend, const polynomial_type &operand, std::size_t count) {
+                backend.prepare_low_product(operand, count, count);
+            }
+        {
+            return backend_.prepare_low_product(fixed, variable_coefficient_count, coefficient_count);
+        }
+
+        template<typename PreparedOperand>
+        bool try_multiply_low_prepared(polynomial_type &output, const polynomial_type &left,
+                                       const PreparedOperand &prepared, std::size_t coefficient_count)
+            requires requires(backend_type &backend, polynomial_type &result, const polynomial_type &operand,
+                              const PreparedOperand &fixed, std::size_t count) {
+                { backend.try_multiply_low_prepared(result, operand, fixed, count) } -> std::same_as<bool>;
+            }
+        {
+            return backend_.try_multiply_low_prepared(output, left, prepared, coefficient_count);
+        }
+
         const options_type &options() const {
             return options_;
         }
