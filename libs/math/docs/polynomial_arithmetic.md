@@ -130,6 +130,23 @@ math::polynomial_divisor_context<backend_type> divisor_context(
 The context is immutable after construction. Operations receiving it assume it represents the intended divisor; when
 another precomputation also depends on `B`, callers must keep those contexts paired with the same polynomial.
 
+### Fixed-operand FFT preparation
+
+For mixed-radix division, construction also prepares the FFT of the reversed-inverse prefix and one representation
+of the divisor. These spectra own their data and belong to the divisor snapshot; changing the source polynomial
+does not change them. The cache is bounded to at most two spectra and never grows during division. Constant divisors
+and configurations selecting long division need no spectra.
+
+The backend exposes optional `prepare_low_product` / `try_multiply_low_prepared` operations through the arithmetic
+context. A preparation records the fixed prefix, precision and transform length. Reuse requires the same precision
+and a compatible transform; otherwise the divisor context uses ordinary `multiply_low`. Changing quotient lengths
+does not build more cache entries. Backends such as schoolbook need only implement the three required operations.
+
+The second spectrum is either the original low-product divisor prefix or, when a strictly shorter supported
+transform exists, the complete divisor folded for cyclic remainder reconstruction. Both are never retained together.
+Preparation pays one forward FFT per nonzero fixed operand up front, plus spectrum storage and allocation. Repeated
+compatible operations then avoid those forward FFTs. This trades setup time and memory for lower repeated cost.
+
 ## Polynomial division
 
 `divrem` computes canonical `quotient` and `remainder` satisfying
@@ -148,6 +165,35 @@ reversal turns division into the truncated product
 
 The divisor context must have inverse precision of at least `k` on this fast path. Long division does not use the
 precomputed inverse and therefore does not require that precision.
+
+### Short cyclic remainder reconstruction
+
+Once the exact quotient is known, the identity `A = Q*B + R` gives, for a supported FFT order `M >= degree(B)`:
+
+    R = (A mod (X^M - 1)) - (Q*B mod (X^M - 1)).
+
+The high coefficients wrap identically in both terms and cancel. Since `degree(R) < degree(B) <= M`, the difference
+is the exact remainder. The implementation folds the dividend and the **complete** divisor, including its leading
+coefficient. In particular, that coefficient wraps into cell zero when `M == degree(B)`.
+
+The mixed-radix backend uses this path for `degree(A) <= 2*degree(B) - 2`, the range from multiplying reduced residues.
+It selects the smallest supported order at least `degree(B)` and uses it only when shorter than the ordinary
+low-product transform. Outside that range, or when the active backend cannot reuse the prepared order, division
+uses its original reconstruction. Quotient computation and inverse-precision validation are unchanged.
+
+`prepare_cyclic_remainder` and `try_cyclic_remainder` are optional backend/context operations. The latter requires
+the exact quotient for the same divisor used in preparation; it returns `false` without changing output when the
+degree range or transform is incompatible. Its output may alias the dividend or quotient. The separate preparation
+type prevents confusing a cyclic convolution with a low product.
+
+Generic `multiply_low(A, B, k)` continues to mean `A*B mod X^k`: an ordinary k-point cyclic convolution cannot
+replace it. Both reconstruction methods use the existing FFT kernels and preserve canonical results.
+
+For dense `squaremod` calls using inverse-based division and compatible nonzero preparations, squaring, quotient
+calculation and remainder reconstruction each need one forward and one inverse FFT. Cyclic reconstruction shortens
+only the remainder transforms; squaring and quotient calculation retain their existing transform lengths. Setup
+performs the fixed-operand forward transforms once. These operation counts do not directly predict execution time:
+pointwise products, folding, allocation and other division work also contribute.
 
 Two convenience operations share the same dispatch:
 
