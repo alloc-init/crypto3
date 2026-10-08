@@ -103,6 +103,10 @@ namespace {
         std::size_t prepared_products = 0;
         std::size_t ordinary_products = 0;
         std::size_t squares = 0;
+        std::size_t last_low_transform_size = 0;
+        std::size_t cyclic_preparations = 0;
+        std::size_t cyclic_remainders = 0;
+        std::size_t cyclic_transform_size = 0;
     };
 
     // Count calls at the backend boundary, as in the exponentiation tests; all arithmetic uses the real backend.
@@ -111,6 +115,7 @@ namespace {
         using base_type = polynomial_arithmetic::mixed_radix_backend<fq_field_type, ValueType>;
         using polynomial_type = typename base_type::polynomial_type;
         using prepared_type = typename base_type::prepared_low_product_type;
+        using cyclic_type = typename base_type::prepared_cyclic_remainder_type;
 
         counting_mixed_radix_backend(std::size_t order, prepared_product_counts &counts) :
             base_type(order), counts(counts) {
@@ -118,7 +123,9 @@ namespace {
 
         auto prepare_low_product(const polynomial_type &fixed, std::size_t variable_count, std::size_t count) {
             ++counts.preparations;
-            return base_type::prepare_low_product(fixed, variable_count, count);
+            auto prepared = base_type::prepare_low_product(fixed, variable_count, count);
+            counts.last_low_transform_size = prepared ? prepared->transform_size() : 0;
+            return prepared;
         }
 
         bool try_multiply_low_prepared(polynomial_type &output, const polynomial_type &input,
@@ -137,6 +144,20 @@ namespace {
         void square(polynomial_type &output, const polynomial_type &input) {
             ++counts.squares;
             base_type::square(output, input);
+        }
+
+        auto prepare_cyclic_remainder(const polynomial_type &divisor, std::size_t quotient_count) {
+            ++counts.cyclic_preparations;
+            auto prepared = base_type::prepare_cyclic_remainder(divisor, quotient_count);
+            counts.cyclic_transform_size = prepared ? prepared->transform_size() : 0;
+            return prepared;
+        }
+
+        bool try_cyclic_remainder(polynomial_type &output, const polynomial_type &dividend,
+                                  const polynomial_type &quotient, const cyclic_type &prepared) {
+            const bool used = base_type::try_cyclic_remainder(output, dividend, quotient, prepared);
+            counts.cyclic_remainders += used;
+            return used;
         }
 
         prepared_product_counts &counts;
@@ -160,13 +181,18 @@ namespace {
     }
 
     template<typename ValueType>
-    void check_cached_squaremod(const math::polynomial<ValueType> &divisor, math::polynomial<ValueType> input) {
+    void check_cached_squaremod(const math::polynomial<ValueType> &divisor, math::polynomial<ValueType> input,
+                                std::size_t maximum_order = 58, std::size_t cyclic_order = 0) {
         using backend_type = counting_mixed_radix_backend<ValueType>;
         using polynomial_type = typename backend_type::polynomial_type;
         prepared_product_counts counts;
-        polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(58, counts)};
+        polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(maximum_order, counts)};
         math::polynomial_divisor_context<backend_type> fixed(divisor, divisor.size() - 2, context);
-        BOOST_CHECK_EQUAL(counts.preparations, 2);
+        BOOST_CHECK_EQUAL(counts.preparations, cyclic_order ? 1 : 2);
+        BOOST_CHECK_EQUAL(counts.cyclic_transform_size, cyclic_order);
+        if (cyclic_order != 0) {
+            BOOST_CHECK_EQUAL(counts.last_low_transform_size, maximum_order);
+        }
 
         for (std::size_t repeat = 0; repeat < 3; ++repeat) {
             polynomial_type square, quotient, expected, result;
@@ -176,11 +202,12 @@ namespace {
             math::squaremod(result, input, fixed, context);
             BOOST_CHECK(result == expected);
             BOOST_CHECK_EQUAL(counts.squares, 1);
-            BOOST_CHECK_EQUAL(counts.prepared_products, 2);
+            BOOST_CHECK_EQUAL(counts.prepared_products, cyclic_order ? 1 : 2);
+            BOOST_CHECK_EQUAL(counts.cyclic_remainders, cyclic_order ? 1 : 0);
             BOOST_CHECK_EQUAL(counts.ordinary_products, 0);
-            BOOST_CHECK_EQUAL(counts.preparations, 0);
-            // All three operations select order 29 for these degree-11 moduli. One square and two prepared
-            // products therefore use six transforms; ordinary reduction would use eight.
+            BOOST_CHECK_EQUAL(counts.preparations + counts.cyclic_preparations, 0);
+            // One square and two operations using fixed spectra use six transforms. With cyclic reconstruction,
+            // only the final two transforms use the shorter cyclic_order; squaring and quotient work stay full size.
             polynomial_type alias = input;
             math::squaremod(alias, alias, fixed, context);
             BOOST_CHECK(alias == expected);
@@ -578,11 +605,12 @@ BOOST_AUTO_TEST_CASE(prepared_division_falls_back_for_changed_quotient_lengths_w
     options.basecase_quotient_coefficient_cutoff = 0;
     polynomial_arithmetic::polynomial_context<backend_type> context(backend_type(18, counts), options);
     const math::polynomial_divisor_context<backend_type> fixed(divisor, 5, context);
-    BOOST_CHECK_EQUAL(counts.preparations, 2);
+    BOOST_CHECK_EQUAL(counts.preparations, 1);
+    BOOST_CHECK_EQUAL(counts.cyclic_preparations, 1);
 
     for (const auto &remainder : {polynomial_type {fq_value_type::zero()}, polynomial_type {19, 23}}) {
-        // Quotient size five uses both spectra. Shorter quotients have a different inverse precision and a
-        // smaller remainder-product transform. Returning to size five must reuse the original preparations.
+        // Quotient size five reuses the inverse and cyclic modulus. Sizes four and two reuse only the cyclic
+        // modulus. At size one the ordinary remainder transform is equally short, so both products fall back.
         for (std::size_t size : {5, 4, 2, 1, 5}) {
             polynomial_type quotient(size, fq_value_type::zero()), dividend;
             quotient.back() = fq_value_type(17);
@@ -590,9 +618,10 @@ BOOST_AUTO_TEST_CASE(prepared_division_falls_back_for_changed_quotient_lengths_w
             math::addition(dividend, dividend, remainder);
             counts = {};
             check_reused_division(dividend, fixed, context);
-            BOOST_CHECK_EQUAL(counts.prepared_products, size == 5 ? 2 : 0);
-            BOOST_CHECK_EQUAL(counts.ordinary_products, size == 5 ? 0 : 2);
-            BOOST_CHECK_EQUAL(counts.preparations, 0);
+            BOOST_CHECK_EQUAL(counts.prepared_products, size == 5 ? 1 : 0);
+            BOOST_CHECK_EQUAL(counts.cyclic_remainders, size > 1 ? 1 : 0);
+            BOOST_CHECK_EQUAL(counts.ordinary_products, size == 5 ? 0 : (size == 1 ? 2 : 1));
+            BOOST_CHECK_EQUAL(counts.preparations + counts.cyclic_preparations, 0);
 
             polynomial_type expected_quotient, expected_remainder, aliased = dividend;
             math::divrem(aliased, expected_remainder, aliased, fixed, context);
@@ -607,7 +636,9 @@ BOOST_AUTO_TEST_CASE(prepared_division_falls_back_for_changed_quotient_lengths_w
     for (const auto &small : {polynomial_type {fq_value_type::zero()}, polynomial_type {0, 0, 1}}) {
         counts = {};
         check_reused_division(small, fixed, context);
-        BOOST_CHECK_EQUAL(counts.prepared_products + counts.ordinary_products + counts.preparations, 0);
+        BOOST_CHECK_EQUAL(counts.prepared_products + counts.ordinary_products + counts.preparations +
+                              counts.cyclic_preparations + counts.cyclic_remainders,
+                          0);
     }
 }
 
@@ -635,9 +666,10 @@ BOOST_AUTO_TEST_CASE(prepared_divisor_snapshots_survive_copy_move_and_arithmetic
             counts = {};
             check_reused_division(dividend, *snapshot, context);
             BOOST_CHECK(snapshot->divisor() == original);
-            BOOST_CHECK_EQUAL(counts.prepared_products, order == 522 ? 2 : 0);
+            BOOST_CHECK_EQUAL(counts.prepared_products, order == 522 ? 1 : 0);
+            BOOST_CHECK_EQUAL(counts.cyclic_remainders, order == 522 ? 1 : 0);
             BOOST_CHECK_EQUAL(counts.ordinary_products, order == 522 ? 0 : 2);
-            BOOST_CHECK_EQUAL(counts.preparations, 0);
+            BOOST_CHECK_EQUAL(counts.preparations + counts.cyclic_preparations, 0);
         }
         polynomial_type different = original;
         different[0] = fq_value_type(99);
@@ -662,9 +694,9 @@ BOOST_AUTO_TEST_CASE(prepared_division_handles_sparse_reversals_and_zero_fixed_p
         const math::polynomial_divisor_context<backend_type> fixed(divisor, 5, context);
         counts = {};
         check_reused_division(dividend, fixed, context);
-        BOOST_CHECK_EQUAL(counts.prepared_products, 2);
+        BOOST_CHECK_EQUAL(counts.prepared_products + counts.cyclic_remainders, 2);
         BOOST_CHECK_EQUAL(counts.ordinary_products, 0);
-        BOOST_CHECK_EQUAL(counts.preparations, 0);
+        BOOST_CHECK_EQUAL(counts.preparations + counts.cyclic_preparations, 0);
     }
 }
 
@@ -702,6 +734,56 @@ BOOST_AUTO_TEST_CASE(unavailable_or_unused_preparations_preserve_existing_divisi
     counts = {};
     const math::polynomial_divisor_context<backend_type> constant(polynomial_type {fq_value_type(7)}, 3, context);
     BOOST_CHECK_EQUAL(counts.preparations, 0);
+}
+
+BOOST_AUTO_TEST_CASE(squaremod_uses_full_quotient_transforms_and_short_cyclic_reconstruction) {
+    // degree(H) = 64 selects M = 67. A square of a reduced dense residue and each quotient product select 134.
+    math::polynomial<fq_value_type> divisor(65, fq_value_type::one()), input(64, fq_value_type::one());
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        divisor[i] = fq_value_type(i + 2);
+        input[i] = fq_value_type(2 * i + 3);
+    }
+    check_cached_squaremod(divisor, input, 134, 67);
+
+    using polynomial_type = math::polynomial<fq12_value_type>;
+    polynomial_type factor(64, fq12_value_type::one()), extension_input(64, fq12_value_type::one()), extension_divisor;
+    for (std::size_t i = 0; i < factor.size() - 1; ++i) {
+        factor[i] = fq12_value(12 * i + 1);
+        extension_input[i] = fq12_value(12 * i + 769);
+    }
+    // Include a reducible Fp12 modulus, both monic and nonmonic, with coefficients spanning the extension field.
+    polynomial_arithmetic::schoolbook_backend<fq12_value_type> {}.multiply(
+        extension_divisor, factor, polynomial_type {fq12_value(1537), fq12_value_type::one()});
+    check_cached_squaremod(extension_divisor, extension_input, 134, 67);
+    for (auto &coefficient : extension_divisor) {
+        coefficient *= fq12_value(1549);
+    }
+    check_cached_squaremod(extension_divisor, extension_input, 134, 67);
+}
+
+BOOST_AUTO_TEST_CASE(cyclic_reconstruction_falls_back_outside_the_reduced_product_degree_range) {
+    using backend_type = counting_mixed_radix_backend<>;
+    using polynomial_type = typename backend_type::polynomial_type;
+    const polynomial_type divisor {2, 3, 5, 7, 11, 13, 1};
+    prepared_product_counts counts;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type(18, counts), options);
+    // A larger inverse precision still prepares the cyclic modulus for the bounded range. General division
+    // with degree(V) > 2*degree(H) - 2 must retain the ordinary reconstruction and its precision checks.
+    const math::polynomial_divisor_context<backend_type> fixed(divisor, 10, context);
+    BOOST_CHECK_EQUAL(counts.cyclic_transform_size, 6);
+    for (std::size_t size : {5, 6, 8, 5}) {
+        polynomial_type quotient(size, fq_value_type::one()), dividend;
+        polynomial_arithmetic::schoolbook_backend<fq_value_type> {}.multiply(dividend, quotient, divisor);
+        dividend[0] += fq_value_type(17);
+        counts = {};
+        check_reused_division(dividend, fixed, context);
+        BOOST_CHECK_EQUAL(counts.cyclic_remainders, size == 5 ? 1 : 0);
+        BOOST_CHECK_EQUAL(counts.ordinary_products, size == 5 ? 1 : 2);
+        BOOST_CHECK_EQUAL(counts.preparations + counts.cyclic_preparations, 0);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

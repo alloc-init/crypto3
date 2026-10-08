@@ -61,6 +61,29 @@ namespace nil::crypto3::math {
             preparation_type divisor;
         };
 
+        template<typename Backend>
+        concept SupportsPreparedCyclicRemainder =
+            requires(polynomial_arithmetic::polynomial_context<Backend> &context,
+                     typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
+                     std::size_t count) {
+                { context.prepare_cyclic_remainder(input, count).has_value() } -> std::same_as<bool>;
+                {
+                    context.try_cyclic_remainder(output, input, input, *context.prepare_cyclic_remainder(input, count))
+                } -> std::same_as<bool>;
+            };
+
+        template<typename Backend>
+        struct divisor_prepared_cyclic_remainder { };
+
+        template<SupportsPreparedCyclicRemainder Backend>
+        struct divisor_prepared_cyclic_remainder<Backend> {
+            using preparation_type =
+                decltype(std::declval<polynomial_arithmetic::polynomial_context<Backend> &>().prepare_cyclic_remainder(
+                    std::declval<const typename Backend::polynomial_type &>(),
+                    std::size_t {}));
+            preparation_type value;
+        };
+
         inline bool use_basecase_division(const polynomial_arithmetic::polynomial_context_options &options,
                                           std::size_t divisor_coefficient_count,
                                           std::size_t quotient_coefficient_count) {
@@ -82,6 +105,8 @@ namespace nil::crypto3::math {
      * during division. Each product falls back to ordinary multiplication when its precision or transform length
      * is incompatible with its preparation.
      * No preparations are needed when that quotient size selects long division, or when B is constant.
+     * The modulus preparation uses a shorter cyclic FFT when supported and beneficial; otherwise it uses the
+     * original low-product FFT. At most one of these modulus spectra is retained, alongside the inverse spectrum.
      *
      * @pre inverse_precision is positive.
      */
@@ -118,6 +143,12 @@ namespace nil::crypto3::math {
                     !detail::use_basecase_division(arithmetic_context.options(), divisor_.size(), inverse_precision_)) {
                     prepared_.inverse = arithmetic_context.prepare_low_product(reversed_divisor_inverse_,
                                                                                inverse_precision_, inverse_precision_);
+                    if constexpr (detail::SupportsPreparedCyclicRemainder<backend_type>) {
+                        cyclic_.value = arithmetic_context.prepare_cyclic_remainder(divisor_, inverse_precision_);
+                        if (cyclic_.value) {
+                            return;
+                        }
+                    }
                     prepared_.divisor = arithmetic_context.prepare_low_product(divisor_, inverse_precision_, degree());
                 }
             }
@@ -166,11 +197,25 @@ namespace nil::crypto3::math {
             context.multiply_low(output, input, divisor_, degree());
         }
 
+        // With exact quotient Q, cyclic reconstruction cancels the wrapped high coefficients of V and Q*B.
+        // The backend checks its bounded degree range and current transform lengths before changing output.
+        bool try_reconstruct_remainder(polynomial_type &output, const polynomial_type &dividend,
+                                       const polynomial_type &quotient,
+                                       polynomial_arithmetic::polynomial_context<backend_type> &context) const {
+            if constexpr (detail::SupportsPreparedCyclicRemainder<backend_type>) {
+                if (cyclic_.value) {
+                    return context.try_cyclic_remainder(output, dividend, quotient, *cyclic_.value);
+                }
+            }
+            return false;
+        }
+
     private:
         polynomial_type divisor_;
         polynomial_type reversed_divisor_inverse_;
         std::size_t inverse_precision_;
         [[no_unique_address]] detail::divisor_prepared_products<backend_type> prepared_;
+        [[no_unique_address]] detail::divisor_prepared_cyclic_remainder<backend_type> cyclic_;
     };
 
     /**
@@ -183,6 +228,8 @@ namespace nil::crypto3::math {
      *
      * After recovering Q, only the first d coefficients of A - Q * B are needed because the remainder has degree less
      * than d. If n < d, the quotient is zero and the dividend is returned unchanged as the remainder.
+     * For n <= 2*d - 2, a backend may reconstruct R using a shorter cyclic convolution instead: folding A and
+     * Q*B modulo X^M - 1 with M >= d cancels their wrapped high coefficients and leaves exactly R.
      *
      * For small divisors or quotients, the arithmetic context selects quadratic long division instead. Its two
      * inclusive coefficient-count cutoffs are independently configurable, and setting either cutoff to zero disables
@@ -260,7 +307,8 @@ namespace nil::crypto3::math {
         if (divisor_degree == 0) {
             remainder_result.resize(1);
             remainder_result[0] = value_type {};
-        } else {
+        } else if (!divisor_context.try_reconstruct_remainder(remainder_result, dividend, quotient_result,
+                                                              arithmetic_context)) {
             divisor_context.multiply_low_divisor(remainder_result, quotient_result, arithmetic_context);
             // multiply_low returns canonical output; restore the complete prefix before coefficient-wise subtraction.
             remainder_result.resize(divisor_degree, value_type {});

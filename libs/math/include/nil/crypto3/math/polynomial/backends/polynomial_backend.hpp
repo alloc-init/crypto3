@@ -141,6 +141,25 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             return backend_.try_multiply_low_prepared(output, left, prepared, coefficient_count);
         }
 
+        auto prepare_cyclic_remainder(const polynomial_type &divisor, std::size_t quotient_coefficient_count)
+            requires requires(backend_type &backend, const polynomial_type &operand, std::size_t count) {
+                backend.prepare_cyclic_remainder(operand, count);
+            }
+        {
+            return backend_.prepare_cyclic_remainder(divisor, quotient_coefficient_count);
+        }
+
+        template<typename PreparedRemainder>
+        bool try_cyclic_remainder(polynomial_type &output, const polynomial_type &dividend,
+                                  const polynomial_type &quotient, const PreparedRemainder &prepared)
+            requires requires(backend_type &backend, polynomial_type &result, const polynomial_type &operand,
+                              const PreparedRemainder &fixed) {
+                { backend.try_cyclic_remainder(result, operand, operand, fixed) } -> std::same_as<bool>;
+            }
+        {
+            return backend_.try_cyclic_remainder(output, dividend, quotient, prepared);
+        }
+
         const options_type &options() const {
             return options_;
         }

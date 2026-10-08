@@ -46,8 +46,8 @@ namespace nil::crypto3::math::polynomial_arithmetic {
      * contains each product. It reuses its workspace across operations and is therefore intended
      * for sequential use. Concurrent operations require separate backend instances.
      *
-     * The configured transform must contain the complete product of the coefficients
-     * used by an operation. multiply_low discards input coefficients that cannot
+     * For multiply, square and multiply_low, the configured transform must contain the complete product of the
+     * coefficients used by the operation. multiply_low discards input coefficients that cannot
      * affect the requested low coefficients before computing that product.
      */
     template<typename RootFieldType, typename ValueType = typename RootFieldType::value_type>
@@ -88,6 +88,33 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             std::size_t coefficient_count_;
             std::size_t prefix_size_;
             bool zero_;
+            std::vector<value_type> spectrum_;
+        };
+
+        // Owns the FFT of the complete divisor modulo X^M - 1, including its leading coefficient.
+        // This preparation is separate from multiply_low, whose modulus is a power of X.
+        class prepared_cyclic_remainder_type {
+        public:
+            std::size_t divisor_degree() const {
+                return divisor_degree_;
+            }
+
+            std::size_t transform_size() const {
+                return spectrum_.size();
+            }
+
+            std::size_t storage_bytes() const {
+                return spectrum_.capacity() * sizeof(value_type);
+            }
+
+        private:
+            friend class mixed_radix_backend;
+
+            prepared_cyclic_remainder_type(std::size_t divisor_degree, std::vector<value_type> spectrum) :
+                divisor_degree_(divisor_degree), spectrum_(std::move(spectrum)) {
+            }
+
+            std::size_t divisor_degree_;
             std::vector<value_type> spectrum_;
         };
 
@@ -182,11 +209,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
 
             std::vector<value_type> spectrum(fixed.begin(), fixed.begin() + prefix_size);
             plan->fft(spectrum, workspace_);
-            // FFT exchanges buffers with workspace_. A preceding larger transform can therefore leave this
-            // smaller spectrum with a large allocation. Detach that excess capacity once during preparation.
-            if (spectrum.capacity() > spectrum.size()) {
-                std::vector<value_type>(spectrum.begin(), spectrum.end()).swap(spectrum);
-            }
+            compact_spectrum(spectrum);
             return prepared_low_product_type(coefficient_count, prefix_size, false, std::move(spectrum));
         }
 
@@ -233,7 +256,90 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             return true;
         }
 
+        /**
+         * Prepare remainder reconstruction for products of reduced residues: degree(V) <= 2*n - 2, where
+         * n = degree(divisor). Select the smallest supported M >= n, and return nullopt unless it is shorter
+         * than the existing low-product transform for the expected quotient. Quotient lengths above n - 1
+         * are capped during preparation; division outside this range uses its existing reconstruction.
+         * The complete divisor is folded modulo X^M - 1, so its leading coefficient wraps when M == n.
+         *
+         * @pre divisor is a nonempty canonical coefficient polynomial.
+         */
+        std::optional<prepared_cyclic_remainder_type> prepare_cyclic_remainder(const polynomial_type &divisor,
+                                                                               std::size_t quotient_coefficient_count) {
+            const std::size_t n = divisor.size() - 1;
+            if (n < 2 || math::is_zero(divisor.begin(), divisor.begin() + n)) {
+                // A constant/linear divisor has no nontrivial reduced product to accelerate. For a monomial
+                // divisor the existing low-product remainder is zero and needs no transforms at all.
+                return std::nullopt;
+            }
+            const auto *plan = cyclic_remainder_plan(n, std::min(quotient_coefficient_count, n - 1));
+            if (!plan) {
+                return std::nullopt;
+            }
+            std::vector<value_type> spectrum;
+            fold_coefficients(spectrum, divisor, plan->size());
+            plan->fft(spectrum, workspace_);
+            compact_spectrum(spectrum);
+            return prepared_cyclic_remainder_type(n, std::move(spectrum));
+        }
+
+        /**
+         * Reconstruct R from V = Q*H + R using a prepared H. For n = degree(H) and its prepared length M >= n,
+         * R = fold_M(V) - (Q*H mod (X^M - 1)): the wrapped high coefficients cancel because degree(R) < n.
+         * Returns false without changing output outside degree(V) <= 2*n - 2, if a compatible shorter plan is
+         * unavailable, or if the preparation has been moved from. Successful output is canonical and may alias
+         * either input. The preparation remains unchanged.
+         *
+         * @pre dividend and quotient are nonempty canonical polynomials, and quotient is the exact quotient
+         *      of dividend by the divisor used to construct prepared.
+         */
+        bool try_cyclic_remainder(polynomial_type &output, const polynomial_type &dividend,
+                                  const polynomial_type &quotient, const prepared_cyclic_remainder_type &prepared) {
+            const std::size_t n = prepared.divisor_degree_;
+            if (prepared.spectrum_.empty() || dividend.size() <= n || dividend.size() - n > n - 1 ||
+                quotient.size() != dividend.size() - n) {
+                return false;
+            }
+            const auto *plan = cyclic_remainder_plan(n, quotient.size());
+            if (!plan || plan->size() != prepared.transform_size()) {
+                return false;
+            }
+
+            polynomial_type transformed, product, result;
+            fold_coefficients(transformed.get_storage(), quotient, plan->size());
+            plan->fft(transformed.get_storage(), workspace_);
+            finish_product(product, transformed, prepared.spectrum_, plan->size(), *plan);
+
+            // dividend is V and product holds cyclic Q*H. Folding V is essential: its wrapped coefficients
+            // cancel those of Q*H. Keep all M cells of the difference, including the tail from n through M - 1.
+            fold_coefficients(result.get_storage(), dividend, plan->size());
+            for (std::size_t i = 0; i < product.size(); ++i) {
+                result[i] -= product[i];
+            }
+            // Condense rather than truncate to n: an incorrect uncancelled tail must remain observable in tests.
+            math::condense(result);
+            output = std::move(result);
+            return true;
+        }
+
     private:
+        static void compact_spectrum(std::vector<value_type> &spectrum) {
+            // FFT exchanges buffers with workspace_. A preceding larger transform can therefore leave this
+            // smaller spectrum with a large allocation. Detach that excess capacity once during preparation.
+            if (spectrum.capacity() > spectrum.size()) {
+                std::vector<value_type>(spectrum.begin(), spectrum.end()).swap(spectrum);
+            }
+        }
+
+        static void fold_coefficients(std::vector<value_type> &output, const polynomial_type &input,
+                                      std::size_t length) {
+            output.assign(length, value_type::zero());
+            for (std::size_t i = 0; i < input.size(); ++i) {
+                output[i % length] += input[i];
+            }
+        }
+
         static std::vector<std::size_t> divisor_transform_sizes(std::size_t transform_size) {
             if (transform_size == 0) {
                 throw std::invalid_argument("mixed_radix_backend: expected transform size > 0");
@@ -282,6 +388,18 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 throw std::invalid_argument("mixed_radix_backend: transform is too small for the product");
             }
             return *plan;
+        }
+
+        const mixed_radix_fft_plan<RootFieldType> *cyclic_remainder_plan(std::size_t n,
+                                                                         std::size_t quotient_size) const {
+            if (n < 2 || quotient_size == 0 || quotient_size > n - 1 ||
+                quotient_size > std::numeric_limits<std::size_t>::max() - (n - 1)) {
+                return nullptr;
+            }
+            const auto *short_plan = find_plan(n);
+            // Within this range Q has quotient_size coefficients and the existing low product uses n from H.
+            const auto *linear_plan = find_plan(quotient_size + n - 1);
+            return short_plan && linear_plan && short_plan->size() < linear_plan->size() ? short_plan : nullptr;
         }
 
         void multiply_prefixes(polynomial_type &output, const polynomial_type &left, std::size_t left_size,

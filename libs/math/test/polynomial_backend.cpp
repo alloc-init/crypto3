@@ -86,6 +86,26 @@ namespace {
     static_assert(!UsesPreparedLowProduct<schoolbook_context, fq_mixed_radix_backend::prepared_low_product_type>);
     static_assert(!UsesPreparedLowProduct<fq_context, int>);
 
+    template<typename Context>
+    concept HasPreparedCyclicRemainder = requires(Context &context, const typename Context::polynomial_type &divisor) {
+        context.prepare_cyclic_remainder(divisor, std::size_t(5));
+    };
+
+    template<typename Context, typename Prepared>
+    concept UsesPreparedCyclicRemainder =
+        requires(Context &context, typename Context::polynomial_type &output,
+                 const typename Context::polynomial_type &input, const Prepared &prepared) {
+            { context.try_cyclic_remainder(output, input, input, prepared) } -> std::same_as<bool>;
+        };
+
+    static_assert(HasPreparedCyclicRemainder<fq_context>);
+    static_assert(!HasPreparedCyclicRemainder<schoolbook_context>);
+    static_assert(UsesPreparedCyclicRemainder<fq_context, fq_mixed_radix_backend::prepared_cyclic_remainder_type>);
+    static_assert(
+        !UsesPreparedCyclicRemainder<schoolbook_context, fq_mixed_radix_backend::prepared_cyclic_remainder_type>);
+    static_assert(!UsesPreparedCyclicRemainder<fq_context, fq_mixed_radix_backend::prepared_low_product_type>);
+    static_assert(!UsesPreparedLowProduct<fq_context, fq_mixed_radix_backend::prepared_cyclic_remainder_type>);
+
     template<typename ValueType>
     math::polynomial<ValueType> expected_low_product(const math::polynomial<ValueType> &product,
                                                      std::size_t coefficient_count) {
@@ -190,6 +210,40 @@ namespace {
                 // Different values with the same prefix length reuse the same immutable spectrum.
                 variable[0] += value_type::one();
             }
+        }
+    }
+
+    template<typename Backend>
+    void check_cyclic_reconstruction(Backend backend, const typename Backend::polynomial_type &divisor,
+                                     typename Backend::polynomial_type quotient,
+                                     const typename Backend::polynomial_type &remainder, std::size_t cyclic_length) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using value_type = typename Backend::value_type;
+        polynomial_arithmetic::polynomial_context<Backend> context(std::move(backend));
+        polynomial_arithmetic::schoolbook_backend<value_type> reference;
+        const auto prepared = context.prepare_cyclic_remainder(divisor, quotient.size());
+        BOOST_REQUIRE(prepared.has_value());
+        BOOST_CHECK_EQUAL(prepared->divisor_degree(), divisor.size() - 1);
+        BOOST_CHECK_EQUAL(prepared->transform_size(), cyclic_length);
+        for (std::size_t repeat = 0; repeat < 3; ++repeat) {
+            polynomial_type dividend, expected_quotient, expected_remainder, result;
+            reference.multiply(dividend, quotient, divisor);
+            math::addition(dividend, dividend, remainder);
+            math::division(expected_quotient, expected_remainder, dividend, divisor);
+            BOOST_CHECK(expected_quotient == quotient);
+            BOOST_CHECK(expected_remainder == remainder);
+            BOOST_REQUIRE(context.try_cyclic_remainder(result, dividend, quotient, *prepared));
+            BOOST_CHECK(result == expected_remainder);
+            // Reconstruction only condenses the M-cell difference; it never truncates to degree(H). Therefore
+            // this bound checks that every coefficient from degree(H) through M - 1 actually cancelled.
+            BOOST_CHECK_LT(result.size(), divisor.size());
+            result = dividend;
+            BOOST_REQUIRE(context.try_cyclic_remainder(result, result, quotient, *prepared));
+            BOOST_CHECK(result == expected_remainder);
+            result = quotient;
+            BOOST_REQUIRE(context.try_cyclic_remainder(result, dividend, result, *prepared));
+            BOOST_CHECK(result == expected_remainder);
+            quotient[0] += value_type::one();
         }
     }
 
@@ -367,6 +421,84 @@ BOOST_AUTO_TEST_CASE(prepared_low_products_do_not_retain_larger_workspace_alloca
     for (std::size_t i = 0; i < small.size(); ++i) {
         BOOST_CHECK(result[i] == fq_value_type(i + 1));
     }
+}
+
+BOOST_AUTO_TEST_CASE(cyclic_reconstruction_folds_the_dividend_and_complete_divisor) {
+    using polynomial_type = fq_mixed_radix_backend::polynomial_type;
+    // M == degree(H): H's nonunit leading coefficient must wrap into cell zero.
+    check_cyclic_reconstruction(fq_mixed_radix_backend(18), polynomial_type {2, 3, 5, 7, 11, 13, 17},
+                                polynomial_type {19, 23, 29, 31, 37}, polynomial_type {41, 43}, 6);
+    // M > degree(H): the extra coefficient in the folded difference must cancel to zero.
+    check_cyclic_reconstruction(fq_mixed_radix_backend(18), polynomial_type {2, 3, 5, 7, 11, 1},
+                                polynomial_type {13, 17, 19, 23}, polynomial_type {fq_value_type::zero()}, 6);
+    // Folding H can itself give zero, as for H = X^6 - 1 and M = 6.
+    check_cyclic_reconstruction(fq_mixed_radix_backend(18), polynomial_type {-fq_value_type::one(), 0, 0, 0, 0, 0, 1},
+                                polynomial_type {0, 0, 0, 0, 1}, polynomial_type {0, 0, 1}, 6);
+
+    using extension_polynomial = fq12_mixed_radix_backend::polynomial_type;
+    check_cyclic_reconstruction(fq12_mixed_radix_backend(18),
+                                extension_polynomial {fq12_value(1), fq12_value(13), fq12_value(25), fq12_value(37),
+                                                      fq12_value(49), fq12_value(61)},
+                                extension_polynomial {fq12_value(73), fq12_value(85), fq12_value(97), fq12_value(109)},
+                                extension_polynomial {fq12_value(121), fq12_value(133)}, 6);
+}
+
+BOOST_AUTO_TEST_CASE(cyclic_preparation_and_reuse_require_a_supported_shorter_transform_and_bounded_degree) {
+    using polynomial_type = fq_mixed_radix_backend::polynomial_type;
+    fq_context context {fq_mixed_radix_backend(18)};
+    const polynomial_type divisor {2, 3, 5, 7, 11, 13, 17};
+    const auto prepared = context.prepare_cyclic_remainder(divisor, 5);
+    BOOST_REQUIRE(prepared.has_value());
+    BOOST_CHECK(!context.prepare_cyclic_remainder(divisor, 0).has_value());
+    BOOST_CHECK(!context.prepare_cyclic_remainder(divisor, 1).has_value());
+    BOOST_CHECK(!context.prepare_cyclic_remainder(polynomial_type {fq_value_type(7)}, 5).has_value());
+    BOOST_CHECK(!context.prepare_cyclic_remainder(polynomial_type {7, 11}, 5).has_value());
+    BOOST_CHECK(!context.prepare_cyclic_remainder(polynomial_type {0, 0, 0, 0, 0, 0, 1}, 5).has_value());
+    fq_context same_length {fq_mixed_radix_backend(67)};
+    BOOST_CHECK(!same_length.prepare_cyclic_remainder(divisor, 5).has_value());
+    fq_context too_small {fq_mixed_radix_backend(3)};
+    BOOST_CHECK(!too_small.prepare_cyclic_remainder(divisor, 5).has_value());
+
+    polynomial_arithmetic::schoolbook_backend<fq_value_type> reference;
+    for (std::size_t quotient_size : {1, 5, 6}) {
+        polynomial_type quotient(quotient_size, fq_value_type::one()), dividend, output {fq_value_type(99)};
+        reference.multiply(dividend, quotient, divisor);
+        if (quotient_size == 5) {
+            // The current backend lacks the prepared order-six plan; the preparation remains valid elsewhere.
+            BOOST_CHECK(!same_length.try_cyclic_remainder(output, dividend, quotient, *prepared));
+            BOOST_CHECK(output == polynomial_type({fq_value_type(99)}));
+            BOOST_CHECK(!too_small.try_cyclic_remainder(output, dividend, quotient, *prepared));
+            BOOST_REQUIRE(context.try_cyclic_remainder(output, dividend, quotient, *prepared));
+            BOOST_CHECK(math::is_zero(output));
+        } else {
+            // A constant quotient has no shorter remainder transform; size six exceeds degree(V) <= 2*n - 2.
+            BOOST_CHECK(!context.try_cyclic_remainder(output, dividend, quotient, *prepared));
+            BOOST_CHECK(output == polynomial_type({fq_value_type(99)}));
+            output = dividend;
+            BOOST_CHECK(!context.try_cyclic_remainder(output, output, quotient, *prepared));
+            BOOST_CHECK(output == dividend);
+        }
+    }
+    polynomial_type small {0, 0, 1}, zero {fq_value_type::zero()}, output {fq_value_type(99)};
+    BOOST_CHECK(!context.try_cyclic_remainder(output, small, zero, *prepared));
+    BOOST_CHECK(output == polynomial_type({fq_value_type(99)}));
+}
+
+BOOST_AUTO_TEST_CASE(short_cyclic_preparations_release_larger_workspace_allocations) {
+    using polynomial_type = fq_mixed_radix_backend::polynomial_type;
+    fq_mixed_radix_backend backend(134);
+    polynomial_type large(60, fq_value_type::one()), result;
+    backend.square(result, large);
+    const polynomial_type divisor(65, fq_value_type::one()), quotient(63, fq_value_type::one());
+    const auto prepared = backend.prepare_cyclic_remainder(divisor, quotient.size());
+    BOOST_REQUIRE(prepared.has_value());
+    BOOST_CHECK_EQUAL(prepared->transform_size(), 67);
+    BOOST_CHECK_LT(prepared->storage_bytes(), 134 * sizeof(fq_value_type));
+    polynomial_type dividend;
+    polynomial_arithmetic::schoolbook_backend<fq_value_type> {}.multiply(dividend, quotient, divisor);
+    dividend[0] += fq_value_type(19);
+    BOOST_REQUIRE(backend.try_cyclic_remainder(result, dividend, quotient, *prepared));
+    BOOST_CHECK(result == polynomial_type({fq_value_type(19)}));
 }
 
 BOOST_AUTO_TEST_CASE(scalar_multiplication_supports_base_field_scalars) {
