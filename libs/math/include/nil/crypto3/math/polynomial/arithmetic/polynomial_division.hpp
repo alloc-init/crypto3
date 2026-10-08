@@ -36,6 +36,31 @@
 namespace nil::crypto3::math {
 
     namespace detail {
+        template<typename Backend>
+        concept SupportsPreparedLowProduct =
+            requires(polynomial_arithmetic::polynomial_context<Backend> &context,
+                     typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
+                     std::size_t count) {
+                { context.prepare_low_product(input, count, count).has_value() } -> std::same_as<bool>;
+                {
+                    context.try_multiply_low_prepared(output, input, *context.prepare_low_product(input, count, count),
+                                                      count)
+                } -> std::same_as<bool>;
+            };
+
+        // Keep the optional spectra out of backends that only implement the required multiplication interface.
+        template<typename Backend>
+        struct divisor_prepared_products { };
+
+        template<SupportsPreparedLowProduct Backend>
+        struct divisor_prepared_products<Backend> {
+            using preparation_type =
+                decltype(std::declval<polynomial_arithmetic::polynomial_context<Backend> &>().prepare_low_product(
+                    std::declval<const typename Backend::polynomial_type &>(), std::size_t {}, std::size_t {}));
+            preparation_type inverse;
+            preparation_type divisor;
+        };
+
         inline bool use_basecase_division(const polynomial_arithmetic::polynomial_context_options &options,
                                           std::size_t divisor_coefficient_count,
                                           std::size_t quotient_coefficient_count) {
@@ -51,6 +76,12 @@ namespace nil::crypto3::math {
      * rev(B) = X^d * B(X^-1), which reverses B's d + 1 coefficients. The context stores B in canonical form and
      * rev(B)^-1 modulo X^inverse_precision. A later division may reuse this inverse when its quotient has at most
      * inverse_precision coefficients.
+     *
+     * When supported by the backend, also prepare the two fixed low-product operands for a quotient with
+     * inverse_precision coefficients. These preparations belong to this divisor snapshot and never grow or change
+     * during division. Each product falls back to ordinary multiplication when its precision or transform length
+     * is incompatible with its preparation.
+     * No preparations are needed when that quotient size selects long division, or when B is constant.
      *
      * @pre inverse_precision is positive.
      */
@@ -82,6 +113,14 @@ namespace nil::crypto3::math {
             polynomial_type reversed_divisor(divisor_);
             reverse(reversed_divisor, reversed_divisor.size());
             inverse_series(reversed_divisor_inverse_, reversed_divisor, inverse_precision_, arithmetic_context);
+            if constexpr (detail::SupportsPreparedLowProduct<backend_type>) {
+                if (degree() != 0 &&
+                    !detail::use_basecase_division(arithmetic_context.options(), divisor_.size(), inverse_precision_)) {
+                    prepared_.inverse = arithmetic_context.prepare_low_product(reversed_divisor_inverse_,
+                                                                               inverse_precision_, inverse_precision_);
+                    prepared_.divisor = arithmetic_context.prepare_low_product(divisor_, inverse_precision_, degree());
+                }
+            }
         }
 
         const polynomial_type &divisor() const {
@@ -100,10 +139,38 @@ namespace nil::crypto3::math {
             return inverse_precision_;
         }
 
+        // Multiply by the stored reversed inverse, retaining exactly coefficient_count low coefficients. The
+        // preparation must match this precision and the selected FFT length; otherwise use the ordinary product.
+        void multiply_low_reversed_inverse(polynomial_type &output, const polynomial_type &input,
+                                           std::size_t coefficient_count,
+                                           polynomial_arithmetic::polynomial_context<backend_type> &context) const {
+            if constexpr (detail::SupportsPreparedLowProduct<backend_type>) {
+                if (prepared_.inverse &&
+                    context.try_multiply_low_prepared(output, input, *prepared_.inverse, coefficient_count)) {
+                    return;
+                }
+            }
+            context.multiply_low(output, input, reversed_divisor_inverse_, coefficient_count);
+        }
+
+        // Only degree(B) low coefficients of Q*B are needed for remainder reconstruction. The leading coefficient
+        // of B cannot affect this prefix. Keep the same low-product operation whether or not preparation succeeds.
+        void multiply_low_divisor(polynomial_type &output, const polynomial_type &input,
+                                  polynomial_arithmetic::polynomial_context<backend_type> &context) const {
+            if constexpr (detail::SupportsPreparedLowProduct<backend_type>) {
+                if (prepared_.divisor &&
+                    context.try_multiply_low_prepared(output, input, *prepared_.divisor, degree())) {
+                    return;
+                }
+            }
+            context.multiply_low(output, input, divisor_, degree());
+        }
+
     private:
         polynomial_type divisor_;
         polynomial_type reversed_divisor_inverse_;
         std::size_t inverse_precision_;
+        [[no_unique_address]] detail::divisor_prepared_products<backend_type> prepared_;
     };
 
     /**
@@ -182,8 +249,8 @@ namespace nil::crypto3::math {
         }
 
         polynomial_type reversed_quotient;
-        arithmetic_context.multiply_low(reversed_quotient, reversed_dividend,
-                                        divisor_context.reversed_divisor_inverse(), quotient_size);
+        divisor_context.multiply_low_reversed_inverse(reversed_quotient, reversed_dividend, quotient_size,
+                                                      arithmetic_context);
         reversed_quotient.resize(quotient_size, value_type {});
         reverse(reversed_quotient, quotient_size);
         condense(reversed_quotient);
@@ -194,8 +261,7 @@ namespace nil::crypto3::math {
             remainder_result.resize(1);
             remainder_result[0] = value_type {};
         } else {
-            arithmetic_context.multiply_low(remainder_result, quotient_result, divisor_context.divisor(),
-                                            divisor_degree);
+            divisor_context.multiply_low_divisor(remainder_result, quotient_result, arithmetic_context);
             // multiply_low returns canonical output; restore the complete prefix before coefficient-wise subtraction.
             remainder_result.resize(divisor_degree, value_type {});
             for (std::size_t i = 0; i < divisor_degree; ++i) {

@@ -197,7 +197,8 @@ namespace nil::crypto3::math::polynomial_arithmetic {
          * agrees. Zero products need no matching FFT plan. Successful output is canonical and may alias left;
          * the preparation is never modified.
          *
-         * @pre left is a nonempty canonical coefficient polynomial.
+         * @pre left is a nonempty coefficient polynomial. Trailing zero coefficients are permitted, as in the
+         *      fixed-length reversal of a dividend prefix during division.
          */
         bool try_multiply_low_prepared(polynomial_type &output, const polynomial_type &left,
                                        const prepared_low_product_type &prepared, std::size_t coefficient_count) {
