@@ -40,16 +40,3 @@ target_link_libraries(${MIXED_RADIX_BENCHMARK}
     ${CMAKE_WORKSPACE_NAME}::algebra
     ${CMAKE_WORKSPACE_NAME}::multiprecision
     Boost::random)
-
-# Experimental reductions stay in the benchmark directory and are never registered with CTest.
-set(FFT_REDUCTION_BENCHMARK ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_fft_reduction_benchmark)
-add_executable(${FFT_REDUCTION_BENCHMARK} EXCLUDE_FROM_ALL fft_reduction_benchmark.cpp)
-set_target_properties(${FFT_REDUCTION_BENCHMARK} PROPERTIES CXX_STANDARD 23)
-target_compile_options(${FFT_REDUCTION_BENCHMARK} PRIVATE "-march=native")
-target_link_libraries(${FFT_REDUCTION_BENCHMARK}
-    ${CMAKE_WORKSPACE_NAME}::random
-    ${CMAKE_WORKSPACE_NAME}::math
-    ${CMAKE_WORKSPACE_NAME}::algebra
-    ${CMAKE_WORKSPACE_NAME}::multiprecision
-    marshalling::crypto3_math
-    Boost::random)

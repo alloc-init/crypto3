@@ -35,6 +35,7 @@
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 
 #include <nil/crypto3/math/polynomial/quotient_ring/polynomial_frobenius.hpp>
+#include <nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 
 namespace {
@@ -169,6 +170,44 @@ BOOST_AUTO_TEST_CASE(frobenius_modulo_a_nonzero_constant_is_zero) {
     polynomial_type result;
     math::frobenius_map(result, input, frobenius_context, arithmetic_context);
     BOOST_CHECK(result == polynomial_type({fq_value_type::zero()}));
+}
+
+BOOST_AUTO_TEST_CASE(mixed_radix_frobenius_reuses_cyclic_reduction_and_cached_composition) {
+    using mixed_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type, fq12_value_type>;
+    using reference_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using polynomial_type = typename mixed_backend::polynomial_type;
+    polynomial_type divisor(7, fq12_value_type::one()), input(6, fq12_value_type::one());
+    for (std::size_t i = 0; i < divisor.size(); ++i) {
+        divisor[i] = fq12_value(12 * i + 1);
+    }
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        input[i] = fq12_value(12 * i + 85);
+    }
+    // Force inverse-based division at this bounded size. For degree-six H and a dense reduced product,
+    // the quotient uses order nine, while reconstruction uses order six instead of the low product's 18.
+    polynomial_arithmetic::polynomial_context_options options;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<mixed_backend> mixed(mixed_backend(18), options);
+    polynomial_arithmetic::polynomial_context<reference_backend> reference;
+    const math::polynomial_divisor_context<reference_backend> reference_divisor(divisor, 5, reference);
+    const math::polynomial_frobenius_context<mixed_backend> frobenius(divisor, mixed);
+    const auto order = fields::field_order<fq12_field_type>();
+    const polynomial_type x {fq12_value_type::zero(), fq12_value_type::one()};
+    polynomial_type expected, result;
+    math::powmod(expected, x, order, reference_divisor, reference);
+    BOOST_CHECK(frobenius.x_to_field_order() == expected);
+    math::powmod(expected, input, order, reference_divisor, reference);
+    math::frobenius_map(result, input, frobenius, mixed);
+    BOOST_CHECK(result == expected);
+    auto alias = input;
+    math::frobenius_map(alias, alias, frobenius, mixed);
+    BOOST_CHECK(alias == expected);
+    // Reuse the same composition cache with another input. Frobenius fixes the added constant one.
+    input[0] += fq12_value_type::one();
+    expected[0] += fq12_value_type::one();
+    math::frobenius_map(result, input, frobenius, mixed);
+    BOOST_CHECK(result == expected);
 }
 
 BOOST_AUTO_TEST_CASE(frobenius_context_rejects_invalid_precomputation_inputs) {
