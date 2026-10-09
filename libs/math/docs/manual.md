@@ -18,3 +18,5 @@ The following pages describe the optimized domain and polynomial facilities:
   complete, and staged factorization.
 * [Polynomial recovery](@ref math_polynomial_recovery) covers square testing and square roots in polynomial quotient
   fields, bounded rational reconstruction, and the relation between these operations and polynomial norms.
+* [Polynomial observation](@ref math_polynomial_observation) describes opt-in event hooks, bounded hierarchical
+  timing, progress reporting, and factorization/norm-recovery instrumentation.

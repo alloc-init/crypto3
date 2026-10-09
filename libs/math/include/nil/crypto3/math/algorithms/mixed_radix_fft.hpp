@@ -35,6 +35,7 @@
 #include <nil/crypto3/algebra/type_traits.hpp>
 
 #include <nil/crypto3/math/algorithms/unity_root.hpp>
+#include <nil/crypto3/math/polynomial/polynomial_observation.hpp>
 
 namespace nil {
     namespace crypto3 {
@@ -101,7 +102,21 @@ namespace nil {
                  */
                 template<typename ValueType>
                 void fft(std::vector<ValueType> &values, std::vector<ValueType> &workspace) const {
-                    prepare_transform(values, workspace, "mixed_radix_fft_plan::fft: input exceeds plan size");
+                    polynomial_arithmetic::no_polynomial_observer observer;
+                    fft(values, workspace, observer);
+                }
+
+                // Borrowed instrumentation is confined to this transform; the recursive FFT kernel is unchanged.
+                template<typename ValueType, polynomial_arithmetic::PolynomialObserver Observer>
+                void fft(std::vector<ValueType> &values, std::vector<ValueType> &workspace, Observer &observer) const {
+                    using namespace polynomial_arithmetic;
+                    auto scope = observe_polynomial<polynomial_stage::fft_forward>(observer, [&]() noexcept {
+                        return polynomial_metadata {{{polynomial_metric::transform_length, size_},
+                                                     {polynomial_metric::input_coefficients, values.size()}}};
+                    });
+
+                    prepare_transform(values, workspace, "mixed_radix_fft_plan::fft: input exceeds plan size",
+                                      observer);
                     transform_recursive(values, 0, 1, workspace, 0, size_, 0, 1, forward_powers_);
                     values.swap(workspace);
                 }
@@ -124,11 +139,31 @@ namespace nil {
                  */
                 template<typename ValueType>
                 void inverse_fft(std::vector<ValueType> &values, std::vector<ValueType> &workspace) const {
-                    prepare_transform(values, workspace, "mixed_radix_fft_plan::inverse_fft: input exceeds plan size");
+                    polynomial_arithmetic::no_polynomial_observer observer;
+                    inverse_fft(values, workspace, observer);
+                }
+
+                // Borrowed instrumentation is confined to this transform; the recursive FFT kernel is unchanged.
+                template<typename ValueType, polynomial_arithmetic::PolynomialObserver Observer>
+                void inverse_fft(std::vector<ValueType> &values, std::vector<ValueType> &workspace,
+                                 Observer &observer) const {
+                    using namespace polynomial_arithmetic;
+                    auto scope = observe_polynomial<polynomial_stage::fft_inverse>(observer, [&]() noexcept {
+                        return polynomial_metadata {{{polynomial_metric::transform_length, size_},
+                                                     {polynomial_metric::input_coefficients, values.size()}}};
+                    });
+
+                    prepare_transform(values, workspace, "mixed_radix_fft_plan::inverse_fft: input exceeds plan size",
+                                      observer);
                     transform_recursive(values, 0, 1, workspace, 0, size_, 0, 1, inverse_powers_);
+                    auto normalization =
+                        observe_polynomial<polynomial_stage::fft_normalization>(observer, [&]() noexcept {
+                            return polynomial_metadata {{{polynomial_metric::transform_length, size_}}};
+                        });
                     for (ValueType &value : workspace) {
                         value = value * size_inverse_;
                     }
+                    normalization.finish();
                     values.swap(workspace);
                 }
 
@@ -141,9 +176,15 @@ namespace nil {
                     return size;
                 }
 
-                template<typename ValueType>
+                template<typename ValueType, polynomial_arithmetic::PolynomialObserver Observer>
                 void prepare_transform(std::vector<ValueType> &values, std::vector<ValueType> &workspace,
-                                       const char *oversized_input_message) const {
+                                       const char *oversized_input_message, Observer &observer) const {
+                    using namespace polynomial_arithmetic;
+                    auto scope = observe_polynomial<polynomial_stage::buffer_preparation>(observer, [&]() noexcept {
+                        return polynomial_metadata {{{polynomial_metric::input_coefficients, values.size()},
+                                                     {polynomial_metric::transform_length, size_}}};
+                    });
+
                     if (&values == &workspace) {
                         throw std::invalid_argument("mixed_radix_fft_plan: workspace must not alias input");
                     }

@@ -82,12 +82,19 @@ namespace nil::crypto3::math::detail {
      *
      * @throws std::invalid_argument if the divisor is zero or has more coefficients than the dividend.
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void gcd_divrem_step(typename Backend::polynomial_type &quotient,
                          typename Backend::polynomial_type &remainder_output,
                          const typename Backend::polynomial_type &dividend,
                          const typename Backend::polynomial_type &divisor,
-                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                         polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::euclidean_step>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, dividend.size()}, {metric::second_input_coefficients, divisor.size()}}};
+        });
         if (is_zero(divisor)) {
             throw std::invalid_argument("gcd_divrem_step: divisor must be nonzero");
         }
@@ -97,21 +104,27 @@ namespace nil::crypto3::math::detail {
 
         const std::size_t quotient_size = dividend.size() - divisor.size() + 1;
         if (use_basecase_division(arithmetic_context.options(), divisor.size(), quotient_size)) {
+            auto basecase = arithmetic_context.template observe<stage::basecase_division>();
             division(quotient, remainder_output, dividend, divisor);
         } else {
             polynomial_divisor_context<Backend> divisor_context(divisor, quotient_size, arithmetic_context);
             divrem(quotient, remainder_output, dividend, divisor_context, arithmetic_context);
         }
+        // One completed Euclidean-step scope counts one division; no per-coefficient events or counters.
+        scope.set_result_metadata([&]() noexcept {
+            return metadata {{{metric::quotient_coefficients, quotient.size()},
+                              {metric::remainder_coefficients, remainder_output.size()}}};
+        });
     }
 
     /** Apply a 2-by-2 polynomial matrix to a polynomial pair. */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void apply_half_gcd_matrix(typename Backend::polynomial_type &first_output,
                                typename Backend::polynomial_type &second_output,
                                const half_gcd_matrix<Backend> &matrix,
                                const typename Backend::polynomial_type &first,
                                const typename Backend::polynomial_type &second,
-                               polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                               polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
 
         polynomial_type product_00;
@@ -132,7 +145,7 @@ namespace nil::crypto3::math::detail {
      *
      *     M(A, B) = M(A_low, B_low) + X^split * M(A_high, B_high).
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void reconstruct_half_gcd_pair(typename Backend::polynomial_type &first_output,
                                    typename Backend::polynomial_type &second_output,
                                    const half_gcd_matrix<Backend> &matrix,
@@ -141,7 +154,7 @@ namespace nil::crypto3::math::detail {
                                    const typename Backend::polynomial_type &transformed_high_first,
                                    const typename Backend::polynomial_type &transformed_high_second,
                                    std::size_t split,
-                                   polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                                   polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
 
         polynomial_type low_first(first);
@@ -166,10 +179,10 @@ namespace nil::crypto3::math::detail {
      * Compose two polynomial-pair transformations as output = left * right. When the result is applied to a pair,
      * right acts first and left acts second.
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void multiply_half_gcd_matrices(half_gcd_matrix<Backend> &output, const half_gcd_matrix<Backend> &left,
                                     const half_gcd_matrix<Backend> &right,
-                                    polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                                    polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
 
         half_gcd_matrix<Backend> result;
@@ -199,10 +212,10 @@ namespace nil::crypto3::math::detail {
      * Prepend the Euclidean transformation taking the pair (A, B) to (B, A - quotient * B). The first matrix row
      * becomes the old second row; the new second row is the old first row minus quotient times the old second row.
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void prepend_euclidean_step(half_gcd_matrix<Backend> &matrix,
                                 const typename Backend::polynomial_type &quotient,
-                                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                                polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
 
         polynomial_type quotient_times_entry_10;
@@ -225,12 +238,19 @@ namespace nil::crypto3::math::detail {
      * transformation, apply Euclidean quotient steps until the second polynomial is zero or has at most half as many
      * coefficients as the original first polynomial. When requested, matrix accumulates the same quotient steps.
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void half_gcd_basecase(half_gcd_matrix<Backend> *matrix, typename Backend::polynomial_type &first_output,
                            typename Backend::polynomial_type &second_output,
                            const typename Backend::polynomial_type &first,
                            const typename Backend::polynomial_type &second,
-                           polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                           polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::half_gcd_basecase>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, first.size()}, {metric::second_input_coefficients, second.size()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
 
         const std::size_t target_second_size = first.size() / 2;
@@ -257,12 +277,19 @@ namespace nil::crypto3::math::detail {
      * input pair; recursive calls preserve those invariants. The transformation matrix is optional because plain GCD
      * needs only the reduced pair, while a future XGCD will also need the accumulated transformation.
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void half_gcd_reduce_impl(half_gcd_matrix<Backend> *matrix, typename Backend::polynomial_type &first_output,
                               typename Backend::polynomial_type &second_output,
                               const typename Backend::polynomial_type &first,
                               const typename Backend::polynomial_type &second, std::size_t basecase_cutoff,
-                              polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                              polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::half_gcd_recursion>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, first.size()}, {metric::second_input_coefficients, second.size()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
 
         const std::size_t split = first.size() / 2;
@@ -364,12 +391,19 @@ namespace nil::crypto3::math::detail {
      *
      * A zero basecase_cutoff disables the iterative base case.
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void half_gcd_reduce(half_gcd_matrix<Backend> &matrix, typename Backend::polynomial_type &first_output,
                          typename Backend::polynomial_type &second_output,
                          const typename Backend::polynomial_type &first,
                          const typename Backend::polynomial_type &second, std::size_t basecase_cutoff,
-                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                         polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::half_gcd>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, first.size()}, {metric::second_input_coefficients, second.size()}}};
+        });
         validate_half_gcd_inputs<Backend>(first, second);
         half_gcd_reduce_impl(&matrix, first_output, second_output, first, second, basecase_cutoff, arithmetic_context);
     }
@@ -379,12 +413,19 @@ namespace nil::crypto3::math::detail {
      * top-level matrix composition. Recursive subproblems still construct the matrices needed for reconstruction.
      * A zero basecase_cutoff disables the iterative base case.
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void half_gcd_reduce(typename Backend::polynomial_type &first_output,
                          typename Backend::polynomial_type &second_output,
                          const typename Backend::polynomial_type &first,
                          const typename Backend::polynomial_type &second, std::size_t basecase_cutoff,
-                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                         polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::half_gcd>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, first.size()}, {metric::second_input_coefficients, second.size()}}};
+        });
         validate_half_gcd_inputs<Backend>(first, second);
         half_gcd_reduce_impl<Backend>(nullptr, first_output, second_output, first, second, basecase_cutoff,
                                       arithmetic_context);

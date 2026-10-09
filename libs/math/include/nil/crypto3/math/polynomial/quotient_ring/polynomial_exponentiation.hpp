@@ -61,10 +61,16 @@ namespace nil::crypto3::math {
      *
      * @throws std::invalid_argument if exponent is negative or the precomputed inverse has insufficient precision.
      */
-    template<detail::SupportsDivrem Backend, detail::IntegerExponent Exponent>
+    template<detail::SupportsDivrem Backend, detail::IntegerExponent Exponent,
+             polynomial_arithmetic::PolynomialObserver Observer>
     void powmod(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &base,
                 const Exponent &exponent, const polynomial_divisor_context<Backend> &divisor_context,
-                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::powmod>(
+            [&]() noexcept { return metadata {{{metric::modulus_degree, divisor_context.degree()}}}; });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 
@@ -103,9 +109,14 @@ namespace nil::crypto3::math {
             if (remaining != 0) {
                 squaremod(power, power, divisor_context, arithmetic_context);
             }
+            scope.advance();
         }
 
         output = std::move(result);
+        scope.set_result_metadata([&]() noexcept {
+            return metadata {
+                {{metric::exponent_bits, scope.completed_steps()}, {metric::output_coefficients, output.size()}}};
+        });
     }
 
     /**
@@ -120,10 +131,16 @@ namespace nil::crypto3::math {
      *
      * @throws std::invalid_argument if exponent is negative or a squaring requires more inverse precision.
      */
-    template<detail::SupportsDivrem Backend, detail::IntegerExponent Exponent>
+    template<detail::SupportsDivrem Backend, detail::IntegerExponent Exponent,
+             polynomial_arithmetic::PolynomialObserver Observer>
     void powmod_x(typename Backend::polynomial_type &output, const Exponent &exponent,
                   const polynomial_divisor_context<Backend> &divisor_context,
-                  polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                  polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::powmod_x>(
+            [&]() noexcept { return metadata {{{metric::modulus_degree, divisor_context.degree()}}}; });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 
@@ -161,12 +178,20 @@ namespace nil::crypto3::math {
             result[1] = value_type::one();
         }
         bits.pop_back();    // The leading set bit initializes result to X mod H.
+        // Progress counts processed exponent bits, including this already reduced leading bit.
+        if constexpr (decltype(scope)::enabled) {
+            scope.advance(bits.size() + 1);
+        }
 
         while (!bits.empty()) {
             // If result = X^k mod H for the processed prefix k, the next bit b = bits.back() gives
             // X^(2*k+b): square result, then multiply by X only when b is one.
             squaremod(result, result, divisor_context, arithmetic_context);
             if (bits.back()) {
+                auto multiply_x = arithmetic_context.template observe<stage::multiply_by_x>([&]() noexcept {
+                    return metadata {
+                        {{metric::input_coefficients, result.size()}, {metric::modulus_degree, divisor_degree}}};
+                });
                 if (result.size() == divisor_degree) {
                     // With d = divisor_degree, X*result has degree d and leading coefficient result[d-1].
                     // Subtract c*H once, with c = result[d-1]/lead(H). Store its lower d coefficients directly,
@@ -183,9 +208,17 @@ namespace nil::crypto3::math {
                 }
             }
             bits.pop_back();
+            if constexpr (decltype(scope)::enabled) {
+                // Remaining bits plus completed bits recover the total without another exponent traversal.
+                scope.advance(bits.size() + scope.completed_steps() + 1);
+            }
         }
 
         output = std::move(result);
+        scope.set_result_metadata([&]() noexcept {
+            return metadata {
+                {{metric::exponent_bits, scope.completed_steps()}, {metric::output_coefficients, output.size()}}};
+        });
     }
 
 }    // namespace nil::crypto3::math

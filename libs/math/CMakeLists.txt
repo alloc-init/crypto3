@@ -44,3 +44,7 @@ cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
 
 cm_add_test_subdirectory(test)
+
+if(BUILD_EXAMPLES)
+    add_subdirectory(example)
+endif()

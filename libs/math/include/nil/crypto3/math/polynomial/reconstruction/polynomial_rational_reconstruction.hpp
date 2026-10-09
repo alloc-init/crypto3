@@ -71,14 +71,23 @@ namespace nil::crypto3::math {
      *         constant; residue is not reduced modulo modulus; or the degree bounds do not satisfy the strict
      *         uniqueness condition.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     bool rational_reconstruct(typename Backend::polynomial_type &numerator,
                               typename Backend::polynomial_type &denominator,
                               const typename Backend::polynomial_type &residue,
                               const typename Backend::polynomial_type &modulus,
                               std::size_t maximum_numerator_degree,
                               std::size_t maximum_denominator_degree,
-                              polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                              polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::rational_reconstruction>([&]() noexcept {
+            return metadata {{{metric::input_coefficients, residue.size()},
+                              {metric::second_input_coefficients, modulus.size()},
+                              {metric::numerator_degree_bound, maximum_numerator_degree},
+                              {metric::denominator_degree_bound, maximum_denominator_degree}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 
@@ -116,6 +125,10 @@ namespace nil::crypto3::math {
         polynomial_type next_denominator;
 
         while (!is_zero(current_remainder) && current_remainder.size() - 1 > maximum_numerator_degree) {
+            auto step_scope = arithmetic_context.template observe<stage::rational_reconstruction_step>([&]() noexcept {
+                return metadata {{{metric::input_coefficients, previous_remainder.size()},
+                                  {metric::second_input_coefficients, current_remainder.size()}}};
+            });
             detail::gcd_divrem_step(quotient, next_remainder, previous_remainder, current_remainder,
                                     arithmetic_context);
             arithmetic_context.multiply(quotient_times_denominator, quotient, current_denominator);
@@ -125,12 +138,21 @@ namespace nil::crypto3::math {
             current_remainder = std::move(next_remainder);
             previous_denominator = std::move(current_denominator);
             current_denominator = std::move(next_denominator);
+            step_scope.set_result_metadata([&]() noexcept {
+                return metadata {{{metric::numerator_coefficients, current_remainder.size()},
+                                  {metric::denominator_coefficients, current_denominator.size()}}};
+            });
+            step_scope.finish();
+            scope.advance();
         }
 
         if (is_zero(current_denominator) || current_denominator.size() - 1 > maximum_denominator_degree) {
+            scope.reject(polynomial_arithmetic::polynomial_rejection_reason::rational_degree_bound);
             return false;
         }
 
+        auto normalization_scope = arithmetic_context.template observe<stage::rational_reconstruction_normalization>(
+            [&]() noexcept { return metadata {{}}; });
         const value_type denominator_leading_coefficient = current_denominator[current_denominator.size() - 1];
         if (denominator_leading_coefficient != value_type::one()) {
             const value_type normalization = denominator_leading_coefficient.inversed();
@@ -138,8 +160,13 @@ namespace nil::crypto3::math {
             scalar_multiplication(current_denominator, current_denominator, normalization);
         }
 
+        normalization_scope.finish();
         numerator = std::move(current_remainder);
         denominator = std::move(current_denominator);
+        scope.set_result_metadata([&]() noexcept {
+            return metadata {{{metric::numerator_coefficients, numerator.size()},
+                              {metric::denominator_coefficients, denominator.size()}}};
+        });
         return true;
     }
 

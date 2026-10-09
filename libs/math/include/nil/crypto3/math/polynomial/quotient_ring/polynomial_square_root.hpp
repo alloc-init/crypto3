@@ -41,11 +41,11 @@ namespace nil::crypto3::math {
 
     namespace detail {
 
-        template<SupportsDivrem Backend>
+        template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
             requires algebra::FieldValue<typename Backend::polynomial_type::value_type>
         bool is_square_mod_impl(const typename Backend::polynomial_type &input,
                                 const polynomial_divisor_context<Backend> &divisor_context,
-                                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
                                 const algebra::fields::multiplicative_group_decomposition *order_decomposition);
 
     }    // namespace detail
@@ -78,11 +78,23 @@ namespace nil::crypto3::math {
         using value_type = typename polynomial_type::value_type;
         using field_type = typename value_type::field_type;
 
-        polynomial_square_root_context(const polynomial_type &quadratic_non_residue,
-                                       const polynomial_divisor_context<Backend> &divisor_context,
-                                       polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) :
+        template<polynomial_arithmetic::PolynomialObserver Observer>
+        polynomial_square_root_context(
+            const polynomial_type &quadratic_non_residue,
+            const polynomial_divisor_context<Backend> &divisor_context,
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) :
             divisor_context_(&divisor_context) {
-            initialize_order_decomposition();
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::square_root_preparation>(
+                [&]() noexcept { return metadata {{{metric::modulus_degree, divisor_context.degree()}}}; });
+            scope.set_result_metadata([]() noexcept {
+                return metadata {{{metric::arithmetic_path,
+                                   static_cast<std::size_t>(
+                                       polynomial_arithmetic::polynomial_arithmetic_path::supplied_nonresidue)}}};
+            });
+            initialize_order_decomposition(arithmetic_context);
             require_canonical_reduced(quadratic_non_residue);
             if (detail::is_square_mod_impl(quadratic_non_residue, divisor_context, arithmetic_context,
                                            &order_decomposition_)) {
@@ -91,20 +103,48 @@ namespace nil::crypto3::math {
             cache_non_residue_power(quadratic_non_residue, arithmetic_context);
         }
 
-        template<typename Generator>
+        template<typename Generator, polynomial_arithmetic::PolynomialObserver Observer>
             requires requires(Generator &generator) {
                 { generator() } -> std::convertible_to<polynomial_type>;
             }
         polynomial_square_root_context(const polynomial_divisor_context<Backend> &divisor_context,
-                                       polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                       polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
                                        Generator &generator) : divisor_context_(&divisor_context) {
-            initialize_order_decomposition();
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::square_root_preparation>(
+                [&]() noexcept { return metadata {{{metric::modulus_degree, divisor_context.degree()}}}; });
+            scope.set_result_metadata([]() noexcept {
+                return metadata {{{metric::arithmetic_path,
+                                   static_cast<std::size_t>(
+                                       polynomial_arithmetic::polynomial_arithmetic_path::sampled_nonresidue)}}};
+            });
+            initialize_order_decomposition(arithmetic_context);
 
+            auto search_scope =
+                arithmetic_context.template observe<stage::nonresidue_search>([&]() noexcept { return metadata {{}}; });
             polynomial_type candidate;
-            do {
+            for (;;) {
+                auto attempt_scope = arithmetic_context.template observe<stage::nonresidue_attempt>(
+                    [&]() noexcept { return metadata {{}}; });
                 candidate = generator();
                 require_canonical_reduced(candidate);
-            } while (detail::is_square_mod_impl(candidate, divisor_context, arithmetic_context, &order_decomposition_));
+                // Keep generation, validation, and the existing square test in the same order in each attempt.
+                const bool square =
+                    detail::is_square_mod_impl(candidate, divisor_context, arithmetic_context, &order_decomposition_);
+                if (square) {
+                    attempt_scope.reject(
+                        polynomial_arithmetic::polynomial_rejection_reason::nonresidue_candidate_square);
+                }
+                attempt_scope.advance(1);
+                attempt_scope.finish();
+                search_scope.advance();
+                if (!square) {
+                    break;
+                }
+            }
+            search_scope.finish();
             cache_non_residue_power(candidate, arithmetic_context);
         }
 
@@ -125,7 +165,15 @@ namespace nil::crypto3::math {
         }
 
     private:
-        void initialize_order_decomposition() {
+        template<polynomial_arithmetic::PolynomialObserver Observer>
+        void initialize_order_decomposition(
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::square_root_order>(
+                [&]() noexcept { return metadata {{{metric::modulus_degree, divisor_context().degree()}}}; });
+
             const std::size_t extension_degree = divisor_context().degree();
             if (extension_degree == 0) {
                 throw std::invalid_argument("polynomial square roots require a nonconstant divisor");
@@ -135,6 +183,7 @@ namespace nil::crypto3::math {
             }
             order_decomposition_ =
                 algebra::fields::extension_field_multiplicative_group_decomposition<field_type>(extension_degree);
+            scope.set_result_metadata([&]() noexcept { return metadata {{{metric::two_adicity, two_adicity()}}}; });
         }
 
         void require_canonical_reduced(const polynomial_type &candidate) const {
@@ -146,8 +195,14 @@ namespace nil::crypto3::math {
             }
         }
 
+        template<polynomial_arithmetic::PolynomialObserver Observer>
         void cache_non_residue_power(const polynomial_type &quadratic_non_residue,
-                                     polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                                     polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::nonresidue_power>(
+                [&]() noexcept { return metadata {{{metric::modulus_degree, divisor_context().degree()}}}; });
             powmod(non_residue_to_odd_order_, quadratic_non_residue, odd_order(), divisor_context(),
                    arithmetic_context);
         }
@@ -183,12 +238,20 @@ namespace nil::crypto3::math {
      */
     namespace detail {
 
-        template<SupportsDivrem Backend>
+        template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
             requires algebra::FieldValue<typename Backend::polynomial_type::value_type>
         bool is_square_mod_impl(const typename Backend::polynomial_type &input,
                                 const polynomial_divisor_context<Backend> &divisor_context,
-                                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
                                 const algebra::fields::multiplicative_group_decomposition *order_decomposition) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::square_test>([&]() noexcept {
+                return metadata {{{metric::input_coefficients, input.size()},
+                                  {metric::modulus_degree, divisor_context.degree()},
+                                  {metric::cached_order, order_decomposition != nullptr}}};
+            });
             using polynomial_type = typename Backend::polynomial_type;
             using value_type = typename polynomial_type::value_type;
             using field_type = typename value_type::field_type;
@@ -201,9 +264,19 @@ namespace nil::crypto3::math {
                 throw std::invalid_argument("square testing requires a reduced quotient-field representative");
             }
             if (input.size() == 1 && input[0] == value_type::zero()) {
+                scope.set_result_metadata([]() noexcept {
+                    return metadata {
+                        {{metric::arithmetic_path,
+                          static_cast<std::size_t>(polynomial_arithmetic::polynomial_arithmetic_path::zero)}}};
+                });
                 return true;
             }
             if (algebra::fields::field_characteristic<field_type>() == 2) {
+                scope.set_result_metadata([]() noexcept {
+                    return metadata {{{metric::arithmetic_path,
+                                       static_cast<std::size_t>(
+                                           polynomial_arithmetic::polynomial_arithmetic_path::characteristic_two)}}};
+                });
                 return true;
             }
 
@@ -220,10 +293,25 @@ namespace nil::crypto3::math {
                     if (extension_degree % 2 != 0) {
                         norm = value_type::zero() - norm;
                     }
-                    return norm.is_square();
+                    scope.set_result_metadata([]() noexcept {
+                        return metadata {
+                            {{metric::arithmetic_path,
+                              static_cast<std::size_t>(
+                                  polynomial_arithmetic::polynomial_arithmetic_path::indeterminate_norm)}}};
+                    });
+                    const bool square = norm.is_square();
+                    if (!square) {
+                        scope.reject(polynomial_arithmetic::polynomial_rejection_reason::not_square);
+                    }
+                    return square;
                 }
             }
 
+            scope.set_result_metadata([]() noexcept {
+                return metadata {
+                    {{metric::arithmetic_path,
+                      static_cast<std::size_t>(polynomial_arithmetic::polynomial_arithmetic_path::euler_criterion)}}};
+            });
             boost::multiprecision::cpp_int exponent;
             if (order_decomposition != nullptr) {
                 // In odd characteristic the two-adicity is positive, so half the group order is
@@ -235,16 +323,20 @@ namespace nil::crypto3::math {
             }
             polynomial_type quadratic_character;
             powmod(quadratic_character, input, exponent, divisor_context, arithmetic_context);
-            return quadratic_character.size() == 1 && quadratic_character[0] == value_type::one();
+            const bool square = quadratic_character.size() == 1 && quadratic_character[0] == value_type::one();
+            if (!square) {
+                scope.reject(polynomial_arithmetic::polynomial_rejection_reason::not_square);
+            }
+            return square;
         }
 
     }    // namespace detail
 
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
         requires algebra::FieldValue<typename Backend::polynomial_type::value_type>
     bool is_square_mod(const typename Backend::polynomial_type &input,
                        const polynomial_divisor_context<Backend> &divisor_context,
-                       polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                       polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         return detail::is_square_mod_impl(input, divisor_context, arithmetic_context, nullptr);
     }
 
@@ -259,11 +351,18 @@ namespace nil::crypto3::math {
      * @throws std::invalid_argument if input is not a reduced quotient-field representative.
      * @pre B is irreducible and input is a nonempty canonical coefficient polynomial.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
         requires algebra::FieldValue<typename Backend::polynomial_type::value_type>
     bool square_root_mod(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
                          const polynomial_square_root_context<Backend> &square_root_context,
-                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                         polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::square_root>([&]() noexcept {
+            return metadata {{{metric::input_coefficients, input.size()},
+                              {metric::modulus_degree, square_root_context.divisor_context().degree()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
         const polynomial_divisor_context<Backend> &divisor_context = square_root_context.divisor_context();
@@ -272,6 +371,10 @@ namespace nil::crypto3::math {
             throw std::invalid_argument("a polynomial square root requires a reduced quotient-field representative");
         }
         if (input.size() == 1 && input[0] == value_type::zero()) {
+            scope.set_result_metadata([]() noexcept {
+                return metadata {{{metric::arithmetic_path,
+                                   static_cast<std::size_t>(polynomial_arithmetic::polynomial_arithmetic_path::zero)}}};
+            });
             output.assign(1, value_type::zero());
             return true;
         }
@@ -288,10 +391,13 @@ namespace nil::crypto3::math {
         //     non_residue_power  = z^odd_order.
         //
         // The first two values satisfy root^2 = a * input_to_odd_order.
+        auto initial_scope = arithmetic_context.template observe<stage::square_root_initial_powers>(
+            [&]() noexcept { return metadata {{}}; });
         powmod(input_to_odd_order, input, square_root_context.odd_order(), divisor_context, arithmetic_context);
         boost::multiprecision::cpp_int root_exponent = square_root_context.odd_order() + 1;
         root_exponent >>= 1;
         powmod(root, input, root_exponent, divisor_context, arithmetic_context);
+        initial_scope.finish();
 
         std::size_t remaining_two_adicity = square_root_context.two_adicity();
         const polynomial_type one = {value_type::one()};
@@ -302,17 +408,23 @@ namespace nil::crypto3::math {
             //
             // A square must reach one for some i < M, where M = remaining_two_adicity and its current order divides
             // 2^M.
+            auto search_scope = arithmetic_context.template observe<stage::square_root_order_search>(
+                [&]() noexcept { return metadata {{{metric::two_adicity, remaining_two_adicity}}}; });
             polynomial_type power = input_to_odd_order;
             std::size_t first_one_power = 0;
             do {
                 squaremod(power, power, divisor_context, arithmetic_context);
                 ++first_one_power;
+                search_scope.progress(first_one_power, remaining_two_adicity);
             } while (first_one_power < remaining_two_adicity && power != one);
 
             if (first_one_power == remaining_two_adicity) {
                 output.assign(1, value_type::zero());
+                search_scope.reject(polynomial_arithmetic::polynomial_rejection_reason::not_square);
+                scope.reject(polynomial_arithmetic::polynomial_rejection_reason::not_square);
                 return false;
             }
+            search_scope.finish();
 
             // Set correction = non_residue_power^(2^(M - i - 1)), then update
             //
@@ -324,6 +436,9 @@ namespace nil::crypto3::math {
             // This preserves root^2 = input * input_to_odd_order while reducing input_to_odd_order's two-power order
             // from 2^M to 2^i.
             // The previous nonresidue power is no longer needed, so move its storage into the correction.
+            auto correction_scope = arithmetic_context.template observe<stage::square_root_correction>([&]() noexcept {
+                return metadata {{{metric::two_adicity, remaining_two_adicity}, {metric::iteration, first_one_power}}};
+            });
             polynomial_type correction = std::move(non_residue_power);
             for (std::size_t i = 0; i < remaining_two_adicity - first_one_power - 1; ++i) {
                 squaremod(correction, correction, divisor_context, arithmetic_context);
@@ -333,9 +448,13 @@ namespace nil::crypto3::math {
             mulmod(input_to_odd_order, input_to_odd_order, non_residue_power, divisor_context, arithmetic_context);
             mulmod(root, root, correction, divisor_context, arithmetic_context);
             remaining_two_adicity = first_one_power;
+            correction_scope.advance(1);
+            correction_scope.finish();
+            scope.advance();
         }
 
         output = std::move(root);
+        scope.set_result_metadata([&]() noexcept { return metadata {{{metric::output_coefficients, output.size()}}}; });
         return true;
     }
 

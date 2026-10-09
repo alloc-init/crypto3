@@ -54,7 +54,7 @@ namespace nil::crypto3::math {
      *
      * @throws std::invalid_argument if coefficient_count is nonzero and input has zero constant coefficient.
      */
-    template<polynomial_arithmetic::PolynomialBackend Backend>
+    template<polynomial_arithmetic::PolynomialBackend Backend, polynomial_arithmetic::PolynomialObserver Observer>
         requires detail::MutableNormalizableCoefficientPolynomial<typename Backend::polynomial_type> &&
                  std::default_initializable<typename Backend::polynomial_type> &&
                  std::movable<typename Backend::polynomial_type> &&
@@ -67,9 +67,18 @@ namespace nil::crypto3::math {
                      { left - right } -> std::convertible_to<typename Backend::polynomial_type::value_type>;
                  }
     void inverse_series(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
-                        std::size_t coefficient_count, polynomial_arithmetic::polynomial_context<Backend> &context) {
+                        std::size_t coefficient_count,
+                        polynomial_arithmetic::polynomial_context<Backend, Observer> &context) {
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
+
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = context.template observe<stage::inverse_series>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, input.size()}, {metric::inverse_precision, coefficient_count}}};
+        });
 
         if (coefficient_count == 0) {
             output.resize(1);
@@ -112,9 +121,12 @@ namespace nil::crypto3::math {
             }
             condense(approximation);
             precision = next_precision;
+            // The newly appended coefficients now satisfy the inverse identity at this precision.
+            scope.progress(precision, coefficient_count);
         }
 
         output = std::move(approximation);
+        scope.set_result_metadata([&]() noexcept { return metadata {{{metric::output_coefficients, output.size()}}}; });
     }
 
 }    // namespace nil::crypto3::math

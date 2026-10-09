@@ -51,6 +51,8 @@ set(TESTS_NAMES
     # "kronecker_substitution"  # FIXME: This fails. Disabled for passing CI
     "polynomial_arithmetic"
     "polynomial_backend"
+    "polynomial_observation"
+    "polynomial_observation_collector"
     "polynomial_division"
     "polynomial_exponentiation"
     "polynomial_rational_reconstruction"

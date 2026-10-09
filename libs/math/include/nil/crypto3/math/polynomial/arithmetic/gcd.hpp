@@ -48,7 +48,7 @@ namespace nil::crypto3::math {
      * GCD. Half-GCD batches several of these same quotient steps into one recursively constructed polynomial-matrix
      * transformation.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
         requires std::copy_constructible<typename Backend::polynomial_type> &&
                  std::movable<typename Backend::polynomial_type> &&
                  requires(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input) {
@@ -56,8 +56,18 @@ namespace nil::crypto3::math {
                  }
     void gcd(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &left,
              const typename Backend::polynomial_type &right,
-             polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+             polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
+
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        // Euclidean-step children count classical divisions; half_gcd children identify actual batched reductions.
+        auto scope = arithmetic_context.template observe<stage::gcd>([&]() noexcept {
+            return metadata {{{metric::input_coefficients, left.size()},
+                              {metric::second_input_coefficients, right.size()},
+                              {metric::half_gcd_cutoff, arithmetic_context.options().gcd_half_gcd_cutoff}}};
+        });
 
         polynomial_type previous_remainder(left);
         polynomial_type current_remainder(right);
@@ -67,10 +77,14 @@ namespace nil::crypto3::math {
             } else {
                 make_monic(output, current_remainder);
             }
+            scope.set_result_metadata(
+                [&]() noexcept { return metadata {{{metric::output_coefficients, output.size()}}}; });
             return;
         }
         if (is_zero(current_remainder)) {
             make_monic(output, previous_remainder);
+            scope.set_result_metadata(
+                [&]() noexcept { return metadata {{{metric::output_coefficients, output.size()}}}; });
             return;
         }
 
@@ -111,6 +125,7 @@ namespace nil::crypto3::math {
         }
 
         make_monic(output, previous_remainder);
+        scope.set_result_metadata([&]() noexcept { return metadata {{{metric::output_coefficients, output.size()}}}; });
     }
 
 }    // namespace nil::crypto3::math

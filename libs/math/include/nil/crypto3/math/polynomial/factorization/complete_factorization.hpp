@@ -59,12 +59,18 @@ namespace nil::crypto3::math {
      * coefficient-field characteristic is not greater than the input degree or is two.
      * @pre input is a nonempty coefficient polynomial.
      */
-    template<detail::SupportsDivrem Backend, typename Generator, typename FactorCallback>
+    template<detail::SupportsDivrem Backend, typename Generator, typename FactorCallback,
+             polynomial_arithmetic::PolynomialObserver Observer>
         requires detail::PolynomialFactorCallback<FactorCallback, typename Backend::polynomial_type>
     polynomial_factorization_result<typename Backend::polynomial_type>
         complete_factorization(const typename Backend::polynomial_type &input,
-                               polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                               polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
                                Generator &generator, FactorCallback &&factor_callback) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::complete_factorization>(
+            [&]() noexcept { return metadata {{{metric::input_coefficients, input.size()}}}; });
         using polynomial_type = typename Backend::polynomial_type;
         using result_type = polynomial_factorization_result<polynomial_type>;
 
@@ -76,6 +82,13 @@ namespace nil::crypto3::math {
             const std::size_t multiplicity = square_free_factor.multiplicity;
             const std::size_t block_size = detail::kaltofen_shoup_block_size(square_free_factor.polynomial.size() - 1);
 
+            // Collect all degree groups before splitting them. Callback time is nested under
+            // equal-degree splitting, after this scope closes; it is included in the complete-factorization total.
+            auto groups_scope = arithmetic_context.template observe<stage::degree_group_collection>([&]() noexcept {
+                return metadata {{{metric::input_coefficients, square_free_factor.polynomial.size()},
+                                  {metric::multiplicity, multiplicity},
+                                  {metric::degree_block_size, block_size}}};
+            });
             std::vector<distinct_degree_factor<polynomial_type>> degree_groups;
             detail::kaltofen_shoup_factor_monic_square_free(degree_groups, std::move(square_free_factor.polynomial),
                                                             block_size, arithmetic_context,
@@ -83,14 +96,30 @@ namespace nil::crypto3::math {
                                                                 return factorization_control::continue_factorization;
                                                             });
 
+            groups_scope.finish();
+
             for (auto &degree_group : degree_groups) {
                 const factorization_control control = detail::factor_distinct_degree_group<Backend>(
                     std::move(degree_group), arithmetic_context, generator, [&](polynomial_type &&factor) {
                         result.factors.push_back({std::move(factor), multiplicity});
-                        return factor_callback(result.factors.back());
+                        scope.set_result_metadata(
+                            [&]() noexcept { return metadata {{{metric::factor_count, result.factors.size()}}}; });
+                        auto callback_scope =
+                            arithmetic_context.template observe<stage::factor_callback>([&]() noexcept {
+                                return metadata {{{metric::factor_degree, result.factors.back().polynomial.size() - 1},
+                                                  {metric::multiplicity, multiplicity}}};
+                            });
+                        const auto callback_control = factor_callback(result.factors.back());
+                        if (callback_control == factorization_control::stop_factorization) {
+                            callback_scope.callback_stop();
+                            scope.callback_stop();
+                        }
+                        callback_scope.advance(1);
+                        return callback_control;
                     });
                 if (control == factorization_control::stop_factorization) {
                     result.complete = false;
+                    scope.callback_stop();
                     return result;
                 }
             }
@@ -99,10 +128,10 @@ namespace nil::crypto3::math {
     }
 
     /** Compute the complete irreducible factorization without a staged callback. */
-    template<detail::SupportsDivrem Backend, typename Generator>
+    template<detail::SupportsDivrem Backend, typename Generator, polynomial_arithmetic::PolynomialObserver Observer>
     polynomial_factorization_result<typename Backend::polynomial_type>
         complete_factorization(const typename Backend::polynomial_type &input,
-                               polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                               polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
                                Generator &generator) {
         using factor_type = polynomial_factor<typename Backend::polynomial_type>;
         return complete_factorization<Backend>(input, arithmetic_context, generator, [](const factor_type &) {

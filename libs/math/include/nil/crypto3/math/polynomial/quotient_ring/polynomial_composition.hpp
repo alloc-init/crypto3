@@ -57,11 +57,19 @@ namespace nil::crypto3::math {
         using polynomial_type = typename backend_type::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 
+        template<polynomial_arithmetic::PolynomialObserver Observer>
         polynomial_composition_precomputation(
             const polynomial_type &inner, std::size_t maximum_outer_coefficient_count,
             const polynomial_divisor_context<backend_type> &divisor_context,
-            polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) :
+            polynomial_arithmetic::polynomial_context<backend_type, Observer> &arithmetic_context) :
             maximum_outer_coefficient_count_(maximum_outer_coefficient_count) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::composition_cache>([&]() noexcept {
+                return metadata {
+                    {{metric::input_coefficients, inner.size()}, {metric::modulus_degree, divisor_context.degree()}}};
+            });
             if (maximum_outer_coefficient_count_ == 0) {
                 throw std::invalid_argument("the maximum outer coefficient count must be positive");
             }
@@ -71,6 +79,8 @@ namespace nil::crypto3::math {
                 throw std::invalid_argument("the modular-composition cached-power limit must be positive");
             }
             block_size_ = std::min(detail::ceil_sqrt(maximum_outer_coefficient_count_), cached_power_limit);
+            scope.set_result_metadata(
+                [&]() noexcept { return metadata {{{metric::composition_block_size, block_size_}}}; });
 
             if (divisor_context.degree() == 0) {
                 return;
@@ -83,11 +93,16 @@ namespace nil::crypto3::math {
                 reduced_inner = inner;
             }
 
+            auto powers = arithmetic_context.template observe<stage::composition_cached_powers>([&]() noexcept {
+                return metadata {{{metric::composition_block_size, block_size_},
+                                  {metric::modulus_degree, divisor_context.degree()}}};
+            });
             baby_steps_.reserve(block_size_);
             baby_steps_.emplace_back(polynomial_type {value_type::one()});
             if (block_size_ > 1) {
                 baby_steps_.emplace_back(std::move(reduced_inner));
             }
+            powers.progress(baby_steps_.size(), block_size_);
 
             // Build each power from two already cached powers with approximately equal exponents. Even exponents use
             // the dedicated squaring path; odd exponents multiply the floor and ceiling half-powers.
@@ -100,6 +115,7 @@ namespace nil::crypto3::math {
                            arithmetic_context);
                 }
                 baby_steps_.emplace_back(std::move(power));
+                powers.progress(exponent + 1, block_size_);
             }
 
             if (block_size_ == 1) {
@@ -150,12 +166,19 @@ namespace nil::crypto3::math {
      * @throws std::invalid_argument if the precomputed inverse has insufficient precision.
      * @pre outer and inner are nonempty canonical coefficient polynomials.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void compose_mod_reference(typename Backend::polynomial_type &output,
                                const typename Backend::polynomial_type &outer,
                                const typename Backend::polynomial_type &inner,
                                const polynomial_divisor_context<Backend> &divisor_context,
-                               polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                               polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::compose_mod_reference>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, outer.size()}, {metric::modulus_degree, divisor_context.degree()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 
@@ -183,7 +206,11 @@ namespace nil::crypto3::math {
             result[0] = result[0] + outer[i];
         }
 
+        auto finalization = arithmetic_context.template observe<stage::composition_finalization>(
+            [&]() noexcept { return metadata {{}}; });
         output = std::move(result);
+        finalization.set_result_metadata(
+            [&]() noexcept { return metadata {{{metric::output_coefficients, output.size()}}}; });
     }
 
     /**
@@ -211,11 +238,18 @@ namespace nil::crypto3::math {
      * @pre outer is a nonempty canonical coefficient polynomial. divisor_context represents the same divisor used to
      *      construct precomputation and contains sufficient inverse precision.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void compose_mod(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &outer,
                      const polynomial_composition_precomputation<Backend> &precomputation,
                      const polynomial_divisor_context<Backend> &divisor_context,
-                     polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                     polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::compose_mod_cached>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, outer.size()}, {metric::modulus_degree, divisor_context.degree()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 
@@ -237,6 +271,12 @@ namespace nil::crypto3::math {
         // TODO: This coefficientwise phase costs O(outer.size() * degree(B)), which is quadratic when both dimensions
         // grow together. A faster matrix-product or backend-provided linear-combination kernel could replace it.
         auto add_block = [&](polynomial_type &result, std::size_t block_index) {
+            auto linear_combination =
+                arithmetic_context.template observe<stage::composition_linear_combination>([&]() noexcept {
+                    return metadata {{{metric::block_index, block_index},
+                                      {metric::composition_block_size, block_size},
+                                      {metric::modulus_degree, divisor_context.degree()}}};
+                });
             const std::size_t first_coefficient = block_index * block_size;
             const std::size_t block_coefficient_count = std::min(block_size, outer.size() - first_coefficient);
             for (std::size_t exponent = 0; exponent < block_coefficient_count; ++exponent) {
@@ -263,12 +303,21 @@ namespace nil::crypto3::math {
         const std::size_t block_count = 1 + (outer.size() - 1) / block_size;
         polynomial_type result;
         add_block(result, block_count - 1);
+        scope.advance(block_count);
         for (std::size_t block = block_count - 1; block-- > 0;) {
+            auto giant_step = arithmetic_context.template observe<stage::composition_giant_step>(
+                [&]() noexcept { return metadata {{{metric::block_index, block}}}; });
             mulmod(result, result, precomputation.giant_step(), divisor_context, arithmetic_context);
+            giant_step.finish();
             add_block(result, block);
+            scope.advance(block_count);
         }
 
+        auto finalization = arithmetic_context.template observe<stage::composition_finalization>(
+            [&]() noexcept { return metadata {{}}; });
         output = std::move(result);
+        finalization.set_result_metadata(
+            [&]() noexcept { return metadata {{{metric::output_coefficients, output.size()}}}; });
     }
 
     /**
@@ -285,11 +334,18 @@ namespace nil::crypto3::math {
      *         precision.
      * @pre outer and inner are nonempty canonical coefficient polynomials.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void compose_mod(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &outer,
                      const typename Backend::polynomial_type &inner,
                      const polynomial_divisor_context<Backend> &divisor_context,
-                     polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                     polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::compose_mod>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, outer.size()}, {metric::modulus_degree, divisor_context.degree()}}};
+        });
         using value_type = typename Backend::polynomial_type::value_type;
 
         if (arithmetic_context.options().modular_composition_cached_power_limit == 0) {

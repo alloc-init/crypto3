@@ -61,8 +61,10 @@ namespace nil::crypto3::math {
         using value_type = typename polynomial_type::value_type;
         using field_type = typename value_type::field_type;
 
-        polynomial_frobenius_context(const polynomial_type &divisor,
-                                     polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) :
+        template<polynomial_arithmetic::PolynomialObserver Observer>
+        polynomial_frobenius_context(
+            const polynomial_type &divisor,
+            polynomial_arithmetic::polynomial_context<backend_type, Observer> &arithmetic_context) :
             divisor_context_(divisor, required_inverse_precision(divisor), arithmetic_context),
             x_to_field_order_(compute_x_to_field_order(divisor_context_, arithmetic_context)),
             composition_precomputation_(x_to_field_order_, std::max<std::size_t>(1, divisor_context_.degree()),
@@ -82,9 +84,15 @@ namespace nil::crypto3::math {
         }
 
     private:
-        static polynomial_type
-            compute_x_to_field_order(const polynomial_divisor_context<backend_type> &divisor_context,
-                                     polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) {
+        template<polynomial_arithmetic::PolynomialObserver Observer>
+        static polynomial_type compute_x_to_field_order(
+            const polynomial_divisor_context<backend_type> &divisor_context,
+            polynomial_arithmetic::polynomial_context<backend_type, Observer> &arithmetic_context) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::initial_frobenius_power>(
+                [&]() noexcept { return metadata {{{metric::modulus_degree, divisor_context.degree()}}}; });
             polynomial_type result;
             powmod_x(result, algebra::fields::field_order<field_type>(), divisor_context, arithmetic_context);
             return result;
@@ -106,16 +114,33 @@ namespace nil::crypto3::math {
      * Apply the Q-power Frobenius map to input in K[X]/(B), using the cached value X^Q mod B. The canonical result
      * may alias input.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void frobenius_map(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
                        const polynomial_frobenius_context<Backend> &frobenius_context,
-                       polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                       polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::frobenius_map>([&]() noexcept {
+            return metadata {{{metric::input_coefficients, input.size()},
+                              {metric::modulus_degree, frobenius_context.divisor_context().degree()}}};
+        });
         if (input.size() <= frobenius_context.composition_precomputation().maximum_outer_coefficient_count()) {
+            scope.set_result_metadata([]() noexcept {
+                return metadata {{{metric::arithmetic_path,
+                                   static_cast<std::size_t>(
+                                       polynomial_arithmetic::polynomial_arithmetic_path::cached_composition)}}};
+            });
             compose_mod(output, input, frobenius_context.composition_precomputation(),
                         frobenius_context.divisor_context(), arithmetic_context);
         } else {
             // Quotient-ring representatives use the reusable precomputation. Retain support for larger, unreduced
             // inputs by constructing a one-off composition precomputation sized for that input.
+            scope.set_result_metadata([]() noexcept {
+                return metadata {{{metric::arithmetic_path,
+                                   static_cast<std::size_t>(
+                                       polynomial_arithmetic::polynomial_arithmetic_path::uncached_composition)}}};
+            });
             compose_mod(output, input, frobenius_context.x_to_field_order(), frobenius_context.divisor_context(),
                         arithmetic_context);
         }
@@ -128,10 +153,17 @@ namespace nil::crypto3::math {
      * @throws std::invalid_argument if reducing input at iteration count zero requires more inverse coefficients than
      *         the context stores.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void frobenius_map(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
                        std::size_t iteration_count, const polynomial_frobenius_context<Backend> &frobenius_context,
-                       polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                       polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::frobenius_iterations>([&]() noexcept {
+            return metadata {{{metric::input_coefficients, input.size()},
+                              {metric::modulus_degree, frobenius_context.divisor_context().degree()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
 
         if (iteration_count == 0) {
@@ -141,8 +173,10 @@ namespace nil::crypto3::math {
 
         polynomial_type result;
         frobenius_map(result, input, frobenius_context, arithmetic_context);
+        scope.advance(iteration_count);
         for (std::size_t iteration = 1; iteration < iteration_count; ++iteration) {
             frobenius_map(result, result, frobenius_context, arithmetic_context);
+            scope.advance(iteration_count);
         }
         output = std::move(result);
     }

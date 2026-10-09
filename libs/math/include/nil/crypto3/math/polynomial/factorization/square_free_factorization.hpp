@@ -78,21 +78,32 @@ namespace nil::crypto3::math {
      *
      * @throws std::invalid_argument if the coefficient-field characteristic is not greater than the input degree.
      */
-    template<detail::SupportsDivrem Backend, typename FactorCallback>
+    template<detail::SupportsDivrem Backend, typename FactorCallback,
+             polynomial_arithmetic::PolynomialObserver Observer>
         requires detail::PolynomialFactorCallback<FactorCallback, typename Backend::polynomial_type>
     polynomial_factorization_result<typename Backend::polynomial_type>
         square_free_factorization(const typename Backend::polynomial_type &input,
-                                  polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                  polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
                                   FactorCallback &&factor_callback) {
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
         using field_type = typename value_type::field_type;
         using result_type = polynomial_factorization_result<polynomial_type>;
 
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::square_free_factorization>(
+            [&]() noexcept { return metadata {{{metric::input_coefficients, input.size()}}}; });
+
         result_type result;
         polynomial_type monic_input(input);
-        condense(monic_input);
-        result.leading_coefficient = monic_input.back();
+        {
+            auto normalization = arithmetic_context.template observe<stage::square_free_normalization>();
+            condense(monic_input);
+            result.leading_coefficient = monic_input.back();
+        }
+        scope.set_result_metadata([]() noexcept { return metadata {{{metric::factor_count, 0}}}; });
 
         if (monic_input.size() == 1) {
             return result;
@@ -103,10 +114,16 @@ namespace nil::crypto3::math {
             throw std::invalid_argument(
                 "square-free factorization requires characteristic greater than the polynomial degree");
         }
-        make_monic(monic_input, monic_input);
+        {
+            auto normalization = arithmetic_context.template observe<stage::square_free_normalization>();
+            make_monic(monic_input, monic_input);
+        }
 
         polynomial_type input_derivative;
-        derivative(input_derivative, monic_input);
+        {
+            auto derivative_scope = arithmetic_context.template observe<stage::derivative>();
+            derivative(input_derivative, monic_input);
+        }
 
         polynomial_type repeated_part;
         gcd(repeated_part, monic_input, input_derivative, arithmetic_context);
@@ -116,6 +133,11 @@ namespace nil::crypto3::math {
 
         std::size_t multiplicity = 1;
         while (square_free_part.size() > 1) {
+            auto multiplicity_scope = arithmetic_context.template observe<stage::multiplicity>([&]() noexcept {
+                return metadata {{{metric::multiplicity, multiplicity},
+                                  {metric::input_coefficients, square_free_part.size()},
+                                  {metric::second_input_coefficients, repeated_part.size()}}};
+            });
             polynomial_type next_square_free_part;
             gcd(next_square_free_part, square_free_part, repeated_part, arithmetic_context);
 
@@ -123,8 +145,20 @@ namespace nil::crypto3::math {
             detail::factorization_exact_quotient(factor, square_free_part, next_square_free_part, arithmetic_context);
             if (factor.size() > 1) {
                 result.factors.push_back({std::move(factor), multiplicity});
-                if (factor_callback(result.factors.back()) == factorization_control::stop_factorization) {
+                scope.set_result_metadata(
+                    [&]() noexcept { return metadata {{{metric::factor_count, result.factors.size()}}}; });
+                auto callback_scope = arithmetic_context.template observe<stage::factor_callback>([&]() noexcept {
+                    return metadata {{{metric::factor_degree, result.factors.back().polynomial.size() - 1},
+                                      {metric::multiplicity, multiplicity}}};
+                });
+                const auto control = factor_callback(result.factors.back());
+                // The factor is appended and the callback has returned. No tail work of this multiplicity is implied.
+                callback_scope.progress(1, 1);
+                if (control == factorization_control::stop_factorization) {
                     result.complete = false;
+                    callback_scope.callback_stop();
+                    multiplicity_scope.callback_stop();
+                    scope.callback_stop();
                     return result;
                 }
             }
@@ -132,6 +166,8 @@ namespace nil::crypto3::math {
             detail::factorization_exact_quotient(repeated_part, repeated_part, next_square_free_part,
                                                  arithmetic_context);
             square_free_part = std::move(next_square_free_part);
+            // This reports a complete multiplicity iteration, including the final exact quotient and state update.
+            multiplicity_scope.progress(1, 1);
             ++multiplicity;
         }
 
@@ -139,10 +175,10 @@ namespace nil::crypto3::math {
     }
 
     /** Compute the complete square-free factorization without a staged callback. */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     polynomial_factorization_result<typename Backend::polynomial_type>
         square_free_factorization(const typename Backend::polynomial_type &input,
-                                  polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                                  polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         using factor_type = polynomial_factor<typename Backend::polynomial_type>;
         return square_free_factorization<Backend>(input, arithmetic_context, [](const factor_type &) {
             return factorization_control::continue_factorization;

@@ -31,6 +31,7 @@
 #include <utility>
 
 #include <nil/crypto3/math/polynomial/concepts.hpp>
+#include <nil/crypto3/math/polynomial/polynomial_observation.hpp>
 
 namespace nil::crypto3::math::polynomial_arithmetic {
 
@@ -91,32 +92,120 @@ namespace nil::crypto3::math::polynomial_arithmetic {
      * Higher-level algorithms use the context without managing backend-specific
      * plans, configuration, or scratch storage. A context can be reused sequentially,
      * but callers must use separate contexts for concurrent operations.
+     *
+     * An enabled observer is borrowed and must outlive the context and its scopes. Copies of a context borrow
+     * the same observer; use separate observers for concurrent workers. Default observation has empty storage
+     * and requires no observer methods on the backend. It does not change optional backend capabilities.
+     * The context emits operation scopes. A backend may additionally accept the borrowed observer as its last
+     * argument to emit kernel phases; otherwise its original operation runs inside the context's scope. These
+     * extra overloads are selected only when kernel observation is enabled and must preserve the original result,
+     * acceptance, and exception semantics. Kernel-only observers receive no algorithm scopes.
      */
-    template<PolynomialBackend Backend>
+    template<PolynomialBackend Backend, PolynomialObserver Observer = no_polynomial_observer>
     class polynomial_context {
     public:
         using backend_type = Backend;
         using polynomial_type = typename backend_type::polynomial_type;
         using value_type = typename polynomial_type::value_type;
         using options_type = polynomial_context_options;
+        using observer_type = Observer;
 
-        polynomial_context() = default;
+        polynomial_context()
+            requires(!(Observer::observe_algorithms || Observer::observe_kernels))
+        = default;
 
-        explicit polynomial_context(backend_type backend, options_type options = {}) :
-            backend_(std::move(backend)), options_(options) {
+        explicit polynomial_context(backend_type backend, options_type options = {})
+            requires(!(Observer::observe_algorithms || Observer::observe_kernels))
+            : backend_(std::move(backend)), options_(options) {
+        }
+
+        polynomial_context(backend_type backend, observer_type &observer, options_type options = {}) :
+            backend_(std::move(backend)), options_(options), observer_(observer) {
+        }
+
+        // Metadata is built only for enabled stages. Put any observation-only computation in this factory.
+        template<polynomial_stage Stage, detail::PolynomialMetadataFactory Factory>
+        [[nodiscard]] auto observe(Factory &&metadata) noexcept {
+            using scope_type = polynomial_observation_scope<observer_type, Stage>;
+            if constexpr (scope_type::enabled) {
+                return observe_polynomial<Stage>(*observer_.observer, std::forward<Factory>(metadata));
+            } else {
+                return scope_type();
+            }
+        }
+
+        template<polynomial_stage Stage>
+        [[nodiscard]] auto observe() noexcept {
+            return observe<Stage>([]() noexcept { return polynomial_metadata {}; });
         }
 
         void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) {
-            backend_.multiply(output, left, right);
+            auto scope = observe<polynomial_stage::multiply>([&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::input_coefficients, left.size()},
+                                             {polynomial_metric::second_input_coefficients, right.size()}}};
+            });
+            if constexpr (Observer::observe_kernels && requires(observer_type &observer) {
+                              { backend_.multiply(output, left, right, observer) } -> std::same_as<void>;
+                          }) {
+                backend_.multiply(output, left, right, *observer_.observer);
+                scope.set_result_metadata([&]() noexcept {
+                    return polynomial_metadata {{{polynomial_metric::output_coefficients, output.size()},
+                                                 {polynomial_metric::detailed_backend, 1}}};
+                });
+            } else {
+                backend_.multiply(output, left, right);
+                scope.set_result_metadata([&]() noexcept {
+                    return polynomial_metadata {{{polynomial_metric::output_coefficients, output.size()},
+                                                 {polynomial_metric::detailed_backend, 0}}};
+                });
+            }
         }
 
         void square(polynomial_type &output, const polynomial_type &input) {
-            backend_.square(output, input);
+            auto scope = observe<polynomial_stage::square>([&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::input_coefficients, input.size()}}};
+            });
+            if constexpr (Observer::observe_kernels && requires(observer_type &observer) {
+                              { backend_.square(output, input, observer) } -> std::same_as<void>;
+                          }) {
+                backend_.square(output, input, *observer_.observer);
+                scope.set_result_metadata([&]() noexcept {
+                    return polynomial_metadata {{{polynomial_metric::output_coefficients, output.size()},
+                                                 {polynomial_metric::detailed_backend, 1}}};
+                });
+            } else {
+                backend_.square(output, input);
+                scope.set_result_metadata([&]() noexcept {
+                    return polynomial_metadata {{{polynomial_metric::output_coefficients, output.size()},
+                                                 {polynomial_metric::detailed_backend, 0}}};
+                });
+            }
         }
 
         void multiply_low(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
                           std::size_t coefficient_count) {
-            backend_.multiply_low(output, left, right, coefficient_count);
+            auto scope = observe<polynomial_stage::multiply_low>([&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::input_coefficients, left.size()},
+                                             {polynomial_metric::second_input_coefficients, right.size()},
+                                             {polynomial_metric::low_coefficient_count, coefficient_count}}};
+            });
+            if constexpr (Observer::observe_kernels && requires(observer_type &observer) {
+                              {
+                                  backend_.multiply_low(output, left, right, coefficient_count, observer)
+                              } -> std::same_as<void>;
+                          }) {
+                backend_.multiply_low(output, left, right, coefficient_count, *observer_.observer);
+                scope.set_result_metadata([&]() noexcept {
+                    return polynomial_metadata {{{polynomial_metric::output_coefficients, output.size()},
+                                                 {polynomial_metric::detailed_backend, 1}}};
+                });
+            } else {
+                backend_.multiply_low(output, left, right, coefficient_count);
+                scope.set_result_metadata([&]() noexcept {
+                    return polynomial_metadata {{{polynomial_metric::output_coefficients, output.size()},
+                                                 {polynomial_metric::detailed_backend, 0}}};
+                });
+            }
         }
 
         // Optional capabilities: backends without prepared low products still satisfy PolynomialBackend.
@@ -127,7 +216,47 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 backend.prepare_low_product(operand, count, count);
             }
         {
-            return backend_.prepare_low_product(fixed, variable_coefficient_count, coefficient_count);
+            if constexpr (!Observer::observe_kernels) {
+                return backend_.prepare_low_product(fixed, variable_coefficient_count, coefficient_count);
+            } else {
+                auto scope = observe<polynomial_stage::prepare_low_product>([&]() noexcept {
+                    return polynomial_metadata {
+                        {{polynomial_metric::input_coefficients, fixed.size()},
+                         {polynomial_metric::second_input_coefficients, variable_coefficient_count},
+                         {polynomial_metric::low_coefficient_count, coefficient_count}}};
+                });
+                auto prepared = [&]() {
+                    if constexpr (requires(observer_type &observer) {
+                                      backend_.prepare_low_product(fixed, variable_coefficient_count, coefficient_count,
+                                                                   observer);
+                                  }) {
+                        return backend_.prepare_low_product(fixed, variable_coefficient_count, coefficient_count,
+                                                            *observer_.observer);
+                    } else {
+                        return backend_.prepare_low_product(fixed, variable_coefficient_count, coefficient_count);
+                    }
+                }();
+                if (!prepared) {
+                    scope.decline();
+                }
+                scope.set_result_metadata([&]() noexcept {
+                    polynomial_metadata result {{{polynomial_metric::accepted, bool(prepared)}}};
+                    if (prepared) {
+                        if constexpr (requires {
+                                          { prepared->transform_size() } noexcept -> std::convertible_to<std::size_t>;
+                                      }) {
+                            result[1] = {polynomial_metric::transform_length, prepared->transform_size()};
+                        }
+                        if constexpr (requires {
+                                          { prepared->storage_bytes() } noexcept -> std::convertible_to<std::size_t>;
+                                      }) {
+                            result[2] = {polynomial_metric::prepared_storage_bytes, prepared->storage_bytes()};
+                        }
+                    }
+                    return result;
+                });
+                return prepared;
+            }
         }
 
         template<typename PreparedOperand>
@@ -138,7 +267,38 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 { backend.try_multiply_low_prepared(result, operand, fixed, count) } -> std::same_as<bool>;
             }
         {
-            return backend_.try_multiply_low_prepared(output, left, prepared, coefficient_count);
+            if constexpr (!Observer::observe_kernels) {
+                return backend_.try_multiply_low_prepared(output, left, prepared, coefficient_count);
+            } else {
+                auto scope = observe<polynomial_stage::try_multiply_low_prepared>([&]() noexcept {
+                    return polynomial_metadata {{{polynomial_metric::input_coefficients, left.size()},
+                                                 {polynomial_metric::low_coefficient_count, coefficient_count}}};
+                });
+                const bool accepted = [&]() {
+                    if constexpr (requires(observer_type &observer) {
+                                      {
+                                          backend_.try_multiply_low_prepared(output, left, prepared, coefficient_count,
+                                                                             observer)
+                                      } -> std::same_as<bool>;
+                                  }) {
+                        return backend_.try_multiply_low_prepared(output, left, prepared, coefficient_count,
+                                                                  *observer_.observer);
+                    } else {
+                        return backend_.try_multiply_low_prepared(output, left, prepared, coefficient_count);
+                    }
+                }();
+                if (!accepted) {
+                    scope.decline();
+                }
+                scope.set_result_metadata([&]() noexcept {
+                    polynomial_metadata result {{{polynomial_metric::accepted, accepted}}};
+                    if (accepted) {
+                        result[1] = {polynomial_metric::output_coefficients, output.size()};
+                    }
+                    return result;
+                });
+                return accepted;
+            }
         }
 
         auto prepare_cyclic_remainder(const polynomial_type &divisor, std::size_t quotient_coefficient_count)
@@ -146,7 +306,45 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 backend.prepare_cyclic_remainder(operand, count);
             }
         {
-            return backend_.prepare_cyclic_remainder(divisor, quotient_coefficient_count);
+            if constexpr (!Observer::observe_kernels) {
+                return backend_.prepare_cyclic_remainder(divisor, quotient_coefficient_count);
+            } else {
+                auto scope = observe<polynomial_stage::prepare_cyclic_remainder>([&]() noexcept {
+                    return polynomial_metadata {
+                        {{polynomial_metric::input_coefficients, divisor.size()},
+                         {polynomial_metric::quotient_coefficients, quotient_coefficient_count}}};
+                });
+                auto prepared = [&]() {
+                    if constexpr (requires(observer_type &observer) {
+                                      backend_.prepare_cyclic_remainder(divisor, quotient_coefficient_count, observer);
+                                  }) {
+                        return backend_.prepare_cyclic_remainder(divisor, quotient_coefficient_count,
+                                                                 *observer_.observer);
+                    } else {
+                        return backend_.prepare_cyclic_remainder(divisor, quotient_coefficient_count);
+                    }
+                }();
+                if (!prepared) {
+                    scope.decline();
+                }
+                scope.set_result_metadata([&]() noexcept {
+                    polynomial_metadata result {{{polynomial_metric::accepted, bool(prepared)}}};
+                    if (prepared) {
+                        if constexpr (requires {
+                                          { prepared->transform_size() } noexcept -> std::convertible_to<std::size_t>;
+                                      }) {
+                            result[1] = {polynomial_metric::transform_length, prepared->transform_size()};
+                        }
+                        if constexpr (requires {
+                                          { prepared->storage_bytes() } noexcept -> std::convertible_to<std::size_t>;
+                                      }) {
+                            result[2] = {polynomial_metric::prepared_storage_bytes, prepared->storage_bytes()};
+                        }
+                    }
+                    return result;
+                });
+                return prepared;
+            }
         }
 
         template<typename PreparedRemainder>
@@ -157,7 +355,36 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 { backend.try_cyclic_remainder(result, operand, operand, fixed) } -> std::same_as<bool>;
             }
         {
-            return backend_.try_cyclic_remainder(output, dividend, quotient, prepared);
+            if constexpr (!Observer::observe_kernels) {
+                return backend_.try_cyclic_remainder(output, dividend, quotient, prepared);
+            } else {
+                auto scope = observe<polynomial_stage::try_cyclic_remainder>([&]() noexcept {
+                    return polynomial_metadata {{{polynomial_metric::input_coefficients, dividend.size()},
+                                                 {polynomial_metric::quotient_coefficients, quotient.size()}}};
+                });
+                const bool accepted = [&]() {
+                    if constexpr (requires(observer_type &observer) {
+                                      {
+                                          backend_.try_cyclic_remainder(output, dividend, quotient, prepared, observer)
+                                      } -> std::same_as<bool>;
+                                  }) {
+                        return backend_.try_cyclic_remainder(output, dividend, quotient, prepared, *observer_.observer);
+                    } else {
+                        return backend_.try_cyclic_remainder(output, dividend, quotient, prepared);
+                    }
+                }();
+                if (!accepted) {
+                    scope.decline();
+                }
+                scope.set_result_metadata([&]() noexcept {
+                    polynomial_metadata result {{{polynomial_metric::accepted, accepted}}};
+                    if (accepted) {
+                        result[1] = {polynomial_metric::output_coefficients, output.size()};
+                    }
+                    return result;
+                });
+                return accepted;
+            }
         }
 
         const options_type &options() const {
@@ -167,6 +394,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
     private:
         backend_type backend_;
         options_type options_;
+        [[no_unique_address]] detail::polynomial_observer_reference<observer_type> observer_;
     };
 
 }    // namespace nil::crypto3::math::polynomial_arithmetic

@@ -119,14 +119,24 @@ namespace nil::crypto3::math {
         using polynomial_type = typename backend_type::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 
-        polynomial_divisor_context(const polynomial_type &divisor, std::size_t inverse_precision,
-                                   polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context)
+        template<polynomial_arithmetic::PolynomialObserver Observer>
+        polynomial_divisor_context(
+            const polynomial_type &divisor, std::size_t inverse_precision,
+            polynomial_arithmetic::polynomial_context<backend_type, Observer> &arithmetic_context)
             requires std::copy_constructible<polynomial_type> &&
                          requires(polynomial_type &output, const polynomial_type &input, std::size_t coefficient_count,
-                                  polynomial_arithmetic::polynomial_context<backend_type> &context) {
+                                  polynomial_arithmetic::polynomial_context<backend_type, Observer> &context) {
                              inverse_series(output, input, coefficient_count, context);
                          }
             : divisor_(divisor), inverse_precision_(inverse_precision) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            // Member initialization has already copied the owned divisor; this scope covers its precomputation.
+            auto scope = arithmetic_context.template observe<stage::divisor_preparation>([&]() noexcept {
+                return metadata {
+                    {{metric::input_coefficients, divisor_.size()}, {metric::inverse_precision, inverse_precision_}}};
+            });
             condense(divisor_);
             if (divisor_.size() == 1 && divisor_[0] == value_type {}) {
                 throw std::invalid_argument("the zero polynomial cannot be used as a divisor");
@@ -172,36 +182,61 @@ namespace nil::crypto3::math {
 
         // Multiply by the stored reversed inverse, retaining exactly coefficient_count low coefficients. The
         // preparation must match this precision and the selected FFT length; otherwise use the ordinary product.
-        void multiply_low_reversed_inverse(polynomial_type &output, const polynomial_type &input,
-                                           std::size_t coefficient_count,
-                                           polynomial_arithmetic::polynomial_context<backend_type> &context) const {
+        template<polynomial_arithmetic::PolynomialObserver Observer>
+        void multiply_low_reversed_inverse(
+            polynomial_type &output, const polynomial_type &input, std::size_t coefficient_count,
+            polynomial_arithmetic::polynomial_context<backend_type, Observer> &context) const {
             if constexpr (detail::SupportsPreparedLowProduct<backend_type>) {
                 if (prepared_.inverse &&
                     context.try_multiply_low_prepared(output, input, *prepared_.inverse, coefficient_count)) {
                     return;
                 }
             }
+            // This is the existing fallback, either without preparation or after a declined prepared attempt.
+            auto fallback =
+                context.template observe<polynomial_arithmetic::polynomial_stage::low_product_fallback>([&]() noexcept {
+                    using metric = polynomial_arithmetic::polynomial_metric;
+                    polynomial_arithmetic::polynomial_metadata result {
+                        {{metric::low_coefficient_count, coefficient_count}, {metric::prepared_available, 0}}};
+                    if constexpr (detail::SupportsPreparedLowProduct<backend_type>) {
+                        result[1].value = bool(prepared_.inverse);
+                    }
+                    return result;
+                });
             context.multiply_low(output, input, reversed_divisor_inverse_, coefficient_count);
         }
 
         // Only degree(B) low coefficients of Q*B are needed for remainder reconstruction. The leading coefficient
         // of B cannot affect this prefix. Keep the same low-product operation whether or not preparation succeeds.
+        template<polynomial_arithmetic::PolynomialObserver Observer>
         void multiply_low_divisor(polynomial_type &output, const polynomial_type &input,
-                                  polynomial_arithmetic::polynomial_context<backend_type> &context) const {
+                                  polynomial_arithmetic::polynomial_context<backend_type, Observer> &context) const {
             if constexpr (detail::SupportsPreparedLowProduct<backend_type>) {
                 if (prepared_.divisor &&
                     context.try_multiply_low_prepared(output, input, *prepared_.divisor, degree())) {
                     return;
                 }
             }
+            // This is the existing fallback, either without preparation or after a declined prepared attempt.
+            auto fallback =
+                context.template observe<polynomial_arithmetic::polynomial_stage::low_product_fallback>([&]() noexcept {
+                    using metric = polynomial_arithmetic::polynomial_metric;
+                    polynomial_arithmetic::polynomial_metadata result {
+                        {{metric::low_coefficient_count, degree()}, {metric::prepared_available, 0}}};
+                    if constexpr (detail::SupportsPreparedLowProduct<backend_type>) {
+                        result[1].value = bool(prepared_.divisor);
+                    }
+                    return result;
+                });
             context.multiply_low(output, input, divisor_, degree());
         }
 
         // With exact quotient Q, cyclic reconstruction cancels the wrapped high coefficients of V and Q*B.
         // The backend checks its bounded degree range and current transform lengths before changing output.
-        bool try_reconstruct_remainder(polynomial_type &output, const polynomial_type &dividend,
-                                       const polynomial_type &quotient,
-                                       polynomial_arithmetic::polynomial_context<backend_type> &context) const {
+        template<polynomial_arithmetic::PolynomialObserver Observer>
+        bool try_reconstruct_remainder(
+            polynomial_type &output, const polynomial_type &dividend, const polynomial_type &quotient,
+            polynomial_arithmetic::polynomial_context<backend_type, Observer> &context) const {
             if constexpr (detail::SupportsPreparedCyclicRemainder<backend_type>) {
                 if (cyclic_.value) {
                     return context.try_cyclic_remainder(output, dividend, quotient, *cyclic_.value);
@@ -239,7 +274,7 @@ namespace nil::crypto3::math {
      *         precision less than k.
      * @pre dividend is a nonempty canonical coefficient polynomial.
      */
-    template<polynomial_arithmetic::PolynomialBackend Backend>
+    template<polynomial_arithmetic::PolynomialBackend Backend, polynomial_arithmetic::PolynomialObserver Observer>
         requires detail::MutableNormalizableCoefficientPolynomial<typename Backend::polynomial_type> &&
                  std::default_initializable<typename Backend::polynomial_type> &&
                  std::movable<typename Backend::polynomial_type> &&
@@ -255,9 +290,18 @@ namespace nil::crypto3::math {
     void divrem(typename Backend::polynomial_type &quotient, typename Backend::polynomial_type &remainder,
                 const typename Backend::polynomial_type &dividend,
                 const polynomial_divisor_context<Backend> &divisor_context,
-                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
+
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        using path = polynomial_arithmetic::polynomial_arithmetic_path;
+        auto scope = arithmetic_context.template observe<stage::division>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, dividend.size()}, {metric::modulus_degree, divisor_context.degree()}}};
+        });
 
         if (std::addressof(quotient) == std::addressof(remainder)) {
             throw std::invalid_argument("quotient and remainder must be distinct objects");
@@ -271,6 +315,11 @@ namespace nil::crypto3::math {
             remainder_result = dividend;
             quotient = std::move(quotient_result);
             remainder = std::move(remainder_result);
+            scope.set_result_metadata([&]() noexcept {
+                return metadata {{{metric::quotient_coefficients, quotient.size()},
+                                  {metric::remainder_coefficients, remainder.size()},
+                                  {metric::arithmetic_path, static_cast<std::size_t>(path::trivial)}}};
+            });
             return;
         }
 
@@ -279,9 +328,15 @@ namespace nil::crypto3::math {
         // Long division avoids Newton multiplication overhead when either the divisor or quotient is small. It does
         // not use the precomputed reversed-divisor inverse, so this dispatch precedes the inverse-precision check.
         if (detail::use_basecase_division(options, divisor_context.divisor().size(), quotient_size)) {
+            auto basecase = arithmetic_context.template observe<stage::basecase_division>();
             division(quotient_result, remainder_result, dividend, divisor_context.divisor());
             quotient = std::move(quotient_result);
             remainder = std::move(remainder_result);
+            scope.set_result_metadata([&]() noexcept {
+                return metadata {{{metric::quotient_coefficients, quotient.size()},
+                                  {metric::remainder_coefficients, remainder.size()},
+                                  {metric::arithmetic_path, static_cast<std::size_t>(path::basecase)}}};
+            });
             return;
         }
 
@@ -289,6 +344,11 @@ namespace nil::crypto3::math {
             throw std::invalid_argument("the precomputed divisor inverse has insufficient precision");
         }
 
+        // Each estimation reuses the coefficient-space inverse; its construction is a separate scope.
+        auto estimate = arithmetic_context.template observe<stage::quotient_estimation>([&]() noexcept {
+            return metadata {{{metric::quotient_coefficients, quotient_size},
+                              {metric::inverse_precision, divisor_context.inverse_precision()}}};
+        });
         polynomial_type reversed_dividend;
         reversed_dividend.resize(quotient_size);
         for (std::size_t i = 0; i < quotient_size; ++i) {
@@ -302,24 +362,50 @@ namespace nil::crypto3::math {
         reverse(reversed_quotient, quotient_size);
         condense(reversed_quotient);
         quotient_result = std::move(reversed_quotient);
+        estimate.finish();
 
-        const std::size_t divisor_degree = divisor_context.degree();
-        if (divisor_degree == 0) {
-            remainder_result.resize(1);
-            remainder_result[0] = value_type {};
-        } else if (!divisor_context.try_reconstruct_remainder(remainder_result, dividend, quotient_result,
-                                                              arithmetic_context)) {
-            divisor_context.multiply_low_divisor(remainder_result, quotient_result, arithmetic_context);
-            // multiply_low returns canonical output; restore the complete prefix before coefficient-wise subtraction.
-            remainder_result.resize(divisor_degree, value_type {});
-            for (std::size_t i = 0; i < divisor_degree; ++i) {
-                remainder_result[i] = dividend[i] - remainder_result[i];
+        {
+            auto reconstruction = arithmetic_context.template observe<stage::remainder_reconstruction>([&]() noexcept {
+                return metadata {{{metric::input_coefficients, dividend.size()},
+                                  {metric::quotient_coefficients, quotient_result.size()},
+                                  {metric::modulus_degree, divisor_context.degree()}}};
+            });
+            const std::size_t divisor_degree = divisor_context.degree();
+            if (divisor_degree == 0) {
+                remainder_result.resize(1);
+                remainder_result[0] = value_type {};
+                reconstruction.set_result_metadata([]() noexcept {
+                    return metadata {{{metric::arithmetic_path, static_cast<std::size_t>(path::trivial)}}};
+                });
+            } else if (!divisor_context.try_reconstruct_remainder(remainder_result, dividend, quotient_result,
+                                                                  arithmetic_context)) {
+                divisor_context.multiply_low_divisor(remainder_result, quotient_result, arithmetic_context);
+                // multiply_low returns canonical output; restore the complete prefix before coefficient-wise
+                // subtraction.
+                remainder_result.resize(divisor_degree, value_type {});
+                for (std::size_t i = 0; i < divisor_degree; ++i) {
+                    remainder_result[i] = dividend[i] - remainder_result[i];
+                }
+                condense(remainder_result);
+                reconstruction.set_result_metadata([&]() noexcept {
+                    return metadata {{{metric::arithmetic_path, static_cast<std::size_t>(path::low_product)},
+                                      {metric::output_coefficients, remainder_result.size()}}};
+                });
+            } else {
+                reconstruction.set_result_metadata([&]() noexcept {
+                    return metadata {{{metric::arithmetic_path, static_cast<std::size_t>(path::cyclic)},
+                                      {metric::output_coefficients, remainder_result.size()}}};
+                });
             }
-            condense(remainder_result);
         }
 
         quotient = std::move(quotient_result);
         remainder = std::move(remainder_result);
+        scope.set_result_metadata([&]() noexcept {
+            return metadata {{{metric::quotient_coefficients, quotient.size()},
+                              {metric::remainder_coefficients, remainder.size()},
+                              {metric::arithmetic_path, static_cast<std::size_t>(path::reciprocal)}}};
+        });
     }
 
     namespace detail {
@@ -339,10 +425,10 @@ namespace nil::crypto3::math {
      * Reduce dividend modulo the divisor stored in divisor_context. The result is canonical and may alias dividend.
      * The precomputed inverse must have enough precision for the quotient that divrem computes internally.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void remainder(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &dividend,
                    const polynomial_divisor_context<Backend> &divisor_context,
-                   polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                   polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         typename Backend::polynomial_type quotient;
         divrem(quotient, output, dividend, divisor_context, arithmetic_context);
     }
@@ -354,10 +440,17 @@ namespace nil::crypto3::math {
      * @throws std::invalid_argument if dividend is not exactly divisible by the stored divisor or the precomputed
      *         inverse has insufficient precision.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void exact_division(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &dividend,
                         const polynomial_divisor_context<Backend> &divisor_context,
-                        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                        polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::exact_division>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, dividend.size()}, {metric::modulus_degree, divisor_context.degree()}}};
+        });
         typename Backend::polynomial_type quotient;
         typename Backend::polynomial_type remainder_result;
         divrem(quotient, remainder_result, dividend, divisor_context, arithmetic_context);

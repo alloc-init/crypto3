@@ -409,11 +409,12 @@ namespace nil {
              * Multiply canonical coefficient polynomials using a reusable polynomial-arithmetic context.
              * The output is canonical and may alias either input.
              */
-            template<polynomial_arithmetic::PolynomialBackend Backend>
+            template<polynomial_arithmetic::PolynomialBackend Backend,
+                     polynomial_arithmetic::PolynomialObserver Observer>
             void multiplication(typename Backend::polynomial_type &output,
                                 const typename Backend::polynomial_type &left,
                                 const typename Backend::polynomial_type &right,
-                                polynomial_arithmetic::polynomial_context<Backend> &context) {
+                                polynomial_arithmetic::polynomial_context<Backend, Observer> &context) {
                 context.multiply(output, left, right);
             }
 
@@ -421,9 +422,10 @@ namespace nil {
              * Square a canonical coefficient polynomial using a reusable polynomial-arithmetic context.
              * The output is canonical and may alias the input.
              */
-            template<polynomial_arithmetic::PolynomialBackend Backend>
+            template<polynomial_arithmetic::PolynomialBackend Backend,
+                     polynomial_arithmetic::PolynomialObserver Observer>
             void square(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
-                        polynomial_arithmetic::polynomial_context<Backend> &context) {
+                        polynomial_arithmetic::polynomial_context<Backend, Observer> &context) {
                 context.square(output, input);
             }
 
@@ -431,10 +433,11 @@ namespace nil {
              * Compute the product modulo X^coefficient_count using a reusable polynomial-arithmetic context.
              * The output is canonical and may alias either input. A coefficient count of zero produces [0].
              */
-            template<polynomial_arithmetic::PolynomialBackend Backend>
+            template<polynomial_arithmetic::PolynomialBackend Backend,
+                     polynomial_arithmetic::PolynomialObserver Observer>
             void multiply_low(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &left,
                               const typename Backend::polynomial_type &right, std::size_t coefficient_count,
-                              polynomial_arithmetic::polynomial_context<Backend> &context) {
+                              polynomial_arithmetic::polynomial_context<Backend, Observer> &context) {
                 context.multiply_low(output, left, right, coefficient_count);
             }
 
@@ -467,7 +470,8 @@ namespace nil {
              *
              * @pre a is not empty.
              */
-            template<polynomial_arithmetic::PolynomialBackend Backend, detail::PolynomialCoefficientRange FieldRange>
+            template<polynomial_arithmetic::PolynomialBackend Backend, detail::PolynomialCoefficientRange FieldRange,
+                     polynomial_arithmetic::PolynomialObserver Observer>
                 requires std::default_initializable<typename Backend::polynomial_type> &&
                          algebra::FieldValue<std::ranges::range_value_t<const FieldRange>> &&
                          requires(const std::ranges::range_value_t<const FieldRange> &field_value) {
@@ -478,7 +482,7 @@ namespace nil {
             typename Backend::polynomial_type
                 transpose_multiplication(const std::size_t n, const typename Backend::polynomial_type &a,
                                          const FieldRange &c,
-                                         polynomial_arithmetic::polynomial_context<Backend> &context) {
+                                         polynomial_arithmetic::polynomial_context<Backend, Observer> &context) {
                 using polynomial_type = typename Backend::polynomial_type;
                 using value_type = typename polynomial_type::value_type;
 

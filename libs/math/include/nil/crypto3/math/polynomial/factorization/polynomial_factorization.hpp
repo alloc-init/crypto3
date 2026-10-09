@@ -121,12 +121,17 @@ namespace nil::crypto3::math {
          * @throws std::invalid_argument if a nonconstant input is not square-free.
          * @pre input is a nonempty coefficient polynomial.
          */
-        template<SupportsDivrem Backend>
+        template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
         bool prepare_square_free_factorization_input(
             typename Backend::polynomial_type &monic_input,
             typename Backend::polynomial_type::value_type &leading_coefficient,
             const typename Backend::polynomial_type &input,
-            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto normalization_scope = arithmetic_context.template observe<stage::square_free_normalization>(
+                [&]() noexcept { return metadata {{{metric::input_coefficients, input.size()}}}; });
             monic_input = input;
             condense(monic_input);
             leading_coefficient = monic_input.back();
@@ -134,9 +139,13 @@ namespace nil::crypto3::math {
                 return false;
             }
             make_monic(monic_input, monic_input);
+            normalization_scope.finish();
 
             typename Backend::polynomial_type input_derivative;
+            auto derivative_scope = arithmetic_context.template observe<stage::derivative>(
+                [&]() noexcept { return metadata {{{metric::input_coefficients, monic_input.size()}}}; });
             derivative(input_derivative, monic_input);
+            derivative_scope.finish();
             typename Backend::polynomial_type repeated_factor;
             gcd(repeated_factor, monic_input, input_derivative, arithmetic_context);
             if (repeated_factor.size() > 1) {
@@ -145,11 +154,19 @@ namespace nil::crypto3::math {
             return true;
         }
 
-        template<SupportsDivrem Backend>
-        void factorization_exact_quotient(typename Backend::polynomial_type &output,
-                                          const typename Backend::polynomial_type &dividend,
-                                          const typename Backend::polynomial_type &divisor,
-                                          polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
+        void factorization_exact_quotient(
+            typename Backend::polynomial_type &output,
+            const typename Backend::polynomial_type &dividend,
+            const typename Backend::polynomial_type &divisor,
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::factorization_exact_quotient>([&]() noexcept {
+                return metadata {{{metric::input_coefficients, dividend.size()},
+                                  {metric::second_input_coefficients, divisor.size()}}};
+            });
             const std::size_t quotient_coefficient_count =
                 dividend.size() >= divisor.size() ? dividend.size() - divisor.size() + 1 : 1;
             polynomial_divisor_context<Backend> divisor_context(divisor, quotient_coefficient_count,

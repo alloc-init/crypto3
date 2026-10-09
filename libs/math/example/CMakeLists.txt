@@ -17,6 +17,7 @@ macro(define_algebra_example name)
 endmacro()
 
 set(EXAMPLES_NAMES
+    "polynomial_observation"
     "polynomials"
     "polynomials_dfs"
 )

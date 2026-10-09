@@ -131,12 +131,20 @@ namespace nil::crypto3::math {
          * @throws std::invalid_argument if the divisor degree is inconsistent with the requested factor degree or the
          * divisor is not monic.
          */
-        template<SupportsDivrem Backend, typename Generator>
-        bool try_cantor_zassenhaus_split(typename Backend::polynomial_type &factor,
-                                         const cantor_zassenhaus_context<Backend> &split_context,
-                                         const polynomial_divisor_context<Backend> &divisor_context,
-                                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
-                                         Generator &generator) {
+        template<SupportsDivrem Backend, typename Generator, polynomial_arithmetic::PolynomialObserver Observer>
+        bool try_cantor_zassenhaus_split(
+            typename Backend::polynomial_type &factor,
+            const cantor_zassenhaus_context<Backend> &split_context,
+            const polynomial_divisor_context<Backend> &divisor_context,
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
+            Generator &generator) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::splitting_attempt>([&]() noexcept {
+                return metadata {{{metric::modulus_degree, divisor_context.degree()},
+                                  {metric::factor_degree, split_context.irreducible_factor_degree()}}};
+            });
             using polynomial_type = typename Backend::polynomial_type;
             using value_type = typename polynomial_type::value_type;
 
@@ -154,10 +162,23 @@ namespace nil::crypto3::math {
             // Zero and constant residues have the same value modulo every irreducible factor, so they cannot split G.
             // Resample them before paying for either GCD or modular exponentiation.
             do {
+                auto candidate_scope = arithmetic_context.template observe<stage::random_candidate>(
+                    [&]() noexcept { return metadata {{{metric::input_coefficients, group_degree}}}; });
                 random_polynomial = sample_random_polynomial<polynomial_type>(group_degree, generator);
+                if (random_polynomial.size() <= 1) {
+                    candidate_scope.reject(polynomial_arithmetic::polynomial_rejection_reason::constant_candidate);
+                }
+                candidate_scope.advance(1);
             } while (random_polynomial.size() <= 1);
             gcd(factor, random_polynomial, group, arithmetic_context);
             if (factor.size() > 1 && factor.size() < group.size()) {
+                scope.set_result_metadata([&]() noexcept {
+                    return metadata {
+                        {{metric::arithmetic_path,
+                          static_cast<std::size_t>(polynomial_arithmetic::polynomial_arithmetic_path::gcd_split)},
+                         {metric::output_coefficients, factor.size()}}};
+                });
+                scope.advance(1);
                 return true;
             }
 
@@ -168,10 +189,19 @@ namespace nil::crypto3::math {
             condense(quadratic_character);
             gcd(factor, quadratic_character, group, arithmetic_context);
             if (factor.size() > 1 && factor.size() < group.size()) {
+                scope.set_result_metadata([&]() noexcept {
+                    return metadata {
+                        {{metric::arithmetic_path,
+                          static_cast<std::size_t>(polynomial_arithmetic::polynomial_arithmetic_path::power_split)},
+                         {metric::output_coefficients, factor.size()}}};
+                });
+                scope.advance(1);
                 return true;
             }
 
             factor.assign(1, value_type::zero());
+            scope.reject(polynomial_arithmetic::polynomial_rejection_reason::unsuccessful_split);
+            scope.advance(1);
             return false;
         }
 
@@ -188,12 +218,19 @@ namespace nil::crypto3::math {
          * @pre group is monic and square-free, all its irreducible factors have the context's factor degree, and
          * generator supplies independent uniformly distributed coefficient-field elements.
          */
-        template<SupportsDivrem Backend, typename Generator, typename FactorCallback>
-        factorization_control
-            cantor_zassenhaus_split_all(typename Backend::polynomial_type group,
-                                        const cantor_zassenhaus_context<Backend> &split_context,
-                                        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
-                                        Generator &generator, FactorCallback &&factor_callback) {
+        template<SupportsDivrem Backend, typename Generator, typename FactorCallback,
+                 polynomial_arithmetic::PolynomialObserver Observer>
+        factorization_control cantor_zassenhaus_split_all(
+            typename Backend::polynomial_type group, const cantor_zassenhaus_context<Backend> &split_context,
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context, Generator &generator,
+            FactorCallback &&factor_callback) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::equal_degree_splitting>([&]() noexcept {
+                return metadata {{{metric::input_coefficients, group.size()},
+                                  {metric::factor_degree, split_context.irreducible_factor_degree()}}};
+            });
             using polynomial_type = typename Backend::polynomial_type;
 
             std::vector<polynomial_type> pending;
@@ -203,6 +240,11 @@ namespace nil::crypto3::math {
                 polynomial_type current = std::move(pending.back());
                 pending.pop_back();
 
+                auto subproblem_scope =
+                    arithmetic_context.template observe<stage::splitting_subproblem>([&]() noexcept {
+                        return metadata {{{metric::input_coefficients, current.size()},
+                                          {metric::pending_subproblems, pending.size()}}};
+                    });
                 const std::size_t current_degree = current.size() - 1;
                 if (current_degree < split_context.irreducible_factor_degree() ||
                     current_degree % split_context.irreducible_factor_degree() != 0) {
@@ -210,7 +252,20 @@ namespace nil::crypto3::math {
                         "Cantor-Zassenhaus splitting requires the factor degree to divide every pending degree");
                 }
                 if (current_degree == split_context.irreducible_factor_degree()) {
-                    if (factor_callback(std::move(current)) == factorization_control::stop_factorization) {
+                    auto factor_scope = arithmetic_context.template observe<stage::irreducible_factor>(
+                        [&]() noexcept { return metadata {{{metric::factor_degree, current_degree}}}; });
+                    const auto control = factor_callback(std::move(current));
+                    if (control == factorization_control::stop_factorization) {
+                        factor_scope.callback_stop();
+                        subproblem_scope.callback_stop();
+                        scope.callback_stop();
+                    }
+                    factor_scope.advance(1);
+                    factor_scope.finish();
+                    subproblem_scope.advance(1);
+                    subproblem_scope.finish();
+                    scope.advance();
+                    if (control == factorization_control::stop_factorization) {
                         return factorization_control::stop_factorization;
                     }
                     continue;
@@ -224,20 +279,27 @@ namespace nil::crypto3::math {
                                                              generator)) {
                 }
 
+                auto split_scope = arithmetic_context.template observe<stage::subgroup_split>(
+                    [&]() noexcept { return metadata {{{metric::input_coefficients, current.size()}}}; });
                 polynomial_type quotient;
                 factorization_exact_quotient(quotient, current, factor, arithmetic_context);
                 pending.push_back(std::move(factor));
                 pending.push_back(std::move(quotient));
+                split_scope.advance(1);
+                split_scope.finish();
+                subproblem_scope.advance(1);
+                subproblem_scope.finish();
+                scope.advance();
             }
 
             return factorization_control::continue_factorization;
         }
 
         /** Split an entire equal-degree group and collect every irreducible factor. */
-        template<SupportsDivrem Backend, typename Generator>
+        template<SupportsDivrem Backend, typename Generator, polynomial_arithmetic::PolynomialObserver Observer>
         std::vector<typename Backend::polynomial_type> cantor_zassenhaus_split_all(
             typename Backend::polynomial_type group, const cantor_zassenhaus_context<Backend> &split_context,
-            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, Generator &generator) {
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context, Generator &generator) {
             using polynomial_type = typename Backend::polynomial_type;
 
             std::vector<polynomial_type> factors;
@@ -265,11 +327,19 @@ namespace nil::crypto3::math {
          * @pre group.polynomial is canonical and square-free, and all its irreducible factors have
          * group.irreducible_factor_degree.
          */
-        template<SupportsDivrem Backend, typename Generator, typename FactorCallback>
-        factorization_control
-            factor_distinct_degree_group(distinct_degree_factor<typename Backend::polynomial_type> group,
-                                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
-                                         Generator &generator, FactorCallback &&factor_callback) {
+        template<SupportsDivrem Backend, typename Generator, typename FactorCallback,
+                 polynomial_arithmetic::PolynomialObserver Observer>
+        factorization_control factor_distinct_degree_group(
+            distinct_degree_factor<typename Backend::polynomial_type> group,
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context, Generator &generator,
+            FactorCallback &&factor_callback) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::equal_degree_group>([&]() noexcept {
+                return metadata {{{metric::input_coefficients, group.polynomial.size()},
+                                  {metric::factor_degree, group.irreducible_factor_degree}}};
+            });
             using value_type = typename Backend::polynomial_type::value_type;
 
             if (group.irreducible_factor_degree == 0) {
@@ -287,8 +357,13 @@ namespace nil::crypto3::math {
             }
 
             cantor_zassenhaus_context<Backend> split_context(group.irreducible_factor_degree);
-            return cantor_zassenhaus_split_all<Backend>(std::move(group.polynomial), split_context, arithmetic_context,
-                                                        generator, std::forward<FactorCallback>(factor_callback));
+            const auto control =
+                cantor_zassenhaus_split_all<Backend>(std::move(group.polynomial), split_context, arithmetic_context,
+                                                     generator, std::forward<FactorCallback>(factor_callback));
+            if (control == factorization_control::stop_factorization) {
+                scope.callback_stop();
+            }
+            return control;
         }
 
         /**
@@ -312,12 +387,12 @@ namespace nil::crypto3::math {
          * total degree is not divisible by irreducible_factor_degree.
          * @pre input is a nonempty coefficient polynomial.
          */
-        template<SupportsDivrem Backend>
+        template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
         bool prepare_equal_degree_factorization_input(
             typename Backend::polynomial_type &monic_input,
             typename Backend::polynomial_type::value_type &leading_coefficient,
             const typename Backend::polynomial_type &input, std::size_t irreducible_factor_degree,
-            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
             if (irreducible_factor_degree == 0) {
                 throw std::invalid_argument("equal-degree factorization requires a positive factor degree");
             }
@@ -353,13 +428,21 @@ namespace nil::crypto3::math {
      * @pre input is a nonempty coefficient polynomial whose irreducible factors all have
      * irreducible_factor_degree.
      */
-    template<detail::SupportsDivrem Backend, typename Generator, typename FactorCallback>
+    template<detail::SupportsDivrem Backend, typename Generator, typename FactorCallback,
+             polynomial_arithmetic::PolynomialObserver Observer>
         requires detail::PolynomialFactorCallback<FactorCallback, typename Backend::polynomial_type>
     polynomial_factorization_result<typename Backend::polynomial_type>
         equal_degree_factorization(const typename Backend::polynomial_type &input,
                                    std::size_t irreducible_factor_degree,
-                                   polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                   polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
                                    Generator &generator, FactorCallback &&factor_callback) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::equal_degree_factorization>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, input.size()}, {metric::factor_degree, irreducible_factor_degree}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
         using result_type = polynomial_factorization_result<polynomial_type>;
 
@@ -374,19 +457,32 @@ namespace nil::crypto3::math {
         const factorization_control control = detail::cantor_zassenhaus_split_all<Backend>(
             std::move(monic_input), split_context, arithmetic_context, generator, [&](polynomial_type &&factor) {
                 result.factors.push_back({std::move(factor), 1});
-                return factor_callback(result.factors.back());
+                auto callback_scope = arithmetic_context.template observe<stage::factor_callback>([&]() noexcept {
+                    return metadata {{{metric::factor_degree, result.factors.back().polynomial.size() - 1},
+                                      {metric::multiplicity, 1}}};
+                });
+                const auto callback_control = factor_callback(result.factors.back());
+                if (callback_control == factorization_control::stop_factorization) {
+                    callback_scope.callback_stop();
+                    scope.callback_stop();
+                }
+                callback_scope.advance(1);
+                return callback_control;
             });
         if (control == factorization_control::stop_factorization) {
             result.complete = false;
+            scope.callback_stop();
         }
+        scope.set_result_metadata(
+            [&]() noexcept { return metadata {{{metric::factor_count, result.factors.size()}}}; });
         return result;
     }
 
     /** Compute the complete equal-degree factorization without a staged callback. */
-    template<detail::SupportsDivrem Backend, typename Generator>
+    template<detail::SupportsDivrem Backend, typename Generator, polynomial_arithmetic::PolynomialObserver Observer>
     polynomial_factorization_result<typename Backend::polynomial_type> equal_degree_factorization(
         const typename Backend::polynomial_type &input, std::size_t irreducible_factor_degree,
-        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, Generator &generator) {
+        polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context, Generator &generator) {
         using factor_type = polynomial_factor<typename Backend::polynomial_type>;
         return equal_degree_factorization<Backend>(
             input, irreducible_factor_degree, arithmetic_context, generator,

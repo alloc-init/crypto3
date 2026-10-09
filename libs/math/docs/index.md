@@ -13,3 +13,5 @@
 @subpage math_polynomial_factorization
 
 @subpage math_polynomial_recovery
+
+@subpage math_polynomial_observation

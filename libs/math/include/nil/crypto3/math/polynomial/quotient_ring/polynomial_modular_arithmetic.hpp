@@ -40,11 +40,19 @@ namespace nil::crypto3::math {
      *
      * @throws std::invalid_argument if the precomputed inverse has insufficient precision.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void mulmod(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &left,
                 const typename Backend::polynomial_type &right,
                 const polynomial_divisor_context<Backend> &divisor_context,
-                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::mulmod>([&]() noexcept {
+            return metadata {{{metric::input_coefficients, left.size()},
+                              {metric::second_input_coefficients, right.size()},
+                              {metric::modulus_degree, divisor_context.degree()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 
@@ -67,10 +75,17 @@ namespace nil::crypto3::math {
      *
      * @throws std::invalid_argument if the precomputed inverse has insufficient precision.
      */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     void squaremod(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
                    const polynomial_divisor_context<Backend> &divisor_context,
-                   polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                   polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::squaremod>([&]() noexcept {
+            return metadata {
+                {{metric::input_coefficients, input.size()}, {metric::modulus_degree, divisor_context.degree()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 

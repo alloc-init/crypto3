@@ -75,10 +75,17 @@ namespace nil::crypto3::math {
      *
      * @throws std::invalid_argument if P or Q is empty or noncanonical.
      */
-    template<polynomial_arithmetic::PolynomialBackend Backend>
+    template<polynomial_arithmetic::PolynomialBackend Backend, polynomial_arithmetic::PolynomialObserver Observer>
     typename Backend::polynomial_type evaluate_polynomial_x_norm(
         const polynomial_x_norm_representation<typename Backend::polynomial_type> &representation,
-        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::x_norm_evaluation>([&]() noexcept {
+            return metadata {
+                {{metric::p_coefficients, representation.p.size()}, {metric::q_coefficients, representation.q.size()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
         if (!detail::is_canonical_polynomial_x_norm_representation(representation)) {
             throw std::invalid_argument("polynomial X-norm evaluation requires canonical nonempty inputs");
@@ -106,11 +113,20 @@ namespace nil::crypto3::math {
      *
      * @throws std::invalid_argument if an input polynomial is empty or noncanonical.
      */
-    template<polynomial_arithmetic::PolynomialBackend Backend>
+    template<polynomial_arithmetic::PolynomialBackend Backend, polynomial_arithmetic::PolynomialObserver Observer>
     polynomial_x_norm_representation<typename Backend::polynomial_type> multiply_polynomial_x_norm_representations(
         const polynomial_x_norm_representation<typename Backend::polynomial_type> &left,
         const polynomial_x_norm_representation<typename Backend::polynomial_type> &right,
-        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::x_norm_multiply>([&]() noexcept {
+            return metadata {{{metric::p_coefficients, left.p.size()},
+                              {metric::second_p_coefficients, right.p.size()},
+                              {metric::q_coefficients, left.q.size()},
+                              {metric::second_q_coefficients, right.q.size()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
         using representation_type = polynomial_x_norm_representation<polynomial_type>;
 
@@ -161,7 +177,7 @@ namespace nil::crypto3::math {
      *         of a composed polynomial operation is violated.
      * @throws std::logic_error if a composed operation reports success but its resulting identities are inconsistent.
      */
-    template<detail::SupportsDivrem Backend, typename Generator>
+    template<detail::SupportsDivrem Backend, typename Generator, polynomial_arithmetic::PolynomialObserver Observer>
         requires algebra::FieldValue<typename Backend::polynomial_type::value_type> &&
                  std::constructible_from<typename Backend::polynomial_type, std::size_t> &&
                  requires(typename Backend::polynomial_type &polynomial, Generator &generator,
@@ -172,8 +188,13 @@ namespace nil::crypto3::math {
     std::optional<polynomial_x_norm_representation<typename Backend::polynomial_type>>
         recover_irreducible_polynomial_x_norm_representation(
             const typename Backend::polynomial_type &g,
-            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
             Generator &coefficient_generator) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::x_norm_irreducible>(
+            [&]() noexcept { return metadata {{{metric::input_coefficients, g.size()}}}; });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
         using representation_type = polynomial_x_norm_representation<polynomial_type>;
@@ -190,12 +211,17 @@ namespace nil::crypto3::math {
         polynomial_divisor_context<Backend> divisor_context(g, inverse_precision, arithmetic_context);
 
         // Work with the canonical representative of X in K[X]/(g). Reduction is necessary when g is linear.
+        auto test_scope = arithmetic_context.template observe<stage::x_norm_square_test>(
+            [&]() noexcept { return metadata {{{metric::modulus_degree, degree}}}; });
         const polynomial_type x = {value_type::zero(), value_type::one()};
         polynomial_type x_mod_g;
         remainder(x_mod_g, x, divisor_context, arithmetic_context);
         if (!is_square_mod(x_mod_g, divisor_context, arithmetic_context)) {
+            test_scope.reject(polynomial_arithmetic::polynomial_rejection_reason::x_not_square);
+            scope.reject(polynomial_arithmetic::polynomial_rejection_reason::x_not_square);
             return std::nullopt;
         }
+        test_scope.finish();
 
         // Adapt caller-generated field coefficients into canonical representatives of K[X]/(g). No random source or
         // polynomial backend is constructed here.
@@ -220,11 +246,14 @@ namespace nil::crypto3::math {
         polynomial_type p;
         polynomial_type q;
         if (!rational_reconstruct(p, q, root, g, degree / 2, (degree - 1) / 2, arithmetic_context)) {
+            scope.reject(polynomial_arithmetic::polynomial_rejection_reason::rational_recovery);
             return std::nullopt;
         }
 
         // The two modular identities imply P^2 - X * Q^2 = lambda * g. The degree bounds ensure that lambda is a
         // scalar. A nonzero remainder or nonconstant quotient would contradict those successful operations.
+        auto scalar_scope =
+            arithmetic_context.template observe<stage::x_norm_scalar_check>([&]() noexcept { return metadata {{}}; });
         representation_type representation {std::move(p), std::move(q)};
         const polynomial_type norm = evaluate_polynomial_x_norm(representation, arithmetic_context);
         polynomial_type scalar_quotient;
@@ -235,15 +264,28 @@ namespace nil::crypto3::math {
         }
 
         const value_type lambda = scalar_quotient[0];
-        if (lambda.is_zero() || !lambda.is_square()) {
+        if (lambda.is_zero()) {
+            scalar_scope.reject(polynomial_arithmetic::polynomial_rejection_reason::zero_normalization_scalar);
+            scope.reject(polynomial_arithmetic::polynomial_rejection_reason::zero_normalization_scalar);
             return std::nullopt;
         }
+        if (!lambda.is_square()) {
+            scalar_scope.reject(polynomial_arithmetic::polynomial_rejection_reason::nonsquare_normalization_scalar);
+            scope.reject(polynomial_arithmetic::polynomial_rejection_reason::nonsquare_normalization_scalar);
+            return std::nullopt;
+        }
+        scalar_scope.finish();
 
         // Multiplying P and Q by sqrt(lambda^-1) changes their norm from lambda * g to exactly g.
+        auto normalization_scope =
+            arithmetic_context.template observe<stage::x_norm_normalization>([&]() noexcept { return metadata {{}}; });
         const value_type normalization = algebra::fields::sqrt_known_square(lambda.inversed());
         scalar_multiplication(representation.p, representation.p, normalization);
         scalar_multiplication(representation.q, representation.q, normalization);
 
+        normalization_scope.finish();
+        auto check_scope =
+            arithmetic_context.template observe<stage::x_norm_exact_check>([&]() noexcept { return metadata {{}}; });
         if (evaluate_polynomial_x_norm(representation, arithmetic_context) != g) {
             throw std::logic_error("normalized polynomial X-norm representation failed exact verification");
         }
@@ -253,10 +295,15 @@ namespace nil::crypto3::math {
     namespace detail {
 
         /** Raise a canonical polynomial to a nonnegative integer power using the supplied arithmetic context. */
-        template<polynomial_arithmetic::PolynomialBackend Backend>
+        template<polynomial_arithmetic::PolynomialBackend Backend, polynomial_arithmetic::PolynomialObserver Observer>
         typename Backend::polynomial_type
             polynomial_x_norm_power(const typename Backend::polynomial_type &base, std::size_t exponent,
-                                    polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                                    polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::x_norm_factor_power>(
+                [&]() noexcept { return metadata {{{metric::input_coefficients, base.size()}}}; });
             using polynomial_type = typename Backend::polynomial_type;
             using value_type = typename polynomial_type::value_type;
 
@@ -274,7 +321,12 @@ namespace nil::crypto3::math {
                     arithmetic_context.square(square, current_power);
                     current_power = std::move(square);
                 }
+                scope.advance();
             }
+            scope.set_result_metadata([&]() noexcept {
+                return metadata {
+                    {{metric::exponent_bits, scope.completed_steps()}, {metric::output_coefficients, result.size()}}};
+            });
             return result;
         }
 
@@ -299,12 +351,19 @@ namespace nil::crypto3::math {
          * represents g^3, while (h, 0) represents h^2. Combining those two representations produces the
          * representation of g^3 * h^2. Thus only the odd-multiplicity factor g requires irreducible recovery.
          */
-        template<SupportsDivrem Backend, typename Generator>
+        template<SupportsDivrem Backend, typename Generator, polynomial_arithmetic::PolynomialObserver Observer>
         std::optional<polynomial_x_norm_representation<typename Backend::polynomial_type>>
             recover_polynomial_x_norm_factor_power(
                 const polynomial_factor<typename Backend::polynomial_type> &factor,
-                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
                 Generator &coefficient_generator) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::x_norm_multiplicity>([&]() noexcept {
+                return metadata {{{metric::factor_degree, factor.polynomial.size() - 1},
+                                  {metric::multiplicity, factor.multiplicity}}};
+            });
             using polynomial_type = typename Backend::polynomial_type;
             using value_type = typename polynomial_type::value_type;
             using representation_type = polynomial_x_norm_representation<polynomial_type>;
@@ -313,6 +372,12 @@ namespace nil::crypto3::math {
                 throw std::logic_error("complete factorization produced a factor with zero multiplicity");
             }
 
+            scope.set_result_metadata([&]() noexcept {
+                using path = polynomial_arithmetic::polynomial_arithmetic_path;
+                return metadata {{{metric::arithmetic_path,
+                                   static_cast<std::size_t>((factor.multiplicity & 1) == 0 ? path::even_multiplicity :
+                                                                                             path::odd_multiplicity)}}};
+            });
             const std::size_t half_multiplicity = factor.multiplicity / 2;
             polynomial_type half_power =
                 polynomial_x_norm_power<Backend>(factor.polynomial, half_multiplicity, arithmetic_context);
@@ -323,6 +388,7 @@ namespace nil::crypto3::math {
             auto odd_representation = recover_irreducible_polynomial_x_norm_representation<Backend>(
                 factor.polynomial, arithmetic_context, coefficient_generator);
             if (!odd_representation) {
+                scope.reject(polynomial_arithmetic::polynomial_rejection_reason::odd_factor_recovery);
                 return std::nullopt;
             }
             if (half_multiplicity == 0) {
@@ -349,12 +415,17 @@ namespace nil::crypto3::math {
          * representation is carried unchanged to the next level. An empty input represents the empty product and
          * therefore returns the multiplicative identity (1, 0).
          */
-        template<polynomial_arithmetic::PolynomialBackend Backend>
+        template<polynomial_arithmetic::PolynomialBackend Backend, polynomial_arithmetic::PolynomialObserver Observer>
         polynomial_x_norm_representation<typename Backend::polynomial_type>
             combine_polynomial_x_norm_representations_balanced(
                 std::vector<polynomial_x_norm_representation<typename Backend::polynomial_type>>
                     representations,
-                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::x_norm_combination>(
+                [&]() noexcept { return metadata {{{metric::factor_count, representations.size()}}}; });
             using polynomial_type = typename Backend::polynomial_type;
             using value_type = typename polynomial_type::value_type;
             using representation_type = polynomial_x_norm_representation<polynomial_type>;
@@ -364,17 +435,24 @@ namespace nil::crypto3::math {
             }
 
             while (representations.size() > 1) {
+                auto level_scope = arithmetic_context.template observe<stage::x_norm_combination_level>([&]() noexcept {
+                    return metadata {
+                        {{metric::factor_count, representations.size()}, {metric::iteration, scope.completed_steps()}}};
+                });
                 std::vector<representation_type> next_level;
                 next_level.reserve((representations.size() + 1) / 2);
                 std::size_t index = 0;
                 for (; index + 1 < representations.size(); index += 2) {
                     next_level.push_back(multiply_polynomial_x_norm_representations<Backend>(
                         representations[index], representations[index + 1], arithmetic_context));
+                    level_scope.advance(representations.size() / 2);
                 }
                 if (index < representations.size()) {
                     next_level.push_back(std::move(representations[index]));
                 }
                 representations = std::move(next_level);
+                level_scope.finish();
+                scope.advance();
             }
             return std::move(representations.front());
         }
@@ -406,7 +484,7 @@ namespace nil::crypto3::math {
      *         violated.
      * @throws std::logic_error if completed internal operations produce an inconsistent identity.
      */
-    template<detail::SupportsDivrem Backend, typename Generator>
+    template<detail::SupportsDivrem Backend, typename Generator, polynomial_arithmetic::PolynomialObserver Observer>
         requires algebra::FieldValue<typename Backend::polynomial_type::value_type> &&
                  std::constructible_from<typename Backend::polynomial_type, std::size_t> &&
                  requires(typename Backend::polynomial_type &polynomial, Generator &generator,
@@ -415,9 +493,15 @@ namespace nil::crypto3::math {
                      { value.is_square() } -> std::convertible_to<bool>;
                  }
     std::optional<polynomial_x_norm_representation<typename Backend::polynomial_type>>
-        recover_polynomial_x_norm_representation(const typename Backend::polynomial_type &h,
-                                                 polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
-                                                 Generator &coefficient_generator) {
+        recover_polynomial_x_norm_representation(
+            const typename Backend::polynomial_type &h,
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
+            Generator &coefficient_generator) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::x_norm_recovery>(
+            [&]() noexcept { return metadata {{{metric::input_coefficients, h.size()}}}; });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
         using representation_type = polynomial_x_norm_representation<polynomial_type>;
@@ -427,6 +511,9 @@ namespace nil::crypto3::math {
         }
 
         const auto verify_exact = [&](representation_type representation) -> std::optional<representation_type> {
+            auto check_scope = arithmetic_context.template observe<stage::x_norm_final_verification>(
+                [&]() noexcept { return metadata {{{metric::input_coefficients, h.size()}}}; });
+
             if (evaluate_polynomial_x_norm<Backend>(representation, arithmetic_context) != h) {
                 throw std::logic_error("polynomial X-norm recovery failed exact verification");
             }
@@ -434,11 +521,26 @@ namespace nil::crypto3::math {
         };
 
         if (is_zero(h)) {
+            auto shortcut_scope =
+                arithmetic_context.template observe<stage::x_norm_shortcut>([&]() noexcept { return metadata {{}}; });
+            shortcut_scope.set_result_metadata([]() noexcept {
+                return metadata {{{metric::arithmetic_path,
+                                   static_cast<std::size_t>(polynomial_arithmetic::polynomial_arithmetic_path::zero)}}};
+            });
             return verify_exact(
                 representation_type {polynomial_type {value_type::zero()}, polynomial_type {value_type::zero()}});
         }
         if (h.size() == 1) {
+            auto shortcut_scope =
+                arithmetic_context.template observe<stage::x_norm_shortcut>([&]() noexcept { return metadata {{}}; });
+            shortcut_scope.set_result_metadata([]() noexcept {
+                return metadata {
+                    {{metric::arithmetic_path,
+                      static_cast<std::size_t>(polynomial_arithmetic::polynomial_arithmetic_path::constant)}}};
+            });
             if (!h[0].is_square()) {
+                shortcut_scope.reject(polynomial_arithmetic::polynomial_rejection_reason::constant_not_square);
+                scope.reject(polynomial_arithmetic::polynomial_rejection_reason::constant_not_square);
                 return std::nullopt;
             }
             return verify_exact(representation_type {polynomial_type {algebra::fields::sqrt_known_square(h[0])},
@@ -447,32 +549,55 @@ namespace nil::crypto3::math {
 
         // square filters
         const std::size_t degree = h.size() - 1;
+        auto constant_scope = arithmetic_context.template observe<stage::x_norm_constant_filter>(
+            [&]() noexcept { return metadata {{}}; });
         if (!h[0].is_square()) {
+            constant_scope.reject(polynomial_arithmetic::polynomial_rejection_reason::constant_coefficient_not_square);
+            scope.reject(polynomial_arithmetic::polynomial_rejection_reason::constant_coefficient_not_square);
             return std::nullopt;
         }
+        constant_scope.finish();
+        auto leading_scope =
+            arithmetic_context.template observe<stage::x_norm_leading_filter>([&]() noexcept { return metadata {{}}; });
         value_type signed_leading_coefficient = h[h.size() - 1];
         if ((degree & 1) != 0) {
             signed_leading_coefficient = value_type::zero() - signed_leading_coefficient;
         }
         if (!signed_leading_coefficient.is_square()) {
+            leading_scope.reject(
+                polynomial_arithmetic::polynomial_rejection_reason::signed_leading_coefficient_not_square);
+            scope.reject(polynomial_arithmetic::polynomial_rejection_reason::signed_leading_coefficient_not_square);
             return std::nullopt;
         }
+        leading_scope.finish();
 
         std::vector<representation_type> factor_representations;
         bool factor_recovery_failed = false;
         const auto factorization = complete_factorization<Backend>(
             h, arithmetic_context, coefficient_generator, [&](const polynomial_factor<polynomial_type> &factor) {
+                // Recovery stays inside the factorization callback. Its time is included in factorization's
+                // inclusive total; a rejected factor requests the existing stop at this same boundary.
+                auto factor_scope = arithmetic_context.template observe<stage::x_norm_factor>([&]() noexcept {
+                    return metadata {{{metric::factor_degree, factor.polynomial.size() - 1},
+                                      {metric::multiplicity, factor.multiplicity},
+                                      {metric::factor_count, factor_representations.size() + 1}}};
+                });
+
                 auto representation = detail::recover_polynomial_x_norm_factor_power<Backend>(
                     factor, arithmetic_context, coefficient_generator);
                 if (!representation) {
                     factor_recovery_failed = true;
+                    factor_scope.reject(polynomial_arithmetic::polynomial_rejection_reason::odd_factor_recovery);
+                    factor_scope.advance(1);
                     return factorization_control::stop_factorization;
                 }
                 factor_representations.push_back(std::move(*representation));
+                factor_scope.advance(1);
                 return factorization_control::continue_factorization;
             });
 
         if (factor_recovery_failed) {
+            scope.reject(polynomial_arithmetic::polynomial_rejection_reason::odd_factor_recovery);
             return std::nullopt;
         }
         if (!factorization.complete || factor_representations.empty()) {
@@ -481,16 +606,21 @@ namespace nil::crypto3::math {
 
         representation_type result = detail::combine_polynomial_x_norm_representations_balanced<Backend>(
             std::move(factor_representations), arithmetic_context);
+        auto scalar_scope =
+            arithmetic_context.template observe<stage::x_norm_leading_scalar>([&]() noexcept { return metadata {{}}; });
         const value_type leading_coefficient = factorization.leading_coefficient;
         if (leading_coefficient.is_zero()) {
             throw std::logic_error("complete factorization produced a zero leading coefficient");
         }
         if (!leading_coefficient.is_square()) {
+            scalar_scope.reject(polynomial_arithmetic::polynomial_rejection_reason::leading_scalar_not_square);
+            scope.reject(polynomial_arithmetic::polynomial_rejection_reason::leading_scalar_not_square);
             return std::nullopt;
         }
         const value_type scalar = algebra::fields::sqrt_known_square(leading_coefficient);
         scalar_multiplication(result.p, result.p, scalar);
         scalar_multiplication(result.q, result.q, scalar);
+        scalar_scope.finish();
         return verify_exact(std::move(result));
     }
 

@@ -86,9 +86,10 @@ namespace nil::crypto3::math::detail {
         using polynomial_type = typename backend_type::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 
+        template<polynomial_arithmetic::PolynomialObserver Observer>
         kaltofen_shoup_frobenius_precomputation(
             std::size_t block_size, const polynomial_frobenius_context<backend_type> &frobenius_context,
-            polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) :
+            polynomial_arithmetic::polynomial_context<backend_type, Observer> &arithmetic_context) :
             block_size_(block_size), baby_steps_(make_baby_steps(block_size_, frobenius_context, arithmetic_context)),
             block_frobenius_precomputation_(baby_steps_.back(),
                                             // A residue modulo degree-d polynomial B has at most d coefficients. The
@@ -112,17 +113,35 @@ namespace nil::crypto3::math::detail {
          * @pre input is reduced modulo B.
          * @pre frobenius_context represents the same B used to construct this precomputation.
          */
-        void apply_block_frobenius(polynomial_type &output, const polynomial_type &input,
-                                   const polynomial_frobenius_context<backend_type> &frobenius_context,
-                                   polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) const {
+        template<polynomial_arithmetic::PolynomialObserver Observer>
+        void apply_block_frobenius(
+            polynomial_type &output, const polynomial_type &input,
+            const polynomial_frobenius_context<backend_type> &frobenius_context,
+            polynomial_arithmetic::polynomial_context<backend_type, Observer> &arithmetic_context) const {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::frobenius_giant_step>([&]() noexcept {
+                return metadata {{{metric::degree_block_size, block_size_},
+                                  {metric::modulus_degree, frobenius_context.divisor_context().degree()}}};
+            });
             compose_mod(output, input, block_frobenius_precomputation_, frobenius_context.divisor_context(),
                         arithmetic_context);
+            scope.advance(1);
         }
 
     private:
+        template<polynomial_arithmetic::PolynomialObserver Observer>
         static std::vector<polynomial_type>
             make_baby_steps(std::size_t block_size, const polynomial_frobenius_context<backend_type> &frobenius_context,
-                            polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) {
+                            polynomial_arithmetic::polynomial_context<backend_type, Observer> &arithmetic_context) {
+            using stage = polynomial_arithmetic::polynomial_stage;
+            using metric = polynomial_arithmetic::polynomial_metric;
+            using metadata = polynomial_arithmetic::polynomial_metadata;
+            auto scope = arithmetic_context.template observe<stage::frobenius_baby_steps>([&]() noexcept {
+                return metadata {{{metric::degree_block_size, block_size},
+                                  {metric::modulus_degree, frobenius_context.divisor_context().degree()}}};
+            });
             if (block_size == 0) {
                 throw std::invalid_argument("the Kaltofen-Shoup block size must be positive");
             }
@@ -141,6 +160,7 @@ namespace nil::crypto3::math::detail {
                 polynomial_type next_step;
                 frobenius_map(next_step, baby_steps.back(), frobenius_context, arithmetic_context);
                 baby_steps.emplace_back(std::move(next_step));
+                scope.advance(block_size);
             }
             return baby_steps;
         }
@@ -171,14 +191,15 @@ namespace nil::crypto3::math::detail {
      * @pre giant_step is reduced modulo B.
      * @pre frobenius_context represents the same B used to construct precomputation.
      */
-    template<SupportsDivrem Backend>
-    void kaltofen_shoup_coarse_block_factor(typename Backend::polynomial_type &output,
-                                            const typename Backend::polynomial_type &remaining,
-                                            const typename Backend::polynomial_type &giant_step,
-                                            std::size_t degree_count,
-                                            const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
-                                            const polynomial_frobenius_context<Backend> &frobenius_context,
-                                            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+    template<SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
+    void kaltofen_shoup_coarse_block_factor(
+        typename Backend::polynomial_type &output,
+        const typename Backend::polynomial_type &remaining,
+        const typename Backend::polynomial_type &giant_step,
+        std::size_t degree_count,
+        const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
+        const polynomial_frobenius_context<Backend> &frobenius_context,
+        polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
 
@@ -186,6 +207,13 @@ namespace nil::crypto3::math::detail {
             throw std::invalid_argument("the coarse Kaltofen-Shoup degree count must be within the block");
         }
 
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto product_scope = arithmetic_context.template observe<stage::interval_product>([&]() noexcept {
+            return metadata {
+                {{metric::degree_count, degree_count}, {metric::degree_block_size, precomputation.block_size()}}};
+        });
         polynomial_type interval_product = {value_type::one()};
         polynomial_type difference;
         for (std::size_t offset = 0; offset < degree_count; ++offset) {
@@ -193,7 +221,11 @@ namespace nil::crypto3::math::detail {
             subtraction(difference, giant_step, precomputation.baby_step(baby_step_index));
             mulmod(interval_product, interval_product, difference, frobenius_context.divisor_context(),
                    arithmetic_context);
+            product_scope.advance(degree_count);
         }
+        product_scope.finish();
+        auto gcd_scope = arithmetic_context.template observe<stage::coarse_gcd>(
+            [&]() noexcept { return metadata {{{metric::input_coefficients, remaining.size()}}}; });
         gcd(output, remaining, interval_product, arithmetic_context);
     }
 
@@ -223,14 +255,24 @@ namespace nil::crypto3::math::detail {
      * factors in the stated degree interval.
      * @pre giant_step and first_factor_degree describe the same block as precomputation.
      */
-    template<SupportsDivrem Backend, typename FactorCallback>
+    template<SupportsDivrem Backend, typename FactorCallback, polynomial_arithmetic::PolynomialObserver Observer>
         requires DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
     factorization_control kaltofen_shoup_split_coarse_block(
         std::vector<distinct_degree_factor<typename Backend::polynomial_type>> &output,
         typename Backend::polynomial_type coarse_block, const typename Backend::polynomial_type &giant_step,
         std::size_t first_factor_degree, std::size_t degree_count,
         const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
-        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, FactorCallback &&factor_callback) {
+        polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
+        FactorCallback &&factor_callback) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::degree_refinement>([&]() noexcept {
+            return metadata {{{metric::input_coefficients, coarse_block.size()},
+                              {metric::factor_degree, first_factor_degree},
+                              {metric::degree_count, degree_count},
+                              {metric::degree_block_size, precomputation.block_size()}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
 
         if (first_factor_degree == 0 || degree_count == 0 || degree_count > precomputation.block_size()) {
@@ -247,16 +289,32 @@ namespace nil::crypto3::math::detail {
             subtraction(difference, giant_step, precomputation.baby_step(baby_step_index));
             gcd(factor, coarse_block, difference, arithmetic_context);
             if (factor.size() == 1) {
+                scope.advance(degree_count);
                 continue;
             }
 
             output.push_back({std::move(factor), first_factor_degree + offset});
-            if (factor_callback(output.back()) == factorization_control::stop_factorization) {
+            auto callback_scope = arithmetic_context.template observe<stage::degree_group_callback>([&]() noexcept {
+                return metadata {{{metric::factor_degree, output.back().irreducible_factor_degree},
+                                  {metric::input_coefficients, output.back().polynomial.size()}}};
+            });
+            const auto callback_control = factor_callback(output.back());
+            if (callback_control == factorization_control::stop_factorization) {
+                callback_scope.callback_stop();
+                scope.callback_stop();
+            }
+            callback_scope.advance(1);
+            callback_scope.finish();
+            if (callback_control == factorization_control::stop_factorization) {
                 return factorization_control::stop_factorization;
             }
 
+            auto removal_scope = arithmetic_context.template observe<stage::classified_factor_removal>(
+                [&]() noexcept { return metadata {{}}; });
             factorization_exact_quotient(quotient, coarse_block, output.back().polynomial, arithmetic_context);
             coarse_block = std::move(quotient);
+            removal_scope.finish();
+            scope.advance(degree_count);
         }
 
         if (coarse_block.size() > 1) {
@@ -280,12 +338,19 @@ namespace nil::crypto3::math::detail {
      * @throws std::invalid_argument if block_size is zero.
      * @pre input is monic, square-free, nonzero, and nonconstant.
      */
-    template<SupportsDivrem Backend, typename FactorCallback>
+    template<SupportsDivrem Backend, typename FactorCallback, polynomial_arithmetic::PolynomialObserver Observer>
         requires DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
     factorization_control kaltofen_shoup_factor_monic_square_free(
         std::vector<distinct_degree_factor<typename Backend::polynomial_type>> &output,
         typename Backend::polynomial_type input, std::size_t block_size,
-        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, FactorCallback &&factor_callback) {
+        polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
+        FactorCallback &&factor_callback) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::kaltofen_shoup_factor>([&]() noexcept {
+            return metadata {{{metric::input_coefficients, input.size()}, {metric::degree_block_size, block_size}}};
+        });
         using polynomial_type = typename Backend::polynomial_type;
 
         if (block_size == 0) {
@@ -294,12 +359,28 @@ namespace nil::crypto3::math::detail {
         // A linear polynomial is already one degree-one factor, so no Frobenius precomputation is needed.
         if (input.size() == 2) {
             output.push_back({std::move(input), 1});
-            return factor_callback(output.back());
+            auto callback_scope = arithmetic_context.template observe<stage::degree_group_callback>(
+                [&]() noexcept { return metadata {{{metric::factor_degree, 1}}}; });
+            const auto callback_control = factor_callback(output.back());
+            if (callback_control == factorization_control::stop_factorization) {
+                callback_scope.callback_stop();
+                scope.callback_stop();
+            }
+            callback_scope.advance(1);
+            callback_scope.finish();
+            return callback_control;
         }
 
+        auto frobenius_scope = arithmetic_context.template observe<stage::frobenius_preparation>(
+            [&]() noexcept { return metadata {{{metric::input_coefficients, input.size()}}}; });
         polynomial_frobenius_context<Backend> frobenius_context(input, arithmetic_context);
+        frobenius_scope.finish();
+        auto preparation_scope = arithmetic_context.template observe<stage::kaltofen_shoup_preparation>(
+            [&]() noexcept { return metadata {{{metric::degree_block_size, block_size}}}; });
+
         kaltofen_shoup_frobenius_precomputation<Backend> precomputation(block_size, frobenius_context,
                                                                         arithmetic_context);
+        preparation_scope.finish();
         polynomial_type giant_step = precomputation.baby_step(block_size);
         polynomial_type unclassified(std::move(input));
 
@@ -308,29 +389,54 @@ namespace nil::crypto3::math::detail {
             const std::size_t maximum_degree_to_test = (unclassified.size() - 1) / 2;
             const std::size_t degree_count = std::min(block_size, maximum_degree_to_test - first_factor_degree + 1);
 
+            auto block_scope = arithmetic_context.template observe<stage::degree_block>([&]() noexcept {
+                return metadata {{{metric::factor_degree, first_factor_degree},
+                                  {metric::degree_count, degree_count},
+                                  {metric::degree_block_size, block_size},
+                                  {metric::input_coefficients, unclassified.size()}}};
+            });
             polynomial_type coarse_block;
             kaltofen_shoup_coarse_block_factor(coarse_block, unclassified, giant_step, degree_count, precomputation,
                                                frobenius_context, arithmetic_context);
             if (coarse_block.size() > 1) {
+                auto removal_scope = arithmetic_context.template observe<stage::classified_factor_removal>(
+                    [&]() noexcept { return metadata {{}}; });
                 polynomial_type quotient;
                 factorization_exact_quotient(quotient, unclassified, coarse_block, arithmetic_context);
                 unclassified = std::move(quotient);
+                removal_scope.finish();
 
                 const std::size_t coarse_block_degree = coarse_block.size() - 1;
                 // Every irreducible factor in this block has degree at least first_factor_degree. If the block's total
                 // degree is less than twice that bound, it cannot contain two factors and is itself irreducible.
                 if (coarse_block_degree / 2 < first_factor_degree) {
                     output.push_back({std::move(coarse_block), coarse_block_degree});
-                    if (factor_callback(output.back()) == factorization_control::stop_factorization) {
+                    auto callback_scope = arithmetic_context.template observe<stage::degree_group_callback>(
+                        [&]() noexcept { return metadata {{{metric::factor_degree, coarse_block_degree}}}; });
+                    const auto callback_control = factor_callback(output.back());
+                    if (callback_control == factorization_control::stop_factorization) {
+                        callback_scope.callback_stop();
+                        block_scope.callback_stop();
+                        scope.callback_stop();
+                    }
+                    callback_scope.advance(1);
+                    callback_scope.finish();
+                    if (callback_control == factorization_control::stop_factorization) {
                         return factorization_control::stop_factorization;
                     }
                 } else if (kaltofen_shoup_split_coarse_block(output, std::move(coarse_block), giant_step,
                                                              first_factor_degree, degree_count, precomputation,
                                                              arithmetic_context, factor_callback) ==
                            factorization_control::stop_factorization) {
+                    block_scope.callback_stop();
+                    scope.callback_stop();
                     return factorization_control::stop_factorization;
                 }
             }
+
+            block_scope.advance(1);
+            block_scope.finish();
+            scope.advance();
 
             // Giant-step exponents remain aligned to fixed-size blocks, including when the final tested interval is
             // shorter than block_size.
@@ -343,7 +449,17 @@ namespace nil::crypto3::math::detail {
         if (unclassified.size() > 1) {
             const std::size_t irreducible_factor_degree = unclassified.size() - 1;
             output.push_back({std::move(unclassified), irreducible_factor_degree});
-            if (factor_callback(output.back()) == factorization_control::stop_factorization) {
+            auto callback_scope = arithmetic_context.template observe<stage::degree_group_callback>([&]() noexcept {
+                return metadata {{{metric::factor_degree, output.back().irreducible_factor_degree}}};
+            });
+            const auto callback_control = factor_callback(output.back());
+            if (callback_control == factorization_control::stop_factorization) {
+                callback_scope.callback_stop();
+                scope.callback_stop();
+            }
+            callback_scope.advance(1);
+            callback_scope.finish();
+            if (callback_control == factorization_control::stop_factorization) {
                 return factorization_control::stop_factorization;
             }
         }
@@ -366,13 +482,19 @@ namespace nil::crypto3::math {
      * @throws std::invalid_argument if a nonconstant input is not square-free.
      * @pre input is a nonempty coefficient polynomial.
      */
-    template<detail::SupportsDivrem Backend, typename FactorCallback>
+    template<detail::SupportsDivrem Backend, typename FactorCallback,
+             polynomial_arithmetic::PolynomialObserver Observer>
         requires detail::DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
     distinct_degree_factorization_result<typename Backend::polynomial_type>
         distinct_degree_factorization_kaltofen_shoup(
             const typename Backend::polynomial_type &input,
-            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
             FactorCallback &&factor_callback) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::distinct_degree_factorization>(
+            [&]() noexcept { return metadata {{{metric::input_coefficients, input.size()}}}; });
         using polynomial_type = typename Backend::polynomial_type;
         using result_type = distinct_degree_factorization_result<polynomial_type>;
 
@@ -388,16 +510,19 @@ namespace nil::crypto3::math {
                                                             arithmetic_context, factor_callback) ==
             factorization_control::stop_factorization) {
             result.complete = false;
+            scope.callback_stop();
         }
+        scope.set_result_metadata(
+            [&]() noexcept { return metadata {{{metric::factor_count, result.factors.size()}}}; });
         return result;
     }
 
     /** Compute the complete Kaltofen-Shoup distinct-degree factorization without a staged callback. */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     distinct_degree_factorization_result<typename Backend::polynomial_type>
         distinct_degree_factorization_kaltofen_shoup(
             const typename Backend::polynomial_type &input,
-            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+            polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         using factor_type = distinct_degree_factor<typename Backend::polynomial_type>;
         return distinct_degree_factorization_kaltofen_shoup<Backend>(
             input, arithmetic_context,

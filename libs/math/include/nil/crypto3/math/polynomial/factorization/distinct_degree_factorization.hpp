@@ -78,12 +78,18 @@ namespace nil::crypto3::math {
      * @throws std::invalid_argument if a nonconstant input is not square-free.
      * @pre input is a nonempty coefficient polynomial.
      */
-    template<detail::SupportsDivrem Backend, typename FactorCallback>
+    template<detail::SupportsDivrem Backend, typename FactorCallback,
+             polynomial_arithmetic::PolynomialObserver Observer>
         requires detail::DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
-    distinct_degree_factorization_result<typename Backend::polynomial_type>
-        distinct_degree_factorization_reference(const typename Backend::polynomial_type &input,
-                                                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
-                                                FactorCallback &&factor_callback) {
+    distinct_degree_factorization_result<typename Backend::polynomial_type> distinct_degree_factorization_reference(
+        const typename Backend::polynomial_type &input,
+        polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context,
+        FactorCallback &&factor_callback) {
+        using stage = polynomial_arithmetic::polynomial_stage;
+        using metric = polynomial_arithmetic::polynomial_metric;
+        using metadata = polynomial_arithmetic::polynomial_metadata;
+        auto scope = arithmetic_context.template observe<stage::distinct_degree_reference>(
+            [&]() noexcept { return metadata {{{metric::input_coefficients, input.size()}}}; });
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
         using result_type = distinct_degree_factorization_result<polynomial_type>;
@@ -97,7 +103,10 @@ namespace nil::crypto3::math {
 
         const polynomial_type x = {value_type {}, value_type::one()};
         polynomial_type frobenius_power(x);
+        auto frobenius_scope = arithmetic_context.template observe<stage::frobenius_preparation>(
+            [&]() noexcept { return metadata {{{metric::input_coefficients, monic_input.size()}}}; });
         polynomial_frobenius_context<Backend> frobenius_context(monic_input, arithmetic_context);
+        frobenius_scope.finish();
         polynomial_type remaining(std::move(monic_input));
 
         std::size_t irreducible_factor_degree = 1;
@@ -112,23 +121,46 @@ namespace nil::crypto3::math {
             gcd(factor, remaining, frobenius_difference, arithmetic_context);
             if (factor.size() > 1) {
                 result.factors.push_back({std::move(factor), irreducible_factor_degree});
-                if (factor_callback(result.factors.back()) == factorization_control::stop_factorization) {
+                auto callback_scope = arithmetic_context.template observe<stage::degree_group_callback>([&]() noexcept {
+                    return metadata {{{metric::factor_degree, result.factors.back().irreducible_factor_degree}}};
+                });
+                const auto callback_control = factor_callback(result.factors.back());
+                if (callback_control == factorization_control::stop_factorization) {
+                    callback_scope.callback_stop();
+                    scope.callback_stop();
+                }
+                callback_scope.advance(1);
+                callback_scope.finish();
+                if (callback_control == factorization_control::stop_factorization) {
                     result.complete = false;
                     return result;
                 }
 
+                auto removal_scope = arithmetic_context.template observe<stage::classified_factor_removal>(
+                    [&]() noexcept { return metadata {{}}; });
                 polynomial_type quotient;
                 detail::factorization_exact_quotient(quotient, remaining, result.factors.back().polynomial,
                                                      arithmetic_context);
                 remaining = std::move(quotient);
             }
+            scope.advance();
             ++irreducible_factor_degree;
         }
 
         if (remaining.size() > 1) {
             const std::size_t remaining_degree = remaining.size() - 1;
             result.factors.push_back({std::move(remaining), remaining_degree});
-            if (factor_callback(result.factors.back()) == factorization_control::stop_factorization) {
+            auto callback_scope = arithmetic_context.template observe<stage::degree_group_callback>([&]() noexcept {
+                return metadata {{{metric::factor_degree, result.factors.back().irreducible_factor_degree}}};
+            });
+            const auto callback_control = factor_callback(result.factors.back());
+            if (callback_control == factorization_control::stop_factorization) {
+                callback_scope.callback_stop();
+                scope.callback_stop();
+            }
+            callback_scope.advance(1);
+            callback_scope.finish();
+            if (callback_control == factorization_control::stop_factorization) {
                 result.complete = false;
             }
         }
@@ -137,10 +169,10 @@ namespace nil::crypto3::math {
     }
 
     /** Compute the complete reference distinct-degree factorization without a staged callback. */
-    template<detail::SupportsDivrem Backend>
+    template<detail::SupportsDivrem Backend, polynomial_arithmetic::PolynomialObserver Observer>
     distinct_degree_factorization_result<typename Backend::polynomial_type> distinct_degree_factorization_reference(
         const typename Backend::polynomial_type &input,
-        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        polynomial_arithmetic::polynomial_context<Backend, Observer> &arithmetic_context) {
         using factor_type = distinct_degree_factor<typename Backend::polynomial_type>;
         return distinct_degree_factorization_reference<Backend>(input, arithmetic_context, [](const factor_type &) {
             return factorization_control::continue_factorization;

@@ -49,6 +49,11 @@ namespace nil::crypto3::math::polynomial_arithmetic {
      * For multiply, square and multiply_low, the configured transform must contain the complete product of the
      * coefficients used by the operation. multiply_low discards input coefficients that cannot
      * affect the requested low coefficients before computing that product.
+     *
+     * Optional observer overloads emit phases beneath the operation scope supplied by polynomial_context. They
+     * borrow the observer only during the call and execute the same implementation as the original entry points.
+     * FFT scopes include their buffer preparation; inverse FFT scopes also include normalization. Exclusive time
+     * subtracts these child scopes. Prepared spectra and plan/workspace ownership are independent of observation.
      */
     template<typename RootFieldType, typename ValueType = typename RootFieldType::value_type>
     class mixed_radix_backend {
@@ -63,16 +68,16 @@ namespace nil::crypto3::math::polynomial_arithmetic {
          */
         class prepared_low_product_type {
         public:
-            std::size_t coefficient_count() const {
+            std::size_t coefficient_count() const noexcept {
                 return coefficient_count_;
             }
 
             // Zero means the requested fixed prefix is zero, so no transform was needed.
-            std::size_t transform_size() const {
+            std::size_t transform_size() const noexcept {
                 return spectrum_.size();
             }
 
-            std::size_t storage_bytes() const {
+            std::size_t storage_bytes() const noexcept {
                 return spectrum_.capacity() * sizeof(value_type);
             }
 
@@ -95,15 +100,15 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // This preparation is separate from multiply_low, whose modulus is a power of X.
         class prepared_cyclic_remainder_type {
         public:
-            std::size_t divisor_degree() const {
+            std::size_t divisor_degree() const noexcept {
                 return divisor_degree_;
             }
 
-            std::size_t transform_size() const {
+            std::size_t transform_size() const noexcept {
                 return spectrum_.size();
             }
 
-            std::size_t storage_bytes() const {
+            std::size_t storage_bytes() const noexcept {
                 return spectrum_.capacity() * sizeof(value_type);
             }
 
@@ -130,16 +135,29 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         }
 
         void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) {
+            no_polynomial_observer observer;
+            multiply(output, left, right, observer);
+        }
+
+        template<PolynomialObserver Observer>
+        void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
+                      Observer &observer) {
             if (math::is_zero(left) || math::is_zero(right)) {
                 set_zero(output);
                 return;
             }
 
             const std::size_t result_size = left.size() + right.size() - 1;
-            multiply_prefixes(output, left, left.size(), right, right.size(), result_size);
+            multiply_prefixes(output, left, left.size(), right, right.size(), result_size, observer);
         }
 
         void square(polynomial_type &output, const polynomial_type &input) {
+            no_polynomial_observer observer;
+            square(output, input, observer);
+        }
+
+        template<PolynomialObserver Observer>
+        void square(polynomial_type &output, const polynomial_type &input, Observer &observer) {
             if (math::is_zero(input)) {
                 set_zero(output);
                 return;
@@ -148,17 +166,33 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             const std::size_t result_size = 2 * input.size() - 1;
             const mixed_radix_fft_plan<RootFieldType> &plan = plan_for(result_size);
 
+            auto buffers = observe_polynomial<polynomial_stage::buffer_preparation>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::input_coefficients, input.size()},
+                                             {polynomial_metric::transform_length, plan.size()}}};
+            });
             polynomial_type transformed = input;
-            plan.fft(transformed.get_storage(), workspace_);
+            buffers.finish();
+            plan.fft(transformed.get_storage(), workspace_, observer);
+            auto pointwise = observe_polynomial<polynomial_stage::pointwise_square>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::transform_length, plan.size()}}};
+            });
             for (value_type &value : transformed) {
                 value = value * value;
             }
 
-            finish_transform(output, transformed, result_size, plan);
+            pointwise.finish();
+            finish_transform(output, transformed, result_size, plan, observer);
         }
 
         void multiply_low(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
                           std::size_t coefficient_count) {
+            no_polynomial_observer observer;
+            multiply_low(output, left, right, coefficient_count, observer);
+        }
+
+        template<PolynomialObserver Observer>
+        void multiply_low(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
+                          std::size_t coefficient_count, Observer &observer) {
             if (coefficient_count == 0) {
                 set_zero(output);
                 return;
@@ -174,7 +208,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
 
             const std::size_t prefix_product_size = left_size + right_size - 1;
             const std::size_t result_size = std::min(coefficient_count, prefix_product_size);
-            multiply_prefixes(output, left, left_size, right, right_size, result_size);
+            multiply_prefixes(output, left, left_size, right, right_size, result_size, observer);
         }
 
         /**
@@ -188,6 +222,14 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         std::optional<prepared_low_product_type> prepare_low_product(const polynomial_type &fixed,
                                                                      std::size_t variable_coefficient_count,
                                                                      std::size_t coefficient_count) {
+            no_polynomial_observer observer;
+            return prepare_low_product(fixed, variable_coefficient_count, coefficient_count, observer);
+        }
+
+        template<PolynomialObserver Observer>
+        std::optional<prepared_low_product_type>
+            prepare_low_product(const polynomial_type &fixed, std::size_t variable_coefficient_count,
+                                std::size_t coefficient_count, Observer &observer) {
             const std::size_t prefix_size = std::min(fixed.size(), coefficient_count);
             if (coefficient_count == 0) {
                 return prepared_low_product_type(coefficient_count, prefix_size, true);
@@ -207,9 +249,14 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 return std::nullopt;
             }
 
+            auto buffers = observe_polynomial<polynomial_stage::buffer_preparation>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::input_coefficients, prefix_size},
+                                             {polynomial_metric::transform_length, plan->size()}}};
+            });
             std::vector<value_type> spectrum(fixed.begin(), fixed.begin() + prefix_size);
-            plan->fft(spectrum, workspace_);
-            compact_spectrum(spectrum);
+            buffers.finish();
+            plan->fft(spectrum, workspace_, observer);
+            compact_spectrum(spectrum, observer);
             return prepared_low_product_type(coefficient_count, prefix_size, false, std::move(spectrum));
         }
 
@@ -225,6 +272,14 @@ namespace nil::crypto3::math::polynomial_arithmetic {
          */
         bool try_multiply_low_prepared(polynomial_type &output, const polynomial_type &left,
                                        const prepared_low_product_type &prepared, std::size_t coefficient_count) {
+            no_polynomial_observer observer;
+            return try_multiply_low_prepared(output, left, prepared, coefficient_count, observer);
+        }
+
+        template<PolynomialObserver Observer>
+        bool try_multiply_low_prepared(polynomial_type &output, const polynomial_type &left,
+                                       const prepared_low_product_type &prepared, std::size_t coefficient_count,
+                                       Observer &observer) {
             if (coefficient_count != prepared.coefficient_count_) {
                 return false;
             }
@@ -250,9 +305,15 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 return false;
             }
 
+            auto buffers = observe_polynomial<polynomial_stage::buffer_preparation>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::input_coefficients, left_size},
+                                             {polynomial_metric::transform_length, plan->size()}}};
+            });
             polynomial_type transformed(left.begin(), left.begin() + left_size);
-            plan->fft(transformed.get_storage(), workspace_);
-            finish_product(output, transformed, prepared.spectrum_, std::min(coefficient_count, product_size), *plan);
+            buffers.finish();
+            plan->fft(transformed.get_storage(), workspace_, observer);
+            finish_product(output, transformed, prepared.spectrum_, std::min(coefficient_count, product_size), *plan,
+                           observer);
             return true;
         }
 
@@ -267,6 +328,14 @@ namespace nil::crypto3::math::polynomial_arithmetic {
          */
         std::optional<prepared_cyclic_remainder_type> prepare_cyclic_remainder(const polynomial_type &divisor,
                                                                                std::size_t quotient_coefficient_count) {
+            no_polynomial_observer observer;
+            return prepare_cyclic_remainder(divisor, quotient_coefficient_count, observer);
+        }
+
+        template<PolynomialObserver Observer>
+        std::optional<prepared_cyclic_remainder_type> prepare_cyclic_remainder(const polynomial_type &divisor,
+                                                                               std::size_t quotient_coefficient_count,
+                                                                               Observer &observer) {
             const std::size_t n = divisor.size() - 1;
             if (n < 2 || math::is_zero(divisor.begin(), divisor.begin() + n)) {
                 // A constant/linear divisor has no nontrivial reduced product to accelerate. For a monomial
@@ -278,9 +347,9 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 return std::nullopt;
             }
             std::vector<value_type> spectrum;
-            fold_coefficients(spectrum, divisor, plan->size());
-            plan->fft(spectrum, workspace_);
-            compact_spectrum(spectrum);
+            fold_coefficients(spectrum, divisor, plan->size(), observer);
+            plan->fft(spectrum, workspace_, observer);
+            compact_spectrum(spectrum, observer);
             return prepared_cyclic_remainder_type(n, std::move(spectrum));
         }
 
@@ -296,6 +365,14 @@ namespace nil::crypto3::math::polynomial_arithmetic {
          */
         bool try_cyclic_remainder(polynomial_type &output, const polynomial_type &dividend,
                                   const polynomial_type &quotient, const prepared_cyclic_remainder_type &prepared) {
+            no_polynomial_observer observer;
+            return try_cyclic_remainder(output, dividend, quotient, prepared, observer);
+        }
+
+        template<PolynomialObserver Observer>
+        bool try_cyclic_remainder(polynomial_type &output, const polynomial_type &dividend,
+                                  const polynomial_type &quotient, const prepared_cyclic_remainder_type &prepared,
+                                  Observer &observer) {
             const std::size_t n = prepared.divisor_degree_;
             if (prepared.spectrum_.empty() || dividend.size() <= n || dividend.size() - n > n - 1 ||
                 quotient.size() != dividend.size() - n) {
@@ -306,17 +383,30 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 return false;
             }
 
+            auto buffers = observe_polynomial<polynomial_stage::buffer_preparation>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::transform_length, plan->size()}}};
+            });
             polynomial_type transformed, product, result;
-            fold_coefficients(transformed.get_storage(), quotient, plan->size());
-            plan->fft(transformed.get_storage(), workspace_);
-            finish_product(product, transformed, prepared.spectrum_, plan->size(), *plan);
+            buffers.finish();
+            fold_coefficients(transformed.get_storage(), quotient, plan->size(), observer);
+            plan->fft(transformed.get_storage(), workspace_, observer);
+            finish_product(product, transformed, prepared.spectrum_, plan->size(), *plan, observer);
 
             // dividend is V and product holds cyclic Q*H. Folding V is essential: its wrapped coefficients
             // cancel those of Q*H. Keep all M cells of the difference, including the tail from n through M - 1.
-            fold_coefficients(result.get_storage(), dividend, plan->size());
+            fold_coefficients(result.get_storage(), dividend, plan->size(), observer);
+            auto subtraction_scope =
+                observe_polynomial<polynomial_stage::coefficient_subtraction>(observer, [&]() noexcept {
+                    return polynomial_metadata {{{polynomial_metric::transform_length, plan->size()},
+                                                 {polynomial_metric::input_coefficients, product.size()}}};
+                });
             for (std::size_t i = 0; i < product.size(); ++i) {
                 result[i] -= product[i];
             }
+            subtraction_scope.finish();
+            auto finalization = observe_polynomial<polynomial_stage::output_finalization>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::transform_length, plan->size()}}};
+            });
             // Condense rather than truncate to n: an incorrect uncancelled tail must remain observable in tests.
             math::condense(result);
             output = std::move(result);
@@ -324,7 +414,11 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         }
 
     private:
-        static void compact_spectrum(std::vector<value_type> &spectrum) {
+        template<PolynomialObserver Observer>
+        static void compact_spectrum(std::vector<value_type> &spectrum, Observer &observer) {
+            auto scope = observe_polynomial<polynomial_stage::spectrum_compaction>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::transform_length, spectrum.size()}}};
+            });
             // FFT exchanges buffers with workspace_. A preceding larger transform can therefore leave this
             // smaller spectrum with a large allocation. Detach that excess capacity once during preparation.
             if (spectrum.capacity() > spectrum.size()) {
@@ -332,8 +426,13 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
         }
 
-        static void fold_coefficients(std::vector<value_type> &output, const polynomial_type &input,
-                                      std::size_t length) {
+        template<PolynomialObserver Observer>
+        static void fold_coefficients(std::vector<value_type> &output, const polynomial_type &input, std::size_t length,
+                                      Observer &observer) {
+            auto scope = observe_polynomial<polynomial_stage::cyclic_folding>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::input_coefficients, input.size()},
+                                             {polynomial_metric::transform_length, length}}};
+            });
             output.assign(length, value_type::zero());
             for (std::size_t i = 0; i < input.size(); ++i) {
                 output[i % length] += input[i];
@@ -402,31 +501,49 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             return short_plan && linear_plan && short_plan->size() < linear_plan->size() ? short_plan : nullptr;
         }
 
+        template<PolynomialObserver Observer>
         void multiply_prefixes(polynomial_type &output, const polynomial_type &left, std::size_t left_size,
-                               const polynomial_type &right, std::size_t right_size, std::size_t result_size) {
+                               const polynomial_type &right, std::size_t right_size, std::size_t result_size,
+                               Observer &observer) {
             const mixed_radix_fft_plan<RootFieldType> &plan = plan_for(left_size + right_size - 1);
 
+            auto buffers = observe_polynomial<polynomial_stage::buffer_preparation>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::input_coefficients, left_size},
+                                             {polynomial_metric::second_input_coefficients, right_size},
+                                             {polynomial_metric::transform_length, plan.size()}}};
+            });
             polynomial_type transformed_left(left.begin(), left.begin() + left_size);
             polynomial_type transformed_right(right.begin(), right.begin() + right_size);
-            plan.fft(transformed_left.get_storage(), workspace_);
-            plan.fft(transformed_right.get_storage(), workspace_);
+            buffers.finish();
+            plan.fft(transformed_left.get_storage(), workspace_, observer);
+            plan.fft(transformed_right.get_storage(), workspace_, observer);
 
-            finish_product(output, transformed_left, transformed_right.get_storage(), result_size, plan);
+            finish_product(output, transformed_left, transformed_right.get_storage(), result_size, plan, observer);
         }
 
+        template<PolynomialObserver Observer>
         void finish_product(polynomial_type &output, polynomial_type &transformed_left,
                             const std::vector<value_type> &transformed_right, std::size_t result_size,
-                            const mixed_radix_fft_plan<RootFieldType> &plan) {
+                            const mixed_radix_fft_plan<RootFieldType> &plan, Observer &observer) {
+            auto pointwise = observe_polynomial<polynomial_stage::pointwise_multiply>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::transform_length, plan.size()}}};
+            });
             for (std::size_t i = 0; i < plan.size(); ++i) {
                 transformed_left[i] = transformed_left[i] * transformed_right[i];
             }
 
-            finish_transform(output, transformed_left, result_size, plan);
+            pointwise.finish();
+            finish_transform(output, transformed_left, result_size, plan, observer);
         }
 
+        template<PolynomialObserver Observer>
         void finish_transform(polynomial_type &output, polynomial_type &transformed, std::size_t result_size,
-                              const mixed_radix_fft_plan<RootFieldType> &plan) {
-            plan.inverse_fft(transformed.get_storage(), workspace_);
+                              const mixed_radix_fft_plan<RootFieldType> &plan, Observer &observer) {
+            plan.inverse_fft(transformed.get_storage(), workspace_, observer);
+            auto scope = observe_polynomial<polynomial_stage::output_finalization>(observer, [&]() noexcept {
+                return polynomial_metadata {{{polynomial_metric::transform_length, plan.size()},
+                                             {polynomial_metric::output_coefficients, result_size}}};
+            });
             math::truncate(transformed, result_size);
             output = std::move(transformed);
         }
