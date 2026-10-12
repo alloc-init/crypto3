@@ -27,6 +27,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 #include <boost/test/unit_test.hpp>
 
@@ -50,6 +53,30 @@ namespace {
     using fq12_value_type = fq12_field_type::value_type;
     using backend_type = polynomial_arithmetic::schoolbook_backend<value_type>;
     using polynomial_type = typename backend_type::polynomial_type;
+
+    // Count backend calls without replacing any arithmetic, as in the exponentiation tests.
+    struct counting_schoolbook_backend : backend_type {
+        explicit counting_schoolbook_backend(std::size_t &calls) : calls(calls) {
+        }
+
+        void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) const {
+            ++calls;
+            backend_type::multiply(output, left, right);
+        }
+
+        void square(polynomial_type &output, const polynomial_type &input) const {
+            ++calls;
+            backend_type::square(output, input);
+        }
+
+        void multiply_low(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
+                          std::size_t coefficient_count) const {
+            ++calls;
+            backend_type::multiply_low(output, left, right, coefficient_count);
+        }
+
+        std::size_t &calls;
+    };
 
     fq12_value_type fq12_value(std::size_t first_coordinate) {
         fq12_value_type value = fq12_value_type::zero();
@@ -143,6 +170,129 @@ BOOST_AUTO_TEST_CASE(staged_complete_factorization_stops_after_the_reported_fact
     BOOST_REQUIRE_EQUAL(result.factors.size(), 1);
     BOOST_CHECK_EQUAL(result.factors.front().polynomial.degree(), 1);
     BOOST_CHECK_EQUAL(result.factors.front().multiplicity, 1);
+}
+
+BOOST_AUTO_TEST_CASE(irreducible_callback_runs_before_later_degree_group_work) {
+    backend_type backend;
+    const polynomial_type linear = {value_type(1), value_type::one()};
+    // Three is neither a square nor a cube in BN254 Fq, so these have degrees two and three irreducibly.
+    const polynomial_type quadratic = {-value_type(3), value_type::zero(), value_type::one()};
+    const polynomial_type cubic = {-value_type(3), value_type::zero(), value_type::zero(), value_type::one()};
+    const auto input = multiply(backend, multiply(backend, linear, quadratic), cubic);
+
+    polynomial_arithmetic::polynomial_context_options options;
+    // Include division work in the backend count, even for this small fixture.
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    std::size_t prefix_calls = 0;
+    polynomial_arithmetic::polynomial_context<counting_schoolbook_backend> prefix_context(
+        counting_schoolbook_backend(prefix_calls), options);
+    auto square_free = math::square_free_factorization<counting_schoolbook_backend>(input, prefix_context);
+    BOOST_REQUIRE_EQUAL(square_free.factors.size(), 1);
+    std::vector<math::distinct_degree_factor<polynomial_type>> groups;
+    const auto control = math::detail::kaltofen_shoup_factor_monic_square_free(
+        groups, std::move(square_free.factors.front().polynomial),
+        math::detail::kaltofen_shoup_block_size(input.degree()), prefix_context, [&](const auto &group) {
+            BOOST_CHECK(group.polynomial == linear);
+            return math::factorization_control::stop_factorization;
+        });
+    BOOST_REQUIRE(control == math::factorization_control::stop_factorization);
+    BOOST_REQUIRE_EQUAL(groups.size(), 1);
+    BOOST_REQUIRE_GT(prefix_calls, 0);
+
+    // This first degree group is already irreducible: delivering its factor requires no further backend calls
+    // or random coefficients. Returning or throwing from the callback must both avoid all later degree-group work.
+    for (bool throw_from_callback : {false, true}) {
+        std::size_t calls = 0, callback_count = 0;
+        polynomial_arithmetic::polynomial_context<counting_schoolbook_backend> context(
+            counting_schoolbook_backend(calls), options);
+        auto generator = []() -> value_type { throw std::logic_error("unexpected random coefficient request"); };
+        auto callback = [&](const math::polynomial_factor<polynomial_type> &factor) {
+            ++callback_count;
+            BOOST_CHECK(factor.polynomial == linear);
+            BOOST_CHECK_EQUAL(factor.multiplicity, 1);
+            BOOST_CHECK_EQUAL(calls, prefix_calls);
+            if (throw_from_callback)
+                throw std::runtime_error("factor callback failure");
+            return math::factorization_control::stop_factorization;
+        };
+        if (throw_from_callback) {
+            BOOST_CHECK_EXCEPTION(
+                math::complete_factorization<counting_schoolbook_backend>(input, context, generator, callback),
+                std::runtime_error,
+                [](const auto &error) { return std::string(error.what()) == "factor callback failure"; });
+        } else {
+            const auto result =
+                math::complete_factorization<counting_schoolbook_backend>(input, context, generator, callback);
+            BOOST_CHECK(!result.complete);
+            BOOST_REQUIRE_EQUAL(result.factors.size(), 1);
+            BOOST_CHECK(result.factors.front().polynomial == linear);
+        }
+        BOOST_CHECK_EQUAL(callback_count, 1);
+        BOOST_CHECK_EQUAL(calls, prefix_calls);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(incremental_groups_preserve_factor_order_multiplicities_and_shared_generator_order) {
+    backend_type backend;
+    const polynomial_type first_linear = {value_type(1), value_type::one()};
+    const polynomial_type second_linear = {value_type(2), value_type::one()};
+    const polynomial_type first_quadratic = {-value_type(3), value_type::zero(), value_type::one()};
+    // Multiplying the nonsquare 3 by the square 4 gives another nonsquare, so X^2 - 12 is irreducible too.
+    const polynomial_type second_quadratic = {-value_type(12), value_type::zero(), value_type::one()};
+    const polynomial_type cubic = {-value_type(3), value_type::zero(), value_type::zero(), value_type::one()};
+    const polynomial_type repeated_linear = {value_type(4), value_type::one()};
+    const std::vector<math::polynomial_factor<polynomial_type>> expected = {
+        {second_linear, 1},   {first_linear, 1}, {second_quadratic, 1},
+        {first_quadratic, 1}, {cubic, 1},        {repeated_linear, 3}};
+    math::polynomial_factorization_result<polynomial_type> expected_result;
+    expected_result.leading_coefficient = value_type(11);
+    expected_result.factors = expected;
+    const auto input = reconstruct(backend, expected_result);
+
+    // Feed each splitter one exact proper factor, padded to the sampled coefficient count. The existing worklist
+    // emits the complementary factor first. Interspersed 101..106 values are consumed by callbacks, modeling callers
+    // such as norm recovery that share their generator with factorization.
+    const std::array coefficients = {value_type(1),   value_type(1),   value_type(101), value_type(102),
+                                     -value_type(3),  value_type(0),   value_type(1),   value_type(0),
+                                     value_type(103), value_type(104), value_type(105), value_type(106)};
+    const std::array<std::size_t, 6> consumed_at_factor = {3, 4, 9, 10, 11, 12};
+    for (std::size_t stop_after = 0; stop_after <= expected.size(); ++stop_after) {
+        polynomial_arithmetic::polynomial_context<backend_type> context;
+        std::size_t next_coefficient = 0;
+        auto generator = [&] { return coefficients.at(next_coefficient++); };
+        std::vector<math::polynomial_factor<polynomial_type>> reported;
+        const auto result =
+            math::complete_factorization<backend_type>(input, context, generator, [&](const auto &factor) {
+                reported.push_back(factor);
+                BOOST_CHECK(generator() == value_type(100 + reported.size()));
+                return reported.size() == stop_after ? math::factorization_control::stop_factorization :
+                                                       math::factorization_control::continue_factorization;
+            });
+        const auto count = stop_after ? stop_after : expected.size();
+        BOOST_REQUIRE_EQUAL(result.factors.size(), count);
+        BOOST_CHECK(result.factors == reported);
+        for (std::size_t i = 0; i < count; ++i)
+            BOOST_CHECK(result.factors[i] == expected[i]);
+        BOOST_CHECK(result.leading_coefficient == expected_result.leading_coefficient);
+        BOOST_CHECK_EQUAL(result.complete, stop_after == 0);
+        BOOST_CHECK_EQUAL(next_coefficient, consumed_at_factor[count - 1]);
+        if (result.complete)
+            BOOST_CHECK(reconstruct(backend, result) == input);
+    }
+
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    auto throwing_generator = []() -> value_type { throw std::runtime_error("coefficient generator failure"); };
+    std::size_t callback_count = 0;
+    BOOST_CHECK_EXCEPTION(
+        math::complete_factorization<backend_type>(input, context, throwing_generator,
+                                                   [&](const auto &) {
+                                                       ++callback_count;
+                                                       return math::factorization_control::continue_factorization;
+                                                   }),
+        std::runtime_error,
+        [](const auto &error) { return std::string(error.what()) == "coefficient generator failure"; });
+    BOOST_CHECK_EQUAL(callback_count, 0);
 }
 
 BOOST_AUTO_TEST_CASE(zero_and_constant_inputs_preserve_their_scalar_values) {

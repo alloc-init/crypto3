@@ -51,9 +51,11 @@ namespace nil::crypto3::math {
      * generator is shared by all Cantor-Zassenhaus groups and must return independent uniformly distributed
      * coefficient-field elements.
      *
-     * After each irreducible factor is appended to the result, factor_callback may request an early stop. A stopped
-     * result includes that factor and has complete set to false. Zero and constant inputs produce no factors and
-     * preserve their scalar value as leading_coefficient.
+     * Each distinct-degree group is split as soon as it is discovered, before searching for later groups. After each
+     * irreducible factor is appended to the result, factor_callback may request an early stop. This stops both group
+     * splitting and distinct-degree discovery; the result includes that factor and has complete set to false. The
+     * Kaltofen-Shoup baby table for a nonlinear square-free part is still constructed before its first group is
+     * discovered. Zero and constant inputs produce no factors and preserve their scalar value as leading_coefficient.
      *
      * @throws std::invalid_argument under the restrictions documented by the component stages, including when the
      * coefficient-field characteristic is not greater than the input degree or is two.
@@ -77,22 +79,23 @@ namespace nil::crypto3::math {
             const std::size_t block_size = detail::kaltofen_shoup_block_size(square_free_factor.polynomial.size() - 1);
 
             std::vector<distinct_degree_factor<polynomial_type>> degree_groups;
-            detail::kaltofen_shoup_factor_monic_square_free(degree_groups, std::move(square_free_factor.polynomial),
-                                                            block_size, arithmetic_context,
-                                                            [](const distinct_degree_factor<polynomial_type> &) {
-                                                                return factorization_control::continue_factorization;
-                                                            });
-
-            for (auto &degree_group : degree_groups) {
-                const factorization_control control = detail::factor_distinct_degree_group<Backend>(
-                    std::move(degree_group), arithmetic_context, generator, [&](polynomial_type &&factor) {
-                        result.factors.push_back({std::move(factor), multiplicity});
-                        return factor_callback(result.factors.back());
-                    });
-                if (control == factorization_control::stop_factorization) {
-                    result.complete = false;
-                    return result;
-                }
+            const auto control = detail::kaltofen_shoup_factor_monic_square_free(
+                degree_groups, std::move(square_free_factor.polynomial), block_size, arithmetic_context,
+                [&](const distinct_degree_factor<polynomial_type> &degree_group) {
+                    // Split each newly discovered degree group now and report its irreducible factors immediately.
+                    // This lets the caller stop before Kaltofen-Shoup searches for later degree groups.
+                    // The splitter takes its group by value, so passing degree_group intentionally copies it.
+                    // Splitting consumes that copy; Kaltofen-Shoup still needs the original polynomial for exact
+                    // division if this callback continues.
+                    return detail::factor_distinct_degree_group<Backend>(
+                        degree_group, arithmetic_context, generator, [&](polynomial_type &&factor) {
+                            result.factors.push_back({std::move(factor), multiplicity});
+                            return factor_callback(result.factors.back());
+                        });
+                });
+            if (control == factorization_control::stop_factorization) {
+                result.complete = false;
+                return result;
             }
         }
         return result;

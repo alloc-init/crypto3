@@ -114,6 +114,18 @@ The factor that triggers the stop is included in `result.factors`, and `result.c
 `complete == true`. Square-free and distinct-degree factorization also expose staged callbacks, allowing a caller to
 stop at the earliest useful stage rather than computing a complete irreducible factorization.
 
+Complete factorization splits each distinct-degree group and invokes its irreducible-factor callbacks as soon as the
+group is discovered. A callback stop also stops distinct-degree discovery, so later groups and square-free parts are
+not processed. Factors retain their square-free multiplicities and the same group/splitting order. The shared
+generator is consumed in the same order, including when callbacks use it, and callback or generator exceptions
+propagate to the caller.
+
+For each nonlinear square-free part, Kaltofen-Shoup still prepares the initial Frobenius power and full baby-step
+table before discovering groups. Early callbacks therefore save subsequent work, not that initial preparation.
+Splitting and callback work run while the distinct-degree precomputation remains alive, which can increase peak
+memory. Splitting copies the emitted group because distinct-degree refinement still needs its stored polynomial
+after the callback returns.
+
 ## Preconditions and current restrictions
 
 * Inputs are nonempty coefficient polynomials. Algorithms canonicalize trailing zero coefficients and return monic
