@@ -54,8 +54,9 @@ namespace nil::crypto3::math {
      * Each distinct-degree group is split as soon as it is discovered, before searching for later groups. After each
      * irreducible factor is appended to the result, factor_callback may request an early stop. This stops both group
      * splitting and distinct-degree discovery; the result includes that factor and has complete set to false. The
-     * Kaltofen-Shoup baby table for a nonlinear square-free part is still constructed before its first group is
-     * discovered. Zero and constant inputs produce no factors and preserve their scalar value as leading_coefficient.
+     * default path constructs the Kaltofen-Shoup baby table before discovering groups. Configured small-degree
+     * screening can deliver factors before that table is built. Zero and constant inputs produce no factors and
+     * preserve their scalar value as leading_coefficient.
      *
      * @throws std::invalid_argument under the restrictions documented by the component stages, including when the
      * coefficient-field characteristic is not greater than the input degree or is two.

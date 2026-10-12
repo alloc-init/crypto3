@@ -444,4 +444,39 @@ BOOST_AUTO_TEST_CASE(high_level_recovery_supports_bn254_fq12_with_the_mixed_radi
     check_bn254_fq12_high_level_recovery(arithmetic_context, 0xF0125102);
 }
 
+BOOST_AUTO_TEST_CASE(screening_preserves_even_multiplicities_and_rejects_odd_obstructions) {
+    polynomial_arithmetic::polynomial_context<backend_type> preparation;
+    const auto non_residue = first_quadratic_non_residue();
+    const auto other_non_residue = next_quadratic_non_residue(non_residue);
+    const polynomial_type first = {-non_residue, value_type::one()};
+    const polynomial_type second = {-other_non_residue, value_type::one()};
+    const auto unsuitable_group = context_multiply<backend_type>(first, second, preparation);
+    const auto good_quadratic = representable_irreducible_quadratic();
+    const auto rejected_input = context_multiply<backend_type>(unsuitable_group, good_quadratic, preparation);
+    polynomial_type even_power;
+    preparation.square(even_power, unsuitable_group);
+    auto suitable_input = context_multiply<backend_type>(even_power, good_quadratic, preparation);
+    suitable_input = context_multiply<backend_type>(
+        suitable_input, polynomial_type {value_type::zero(), value_type::one()}, preparation);
+
+    // The product of two unsuitable linear factors passes the scalar filters. They must be classified individually;
+    // their even powers remain admissible, including when combined with the zero-root factor X.
+    BOOST_REQUIRE(rejected_input[0].is_square());
+    BOOST_REQUIRE(rejected_input.back().is_square());
+    for (std::size_t limit : {0, 1, 2, 100}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.distinct_degree_screening_limit = limit;
+        polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+        boost::random::mt19937 rng(0x584E3001);
+        auto generator = [&] { return nil::crypto3::algebra::random_element<field_type>(rng); };
+        const auto rejected =
+            math::recover_polynomial_x_norm_representation<backend_type>(rejected_input, context, generator);
+        BOOST_CHECK(!rejected.has_value());
+        const auto recovered =
+            math::recover_polynomial_x_norm_representation<backend_type>(suitable_input, context, generator);
+        BOOST_REQUIRE(recovered.has_value());
+        BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*recovered, context) == suitable_input);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()

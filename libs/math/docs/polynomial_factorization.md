@@ -120,11 +120,33 @@ not processed. Factors retain their square-free multiplicities and the same grou
 generator is consumed in the same order, including when callbacks use it, and callback or generator exceptions
 propagate to the caller.
 
-For each nonlinear square-free part, Kaltofen-Shoup still prepares the initial Frobenius power and full baby-step
-table before discovering groups. Early callbacks therefore save subsequent work, not that initial preparation.
-Splitting and callback work run while the distinct-degree precomputation remains alive, which can increase peak
-memory. Splitting copies the emitted group because distinct-degree refinement still needs its stored polynomial
-after the callback returns.
+By default, each nonlinear square-free part prepares the initial Frobenius power and full baby-step table before
+discovering groups. To screen small degrees first, set a numeric limit on the existing arithmetic options:
+
+```cpp
+math::polynomial_arithmetic::polynomial_context_options options;
+options.distinct_degree_screening_limit = 1; // Screen linear factors before building the full baby table.
+math::polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context(backend_type{}, options);
+```
+
+The default limit is zero, preserving the unscreened baseline. Positive limits are capped at the Kaltofen-Shoup
+degree-block size. Screening computes `gcd(remaining, X^(Q^d) - X)` in increasing degrees `d`, removing each emitted
+group before advancing. These are equal-degree groups; their combined norm must not be used to classify every
+constituent factor. Complete factorization splits them individually and preserves square-free multiplicities, so
+norm recovery still handles even powers without rejecting their individually unsuitable factors.
+
+Screening reuses the initial `X^Q mod B` and subsequent Frobenius powers, all computed modulo the original
+square-free part B. A callback stop avoids constructing the remaining baby table and its block-composition cache.
+It still pays for square-free decomposition, the initial power, and the initial Frobenius composition cache. If
+screening continues, its powers become the prefix of the full baby table and only missing steps are computed.
+The blocked search retains its original alignment; its first block may revisit screened degrees, whose factors
+have already been removed. This adds GCD/exact-division work relative to the baseline and should be measured on
+both rejected and suitable inputs before choosing a limit. Passing a bounded screen does not establish that norm
+recovery will succeed.
+
+Splitting and callback work run while the active Frobenius precomputation remains alive, which can increase peak
+memory. Splitting copies the emitted group because distinct-degree refinement or screening still needs its stored
+polynomial after the callback returns. No default screening bound is selected from the behavior of one candidate.
 
 ## Preconditions and current restrictions
 

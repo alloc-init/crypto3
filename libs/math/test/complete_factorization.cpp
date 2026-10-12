@@ -257,28 +257,32 @@ BOOST_AUTO_TEST_CASE(incremental_groups_preserve_factor_order_multiplicities_and
                                      -value_type(3),  value_type(0),   value_type(1),   value_type(0),
                                      value_type(103), value_type(104), value_type(105), value_type(106)};
     const std::array<std::size_t, 6> consumed_at_factor = {3, 4, 9, 10, 11, 12};
-    for (std::size_t stop_after = 0; stop_after <= expected.size(); ++stop_after) {
-        polynomial_arithmetic::polynomial_context<backend_type> context;
-        std::size_t next_coefficient = 0;
-        auto generator = [&] { return coefficients.at(next_coefficient++); };
-        std::vector<math::polynomial_factor<polynomial_type>> reported;
-        const auto result =
-            math::complete_factorization<backend_type>(input, context, generator, [&](const auto &factor) {
-                reported.push_back(factor);
-                BOOST_CHECK(generator() == value_type(100 + reported.size()));
-                return reported.size() == stop_after ? math::factorization_control::stop_factorization :
-                                                       math::factorization_control::continue_factorization;
-            });
-        const auto count = stop_after ? stop_after : expected.size();
-        BOOST_REQUIRE_EQUAL(result.factors.size(), count);
-        BOOST_CHECK(result.factors == reported);
-        for (std::size_t i = 0; i < count; ++i)
-            BOOST_CHECK(result.factors[i] == expected[i]);
-        BOOST_CHECK(result.leading_coefficient == expected_result.leading_coefficient);
-        BOOST_CHECK_EQUAL(result.complete, stop_after == 0);
-        BOOST_CHECK_EQUAL(next_coefficient, consumed_at_factor[count - 1]);
-        if (result.complete)
-            BOOST_CHECK(reconstruct(backend, result) == input);
+    for (std::size_t screening_limit : {0, 1, 2, 100}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.distinct_degree_screening_limit = screening_limit;
+        for (std::size_t stop_after = 0; stop_after <= expected.size(); ++stop_after) {
+            polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+            std::size_t next_coefficient = 0;
+            auto generator = [&] { return coefficients.at(next_coefficient++); };
+            std::vector<math::polynomial_factor<polynomial_type>> reported;
+            const auto result =
+                math::complete_factorization<backend_type>(input, context, generator, [&](const auto &factor) {
+                    reported.push_back(factor);
+                    BOOST_CHECK(generator() == value_type(100 + reported.size()));
+                    return reported.size() == stop_after ? math::factorization_control::stop_factorization :
+                                                           math::factorization_control::continue_factorization;
+                });
+            const auto count = stop_after ? stop_after : expected.size();
+            BOOST_REQUIRE_EQUAL(result.factors.size(), count);
+            BOOST_CHECK(result.factors == reported);
+            for (std::size_t i = 0; i < count; ++i)
+                BOOST_CHECK(result.factors[i] == expected[i]);
+            BOOST_CHECK(result.leading_coefficient == expected_result.leading_coefficient);
+            BOOST_CHECK_EQUAL(result.complete, stop_after == 0);
+            BOOST_CHECK_EQUAL(next_coefficient, consumed_at_factor[count - 1]);
+            if (result.complete)
+                BOOST_CHECK(reconstruct(backend, result) == input);
+        }
     }
 
     polynomial_arithmetic::polynomial_context<backend_type> context;
@@ -293,6 +297,96 @@ BOOST_AUTO_TEST_CASE(incremental_groups_preserve_factor_order_multiplicities_and
         std::runtime_error,
         [](const auto &error) { return std::string(error.what()) == "coefficient generator failure"; });
     BOOST_CHECK_EQUAL(callback_count, 0);
+}
+
+BOOST_AUTO_TEST_CASE(screening_delivers_a_linear_factor_before_building_the_baby_table) {
+    backend_type backend;
+    const polynomial_type linear = {value_type(1), value_type::one()};
+    const polynomial_type quadratic = {-value_type(3), value_type::zero(), value_type::one()};
+    const polynomial_type cubic = {-value_type(3), value_type::zero(), value_type::zero(), value_type::one()};
+    const auto input = multiply(backend, multiply(backend, linear, quadratic), cubic);
+    polynomial_arithmetic::polynomial_context_options options;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    options.distinct_degree_screening_limit = 1;
+
+    std::size_t prefix_calls = 0;
+    polynomial_arithmetic::polynomial_context<counting_schoolbook_backend> prefix_context(
+        counting_schoolbook_backend(prefix_calls), options);
+    const auto square_free = math::square_free_factorization<counting_schoolbook_backend>(input, prefix_context);
+    BOOST_REQUIRE_EQUAL(square_free.factors.size(), 1);
+    const math::polynomial_frobenius_context<counting_schoolbook_backend> frobenius(input, prefix_context);
+    polynomial_type difference, factor;
+    math::subtraction(difference, frobenius.x_to_field_order(),
+                      polynomial_type {value_type::zero(), value_type::one()});
+    math::gcd(factor, input, difference, prefix_context);
+    BOOST_REQUIRE(factor == linear);
+
+    for (bool throw_from_callback : {false, true}) {
+        std::size_t calls = 0, callbacks = 0;
+        polynomial_arithmetic::polynomial_context<counting_schoolbook_backend> context(
+            counting_schoolbook_backend(calls), options);
+        auto generator = []() -> value_type { throw std::logic_error("unexpected random coefficient request"); };
+        auto callback = [&](const auto &reported) {
+            ++callbacks;
+            BOOST_CHECK(reported.polynomial == linear);
+            // Only square-free preparation, the initial Frobenius context, and this one GCD are permitted here.
+            BOOST_CHECK_EQUAL(calls, prefix_calls);
+            if (throw_from_callback)
+                throw std::runtime_error("screening callback failure");
+            return math::factorization_control::stop_factorization;
+        };
+        if (throw_from_callback) {
+            BOOST_CHECK_EXCEPTION(
+                math::complete_factorization<counting_schoolbook_backend>(input, context, generator, callback),
+                std::runtime_error,
+                [](const auto &error) { return std::string(error.what()) == "screening callback failure"; });
+        } else {
+            const auto result =
+                math::complete_factorization<counting_schoolbook_backend>(input, context, generator, callback);
+            BOOST_CHECK(!result.complete);
+            BOOST_REQUIRE_EQUAL(result.factors.size(), 1);
+            BOOST_CHECK_EQUAL(result.factors.front().multiplicity, 1);
+        }
+        BOOST_CHECK_EQUAL(callbacks, 1);
+        BOOST_CHECK_EQUAL(calls, prefix_calls);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(screening_prefix_is_reused_when_completing_the_baby_table) {
+    const polynomial_type input = {value_type(2), value_type(3),  value_type(5),
+                                   value_type(7), value_type(11), value_type::one()};
+    std::size_t calls = 0;
+    polynomial_arithmetic::polynomial_context<counting_schoolbook_backend> context {counting_schoolbook_backend(calls)};
+    const math::polynomial_frobenius_context<counting_schoolbook_backend> frobenius(input, context);
+    std::vector<polynomial_type> powers = {{value_type::zero(), value_type::one()}, frobenius.x_to_field_order()};
+    for (std::size_t degree = 2; degree <= 3; ++degree) {
+        polynomial_type next;
+        math::frobenius_map(next, powers.back(), frobenius, context);
+        powers.push_back(std::move(next));
+    }
+    // Compare against constructing just the still-required block-composition cache. Completing a full prefix must
+    // not perform any extra Frobenius work; a partial prefix must compute only its missing last step.
+    for (std::size_t prefix_size : {3, 4}) {
+        calls = 0;
+        if (prefix_size == 3) {
+            polynomial_type next;
+            math::frobenius_map(next, powers[2], frobenius, context);
+            BOOST_CHECK(next == powers[3]);
+        }
+        const math::polynomial_composition_precomputation<counting_schoolbook_backend> block_cache(
+            powers[3], input.degree(), frobenius.divisor_context(), context);
+        const auto expected_calls = calls;
+        calls = 0;
+        const math::detail::kaltofen_shoup_frobenius_precomputation<counting_schoolbook_backend> table(
+            3, frobenius, context, std::vector<polynomial_type>(powers.begin(), powers.begin() + prefix_size));
+        BOOST_CHECK_EQUAL(calls, expected_calls);
+        for (std::size_t i = 0; i < powers.size(); ++i)
+            BOOST_CHECK(table.baby_step(i) == powers[i]);
+    }
+    BOOST_CHECK_THROW((math::detail::kaltofen_shoup_frobenius_precomputation<counting_schoolbook_backend>(
+                          1, frobenius, context, powers)),
+                      std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(zero_and_constant_inputs_preserve_their_scalar_values) {
