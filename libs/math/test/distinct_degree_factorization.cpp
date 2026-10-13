@@ -587,4 +587,87 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_internal_driver_propagates_an_early_stop) {
     BOOST_CHECK(factors[1] == factor_type({quadratic_factor, 2}));
 }
 
+BOOST_AUTO_TEST_CASE(screening_continuation_matches_reference_and_unscreened_blocks) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using mixed_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type, fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+    backend_type backend;
+    const polynomial_type linear = {fq_value_type::one(), fq_value_type::one()};
+    const polynomial_type quadratic = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::one()};
+    const polynomial_type cubic = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::zero(),
+                                   fq_value_type::one()};
+    const polynomial_type second_cubic = {-fq_value_type(9), fq_value_type::zero(), fq_value_type::zero(),
+                                          fq_value_type::one()};
+    const auto higher_degrees = multiply(backend, quadratic, multiply(backend, cubic, second_cubic));
+    const auto mixed_degrees = multiply(backend, linear, higher_degrees);
+    auto nonmonic = mixed_degrees;
+    math::scalar_multiplication(nonmonic, nonmonic, fq_value_type(7));
+    const std::vector<polynomial_type> inputs = {
+        {fq_value_type::zero()},
+        {fq_value_type(7)},
+        linear,
+        quadratic,
+        cubic,
+        multiply(backend, linear, polynomial_type {fq_value_type::zero(), fq_value_type::one()}),
+        higher_degrees,
+        mixed_degrees,
+        nonmonic};
+    for (const auto &input : inputs) {
+        polynomial_arithmetic::polynomial_context<backend_type> reference_context;
+        const auto reference = math::distinct_degree_factorization_reference<backend_type>(input, reference_context);
+        for (std::size_t limit : {0, 1, 2, 100}) {
+            polynomial_arithmetic::polynomial_context_options options;
+            options.distinct_degree_screening_limit = limit;
+            options.basecase_divisor_coefficient_cutoff = 0;
+            options.basecase_quotient_coefficient_cutoff = 0;
+            polynomial_arithmetic::polynomial_context<backend_type> school(backend_type {}, options);
+            polynomial_arithmetic::polynomial_context<mixed_backend> mixed(mixed_backend(26), options);
+            BOOST_CHECK(math::distinct_degree_factorization_kaltofen_shoup<backend_type>(input, school) == reference);
+            BOOST_CHECK(math::distinct_degree_factorization_kaltofen_shoup<mixed_backend>(input, mixed) == reference);
+        }
+    }
+    // Smaller explicit block sizes force continuation across several degree blocks after the linear screen.
+    for (std::size_t block_size : {1, 2}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.distinct_degree_screening_limit = 1;
+        polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+        const auto reference = math::distinct_degree_factorization_reference<backend_type>(mixed_degrees, context);
+        std::vector<math::distinct_degree_factor<polynomial_type>> groups;
+        const auto control = math::detail::kaltofen_shoup_factor_monic_square_free(
+            groups, mixed_degrees, block_size, context,
+            [](const auto &) { return math::factorization_control::continue_factorization; });
+        BOOST_CHECK(control == math::factorization_control::continue_factorization);
+        BOOST_CHECK(groups == reference.factors);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(screening_preserves_full_fq12_groups_and_early_stops) {
+    using school_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using mixed_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type, fq12_value_type>;
+    using polynomial_type = typename school_backend::polynomial_type;
+    school_backend backend;
+    const polynomial_type first = {-fq12_value(1), fq12_value_type::one()};
+    const polynomial_type second = {-fq12_value(20), fq12_value_type::one()};
+    const auto input = multiply(backend, first, second);
+    polynomial_arithmetic::polynomial_context_options options;
+    options.distinct_degree_screening_limit = 1;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<school_backend> school(school_backend {}, options);
+    polynomial_arithmetic::polynomial_context<mixed_backend> mixed(mixed_backend(18), options);
+    std::size_t callbacks = 0;
+    const auto callback = [&](const auto &group) {
+        ++callbacks;
+        // Screening emits a reducible degree-one group; irreducible splitting remains the next stage's job.
+        BOOST_CHECK_EQUAL(group.irreducible_factor_degree, 1);
+        BOOST_CHECK(group.polynomial == input);
+        return math::factorization_control::stop_factorization;
+    };
+    const auto reference = math::distinct_degree_factorization_kaltofen_shoup<school_backend>(input, school, callback);
+    const auto result = math::distinct_degree_factorization_kaltofen_shoup<mixed_backend>(input, mixed, callback);
+    BOOST_CHECK(!result.complete);
+    BOOST_CHECK(result == reference);
+    BOOST_CHECK_EQUAL(callbacks, 2);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

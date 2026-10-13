@@ -49,6 +49,18 @@ a caller-owned CSV stream, and a separate progress stream. Enable examples with 
 `algebra_polynomial_observation_example`. The collector tests are registered as
 `crypto3_math_polynomial_observation_collector_test`.
 
+Small-degree screening uses the same arithmetic options with or without observation:
+
+```cpp
+pa::polynomial_context_options options;
+options.distinct_degree_screening_limit = 1;
+pa::polynomial_context<backend_type, observer_type> context(backend, observer, options);
+```
+
+The limit remains zero by default. Enabling an observer does not enable screening automatically. A caller can label
+each candidate with an `invocation` scope, write its report after recovery returns, and reset the collector between
+candidates. This keeps aggregation bounded while retaining a separate time-to-rejection result for each candidate.
+
 ## Lifetime, concurrency, and exceptions
 
 The context owns its backend and borrows the observer. Context copies borrow the same observer. Prepared divisor,
@@ -79,10 +91,28 @@ Inclusive time covers a scope and its children. Exclusive time subtracts the inc
 children. Sum exclusive totals, or compare scopes at a single level; summing inclusive totals across levels counts
 nested work repeatedly. Disabled children remain part of their nearest observed ancestor's exclusive time.
 
-Factorization includes work performed by its norm-recovery callbacks. In each square-free component, the complete
-factorization algorithm collects degree groups before invoking its irreducible-factor callbacks. Observation preserves
-that ordering. Norm work is visibly nested under `factor_callback`, so a report can distinguish factor discovery from
-subsequent recovery. FFT scopes include buffer preparation; inverse FFT scopes also include normalization as a child.
+Factorization includes work performed by its norm-recovery callbacks. Each degree group is split as it is discovered,
+and the irreducible-factor callbacks run before searching for the next group. `degree_group_discovery` therefore
+includes distinct-degree arithmetic, splitting, and callback work. Norm work is nested under `factor_callback`, which
+is itself beneath the active `degree_group_callback`. Do not add these inclusive totals to their enclosing discovery
+or factorization totals. Historical `degree_group_collection` (ID 513) ended before splitting and callbacks; that ID
+is reserved for those older traces and is no longer emitted. New discovery uses ID 514, so its inclusive time is not
+directly comparable with the historical collection time. FFT scopes include buffer preparation; inverse FFT scopes
+also include normalization as a child.
+
+With screening enabled, `degree_screening` begins after the initial Frobenius context has been prepared. Each
+`degree_screening_step` includes obtaining that degree's power, its GCD, any immediate callback, and factor removal
+when continuing. Thus a norm-recovery rejection may be nested under a screening step. A returned callback stop marks
+the screening/discovery/factorization scopes as `callback_stopped`; the norm-recovery scope separately records its
+rejection reason. Exceptions retain the ordinary `exception` outcome through scope unwinding.
+
+Screening progress reports completed degree checks after callbacks and any required removal. A returned stop counts
+the completed check; an exception during it does not. The progress total is the capped screening limit, an upper
+bound: early stopping or an irreducible remainder can finish before it. The final irreducible-remainder callback is
+recorded without inventing another tested degree. `frobenius_baby_steps` reports only new powers computed while
+completing the table; its progress total excludes the supplied prefix. `reused_baby_steps` counts supplied h[1] through
+h[s], excluding h[0] = X. A full prefix reports no new baby-step progress, but still builds its block-composition cache.
+Screening that stops before table construction emits no `kaltofen_shoup_preparation` or `frobenius_baby_steps` scope.
 
 The collector preallocates its row and stack storage at construction. Callbacks do not allocate or perform I/O. Rows
 aggregate by parent row and stage, with separate rows for caller invocation labels and transform lengths. Operand
@@ -140,7 +170,7 @@ whether an existing preparation was available when ordinary low-product arithmet
 | Square-free/GCD/division | Normalization, derivative, multiplicity, classical and optional half-GCD paths, Euclidean steps, reciprocal preparation/reuse, exact quotients, quotient estimation and remainder reconstruction. |
 | Powers/Frobenius | Generic powers and specialized `powmod_x`, squares and multiplication by X, completed exponent steps, initial context setup and subsequent cached composition. |
 | Composition | Cache construction and cached powers, coefficientwise block combinations, giant-step products, and finalization. Composition block size and factorization degree-block size are distinct metrics. |
-| Distinct-degree factorization | Initial Frobenius setup, baby steps, block composition cache, giant steps, interval products, coarse GCDs, degree refinement, classified-factor removal, and termination. |
+| Distinct-degree factorization | Initial Frobenius setup, optional small-degree screening and completed degree checks, reused baby-step prefixes and missing steps, block composition cache, giant steps, interval products, coarse GCDs, degree refinement, classified-factor removal, and termination. |
 | Equal-degree/complete factorization | Random candidate attempts, powers/GCDs, pending subproblems, splits, irreducible outputs, factor callbacks and existing early stops. |
 | Norm recovery | Shortcuts and filters, even/odd multiplicities, per-factor tests and recovery, square-root contexts/nonresidue searches/corrections, rational reconstruction, scalar normalization, exact checks, balanced combination, leading scalar, and final norm verification. |
 | Backend/FFT | Multiply, dedicated square, low products, preparation/reuse/decline/fallback, buffers, forward/inverse transforms, pointwise operations, normalization, folding/subtraction, compaction, truncation and output finalization. |
@@ -196,7 +226,8 @@ for complete large-degree factorization or norm recovery.
 | 358 | `compose_mod` |
 | 359 | `compose_mod_reference` |
 | 512 | `complete_factorization` |
-| 513 | `degree_group_collection` |
+| 513 | `degree_group_collection` (historical, no longer emitted) |
+| 514 | `degree_group_discovery` |
 | 544 | `square_free_factorization` |
 | 545 | `square_free_normalization` |
 | 546 | `derivative` |
@@ -214,6 +245,8 @@ for complete large-degree factorization or norm recovery.
 | 585 | `classified_factor_removal` |
 | 586 | `distinct_degree_reference` |
 | 587 | `degree_group_callback` |
+| 588 | `degree_screening` |
+| 589 | `degree_screening_step` |
 | 608 | `equal_degree_factorization` |
 | 609 | `equal_degree_group` |
 | 610 | `equal_degree_splitting` |
@@ -313,6 +346,8 @@ for complete large-degree factorization or norm recovery.
 | 34 | `prepared_available` |
 | 35 | `low_coefficient_count` |
 | 36 | `detailed_backend` |
+| 37 | `screening_limit` |
+| 38 | `reused_baby_steps` |
 
 ## Outcome catalog
 

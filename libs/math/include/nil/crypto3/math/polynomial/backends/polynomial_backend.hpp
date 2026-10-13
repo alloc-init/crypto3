@@ -53,6 +53,11 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // has at most degree(divisor) coefficients. The limit must be positive; the default permits the algorithm's
         // square-root block size.
         std::size_t modular_composition_cached_power_limit = std::numeric_limits<std::size_t>::max();
+
+        // Examine initial irreducible-factor degrees before constructing the full Kaltofen-Shoup baby table.
+        // Zero keeps the unscreened path. The limit is capped at the degree-block size so the computed Frobenius
+        // powers can be reused as the start of that table if factorization continues.
+        std::size_t distinct_degree_screening_limit = 0;
     };
 
     /**

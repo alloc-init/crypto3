@@ -70,7 +70,9 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         compose_mod = 0x0166,
         compose_mod_reference = 0x0167,
         complete_factorization = 0x0200,
+        // Retained for historical traces, where all groups were collected before any splitting or callbacks.
         degree_group_collection = 0x0201,
+        degree_group_discovery = 0x0202,
         square_free_factorization = 0x0220,
         square_free_normalization = 0x0221,
         derivative = 0x0222,
@@ -88,6 +90,8 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         classified_factor_removal = 0x0249,
         distinct_degree_reference = 0x024a,
         degree_group_callback = 0x024b,
+        degree_screening = 0x024c,
+        degree_screening_step = 0x024d,
         equal_degree_factorization = 0x0260,
         equal_degree_group = 0x0261,
         equal_degree_splitting = 0x0262,
@@ -184,7 +188,9 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         accepted = 33,
         prepared_available = 34,
         low_coefficient_count = 35,
-        detailed_backend = 36
+        detailed_backend = 36,
+        screening_limit = 37,
+        reused_baby_steps = 38
     };
 
     // Diagnostic values for arithmetic_path metadata; these report decisions made by existing dispatch.

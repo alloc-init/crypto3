@@ -51,8 +51,11 @@ namespace nil::crypto3::math {
      * generator is shared by all Cantor-Zassenhaus groups and must return independent uniformly distributed
      * coefficient-field elements.
      *
-     * After each irreducible factor is appended to the result, factor_callback may request an early stop. A stopped
-     * result includes that factor and has complete set to false. Zero and constant inputs produce no factors and
+     * Each distinct-degree group is split as soon as it is discovered, before searching for later groups. After each
+     * irreducible factor is appended to the result, factor_callback may request an early stop. This stops both group
+     * splitting and distinct-degree discovery; the result includes that factor and has complete set to false. The
+     * default path constructs the Kaltofen-Shoup baby table before discovering groups. Configured small-degree
+     * screening can deliver factors before that table is built. Zero and constant inputs produce no factors and
      * preserve their scalar value as leading_coefficient.
      *
      * @throws std::invalid_argument under the restrictions documented by the component stages, including when the
@@ -82,46 +85,46 @@ namespace nil::crypto3::math {
             const std::size_t multiplicity = square_free_factor.multiplicity;
             const std::size_t block_size = detail::kaltofen_shoup_block_size(square_free_factor.polynomial.size() - 1);
 
-            // Collect all degree groups before splitting them. Callback time is nested under
-            // equal-degree splitting, after this scope closes; it is included in the complete-factorization total.
-            auto groups_scope = arithmetic_context.template observe<stage::degree_group_collection>([&]() noexcept {
+            // Discovery now includes immediate splitting and factor callbacks. Their work is nested beneath this
+            // scope, including norm recovery; inclusive discovery time must not be added to those child totals.
+            auto groups_scope = arithmetic_context.template observe<stage::degree_group_discovery>([&]() noexcept {
                 return metadata {{{metric::input_coefficients, square_free_factor.polynomial.size()},
                                   {metric::multiplicity, multiplicity},
                                   {metric::degree_block_size, block_size}}};
             });
             std::vector<distinct_degree_factor<polynomial_type>> degree_groups;
-            detail::kaltofen_shoup_factor_monic_square_free(degree_groups, std::move(square_free_factor.polynomial),
-                                                            block_size, arithmetic_context,
-                                                            [](const distinct_degree_factor<polynomial_type> &) {
-                                                                return factorization_control::continue_factorization;
-                                                            });
-
-            groups_scope.finish();
-
-            for (auto &degree_group : degree_groups) {
-                const factorization_control control = detail::factor_distinct_degree_group<Backend>(
-                    std::move(degree_group), arithmetic_context, generator, [&](polynomial_type &&factor) {
-                        result.factors.push_back({std::move(factor), multiplicity});
-                        scope.set_result_metadata(
-                            [&]() noexcept { return metadata {{{metric::factor_count, result.factors.size()}}}; });
-                        auto callback_scope =
-                            arithmetic_context.template observe<stage::factor_callback>([&]() noexcept {
-                                return metadata {{{metric::factor_degree, result.factors.back().polynomial.size() - 1},
-                                                  {metric::multiplicity, multiplicity}}};
-                            });
-                        const auto callback_control = factor_callback(result.factors.back());
-                        if (callback_control == factorization_control::stop_factorization) {
-                            callback_scope.callback_stop();
-                            scope.callback_stop();
-                        }
-                        callback_scope.advance(1);
-                        return callback_control;
-                    });
-                if (control == factorization_control::stop_factorization) {
-                    result.complete = false;
-                    scope.callback_stop();
-                    return result;
-                }
+            const auto control = detail::kaltofen_shoup_factor_monic_square_free(
+                degree_groups, std::move(square_free_factor.polynomial), block_size, arithmetic_context,
+                [&](const distinct_degree_factor<polynomial_type> &degree_group) {
+                    // Split each newly discovered degree group now and report its irreducible factors immediately.
+                    // This lets the caller stop before Kaltofen-Shoup searches for later degree groups.
+                    // The splitter takes its group by value, so passing degree_group intentionally copies it.
+                    // Splitting consumes that copy; Kaltofen-Shoup still needs the original polynomial for exact
+                    // division if this callback continues.
+                    return detail::factor_distinct_degree_group<Backend>(
+                        degree_group, arithmetic_context, generator, [&](polynomial_type &&factor) {
+                            result.factors.push_back({std::move(factor), multiplicity});
+                            scope.set_result_metadata(
+                                [&]() noexcept { return metadata {{{metric::factor_count, result.factors.size()}}}; });
+                            auto callback_scope =
+                                arithmetic_context.template observe<stage::factor_callback>([&]() noexcept {
+                                    return metadata {
+                                        {{metric::factor_degree, result.factors.back().polynomial.size() - 1},
+                                         {metric::multiplicity, multiplicity}}};
+                                });
+                            const auto callback_control = factor_callback(result.factors.back());
+                            if (callback_control == factorization_control::stop_factorization) {
+                                callback_scope.callback_stop();
+                            }
+                            callback_scope.advance(1);
+                            return callback_control;
+                        });
+                });
+            if (control == factorization_control::stop_factorization) {
+                result.complete = false;
+                groups_scope.callback_stop();
+                scope.callback_stop();
+                return result;
             }
         }
         return result;

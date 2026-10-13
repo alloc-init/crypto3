@@ -250,10 +250,12 @@ namespace {
     }
 
     template<typename Backend, bool Kernels>
-    void check_integration(Backend backend) {
+    void check_integration(Backend backend, std::size_t screening_limit) {
         pa::polynomial_observation_collector<true, Kernels> collector(2048);
-        pa::polynomial_context observed(backend, collector);
-        pa::polynomial_context plain(backend);
+        pa::polynomial_context_options options;
+        options.distinct_degree_screening_limit = screening_limit;
+        pa::polynomial_context observed(backend, collector, options);
+        pa::polynomial_context plain(backend, options);
         // Repeated even and odd factors, including an irreducible quadratic needing modular root recovery.
         polynomial input {value(25)};
         for (const auto &factor : {polynomial {-value(4), 1}, polynomial {-value(9), 1}, polynomial {-value(9), 1},
@@ -274,6 +276,10 @@ namespace {
             BOOST_CHECK(actual == expected);
             BOOST_CHECK(a == b);
             BOOST_CHECK(first() == second());
+            if (screening_limit != 0) {
+                BOOST_CHECK_GT(calls(collector, stage::degree_screening), 0);
+                BOOST_CHECK_EQUAL(calls(collector, stage::kaltofen_shoup_preparation), 0);
+            }
             check_totals(collector);
             collector.reset();
         }
@@ -287,6 +293,7 @@ namespace {
         BOOST_CHECK(actual->p == expected->p && actual->q == expected->q);
         BOOST_CHECK_EQUAL(calls(collector, stage::x_norm_recovery), 1);
         BOOST_CHECK_GT(calls(collector, stage::rational_reconstruction), 0);
+        BOOST_CHECK(math::evaluate_polynomial_x_norm(*actual, plain) == input);
         check_totals(collector);
         collector.reset();
         // A necessary coefficient filter rejects before any factorization work starts.
@@ -301,15 +308,31 @@ namespace {
         BOOST_CHECK(!math::recover_polynomial_x_norm_representation(rejected, observed, generator));
         BOOST_CHECK_EQUAL(calls(collector, stage::x_norm_factor), 1);
         BOOST_CHECK_EQUAL(calls(collector, stage::square_root_preparation), 0);
+        if (screening_limit != 0) {
+            // The failing factor is recovered inside screening; rejection must avoid building the full baby table.
+            BOOST_CHECK_EQUAL(calls(collector, stage::degree_screening), 1);
+            BOOST_CHECK_EQUAL(calls(collector, stage::degree_screening_step), 1);
+            BOOST_CHECK_EQUAL(calls(collector, stage::kaltofen_shoup_preparation), 0);
+            BOOST_CHECK_EQUAL(calls(collector, stage::frobenius_baby_steps), 0);
+            for (std::size_t i = 0; i < collector.size(); ++i) {
+                const auto &row = collector[i];
+                if (row.stage == stage::degree_screening || row.stage == stage::degree_group_discovery ||
+                    row.stage == stage::complete_factorization) {
+                    BOOST_CHECK_EQUAL(row.outcomes[static_cast<std::size_t>(outcome::callback_stopped)], 1);
+                }
+            }
+        }
         check_totals(collector);
     }
 }    // namespace
 
 BOOST_AUTO_TEST_CASE(collector_integrates_with_schoolbook_and_mixed_pipelines_at_both_levels) {
-    check_integration<schoolbook, false>(schoolbook {});
-    check_integration<schoolbook, true>(schoolbook {});
-    check_integration<mixed, false>(mixed(32));
-    check_integration<mixed, true>(mixed(32));
+    for (std::size_t screening_limit : {0, 1, 2, 100}) {
+        check_integration<schoolbook, false>(schoolbook {}, screening_limit);
+        check_integration<schoolbook, true>(schoolbook {}, screening_limit);
+        check_integration<mixed, false>(mixed(32), screening_limit);
+        check_integration<mixed, true>(mixed(32), screening_limit);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(independent_workers_have_independent_collectors_and_scope_ids) {

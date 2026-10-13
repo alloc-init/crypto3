@@ -1208,7 +1208,7 @@ BOOST_AUTO_TEST_CASE(distinct_degree_observation_distinguishes_degree_blocks_and
 
 namespace {
     template<typename Backend>
-    void check_complete_observation(Backend plain_backend, Backend observed_backend) {
+    void check_complete_observation(Backend plain_backend, Backend observed_backend, std::size_t screening_limit) {
         backend_type builder;
         polynomial_type input {value_type(7)};
         for (const polynomial_type &factor :
@@ -1216,9 +1216,11 @@ namespace {
               polynomial_type {4, 1}, polynomial_type {4, 1}})
             builder.multiply(input, input, factor);
         for (int mode : {0, 1, 2}) {
-            pa::polynomial_context<Backend> plain(plain_backend);
+            pa::polynomial_context_options options;
+            options.distinct_degree_screening_limit = screening_limit;
+            pa::polynomial_context<Backend> plain(plain_backend, options);
             pipeline_observer observer;
-            pa::polynomial_context<Backend, pipeline_observer> context(observed_backend, observer);
+            pa::polynomial_context<Backend, pipeline_observer> context(observed_backend, observer, options);
             nil::crypto3::random::algebraic_engine<field_type> first_engine(17), second_engine(17);
             std::vector<value_type> first_samples, second_samples;
             auto first_generator = [&] {
@@ -1266,17 +1268,19 @@ namespace {
                                             mode == 1 ? outcome::callback_stopped :
                                                         outcome::exception),
                               1);
-            // The first irreducible callback must follow collection of *all* distinct-degree groups of its component.
+            // The first irreducible callback now runs inside discovery, before later groups are searched for.
+            // The historical collection stage is retained in the catalog but must not label this new ordering.
             const auto end = observer.events.begin() + observer.event_count;
             const auto group_end = std::find_if(observer.events.begin(), end, [](const auto &event) {
-                return event.operation == stage::degree_group_collection && event.kind == event_kind::end;
+                return event.operation == stage::degree_group_discovery && event.kind == event_kind::end;
             });
             const auto first_factor = std::find_if(observer.events.begin(), end, [](const auto &event) {
                 return event.operation == stage::irreducible_factor && event.kind == event_kind::begin;
             });
             BOOST_REQUIRE(group_end != end);
             BOOST_REQUIRE(first_factor != end);
-            BOOST_CHECK(group_end < first_factor);
+            BOOST_CHECK(first_factor < group_end);
+            BOOST_CHECK_EQUAL(count_events(observer, stage::degree_group_collection), 0);
             for (auto it = observer.events.begin(); it != end; ++it) {
                 if (it->kind == event_kind::begin && it->operation == stage::invocation &&
                     measurement(*it, metric::invocation_label) == 42) {
@@ -1293,10 +1297,12 @@ namespace {
 }    // namespace
 
 BOOST_AUTO_TEST_CASE(complete_factorization_preserves_arithmetic_rng_callback_order_and_nesting) {
-    backend_counts plain_counts, observed_counts;
-    check_complete_observation(custom_backend {plain_counts, {}}, custom_backend {observed_counts, {}});
-    BOOST_CHECK(plain_counts.operations == observed_counts.operations);
-    check_complete_observation(mixed_backend(18), mixed_backend(18));
+    for (std::size_t limit : {0, 1, 2, 100}) {
+        backend_counts plain_counts, observed_counts;
+        check_complete_observation(custom_backend {plain_counts, {}}, custom_backend {observed_counts, {}}, limit);
+        BOOST_CHECK(plain_counts.operations == observed_counts.operations);
+        check_complete_observation(mixed_backend(18), mixed_backend(18), limit);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(factorization_shortcuts_and_disabled_observers_need_no_rng_or_progress) {
@@ -1314,8 +1320,10 @@ BOOST_AUTO_TEST_CASE(factorization_shortcuts_and_disabled_observers_need_no_rng_
     BOOST_CHECK_EQUAL(count_events(observer, stage::degree_block), 0);
     check_balanced(observer);
     recording_observer<false, true, 8192> kernels;
-    pa::polynomial_context<backend_type, decltype(kernels)> kernels_only(backend_type {}, kernels);
-    pa::polynomial_context<backend_type, disabled_observer> disabled;
+    pa::polynomial_context_options options;
+    options.distinct_degree_screening_limit = 1;
+    pa::polynomial_context<backend_type, decltype(kernels)> kernels_only(backend_type {}, kernels, options);
+    pa::polynomial_context<backend_type, disabled_observer> disabled(backend_type {}, options);
     const polynomial_type input = repeated_factor_input();
     BOOST_CHECK(math::complete_factorization(input, kernels_only, generator) ==
                 math::complete_factorization(input, disabled, generator));
@@ -1361,6 +1369,126 @@ namespace {
         return *event;
     }
 }    // namespace
+
+BOOST_AUTO_TEST_CASE(screening_observation_preserves_continuation_stops_and_exceptions) {
+    const polynomial_type quadratic {-value_type(3), 0, 1}, cubic {-value_type(3), 0, 0, 1};
+    polynomial_type mixed;
+    backend_type builder;
+    builder.multiply(mixed, quadratic, cubic);
+    builder.multiply(mixed, mixed, polynomial_type {1, 1});
+    // The quadratic has no linear factor and is emitted by the final-remainder shortcut. The mixed input instead
+    // emits a linear group in the loop, then continues into the blocked search unless its callback stops or throws.
+    for (const auto &input : {mixed, quadratic}) {
+        const bool final_remainder = input == quadratic;
+        for (int mode : {0, 1, 2}) {
+            pa::polynomial_context_options options;
+            options.distinct_degree_screening_limit = 1;
+            backend_counts first_counts, second_counts;
+            pa::polynomial_context<custom_backend> plain(custom_backend {first_counts, {}}, options);
+            pipeline_observer observer;
+            pa::polynomial_context<custom_backend, pipeline_observer> context(custom_backend {second_counts, {}},
+                                                                              observer, options);
+            std::vector<math::distinct_degree_factor<polynomial_type>> expected, actual;
+            std::vector<math::distinct_degree_factor<polynomial_type>> first_callbacks, second_callbacks;
+            auto run = [&](auto &arithmetic, auto &groups, auto &callbacks) {
+                return math::detail::kaltofen_shoup_factor_monic_square_free(
+                    groups, input, 2, arithmetic, [&](const auto &factor) {
+                        callbacks.push_back(factor);
+                        if (mode == 2)
+                            throw std::domain_error("screening callback failure");
+                        return mode == 1 ? math::factorization_control::stop_factorization :
+                                           math::factorization_control::continue_factorization;
+                    });
+            };
+            if (mode == 2) {
+                BOOST_CHECK_THROW(run(plain, expected, first_callbacks), std::domain_error);
+                BOOST_CHECK_EXCEPTION(run(context, actual, second_callbacks), std::domain_error, [](const auto &error) {
+                    return std::string(error.what()) == "screening callback failure";
+                });
+            } else {
+                const auto first_control = run(plain, expected, first_callbacks);
+                const auto second_control = run(context, actual, second_callbacks);
+                BOOST_CHECK(first_control == second_control);
+            }
+            BOOST_CHECK(actual == expected);
+            BOOST_CHECK(second_callbacks == first_callbacks);
+            BOOST_CHECK(second_counts.operations == first_counts.operations);
+            const auto result = mode == 0 ? outcome::completed :
+                                mode == 1 ? outcome::callback_stopped :
+                                            outcome::exception;
+            BOOST_CHECK_EQUAL(count_outcome(observer, stage::degree_screening, result), 1);
+            BOOST_CHECK_EQUAL(count_outcome(observer, stage::kaltofen_shoup_factor, result), 1);
+            BOOST_CHECK_EQUAL(count_events(observer, stage::degree_screening_step), 1);
+            BOOST_CHECK_EQUAL(count_events(observer, stage::degree_screening, event_kind::progress),
+                              mode == 2 && !final_remainder ? 0 : 1);
+            BOOST_CHECK_EQUAL(count_events(observer, stage::kaltofen_shoup_preparation),
+                              mode == 0 && !final_remainder ? 1 : 0);
+            // Screen progress must follow the completed degree scope. Rejection via a returned stop counts the
+            // degree check; an exception inside that check does not. The final irreducible callback is a later step.
+            for (std::size_t i = 0; i < observer.event_count; ++i) {
+                const auto &event = observer.events[i];
+                if (event.operation == stage::degree_screening && event.kind == event_kind::progress) {
+                    BOOST_CHECK_EQUAL(event.completed, 1);
+                    BOOST_CHECK_EQUAL(event.total, 1);
+                    BOOST_REQUIRE_GT(i, 0);
+                    BOOST_CHECK(observer.events[i - 1].kind == event_kind::end);
+                    BOOST_CHECK(observer.events[i - 1].operation == stage::degree_screening_step);
+                }
+                if (event.operation == stage::degree_group_callback && event.kind == event_kind::begin &&
+                    measurement(event, metric::factor_degree) == (final_remainder ? 2 : 1)) {
+                    BOOST_CHECK(begin_event(observer, event.scope.parent_id).operation ==
+                                (final_remainder ? stage::degree_screening : stage::degree_screening_step));
+                }
+            }
+            check_balanced(observer);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(reused_frobenius_prefix_reports_only_new_baby_steps) {
+    const polynomial_type input {2, 3, 5, 7, 11, 1};
+    plain_context preparation;
+    const math::polynomial_frobenius_context<backend_type> frobenius(input, preparation);
+    std::vector<polynomial_type> powers {{0, 1}, frobenius.x_to_field_order()};
+    for (std::size_t i = 2; i <= 3; ++i) {
+        polynomial_type next;
+        math::frobenius_map(next, powers.back(), frobenius, preparation);
+        powers.push_back(std::move(next));
+    }
+    for (std::size_t prefix_size : {0, 2, 3, 4}) {
+        std::vector<polynomial_type> prefix(powers.begin(), powers.begin() + prefix_size);
+        pipeline_observer observer;
+        pa::polynomial_context<backend_type, pipeline_observer> context(backend_type {}, observer);
+        const math::detail::kaltofen_shoup_frobenius_precomputation<backend_type> table(3, frobenius, context, prefix);
+        const auto reused = prefix_size == 0 ? 0 : prefix_size - 1;
+        const auto missing = 3 - reused;
+        for (std::size_t i = 0; i < powers.size(); ++i)
+            BOOST_CHECK(table.baby_step(i) == powers[i]);
+        BOOST_CHECK_EQUAL(count_events(observer, stage::frobenius_baby_steps, event_kind::progress), missing);
+        BOOST_CHECK_EQUAL(count_events(observer, stage::frobenius_map), missing);
+        std::size_t completed = 0;
+        for (std::size_t i = 0; i < observer.event_count; ++i) {
+            const auto &event = observer.events[i];
+            if (event.operation != stage::frobenius_baby_steps)
+                continue;
+            if (event.kind == event_kind::begin)
+                BOOST_CHECK_EQUAL(measurement(event, metric::reused_baby_steps), reused);
+            if (event.kind == event_kind::progress) {
+                BOOST_CHECK_EQUAL(event.completed, ++completed);
+                BOOST_CHECK_EQUAL(event.total, missing);
+            }
+        }
+        check_balanced(observer);
+    }
+    pipeline_observer observer;
+    pa::polynomial_context<backend_type, pipeline_observer> context(backend_type {}, observer);
+    BOOST_CHECK_THROW(
+        (math::detail::kaltofen_shoup_frobenius_precomputation<backend_type>(1, frobenius, context, powers)),
+        std::invalid_argument);
+    BOOST_CHECK_EQUAL(count_outcome(observer, stage::frobenius_baby_steps, outcome::exception), 1);
+    BOOST_CHECK_EQUAL(count_events(observer, stage::frobenius_baby_steps, event_kind::progress), 0);
+    check_balanced(observer);
+}
 
 BOOST_AUTO_TEST_CASE(norm_shortcuts_and_coefficient_filters_do_not_factor_or_sample) {
     const auto nonresidue = norm_nonresidue();
@@ -1535,12 +1663,15 @@ BOOST_AUTO_TEST_CASE(rational_reconstruction_observation_preserves_bounds_aliasi
 namespace {
     template<typename Backend>
     void check_norm_pipeline(Backend plain_backend, Backend observed_backend,
-                             const typename Backend::polynomial_type &input, bool succeeds, std::size_t factor_count) {
+                             const typename Backend::polynomial_type &input, bool succeeds, std::size_t factor_count,
+                             std::size_t screening_limit = 0) {
         using value = typename Backend::polynomial_type::value_type;
         using field = typename value::field_type;
         norm_observer observer;
-        pa::polynomial_context<Backend> plain(plain_backend);
-        pa::polynomial_context<Backend, norm_observer> context(observed_backend, observer);
+        pa::polynomial_context_options options;
+        options.distinct_degree_screening_limit = screening_limit;
+        pa::polynomial_context<Backend> plain(plain_backend, options);
+        pa::polynomial_context<Backend, norm_observer> context(observed_backend, observer, options);
         nil::crypto3::random::algebraic_engine<field> first_engine(173), second_engine(173);
         std::vector<value> first_samples, second_samples;
         auto first_generator = [&] {
@@ -1632,10 +1763,12 @@ BOOST_AUTO_TEST_CASE(norm_pipeline_observation_preserves_even_odd_recovery_combi
     for (const auto &factor :
          {norm_polynomial {-norm_value(4), 1}, even_factor, even_factor, quadratic, quadratic, quadratic})
         builder.multiply(input, input, factor);
-    backend_counts first_counts, second_counts;
-    check_norm_pipeline(norm_counting_backend {first_counts, {}}, norm_counting_backend {second_counts, {}}, input,
-                        true, 3);
-    BOOST_CHECK(first_counts.operations == second_counts.operations);
+    for (std::size_t limit : {0, 1, 2, 100}) {
+        backend_counts first_counts, second_counts;
+        check_norm_pipeline(norm_counting_backend {first_counts, {}}, norm_counting_backend {second_counts, {}}, input,
+                            true, 3, limit);
+        BOOST_CHECK(first_counts.operations == second_counts.operations);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(norm_pipeline_rejection_preserves_first_failing_factor_and_stop_point) {
@@ -1643,10 +1776,12 @@ BOOST_AUTO_TEST_CASE(norm_pipeline_rejection_preserves_first_failing_factor_and_
     norm_polynomial input;
     norm_backend {}.multiply(input, norm_polynomial {-first, 1}, norm_polynomial {-second, 1});
     BOOST_REQUIRE(input.front().is_square() && input.back().is_square());
-    backend_counts first_counts, second_counts;
-    check_norm_pipeline(norm_counting_backend {first_counts, {}}, norm_counting_backend {second_counts, {}}, input,
-                        false, 1);
-    BOOST_CHECK(first_counts.operations == second_counts.operations);
+    for (std::size_t limit : {0, 1, 2, 100}) {
+        backend_counts first_counts, second_counts;
+        check_norm_pipeline(norm_counting_backend {first_counts, {}}, norm_counting_backend {second_counts, {}}, input,
+                            false, 1, limit);
+        BOOST_CHECK(first_counts.operations == second_counts.operations);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(norm_pipeline_supports_observed_schoolbook_and_mixed_fp12_backends) {
