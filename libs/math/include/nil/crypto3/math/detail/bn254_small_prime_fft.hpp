@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -38,6 +39,7 @@
 #include <nil/crypto3/math/detail/small_prime_fft_arithmetic.hpp>
 #include <nil/crypto3/math/detail/small_prime_fft_params.hpp>
 #include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
+#include <nil/crypto3/multiprecision/inverse.hpp>
 
 namespace nil::crypto3::math::detail {
 
@@ -181,6 +183,168 @@ namespace nil::crypto3::math::detail {
         }
 
         std::vector<prime_context> primes_;
+    };
+
+    /**
+     * Reconstruct signed integer coordinates from a prefix of the small-prime catalogue, then
+     * reduce them into BN254 Fp12. The supplied bound C must cover the original integer expression,
+     * with M > 2*C for the prime product M. Centering must precede reduction into the target field:
+     * the CRT representative M-1 denotes -1, not the field element (M-1) mod p.
+     *
+     * Cofactors and their inverses are prepared once. Reconstruction uses fixed-size integer scratch
+     * and caller-owned output, with no arbitrary-precision setup work in the coefficient loop.
+     * This operation has no constant-time guarantee.
+     */
+    class bn254_small_prime_fft_reconstructor {
+        static constexpr std::size_t block_size = 32;
+        static constexpr std::size_t correction_count = std::bit_width(small_prime_fft_primes.size() - 1);
+        // Each CRT term is < M, so their sum is < prime_count*M < 12*2^600 < 2^604.
+        static constexpr unsigned crt_bits = 50 * small_prime_fft_primes.size() + correction_count;
+        using integer_type = boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<crt_bits>>;
+
+        struct prime_context {
+            small_prime_fft_arithmetic arithmetic;
+            integer_type cofactor;
+            double inverse;
+
+            prime_context(std::uint64_t modulus, const integer_type &cofactor) :
+                arithmetic(modulus), cofactor(cofactor) {
+                using wide_type = boost::multiprecision::uint128_modular_t;
+                const auto residue = (cofactor % modulus).convert_to<std::uint64_t>();
+                inverse = static_cast<double>(boost::multiprecision::inverse_mod(wide_type(residue), wide_type(modulus))
+                                                  .convert_to<std::uint64_t>());
+            }
+        };
+
+    public:
+        using field_type = bn254_small_prime_fft_converter::field_type;
+        using value_type = field_type::value_type;
+
+        bn254_small_prime_fft_reconstructor(const small_prime_fft_crt_params &params,
+                                            const boost::multiprecision::cpp_int &coefficient_bound) {
+            if (params.prime_count == 0 || params.prime_count > small_prime_fft_primes.size() ||
+                coefficient_bound < 0) {
+                throw std::invalid_argument("bn254_small_prime_fft_reconstructor: invalid CRT parameters");
+            }
+            boost::multiprecision::cpp_int product = 1;
+            for (std::size_t i = 0; i < params.prime_count; ++i) {
+                product *= small_prime_fft_primes[i].modulus;
+            }
+            if (params.modulus != product || 2 * coefficient_bound >= product) {
+                throw std::invalid_argument(
+                    "bn254_small_prime_fft_reconstructor: inconsistent modulus or insufficient capacity");
+            }
+
+            // The checks above establish positivity and capacity before conversion to fixed precision.
+            using setup_backend = integer_type::backend_type::cpp_int_type;
+            multiples_[0].backend().from_cpp_int(setup_backend(product.backend()));
+            bound_.backend().from_cpp_int(setup_backend(coefficient_bound.backend()));
+            half_modulus_ = multiples_[0] >> 1;
+            for (std::size_t bit = 1; bit < correction_count; ++bit) {
+                multiples_[bit] = multiples_[bit - 1] << 1;
+            }
+            primes_.reserve(params.prime_count);
+            for (std::size_t i = 0; i < params.prime_count; ++i) {
+                const auto modulus = small_prime_fft_primes[i].modulus;
+                primes_.emplace_back(modulus, multiples_[0] / modulus);
+            }
+        }
+
+        std::size_t prime_count() const {
+            return primes_.size();
+        }
+
+        /**
+         * Read residues[(prime*12 + coordinate)*stride + coefficient] for each requested output.
+         * Require output.size() <= stride and residues.size() == prime_count()*12*stride.
+         * Check dimensions without overflow before writing any output; throw invalid_argument on
+         * mismatch. An empty output does no work; entries after output.size() in each channel are
+         * not read. Input residues must already include any inverse-transform normalization.
+         *
+         * @pre Each consumed residue is an integer-valued double of magnitude < 2^53. The thread's
+         * rounding mode must remain unchanged during the call; kernel selection occurs once.
+         *
+         * Throw overflow_error if a centered coordinate exceeds the declared bound; earlier output
+         * coordinates may already have been written. This check cannot detect an incorrect original
+         * bound when the integer expression has wrapped by M, so the caller must justify that bound.
+         */
+        void reconstruct(std::span<value_type> output, std::span<const double> residues, std::size_t stride) const {
+            const std::size_t channels = field_type::arity * primes_.size();
+            if (channels == 0 || output.size() > stride || stride > residues.size() / channels ||
+                residues.size() != channels * stride) {
+                throw std::invalid_argument("bn254_small_prime_fft_reconstructor: invalid buffer dimensions");
+            }
+            if (output.empty()) {
+                return;
+            }
+            const bool use_fma = std::all_of(primes_.begin(), primes_.end(), [](const prime_context &prime) {
+                return prime.arithmetic.fma_supported();
+            });
+            if (use_fma) {
+                reconstruct_impl<true>(output, residues, stride);
+            } else {
+                reconstruct_impl<false>(output, residues, stride);
+            }
+        }
+
+    private:
+        template<bool UseFma>
+        void reconstruct_impl(std::span<value_type> output, std::span<const double> residues,
+                              std::size_t stride) const {
+            using base_field_type = algebra::fields::alt_bn128_base_field<254>;
+            for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
+                for (std::size_t offset = 0; offset < output.size();) {
+                    const std::size_t count = std::min(block_size, output.size() - offset);
+                    std::array<integer_type, block_size> sums {};
+                    for (std::size_t prime = 0; prime < primes_.size(); ++prime) {
+                        const auto &context = primes_[prime];
+                        const auto &arithmetic = context.arithmetic;
+                        const double modulus = static_cast<double>(arithmetic.modulus());
+                        const double *source =
+                            residues.data() + (prime * field_type::arity + coordinate) * stride + offset;
+                        for (std::size_t i = 0; i < count; ++i) {
+                            double digit;
+                            if constexpr (UseFma) {
+                                digit = arithmetic.multiply_fma(arithmetic.reduce_fma(source[i]), context.inverse);
+                            } else {
+                                digit =
+                                    arithmetic.multiply_integer(arithmetic.reduce_integer(source[i]), context.inverse);
+                            }
+                            // Both operands have magnitude < q, so the product remainder is in (-q,q).
+                            // Canonical digits give 0 <= digit*(M/q) < M and bound the complete sum.
+                            const auto canonical = static_cast<std::uint64_t>(digit < 0 ? digit + modulus : digit);
+                            sums[i] += context.cofactor * canonical;
+                        }
+                    }
+                    for (std::size_t i = 0; i < count; ++i) {
+                        auto &magnitude = sums[i];
+                        // The sum is < prime_count*M. Subtract binary multiples of M from high to low
+                        // to obtain [0,M), using at most four comparisons/subtractions and no division.
+                        for (std::size_t bit = std::bit_width(primes_.size() - 1); bit-- > 0;) {
+                            if (magnitude >= multiples_[bit]) {
+                                magnitude -= multiples_[bit];
+                            }
+                        }
+                        const bool negative = magnitude > half_modulus_;
+                        if (negative) {
+                            magnitude = multiples_[0] - magnitude;
+                        }
+                        if (magnitude > bound_) {
+                            throw std::overflow_error(
+                                "bn254_small_prime_fft_reconstructor: coefficient exceeds CRT bound");
+                        }
+                        const base_field_type::value_type value(magnitude);
+                        output[offset + i].coordinate(coordinate) = negative ? -value : value;
+                    }
+                    offset += count;
+                }
+            }
+        }
+
+        std::vector<prime_context> primes_;
+        std::array<integer_type, correction_count> multiples_;
+        integer_type half_modulus_;
+        integer_type bound_;
     };
 
 }    // namespace nil::crypto3::math::detail
