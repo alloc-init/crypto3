@@ -50,6 +50,7 @@ set(TESTS_NAMES
     "small_prime_fft_arithmetic"
     "small_prime_fft_conversion"
     "small_prime_fft_crt"
+    "small_prime_fft_transform"
     "matrix"
     "polynomial_gcd"
     # "kronecker_substitution"  # FIXME: This fails. Disabled for passing CI

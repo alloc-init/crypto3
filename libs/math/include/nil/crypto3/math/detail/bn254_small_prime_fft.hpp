@@ -28,6 +28,8 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -345,6 +347,281 @@ namespace nil::crypto3::math::detail {
         std::array<integer_type, correction_count> multiples_;
         integer_type half_modulus_;
         integer_type bound_;
+    };
+
+    /**
+     * In-place, power-of-two transforms for one prime from the catalogue. The forward transform
+     * maps natural-order coefficients to evaluations at omega^k in bit-reversed index order.
+     * The inverse consumes that same order, so convolution needs no permutation passes.
+     *
+     * A reusable table of max(1,N/2) centered twiddles serves both directions. Radix-4 recursion
+     * fuses pairs of layers, with radix-2 leaves for odd depths and special cases for unit twiddles.
+     * Transform calls allocate no buffers; recursion uses O(log N) stack space.
+     *
+     * @pre Inputs are integer-valued doubles in (-3*q,3*q). The calling thread's rounding mode
+     * must remain unchanged during a call. Each call selects FMA or integer arithmetic once.
+     * The forward output is in (-3*q,3*q); the normalized inverse output is in [0,q).
+     * This operation has no constant-time guarantee.
+     */
+    class small_prime_fft_plan {
+    public:
+        small_prime_fft_plan(std::size_t prime_index, std::size_t size) :
+            arithmetic_(checked_prime(prime_index, size).modulus), size_(size),
+            twiddles_(std::max(std::size_t(1), size / 2), 1.0) {
+            using wide_type = boost::multiprecision::uint128_modular_t;
+            const auto &prime = small_prime_fft_primes[prime_index];
+            wide_type root = prime.root;
+            const unsigned depth = std::countr_zero(size_);
+            for (unsigned level = prime.two_adicity; level > depth; --level) {
+                root = root * root % prime.modulus;
+            }
+            omega_ = root.convert_to<std::uint64_t>();
+            size_inverse_ = centered(
+                static_cast<double>(boost::multiprecision::inverse_mod(wide_type(size_), wide_type(prime.modulus))
+                                        .convert_to<std::uint64_t>()));
+
+            // At a layer with 2^d blocks, block j uses omega_(2^(d+1))^bitreverse(j,d).
+            // Each new table segment is the preceding prefix times a primitive root of twice
+            // the previous order: [1], [i], [w8,i*w8], [w16,i*w16,w8*w16,i*w8*w16], ... .
+            for (std::size_t half = size_ / 4; half != 0; half >>= 1) {
+                twiddles_[half] = centered(static_cast<double>(root.convert_to<std::uint64_t>()));
+                root = root * root % prime.modulus;
+            }
+            for (std::size_t half = 1; half < size_ / 2; half <<= 1) {
+                const double step = twiddles_[half];
+                for (std::size_t i = 1; i < half; ++i) {
+                    twiddles_[half + i] = centered(arithmetic_.multiply_integer(twiddles_[i], step));
+                }
+            }
+        }
+
+        std::size_t size() const {
+            return size_;
+        }
+
+        std::uint64_t modulus() const {
+            return arithmetic_.modulus();
+        }
+
+        std::uint64_t omega() const {
+            return omega_;
+        }
+
+        /** Exact centered representative of 1/N modulo q, also usable to fuse scaling into pointwise work. */
+        double size_inverse() const {
+            return size_inverse_;
+        }
+
+        /** Require exactly N entries; invalid dimensions throw before any writes. N=1 is the identity. */
+        void fft(std::span<double> values) const {
+            check_buffer(values);
+            if (arithmetic_.fma_supported()) {
+                forward_recursive<true>(values.data(), size_, 0);
+            } else {
+                forward_recursive<false>(values.data(), size_, 0);
+            }
+        }
+
+        /**
+         * Require exactly N entries in the forward spectrum order. By default, scale by 1/N and
+         * return canonical residues. With normalize=false, return N times the inverse in (-2*q,2*q),
+         * allowing the caller to fuse the scaling elsewhere. Invalid dimensions throw before writes.
+         */
+        void inverse_fft(std::span<double> values, bool normalize = true) const {
+            check_buffer(values);
+            if (arithmetic_.fma_supported()) {
+                inverse_impl<true>(values, normalize);
+            } else {
+                inverse_impl<false>(values, normalize);
+            }
+        }
+
+    private:
+        static const small_prime_fft_prime &checked_prime(std::size_t prime_index, std::size_t size) {
+            if (prime_index >= small_prime_fft_primes.size() || !std::has_single_bit(size) ||
+                std::countr_zero(size) > small_prime_fft_primes[prime_index].two_adicity) {
+                throw std::invalid_argument("small_prime_fft_plan: invalid prime index or transform size");
+            }
+            return small_prime_fft_primes[prime_index];
+        }
+
+        void check_buffer(std::span<const double> values) const {
+            if (values.size() != size_ || twiddles_.empty()) {
+                throw std::invalid_argument("small_prime_fft_plan: invalid buffer dimensions or moved-from plan");
+            }
+#ifndef NDEBUG
+            const double limit = 3 * static_cast<double>(modulus());
+            for (double value : values) {
+                assert(std::isfinite(value) && std::trunc(value) == value && std::abs(value) < limit);
+            }
+#endif
+        }
+
+        double centered(double value) const {
+            const double q = static_cast<double>(modulus());
+            return value > q / 2 ? value - q : (value < -q / 2 ? value + q : value);
+        }
+
+        double inverse_twiddle(std::size_t index) const {
+            if (index == 0) {
+                return 1.0;
+            }
+            // Within [b,2*b), reflected exponents add to half the root order, hence w^-1=-w_reflected.
+            const std::size_t base = std::bit_floor(index);
+            return -twiddles_[base + (2 * base - 1 - index)];
+        }
+
+        // Keep arithmetic selection outside the butterfly loops, with compile-time dispatch inside them.
+        template<bool UseFma>
+        double reduce(double value) const {
+            if constexpr (UseFma) {
+                return arithmetic_.reduce_fma(value);
+            } else {
+                return arithmetic_.reduce_integer(value);
+            }
+        }
+
+        template<bool UseFma>
+        double multiply(double left, double right) const {
+            if constexpr (UseFma) {
+                return arithmetic_.multiply_fma(left, right);
+            } else {
+                return arithmetic_.multiply_integer(left, right);
+            }
+        }
+
+        template<bool UseFma, bool UnitTwiddle>
+        void forward_radix4(double *values, std::size_t quarter, std::size_t node) const {
+#if defined(__clang__)
+#pragma clang fp reassociate(off)
+#pragma clang fp contract(off)
+#endif
+            const double w2 = twiddles_[node];
+            const double w = twiddles_[2 * node];
+            const double iw = twiddles_[2 * node + 1];
+            for (std::size_t i = 0; i < quarter; ++i) {
+                const double a0 = reduce<UseFma>(values[i]);
+                const double a1 = values[i + quarter];
+                const double a2 = UnitTwiddle ? reduce<UseFma>(values[i + 2 * quarter]) :
+                                                multiply<UseFma>(values[i + 2 * quarter], w2);
+                const double a3 = UnitTwiddle ? reduce<UseFma>(values[i + 3 * quarter]) :
+                                                multiply<UseFma>(values[i + 3 * quarter], w2);
+                const double even_sum = a0 + a2;
+                const double even_difference = a0 - a2;
+                const double odd_sum = UnitTwiddle ? reduce<UseFma>(a1 + a3) : multiply<UseFma>(a1 + a3, w);
+                const double odd_difference = multiply<UseFma>(a1 - a3, iw);
+                // Input magnitudes < 3*q and weights < q/2 imply |a2|,|a3| < q and
+                // |a1 +/- a3| < 4*q. Every product is < 2*q^2, so the odd terms are < q.
+                // Thus all outputs are < 3*q, with every integer sum exact below 2^53.
+                values[i] = even_sum + odd_sum;
+                values[i + quarter] = even_sum - odd_sum;
+                values[i + 2 * quarter] = even_difference + odd_difference;
+                values[i + 3 * quarter] = even_difference - odd_difference;
+            }
+        }
+
+        template<bool UseFma>
+        void forward_recursive(double *values, std::size_t length, std::size_t node) const {
+            if (length == 1) {
+                return;
+            }
+            if (length == 2) {
+                const double left = reduce<UseFma>(values[0]);
+                const double right =
+                    node == 0 ? reduce<UseFma>(values[1]) : multiply<UseFma>(values[1], twiddles_[node]);
+                values[0] = left + right;
+                values[1] = left - right;
+                return;
+            }
+            const std::size_t quarter = length / 4;
+            if (node == 0) {
+                forward_radix4<UseFma, true>(values, quarter, node);
+            } else {
+                forward_radix4<UseFma, false>(values, quarter, node);
+            }
+            if (quarter > 1) {
+                for (std::size_t child = 0; child < 4; ++child) {
+                    forward_recursive<UseFma>(values + child * quarter, quarter, 4 * node + child);
+                }
+            }
+        }
+
+        template<bool UseFma, bool UnitTwiddle>
+        void inverse_radix4(double *values, std::size_t quarter, std::size_t node) const {
+#if defined(__clang__)
+#pragma clang fp reassociate(off)
+#pragma clang fp contract(off)
+#endif
+            const double w2 = inverse_twiddle(node);
+            const double w = inverse_twiddle(2 * node);
+            const double iw = inverse_twiddle(2 * node + 1);
+            for (std::size_t i = 0; i < quarter; ++i) {
+                // Leaf inputs may be forward residues of magnitude < 3*q. Reduce them before
+                // adding four entries; non-leaf inputs already satisfy the inverse bound < 2*q.
+                const double b0 = quarter == 1 ? reduce<UseFma>(values[i]) : values[i];
+                const double b1 = quarter == 1 ? reduce<UseFma>(values[i + quarter]) : values[i + quarter];
+                const double b2 = quarter == 1 ? reduce<UseFma>(values[i + 2 * quarter]) : values[i + 2 * quarter];
+                const double b3 = quarter == 1 ? reduce<UseFma>(values[i + 3 * quarter]) : values[i + 3 * quarter];
+                const double even_sum = b0 + b1;
+                const double odd_sum = b2 + b3;
+                const double left = UnitTwiddle ? reduce<UseFma>(b0 - b1) : multiply<UseFma>(b0 - b1, w);
+                const double right = multiply<UseFma>(b2 - b3, iw);
+                // Four inputs < 2*q give sums < 8*q < 2^53. Times a centered weight this is
+                // < 4*q^2, so the a2 remainder is < 1.5*q. Left and right are each < q;
+                // their sum is < 2*q and their weighted difference is < q. The invariant closes.
+                values[i] = reduce<UseFma>(even_sum + odd_sum);
+                values[i + quarter] = left + right;
+                values[i + 2 * quarter] =
+                    UnitTwiddle ? reduce<UseFma>(even_sum - odd_sum) : multiply<UseFma>(even_sum - odd_sum, w2);
+                values[i + 3 * quarter] =
+                    UnitTwiddle ? reduce<UseFma>(left - right) : multiply<UseFma>(left - right, w2);
+            }
+        }
+
+        template<bool UseFma>
+        void inverse_recursive(double *values, std::size_t length, std::size_t node) const {
+            if (length == 1) {
+                values[0] = reduce<UseFma>(values[0]);
+                return;
+            }
+            if (length == 2) {
+                const double left = reduce<UseFma>(values[0]);
+                const double right = reduce<UseFma>(values[1]);
+                values[0] = reduce<UseFma>(left + right);
+                values[1] =
+                    node == 0 ? reduce<UseFma>(left - right) : multiply<UseFma>(left - right, inverse_twiddle(node));
+                return;
+            }
+            const std::size_t quarter = length / 4;
+            if (quarter > 1) {
+                for (std::size_t child = 0; child < 4; ++child) {
+                    inverse_recursive<UseFma>(values + child * quarter, quarter, 4 * node + child);
+                }
+            }
+            if (node == 0) {
+                inverse_radix4<UseFma, true>(values, quarter, node);
+            } else {
+                inverse_radix4<UseFma, false>(values, quarter, node);
+            }
+        }
+
+        template<bool UseFma>
+        void inverse_impl(std::span<double> values, bool normalize) const {
+            inverse_recursive<UseFma>(values.data(), size_, 0);
+            if (normalize) {
+                const double q = static_cast<double>(modulus());
+                for (double &value : values) {
+                    value = multiply<UseFma>(value, size_inverse_);
+                    value = value < 0 ? value + q : value;
+                }
+            }
+        }
+
+        small_prime_fft_arithmetic arithmetic_;
+        std::size_t size_;
+        std::uint64_t omega_;
+        double size_inverse_;
+        std::vector<double> twiddles_;
     };
 
 }    // namespace nil::crypto3::math::detail
