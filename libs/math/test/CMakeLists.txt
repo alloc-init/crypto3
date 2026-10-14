@@ -48,6 +48,7 @@ set(TESTS_NAMES
     "integer_sqrt"
     "small_prime_fft_params"
     "small_prime_fft_arithmetic"
+    "small_prime_fft_conversion"
     "matrix"
     "polynomial_gcd"
     # "kronecker_substitution"  # FIXME: This fails. Disabled for passing CI
