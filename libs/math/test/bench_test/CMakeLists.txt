@@ -40,3 +40,15 @@ target_link_libraries(${MIXED_RADIX_BENCHMARK}
     ${CMAKE_WORKSPACE_NAME}::algebra
     ${CMAKE_WORKSPACE_NAME}::multiprecision
     Boost::random)
+
+# Compare production BN254 Fp12 backends; correctness checks are also available through --check.
+set(SMALL_PRIME_FFT_BENCHMARK ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_small_prime_fft_benchmark)
+add_executable(${SMALL_PRIME_FFT_BENCHMARK} EXCLUDE_FROM_ALL small_prime_fft_benchmark.cpp)
+set_target_properties(${SMALL_PRIME_FFT_BENCHMARK} PROPERTIES CXX_STANDARD 23)
+target_compile_options(${SMALL_PRIME_FFT_BENCHMARK} PRIVATE "-march=native")
+target_link_libraries(${SMALL_PRIME_FFT_BENCHMARK}
+    ${CMAKE_WORKSPACE_NAME}::random
+    ${CMAKE_WORKSPACE_NAME}::math
+    ${CMAKE_WORKSPACE_NAME}::algebra
+    ${CMAKE_WORKSPACE_NAME}::multiprecision
+    Boost::random)
