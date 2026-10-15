@@ -47,10 +47,20 @@ namespace nil::crypto3::math::detail {
         unsigned two_adicity;
     };
 
-    // Twelve 50-bit primes with large power-of-two factors in modulus - 1 provide CRT capacity
-    // for full-width BN254 Fp12 products. The tests certify primality and the exact root orders.
-    // Prime selection uses a prefix of this table. FMA arithmetic and its range checks are separate
-    // from these integer reconstruction parameters; no floating-point arithmetic is used here.
+    // These distinct primes q = k*2^s + 1 (k odd) balance residue arithmetic, FFT length and CRT capacity:
+    //  - 2^49 < q < 2^50 matches the FMA kernel's certified range and leaves three headroom bits in
+    //    binary64's 53-bit significand for exact integer-valued lazy sums with magnitude below 8*q.
+    //    Smaller primes contribute fewer CRT bits, generally requiring more primes and transforms
+    //    to reconstruct the same full-width BN254 Fp12 product.
+    //  - s ranges from 41 to 44, providing roots for every power-of-two transform length up to 2^s.
+    //    Entries are ordered by decreasing s, then decreasing q, favoring root capacity first and
+    //    more CRT bits among primes with the same root capacity.
+    //  - Twelve entries provide spare CRT capacity for larger convolutions; the 32768-point
+    //    full-width BN254 Fp12 workload needs eleven. Selection takes only the shortest prefix whose
+    //    product M exceeds twice the signed coefficient bound, so unused entries incur no transforms.
+    // Other prime/root choices meeting these conditions can also work. Tests certify this catalogue's
+    // primality, exact root orders and FMA reciprocal error bounds; arithmetic checks remain separate
+    // from these integer reconstruction parameters, which use no floating-point arithmetic.
     inline constexpr std::array<small_prime_fft_prime, 12> small_prime_fft_primes = {{
         {1108307720798209ULL, 194751219211145ULL, 44},
         {659706976665601ULL, 422061946989193ULL, 43},
