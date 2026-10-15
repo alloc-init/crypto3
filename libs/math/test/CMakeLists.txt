@@ -46,6 +46,12 @@ set(TESTS_NAMES
     "evaluation_domain"
     "geometric_sequence_domain"
     "integer_sqrt"
+    "small_prime_fft_params"
+    "small_prime_fft_arithmetic"
+    "small_prime_fft_conversion"
+    "small_prime_fft_crt"
+    "small_prime_fft_transform"
+    "small_prime_fft_backend"
     "matrix"
     "polynomial_gcd"
     # "kronecker_substitution"  # FIXME: This fails. Disabled for passing CI
