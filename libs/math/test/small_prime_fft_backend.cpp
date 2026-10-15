@@ -60,6 +60,41 @@ namespace {
 
     static_assert(arithmetic::PolynomialBackend<backend_type>);
     static_assert(math::detail::SupportsDivrem<backend_type>);
+    static_assert(math::detail::SupportsPreparedLowProduct<backend_type>);
+
+    struct prepared_product_counts {
+        std::size_t preparations = 0;
+        std::size_t prepared_products = 0;
+        std::size_t ordinary_products = 0;
+    };
+
+    // Observe dispatch at the backend boundary while keeping all arithmetic in the real backend,
+    // following the existing division tests' counting-backend convention.
+    struct counting_prepared_backend : backend_type {
+        counting_prepared_backend(std::size_t size, prepared_product_counts &counts) :
+            backend_type(size), counts(counts) {
+        }
+
+        auto prepare_low_product(const polynomial_type &fixed, std::size_t variable_count, std::size_t count) {
+            ++counts.preparations;
+            return backend_type::prepare_low_product(fixed, variable_count, count);
+        }
+
+        bool try_multiply_low_prepared(polynomial_type &output, const polynomial_type &input,
+                                       const prepared_low_product_type &prepared, std::size_t count) {
+            const bool accepted = backend_type::try_multiply_low_prepared(output, input, prepared, count);
+            counts.prepared_products += accepted;
+            return accepted;
+        }
+
+        void multiply_low(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
+                          std::size_t count) {
+            ++counts.ordinary_products;
+            backend_type::multiply_low(output, left, right, count);
+        }
+
+        prepared_product_counts &counts;
+    };
 
     struct restore_rounding {
         int saved = std::fegetround();
@@ -477,6 +512,297 @@ BOOST_AUTO_TEST_CASE(existing_modular_multiplication_uses_the_new_backend) {
         actual = left;
         math::squaremod(actual, actual, fixed, context);
         check_polynomial(actual, expected);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(prepared_products_match_native_and_ordinary_low_products) {
+    context_type context {backend_type(256)};
+    std::mt19937_64 random(0x46465420);
+    const std::array<std::pair<std::size_t, std::size_t>, 5> shapes {{{1, 1}, {3, 5}, {7, 9}, {17, 33}, {65, 31}}};
+    for (const auto [a, b] : shapes) {
+        const auto input = random_polynomial(a, random);
+        const auto fixed = random_polynomial(b, random);
+        for (const std::size_t count : {0, 1, 2, 7, 8, 9, 16, 17, 32, 49, 96}) {
+            BOOST_TEST_CONTEXT("shape=" << a << "x" << b << ", count=" << count) {
+                const auto prepared = context.prepare_low_product(fixed, input.size(), count);
+                BOOST_REQUIRE(prepared.has_value());
+                BOOST_CHECK_EQUAL(prepared->coefficient_count(), count);
+                const std::size_t size = count == 0 ? 0 : std::bit_ceil(std::min(a, count) + std::min(b, count) - 1);
+                BOOST_CHECK_EQUAL(prepared->transform_size(), size);
+                polynomial_type variable = input;
+                for (unsigned repeat = 0; repeat < 3; ++repeat) {
+                    const auto expected = expected_low(expected_product(variable, fixed), count);
+                    polynomial_type ordinary, actual;
+                    context.multiply_low(ordinary, variable, fixed, count);
+                    check_polynomial(ordinary, expected);
+                    BOOST_REQUIRE(context.try_multiply_low_prepared(actual, variable, *prepared, count));
+                    check_polynomial(actual, expected);
+                    actual = variable;
+                    BOOST_REQUIRE(context.try_multiply_low_prepared(actual, actual, *prepared, count));
+                    check_polynomial(actual, expected);
+                    variable[0] += value_type::one();
+                }
+            }
+        }
+    }
+    // Large canonical lifts exercise signed CRT through the prepared path as well.
+    coordinates_type coordinates;
+    coordinates.fill(cpp_int(fq::modulus.backend().to_cpp_int()) - 1);
+    const polynomial_type dense(17, field_value(coordinates));
+    const auto prepared = context.prepare_low_product(dense, dense.size(), dense.size());
+    BOOST_REQUIRE(prepared.has_value());
+    polynomial_type actual;
+    BOOST_REQUIRE(context.try_multiply_low_prepared(actual, dense, *prepared, dense.size()));
+    check_polynomial(actual, expected_low(expected_product(dense, dense), dense.size()));
+}
+
+BOOST_AUTO_TEST_CASE(prepared_products_handle_zero_and_truncated_prefixes) {
+    context_type context {backend_type(4)};
+    const polynomial_type zero {value_type::zero()}, one {value_type::one()};
+    polynomial_type input(17, value_type::one()), actual;
+    const auto prepared = context.prepare_low_product(input, input.size(), 2);
+    BOOST_REQUIRE(prepared.has_value());
+    BOOST_CHECK_EQUAL(prepared->transform_size(), 4);
+    BOOST_REQUIRE(context.try_multiply_low_prepared(actual, input, *prepared, 2));
+    check_polynomial(actual, expected_low(expected_product(input, input), 2));
+
+    context_type tiny {backend_type(1)};
+    // Zero variable prefixes need no compatible transform, even in a smaller backend.
+    BOOST_REQUIRE(tiny.try_multiply_low_prepared(actual, zero, *prepared, 2));
+    check_polynomial(actual, zero);
+    polynomial_type zero_prefix(17, value_type::zero());
+    zero_prefix[16] = value_type::one();
+    BOOST_REQUIRE(tiny.try_multiply_low_prepared(actual, zero_prefix, *prepared, 2));
+    check_polynomial(actual, zero);
+    for (const auto &fixed : {zero, zero_prefix}) {
+        const auto empty = context.prepare_low_product(fixed, input.size(), 2);
+        BOOST_REQUIRE(empty.has_value());
+        BOOST_CHECK_EQUAL(empty->transform_size(), 0);
+        BOOST_CHECK_EQUAL(empty->storage_bytes(), 0);
+        BOOST_REQUIRE(tiny.try_multiply_low_prepared(actual, input, *empty, 2));
+        check_polynomial(actual, zero);
+        actual = one;
+        BOOST_CHECK(!tiny.try_multiply_low_prepared(actual, input, *empty, 1));
+        check_polynomial(actual, one);
+    }
+    const auto empty = context.prepare_low_product(input, 0, 0);
+    BOOST_REQUIRE(empty.has_value());
+    BOOST_CHECK_EQUAL(empty->transform_size(), 0);
+    BOOST_CHECK_EQUAL(empty->storage_bytes(), 0);
+    BOOST_REQUIRE(tiny.try_multiply_low_prepared(actual, input, *empty, 0));
+    check_polynomial(actual, zero);
+    BOOST_CHECK(!context.prepare_low_product(zero, 0, 2).has_value());
+
+    // The retained prefixes can end in zeros, although the original polynomials are canonical.
+    const polynomial_type fixed {value_type(2), value_type::zero(), value_type(7)};
+    const polynomial_type variable {value_type(3), value_type::zero(), value_type::one()};
+    const auto trailing = context.prepare_low_product(fixed, variable.size(), 2);
+    BOOST_REQUIRE(trailing.has_value());
+    BOOST_REQUIRE(context.try_multiply_low_prepared(actual, variable, *trailing, 2));
+    check_polynomial(actual, polynomial_type {value_type(6)});
+
+    context_type larger {backend_type(32)};
+    polynomial_type sparse(9, value_type::zero());
+    sparse[0] = sparse[8] = value_type::one();
+    const auto no_wrap = larger.prepare_low_product(sparse, sparse.size(), 9);
+    BOOST_REQUIRE(no_wrap.has_value());
+    BOOST_CHECK_EQUAL(no_wrap->transform_size(), 32);
+    BOOST_REQUIRE(larger.try_multiply_low_prepared(actual, sparse, *no_wrap, 9));
+    check_polynomial(actual, expected_low(expected_product(sparse, sparse), 9));
+}
+
+BOOST_AUTO_TEST_CASE(prepared_products_require_matching_precision_and_transform) {
+    context_type context {backend_type(32)};
+    std::mt19937_64 random(0x46465421);
+    const auto fixed = random_polynomial(3, random);
+    const auto prepared = context.prepare_low_product(fixed, 3, 10);
+    BOOST_REQUIRE(prepared.has_value());
+    BOOST_CHECK_EQUAL(prepared->transform_size(), 8);
+    for (const std::size_t size : {3, 4, 5, 6}) {
+        const auto variable = random_polynomial(size, random);
+        polynomial_type actual;
+        BOOST_REQUIRE(context.try_multiply_low_prepared(actual, variable, *prepared, 10));
+        check_polynomial(actual, expected_product(variable, fixed));
+    }
+    const auto variable = random_polynomial(3, random);
+    polynomial_type actual {value_type::one()};
+    const auto before = actual;
+    for (const std::size_t count : {0, 9, 11}) {
+        BOOST_CHECK(!context.try_multiply_low_prepared(actual, variable, *prepared, count));
+        check_polynomial(actual, before);
+    }
+    for (const std::size_t size : {1, 2, 7, 33}) {
+        const auto input = random_polynomial(size, random);
+        actual = input;
+        BOOST_CHECK(!context.try_multiply_low_prepared(actual, actual, *prepared, 10));
+        check_polynomial(actual, input);
+    }
+    context_type too_small {backend_type(4)};
+    actual = before;
+    BOOST_CHECK(!too_small.try_multiply_low_prepared(actual, variable, *prepared, 10));
+    check_polynomial(actual, before);
+    BOOST_CHECK(!too_small.prepare_low_product(fixed, 3, 3).has_value());
+    BOOST_CHECK(!context.prepare_low_product(fixed, 0, 3).has_value());
+    BOOST_CHECK(!context
+                     .prepare_low_product(fixed, std::numeric_limits<std::size_t>::max(),
+                                          std::numeric_limits<std::size_t>::max())
+                     .has_value());
+}
+
+BOOST_AUTO_TEST_CASE(prepared_products_own_spectra_across_contexts_and_moves) {
+    std::mt19937_64 random(0x46465422);
+    const auto fixed = random_polynomial(5, random);
+    const auto variable = random_polynomial(7, random);
+    const auto prepared = [&] {
+        context_type temporary {backend_type(64)};
+        polynomial_type source = fixed;
+        auto result = temporary.prepare_low_product(source, variable.size(), 17);
+        source[0] += value_type::one();
+        return result;
+    }();
+    BOOST_REQUIRE(prepared.has_value());
+    auto copy = *prepared;
+    const auto moved = std::move(copy);
+    const auto expected = expected_product(variable, fixed);
+    for (const std::size_t size : {16, 128}) {
+        context_type context {backend_type(size)};
+        for (const auto *snapshot : {&*prepared, &moved}) {
+            polynomial_type actual;
+            BOOST_REQUIRE(context.try_multiply_low_prepared(actual, variable, *snapshot, 17));
+            check_polynomial(actual, expected);
+            auto changed_fixed = fixed;
+            changed_fixed[0] += value_type::one();
+            const auto changed = context.prepare_low_product(changed_fixed, variable.size(), 17);
+            BOOST_REQUIRE(changed.has_value());
+            BOOST_REQUIRE(context.try_multiply_low_prepared(actual, variable, *changed, 17));
+            check_polynomial(actual, expected_product(variable, changed_fixed));
+            BOOST_REQUIRE(context.try_multiply_low_prepared(actual, variable, *snapshot, 17));
+            check_polynomial(actual, expected);
+        }
+        polynomial_type actual = variable;
+        BOOST_CHECK(!context.try_multiply_low_prepared(actual, actual, copy, 17));
+        check_polynomial(actual, variable);
+    }
+    backend_type source(32);
+    backend_type destination = std::move(source);
+    polynomial_type actual = variable;
+    BOOST_CHECK(!source.prepare_low_product(fixed, variable.size(), 17).has_value());
+    BOOST_CHECK(!source.try_multiply_low_prepared(actual, actual, *prepared, 17));
+    check_polynomial(actual, variable);
+    BOOST_REQUIRE(destination.try_multiply_low_prepared(actual, variable, *prepared, 17));
+    check_polynomial(actual, expected);
+}
+
+BOOST_AUTO_TEST_CASE(small_preparations_do_not_retain_large_workspaces) {
+    backend_type backend(256);
+    polynomial_type actual, large(65, value_type::one());
+    backend.multiply(actual, large, large);
+    const polynomial_type small(9, value_type::one());
+    const auto prepared = backend.prepare_low_product(small, small.size(), small.size());
+    BOOST_REQUIRE(prepared.has_value());
+    BOOST_CHECK_EQUAL(prepared->transform_size(), 32);
+    const std::size_t bytes_per_position = 12 * backend.prime_count() * sizeof(double);
+    BOOST_CHECK_GE(prepared->storage_bytes(), 32 * bytes_per_position);
+    BOOST_CHECK_LT(prepared->storage_bytes(), 256 * bytes_per_position);
+    BOOST_REQUIRE(backend.try_multiply_low_prepared(actual, small, *prepared, small.size()));
+    polynomial_type expected(small.size(), value_type::zero());
+    for (std::size_t i = 0; i < expected.size(); ++i) {
+        expected[i] = value_type(i + 1);
+    }
+    check_polynomial(actual, expected);
+}
+
+BOOST_AUTO_TEST_CASE(prepared_products_survive_rounding_mode_changes) {
+    restore_rounding restore;
+    BOOST_REQUIRE_EQUAL(std::fesetround(FE_TONEAREST), 0);
+    context_type context {backend_type(32)};
+    std::mt19937_64 random(0x46465423);
+    const auto fixed = random_polynomial(5, random);
+    const auto variable = random_polynomial(9, random);
+    const auto expected = expected_low(expected_product(variable, fixed), 9);
+    for (const int prepare_mode : {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
+        BOOST_REQUIRE_EQUAL(std::fesetround(prepare_mode), 0);
+        context_type preparing {backend_type(32)};
+        const auto prepared = preparing.prepare_low_product(fixed, variable.size(), 9);
+        BOOST_REQUIRE(prepared.has_value());
+        BOOST_CHECK_EQUAL(std::fegetround(), prepare_mode);
+        for (const int use_mode : {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
+            BOOST_REQUIRE_EQUAL(std::fesetround(use_mode), 0);
+            polynomial_type actual;
+            BOOST_REQUIRE(context.try_multiply_low_prepared(actual, variable, *prepared, 9));
+            check_polynomial(actual, expected);
+            BOOST_CHECK_EQUAL(std::fegetround(), use_mode);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(divisor_context_reuses_prepared_products_and_falls_back) {
+    prepared_product_counts counts;
+    arithmetic::polynomial_context_options options;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    using counted_context = arithmetic::polynomial_context<counting_prepared_backend>;
+    counted_context preparing {counting_prepared_backend(64, counts), options};
+    std::mt19937_64 random(0x46465424);
+    auto divisor = random_polynomial(9, random);
+    divisor[8] = value_type::one();
+    const math::polynomial_divisor_context<counting_prepared_backend> fixed(divisor, 7, preparing);
+    BOOST_CHECK_EQUAL(counts.preparations, 2);
+    auto copy = fixed;
+    const auto moved = std::move(copy);
+    counted_context context {counting_prepared_backend(32, counts), options};
+    const auto remainder = random_polynomial(6, random);
+    for (const auto *snapshot : {&fixed, &moved}) {
+        for (const std::size_t size : {7, 6, 2, 1, 7}) {
+            auto quotient = random_polynomial(size, random);
+            quotient[size - 1] = value_type::one();
+            auto dividend = expected_product(quotient, divisor);
+            math::addition(dividend, dividend, remainder);
+            counts = {};
+            polynomial_type actual_quotient, actual_remainder;
+            math::divrem(actual_quotient, actual_remainder, dividend, *snapshot, context);
+            check_polynomial(actual_quotient, quotient);
+            check_polynomial(actual_remainder, remainder);
+            const std::size_t accepted = size == 7 ? 2 : (size == 1 ? 0 : 1);
+            BOOST_CHECK_EQUAL(counts.prepared_products, accepted);
+            BOOST_CHECK_EQUAL(counts.ordinary_products, 2 - accepted);
+            BOOST_CHECK_EQUAL(counts.preparations, 0);
+            actual_quotient = dividend;
+            math::divrem(actual_quotient, actual_remainder, actual_quotient, *snapshot, context);
+            check_polynomial(actual_quotient, quotient);
+            check_polynomial(actual_remainder, remainder);
+            actual_remainder = dividend;
+            math::divrem(actual_quotient, actual_remainder, actual_remainder, *snapshot, context);
+            check_polynomial(actual_quotient, quotient);
+            check_polynomial(actual_remainder, remainder);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(prepared_divisor_context_handles_sparse_fixed_prefixes) {
+    prepared_product_counts counts;
+    arithmetic::polynomial_context_options options;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    arithmetic::polynomial_context<counting_prepared_backend> context {counting_prepared_backend(32, counts), options};
+    std::mt19937_64 random(0x46465425);
+    const auto quotient = random_polynomial(7, random);
+    const auto remainder = random_polynomial(3, random);
+    for (const auto &constant : {value_type::zero(), value_type::one()}) {
+        polynomial_type divisor(9, value_type::zero());
+        divisor[0] = constant;
+        divisor[8] = value_type::one();
+        const math::polynomial_divisor_context<counting_prepared_backend> fixed(divisor, 7, context);
+        auto dividend = expected_product(quotient, divisor);
+        math::addition(dividend, dividend, remainder);
+        counts = {};
+        polynomial_type actual_quotient, actual_remainder;
+        math::divrem(actual_quotient, actual_remainder, dividend, fixed, context);
+        check_polynomial(actual_quotient, quotient);
+        check_polynomial(actual_remainder, remainder);
+        BOOST_CHECK_EQUAL(counts.prepared_products, 2);
+        BOOST_CHECK_EQUAL(counts.ordinary_products, 0);
+        BOOST_CHECK_EQUAL(counts.preparations, 0);
     }
 }
 

@@ -29,6 +29,7 @@
 #include <bit>
 #include <cstddef>
 #include <limits>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <utility>
@@ -67,6 +68,44 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         using polynomial_type = math::polynomial<value_type>;
 
         /**
+         * Owned, immutable spectrum of a fixed operand's low prefix. The preparation has its own
+         * allocation and survives changes to the source polynomial or the preparing backend.
+         * Nonzero preparations identify the transform length and catalogue prefix; compatible
+         * backend instances can reuse them without retaining references to plans or workspace.
+         */
+        class prepared_low_product_type {
+        public:
+            std::size_t coefficient_count() const noexcept {
+                return coefficient_count_;
+            }
+
+            // Zero denotes a zero fixed prefix or zero requested precision, requiring no spectrum.
+            std::size_t transform_size() const noexcept {
+                return transform_size_;
+            }
+
+            std::size_t storage_bytes() const noexcept {
+                return spectrum_.capacity() * sizeof(double);
+            }
+
+        private:
+            friend class bn254_small_prime_fft_backend;
+
+            prepared_low_product_type(std::size_t coefficient_count, std::size_t prefix_size,
+                                      std::size_t transform_size = 0, std::size_t prime_count = 0,
+                                      std::vector<double> spectrum = {}) :
+                coefficient_count_(coefficient_count), prefix_size_(prefix_size), transform_size_(transform_size),
+                prime_count_(prime_count), spectrum_(std::move(spectrum)) {
+            }
+
+            std::size_t coefficient_count_;
+            std::size_t prefix_size_;
+            std::size_t transform_size_;
+            std::size_t prime_count_;
+            std::vector<double> spectrum_;
+        };
+
+        /**
          * max_spectrum_bytes limits one spectrum at the configured maximum length. A second
          * spectrum, cached twiddle tables and coefficient output storage are additional allocations.
          * Invalid/unsupported lengths or an insufficient byte limit throw before allocating plans.
@@ -100,6 +139,88 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             } else {
                 multiply_prefixes<false>(output, left, right, coefficient_count);
             }
+        }
+
+        /**
+         * Prepare the fixed right operand for multiply_low, selecting the same prefixes and smallest
+         * transform as an ordinary product. Positive precision with no variable coefficients returns
+         * nullopt. Nonzero preparations also require a live backend and capacity for the complete
+         * prefix product. Zero precision and zero fixed prefixes need no transform or spectrum allocation.
+         * The source is a coefficient polynomial; trailing zero coefficients are permitted.
+         */
+        std::optional<prepared_low_product_type> prepare_low_product(const polynomial_type &fixed,
+                                                                     std::size_t variable_coefficient_count,
+                                                                     std::size_t coefficient_count) {
+            const std::size_t prefix_size = std::min(fixed.size(), coefficient_count);
+            if (coefficient_count == 0) {
+                return prepared_low_product_type(coefficient_count, prefix_size);
+            }
+            const std::size_t variable_size = std::min(variable_coefficient_count, coefficient_count);
+            if (variable_size == 0) {
+                return std::nullopt;
+            }
+            if (math::is_zero(fixed.begin(), fixed.begin() + prefix_size)) {
+                return prepared_low_product_type(coefficient_count, prefix_size);
+            }
+            if (plans_.empty() || variable_size > max_transform_size_ ||
+                prefix_size > max_transform_size_ - (variable_size - 1)) {
+                return std::nullopt;
+            }
+            const std::size_t size = std::bit_ceil(variable_size + prefix_size - 1);
+            // Allocate just this spectrum, so a small preparation never retains larger scratch capacity.
+            std::vector<double> spectrum(field_type::arity * prime_count() * size);
+            converter_.convert(spectrum, std::span<const value_type>(fixed.data(), prefix_size), size);
+            const std::size_t plan_offset = std::countr_zero(size) * prime_count();
+            for (std::size_t prime = 0; prime < prime_count(); ++prime) {
+                for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
+                    plans_[plan_offset + prime].fft(
+                        std::span<double>(spectrum).subspan((prime * field_type::arity + coordinate) * size, size));
+                }
+            }
+            return prepared_low_product_type(coefficient_count, prefix_size, size, prime_count(), std::move(spectrum));
+        }
+
+        /**
+         * Compute left*fixed mod X^coefficient_count without converting or transforming fixed again.
+         * Return false, leaving output unchanged, for mismatched precision, a moved-from nonzero
+         * preparation, or an incompatible backend/shape. Nonzero products require the same selected
+         * FFT length and catalogue prefix; zero products need neither. Successful output is canonical
+         * and may alias left. The preparation is never modified or copied into working storage.
+         *
+         * Matching primes and a product length fitting the current backend suffice for CRT safety:
+         * its existing coefficient bound covers every linear product that fits, even when the
+         * preparation came from a backend with a different configured maximum.
+         */
+        bool try_multiply_low_prepared(polynomial_type &output, const polynomial_type &left,
+                                       const prepared_low_product_type &prepared, std::size_t coefficient_count) {
+            if (coefficient_count != prepared.coefficient_count_) {
+                return false;
+            }
+            if (prepared.transform_size_ == 0) {
+                output.assign(1, value_type::zero());
+                return true;
+            }
+            if (prepared.spectrum_.empty()) {
+                return false;
+            }
+            const std::size_t left_size = std::min(left.size(), coefficient_count);
+            if (math::is_zero(left.begin(), left.begin() + left_size)) {
+                output.assign(1, value_type::zero());
+                return true;
+            }
+            if (plans_.empty() || prepared.prime_count_ != prime_count() || left_size > max_transform_size_ ||
+                prepared.prefix_size_ > max_transform_size_ - (left_size - 1)) {
+                return false;
+            }
+            const std::size_t product_size = left_size + prepared.prefix_size_ - 1;
+            const std::size_t size = std::bit_ceil(product_size);
+            if (size != prepared.transform_size_) {
+                return false;
+            }
+            left_spectrum_.resize(field_type::arity * prime_count() * size);
+            converter_.convert(left_spectrum_, std::span<const value_type>(left.data(), left_size), size);
+            finish_product<false, true>(output, size, std::min(product_size, coefficient_count), prepared.spectrum_);
+            return true;
         }
 
     private:
@@ -162,20 +283,31 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 right_spectrum_.resize(channels * size);
                 converter_.convert(right_spectrum_, std::span<const value_type>(right.data(), right_size), size);
             }
+            finish_product<Square>(output, size, result_size);
+        }
+
+        // Keep ordinary multiplication, squaring and prepared reuse on the same inverse/CRT path.
+        // A prepared right spectrum is read directly and skips all of the right operand's forward FFTs.
+        template<bool Square, bool Prepared = false>
+        void finish_product(polynomial_type &output, std::size_t size, std::size_t result_size,
+                            std::span<const double> prepared_spectrum = {}) {
             const std::size_t plan_offset = std::countr_zero(size) * prime_count();
             for (std::size_t prime = 0; prime < prime_count(); ++prime) {
                 const auto &plan = plans_[plan_offset + prime];
-                auto a = std::span<double>(left_spectrum_)
-                             .subspan(prime * field_type::arity * size, field_type::arity * size);
-                std::span<double> b;
+                const std::size_t offset = prime * field_type::arity * size;
+                auto a = std::span<double>(left_spectrum_).subspan(offset, field_type::arity * size);
+                std::span<const double> b;
                 if constexpr (!Square) {
-                    b = std::span<double>(right_spectrum_)
-                            .subspan(prime * field_type::arity * size, field_type::arity * size);
+                    if constexpr (Prepared) {
+                        b = prepared_spectrum.subspan(offset, field_type::arity * size);
+                    } else {
+                        b = std::span<const double>(right_spectrum_).subspan(offset, field_type::arity * size);
+                    }
                 }
                 for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
                     plan.fft(a.subspan(coordinate * size, size));
-                    if constexpr (!Square) {
-                        plan.fft(b.subspan(coordinate * size, size));
+                    if constexpr (!Square && !Prepared) {
+                        plan.fft(std::span<double>(right_spectrum_).subspan(offset + coordinate * size, size));
                     }
                 }
                 if constexpr (Square) {
