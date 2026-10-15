@@ -624,6 +624,200 @@ namespace nil::crypto3::math::detail {
         std::vector<double> twiddles_;
     };
 
+    /**
+     * Pointwise products in the BN254 tower u^2=-1, v^3=9+u, w^2=v, over one small modulus q.
+     * This is a quotient ring; irreducibility of the tower polynomials modulo q is not required.
+     * Coordinate channels have the same order as the converter, with one prime per call.
+     *
+     * Reuse the field library's Karatsuba tower identities and quadratic-extension squaring
+     * identity with the scalar residue kernels. The existing field elements bind their base
+     * arithmetic to the target modulus and cannot represent these small-prime intermediates.
+     *
+     * @pre Input cells are integer-valued doubles of magnitude < 2^53. scale is an integer with
+     * |scale| < q/2, normally the FFT plan's centered 1/N. The two buffers are disjoint or identical.
+     * The thread's rounding mode stays unchanged during the call. Output cells are in (-q,q).
+     * No buffers are allocated and no constant-time guarantee is provided.
+     */
+    class bn254_small_prime_fft_pointwise {
+        using quadratic_type = std::array<double, 2>;
+        using cubic_type = std::array<quadratic_type, 3>;
+        using tower_type = std::array<cubic_type, 2>;
+
+        template<bool UseFma>
+        struct kernel {
+            const small_prime_fft_arithmetic &arithmetic;
+
+            double reduce(double value) const {
+                if constexpr (UseFma) {
+                    return arithmetic.reduce_fma(value);
+                } else {
+                    return arithmetic.reduce_integer(value);
+                }
+            }
+
+            double multiply(double a, double b) const {
+                if constexpr (UseFma) {
+                    return arithmetic.multiply_fma(a, b);
+                } else {
+                    return arithmetic.multiply_integer(a, b);
+                }
+            }
+
+            double add(double a, double b) const {
+                return reduce(a + b);
+            }
+
+            double subtract(double a, double b) const {
+                return reduce(a - b);
+            }
+
+            template<typename T, std::size_t N>
+            std::array<T, N> add(const std::array<T, N> &a, const std::array<T, N> &b) const {
+                std::array<T, N> result;
+                for (std::size_t i = 0; i < N; ++i) {
+                    result[i] = add(a[i], b[i]);
+                }
+                return result;
+            }
+
+            template<typename T, std::size_t N>
+            std::array<T, N> subtract(const std::array<T, N> &a, const std::array<T, N> &b) const {
+                std::array<T, N> result;
+                for (std::size_t i = 0; i < N; ++i) {
+                    result[i] = subtract(a[i], b[i]);
+                }
+                return result;
+            }
+
+            // All tower inputs and returned coordinates are in (-q,q). Pair sums are < 2*q;
+            // the Karatsuba product is < 4*q^2 and its remainder < 1.5*q. Correcting by the
+            // two diagonal products gives a sum < 3.5*q, hence exact in binary64 before reduction.
+            quadratic_type multiply(const quadratic_type &a, const quadratic_type &b) const {
+#if defined(__clang__)
+#pragma clang fp reassociate(off)
+#pragma clang fp contract(off)
+#endif
+                const double diagonal0 = multiply(a[0], b[0]);
+                const double diagonal1 = multiply(a[1], b[1]);
+                const double cross = multiply(a[0] + a[1], b[0] + b[1]);
+                return {reduce(diagonal0 - diagonal1), reduce(cross - diagonal0 - diagonal1)};
+            }
+
+            quadratic_type multiply_xi(const quadratic_type &a) const {
+#if defined(__clang__)
+#pragma clang fp reassociate(off)
+#pragma clang fp contract(off)
+#endif
+                // (9+u)*(a0+a1*u) = (9*a0-a1) + (a0+9*a1)*u. Reduce 8*a first:
+                // |8*a| < 8*q < 2^53, whereas forming 9*a directly could lose an integer bit.
+                return {reduce(reduce(8 * a[0]) + a[0] - a[1]), reduce(reduce(8 * a[1]) + a[1] + a[0])};
+            }
+
+            cubic_type multiply_v(const cubic_type &a) const {
+                return {multiply_xi(a[2]), a[0], a[1]};
+            }
+
+            cubic_type multiply(const cubic_type &a, const cubic_type &b) const {
+                const auto diagonal0 = multiply(a[0], b[0]);
+                const auto diagonal1 = multiply(a[1], b[1]);
+                const auto diagonal2 = multiply(a[2], b[2]);
+                const auto cross12 =
+                    subtract(subtract(multiply(add(a[1], a[2]), add(b[1], b[2])), diagonal1), diagonal2);
+                const auto cross01 =
+                    subtract(subtract(multiply(add(a[0], a[1]), add(b[0], b[1])), diagonal0), diagonal1);
+                const auto cross02 =
+                    subtract(subtract(multiply(add(a[0], a[2]), add(b[0], b[2])), diagonal0), diagonal2);
+                return {add(diagonal0, multiply_xi(cross12)), add(cross01, multiply_xi(diagonal2)),
+                        add(cross02, diagonal1)};
+            }
+
+            tower_type multiply(const tower_type &a, const tower_type &b) const {
+                const auto diagonal0 = multiply(a[0], b[0]);
+                const auto diagonal1 = multiply(a[1], b[1]);
+                const auto cross = subtract(subtract(multiply(add(a[0], a[1]), add(b[0], b[1])), diagonal0), diagonal1);
+                return {add(diagonal0, multiply_v(diagonal1)), cross};
+            }
+
+            tower_type square(const tower_type &a) const {
+                // The quadratic-extension square needs two cubic products instead of three:
+                // c0 = (a0+a1)*(a0+v*a1) - a0*a1 - v*a0*a1; c1 = 2*a0*a1.
+                const auto cross = multiply(a[0], a[1]);
+                const auto combined = multiply(add(a[0], a[1]), add(a[0], multiply_v(a[1])));
+                return {subtract(subtract(combined, cross), multiply_v(cross)), add(cross, cross)};
+            }
+        };
+
+    public:
+        explicit bn254_small_prime_fft_pointwise(std::uint64_t modulus) : arithmetic_(modulus) {
+        }
+
+        /** Overwrite left with scale*left*right. Both buffers must contain exactly 12*stride cells. */
+        void multiply(std::span<double> left, std::span<const double> right, std::size_t stride, double scale) const {
+            check_buffers(left, right, stride, scale);
+            if (arithmetic_.fma_supported()) {
+                apply<true, false>(left, right, stride, scale);
+            } else {
+                apply<false, false>(left, right, stride, scale);
+            }
+        }
+
+        /** Overwrite values with scale*values^2, loading each tower element once. */
+        void square(std::span<double> values, std::size_t stride, double scale) const {
+            check_buffers(values, values, stride, scale);
+            if (arithmetic_.fma_supported()) {
+                apply<true, true>(values, values, stride, scale);
+            } else {
+                apply<false, true>(values, values, stride, scale);
+            }
+        }
+
+    private:
+        void check_buffers(std::span<const double> left, std::span<const double> right, std::size_t stride,
+                           double scale) const {
+            if (left.size() % 12 != 0 || left.size() / 12 != stride || left.size() != right.size()) {
+                throw std::invalid_argument("bn254_small_prime_fft_pointwise: invalid buffer dimensions");
+            }
+            assert(std::isfinite(scale) && std::trunc(scale) == scale &&
+                   std::abs(scale) < static_cast<double>(arithmetic_.modulus()) / 2);
+        }
+
+        template<bool UseFma, bool Square>
+        void apply(std::span<double> left, std::span<const double> right, std::size_t stride, double scale) const {
+            const kernel<UseFma> operations {arithmetic_};
+            for (std::size_t i = 0; i < stride; ++i) {
+                tower_type a, b;
+                for (std::size_t w = 0; w < 2; ++w) {
+                    for (std::size_t v = 0; v < 3; ++v) {
+                        for (std::size_t u = 0; u < 2; ++u) {
+                            const std::size_t offset = (6 * w + 2 * v + u) * stride + i;
+                            a[w][v][u] = operations.reduce(left[offset]);
+                            if constexpr (!Square) {
+                                b[w][v][u] = operations.reduce(right[offset]);
+                            }
+                        }
+                    }
+                }
+                const tower_type result = [&]() {
+                    if constexpr (Square) {
+                        return operations.square(a);
+                    } else {
+                        return operations.multiply(a, b);
+                    }
+                }();
+                for (std::size_t w = 0; w < 2; ++w) {
+                    for (std::size_t v = 0; v < 3; ++v) {
+                        for (std::size_t u = 0; u < 2; ++u) {
+                            // Fold inverse-transform normalization into this existing write pass.
+                            left[(6 * w + 2 * v + u) * stride + i] = operations.multiply(result[w][v][u], scale);
+                        }
+                    }
+                }
+            }
+        }
+
+        small_prime_fft_arithmetic arithmetic_;
+    };
+
 }    // namespace nil::crypto3::math::detail
 
 #endif    // CRYPTO3_MATH_DETAIL_BN254_SMALL_PRIME_FFT_HPP
