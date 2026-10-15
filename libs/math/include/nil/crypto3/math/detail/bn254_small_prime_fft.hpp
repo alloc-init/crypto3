@@ -356,6 +356,7 @@ namespace nil::crypto3::math::detail {
      *
      * A reusable table of max(1,N/2) centered twiddles serves both directions. Radix-4 recursion
      * fuses pairs of layers, with radix-2 leaves for odd depths and special cases for unit twiddles.
+     * AVX2/FMA builds process four independent butterflies at a time; short layers stay scalar.
      * Transform calls allocate no buffers; recursion uses O(log N) stack space.
      *
      * @pre Inputs are integer-valued doubles in (-3*q,3*q). The calling thread's rounding mode
@@ -472,51 +473,79 @@ namespace nil::crypto3::math::detail {
         }
 
         // Keep arithmetic selection outside the butterfly loops, with compile-time dispatch inside them.
-        template<bool UseFma>
-        double reduce(double value) const {
+        template<bool UseFma, typename Arithmetic, typename Value>
+        static Value reduce(const Arithmetic &arithmetic, Value value) {
             if constexpr (UseFma) {
-                return arithmetic_.reduce_fma(value);
+                return arithmetic.reduce_fma(value);
             } else {
-                return arithmetic_.reduce_integer(value);
+                return arithmetic.reduce_integer(value);
             }
         }
 
-        template<bool UseFma>
-        double multiply(double left, double right) const {
+        template<bool UseFma, typename Arithmetic, typename Value>
+        static Value multiply(const Arithmetic &arithmetic, Value left, Value right) {
             if constexpr (UseFma) {
-                return arithmetic_.multiply_fma(left, right);
+                return arithmetic.multiply_fma(left, right);
             } else {
-                return arithmetic_.multiply_integer(left, right);
+                return arithmetic.multiply_integer(left, right);
             }
         }
 
-        template<bool UseFma, bool UnitTwiddle>
-        void forward_radix4(double *values, std::size_t quarter, std::size_t node) const {
+        template<bool UseFma, bool UnitTwiddle, typename Arithmetic, typename Value>
+        static void forward_butterfly(const Arithmetic &arithmetic, Value &v0, Value &v1, Value &v2, Value &v3,
+                                      Value w2, Value w, Value iw) {
 #if defined(__clang__)
 #pragma clang fp reassociate(off)
 #pragma clang fp contract(off)
 #endif
+            const Value a0 = reduce<UseFma>(arithmetic, v0);
+            const Value a1 = v1;
+            const Value a2 = UnitTwiddle ? reduce<UseFma>(arithmetic, v2) : multiply<UseFma>(arithmetic, v2, w2);
+            const Value a3 = UnitTwiddle ? reduce<UseFma>(arithmetic, v3) : multiply<UseFma>(arithmetic, v3, w2);
+            const Value even_sum = a0 + a2;
+            const Value even_difference = a0 - a2;
+            const Value odd_sum =
+                UnitTwiddle ? reduce<UseFma>(arithmetic, a1 + a3) : multiply<UseFma>(arithmetic, a1 + a3, w);
+            const Value odd_difference = multiply<UseFma>(arithmetic, a1 - a3, iw);
+            // Input magnitudes < 3*q and weights < q/2 imply |a2|,|a3| < q and
+            // |a1 +/- a3| < 4*q. Every product is < 2*q^2, so the odd terms are < q.
+            // Thus all outputs are < 3*q, with every integer sum exact below 2^53.
+            v0 = even_sum + odd_sum;
+            v1 = even_sum - odd_sum;
+            v2 = even_difference + odd_difference;
+            v3 = even_difference - odd_difference;
+        }
+
+        template<bool UseFma, bool UnitTwiddle>
+        void forward_radix4(double *values, std::size_t quarter, std::size_t node) const {
             const double w2 = twiddles_[node];
             const double w = twiddles_[2 * node];
             const double iw = twiddles_[2 * node + 1];
-            for (std::size_t i = 0; i < quarter; ++i) {
-                const double a0 = reduce<UseFma>(values[i]);
-                const double a1 = values[i + quarter];
-                const double a2 = UnitTwiddle ? reduce<UseFma>(values[i + 2 * quarter]) :
-                                                multiply<UseFma>(values[i + 2 * quarter], w2);
-                const double a3 = UnitTwiddle ? reduce<UseFma>(values[i + 3 * quarter]) :
-                                                multiply<UseFma>(values[i + 3 * quarter], w2);
-                const double even_sum = a0 + a2;
-                const double even_difference = a0 - a2;
-                const double odd_sum = UnitTwiddle ? reduce<UseFma>(a1 + a3) : multiply<UseFma>(a1 + a3, w);
-                const double odd_difference = multiply<UseFma>(a1 - a3, iw);
-                // Input magnitudes < 3*q and weights < q/2 imply |a2|,|a3| < q and
-                // |a1 +/- a3| < 4*q. Every product is < 2*q^2, so the odd terms are < q.
-                // Thus all outputs are < 3*q, with every integer sum exact below 2^53.
-                values[i] = even_sum + odd_sum;
-                values[i + quarter] = even_sum - odd_sum;
-                values[i + 2 * quarter] = even_difference + odd_difference;
-                values[i + 3 * quarter] = even_difference - odd_difference;
+            std::size_t i = 0;
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
+            if constexpr (UseFma) {
+                if (quarter >= 4) {
+                    const small_prime_fft_arithmetic::packed_fma_kernel packed(arithmetic_);
+                    const __m256d packed_w2 = _mm256_set1_pd(w2);
+                    const __m256d packed_w = _mm256_set1_pd(w);
+                    const __m256d packed_iw = _mm256_set1_pd(iw);
+                    for (; quarter - i >= 4; i += 4) {
+                        __m256d v0 = _mm256_loadu_pd(values + i);
+                        __m256d v1 = _mm256_loadu_pd(values + i + quarter);
+                        __m256d v2 = _mm256_loadu_pd(values + i + 2 * quarter);
+                        __m256d v3 = _mm256_loadu_pd(values + i + 3 * quarter);
+                        forward_butterfly<true, UnitTwiddle>(packed, v0, v1, v2, v3, packed_w2, packed_w, packed_iw);
+                        _mm256_storeu_pd(values + i, v0);
+                        _mm256_storeu_pd(values + i + quarter, v1);
+                        _mm256_storeu_pd(values + i + 2 * quarter, v2);
+                        _mm256_storeu_pd(values + i + 3 * quarter, v3);
+                    }
+                }
+            }
+#endif
+            for (; i < quarter; ++i) {
+                forward_butterfly<UseFma, UnitTwiddle>(arithmetic_, values[i], values[i + quarter],
+                                                       values[i + 2 * quarter], values[i + 3 * quarter], w2, w, iw);
             }
         }
 
@@ -526,9 +555,9 @@ namespace nil::crypto3::math::detail {
                 return;
             }
             if (length == 2) {
-                const double left = reduce<UseFma>(values[0]);
-                const double right =
-                    node == 0 ? reduce<UseFma>(values[1]) : multiply<UseFma>(values[1], twiddles_[node]);
+                const double left = reduce<UseFma>(arithmetic_, values[0]);
+                const double right = node == 0 ? reduce<UseFma>(arithmetic_, values[1]) :
+                                                 multiply<UseFma>(arithmetic_, values[1], twiddles_[node]);
                 values[0] = left + right;
                 values[1] = left - right;
                 return;
@@ -546,50 +575,82 @@ namespace nil::crypto3::math::detail {
             }
         }
 
-        template<bool UseFma, bool UnitTwiddle>
-        void inverse_radix4(double *values, std::size_t quarter, std::size_t node) const {
+        template<bool UseFma, bool UnitTwiddle, typename Arithmetic, typename Value>
+        static void inverse_butterfly(const Arithmetic &arithmetic, Value &v0, Value &v1, Value &v2, Value &v3,
+                                      Value w2, Value w, Value iw, bool leaf) {
 #if defined(__clang__)
 #pragma clang fp reassociate(off)
 #pragma clang fp contract(off)
 #endif
+            // Leaf inputs may be forward residues of magnitude < 3*q. Reduce them before
+            // adding four entries; non-leaf inputs already satisfy the inverse bound < 2*q.
+            const Value b0 = leaf ? reduce<UseFma>(arithmetic, v0) : v0;
+            const Value b1 = leaf ? reduce<UseFma>(arithmetic, v1) : v1;
+            const Value b2 = leaf ? reduce<UseFma>(arithmetic, v2) : v2;
+            const Value b3 = leaf ? reduce<UseFma>(arithmetic, v3) : v3;
+            const Value even_sum = b0 + b1;
+            const Value odd_sum = b2 + b3;
+            const Value left =
+                UnitTwiddle ? reduce<UseFma>(arithmetic, b0 - b1) : multiply<UseFma>(arithmetic, b0 - b1, w);
+            const Value right = multiply<UseFma>(arithmetic, b2 - b3, iw);
+            // Four inputs < 2*q give sums < 8*q < 2^53. Times a centered weight this is
+            // < 4*q^2, so the a2 remainder is < 1.5*q. Left and right are each < q;
+            // their sum is < 2*q and their weighted difference is < q. The invariant closes.
+            v0 = reduce<UseFma>(arithmetic, even_sum + odd_sum);
+            v1 = left + right;
+            v2 = UnitTwiddle ? reduce<UseFma>(arithmetic, even_sum - odd_sum) :
+                               multiply<UseFma>(arithmetic, even_sum - odd_sum, w2);
+            v3 =
+                UnitTwiddle ? reduce<UseFma>(arithmetic, left - right) : multiply<UseFma>(arithmetic, left - right, w2);
+        }
+
+        template<bool UseFma, bool UnitTwiddle>
+        void inverse_radix4(double *values, std::size_t quarter, std::size_t node) const {
             const double w2 = inverse_twiddle(node);
             const double w = inverse_twiddle(2 * node);
             const double iw = inverse_twiddle(2 * node + 1);
-            for (std::size_t i = 0; i < quarter; ++i) {
-                // Leaf inputs may be forward residues of magnitude < 3*q. Reduce them before
-                // adding four entries; non-leaf inputs already satisfy the inverse bound < 2*q.
-                const double b0 = quarter == 1 ? reduce<UseFma>(values[i]) : values[i];
-                const double b1 = quarter == 1 ? reduce<UseFma>(values[i + quarter]) : values[i + quarter];
-                const double b2 = quarter == 1 ? reduce<UseFma>(values[i + 2 * quarter]) : values[i + 2 * quarter];
-                const double b3 = quarter == 1 ? reduce<UseFma>(values[i + 3 * quarter]) : values[i + 3 * quarter];
-                const double even_sum = b0 + b1;
-                const double odd_sum = b2 + b3;
-                const double left = UnitTwiddle ? reduce<UseFma>(b0 - b1) : multiply<UseFma>(b0 - b1, w);
-                const double right = multiply<UseFma>(b2 - b3, iw);
-                // Four inputs < 2*q give sums < 8*q < 2^53. Times a centered weight this is
-                // < 4*q^2, so the a2 remainder is < 1.5*q. Left and right are each < q;
-                // their sum is < 2*q and their weighted difference is < q. The invariant closes.
-                values[i] = reduce<UseFma>(even_sum + odd_sum);
-                values[i + quarter] = left + right;
-                values[i + 2 * quarter] =
-                    UnitTwiddle ? reduce<UseFma>(even_sum - odd_sum) : multiply<UseFma>(even_sum - odd_sum, w2);
-                values[i + 3 * quarter] =
-                    UnitTwiddle ? reduce<UseFma>(left - right) : multiply<UseFma>(left - right, w2);
+            std::size_t i = 0;
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
+            if constexpr (UseFma) {
+                if (quarter >= 4) {
+                    const small_prime_fft_arithmetic::packed_fma_kernel packed(arithmetic_);
+                    const __m256d packed_w2 = _mm256_set1_pd(w2);
+                    const __m256d packed_w = _mm256_set1_pd(w);
+                    const __m256d packed_iw = _mm256_set1_pd(iw);
+                    for (; quarter - i >= 4; i += 4) {
+                        __m256d v0 = _mm256_loadu_pd(values + i);
+                        __m256d v1 = _mm256_loadu_pd(values + i + quarter);
+                        __m256d v2 = _mm256_loadu_pd(values + i + 2 * quarter);
+                        __m256d v3 = _mm256_loadu_pd(values + i + 3 * quarter);
+                        inverse_butterfly<true, UnitTwiddle>(packed, v0, v1, v2, v3, packed_w2, packed_w, packed_iw,
+                                                             false);
+                        _mm256_storeu_pd(values + i, v0);
+                        _mm256_storeu_pd(values + i + quarter, v1);
+                        _mm256_storeu_pd(values + i + 2 * quarter, v2);
+                        _mm256_storeu_pd(values + i + 3 * quarter, v3);
+                    }
+                }
+            }
+#endif
+            for (; i < quarter; ++i) {
+                inverse_butterfly<UseFma, UnitTwiddle>(arithmetic_, values[i], values[i + quarter],
+                                                       values[i + 2 * quarter], values[i + 3 * quarter], w2, w, iw,
+                                                       quarter == 1);
             }
         }
 
         template<bool UseFma>
         void inverse_recursive(double *values, std::size_t length, std::size_t node) const {
             if (length == 1) {
-                values[0] = reduce<UseFma>(values[0]);
+                values[0] = reduce<UseFma>(arithmetic_, values[0]);
                 return;
             }
             if (length == 2) {
-                const double left = reduce<UseFma>(values[0]);
-                const double right = reduce<UseFma>(values[1]);
-                values[0] = reduce<UseFma>(left + right);
-                values[1] =
-                    node == 0 ? reduce<UseFma>(left - right) : multiply<UseFma>(left - right, inverse_twiddle(node));
+                const double left = reduce<UseFma>(arithmetic_, values[0]);
+                const double right = reduce<UseFma>(arithmetic_, values[1]);
+                values[0] = reduce<UseFma>(arithmetic_, left + right);
+                values[1] = node == 0 ? reduce<UseFma>(arithmetic_, left - right) :
+                                        multiply<UseFma>(arithmetic_, left - right, inverse_twiddle(node));
                 return;
             }
             const std::size_t quarter = length / 4;
@@ -610,8 +671,25 @@ namespace nil::crypto3::math::detail {
             inverse_recursive<UseFma>(values.data(), size_, 0);
             if (normalize) {
                 const double q = static_cast<double>(modulus());
-                for (double &value : values) {
-                    value = multiply<UseFma>(value, size_inverse_);
+                std::size_t i = 0;
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
+                if constexpr (UseFma) {
+                    if (values.size() >= 4) {
+                        const small_prime_fft_arithmetic::packed_fma_kernel packed(arithmetic_);
+                        const __m256d scale = _mm256_set1_pd(size_inverse_);
+                        const __m256d packed_q = _mm256_set1_pd(q);
+                        for (; values.size() - i >= 4; i += 4) {
+                            __m256d value = packed.multiply_fma(_mm256_loadu_pd(values.data() + i), scale);
+                            const __m256d negative = _mm256_cmp_pd(value, _mm256_setzero_pd(), _CMP_LT_OQ);
+                            value = _mm256_add_pd(value, _mm256_and_pd(negative, packed_q));
+                            _mm256_storeu_pd(values.data() + i, value);
+                        }
+                    }
+                }
+#endif
+                for (; i < values.size(); ++i) {
+                    double &value = values[i];
+                    value = multiply<UseFma>(arithmetic_, value, size_inverse_);
                     value = value < 0 ? value + q : value;
                 }
             }
@@ -630,7 +708,7 @@ namespace nil::crypto3::math::detail {
      * Coordinate channels have the same order as the converter, with one prime per call.
      *
      * Reuse the field library's Karatsuba tower identities and quadratic-extension squaring
-     * identity with the scalar residue kernels. The existing field elements bind their base
+     * identity with scalar or four-lane residue kernels. The existing field elements bind their base
      * arithmetic to the target modulus and cannot represent these small-prime intermediates.
      *
      * @pre Input cells are integer-valued doubles of magnitude < 2^53. scale is an integer with
@@ -638,16 +716,22 @@ namespace nil::crypto3::math::detail {
      * The thread's rounding mode stays unchanged during the call. Output cells are in (-q,q).
      * No buffers are allocated and no constant-time guarantee is provided.
      */
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
+// The packed kernel uses __m256d as the coordinate type of the existing tower arrays.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
     class bn254_small_prime_fft_pointwise {
-        using quadratic_type = std::array<double, 2>;
-        using cubic_type = std::array<quadratic_type, 3>;
-        using tower_type = std::array<cubic_type, 2>;
 
-        template<bool UseFma>
+        template<bool UseFma, typename Value, typename Arithmetic>
         struct kernel {
-            const small_prime_fft_arithmetic &arithmetic;
+            using quadratic_type = std::array<Value, 2>;
+            using cubic_type = std::array<quadratic_type, 3>;
+            using tower_type = std::array<cubic_type, 2>;
 
-            double reduce(double value) const {
+            const Arithmetic &arithmetic;
+
+            Value reduce(Value value) const {
                 if constexpr (UseFma) {
                     return arithmetic.reduce_fma(value);
                 } else {
@@ -655,7 +739,7 @@ namespace nil::crypto3::math::detail {
                 }
             }
 
-            double multiply(double a, double b) const {
+            Value multiply(Value a, Value b) const {
                 if constexpr (UseFma) {
                     return arithmetic.multiply_fma(a, b);
                 } else {
@@ -663,11 +747,11 @@ namespace nil::crypto3::math::detail {
                 }
             }
 
-            double add(double a, double b) const {
+            Value add(Value a, Value b) const {
                 return reduce(a + b);
             }
 
-            double subtract(double a, double b) const {
+            Value subtract(Value a, Value b) const {
                 return reduce(a - b);
             }
 
@@ -697,9 +781,9 @@ namespace nil::crypto3::math::detail {
 #pragma clang fp reassociate(off)
 #pragma clang fp contract(off)
 #endif
-                const double diagonal0 = multiply(a[0], b[0]);
-                const double diagonal1 = multiply(a[1], b[1]);
-                const double cross = multiply(a[0] + a[1], b[0] + b[1]);
+                const Value diagonal0 = multiply(a[0], b[0]);
+                const Value diagonal1 = multiply(a[1], b[1]);
+                const Value cross = multiply(a[0] + a[1], b[0] + b[1]);
                 return {reduce(diagonal0 - diagonal1), reduce(cross - diagonal0 - diagonal1)};
             }
 
@@ -785,16 +869,44 @@ namespace nil::crypto3::math::detail {
         void apply(std::span<double> left, std::span<const double> right, double scale) const {
             // Derive the indexing bound from the buffer extent checked by both public entry points.
             const std::size_t stride = left.size() / 12;
-            const kernel<UseFma> operations {arithmetic_};
-            for (std::size_t i = 0; i < stride; ++i) {
+            std::size_t offset = 0;
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
+            if constexpr (UseFma) {
+                offset = stride - stride % 4;
+                if (offset != 0) {
+                    const small_prime_fft_arithmetic::packed_fma_kernel packed(arithmetic_);
+                    apply_range<true, Square>(packed, left, right, 0, offset, _mm256_set1_pd(scale));
+                }
+            }
+#endif
+            apply_range<UseFma, Square>(arithmetic_, left, right, offset, stride, scale);
+        }
+
+        template<bool UseFma, bool Square, typename Arithmetic, typename Value>
+        static void apply_range(const Arithmetic &arithmetic, std::span<double> left, std::span<const double> right,
+                                std::size_t begin, std::size_t end, Value scale) {
+            constexpr std::size_t width = sizeof(Value) / sizeof(double);
+            const std::size_t stride = left.size() / 12;
+            const kernel<UseFma, Value, Arithmetic> operations {arithmetic};
+            using tower_type = typename kernel<UseFma, Value, Arithmetic>::tower_type;
+            for (std::size_t i = begin; i < end; i += width) {
                 tower_type a, b;
                 for (std::size_t w = 0; w < 2; ++w) {
                     for (std::size_t v = 0; v < 3; ++v) {
                         for (std::size_t u = 0; u < 2; ++u) {
                             const std::size_t offset = (6 * w + 2 * v + u) * stride + i;
-                            a[w][v][u] = operations.reduce(left[offset]);
-                            if constexpr (!Square) {
-                                b[w][v][u] = operations.reduce(right[offset]);
+                            if constexpr (width == 1) {
+                                a[w][v][u] = operations.reduce(left[offset]);
+                                if constexpr (!Square) {
+                                    b[w][v][u] = operations.reduce(right[offset]);
+                                }
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
+                            } else {
+                                a[w][v][u] = operations.reduce(_mm256_loadu_pd(left.data() + offset));
+                                if constexpr (!Square) {
+                                    b[w][v][u] = operations.reduce(_mm256_loadu_pd(right.data() + offset));
+                                }
+#endif
                             }
                         }
                     }
@@ -810,7 +922,15 @@ namespace nil::crypto3::math::detail {
                     for (std::size_t v = 0; v < 3; ++v) {
                         for (std::size_t u = 0; u < 2; ++u) {
                             // Fold inverse-transform normalization into this existing write pass.
-                            left[(6 * w + 2 * v + u) * stride + i] = operations.multiply(result[w][v][u], scale);
+                            const std::size_t offset = (6 * w + 2 * v + u) * stride + i;
+                            const Value value = operations.multiply(result[w][v][u], scale);
+                            if constexpr (width == 1) {
+                                left[offset] = value;
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
+                            } else {
+                                _mm256_storeu_pd(left.data() + offset, value);
+#endif
+                            }
                         }
                     }
                 }
@@ -819,6 +939,9 @@ namespace nil::crypto3::math::detail {
 
         small_prime_fft_arithmetic arithmetic_;
     };
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
+#pragma GCC diagnostic pop
+#endif
 
 }    // namespace nil::crypto3::math::detail
 

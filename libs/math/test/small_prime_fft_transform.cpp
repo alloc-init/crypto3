@@ -333,26 +333,33 @@ BOOST_AUTO_TEST_CASE(rounding_modes_preserve_exactness_and_environment) {
 }
 
 BOOST_AUTO_TEST_CASE(plan_reuse_and_in_place_buffer_boundaries) {
-    constexpr std::size_t size = 32;
-    const plan_type original(0, size);
-    auto copy = original;
-    const plan_type moved = std::move(copy);
     std::mt19937_64 random(0x46465406);
-    for (const plan_type *plan : {&original, &moved}) {
-        for (unsigned trial = 0; trial < 3; ++trial) {
-            const auto input = lazy_input(size, plan->modulus(), random);
-            std::vector<double> storage(size + 2, -17.0);
-            auto values = std::span<double>(storage).subspan(1, size);
-            std::copy(input.begin(), input.end(), values.begin());
-            const double *address = values.data();
-            plan->fft(values);
-            plan->inverse_fft(values);
-            BOOST_CHECK(values.data() == address);
-            BOOST_CHECK_EQUAL(storage.front(), -17.0);
-            BOOST_CHECK_EQUAL(storage.back(), -17.0);
-            for (std::size_t i = 0; i < size; ++i) {
-                check_residue(values[i], canonical(as_integer(input[i]), cpp_int(plan->modulus())), plan->modulus(), 1,
-                              true);
+    for (const std::size_t size : {1, 2, 4, 8, 16, 32, 64}) {
+        const plan_type original(0, size);
+        auto copy = original;
+        const plan_type moved = std::move(copy);
+        for (const plan_type *plan : {&original, &moved}) {
+            for (unsigned trial = 0; trial < 3; ++trial) {
+                const auto input = lazy_input(size, plan->modulus(), random);
+                for (std::size_t padding = 1; padding <= 4; ++padding) {
+                    std::vector<double> storage(size + 8, -17.0);
+                    auto values = std::span<double>(storage).subspan(padding, size);
+                    std::copy(input.begin(), input.end(), values.begin());
+                    const double *address = values.data();
+                    plan->fft(values);
+                    plan->inverse_fft(values);
+                    BOOST_CHECK(values.data() == address);
+                    for (std::size_t i = 0; i < padding; ++i) {
+                        BOOST_CHECK_EQUAL(storage[i], -17.0);
+                    }
+                    for (std::size_t i = padding + size; i < storage.size(); ++i) {
+                        BOOST_CHECK_EQUAL(storage[i], -17.0);
+                    }
+                    for (std::size_t i = 0; i < size; ++i) {
+                        check_residue(values[i], canonical(as_integer(input[i]), cpp_int(plan->modulus())),
+                                      plan->modulus(), 1, true);
+                    }
+                }
             }
         }
     }

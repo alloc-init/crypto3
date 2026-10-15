@@ -29,16 +29,22 @@
 #include <cfenv>
 #include <cfloat>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <stdexcept>
 
 #include <nil/crypto3/multiprecision/cpp_int_modular.hpp>
 
+#if defined(__x86_64__) && defined(__AVX2__) && defined(__FMA__) && (defined(__GNUC__) || defined(__clang__))
+#include <immintrin.h>
+#define CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED
+#endif
+
 namespace nil::crypto3::math::detail {
 
     /**
-     * Scalar residue arithmetic for an odd 50-bit modulus q. Values are integer-valued binary64
+     * Residue arithmetic for an odd 50-bit modulus q. Values are integer-valued binary64
      * numbers, not approximate coefficients. Primality is a caller concern (the prime catalogue
      * is separately certified); these arithmetic operations also work for odd composite moduli.
      *
@@ -144,6 +150,89 @@ namespace nil::crypto3::math::detail {
             // exact integers in binary64. Preserve the split product: reassociation is not allowed.
             return std::fma(-quotient, static_cast<double>(modulus_), high) + low;
         }
+
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
+        /**
+         * Snapshot the two packed constants once before a batch of FMA operations. Keeping them
+         * here avoids repeating integer conversion and broadcasts at each arithmetic operation.
+         * The source arithmetic must remain unchanged and outlive this kernel. The scalar FMA
+         * preconditions still apply.
+         *
+         * Under the required fixed FE_TONEAREST mode, the assembly computes register outputs
+         * from its inputs. It is non-volatile so the compiler can reuse the packed constants
+         * across operations; the instructions within each block still stay together.
+         */
+        class packed_fma_kernel {
+        public:
+            explicit packed_fma_kernel(const small_prime_fft_arithmetic &arithmetic) :
+                arithmetic_(arithmetic), modulus_(_mm256_set1_pd(static_cast<double>(arithmetic.modulus_))),
+                reciprocal_(_mm256_set1_pd(arithmetic.reciprocal_)) {
+                assert(arithmetic.fma_supported());
+            }
+
+            /** Four independent reductions with the same preconditions and bounds as the scalar overload. */
+            __m256d reduce_fma(__m256d value) const {
+                assert(arithmetic_.fma_supported());
+#ifndef NDEBUG
+                double lanes[4];
+                _mm256_storeu_pd(lanes, value);
+                for (double lane : lanes) {
+                    assert(valid_integer(lane));
+                }
+#endif
+                __m256d quotient;
+                // Round to nearest, ties to even, suppressing the inexact exception just like nearbyint.
+                // All operands are registers; the early-clobber scratch cannot overlap a live input.
+                // clang-format off
+                asm(
+                    "vmulpd %[reciprocal], %[value], %[quotient]\n"
+                    "vroundpd $8, %[quotient], %[quotient]\n"
+                    "vfnmadd231pd %[modulus], %[quotient], %[value]\n"
+                    : [value] "+x"(value), [quotient] "=&x"(quotient)
+                    : [modulus] "x"(modulus_), [reciprocal] "x"(reciprocal_)
+                );
+                // clang-format on
+                return value;
+            }
+
+            /** Four independent compensated products; the scalar product bounds apply to every lane. */
+            __m256d multiply_fma(__m256d left, __m256d right) const {
+                assert(arithmetic_.fma_supported());
+#ifndef NDEBUG
+                double a[4], b[4];
+                _mm256_storeu_pd(a, left);
+                _mm256_storeu_pd(b, right);
+                for (std::size_t i = 0; i < 4; ++i) {
+                    assert(valid_integer(a[i]) && valid_integer(b[i]));
+                    assert(product_magnitude(a[i], b[i]) < 4 * wide_type(arithmetic_.modulus_) * arithmetic_.modulus_);
+                }
+#endif
+                __m256d high, low, quotient;
+                // Keep the rounded high product and its exact FMA residual separate. The quotient
+                // estimate and low product are independent once high is available.
+                // clang-format off
+                asm(
+                    "vmulpd %[right], %[left], %[high]\n"
+                    "vmulpd %[reciprocal], %[high], %[quotient]\n"
+                    "vmovapd %[high], %[low]\n"
+                    "vfmsub231pd %[right], %[left], %[low]\n"
+                    "vroundpd $8, %[quotient], %[quotient]\n"
+                    "vfnmadd231pd %[modulus], %[quotient], %[high]\n"
+                    "vaddpd %[low], %[high], %[high]\n"
+                    : [high] "=&x"(high), [low] "=&x"(low), [quotient] "=&x"(quotient)
+                    : [left] "x"(left), [right] "x"(right),
+                      [modulus] "x"(modulus_), [reciprocal] "x"(reciprocal_)
+                );
+                // clang-format on
+                return high;
+            }
+
+        private:
+            const small_prime_fft_arithmetic &arithmetic_;
+            const __m256d modulus_;
+            const __m256d reciprocal_;
+        };
+#endif
 
         /** Exact fallback for reduce_fma, with the same input/output bounds and any rounding mode. */
         double reduce_integer(double value) const {
