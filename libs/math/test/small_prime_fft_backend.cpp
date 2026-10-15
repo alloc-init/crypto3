@@ -246,12 +246,18 @@ BOOST_AUTO_TEST_CASE(pointwise_products_and_squares_match_expanded_integer_tower
             for (std::size_t i = 0; i < stride; ++i) {
                 coordinates_type a {}, b {};
                 for (std::size_t c = 0; c < 12; ++c) {
-                    const std::int64_t x = i % 4 == 0 && c % 2 == 0 ? (std::int64_t(1) << 53) - 1 :
-                                           c % 3 == 0 ? 3 * q - 1 :
-                                                        static_cast<std::int64_t>(random() % (6 * q - 1)) - (3 * q - 1);
-                    const std::int64_t y = i % 4 == 1 && c % 2 == 1 ? 1 - (std::int64_t(1) << 53) :
-                                           c % 3 == 1 ? 1 - 3 * q :
-                                                        static_cast<std::int64_t>(random() % (6 * q - 1)) - (3 * q - 1);
+                    std::int64_t x;
+                    if (i % 4 == 0 && c % 2 == 0) {
+                        x = (std::int64_t(1) << 53) - 1;
+                    } else {
+                        x = c % 3 == 0 ? 3 * q - 1 : static_cast<std::int64_t>(random() % (6 * q - 1)) - (3 * q - 1);
+                    }
+                    std::int64_t y;
+                    if (i % 4 == 1 && c % 2 == 1) {
+                        y = 1 - (std::int64_t(1) << 53);
+                    } else {
+                        y = c % 3 == 1 ? 1 - 3 * q : static_cast<std::int64_t>(random() % (6 * q - 1)) - (3 * q - 1);
+                    }
                     a[c] = x;
                     b[c] = y;
                     left[c * stride + i] = static_cast<double>(x);
