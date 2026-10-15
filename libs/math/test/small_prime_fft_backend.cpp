@@ -61,11 +61,14 @@ namespace {
     static_assert(arithmetic::PolynomialBackend<backend_type>);
     static_assert(math::detail::SupportsDivrem<backend_type>);
     static_assert(math::detail::SupportsPreparedLowProduct<backend_type>);
+    static_assert(math::detail::SupportsPreparedCyclicRemainder<backend_type>);
 
     struct prepared_product_counts {
         std::size_t preparations = 0;
         std::size_t prepared_products = 0;
         std::size_t ordinary_products = 0;
+        std::size_t cyclic_preparations = 0;
+        std::size_t cyclic_remainders = 0;
     };
 
     // Observe dispatch at the backend boundary while keeping all arithmetic in the real backend,
@@ -91,6 +94,18 @@ namespace {
                           std::size_t count) {
             ++counts.ordinary_products;
             backend_type::multiply_low(output, left, right, count);
+        }
+
+        auto prepare_cyclic_remainder(const polynomial_type &divisor, std::size_t quotient_count) {
+            ++counts.cyclic_preparations;
+            return backend_type::prepare_cyclic_remainder(divisor, quotient_count);
+        }
+
+        bool try_cyclic_remainder(polynomial_type &output, const polynomial_type &dividend,
+                                  const polynomial_type &quotient, const prepared_cyclic_remainder_type &prepared) {
+            const bool accepted = backend_type::try_cyclic_remainder(output, dividend, quotient, prepared);
+            counts.cyclic_remainders += accepted;
+            return accepted;
         }
 
         prepared_product_counts &counts;
@@ -747,7 +762,8 @@ BOOST_AUTO_TEST_CASE(divisor_context_reuses_prepared_products_and_falls_back) {
     auto divisor = random_polynomial(9, random);
     divisor[8] = value_type::one();
     const math::polynomial_divisor_context<counting_prepared_backend> fixed(divisor, 7, preparing);
-    BOOST_CHECK_EQUAL(counts.preparations, 2);
+    BOOST_CHECK_EQUAL(counts.preparations, 1);
+    BOOST_CHECK_EQUAL(counts.cyclic_preparations, 1);
     auto copy = fixed;
     const auto moved = std::move(copy);
     counted_context context {counting_prepared_backend(32, counts), options};
@@ -763,10 +779,13 @@ BOOST_AUTO_TEST_CASE(divisor_context_reuses_prepared_products_and_falls_back) {
             math::divrem(actual_quotient, actual_remainder, dividend, *snapshot, context);
             check_polynomial(actual_quotient, quotient);
             check_polynomial(actual_remainder, remainder);
-            const std::size_t accepted = size == 7 ? 2 : (size == 1 ? 0 : 1);
-            BOOST_CHECK_EQUAL(counts.prepared_products, accepted);
-            BOOST_CHECK_EQUAL(counts.ordinary_products, 2 - accepted);
+            const std::size_t inverse_accepted = size == 7 ? 1 : 0;
+            const std::size_t cyclic_accepted = size > 1 ? 1 : 0;
+            BOOST_CHECK_EQUAL(counts.prepared_products, inverse_accepted);
+            BOOST_CHECK_EQUAL(counts.cyclic_remainders, cyclic_accepted);
+            BOOST_CHECK_EQUAL(counts.ordinary_products, 2 - inverse_accepted - cyclic_accepted);
             BOOST_CHECK_EQUAL(counts.preparations, 0);
+            BOOST_CHECK_EQUAL(counts.cyclic_preparations, 0);
             actual_quotient = dividend;
             math::divrem(actual_quotient, actual_remainder, actual_quotient, *snapshot, context);
             check_polynomial(actual_quotient, quotient);
@@ -800,9 +819,274 @@ BOOST_AUTO_TEST_CASE(prepared_divisor_context_handles_sparse_fixed_prefixes) {
         math::divrem(actual_quotient, actual_remainder, dividend, fixed, context);
         check_polynomial(actual_quotient, quotient);
         check_polynomial(actual_remainder, remainder);
-        BOOST_CHECK_EQUAL(counts.prepared_products, 2);
+        BOOST_CHECK_EQUAL(counts.prepared_products, constant.is_zero() ? 2 : 1);
+        BOOST_CHECK_EQUAL(counts.cyclic_remainders, constant.is_zero() ? 0 : 1);
         BOOST_CHECK_EQUAL(counts.ordinary_products, 0);
         BOOST_CHECK_EQUAL(counts.preparations, 0);
+        BOOST_CHECK_EQUAL(counts.cyclic_preparations, 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(cyclic_remainders_match_native_division_and_preserve_aliases) {
+    context_type context {backend_type(256)};
+    std::mt19937_64 random(0x46465430);
+    for (const std::size_t degree : {4, 6, 7, 8, 12, 15, 16, 24, 31, 32, 48, 63, 64}) {
+        const auto divisor = random_polynomial(degree + 1, random);
+        auto quotient = random_polynomial(degree - 1, random);
+        const auto remainder = random_polynomial(degree, random);
+        const auto prepared = context.prepare_cyclic_remainder(divisor, quotient.size());
+        BOOST_REQUIRE(prepared.has_value());
+        BOOST_CHECK_EQUAL(prepared->divisor_degree(), degree);
+        BOOST_CHECK_EQUAL(prepared->transform_size(), std::bit_ceil(degree));
+        for (unsigned repeat = 0; repeat < 3; ++repeat) {
+            BOOST_TEST_CONTEXT("degree=" << degree << ", repeat=" << repeat) {
+                auto dividend = expected_product(quotient, divisor);
+                math::addition(dividend, dividend, remainder);
+                polynomial_type expected_quotient, expected_remainder, actual;
+                math::division(expected_quotient, expected_remainder, dividend, divisor);
+                check_polynomial(expected_quotient, quotient);
+                check_polynomial(expected_remainder, remainder);
+                BOOST_REQUIRE(context.try_cyclic_remainder(actual, dividend, quotient, *prepared));
+                check_polynomial(actual, expected_remainder);
+                // All N cells are reconstructed and condensed, so this also checks cancellation above degree(H).
+                BOOST_CHECK_LT(actual.size(), divisor.size());
+                actual = dividend;
+                BOOST_REQUIRE(context.try_cyclic_remainder(actual, actual, quotient, *prepared));
+                check_polynomial(actual, remainder);
+                actual = quotient;
+                BOOST_REQUIRE(context.try_cyclic_remainder(actual, dividend, actual, *prepared));
+                check_polynomial(actual, remainder);
+                quotient[0] += value_type::one();
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(cyclic_remainders_fold_complete_divisors_with_canonical_coordinates) {
+    context_type context {backend_type(16)};
+    coordinates_type coordinates;
+    coordinates.fill(cpp_int(fq::modulus.backend().to_cpp_int()) - 1);
+    const polynomial_type divisor(9, field_value(coordinates)), quotient(7, field_value(coordinates));
+    const polynomial_type remainder {value_type(19), field_value(coordinates)};
+    const auto prepared = context.prepare_cyclic_remainder(divisor, quotient.size());
+    BOOST_REQUIRE(prepared.has_value());
+    BOOST_CHECK_EQUAL(prepared->transform_size(), 8);
+    auto dividend = expected_product(quotient, divisor);
+    math::addition(dividend, dividend, remainder);
+    polynomial_type actual;
+    BOOST_REQUIRE(context.try_cyclic_remainder(actual, dividend, quotient, *prepared));
+    check_polynomial(actual, remainder);
+
+    // H=X^8-1 folds to zero, while V=Q*H+R has nonzero high coefficients that must still be folded.
+    polynomial_type vanishing(9, value_type::zero()), sparse_quotient(7, value_type::zero());
+    vanishing[0] = -value_type::one();
+    vanishing[8] = sparse_quotient[6] = value_type::one();
+    const auto zero_spectrum = context.prepare_cyclic_remainder(vanishing, sparse_quotient.size());
+    BOOST_REQUIRE(zero_spectrum.has_value());
+    BOOST_CHECK_EQUAL(zero_spectrum->transform_size(), 8);
+    dividend = expected_product(sparse_quotient, vanishing);
+    math::addition(dividend, dividend, remainder);
+    BOOST_REQUIRE(context.try_cyclic_remainder(actual, dividend, sparse_quotient, *zero_spectrum));
+    check_polynomial(actual, remainder);
+    dividend = expected_product(sparse_quotient, vanishing);
+    BOOST_REQUIRE(context.try_cyclic_remainder(actual, dividend, sparse_quotient, *zero_spectrum));
+    check_polynomial(actual, polynomial_type {value_type::zero()});
+}
+
+BOOST_AUTO_TEST_CASE(cyclic_remainders_reject_unsupported_shapes_without_writes) {
+    context_type context {backend_type(16)};
+    std::mt19937_64 random(0x46465431);
+    const auto divisor = random_polynomial(9, random);
+    const auto prepared = context.prepare_cyclic_remainder(divisor, 7);
+    BOOST_REQUIRE(prepared.has_value());
+    BOOST_CHECK(!context.prepare_cyclic_remainder(divisor, 0).has_value());
+    BOOST_CHECK(!context.prepare_cyclic_remainder(divisor, 1).has_value());
+    BOOST_CHECK(!context.prepare_cyclic_remainder(polynomial_type {value_type(7)}, 7).has_value());
+    BOOST_CHECK(!context.prepare_cyclic_remainder(polynomial_type {value_type(7), value_type(11)}, 7).has_value());
+    polynomial_type monomial(9, value_type::zero());
+    monomial[8] = value_type::one();
+    BOOST_CHECK(!context.prepare_cyclic_remainder(monomial, 7).has_value());
+    // A degree-five divisor and four-coefficient quotient already need only an eight-point low product.
+    BOOST_CHECK(!context.prepare_cyclic_remainder(random_polynomial(6, random), 4).has_value());
+    const auto capped = context.prepare_cyclic_remainder(divisor, std::numeric_limits<std::size_t>::max());
+    BOOST_REQUIRE(capped.has_value());
+    BOOST_CHECK_EQUAL(capped->transform_size(), 8);
+
+    const auto reject = [&](const polynomial_type &dividend, const polynomial_type &quotient) {
+        polynomial_type actual {value_type(99)};
+        BOOST_CHECK(!context.try_cyclic_remainder(actual, dividend, quotient, *prepared));
+        check_polynomial(actual, polynomial_type {value_type(99)});
+        actual = dividend;
+        BOOST_CHECK(!context.try_cyclic_remainder(actual, actual, quotient, *prepared));
+        check_polynomial(actual, dividend);
+        actual = quotient;
+        BOOST_CHECK(!context.try_cyclic_remainder(actual, dividend, actual, *prepared));
+        check_polynomial(actual, quotient);
+    };
+    for (const std::size_t count : {1, 8, 9}) {
+        const auto quotient = random_polynomial(count, random);
+        reject(expected_product(quotient, divisor), quotient);
+    }
+    reject(random_polynomial(8, random), polynomial_type {value_type::zero()});
+    const auto quotient = random_polynomial(7, random);
+    const auto dividend = expected_product(quotient, divisor);
+    reject(dividend, random_polynomial(6, random));
+    for (const std::size_t size : {4, 8}) {
+        context_type too_small {backend_type(size)};
+        BOOST_CHECK(!too_small.prepare_cyclic_remainder(divisor, quotient.size()).has_value());
+        polynomial_type actual = dividend;
+        BOOST_CHECK(!too_small.try_cyclic_remainder(actual, actual, quotient, *prepared));
+        check_polynomial(actual, dividend);
+    }
+    polynomial_type actual;
+    BOOST_REQUIRE(context.try_cyclic_remainder(actual, dividend, quotient, *capped));
+    check_polynomial(actual, polynomial_type {value_type::zero()});
+}
+
+BOOST_AUTO_TEST_CASE(cyclic_preparations_own_spectra_across_contexts_and_moves) {
+    std::mt19937_64 random(0x46465432);
+    const auto divisor = random_polynomial(9, random);
+    const auto quotient = random_polynomial(7, random);
+    const auto remainder = random_polynomial(8, random);
+    auto dividend = expected_product(quotient, divisor);
+    math::addition(dividend, dividend, remainder);
+    const auto prepared = [&] {
+        context_type temporary {backend_type(64)};
+        auto source = divisor;
+        auto result = temporary.prepare_cyclic_remainder(source, quotient.size());
+        source[0] += value_type::one();
+        return result;
+    }();
+    BOOST_REQUIRE(prepared.has_value());
+    auto copy = *prepared;
+    const auto moved = std::move(copy);
+    for (const std::size_t size : {16, 128}) {
+        context_type context {backend_type(size)};
+        for (const auto *snapshot : {&*prepared, &moved}) {
+            polynomial_type actual;
+            BOOST_REQUIRE(context.try_cyclic_remainder(actual, dividend, quotient, *snapshot));
+            check_polynomial(actual, remainder);
+            auto changed_divisor = divisor;
+            changed_divisor[0] += value_type::one();
+            const auto changed = context.prepare_cyclic_remainder(changed_divisor, quotient.size());
+            BOOST_REQUIRE(changed.has_value());
+            const auto changed_dividend = expected_product(quotient, changed_divisor);
+            BOOST_REQUIRE(context.try_cyclic_remainder(actual, changed_dividend, quotient, *changed));
+            check_polynomial(actual, polynomial_type {value_type::zero()});
+            BOOST_REQUIRE(context.try_cyclic_remainder(actual, dividend, quotient, *snapshot));
+            check_polynomial(actual, remainder);
+        }
+        polynomial_type actual = dividend;
+        BOOST_CHECK(!context.try_cyclic_remainder(actual, actual, quotient, copy));
+        check_polynomial(actual, dividend);
+    }
+    backend_type source(32);
+    backend_type destination = std::move(source);
+    polynomial_type actual = dividend;
+    BOOST_CHECK(!source.prepare_cyclic_remainder(divisor, quotient.size()).has_value());
+    BOOST_CHECK(!source.try_cyclic_remainder(actual, actual, quotient, *prepared));
+    check_polynomial(actual, dividend);
+    BOOST_REQUIRE(destination.try_cyclic_remainder(actual, dividend, quotient, *prepared));
+    check_polynomial(actual, remainder);
+}
+
+BOOST_AUTO_TEST_CASE(small_cyclic_preparations_do_not_retain_large_workspaces) {
+    backend_type backend(256);
+    polynomial_type actual, large(65, value_type::one());
+    backend.square(actual, large);
+    const polynomial_type divisor(9, value_type::one()), quotient(7, value_type::one());
+    const auto prepared = backend.prepare_cyclic_remainder(divisor, quotient.size());
+    BOOST_REQUIRE(prepared.has_value());
+    BOOST_CHECK_EQUAL(prepared->transform_size(), 8);
+    const std::size_t bytes_per_position = 12 * backend.prime_count() * sizeof(double);
+    BOOST_CHECK_GE(prepared->storage_bytes(), 8 * bytes_per_position);
+    BOOST_CHECK_LT(prepared->storage_bytes(), 256 * bytes_per_position);
+    auto dividend = expected_product(quotient, divisor);
+    dividend[0] += value_type(19);
+    BOOST_REQUIRE(backend.try_cyclic_remainder(actual, dividend, quotient, *prepared));
+    check_polynomial(actual, polynomial_type {value_type(19)});
+}
+
+BOOST_AUTO_TEST_CASE(cyclic_remainders_survive_rounding_mode_changes) {
+    restore_rounding restore;
+    BOOST_REQUIRE_EQUAL(std::fesetround(FE_TONEAREST), 0);
+    context_type context {backend_type(16)};
+    std::mt19937_64 random(0x46465433);
+    const auto divisor = random_polynomial(9, random);
+    const auto quotient = random_polynomial(7, random);
+    const auto remainder = random_polynomial(8, random);
+    auto dividend = expected_product(quotient, divisor);
+    math::addition(dividend, dividend, remainder);
+    for (const int prepare_mode : {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
+        BOOST_REQUIRE_EQUAL(std::fesetround(prepare_mode), 0);
+        context_type preparing {backend_type(16)};
+        const auto prepared = preparing.prepare_cyclic_remainder(divisor, quotient.size());
+        BOOST_REQUIRE(prepared.has_value());
+        BOOST_CHECK_EQUAL(std::fegetround(), prepare_mode);
+        for (const int use_mode : {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
+            BOOST_REQUIRE_EQUAL(std::fesetround(use_mode), 0);
+            polynomial_type actual;
+            BOOST_REQUIRE(context.try_cyclic_remainder(actual, dividend, quotient, *prepared));
+            check_polynomial(actual, remainder);
+            BOOST_CHECK_EQUAL(std::fegetround(), use_mode);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(cyclic_divisor_context_falls_back_outside_reduced_product_range) {
+    prepared_product_counts counts;
+    arithmetic::polynomial_context_options options;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    arithmetic::polynomial_context<counting_prepared_backend> context {counting_prepared_backend(64, counts), options};
+    std::mt19937_64 random(0x46465434);
+    const auto divisor = random_polynomial(9, random);
+    const math::polynomial_divisor_context<counting_prepared_backend> fixed(divisor, 9, context);
+    BOOST_CHECK_EQUAL(counts.preparations, 1);
+    BOOST_CHECK_EQUAL(counts.cyclic_preparations, 1);
+    const auto remainder = random_polynomial(8, random);
+    for (const std::size_t count : {7, 8, 9, 1, 7}) {
+        const auto quotient = random_polynomial(count, random);
+        auto dividend = expected_product(quotient, divisor);
+        math::addition(dividend, dividend, remainder);
+        counts = {};
+        polynomial_type actual_quotient, actual_remainder;
+        math::divrem(actual_quotient, actual_remainder, dividend, fixed, context);
+        check_polynomial(actual_quotient, quotient);
+        check_polynomial(actual_remainder, remainder);
+        const std::size_t inverse_accepted = count == 9 ? 1 : 0;
+        const std::size_t cyclic_accepted = count == 7 ? 1 : 0;
+        BOOST_CHECK_EQUAL(counts.prepared_products, inverse_accepted);
+        BOOST_CHECK_EQUAL(counts.cyclic_remainders, cyclic_accepted);
+        BOOST_CHECK_EQUAL(counts.ordinary_products, 2 - inverse_accepted - cyclic_accepted);
+        BOOST_CHECK_EQUAL(counts.preparations + counts.cyclic_preparations, 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(divisor_context_keeps_prepared_low_products_when_cyclic_is_not_shorter) {
+    prepared_product_counts counts;
+    arithmetic::polynomial_context_options options;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    arithmetic::polynomial_context<counting_prepared_backend> context {counting_prepared_backend(16, counts), options};
+    std::mt19937_64 random(0x46465435);
+    const auto divisor = random_polynomial(6, random);
+    const math::polynomial_divisor_context<counting_prepared_backend> fixed(divisor, 4, context);
+    BOOST_CHECK_EQUAL(counts.preparations, 2);
+    BOOST_CHECK_EQUAL(counts.cyclic_preparations, 1);
+    const auto remainder = random_polynomial(5, random);
+    for (unsigned repeat = 0; repeat < 3; ++repeat) {
+        const auto quotient = random_polynomial(4, random);
+        auto dividend = expected_product(quotient, divisor);
+        math::addition(dividend, dividend, remainder);
+        counts = {};
+        polynomial_type actual_quotient, actual_remainder;
+        math::divrem(actual_quotient, actual_remainder, dividend, fixed, context);
+        check_polynomial(actual_quotient, quotient);
+        check_polynomial(actual_remainder, remainder);
+        BOOST_CHECK_EQUAL(counts.prepared_products, 2);
+        BOOST_CHECK_EQUAL(counts.cyclic_remainders + counts.ordinary_products, 0);
+        BOOST_CHECK_EQUAL(counts.preparations + counts.cyclic_preparations, 0);
     }
 }
 

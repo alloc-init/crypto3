@@ -45,8 +45,9 @@ namespace nil::crypto3::math::polynomial_arithmetic {
     /**
      * Exact BN254 Fp12 polynomial products through small-prime transforms and signed CRT.
      * Configure a power-of-two maximum transform length. All smaller power-of-two plans are
-     * cached at construction; each operation uses the smallest length containing its full linear
-     * product. multiply_low first discards input coefficients that cannot affect the output.
+     * cached at construction; ordinary products use the smallest length containing their full linear
+     * product. multiply_low first discards input coefficients that cannot affect the output. Prepared
+     * cyclic remainder reconstruction can use a shorter transform once the exact quotient is known.
      *
      * One catalogue prefix and coefficient bound cover every supported product, allowing all
      * lengths to share the converter, CRT cofactors and pointwise arithmetic. If a+b-1 <= Nmax,
@@ -100,6 +101,37 @@ namespace nil::crypto3::math::polynomial_arithmetic {
 
             std::size_t coefficient_count_;
             std::size_t prefix_size_;
+            std::size_t transform_size_;
+            std::size_t prime_count_;
+            std::vector<double> spectrum_;
+        };
+
+        // Owns the transformed complete divisor modulo X^N - 1, including its leading coefficient.
+        // Its distinct type keeps cyclic reconstruction separate from multiplication modulo X^k.
+        class prepared_cyclic_remainder_type {
+        public:
+            std::size_t divisor_degree() const noexcept {
+                return divisor_degree_;
+            }
+
+            std::size_t transform_size() const noexcept {
+                return transform_size_;
+            }
+
+            std::size_t storage_bytes() const noexcept {
+                return spectrum_.capacity() * sizeof(double);
+            }
+
+        private:
+            friend class bn254_small_prime_fft_backend;
+
+            prepared_cyclic_remainder_type(std::size_t divisor_degree, std::size_t transform_size,
+                                           std::size_t prime_count, std::vector<double> spectrum) :
+                divisor_degree_(divisor_degree), transform_size_(transform_size), prime_count_(prime_count),
+                spectrum_(std::move(spectrum)) {
+            }
+
+            std::size_t divisor_degree_;
             std::size_t transform_size_;
             std::size_t prime_count_;
             std::vector<double> spectrum_;
@@ -167,17 +199,9 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 return std::nullopt;
             }
             const std::size_t size = std::bit_ceil(variable_size + prefix_size - 1);
-            // Allocate just this spectrum, so a small preparation never retains larger scratch capacity.
-            std::vector<double> spectrum(field_type::arity * prime_count() * size);
-            converter_.convert(spectrum, std::span<const value_type>(fixed.data(), prefix_size), size);
-            const std::size_t plan_offset = std::countr_zero(size) * prime_count();
-            for (std::size_t prime = 0; prime < prime_count(); ++prime) {
-                for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                    plans_[plan_offset + prime].fft(
-                        std::span<double>(spectrum).subspan((prime * field_type::arity + coordinate) * size, size));
-                }
-            }
-            return prepared_low_product_type(coefficient_count, prefix_size, size, prime_count(), std::move(spectrum));
+            return prepared_low_product_type(
+                coefficient_count, prefix_size, size, prime_count(),
+                prepare_spectrum(std::span<const value_type>(fixed.data(), prefix_size), size));
         }
 
         /**
@@ -223,7 +247,93 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             return true;
         }
 
+        /**
+         * Prepare the complete divisor H for cyclic remainder reconstruction in the reduced-product
+         * range degree(V) <= 2*n-2, n=degree(H). Cap the expected quotient length at n-1. Use the smallest
+         * N >= n only when it is shorter than the supported ordinary low-product transform. Constant,
+         * linear and monomial divisors, unsuitable sizes and moved-from backends return nullopt.
+         *
+         * Fold H in Fp12 before conversion: if N==n, add its leading coefficient into cell zero.
+         * Canonical field addition keeps every converted coordinate in [0,p-1], preserving the CRT
+         * bound used by cyclic_remainder_size. The preparation owns its spectrum and cached metadata.
+         *
+         * @pre divisor is a nonempty canonical coefficient polynomial.
+         */
+        std::optional<prepared_cyclic_remainder_type> prepare_cyclic_remainder(const polynomial_type &divisor,
+                                                                               std::size_t quotient_coefficient_count) {
+            if (divisor.size() < 3) {
+                return std::nullopt;
+            }
+            const std::size_t n = divisor.size() - 1;
+            const std::size_t size = cyclic_remainder_size(n, std::min(quotient_coefficient_count, n - 1));
+            if (size == 0 || math::is_zero(divisor.begin(), divisor.begin() + n)) {
+                return std::nullopt;
+            }
+            std::span<const value_type> coefficients(divisor.data(), divisor.size());
+            if (size == n) {
+                result_.get_storage().assign(divisor.begin(), divisor.begin() + n);
+                result_[0] += divisor[n];
+                coefficients = std::span<const value_type>(result_.data(), n);
+            }
+            return prepared_cyclic_remainder_type(n, size, prime_count(), prepare_spectrum(coefficients, size));
+        }
+
+        /**
+         * Reconstruct R=fold_N(V)-(Q*H mod (X^N-1)). Since degree(R)<n<=N, wrapped high coefficients
+         * cancel. Return false without changing output outside the reduced-product degree range,
+         * without a compatible shorter transform/catalogue prefix, or for a moved-from preparation.
+         * Successful output is canonical and may alias either input; the preparation is unchanged.
+         *
+         * @pre dividend and quotient are nonempty canonical coefficient polynomials. quotient is the
+         * exact quotient of dividend by the divisor used to construct prepared.
+         */
+        bool try_cyclic_remainder(polynomial_type &output, const polynomial_type &dividend,
+                                  const polynomial_type &quotient, const prepared_cyclic_remainder_type &prepared) {
+            const std::size_t n = prepared.divisor_degree_;
+            if (prepared.spectrum_.empty() || dividend.size() <= n || dividend.size() - n > n - 1 ||
+                quotient.size() != dividend.size() - n || prepared.prime_count_ != prime_count()) {
+                return false;
+            }
+            const std::size_t size = cyclic_remainder_size(n, quotient.size());
+            if (size == 0 || size != prepared.transform_size_) {
+                return false;
+            }
+            // Q has fewer than n coefficients, so it needs only zero padding, never cyclic folding.
+            left_spectrum_.resize(field_type::arity * prime_count() * size);
+            converter_.convert(left_spectrum_, std::span<const value_type>(quotient.data(), quotient.size()), size);
+            finish_product<false, true>(output, size, size, prepared.spectrum_,
+                                        std::span<const value_type>(dividend.data(), dividend.size()));
+            return true;
+        }
+
     private:
+        std::size_t cyclic_remainder_size(std::size_t n, std::size_t quotient_size) const {
+            if (plans_.empty() || n < 2 || quotient_size == 0 || quotient_size > n - 1 || n > max_transform_size_ ||
+                quotient_size > max_transform_size_ - (n - 1)) {
+                return 0;
+            }
+            // Require the ordinary Q*(H mod X^n) product to fit, as in the existing cyclic backend.
+            // Then 2*quotient_size <= quotient_size+n-1 <= Nmax. Each cyclic coefficient contains at
+            // most quotient_size products of canonical Fp12 values, so the existing Nmax/2 CRT bound
+            // remains sufficient even across backend instances. Do not infer this bound from N alone.
+            const std::size_t size = std::bit_ceil(n);
+            return size < std::bit_ceil(quotient_size + n - 1) ? size : 0;
+        }
+
+        std::vector<double> prepare_spectrum(std::span<const value_type> coefficients, std::size_t size) const {
+            // Allocate just this spectrum, so a small preparation never retains larger scratch capacity.
+            std::vector<double> spectrum(field_type::arity * prime_count() * size);
+            converter_.convert(spectrum, coefficients, size);
+            const std::size_t plan_offset = std::countr_zero(size) * prime_count();
+            for (std::size_t prime = 0; prime < prime_count(); ++prime) {
+                for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
+                    plans_[plan_offset + prime].fft(
+                        std::span<double>(spectrum).subspan((prime * field_type::arity + coordinate) * size, size));
+                }
+            }
+            return spectrum;
+        }
+
         static params_type checked_params(std::size_t max_size, std::size_t max_spectrum_bytes) {
             if (!std::has_single_bit(max_size)) {
                 throw std::invalid_argument("bn254_small_prime_fft_backend: expected a power-of-two maximum size");
@@ -290,7 +400,8 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // A prepared right spectrum is read directly and skips all of the right operand's forward FFTs.
         template<bool Square, bool Prepared = false>
         void finish_product(polynomial_type &output, std::size_t size, std::size_t result_size,
-                            std::span<const double> prepared_spectrum = {}) {
+                            std::span<const double> prepared_spectrum = {},
+                            std::span<const value_type> cyclic_dividend = {}) {
             const std::size_t plan_offset = std::countr_zero(size) * prime_count();
             for (std::size_t prime = 0; prime < prime_count(); ++prime) {
                 const auto &plan = plans_[plan_offset + prime];
@@ -321,6 +432,17 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
             result_.resize(result_size);
             reconstructor_.reconstruct(std::span<value_type>(result_.data(), result_size), left_spectrum_, size);
+            if (!cyclic_dividend.empty()) {
+                // Here result_size==size and degree(V)<=2*n-2<2*size, so at most one high coefficient
+                // folds into each cell. Keep the complete difference: any uncancelled tail stays visible.
+                for (std::size_t i = 0; i < size; ++i) {
+                    value_type folded = i < cyclic_dividend.size() ? cyclic_dividend[i] : value_type::zero();
+                    if (i + size < cyclic_dividend.size()) {
+                        folded += cyclic_dividend[i + size];
+                    }
+                    result_[i] = folded - result_[i];
+                }
+            }
             math::condense(result_);
             output.get_storage().swap(result_.get_storage());
         }
