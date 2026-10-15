@@ -233,42 +233,48 @@ namespace {
 BOOST_AUTO_TEST_SUITE(small_prime_fft_backend_tests)
 
 BOOST_AUTO_TEST_CASE(pointwise_products_and_squares_match_expanded_integer_tower) {
-    constexpr std::size_t stride = 9;
+    restore_rounding restore;
+    BOOST_REQUIRE_EQUAL(std::fesetround(FE_TONEAREST), 0);
     std::mt19937_64 random(0x46465410);
     for (const auto &prime : detail::small_prime_fft_primes) {
         const auto q = static_cast<std::int64_t>(prime.modulus);
         const detail::bn254_small_prime_fft_pointwise pointwise(prime.modulus);
-        std::vector<double> left(12 * stride), right(12 * stride);
-        std::vector<coordinates_type> products(stride), squares(stride);
-        for (std::size_t i = 0; i < stride; ++i) {
-            coordinates_type a {}, b {};
-            for (std::size_t c = 0; c < 12; ++c) {
-                const std::int64_t x =
-                    c % 3 == 0 ? 3 * q - 1 : static_cast<std::int64_t>(random() % (6 * q - 1)) - (3 * q - 1);
-                const std::int64_t y =
-                    c % 3 == 1 ? 1 - 3 * q : static_cast<std::int64_t>(random() % (6 * q - 1)) - (3 * q - 1);
-                a[c] = x;
-                b[c] = y;
-                left[c * stride + i] = static_cast<double>(x);
-                right[c * stride + i] = static_cast<double>(y);
+        // Cover empty/scalar buffers, complete four-lane blocks, and every possible scalar tail.
+        for (const std::size_t stride : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 16, 17}) {
+            std::vector<double> left(12 * stride), right(12 * stride);
+            std::vector<coordinates_type> products(stride), squares(stride);
+            for (std::size_t i = 0; i < stride; ++i) {
+                coordinates_type a {}, b {};
+                for (std::size_t c = 0; c < 12; ++c) {
+                    const std::int64_t x = i % 4 == 0 && c % 2 == 0 ? (std::int64_t(1) << 53) - 1 :
+                                           c % 3 == 0 ? 3 * q - 1 :
+                                                        static_cast<std::int64_t>(random() % (6 * q - 1)) - (3 * q - 1);
+                    const std::int64_t y = i % 4 == 1 && c % 2 == 1 ? 1 - (std::int64_t(1) << 53) :
+                                           c % 3 == 1 ? 1 - 3 * q :
+                                                        static_cast<std::int64_t>(random() % (6 * q - 1)) - (3 * q - 1);
+                    a[c] = x;
+                    b[c] = y;
+                    left[c * stride + i] = static_cast<double>(x);
+                    right[c * stride + i] = static_cast<double>(y);
+                }
+                products[i] = tower_product(a, b);
+                squares[i] = tower_product(a, a);
             }
-            products[i] = tower_product(a, b);
-            squares[i] = tower_product(a, a);
-        }
-        for (double scale : {0.0, 1.0, -1.0, static_cast<double>((q - 1) / 2), -static_cast<double>((q - 1) / 2)}) {
-            std::vector<double> storage(left.size() + 2, -19.0);
-            auto actual = std::span<double>(storage).subspan(1, left.size());
-            std::copy(left.begin(), left.end(), actual.begin());
-            pointwise.multiply(actual, right, stride, scale);
-            check_pointwise(actual, products, prime.modulus, scale);
-            std::copy(left.begin(), left.end(), actual.begin());
-            pointwise.square(actual, stride, scale);
-            check_pointwise(actual, squares, prime.modulus, scale);
-            std::copy(left.begin(), left.end(), actual.begin());
-            pointwise.multiply(actual, actual, stride, scale);
-            check_pointwise(actual, squares, prime.modulus, scale);
-            BOOST_CHECK_EQUAL(storage.front(), -19.0);
-            BOOST_CHECK_EQUAL(storage.back(), -19.0);
+            for (double scale : {0.0, 1.0, -1.0, static_cast<double>((q - 1) / 2), -static_cast<double>((q - 1) / 2)}) {
+                std::vector<double> storage(left.size() + 2, -19.0);
+                auto actual = std::span<double>(storage).subspan(1, left.size());
+                std::copy(left.begin(), left.end(), actual.begin());
+                pointwise.multiply(actual, right, stride, scale);
+                check_pointwise(actual, products, prime.modulus, scale);
+                std::copy(left.begin(), left.end(), actual.begin());
+                pointwise.square(actual, stride, scale);
+                check_pointwise(actual, squares, prime.modulus, scale);
+                std::copy(left.begin(), left.end(), actual.begin());
+                pointwise.multiply(actual, actual, stride, scale);
+                check_pointwise(actual, squares, prime.modulus, scale);
+                BOOST_CHECK_EQUAL(storage.front(), -19.0);
+                BOOST_CHECK_EQUAL(storage.back(), -19.0);
+            }
         }
     }
 }
