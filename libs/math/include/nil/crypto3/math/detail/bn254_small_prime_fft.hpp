@@ -755,9 +755,9 @@ namespace nil::crypto3::math::detail {
         void multiply(std::span<double> left, std::span<const double> right, std::size_t stride, double scale) const {
             check_buffers(left, right, stride, scale);
             if (arithmetic_.fma_supported()) {
-                apply<true, false>(left, right, stride, scale);
+                apply<true, false>(left, right, scale);
             } else {
-                apply<false, false>(left, right, stride, scale);
+                apply<false, false>(left, right, scale);
             }
         }
 
@@ -765,9 +765,9 @@ namespace nil::crypto3::math::detail {
         void square(std::span<double> values, std::size_t stride, double scale) const {
             check_buffers(values, values, stride, scale);
             if (arithmetic_.fma_supported()) {
-                apply<true, true>(values, values, stride, scale);
+                apply<true, true>(values, values, scale);
             } else {
-                apply<false, true>(values, values, stride, scale);
+                apply<false, true>(values, values, scale);
             }
         }
 
@@ -782,7 +782,9 @@ namespace nil::crypto3::math::detail {
         }
 
         template<bool UseFma, bool Square>
-        void apply(std::span<double> left, std::span<const double> right, std::size_t stride, double scale) const {
+        void apply(std::span<double> left, std::span<const double> right, double scale) const {
+            // Derive the indexing bound from the buffer extent checked by both public entry points.
+            const std::size_t stride = left.size() / 12;
             const kernel<UseFma> operations {arithmetic_};
             for (std::size_t i = 0; i < stride; ++i) {
                 tower_type a, b;

@@ -281,6 +281,8 @@ BOOST_AUTO_TEST_CASE(pointwise_invalid_dimensions_throw_before_writes) {
     BOOST_CHECK_THROW(pointwise.multiply(left, std::span<const double>(right).first(23), 2, 1.0),
                       std::invalid_argument);
     BOOST_CHECK_THROW(pointwise.square(std::span<double>(left).first(23), 2, 1.0), std::invalid_argument);
+    BOOST_CHECK_THROW(pointwise.multiply(left, right, std::numeric_limits<std::size_t>::max(), 1.0),
+                      std::invalid_argument);
     BOOST_CHECK_THROW(pointwise.square(left, std::numeric_limits<std::size_t>::max(), 1.0), std::invalid_argument);
     BOOST_CHECK_EQUAL_COLLECTIONS(left.begin(), left.end(), before.begin(), before.end());
     BOOST_CHECK_NO_THROW(pointwise.multiply({}, {}, 0, 1.0));
