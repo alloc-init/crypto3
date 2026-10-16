@@ -200,6 +200,117 @@ BOOST_AUTO_TEST_CASE(random_signed_integers_cover_all_prime_counts_and_partial_b
     }
 }
 
+BOOST_AUTO_TEST_CASE(wide_export_preserves_split_boundaries_and_field_multiples) {
+    const cpp_int characteristic(fq::modulus.backend().to_cpp_int());
+    for (std::size_t count = 8; count <= detail::small_prime_fft_primes.size(); ++count) {
+        const auto params = make_params(count);
+        const cpp_int bound = params.modulus / 2;
+        const reconstructor_type reconstructor(params, bound);
+        std::vector<cpp_int> values {0, bound, -bound};
+        for (unsigned bit : {254, 256, 384, 507, 508, 512}) {
+            const cpp_int power = cpp_int(1) << bit;
+            const cpp_int multiple = (power / characteristic) * characteristic;
+            for (const cpp_int &anchor : {power, multiple}) {
+                for (int delta : {-1, 0, 1}) {
+                    const cpp_int value = anchor + delta;
+                    if (value >= 0 && value <= bound) {
+                        values.push_back(value);
+                        values.push_back(-value);
+                    }
+                }
+            }
+        }
+        // Exercise nonzero high and low parts together, including the largest high part.
+        const cpp_int max_high = bound >> 384;
+        const std::vector<cpp_int> lows {
+            0, 1, characteristic - 1, characteristic, characteristic + 1, (cpp_int(1) << 384) - 1};
+        for (const cpp_int &high : {cpp_int(1), max_high}) {
+            for (const cpp_int &low : lows) {
+                const cpp_int value = (high << 384) + low;
+                if (value <= bound) {
+                    values.push_back(value);
+                    values.push_back(-value);
+                }
+            }
+        }
+        std::vector<coordinates_type> coordinates(values.size());
+        for (std::size_t i = 0; i < coordinates.size(); ++i) {
+            for (std::size_t c = 0; c < 12; ++c) {
+                coordinates[i][c] = values[(i + c) % values.size()];
+            }
+        }
+        check_reconstruction(reconstructor, coordinates, coordinates.size() + 3, true);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(cofactor_accumulation_preserves_carries_for_every_active_width) {
+    for (std::size_t count = 1; count <= detail::small_prime_fft_primes.size(); ++count) {
+        const auto params = make_params(count);
+        const cpp_int bound = params.modulus / 2;
+        const reconstructor_type reconstructor(params, bound);
+        std::vector<cpp_int> values;
+        for (unsigned bit : {0, 1, 31, 32, 48, 49}) {
+            for (std::size_t parity = 0; parity < 2; ++parity) {
+                cpp_int sum = 0;
+                for (std::size_t prime = 0; prime < count; ++prime) {
+                    const auto q = detail::small_prime_fft_primes[prime].modulus;
+                    const auto digit = prime % 2 == parity ? q - 1 : (std::uint64_t(1) << bit) - 1;
+                    sum += (params.modulus / q) * digit;
+                }
+                cpp_int value = canonical(sum, params.modulus);
+                if (value > bound) {
+                    value -= params.modulus;
+                }
+                values.push_back(value);
+            }
+        }
+        std::vector<coordinates_type> coordinates(values.size());
+        for (std::size_t i = 0; i < coordinates.size(); ++i) {
+            for (std::size_t c = 0; c < 12; ++c) {
+                coordinates[i][c] = values[(i + c) % values.size()];
+            }
+        }
+        check_reconstruction(reconstructor, coordinates, 32, true);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(packed_lanes_and_block_tails_preserve_prefixes_and_rounding_modes) {
+    restore_rounding restore;
+    for (std::size_t count = 1; count <= detail::small_prime_fft_primes.size(); ++count) {
+        const auto params = make_params(count);
+        const cpp_int bound = params.modulus / 2;
+        const reconstructor_type reconstructor(params, bound);
+        const auto coordinates = random_coordinates(67, bound);
+        for (int mode : {FE_TONEAREST, FE_TOWARDZERO}) {
+            BOOST_REQUIRE_EQUAL(std::fesetround(mode), 0);
+            for (const std::size_t size : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 31, 32, 33, 34, 35, 63, 64, 65, 66, 67}) {
+                check_reconstruction(reconstructor, std::span<const coordinates_type>(coordinates).first(size), 71,
+                                     true);
+                BOOST_CHECK_EQUAL(std::fegetround(), mode);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(wide_bound_violations_are_rejected_before_field_reduction) {
+    const auto params = make_params(12);
+    const cpp_int characteristic(fq::modulus.backend().to_cpp_int());
+    const cpp_int bound = (cpp_int(1) << 384) - 1;
+    const reconstructor_type reconstructor(params, bound);
+    std::array<coordinates_type, 1> coordinates {};
+    for (int sign : {-1, 1}) {
+        coordinates[0][0] = sign * bound;
+        check_reconstruction(reconstructor, coordinates, 1, true);
+        const std::vector<cpp_int> invalid {bound + 1, (bound / characteristic + 1) * characteristic};
+        for (const cpp_int &value : invalid) {
+            coordinates[0][0] = sign * value;
+            const auto residues = make_residues(coordinates, 12, 1, true);
+            std::array<value_type, 1> output {value_type::one()};
+            BOOST_CHECK_THROW(reconstructor.reconstruct(output, residues, 1), std::overflow_error);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(workload_plan_bound_is_recovered_with_both_signs) {
     const auto plan = detail::make_bn254_small_prime_fft_params(14939, 14939);
     BOOST_REQUIRE(plan);
