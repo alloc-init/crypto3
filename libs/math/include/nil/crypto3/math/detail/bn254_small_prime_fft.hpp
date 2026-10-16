@@ -198,11 +198,17 @@ namespace nil::crypto3::math::detail {
      * This operation has no constant-time guarantee.
      */
     class bn254_small_prime_fft_reconstructor {
+        using base_field_type = algebra::fields::alt_bn128_base_field<254>;
         static constexpr std::size_t block_size = 32;
         static constexpr std::size_t correction_count = std::bit_width(small_prime_fft_primes.size() - 1);
         // Each CRT term is < M, so their sum is < prime_count*M < 12*2^600 < 2^604.
         static constexpr unsigned crt_bits = 50 * small_prime_fft_primes.size() + correction_count;
         using integer_type = boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<crt_bits>>;
+        static constexpr unsigned export_split = 384;
+        using export_low_type =
+            boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<export_split>>;
+        using export_type = boost::multiprecision::uint512_modular_t;
+        static_assert(50 * small_prime_fft_primes.size() <= 600, "CRT export folding requires M < 2^600");
 
         struct prime_context {
             small_prime_fft_arithmetic arithmetic;
@@ -242,6 +248,10 @@ namespace nil::crypto3::math::detail {
             multiples_[0].backend().from_cpp_int(setup_backend(product.backend()));
             bound_.backend().from_cpp_int(setup_backend(coefficient_bound.backend()));
             half_modulus_ = multiples_[0] >> 1;
+            const boost::multiprecision::cpp_int sum_bound = params.prime_count * product - 1;
+            constexpr unsigned limb_bits = integer_type::backend_type::limb_bits;
+            accumulator_limbs_ = (boost::multiprecision::msb(sum_bound) + 1 + limb_bits - 1) / limb_bits;
+            export_radix_ = (export_type(1) << export_split) % export_type(base_field_type::modulus);
             for (std::size_t bit = 1; bit < correction_count; ++bit) {
                 multiples_[bit] = multiples_[bit - 1] << 1;
             }
@@ -290,10 +300,47 @@ namespace nil::crypto3::math::detail {
         }
 
     private:
+        void add_cofactor_product(integer_type &sum, const integer_type &cofactor, std::uint64_t digit) const {
+            using limb_type = boost::multiprecision::limb_type;
+            using wide_type = boost::multiprecision::double_limb_type;
+            constexpr unsigned limb_bits = integer_type::backend_type::limb_bits;
+            if constexpr (limb_bits >= 50) {
+                auto *destination = sum.backend().limbs();
+                const auto *source = cofactor.backend().limbs();
+                wide_type carry = 0;
+                // A digit is < 2^50. Each product plus the accumulator limb and carry fits
+                // in a double limb. The complete sum is < prime_count*M, so its final carry
+                // fits in the active width prepared by the constructor; higher limbs stay zero.
+                for (std::size_t limb = 0; limb < accumulator_limbs_; ++limb) {
+                    const wide_type value = wide_type(source[limb]) * digit + destination[limb] + carry;
+                    destination[limb] = static_cast<limb_type>(value);
+                    carry = value >> limb_bits;
+                }
+                assert(carry == 0);
+                assert((destination[sum.backend().size() - 1] & ~integer_type::backend_type::upper_limb_mask) == 0);
+            } else {
+                // A 50-bit digit spans more than one limb on a 32-bit limb backend.
+                sum += cofactor * digit;
+            }
+        }
+
+        base_field_type::value_type export_magnitude(const integer_type &magnitude) const {
+            // Centering and the coefficient-bound check have already established magnitude < M < 2^600.
+            // Write magnitude = low + high*2^384 and replace 2^384 by its cached residue modulo p.
+            // The fold is < 2^384 + 2^216*2^254 < 2^471, within the existing BN254 Barrett reducer's
+            // range. This avoids its general-division fallback while retaining the field's normal
+            // Montgomery conversion. The fixed-width low conversion intentionally discards high bits.
+            const export_type high(magnitude >> export_split);
+            export_type folded {export_low_type(magnitude)};
+            if (high != 0) {
+                folded += high * export_radix_;
+            }
+            return base_field_type::value_type(folded);
+        }
+
         template<bool UseFma>
         void reconstruct_impl(std::span<value_type> output, std::span<const double> residues,
                               std::size_t stride) const {
-            using base_field_type = algebra::fields::alt_bn128_base_field<254>;
             for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
                 for (std::size_t offset = 0; offset < output.size();) {
                     const std::size_t count = std::min(block_size, output.size() - offset);
@@ -304,7 +351,29 @@ namespace nil::crypto3::math::detail {
                         const double modulus = static_cast<double>(arithmetic.modulus());
                         const double *source =
                             residues.data() + (prime * field_type::arity + coordinate) * stride + offset;
-                        for (std::size_t i = 0; i < count; ++i) {
+                        std::size_t i = 0;
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
+                        if constexpr (UseFma) {
+                            if (count >= 4) {
+                                const small_prime_fft_arithmetic::packed_fma_kernel packed(arithmetic);
+                                const __m256d inverse = _mm256_set1_pd(context.inverse);
+                                const __m256d q = _mm256_set1_pd(modulus);
+                                for (; count - i >= 4; i += 4) {
+                                    __m256d digits =
+                                        packed.multiply_fma(packed.reduce_fma(_mm256_loadu_pd(source + i)), inverse);
+                                    const __m256d negative = _mm256_cmp_pd(digits, _mm256_setzero_pd(), _CMP_LT_OQ);
+                                    digits = _mm256_add_pd(digits, _mm256_and_pd(negative, q));
+                                    std::array<double, 4> canonical;
+                                    _mm256_storeu_pd(canonical.data(), digits);
+                                    for (std::size_t lane = 0; lane < canonical.size(); ++lane) {
+                                        add_cofactor_product(sums[i + lane], context.cofactor,
+                                                             static_cast<std::uint64_t>(canonical[lane]));
+                                    }
+                                }
+                            }
+                        }
+#endif
+                        for (; i < count; ++i) {
                             double digit;
                             if constexpr (UseFma) {
                                 digit = arithmetic.multiply_fma(arithmetic.reduce_fma(source[i]), context.inverse);
@@ -315,7 +384,7 @@ namespace nil::crypto3::math::detail {
                             // Both operands have magnitude < q, so the product remainder is in (-q,q).
                             // Canonical digits give 0 <= digit*(M/q) < M and bound the complete sum.
                             const auto canonical = static_cast<std::uint64_t>(digit < 0 ? digit + modulus : digit);
-                            sums[i] += context.cofactor * canonical;
+                            add_cofactor_product(sums[i], context.cofactor, canonical);
                         }
                     }
                     for (std::size_t i = 0; i < count; ++i) {
@@ -335,7 +404,7 @@ namespace nil::crypto3::math::detail {
                             throw std::overflow_error(
                                 "bn254_small_prime_fft_reconstructor: coefficient exceeds CRT bound");
                         }
-                        const base_field_type::value_type value(magnitude);
+                        const auto value = export_magnitude(magnitude);
                         output[offset + i].coordinate(coordinate) = negative ? -value : value;
                     }
                     offset += count;
@@ -347,6 +416,8 @@ namespace nil::crypto3::math::detail {
         std::array<integer_type, correction_count> multiples_;
         integer_type half_modulus_;
         integer_type bound_;
+        std::size_t accumulator_limbs_;
+        export_type export_radix_;
     };
 
     /**
