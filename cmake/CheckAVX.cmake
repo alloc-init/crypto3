@@ -37,6 +37,19 @@ set(AVX512_CODE "
   }
 ")
 
+set(AVX512IFMA_CODE "
+  #include <immintrin.h>
+  int main() {
+    __m256i a = _mm256_set1_epi64x(1);
+    a = _mm256_madd52lo_epu64(a, a, a);
+    a = _mm256_madd52hi_epu64(a, a, a);
+    __m512i b = _mm512_set1_epi64(1);
+    b = _mm512_madd52lo_epu64(b, b, b);
+    b = _mm512_madd52hi_epu64(b, b, b);
+    return _mm256_extract_epi64(a, 0) + _mm_cvtsi128_si32(_mm512_castsi512_si128(b));
+  }
+")
+
 macro(check_avx_lang lang type flags)
     set(__FLAG_I 1)
     set(CMAKE_REQUIRED_FLAGS_SAVE ${CMAKE_REQUIRED_FLAGS})
@@ -45,7 +58,7 @@ macro(check_avx_lang lang type flags)
         if(NOT ${lang}_${type}_FOUND)
             set(CMAKE_REQUIRED_QUIET TRUE)
             set(CMAKE_REQUIRED_FLAGS ${__FLAG})
-            if(lang STREQUAL "CXX")
+            if("${lang}" STREQUAL "CXX")
                 check_cxx_source_compiles("${${type}_CODE}" ${lang}_HAS_${type}_${__FLAG_I})
             else()
                 check_c_source_compiles("${${type}_CODE}" ${lang}_HAS_${type}_${__FLAG_I})
@@ -67,6 +80,19 @@ macro(check_avx_lang lang type flags)
 
     mark_as_advanced(${lang}_${type}_FOUND ${lang}_${type}_FLAGS)
 
+endmacro()
+
+# Both widths use the same host contract; VL is required by the four-lane kernel.
+macro(check_avx512ifma)
+    check_host_cpu_feature(AVX512F "avx512f")
+    check_host_cpu_feature(AVX512IFMA "avx512ifma")
+    check_host_cpu_feature(AVX512VL "avx512vl")
+    if(HOST_CPU_AVX512F_FOUND AND HOST_CPU_AVX512IFMA_FOUND AND HOST_CPU_AVX512VL_FOUND)
+        check_avx_lang(CXX "AVX512IFMA" " ;-mavx512f -mavx512vl -mavx512ifma;/arch:AVX512")
+    else()
+        set(CXX_AVX512IFMA_FOUND FALSE CACHE BOOL "CXX AVX512IFMA support" FORCE)
+        set(CXX_AVX512IFMA_FLAGS "" CACHE STRING "CXX AVX512IFMA flags" FORCE)
+    endif()
 endmacro()
 
 macro(check_avx)

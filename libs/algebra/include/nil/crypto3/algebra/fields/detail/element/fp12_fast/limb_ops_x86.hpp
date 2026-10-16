@@ -3,6 +3,10 @@
 #include <nil/crypto3/algebra/fields/detail/element/fp12_fast/types.hpp>
 #include <boost/preprocessor.hpp>
 
+#if defined(CRYPTO3_HAS_AVX512IFMA)
+#include <immintrin.h>
+#endif
+
 // clang-format off
 
 #define STR_IMPL(X) #X
@@ -50,6 +54,29 @@
     "mov " D4(1, 4) ", " PTR2(Z, Z_BASE, 5) "\n"                    \
     "mov " D4(2, 4) ", " PTR2(Z, Z_BASE, 6) "\n"                    \
     "mov " D4(3, 4) ", " PTR2(Z, Z_BASE, 7) "\n"
+
+// Finish one product limb before adding it to the nine-limb accumulator. The product's CF/OF chains
+// and the accumulator's carry are independent: save the latter in pending between schoolbook rounds.
+#define MULTIPLY_ADD_4x4_ROUND(ROUND)                              \
+    "xor %[zero], %[zero]\n"                                      \
+    "mov " PTR(y, ROUND) ", %%rdx\n"                            \
+    "mulx " PTR(x, 0) ", %[low], %[high]\n"                      \
+    "adox %[low], " D4(0, ROUND) "\n"                            \
+    "mov " D4(0, ROUND) ", %[saved]\n"                          \
+    "adcx %[high], " D4(1, ROUND) "\n"                           \
+    "mulx " PTR(x, 1) ", %[low], %[high]\n"                      \
+    "adox %[low], " D4(1, ROUND) "\n"                            \
+    "adcx %[high], " D4(2, ROUND) "\n"                           \
+    "mulx " PTR(x, 2) ", %[low], %[high]\n"                      \
+    "adox %[low], " D4(2, ROUND) "\n"                            \
+    "adcx %[high], " D4(3, ROUND) "\n"                           \
+    "mulx " PTR(x, 3) ", %[low], " D4(4, ROUND) "\n"            \
+    "adox %[low], " D4(3, ROUND) "\n"                            \
+    "adox %[zero], " D4(4, ROUND) "\n"                           \
+    "adcx %[zero], " D4(4, ROUND) "\n"                           \
+    "btq $0, %[pending]\n"                                        \
+    "adcq %[saved], " PTR(z, ROUND) "\n"                        \
+    "setc %b[pending]\n"
 
 // Get the (i + j) mod 6 d register in the 6-live-limb schoolbook window.
 #define D6(I, J) "%[d" STR(BOOST_PP_MOD(BOOST_PP_ADD(I, J), 6)) "]"
@@ -628,6 +655,45 @@
     "adcq %[" #T5 "], " PTR2(Z, Z_BASE, 11) "\n"
 
 namespace nil::crypto3::algebra::fields::detail::fp12_fast {
+    // z += x*y, with four unsigned 64-bit input limbs and nine accumulator limbs. z must be disjoint
+    // from both inputs, and the exact sum must fit in nine limbs. x and y may alias each other.
+    template<typename Limb>
+    inline void multiply_add_4x4_x86(Limb *z, const Limb *x, const Limb *y) {
+        static_assert(std::is_unsigned_v<Limb> && sizeof(Limb) == sizeof(limb));
+        limb d0, d1, d2, d3, low, high, saved, pending, zero;
+        asm volatile(
+            "mov " PTR(y, 0) ", %%rdx\n"
+            "mulx " PTR(x, 0) ", %[d0], %[d1]\n"
+            "mov %[d0], %[saved]\n"
+            "mulx " PTR(x, 1) ", %[low], %[d2]\n"
+            "add %[low], %[d1]\n"
+            "mulx " PTR(x, 2) ", %[low], %[d3]\n"
+            "adc %[low], %[d2]\n"
+            "mulx " PTR(x, 3) ", %[low], %[d0]\n"
+            "adc %[low], %[d3]\n"
+            "adc $0, %[d0]\n"
+            "addq %[saved], " PTR(z, 0) "\n"
+            "setc %b[pending]\n"
+
+            MULTIPLY_ADD_4x4_ROUND(1)
+            MULTIPLY_ADD_4x4_ROUND(2)
+            MULTIPLY_ADD_4x4_ROUND(3)
+
+            // The last round leaves the accumulator carry in CF. Propagate it through the high product
+            // limbs and into the extra limb, without truncating sums that exceed 512 bits.
+            "adcq %[d0], " PTR(z, 4) "\n"
+            "adcq %[d1], " PTR(z, 5) "\n"
+            "adcq %[d2], " PTR(z, 6) "\n"
+            "adcq %[d3], " PTR(z, 7) "\n"
+            "adcq $0, " PTR(z, 8) "\n"
+            : [d0]"=&r"(d0), [d1]"=&r"(d1), [d2]"=&r"(d2), [d3]"=&r"(d3),
+              [low]"=&r"(low), [high]"=&r"(high), [saved]"=&r"(saved),
+              [pending]"=&r"(pending), [zero]"=&r"(zero)
+            : [z]"r"(z), [x]"r"(x), [y]"r"(y)
+            : "rdx", "cc", "memory"
+        );
+    }
+
     template<Fp12FastParams Params>
         requires(Params::storage_limb_count == 8)
     inline void montgomery_reduce_x86(limb *result, const limb *data) {
@@ -1297,6 +1363,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #undef D6
 #undef SCHOOLBOOK_4x4_ROUND
 #undef SCHOOLBOOK_4x4
+#undef MULTIPLY_ADD_4x4_ROUND
 #undef SCHOOLBOOK_6x6_ROUND
 #undef SCHOOLBOOK_6x6
 #undef DOUBLE_MOD_P
@@ -1325,3 +1392,92 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
 #undef SUB_12_LIMBS_MOD
 
 // clang-format on
+
+#if defined(CRYPTO3_HAS_AVX512IFMA)
+namespace nil::crypto3::algebra::fields::detail::fp12_fast {
+    template<std::size_t Lanes>
+    struct ifma52_operations;
+
+    template<>
+    struct ifma52_operations<4> {
+        static constexpr std::size_t lanes = 4;
+        struct value_type {
+            __m256i data;
+        };
+        static value_type broadcast(limb x) {
+            return {_mm256_set1_epi64x(x)};
+        }
+        static value_type load(const limb *x) {
+            return {_mm256_loadu_si256(reinterpret_cast<const __m256i *>(x))};
+        }
+        static void store(limb *x, value_type a) {
+            _mm256_storeu_si256(reinterpret_cast<__m256i *>(x), a.data);
+        }
+        static value_type add(value_type a, value_type b) {
+            return {_mm256_add_epi64(a.data, b.data)};
+        }
+        static value_type subtract(value_type a, value_type b) {
+            return {_mm256_sub_epi64(a.data, b.data)};
+        }
+        static value_type bit_and(value_type a, value_type b) {
+            return {_mm256_and_si256(a.data, b.data)};
+        }
+        static value_type shift52(value_type a) {
+            return {_mm256_srli_epi64(a.data, 52)};
+        }
+        static __mmask8 less(value_type a, value_type b) {
+            return _mm256_cmp_epu64_mask(a.data, b.data, _MM_CMPINT_LT);
+        }
+        static value_type select(__mmask8 mask, value_type yes, value_type no) {
+            return {_mm256_mask_blend_epi64(mask, no.data, yes.data)};
+        }
+        static value_type multiply_add_low(value_type sum, value_type a, value_type b) {
+            return {_mm256_madd52lo_epu64(sum.data, a.data, b.data)};
+        }
+        static value_type multiply_add_high(value_type sum, value_type a, value_type b) {
+            return {_mm256_madd52hi_epu64(sum.data, a.data, b.data)};
+        }
+    };
+
+    template<>
+    struct ifma52_operations<8> {
+        static constexpr std::size_t lanes = 8;
+        struct value_type {
+            __m512i data;
+        };
+        static value_type broadcast(limb x) {
+            return {_mm512_set1_epi64(x)};
+        }
+        static value_type load(const limb *x) {
+            return {_mm512_loadu_si512(x)};
+        }
+        static void store(limb *x, value_type a) {
+            _mm512_storeu_si512(x, a.data);
+        }
+        static value_type add(value_type a, value_type b) {
+            return {_mm512_add_epi64(a.data, b.data)};
+        }
+        static value_type subtract(value_type a, value_type b) {
+            return {_mm512_sub_epi64(a.data, b.data)};
+        }
+        static value_type bit_and(value_type a, value_type b) {
+            return {_mm512_and_si512(a.data, b.data)};
+        }
+        static value_type shift52(value_type a) {
+            return {_mm512_srli_epi64(a.data, 52)};
+        }
+        static __mmask8 less(value_type a, value_type b) {
+            return _mm512_cmp_epu64_mask(a.data, b.data, _MM_CMPINT_LT);
+        }
+        static value_type select(__mmask8 mask, value_type yes, value_type no) {
+            return {_mm512_mask_blend_epi64(mask, no.data, yes.data)};
+        }
+        static value_type multiply_add_low(value_type sum, value_type a, value_type b) {
+            return {_mm512_madd52lo_epu64(sum.data, a.data, b.data)};
+        }
+        static value_type multiply_add_high(value_type sum, value_type a, value_type b) {
+            return {_mm512_madd52hi_epu64(sum.data, a.data, b.data)};
+        }
+    };
+}    // namespace nil::crypto3::algebra::fields::detail::fp12_fast
+#endif

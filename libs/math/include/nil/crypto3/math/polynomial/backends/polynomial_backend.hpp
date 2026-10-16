@@ -57,6 +57,15 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // Zero keeps the unscreened path. The limit is capped at the degree-block size so the computed Frobenius
         // powers can be reused as the start of that table if factorization continues.
         std::size_t distinct_degree_screening_limit = 0;
+
+        // Optional prepared Fp12 coefficient combinations. This limits the additional owned coefficient payload,
+        // excluding the ordinary baby steps and per-call scratch. Zero keeps the scalar path; enable a budget
+        // explicitly until benchmarks establish the crossover and acceptable memory use for the workload.
+        std::size_t modular_composition_prepared_byte_limit = 0;
+
+        // Prepared BN254 combinations may use four or eight IFMA lanes when the build supports them.
+        // Zero retains the scalar prepared kernel. The byte budget above remains the opt-in switch.
+        std::size_t modular_composition_simd_lanes = 8;
     };
 
     /**

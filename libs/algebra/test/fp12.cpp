@@ -30,6 +30,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string_view>
+#include <vector>
 
 #include <boost/mpl/list.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -147,6 +148,148 @@ namespace {
             }
         }
         return value;
+    }
+
+    // Execute the vector algorithm on scalar lanes as well, independently of the 128-bit-column reference.
+    // These operations model IFMA's ignored upper operand bits and reject any accumulator overflow.
+    template<std::size_t Lanes>
+    struct scalar_ifma52_operations {
+        using limb = fields::detail::fp12_fast::limb;
+        using wide = fields::detail::fp12_fast::wide_limb;
+        static constexpr std::size_t lanes = Lanes;
+        static constexpr limb mask = (limb(1) << 52) - 1;
+        using value_type = std::array<limb, lanes>;
+        using mask_type = std::array<bool, lanes>;
+        static value_type broadcast(limb x) {
+            value_type r;
+            r.fill(x);
+            return r;
+        }
+        static value_type load(const limb *x) {
+            value_type r;
+            std::copy_n(x, lanes, r.begin());
+            return r;
+        }
+        static void store(limb *x, const value_type &a) {
+            std::copy(a.begin(), a.end(), x);
+        }
+        static value_type add(value_type a, const value_type &b) {
+            for (std::size_t i = 0; i < lanes; ++i) {
+                if (a[i] > std::numeric_limits<limb>::max() - b[i]) {
+                    throw std::overflow_error("IFMA lane overflow");
+                }
+                a[i] += b[i];
+            }
+            return a;
+        }
+        static value_type subtract(value_type a, const value_type &b) {
+            for (std::size_t i = 0; i < lanes; ++i)
+                a[i] -= b[i];
+            return a;
+        }
+        static value_type bit_and(value_type a, const value_type &b) {
+            for (std::size_t i = 0; i < lanes; ++i)
+                a[i] &= b[i];
+            return a;
+        }
+        static value_type shift52(value_type a) {
+            for (auto &x : a)
+                x >>= 52;
+            return a;
+        }
+        static mask_type less(const value_type &a, const value_type &b) {
+            mask_type r;
+            for (std::size_t i = 0; i < lanes; ++i)
+                r[i] = a[i] < b[i];
+            return r;
+        }
+        static value_type select(const mask_type &mask, value_type yes, const value_type &no) {
+            for (std::size_t i = 0; i < lanes; ++i)
+                if (!mask[i])
+                    yes[i] = no[i];
+            return yes;
+        }
+        static value_type multiply_add_low(value_type sum, const value_type &a, const value_type &b) {
+            value_type product;
+            for (std::size_t i = 0; i < lanes; ++i)
+                product[i] = limb(wide(a[i] & mask) * (b[i] & mask)) & mask;
+            return add(sum, product);
+        }
+        static value_type multiply_add_high(value_type sum, const value_type &a, const value_type &b) {
+            value_type product;
+            for (std::size_t i = 0; i < lanes; ++i)
+                product[i] = limb((wide(a[i] & mask) * (b[i] & mask)) >> 52);
+            return add(sum, product);
+        }
+    };
+
+    template<typename Operations>
+    void check_radix52_dots() {
+        namespace fast = fields::detail::fp12_fast;
+        using params = alt_bn128_254_fp12::extension_policy::fast_params;
+        using kernel = fast::fp12_fast<params>;
+        using radix = fast::montgomery_radix52<params>;
+        using backend = kernel::base_backend_type;
+        constexpr std::size_t lanes = Operations::lanes, terms = 1025;
+        const auto &mod = params::base_field_type::modulus_params.get_mod_obj();
+        auto maximum = radix::modulus();
+        --maximum[0];
+        boost::random::mt19937 rng(0x52F00D);
+        for (bool maximal : {true, false}) {
+            std::vector<radix::value_type> left(terms);
+            std::array<std::vector<radix::value_type>, lanes> right;
+            std::vector<fast::limb> packed_left(terms * 5), packed_right(terms * 5 * lanes);
+            std::vector<std::size_t> indices(terms);
+            for (auto &lane : right)
+                lane.resize(terms);
+            for (std::size_t j = 0; j < terms; ++j) {
+                left[j] =
+                    maximal ?
+                        maximum :
+                        radix::from_montgomery64(
+                            random_fp12<alt_bn128_254_fp12>(rng).data[0].data[0].data[0].data.backend().base_data());
+                indices[j] = terms - j - 1;
+                for (std::size_t lane = 0; lane < lanes; ++lane) {
+                    right[lane][j] = lane == 0 ? radix::value_type {} :
+                                     maximal   ? maximum :
+                                                 radix::from_montgomery64(random_fp12<alt_bn128_254_fp12>(rng)
+                                                                              .data[0]
+                                                                              .data[0]
+                                                                              .data[0]
+                                                                              .data.backend()
+                                                                              .base_data());
+                    for (std::size_t i = 0; i < 5; ++i) {
+                        packed_left[j * 5 + i] = left[j][i];
+                        packed_right[(indices[j] * 5 + i) * lanes + lane] = right[lane][j][i];
+                    }
+                }
+            }
+            for (std::size_t count : {0, 1, 2, 7, 8, 9, 27, 28, 123, 255, 256, 257, 511, 512, 513, 1025}) {
+                std::array<fast::limb, 5 * lanes + 2> actual;
+                actual.fill(0xAABBCCDDEEFF0011);
+                fast::montgomery_inner_product52<params, Operations>(actual.data() + 1, packed_left.data(),
+                                                                     packed_right.data(), indices.data(), count);
+                BOOST_CHECK_EQUAL(actual.front(), 0xAABBCCDDEEFF0011);
+                BOOST_CHECK_EQUAL(actual.back(), 0xAABBCCDDEEFF0011);
+                for (std::size_t lane = 0; lane < lanes; ++lane) {
+                    radix::value_type result;
+                    for (std::size_t i = 0; i < 5; ++i)
+                        result[i] = actual[1 + i * lanes + lane];
+                    const auto expected = radix::inner_product(left.begin(), left.begin() + count, right[lane].begin());
+                    BOOST_CHECK(result == expected);
+                    std::vector<backend> l(count), r(count);
+                    for (std::size_t j = 0; j < count; ++j) {
+                        radix::to_montgomery64(l[j], left[j]);
+                        radix::to_montgomery64(r[j], right[lane][j]);
+                    }
+                    backend original, converted;
+                    mod.montgomery_inner_product(original, l.begin(), l.end(), r.begin());
+                    radix::to_montgomery64(converted, result);
+                    BOOST_CHECK(eval_eq(original, converted));
+                    BOOST_CHECK(eval_lt(converted, mod.get_mod()));
+                }
+            }
+        }
     }
 
 }    // namespace
@@ -333,6 +476,218 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(multiplication_matches_generic_implementation, Fp1
         }
     }
 }
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(prepared_product_forms_recombine_exactly, Fp12Field, fp12_field_types) {
+    using kernel = fields::detail::fp12_fast::fp12_fast<typename Fp12Field::extension_policy::fast_params>;
+    using base_value_type = typename kernel::base_value_type;
+    boost::random::mt19937 rng(0x5412);
+    const auto check = [&](const auto &x, const auto &y) {
+        const auto left = kernel::prepare_product_operand(x);
+        const auto right = kernel::prepare_product_operand(y);
+        std::array<base_value_type, kernel::product_coordinate_count> products;
+        for (std::size_t i = 0; i < products.size(); ++i) {
+            const auto &modulus = base_value_type::modulus_params.get_mod_obj().get_mod();
+            BOOST_CHECK(eval_lt(left[i], modulus));
+            BOOST_CHECK(eval_lt(right[i], modulus));
+            base_value_type a, b;
+            a.data.backend().base_data() = left[i];
+            b.data.backend().base_data() = right[i];
+            products[i] = a * b;
+        }
+        BOOST_CHECK_EQUAL(kernel::template recombine_products<typename Fp12Field::value_type>(products),
+                          generic_fp12_mul<Fp12Field>(x, y));
+    };
+    for (std::size_t i = 0; i < 6; ++i) {
+        for (std::size_t j = 0; j < 6; ++j) {
+            check(boundary_fp12<Fp12Field>(i), boundary_fp12<Fp12Field>(j));
+        }
+    }
+    for (std::size_t i = 0; i < random_samples; ++i) {
+        check(random_fp12<Fp12Field>(rng), random_fp12<Fp12Field>(rng));
+    }
+    check(Fp12Field::value_type::zero(), Fp12Field::value_type::one());
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(prepared_inner_products_match_generic_arithmetic, Fp12Field, fp12_field_types) {
+    using value_type = typename Fp12Field::value_type;
+    using kernel = fields::detail::fp12_fast::fp12_fast<typename Fp12Field::extension_policy::fast_params>;
+    using base_value_type = typename kernel::base_value_type;
+    using prepared_type = typename kernel::prepared_product_operand;
+    boost::random::mt19937 rng(0x12354);
+    std::vector<value_type> left, right;
+    std::vector<prepared_type> prepared_left, prepared_right;
+    value_type maximum_residues;
+    auto maximum = base_value_type::modulus_params.get_mod_obj().get_mod();
+    typename kernel::base_backend_type one;
+    one.limbs()[0] = 1;
+    eval_subtract(maximum, one);
+    for (std::size_t i = 0; i < Fp12Field::arity; ++i) {
+        maximum_residues.coordinate(i).data.backend().base_data() = maximum;
+    }
+    for (std::size_t i = 0; i < 513; ++i) {
+        left.push_back(i % 3 == 0 ? maximum_residues : random_fp12<Fp12Field>(rng));
+        right.push_back(i % 3 == 0 ? maximum_residues : boundary_fp12<Fp12Field>(i % 6));
+        prepared_left.push_back(kernel::prepare_product_operand(left.back()));
+        prepared_right.push_back(kernel::prepare_product_operand(right.back()));
+    }
+    for (std::size_t count : {0, 1, 2, 3, 4, 5, 7, 8, 9, 16, 31, 32, 33, 123, 124, 256, 257, 513}) {
+        value_type expected = value_type::zero();
+        for (std::size_t i = 0; i < count; ++i) {
+            expected += generic_fp12_mul<Fp12Field>(left[i], right[i]);
+        }
+        const auto actual = kernel::template inner_product<value_type>(
+            prepared_left.begin(), prepared_left.begin() + count, prepared_right.begin());
+        BOOST_CHECK_EQUAL(actual, expected);
+    }
+
+    // Cancellation across a long dot must remain canonical, including the empty result.
+    for (std::size_t i = 0; i < 246; i += 2) {
+        prepared_left[i + 1] = kernel::prepare_product_operand(-left[i]);
+        prepared_right[i + 1] = prepared_right[i];
+    }
+    BOOST_CHECK_EQUAL(kernel::template inner_product<value_type>(prepared_left.begin(), prepared_left.begin() + 246,
+                                                                 prepared_right.begin()),
+                      value_type::zero());
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(prepared_base_dots_match_portable_with_wide_carries, Fp12Field, fp12_field_types) {
+    using params = typename Fp12Field::extension_policy::fast_params;
+    using kernel = fields::detail::fp12_fast::fp12_fast<params>;
+    using backend = typename kernel::base_backend_type;
+    const auto &modulus = params::base_field_type::modulus_params.get_mod_obj();
+    backend maximum = modulus.get_mod(), one;
+    one.limbs()[0] = 1;
+    eval_subtract(maximum, one);
+    std::vector<backend> left(1025, maximum), right(1025, maximum);
+    // For BN254, 28 products of (p-1)^2 first carry beyond the eight ordinary product limbs.
+    // Also exercise several REDC canonicalization subtractions and the six-limb portable fallback.
+    for (std::size_t count : {0, 1, 2, 3, 27, 28, 29, 31, 32, 33, 122, 123, 124, 255, 256, 257, 513, 1025}) {
+        backend actual, expected;
+        modulus.montgomery_inner_product(expected, left.begin(), left.begin() + count, right.begin());
+        fields::detail::fp12_fast::montgomery_inner_product<params>(actual, left.begin(), left.begin() + count,
+                                                                    right.begin());
+        BOOST_CHECK(eval_eq(actual, expected));
+        BOOST_CHECK(eval_lt(actual, modulus.get_mod()));
+        // Writing the result must wait until all input terms have been consumed.
+        fields::detail::fp12_fast::montgomery_inner_product<params>(left[0], left.begin(), left.begin() + count,
+                                                                    right.begin());
+        BOOST_CHECK(eval_eq(left[0], expected));
+        left[0] = maximum;
+    }
+}
+
+BOOST_AUTO_TEST_CASE(radix52_conversion_preserves_canonical_montgomery_values) {
+    namespace fast = fields::detail::fp12_fast;
+    using params = alt_bn128_254_fp12::extension_policy::fast_params;
+    using radix = fast::montgomery_radix52<params>;
+    using backend = fast::fp12_fast<params>::base_backend_type;
+    using boost::multiprecision::cpp_int;
+    const auto integer = [](const auto &x, unsigned bits) {
+        cpp_int result = 0;
+        for (auto i = x.rbegin(); i != x.rend(); ++i) {
+            result <<= bits;
+            result += *i;
+        }
+        return result;
+    };
+    const auto &mod = params::base_field_type::modulus_params.get_mod_obj();
+    const cpp_int p = integer(fast::load_limbs(mod.get_mod()), 64);
+    boost::random::mt19937 rng(0x5264);
+    for (std::size_t i = 0; i < 300; ++i) {
+        backend original = i < 16 ?
+                               mod.get_mod() :
+                               random_fp12<alt_bn128_254_fp12>(rng).data[0].data[0].data[0].data.backend().base_data();
+        if (i < 16) {
+            backend delta;
+            delta.limbs()[0] = i + 1;
+            eval_subtract(original, delta);
+        }
+        if (i == 16)
+            original = backend();
+        const auto packed = radix::from_montgomery64(original);
+        BOOST_CHECK(integer(packed, 52) == (integer(fast::load_limbs(original), 64) * 16) % p);
+        for (auto digit : packed)
+            BOOST_CHECK_LE(digit, radix::mask);
+        backend restored;
+        radix::to_montgomery64(restored, packed);
+        BOOST_CHECK(eval_eq(restored, original));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(radix52_four_and_eight_lane_arithmetic_matches_reference) {
+    check_radix52_dots<scalar_ifma52_operations<4>>();
+    check_radix52_dots<scalar_ifma52_operations<8>>();
+}
+
+#if defined(CRYPTO3_HAS_AVX512IFMA)
+BOOST_AUTO_TEST_CASE(radix52_ifma_matches_reference_in_every_lane) {
+    check_radix52_dots<fields::detail::fp12_fast::ifma52_operations<4>>();
+    check_radix52_dots<fields::detail::fp12_fast::ifma52_operations<8>>();
+}
+#endif
+
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
+BOOST_AUTO_TEST_CASE(four_limb_multiply_accumulate_preserves_all_nine_limbs) {
+    using limb = fields::detail::fp12_fast::limb;
+    using boost::multiprecision::cpp_int;
+    constexpr limb maximum = std::numeric_limits<limb>::max();
+    const auto integer = [](const limb *data, std::size_t size) {
+        cpp_int result = 0;
+        while (size > 0) {
+            result <<= 64;
+            result += data[--size];
+        }
+        return result;
+    };
+    const auto check = [&](const std::array<limb, 4> &left, const std::array<limb, 4> &right,
+                           const std::array<limb, 9> &initial, bool square = false) {
+        std::array<limb, 11> storage;
+        storage.front() = 0xAABBCCDDEEFF0011;
+        storage.back() = 0x1122334455667788;
+        std::copy(initial.begin(), initial.end(), storage.begin() + 1);
+        const auto *right_data = square ? left.data() : right.data();
+        const cpp_int expected = integer(initial.data(), initial.size()) +
+                                 integer(left.data(), left.size()) * integer(right_data, right.size());
+        fields::detail::fp12_fast::multiply_add_4x4_x86(storage.data() + 1, left.data(), right_data);
+        BOOST_CHECK_EQUAL(integer(storage.data() + 1, 9), expected);
+        BOOST_CHECK_EQUAL(storage.front(), 0xAABBCCDDEEFF0011);
+        BOOST_CHECK_EQUAL(storage.back(), 0x1122334455667788);
+    };
+    const std::array<limb, 4> full {maximum, maximum, maximum, maximum}, zero {};
+    std::array<limb, 9> initial;
+    initial.fill(maximum);
+    check(zero, full, initial);
+    initial.back() = maximum - 1;    // Carry into a nearly full ninth limb without overflowing it.
+    check(full, full, initial);
+    check(full, full, initial, true);
+    initial.back() = 0;
+    check(full, full, initial);
+    check(full, full, {});
+    for (std::size_t i = 0; i < 4; ++i) {
+        for (std::size_t j = 0; j < 4; ++j) {
+            for (unsigned bit : {0, 1, 31, 32, 63}) {
+                std::array<limb, 4> left {}, right {};
+                left[i] = limb(1) << bit;
+                right[j] = maximum;
+                check(left, right, initial);
+            }
+        }
+    }
+    boost::random::mt19937 rng(0x4ADC);
+    const auto random_limb = [&]() { return (limb(rng()) << 32) | rng(); };
+    for (std::size_t sample = 0; sample < 1024; ++sample) {
+        std::array<limb, 4> left, right;
+        for (auto &value : left)
+            value = random_limb();
+        for (auto &value : right)
+            value = random_limb();
+        for (auto &value : initial)
+            value = random_limb();
+        initial.back() >>= 1;    // Leave room for the product's carry.
+        check(left, right, initial, sample % 2 == 0);
+    }
+}
+#endif
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(square_matches_generic_implementation, Fp12Field, fp12_field_types) {
     using fp12_value_type = typename Fp12Field::value_type;
