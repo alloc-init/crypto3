@@ -136,6 +136,48 @@ namespace nil::crypto3::math {
         polynomial_type giant_step_;
     };
 
+    namespace detail {
+        // Add F_block(inner) = sum_j outer[block_index * k + j] * baby_step(j) to an existing accumulator.
+        // Preconditions: the cache belongs to a nonconstant divisor; outer and result are nonempty canonical
+        // polynomials; outer fits the cache; block_index identifies an existing block; result does not alias outer
+        // or any cached power. Short final blocks and powers of different lengths are supported. The result is
+        // condensed after addition, including complete cancellation to zero.
+        //
+        // Streaming one block at a time avoids storing the full matrix of evaluated block polynomials. Keep this
+        // scalar kernel shared by composition and its focused benchmark. Across all blocks its work costs
+        // O(outer.size() * degree(B)), the baseline for a future matrix-product or linear-combination kernel.
+        template<SupportsDivrem Backend>
+        void add_composition_block(typename Backend::polynomial_type &result,
+                                   const typename Backend::polynomial_type &outer,
+                                   const polynomial_composition_precomputation<Backend> &precomputation,
+                                   std::size_t block_index) {
+            using polynomial_type = typename Backend::polynomial_type;
+            using value_type = typename polynomial_type::value_type;
+            const std::size_t block_size = precomputation.block_size();
+            const std::size_t first_coefficient = block_index * block_size;
+            const std::size_t block_coefficient_count = std::min(block_size, outer.size() - first_coefficient);
+            for (std::size_t exponent = 0; exponent < block_coefficient_count; ++exponent) {
+                const value_type &scalar = outer[first_coefficient + exponent];
+                if (scalar == value_type {}) {
+                    continue;
+                }
+                if (exponent == 0) {
+                    result[0] = result[0] + scalar;
+                    continue;
+                }
+
+                const polynomial_type &power = precomputation.baby_step(exponent);
+                if (result.size() < power.size()) {
+                    result.resize(power.size(), value_type {});
+                }
+                for (std::size_t coefficient = 0; coefficient < power.size(); ++coefficient) {
+                    result[coefficient] = result[coefficient] + power[coefficient] * scalar;
+                }
+            }
+            condense(result);
+        }
+    }    // namespace detail
+
     /**
      * Compute output = outer(inner(X)) mod B by Horner's rule, where B is the nonzero polynomial stored in
      * divisor_context. This Horner algorithm performs one modular multiplication for each coefficient of outer except
@@ -232,40 +274,12 @@ namespace nil::crypto3::math {
         }
 
         const std::size_t block_size = precomputation.block_size();
-        // Evaluate F_block(inner) as a linear combination of the baby steps and add it directly to the Horner
-        // accumulator. Streaming one block at a time avoids storing the full matrix of evaluated block polynomials.
-        // TODO: This coefficientwise phase costs O(outer.size() * degree(B)), which is quadratic when both dimensions
-        // grow together. A faster matrix-product or backend-provided linear-combination kernel could replace it.
-        auto add_block = [&](polynomial_type &result, std::size_t block_index) {
-            const std::size_t first_coefficient = block_index * block_size;
-            const std::size_t block_coefficient_count = std::min(block_size, outer.size() - first_coefficient);
-            for (std::size_t exponent = 0; exponent < block_coefficient_count; ++exponent) {
-                const value_type &scalar = outer[first_coefficient + exponent];
-                if (scalar == value_type {}) {
-                    continue;
-                }
-                if (exponent == 0) {
-                    result[0] = result[0] + scalar;
-                    continue;
-                }
-
-                const polynomial_type &power = precomputation.baby_step(exponent);
-                if (result.size() < power.size()) {
-                    result.resize(power.size(), value_type {});
-                }
-                for (std::size_t coefficient = 0; coefficient < power.size(); ++coefficient) {
-                    result[coefficient] = result[coefficient] + power[coefficient] * scalar;
-                }
-            }
-            condense(result);
-        };
-
         const std::size_t block_count = 1 + (outer.size() - 1) / block_size;
         polynomial_type result;
-        add_block(result, block_count - 1);
+        detail::add_composition_block(result, outer, precomputation, block_count - 1);
         for (std::size_t block = block_count - 1; block-- > 0;) {
             mulmod(result, result, precomputation.giant_step(), divisor_context, arithmetic_context);
-            add_block(result, block);
+            detail::add_composition_block(result, outer, precomputation, block);
         }
 
         output = std::move(result);

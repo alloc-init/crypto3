@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package, verify and measure production BN254 Fp12 backends with reproducible logs."""
+"""Package, verify and measure BN254 Fp12 polynomial products or coefficient combinations."""
 
 import argparse
 import csv
@@ -25,6 +25,7 @@ import traceback
 BENCH = Path("libs/math/test/bench_test")
 SOURCE = BENCH / "small_prime_fft_benchmark.cpp"
 RUNNER = BENCH / "run_small_prime_fft_benchmark.py"
+GUIDE = BENCH / "coefficient_combination_benchmark.md"
 MANIFEST = "benchmark-snapshot.json"
 
 
@@ -56,7 +57,7 @@ def source_metadata(repo):
             if digest(repo / name) != expected:
                 raise RuntimeError(f"snapshot source changed: {name}")
         return metadata
-    files = {repo / SOURCE, repo / RUNNER, repo / BENCH / "CMakeLists.txt"}
+    files = {repo / SOURCE, repo / RUNNER, repo / GUIDE, repo / BENCH / "CMakeLists.txt"}
     for root in include_roots(repo):
         files.update(path for path in root.rglob("*") if path.is_file())
 
@@ -74,12 +75,12 @@ def source_metadata(repo):
     }
 
 
-def package(repo, destination):
+def package(repo, destination, coefficient_combination=False):
     metadata = source_metadata(repo)
     destination.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive creation preserves previous handoffs. Every file is rooted under one directory.
     with destination.open("xb") as output, tarfile.open(fileobj=output, mode="w:gz") as archive:
-        prefix = "crypto3-small-prime-benchmark"
+        prefix = "crypto3-coefficient-combination-benchmark" if coefficient_combination else "crypto3-small-prime-benchmark"
         for name in metadata["files"]:
             archive.add(repo / name, arcname=f"{prefix}/{name}")
         if (repo / "LICENSE").is_file():
@@ -129,6 +130,63 @@ def summarize(samples, trials, warmups):
     return {"backends": results, "wall_time_speedups": speedups}
 
 
+def summarize_combination(samples, trials, warmups):
+    with samples.open(newline="") as source:
+        rows = list(csv.DictReader(source))
+    setup = [row for row in rows if row["phase"] == "setup"]
+    if len(setup) != 4 or {row["operation"] for row in setup} != {
+        "fixture_and_export", "backend", "divisor_context", "composition_cache"
+    }:
+        raise RuntimeError("incomplete coefficient-combination setup output")
+    for phase, indices in (
+        ("warmup", set(range(warmups))),
+        ("trial", set(range(warmups, warmups + trials))),
+        ("verification", set(range(warmups + trials))),
+    ):
+        group = [row for row in rows if row["phase"] == phase]
+        if len(group) != len(indices) or {int(row["trial"]) for row in group} != indices:
+            raise RuntimeError(f"incomplete coefficient-combination samples: {phase}")
+        if any(row["operation"] != "coefficient_combination" for row in group):
+            raise RuntimeError(f"unexpected coefficient-combination operation: {phase}")
+    if len(rows) != 4 + 2 * (warmups + trials):
+        raise RuntimeError("unexpected coefficient-combination rows")
+    for row in rows:
+        if any(not math.isfinite(float(row[key])) or float(row[key]) < 0 for key in ("wall_ms", "cpu_ms")):
+            raise RuntimeError("invalid coefficient-combination timing sample")
+    cache = next(row for row in setup if row["operation"] == "composition_cache")
+    dimensions = {key: int(cache[key]) for key in (
+        "degree", "outer_coefficients", "block_size", "block_count", "coefficient_products"
+    )}
+    for row in rows:
+        if row["phase"] != "setup" and any(int(row[key]) != value for key, value in dimensions.items()):
+            raise RuntimeError("coefficient-combination dimensions changed between samples")
+
+    def statistics_for(phase):
+        group = [row for row in rows if row["phase"] == phase and int(row["trial"]) >= warmups]
+        result = {}
+        for key in ("wall_ms", "cpu_ms"):
+            values = [float(row[key]) for row in group]
+            result[key] = {"median": statistics.median(values), "min": min(values), "max": max(values)}
+        return result
+
+    result = {
+        "dimensions": dimensions, "setup": setup,
+        "coefficient_combination": statistics_for("trial"),
+        "verification": statistics_for("verification"),
+        "memory": {key: max(int(row[key]) for row in rows) for key in (
+            "process_peak_rss_bytes", "cache_coefficient_bytes", "output_and_reference_capacity_bytes"
+        )},
+        "verification_method": "all coefficients against reverse-order dot products; small fixtures also use schoolbook/Horner",
+        "timing_scope": "sum of block-kernel calls; accumulator resets and verification excluded",
+        "input_kind": "deterministic synthetic full-Fp12 inputs; real composition precomputation",
+    }
+    wall = result["coefficient_combination"]["wall_ms"]["median"] / 1000
+    cpu = result["coefficient_combination"]["cpu_ms"]["median"] / 1000
+    print(f"coefficient_combination: median wall={wall:.6f} s, CPU={cpu:.6f} s; "
+          f"{dimensions['block_count']} blocks, {dimensions['coefficient_products']} Fp12 products")
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[4])
@@ -136,26 +194,32 @@ def main():
     parser.add_argument("--cxx", default="g++")
     parser.add_argument("--boost-include", type=Path)
     parser.add_argument("--cpu", type=int, help="Linux CPU affinity; default is the highest permitted CPU")
+    parser.add_argument("--coefficient-combination", action="store_true",
+                        help="time the current scalar composition block kernel using real cached powers")
     parser.add_argument("--degree", type=int, default=14938)
-    parser.add_argument("--trials", type=int, default=5)
-    parser.add_argument("--warmups", type=int, default=2)
+    parser.add_argument("--trials", type=int, help="default: 3 for coefficient combinations, 5 for polynomial products")
+    parser.add_argument("--warmups", type=int, help="default: 1 for coefficient combinations, 2 for polynomial products")
     parser.add_argument("--timeout", type=int, default=3600, help="limit for each command, in seconds")
     parser.add_argument("--check-only", action="store_true")
     args = parser.parse_args()
+    if args.trials is None:
+        args.trials = 3 if args.coefficient_combination else 5
+    if args.warmups is None:
+        args.warmups = 1 if args.coefficient_combination else 2
     repo = args.repo.resolve()
     if not (repo / SOURCE).is_file():
         parser.error("--repo does not contain the benchmark source")
     if not 1 <= args.degree <= 17487 or not 1 <= args.trials <= 1000 or not 0 <= args.warmups <= 1000 or args.timeout < 1:
         parser.error("degree must be 1..17487, trials 1..1000, warmups 0..1000, timeout positive")
     if args.package:
-        package(repo, args.package.resolve())
+        package(repo, args.package.resolve(), args.coefficient_combination)
         return 0
     permitted = sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else []
     cpu = args.cpu if args.cpu is not None else (permitted[-1] if permitted else None)
     if cpu is not None and (cpu not in permitted or not shutil.which("taskset")):
         parser.error("CPU is outside the permitted affinity or taskset is unavailable")
     env = dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1")
-    parent = repo / "build" / "small-prime-fft-benchmarks"
+    parent = repo / "build" / ("coefficient-combination-benchmarks" if args.coefficient_combination else "small-prime-fft-benchmarks")
     parent.mkdir(parents=True, exist_ok=True)
     logs = Path(tempfile.mkdtemp(prefix="run-", dir=parent))
     print(f"LOG_DIRECTORY={logs}\nCPU={cpu if cpu is not None else 'not pinned'}", flush=True)
@@ -165,6 +229,7 @@ def main():
         "cpu": cpu, "permitted_cpus": permitted,
         "environment": {key: env.get(key) for key in ("PATH", "CPATH", "CPLUS_INCLUDE_PATH", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")},
         "instrumentation": "none", "commands": [],
+        "component": "coefficient_combination" if args.coefficient_combination else "polynomial_products",
     }
     save(logs / "metadata.json", metadata)
 
@@ -188,7 +253,7 @@ def main():
     try:
         sources = source_metadata(repo)
         save(logs / "sources.json", sources)
-        for source in (SOURCE, RUNNER, BENCH / "CMakeLists.txt"):
+        for source in (SOURCE, RUNNER, GUIDE, BENCH / "CMakeLists.txt"):
             shutil.copyfile(repo / source, logs / source.name)
         command("machine", ["uname", "-a"])
         if sys.platform.startswith("linux"):
@@ -208,12 +273,14 @@ def main():
         command("compile", compile_command)
         metadata["binary_sha256"] = digest(binary)
         prefix = ["taskset", "-c", str(cpu)] if cpu is not None else []
-        command("checks", prefix + [str(binary), "--check", "--input-dir", str(logs / "check-inputs")])
+        component = ["--coefficient-combination"] if args.coefficient_combination else []
+        command("checks", prefix + [str(binary), *component, "--check", "--input-dir", str(logs / "check-inputs")])
         if not args.check_only:
-            command("benchmark", prefix + [str(binary), "--degree", str(args.degree), "--trials", str(args.trials),
+            command("benchmark", prefix + [str(binary), *component, "--degree", str(args.degree), "--trials", str(args.trials),
                     "--warmups", str(args.warmups), "--input-dir", str(logs / "inputs")])
             shutil.copyfile(logs / "benchmark.stdout.log", logs / "samples.csv")
-            save(logs / "summary.json", summarize(logs / "samples.csv", args.trials, args.warmups))
+            summarize_run = summarize_combination if args.coefficient_combination else summarize
+            save(logs / "summary.json", summarize_run(logs / "samples.csv", args.trials, args.warmups))
         for name, expected in sources["files"].items():
             if digest(repo / name) != expected:
                 raise RuntimeError(f"source changed during the run: {name}")

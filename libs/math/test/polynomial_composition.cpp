@@ -318,4 +318,93 @@ BOOST_AUTO_TEST_CASE(composition_matches_between_schoolbook_and_mixed_radix_back
     BOOST_CHECK(result == expected);
 }
 
+BOOST_AUTO_TEST_CASE(coefficient_blocks_preserve_ragged_powers_and_accumulator_tails) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    polynomial_type divisor(10, fq_value_type::zero());
+    divisor.front() = divisor.back() = fq_value_type::one();
+    const math::polynomial_divisor_context<backend_type> modulus(divisor, 8, context);
+    const polynomial_type inner {fq_value_type::zero(), fq_value_type::one()};
+    const math::polynomial_composition_precomputation<backend_type> cache(inner, 18, modulus, context);
+    BOOST_REQUIRE_EQUAL(cache.block_size(), 5);
+    for (std::size_t j = 0; j < cache.block_size(); ++j) {
+        BOOST_CHECK_EQUAL(cache.baby_step(j).size(), j + 1);
+    }
+
+    const polynomial_type initial(8, fq_value_type(17));
+    for (std::size_t size : {1, 4, 5, 6, 18}) {
+        polynomial_type outer(size, fq_value_type::zero());
+        for (std::size_t i = 0; i < size; ++i) {
+            outer[i] = i % 3 == 0 && i + 1 < size ? fq_value_type::zero() : fq_value_type(i + 1);
+        }
+        const auto blocks = 1 + (size - 1) / cache.block_size();
+        for (std::size_t block = blocks; block-- > 0;) {
+            // With inner = X and no wraparound, each block is exactly its coefficient slice.
+            auto expected = initial;
+            const auto first = block * cache.block_size();
+            for (std::size_t j = 0; j < std::min(cache.block_size(), size - first); ++j) {
+                expected[j] += outer[first + j];
+            }
+            auto actual = initial;
+            math::detail::add_composition_block(actual, outer, cache, block);
+            BOOST_CHECK(actual == expected);
+            BOOST_CHECK_EQUAL(actual.size(), initial.size());
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(coefficient_blocks_match_fp12_horner_for_sparse_tails_and_cancellation) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+    const polynomial_type divisor {fq12_value(1),  fq12_value(13), fq12_value(25), fq12_value(37),
+                                   fq12_value(49), fq12_value(61), fq12_value(73), fq12_value(85)};
+    const polynomial_type dense_outer {fq12_value(97),  fq12_value(109), fq12_value(121), fq12_value(133),
+                                       fq12_value(145), fq12_value(157), fq12_value(169), fq12_value(181),
+                                       fq12_value(193), fq12_value(205), fq12_value(217), fq12_value(229),
+                                       fq12_value(241)};
+    const polynomial_type sparse_outer {fq12_value(253), fq12_value_type::zero(), fq12_value_type::zero(),
+                                        fq12_value_type::zero(), fq12_value(265)};
+    const polynomial_type initial {fq12_value(277), fq12_value(289), fq12_value(301), fq12_value(313)};
+    for (std::size_t limit : {1, 2, 4}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.modular_composition_cached_power_limit = limit;
+        polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+        const math::polynomial_divisor_context<backend_type> modulus(divisor, 6, context);
+        for (const auto &inner : {polynomial_type {fq12_value(325)}, polynomial_type {fq12_value(337), fq12_value(349)},
+                                  polynomial_type {fq12_value(361), fq12_value(373), fq12_value(385), fq12_value(397),
+                                                   fq12_value(409), fq12_value(421), fq12_value(433)}}) {
+            const math::polynomial_composition_precomputation<backend_type> cache(inner, dense_outer.size(), modulus,
+                                                                                  context);
+            BOOST_REQUIRE_EQUAL(cache.block_size(), limit);
+            for (const auto &outer : {polynomial_type {fq12_value_type::zero()}, polynomial_type {fq12_value(445)},
+                                      sparse_outer, dense_outer}) {
+                const auto blocks = 1 + (outer.size() - 1) / cache.block_size();
+                for (std::size_t block = blocks; block-- > 0;) {
+                    const auto first = block * cache.block_size();
+                    const auto end = std::min(first + cache.block_size(), outer.size());
+                    polynomial_type block_polynomial(outer.begin() + first, outer.begin() + end);
+                    math::condense(block_polynomial);
+                    polynomial_type block_value;
+                    math::compose_mod_reference(block_value, block_polynomial, inner, modulus, context);
+                    for (const auto &accumulator : {polynomial_type {}, initial}) {
+                        polynomial_type expected;
+                        math::addition(expected, accumulator, block_value);
+                        auto actual = accumulator;
+                        math::detail::add_composition_block(actual, outer, cache, block);
+                        BOOST_CHECK(actual == expected);
+                    }
+                    auto cancelled = block_value;
+                    for (auto &coefficient : cancelled) {
+                        coefficient = -coefficient;
+                    }
+                    math::detail::add_composition_block(cancelled, outer, cache, block);
+                    BOOST_CHECK_EQUAL(cancelled.size(), 1);
+                    BOOST_CHECK(cancelled.front().is_zero());
+                }
+            }
+        }
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()

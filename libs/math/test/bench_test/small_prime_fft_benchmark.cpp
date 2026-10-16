@@ -38,6 +38,9 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/resource.h>
+#endif
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/version.hpp>
@@ -47,6 +50,7 @@
 #include <nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/math/polynomial/operations/evaluate.hpp>
+#include <nil/crypto3/math/polynomial/quotient_ring/polynomial_composition.hpp>
 #include <nil/crypto3/math/polynomial/quotient_ring/polynomial_modular_arithmetic.hpp>
 
 namespace {
@@ -95,7 +99,7 @@ namespace {
 
     struct options {
         std::size_t degree = 14938, trials = 5, warmups = 2;
-        bool check = false;
+        bool check = false, coefficient_combination = false;
         fs::path input_directory;
     };
 
@@ -306,6 +310,131 @@ namespace {
         }
         std::cerr << "Verified all samples: degree=" << settings.degree << " fixture=" << data.name << '\n';
     }
+
+    std::size_t process_peak_rss_bytes() {
+#if defined(__unix__) || defined(__APPLE__)
+        struct rusage usage {};
+        if (getrusage(RUSAGE_SELF, &usage) == 0) {
+#if defined(__APPLE__)
+            return usage.ru_maxrss;
+#else
+            return std::size_t(usage.ru_maxrss) * 1024;
+#endif
+        }
+#endif
+        return 0;
+    }
+
+    using composition_cache = math::polynomial_composition_precomputation<small_backend>;
+
+    // Independent traversal of the same exact matrix: complete each coefficient's dot product in reverse order,
+    // including multiplication by baby_step(0) = 1. This is verification work, never part of a kernel sample.
+    void reference_combination(polynomial &output, const polynomial &initial, const polynomial &outer,
+                               const composition_cache &cache, std::size_t block) {
+        const auto first = block * cache.block_size();
+        const auto count = std::min(cache.block_size(), outer.size() - first);
+        auto width = initial.size();
+        for (std::size_t j = 0; j < count; ++j) {
+            if (!outer[first + j].is_zero()) {
+                width = std::max(width, cache.baby_step(j).size());
+            }
+        }
+        output.assign(width, value_type::zero());
+        for (std::size_t coefficient = 0; coefficient < width; ++coefficient) {
+            auto sum = coefficient < initial.size() ? initial[coefficient] : value_type::zero();
+            for (std::size_t j = count; j-- > 0;) {
+                const auto &power = cache.baby_step(j);
+                if (!outer[first + j].is_zero() && coefficient < power.size()) {
+                    sum += outer[first + j] * power[coefficient];
+                }
+            }
+            output[coefficient] = sum;
+        }
+        math::condense(output);
+    }
+
+    void run_combination(const options &settings, bool sparse) {
+        std::optional<fixture> input;
+        std::optional<pa::polynomial_context<small_backend>> context;
+        std::optional<math::polynomial_divisor_context<small_backend>> divisor;
+        std::optional<composition_cache> cache;
+        const auto order = std::bit_ceil(2 * settings.degree - 1);
+        std::size_t block_size = 0, blocks = 0, products = 0, cache_bytes = 0;
+        polynomial output, expected;
+        const auto print = [&](std::string_view phase, std::size_t trial, std::string_view operation, timing elapsed) {
+            std::cout << settings.degree << ',' << (sparse ? "synthetic_nonmonic_sparse" : "synthetic_monic_dense")
+                      << ',' << settings.degree << ',' << block_size << ',' << blocks << ',' << products << ',' << phase
+                      << ',' << trial << ',' << operation << ',' << elapsed.wall_ms << ',' << elapsed.cpu_ms << ','
+                      << process_peak_rss_bytes() << ',' << cache_bytes << ','
+                      << (output.capacity() + expected.capacity()) * sizeof(value_type) << '\n';
+        };
+        print("setup", 0, "fixture_and_export", measure([&] { input.emplace(settings, sparse); }));
+        print("setup", 0, "backend", measure([&] { context.emplace(small_backend(order)); }));
+        print("setup", 0, "divisor_context",
+              measure([&] { divisor.emplace(input->h, std::max(std::size_t(1), settings.degree - 1), *context); }));
+        const auto cache_time = measure([&] { cache.emplace(input->b, input->a.size(), *divisor, *context); });
+        block_size = cache->block_size();
+        blocks = 1 + (input->a.size() - 1) / block_size;
+        cache_bytes = cache->giant_step().size() * sizeof(value_type);
+        for (std::size_t j = 0; j < block_size; ++j) {
+            cache_bytes += cache->baby_step(j).size() * sizeof(value_type);
+        }
+        for (std::size_t i = 0; i < input->a.size(); ++i) {
+            if (i % block_size != 0 && !input->a[i].is_zero()) {
+                products += cache->baby_step(i % block_size).size();
+            }
+        }
+        print("setup", 0, "composition_cache", cache_time);
+
+        using schoolbook = pa::schoolbook_backend<value_type>;
+        pa::polynomial_context<schoolbook> school;
+        std::optional<math::polynomial_divisor_context<schoolbook>> school_divisor;
+        if (settings.degree <= 67) {
+            school_divisor.emplace(input->h, std::max(std::size_t(1), settings.degree - 1), school);
+        }
+        std::cerr << "Coefficient combination: degree=" << settings.degree << " block_size=" << block_size
+                  << " blocks=" << blocks << " Fp12_products=" << products << " cache_coefficient_bytes=" << cache_bytes
+                  << "; exact coefficient-major checks" << (school_divisor ? " and schoolbook/Horner checks\n" : "\n");
+        const polynomial zero;
+        for (std::size_t trial = 0; trial < settings.warmups + settings.trials; ++trial) {
+            const auto phase = trial < settings.warmups ? "warmup" : "trial";
+            timing kernel {0, 0}, verification {0, 0};
+            // Preserve composition's descending block order and reuse the real baby-step cache. The leading block
+            // starts at zero; later blocks add to a fixed dense accumulator standing in for a Horner product.
+            // Resetting that accumulator, reference work, and output comparisons are all outside kernel timings.
+            for (std::size_t block = blocks; block-- > 0;) {
+                const auto &initial = block + 1 == blocks ? zero : input->b;
+                output = initial;
+                const auto elapsed =
+                    measure([&] { math::detail::add_composition_block(output, input->a, *cache, block); });
+                kernel.wall_ms += elapsed.wall_ms;
+                kernel.cpu_ms += elapsed.cpu_ms;
+                const auto checked = measure([&] {
+                    reference_combination(expected, initial, input->a, *cache, block);
+                    require(output == expected, "coefficient-combination reference mismatch");
+                    require(!output.empty() && (output.size() == 1 || !output.back().is_zero()),
+                            "noncanonical coefficient-combination result");
+                    if (school_divisor) {
+                        const auto first = block * block_size;
+                        const auto end = std::min(first + block_size, input->a.size());
+                        polynomial slice(input->a.begin() + first, input->a.begin() + end), horner;
+                        math::condense(slice);
+                        math::compose_mod_reference(horner, slice, input->b, *school_divisor, school);
+                        math::addition(horner, horner, initial);
+                        require(output == horner, "coefficient-combination Horner mismatch");
+                    }
+                });
+                verification.wall_ms += checked.wall_ms;
+                verification.cpu_ms += checked.cpu_ms;
+            }
+            // A sample is the sum of block-kernel times for one composition's coefficient work. Verification may
+            // be expensive, so report its cost explicitly without allocating a full matrix of expected outputs.
+            print(phase, trial, "coefficient_combination", kernel);
+            print("verification", trial, "coefficient_combination", verification);
+            std::cerr << "Verified coefficient-combination " << phase << '=' << trial << " wall_ms=" << kernel.wall_ms
+                      << " verification_ms=" << verification.wall_ms << '\n';
+        }
+    }
 }    // namespace
 
 int main(int argc, char **argv) {
@@ -315,6 +444,8 @@ int main(int argc, char **argv) {
             const std::string_view argument(argv[i]);
             if (argument == "--check") {
                 settings.check = true;
+            } else if (argument == "--coefficient-combination") {
+                settings.coefficient_combination = true;
             } else if (argument == "--input-dir") {
                 require(++i < argc, "missing input directory");
                 settings.input_directory = argv[i];
@@ -324,7 +455,8 @@ int main(int argc, char **argv) {
                                argument == "--warmups" ? &settings.warmups :
                                                          nullptr;
                 require(target && ++i < argc,
-                        "usage: [--check] [--degree N] [--trials N] [--warmups N] [--input-dir DIR]");
+                        "usage: [--check] [--coefficient-combination] [--degree N] [--trials N] [--warmups N] "
+                        "[--input-dir DIR]");
                 const std::string_view value(argv[i]);
                 const auto parsed = std::from_chars(value.data(), value.data() + value.size(), *target);
                 require(parsed.ec == std::errc {} && parsed.ptr == value.data() + value.size(), "invalid number");
@@ -335,19 +467,26 @@ int main(int argc, char **argv) {
                 "require degree 1..17487, trials 1..1000, warmups 0..1000");
         std::cerr << "BN254 Fp12; boost=" << BOOST_LIB_VERSION << "; seed=" << seed
                   << "; serial; synthetic inputs; setup and checks excluded from operation samples.\n";
-        std::cout << std::fixed << std::setprecision(6) << std::unitbuf
-                  << "backend,degree,fixture,max_transform,phase,trial,operation,wall_ms,cpu_ms,prepared_transform,"
-                     "prepared_bytes\n";
+        std::cout << std::fixed << std::setprecision(6) << std::unitbuf;
+        if (settings.coefficient_combination) {
+            std::cout << "degree,fixture,outer_coefficients,block_size,block_count,coefficient_products,phase,trial,"
+                         "operation,wall_ms,cpu_ms,process_peak_rss_bytes,cache_coefficient_bytes,"
+                         "output_and_reference_capacity_bytes\n";
+        } else {
+            std::cout << "backend,degree,fixture,max_transform,phase,trial,operation,wall_ms,cpu_ms,prepared_transform,"
+                         "prepared_bytes\n";
+        }
+        const auto selected_run = settings.coefficient_combination ? run_combination : run;
         if (settings.check) {
             settings.trials = 1;
             settings.warmups = 0;
             for (std::size_t degree : {1, 2, 4, 5, 6, 8, 9, 17, 32, 67}) {
                 settings.degree = degree;
-                run(settings, false);
-                run(settings, true);
+                selected_run(settings, false);
+                selected_run(settings, true);
             }
         } else {
-            run(settings, false);
+            selected_run(settings, false);
         }
         return 0;
     } catch (const std::exception &error) {
