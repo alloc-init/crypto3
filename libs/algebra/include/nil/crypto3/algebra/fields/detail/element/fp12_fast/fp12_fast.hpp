@@ -2,7 +2,12 @@
 
 #include <array>
 #include <cstddef>
+#include <iterator>
 #include <tuple>
+#include <type_traits>
+#include <utility>
+
+#include <boost/iterator/transform_iterator.hpp>
 
 #include <nil/crypto3/algebra/fields/detail/element/fp12_fast/types.hpp>
 #include <nil/crypto3/algebra/fields/detail/element/fp12_fast/limb_ops.hpp>
@@ -12,6 +17,15 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     struct fp12_fast {
         using limb_array = Params::limb_array;
+        using base_value_type = typename Params::base_field_type::value_type;
+        using base_backend_type =
+            std::remove_cvref_t<decltype(std::declval<base_value_type &>().data.backend().base_data())>;
+
+        // Three Fp6 products, six Fp2 products each, and three base-field products per Fp2 product.
+        // Every entry is a canonical Montgomery residue. These are reusable linear forms of one operand;
+        // multiplying corresponding entries and applying recombine_products gives the Fp12 product.
+        static constexpr std::size_t product_coordinate_count = 54;
+        using prepared_product_operand = std::array<base_backend_type, product_coordinate_count>;
 
         // Packed input-side Fp2 value: two canonical Fp coefficients.
         struct fp2_base {
@@ -62,6 +76,15 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             fp2_base &operator+=(const fp2_base &other) {
                 fp2_base::add_mod(*this, *this, other);
                 return *this;
+            }
+
+            void to_non_residue(Params::non_residue_type &result) const {
+                constexpr std::size_t N = Params::base_value_limb_count;
+                for (std::size_t coefficient = 0; coefficient < 2; ++coefficient) {
+                    for (std::size_t i = 0; i < N; ++i) {
+                        result.data[coefficient].data.backend().base_data().limbs()[i] = data[coefficient * N + i];
+                    }
+                }
             }
         };
 
@@ -270,6 +293,86 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                 z.data[2] = x.data[1];
             }
         };
+
+        template<typename Fp12Value>
+        static prepared_product_operand prepare_product_operand(const Fp12Value &x) {
+            using fp2_value_type = typename Params::non_residue_type;
+            using fp6_value_type = typename Params::underlying_type;
+            const std::array<fp6_value_type, 3> outer = {x.data[0], x.data[1], x.data[0] + x.data[1]};
+            prepared_product_operand result;
+            for (std::size_t w = 0; w < outer.size(); ++w) {
+                const auto &a = outer[w].data;
+                const std::array<fp2_value_type, 6> forms = {a[0], a[1], a[2], a[0] + a[1], a[0] + a[2], a[1] + a[2]};
+                for (std::size_t v = 0; v < forms.size(); ++v) {
+                    const auto &b = forms[v].data;
+                    const base_value_type sum = b[0] + b[1];
+                    const std::size_t offset = 18 * w + 3 * v;
+                    result[offset] = b[0].data.backend().base_data();
+                    result[offset + 1] = b[1].data.backend().base_data();
+                    result[offset + 2] = sum.data.backend().base_data();
+                }
+            }
+            return result;
+        }
+
+        // This map is linear over Fp, so it also recombines sums of the 54 coordinate products. All corrections
+        // take place after the dot products, with canonical field arithmetic rather than unbounded lazy values.
+        template<typename Fp12Value>
+        static Fp12Value recombine_products(const std::array<base_value_type, product_coordinate_count> &products) {
+            using fp2_value_type = typename Params::non_residue_type;
+            using fp6_value_type = typename Params::underlying_type;
+            const auto mul_xi = [](const fp2_value_type &x) {
+                fp2_base packed;
+                fp2_base::mul_xi(packed, fp2_base(x));
+                fp2_value_type result;
+                packed.to_non_residue(result);
+                return result;
+            };
+            std::array<fp6_value_type, 3> outer;
+            for (std::size_t w = 0; w < outer.size(); ++w) {
+                std::array<fp2_value_type, 6> p;
+                for (std::size_t v = 0; v < p.size(); ++v) {
+                    const std::size_t offset = 18 * w + 3 * v;
+                    const auto &ac = products[offset];
+                    const auto &bd = products[offset + 1];
+                    auto real = ac - bd;
+                    if constexpr (Params::u_squared == -5) {
+                        real -= bd.doubled().doubled();
+                    } else {
+                        static_assert(Params::u_squared == -1, "unsupported quadratic non-residue");
+                    }
+                    p[v] = fp2_value_type(real, products[offset + 2] - ac - bd);
+                }
+                // p[0..2] are the diagonal Fp2 products; p[3..5] are the pairwise sum products.
+                outer[w] = fp6_value_type(p[0] + mul_xi(p[5] - p[1] - p[2]), p[3] - p[0] - p[1] + mul_xi(p[2]),
+                                          p[4] - p[0] - p[2] + p[1]);
+            }
+            const auto &ac = outer[0];
+            const auto &bd = outer[1];
+            const fp6_value_type v_bd(mul_xi(bd.data[2]), bd.data[0], bd.data[1]);
+            return Fp12Value(ac + v_bd, outer[2] - ac - bd);
+        }
+
+        // Preconditions: both ranges contain prepared canonical operands; the right range is at least as long
+        // as the left. Multipass iterators are required because each coordinate traverses the same operands.
+        template<typename Fp12Value, std::forward_iterator LeftIterator, std::forward_iterator RightIterator>
+        static Fp12Value inner_product(LeftIterator first, LeftIterator last, RightIterator right) {
+            if (first == last) {
+                return Fp12Value::zero();
+            }
+            std::array<base_value_type, product_coordinate_count> products;
+            for (std::size_t coordinate = 0; coordinate < product_coordinate_count; ++coordinate) {
+                const auto select = [coordinate](const prepared_product_operand &operand) -> const base_backend_type & {
+                    return operand[coordinate];
+                };
+                // Reuse the existing 2*N+1-limb accumulator: canonical inputs are < p < R, so any size_t-length
+                // sum fits. Its final canonicalization handles sums larger than p*R, including 123-term dots.
+                montgomery_inner_product<Params>(
+                    products[coordinate].data.backend().base_data(), boost::make_transform_iterator(first, select),
+                    boost::make_transform_iterator(last, select), boost::make_transform_iterator(right, select));
+            }
+            return recombine_products<Fp12Value>(products);
+        }
 
         template<typename Fp12Value>
         static Fp12Value square(const Fp12Value &x) {

@@ -14,6 +14,7 @@ cm_project(algebra WORKSPACE_NAME ${CMAKE_WORKSPACE_NAME} LANGUAGES ASM C CXX)
 include(CMDeploy)
 include(CheckADX)
 include(CheckBMI2)
+include(CheckAVX)
 
 # Blueprint components are using point {0, 0} as a point in infinity, while the standard is {0, 1}
 # for most curves. We will use compatibility mode with blueprint as default. Setting this flag to
@@ -46,6 +47,7 @@ cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
 if(CMAKE_TARGET_ARCHITECTURE STREQUAL "x86_64" OR CMAKE_TARGET_ARCHITECTURE STREQUAL "x86")
         check_bmi2()
         check_adx()
+        check_avx512ifma()
 
         if(CXX_BMI2_FOUND)
                 target_compile_definitions(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
@@ -56,6 +58,12 @@ if(CMAKE_TARGET_ARCHITECTURE STREQUAL "x86_64" OR CMAKE_TARGET_ARCHITECTURE STRE
                 target_compile_definitions(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
                         "${CMAKE_UPPER_WORKSPACE_NAME}_HAS_ADX")
                 target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE ${CXX_ADX_FLAGS})
+        endif()
+        if(CXX_AVX512IFMA_FOUND)
+                target_compile_definitions(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
+                        "${CMAKE_UPPER_WORKSPACE_NAME}_HAS_AVX512IFMA")
+                separate_arguments(CXX_AVX512IFMA_OPTIONS NATIVE_COMMAND "${CXX_AVX512IFMA_FLAGS}")
+                target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE ${CXX_AVX512IFMA_OPTIONS})
         endif()
 endif()
 

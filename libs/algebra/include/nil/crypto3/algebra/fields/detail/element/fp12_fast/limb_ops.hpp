@@ -1,8 +1,10 @@
 #pragma once
 
+#include <algorithm>
+
 #include <nil/crypto3/algebra/fields/detail/element/fp12_fast/types.hpp>
 
-#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
+#if (defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)) || defined(CRYPTO3_HAS_AVX512IFMA)
 #include <nil/crypto3/algebra/fields/detail/element/fp12_fast/limb_ops_x86.hpp>
 #endif
 
@@ -20,6 +22,37 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
     auto modulus_limbs() {
         return load_limbs(Params::base_field_type::modulus_params.get_mod_obj().get_mod());
+    }
+
+    // Sum canonical Montgomery residues, retaining the multiprecision implementation for other limb counts
+    // and targets. The four-limb kernel changes only product accumulation; reduction still uses the existing
+    // padded backend and canonicalization, so no dot-length-dependent narrowing is introduced.
+    template<Fp12FastParams Params, typename Backend, typename LeftIterator, typename RightIterator>
+    inline void montgomery_inner_product(Backend &result, LeftIterator first, LeftIterator last, RightIterator right) {
+        const auto &modulus = Params::base_field_type::modulus_params.get_mod_obj();
+#if defined(CRYPTO3_HAS_BMI2) && defined(CRYPTO3_HAS_ADX)
+        if constexpr (Params::base_value_limb_count == 4) {
+            using policy = typename std::remove_cvref_t<decltype(modulus)>::policy_type;
+            using accumulator_type = typename policy::Backend_doubled_padded_limbs;
+            static_assert(Backend::internal_limb_count == 4 && Backend::limb_bits == 64);
+            static_assert(sizeof(std::size_t) <= sizeof(limb));
+            accumulator_type accumulator;
+            for (; first != last; ++first, ++right) {
+                BOOST_ASSERT(eval_lt(*first, modulus.get_mod()) && eval_lt(*right, modulus.get_mod()));
+                multiply_add_4x4_x86(accumulator.limbs(), (*first).limbs(), (*right).limbs());
+            }
+            // With B=2^64 and R=B^4, at most B-1 canonical products sum to less than (B-1)*p^2.
+            // REDC adds less than p*R; because p<R, both accumulation and reduction fit in nine limbs.
+            modulus.montgomery_reduce(accumulator);
+            const accumulator_type wide_modulus(modulus.get_mod());
+            while (!eval_lt(accumulator, wide_modulus)) {
+                eval_subtract(accumulator, wide_modulus);
+            }
+            result = accumulator;
+            return;
+        }
+#endif
+        modulus.montgomery_inner_product(result, first, last, right);
     }
 
     template<size_t N>
@@ -414,6 +447,212 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         add_limbs_portable<N>(y.data(), c.data(), d.data());
         add_limbs_portable<N>(y.data() + N, c.data() + N, d.data() + N);
         fp2_mul_pre<Params>(z, x, y);
+    }
+
+    // Five radix-2^52 digits, with Montgomery factor S=2^260 rather than R=2^256.
+    // Restrict this representation to the four-limb fields whose modulus is below 2^254.
+    template<Fp12FastParams Params>
+        requires(Params::base_value_limb_count == 4 && Params::base_field_type::modulus_bits <= 254)
+    struct montgomery_radix52 {
+        static constexpr limb mask = (limb(1) << 52) - 1;
+        static constexpr std::size_t digits = 5;
+        static constexpr std::size_t max_terms = 256;
+        using value_type = std::array<limb, digits>;
+
+        static value_type pack(const limb *x) {
+            return {x[0] & mask, ((x[0] >> 52) | (x[1] << 12)) & mask, ((x[1] >> 40) | (x[2] << 24)) & mask,
+                    ((x[2] >> 28) | (x[3] << 36)) & mask, x[3] >> 16};
+        }
+
+        static const value_type &modulus() {
+            static const value_type p = [] {
+                const auto words = modulus_limbs<Params>();
+                return pack(words.data());
+            }();
+            return p;
+        }
+
+        static limb p_dash() {
+            return Params::base_field_type::modulus_params.get_mod_obj().get_p_dash() & mask;
+        }
+
+        template<typename Backend>
+        static value_type from_montgomery64(const Backend &x) {
+            auto words = load_limbs(x);
+            // S/R=16: four canonical doublings convert the Montgomery scaling exactly.
+            for (unsigned i = 0; i < 4; ++i) {
+                add_low_limbs_mod_portable<Params>(words.data(), words.data(), words.data());
+            }
+            return pack(words.data());
+        }
+
+        template<typename Backend>
+        static void to_montgomery64(Backend &result, value_type x) {
+            // Choose m in [0,15] so x+m*p is divisible by 16. Since x<p, (x+m*p)/16<p.
+            // This removes the extra four Montgomery bits without a general modular multiplication.
+            const limb m = (x[0] * p_dash()) & 15;
+            limb carry = 0;
+            for (std::size_t i = 0; i < digits; ++i) {
+                const wide_limb sum = wide_limb(m) * modulus()[i] + x[i] + carry;
+                x[i] = limb(sum) & mask;
+                carry = limb(sum >> 52);
+            }
+            BOOST_ASSERT(carry == 0);
+            for (std::size_t i = 0; i < digits - 1; ++i) {
+                x[i] = (x[i] >> 4) | ((x[i + 1] & 15) << 48);
+            }
+            x[4] >>= 4;
+            result = Backend();
+            result.limbs()[0] = x[0] | (x[1] << 52);
+            result.limbs()[1] = (x[1] >> 12) | (x[2] << 40);
+            result.limbs()[2] = (x[2] >> 24) | (x[3] << 28);
+            result.limbs()[3] = (x[3] >> 36) | (x[4] << 16);
+        }
+
+        static void subtract_modulus(value_type &x) {
+            value_type difference;
+            limb borrow = 0;
+            for (std::size_t i = 0; i < digits; ++i) {
+                const limb subtrahend = modulus()[i] + borrow;
+                difference[i] = (x[i] - subtrahend) & mask;
+                borrow = x[i] < subtrahend;
+            }
+            if (!borrow) {
+                x = difference;
+            }
+        }
+
+        // Scalar reference: full 104-bit products in 128-bit columns, independently of IFMA's split products.
+        // At most 256 terms contribute five products to a column, requiring fewer than 115 bits.
+        template<typename LeftIterator, typename RightIterator>
+        static value_type inner_product(LeftIterator first, LeftIterator last, RightIterator right) {
+            value_type result {};
+            while (first != last) {
+                std::array<wide_limb, 10> t {};
+                std::size_t count = 0;
+                for (; first != last && count < max_terms; ++first, ++right, ++count) {
+                    for (std::size_t i = 0; i < digits; ++i) {
+                        for (std::size_t j = 0; j < digits; ++j) {
+                            t[i + j] += wide_limb((*first)[i]) * (*right)[j];
+                        }
+                    }
+                }
+                for (std::size_t i = 0; i < digits; ++i) {
+                    const limb m = (limb(t[i]) * p_dash()) & mask;
+                    for (std::size_t j = 0; j < digits; ++j) {
+                        t[i + j] += wide_limb(m) * modulus()[j];
+                    }
+                    t[i + 1] += t[i] >> 52;
+                }
+                value_type reduced;
+                for (std::size_t i = 5; i < 9; ++i) {
+                    reduced[i - 5] = limb(t[i]) & mask;
+                    t[i + 1] += t[i] >> 52;
+                }
+                reduced[4] = limb(t[9]);
+                // T<256*p^2 and p<2^254 imply REDC(T)<5*p<S. Four subtractions suffice.
+                for (unsigned i = 0; i < 4; ++i) {
+                    subtract_modulus(reduced);
+                }
+                limb carry = 0;
+                for (std::size_t i = 0; i < digits; ++i) {
+                    const limb sum = result[i] + reduced[i] + carry;
+                    result[i] = sum & mask;
+                    carry = sum >> 52;
+                }
+                BOOST_ASSERT(carry == 0);
+                subtract_modulus(result);
+            }
+            return result;
+        }
+    };
+
+    // Left is count consecutive five-digit scalars. Right is [term][digit][lane]; indices selects
+    // nonzero outer terms without repacking the cached panels. All digits are canonical S-Montgomery inputs.
+    // Result has [digit][lane] layout. Padded coefficient lanes are zero and never read past a panel.
+    template<Fp12FastParams Params, typename Operations>
+    inline void montgomery_inner_product52(limb *result, const limb *left, const limb *right,
+                                           const std::size_t *indices, std::size_t count) {
+        using radix = montgomery_radix52<Params>;
+        using vector = typename Operations::value_type;
+        constexpr std::size_t lanes = Operations::lanes;
+        const auto zero = Operations::broadcast(0);
+        const auto mask = Operations::broadcast(radix::mask);
+        const auto one = Operations::broadcast(1);
+        const auto inverse = Operations::broadcast(radix::p_dash());
+        std::array<vector, 5> modulus, total;
+        for (std::size_t i = 0; i < 5; ++i) {
+            modulus[i] = Operations::broadcast(radix::modulus()[i]);
+            total[i] = zero;
+        }
+        const auto subtract = [&](std::array<vector, 5> &x) {
+            std::array<vector, 5> difference;
+            auto borrow = zero;
+            for (std::size_t i = 0; i < 5; ++i) {
+                const auto subtrahend = Operations::add(modulus[i], borrow);
+                difference[i] = Operations::bit_and(Operations::subtract(x[i], subtrahend), mask);
+                borrow = Operations::select(Operations::less(x[i], subtrahend), one, zero);
+            }
+            const auto keep = Operations::less(zero, borrow);
+            for (std::size_t i = 0; i < 5; ++i) {
+                x[i] = Operations::select(keep, x[i], difference[i]);
+            }
+        };
+        for (std::size_t first = 0; first < count;) {
+            const std::size_t terms = std::min(radix::max_terms, count - first);
+            std::array<vector, 10> t;
+            t.fill(zero);
+            // Each column receives at most 9*256 split products, each <2^52: below 2^64.
+            // Normalize between chunks, never permitting an unbounded IFMA accumulator.
+            for (std::size_t term = first; term < first + terms; ++term) {
+                const limb *y = right + indices[term] * 5 * lanes;
+                std::array<vector, 5> b;
+                for (std::size_t j = 0; j < 5; ++j) {
+                    b[j] = Operations::load(y + j * lanes);
+                }
+                for (std::size_t i = 0; i < 5; ++i) {
+                    const auto a = Operations::broadcast(left[5 * term + i]);
+                    for (std::size_t j = 0; j < 5; ++j) {
+                        t[i + j] = Operations::multiply_add_low(t[i + j], a, b[j]);
+                        t[i + j + 1] = Operations::multiply_add_high(t[i + j + 1], a, b[j]);
+                    }
+                }
+            }
+            for (std::size_t i = 0; i < 9; ++i) {
+                t[i + 1] = Operations::add(t[i + 1], Operations::shift52(t[i]));
+                t[i] = Operations::bit_and(t[i], mask);
+            }
+            // Five cancellation steps divide by S=2^260. IFMA ignores upper operand bits, which is
+            // exactly the reduction modulo 2^52 needed for m; the carry of t[i] goes to t[i+1].
+            for (std::size_t i = 0; i < 5; ++i) {
+                const auto m = Operations::multiply_add_low(zero, t[i], inverse);
+                for (std::size_t j = 0; j < 5; ++j) {
+                    t[i + j] = Operations::multiply_add_low(t[i + j], m, modulus[j]);
+                    t[i + j + 1] = Operations::multiply_add_high(t[i + j + 1], m, modulus[j]);
+                }
+                t[i + 1] = Operations::add(t[i + 1], Operations::shift52(t[i]));
+            }
+            std::array<vector, 5> reduced;
+            for (std::size_t i = 5; i < 9; ++i) {
+                reduced[i - 5] = Operations::bit_and(t[i], mask);
+                t[i + 1] = Operations::add(t[i + 1], Operations::shift52(t[i]));
+            }
+            reduced[4] = t[9];
+            for (unsigned i = 0; i < 4; ++i) {
+                subtract(reduced);
+            }
+            auto carry = zero;
+            for (std::size_t i = 0; i < 5; ++i) {
+                const auto sum = Operations::add(Operations::add(total[i], reduced[i]), carry);
+                total[i] = Operations::bit_and(sum, mask);
+                carry = Operations::shift52(sum);
+            }
+            subtract(total);
+            first += terms;
+        }
+        for (std::size_t i = 0; i < 5; ++i) {
+            Operations::store(result + i * lanes, total[i]);
+        }
     }
 
 }    // namespace nil::crypto3::algebra::fields::detail::fp12_fast
