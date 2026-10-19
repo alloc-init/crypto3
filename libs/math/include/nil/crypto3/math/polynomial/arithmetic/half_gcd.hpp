@@ -25,6 +25,7 @@
 #ifndef CRYPTO3_MATH_POLYNOMIAL_HALF_GCD_HPP
 #define CRYPTO3_MATH_POLYNOMIAL_HALF_GCD_HPP
 
+#include <array>
 #include <cstddef>
 #include <stdexcept>
 #include <utility>
@@ -114,6 +115,16 @@ namespace nil::crypto3::math::detail {
                                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
 
+        const std::array<polynomial_type *, 2> outputs {&first_output, &second_output};
+        const std::array<const polynomial_type *, 4> entries {&matrix.entry_00, &matrix.entry_01, &matrix.entry_10,
+                                                              &matrix.entry_11};
+        const std::array<const polynomial_type *, 2> pair {&first, &second};
+        if constexpr (requires { arithmetic_context.template try_multiply_matrix<1>(outputs, entries, pair); }) {
+            if (arithmetic_context.template try_multiply_matrix<1>(outputs, entries, pair)) {
+                return;
+            }
+        }
+
         polynomial_type product_00;
         polynomial_type product_01;
         polynomial_type product_10;
@@ -171,6 +182,20 @@ namespace nil::crypto3::math::detail {
                                     const half_gcd_matrix<Backend> &right,
                                     polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
+
+        const std::array<polynomial_type *, 4> outputs {&output.entry_00, &output.entry_01, &output.entry_10,
+                                                        &output.entry_11};
+        const std::array<const polynomial_type *, 4> left_entries {&left.entry_00, &left.entry_01, &left.entry_10,
+                                                                   &left.entry_11};
+        const std::array<const polynomial_type *, 4> right_entries {&right.entry_00, &right.entry_01, &right.entry_10,
+                                                                    &right.entry_11};
+        if constexpr (requires {
+                          arithmetic_context.template try_multiply_matrix<2>(outputs, left_entries, right_entries);
+                      }) {
+            if (arithmetic_context.template try_multiply_matrix<2>(outputs, left_entries, right_entries)) {
+                return;
+            }
+        }
 
         half_gcd_matrix<Backend> result;
         polynomial_type first_product;

@@ -26,6 +26,7 @@
 #define CRYPTO3_MATH_BN254_SMALL_PRIME_FFT_BACKEND_HPP
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cstddef>
 #include <limits>
@@ -37,6 +38,7 @@
 
 #include <nil/crypto3/math/detail/bn254_small_prime_fft.hpp>
 #include <nil/crypto3/math/polynomial/backends/polynomial_backend.hpp>
+#include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 
@@ -46,7 +48,8 @@ namespace nil::crypto3::math::polynomial_arithmetic {
      * Exact BN254 Fp12 polynomial products through small-prime transforms and signed CRT.
      * Configure a power-of-two maximum transform length. All smaller power-of-two plans are
      * cached at construction; ordinary products use the smallest length containing their full linear
-     * product. multiply_low first discards input coefficients that cannot affect the output. Prepared
+     * product. Scalar and linear operands use direct coefficient arithmetic. multiply_low first
+     * discards input coefficients that cannot affect the output. Prepared
      * cyclic remainder reconstruction can use a shorter transform once the exact quotient is known.
      *
      * One catalogue prefix and coefficient bound cover every supported product, allowing all
@@ -141,11 +144,14 @@ namespace nil::crypto3::math::polynomial_arithmetic {
          * max_spectrum_bytes limits one spectrum at the configured maximum length. A second
          * spectrum, cached twiddle tables and coefficient output storage are additional allocations.
          * Invalid/unsupported lengths or an insufficient byte limit throw before allocating plans.
+         * max_matrix_spectrum_bytes limits the additional shared input spectra used by matrix
+         * products. Zero disables that optional path; exceeding its budget declines the operation.
          */
-        explicit bn254_small_prime_fft_backend(
-            std::size_t max_transform_size,
-            std::size_t max_spectrum_bytes = std::numeric_limits<std::size_t>::max()) :
-            bn254_small_prime_fft_backend(checked_params(max_transform_size, max_spectrum_bytes)) {
+        explicit bn254_small_prime_fft_backend(std::size_t max_transform_size,
+                                               std::size_t max_spectrum_bytes = std::numeric_limits<std::size_t>::max(),
+                                               std::size_t max_matrix_spectrum_bytes = 256 * 1024 * 1024) :
+            bn254_small_prime_fft_backend(checked_params(max_transform_size, max_spectrum_bytes),
+                                          max_matrix_spectrum_bytes) {
         }
 
         std::size_t max_transform_size() const {
@@ -171,6 +177,135 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             } else {
                 multiply_prefixes<false>(output, left, right, coefficient_count);
             }
+        }
+
+        /**
+         * Multiply a row-major 2-by-2 matrix by a 2-by-Columns matrix, sharing input transforms and
+         * reconstructing each sum of two products once. Columns is one for a polynomial pair.
+         * Outputs must be distinct and all pointers nonnull; outputs may alias any input.
+         * Return false without changing outputs when the shape, CRT bound or workspace budget does
+         * not permit fusion. Small or heavily unbalanced products retain the ordinary dispatch.
+         */
+        template<std::size_t Columns>
+            requires(Columns == 1 || Columns == 2)
+        bool try_multiply_matrix(const std::array<polynomial_type *, 2 * Columns> &output,
+                                 const std::array<const polynomial_type *, 4> &left,
+                                 const std::array<const polynomial_type *, 2 * Columns> &right) {
+            if (plans_.empty() || max_matrix_spectrum_bytes_ == 0) {
+                return false;
+            }
+            for (std::size_t i = 0; i < output.size(); ++i) {
+                if (output[i] == nullptr ||
+                    std::find(output.begin(), output.begin() + i, output[i]) != output.begin() + i) {
+                    return false;
+                }
+            }
+            std::array<const polynomial_type *, 4 + 2 * Columns> operands;
+            std::copy(left.begin(), left.end(), operands.begin());
+            std::copy(right.begin(), right.end(), operands.begin() + 4);
+            for (const auto *operand : operands) {
+                if (operand == nullptr || operand->size() <= 2 || math::is_zero(*operand)) {
+                    return false;
+                }
+            }
+
+            std::array<std::size_t, 2 * Columns> result_sizes {};
+            std::size_t max_product_size = 0;
+            std::size_t min_product_size = max_transform_size_;
+            const std::size_t term_limit = std::max(std::size_t(1), max_transform_size_ / 2);
+            for (std::size_t row = 0; row < 2; ++row) {
+                for (std::size_t column = 0; column < Columns; ++column) {
+                    std::size_t terms = 0;
+                    for (std::size_t inner = 0; inner < 2; ++inner) {
+                        const std::size_t a = left[2 * row + inner]->size();
+                        const std::size_t b = right[Columns * inner + column]->size();
+                        if (a > max_transform_size_ || b > max_transform_size_ - (a - 1)) {
+                            return false;
+                        }
+                        // Each output coefficient sums at most min(a,b) tower products from this
+                        // convolution. Their combined bound must fit the existing signed CRT plan:
+                        // 102 * (min(a,b) + min(c,d)) * (p-1)^2 <= its configured coefficient bound.
+                        const std::size_t product_terms = std::min(a, b);
+                        if (product_terms > term_limit - terms) {
+                            return false;
+                        }
+                        terms += product_terms;
+                        const std::size_t product_size = a + b - 1;
+                        auto &result_size = result_sizes[row * Columns + column];
+                        result_size = std::max(result_size, product_size);
+                        max_product_size = std::max(max_product_size, product_size);
+                        min_product_size = std::min(min_product_size, product_size);
+                    }
+                }
+            }
+            const std::size_t size = std::bit_ceil(max_product_size);
+            if (std::bit_ceil(min_product_size) < size / 2) {
+                return false;
+            }
+
+            // Equal input objects share storage as well as their conversion and forward transforms.
+            std::array<const polynomial_type *, 4 + 2 * Columns> unique_operands {};
+            std::array<std::size_t, 4 + 2 * Columns> spectrum_indices;
+            std::size_t unique_count = 0;
+            for (std::size_t i = 0; i < operands.size(); ++i) {
+                auto end = unique_operands.begin() + unique_count;
+                auto found = std::find(unique_operands.begin(), end, operands[i]);
+                spectrum_indices[i] = found - unique_operands.begin();
+                if (found == end) {
+                    unique_operands[unique_count++] = operands[i];
+                }
+            }
+            const std::size_t cells = field_type::arity * prime_count() * size;
+            if (cells > max_matrix_spectrum_bytes_ / sizeof(double) / unique_count) {
+                return false;
+            }
+            const std::size_t total_cells = unique_count * cells;
+            if (matrix_spectra_.capacity() < total_cells) {
+                // Avoid geometric vector growth beyond the configured spectrum budget.
+                std::vector<double>(total_cells).swap(matrix_spectra_);
+            } else {
+                matrix_spectra_.resize(total_cells);
+            }
+            for (std::size_t i = 0; i < unique_count; ++i) {
+                const auto &operand = *unique_operands[i];
+                prepare_spectrum(std::span<double>(matrix_spectra_).subspan(i * cells, cells),
+                                 std::span<const value_type>(operand.data(), operand.size()), size);
+            }
+
+            left_spectrum_.resize(cells);
+            std::array<polynomial_type, 2 * Columns> results;
+            const std::size_t plan_offset = std::countr_zero(size) * prime_count();
+            for (std::size_t row = 0; row < 2; ++row) {
+                for (std::size_t column = 0; column < Columns; ++column) {
+                    for (std::size_t prime = 0; prime < prime_count(); ++prime) {
+                        const auto &plan = plans_[plan_offset + prime];
+                        const std::size_t count = field_type::arity * size;
+                        const std::size_t offset = prime * count;
+                        const auto spectrum = [&](std::size_t operand) {
+                            return std::span<const double>(matrix_spectra_)
+                                .subspan(spectrum_indices[operand] * cells + offset, count);
+                        };
+                        auto destination = std::span<double>(left_spectrum_).subspan(offset, count);
+                        pointwise_[prime].multiply_sum(destination, spectrum(2 * row), spectrum(4 + column),
+                                                       spectrum(2 * row + 1), spectrum(4 + Columns + column), size,
+                                                       plan.size_inverse());
+                        for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
+                            plan.inverse_fft(destination.subspan(coordinate * size, size), false);
+                        }
+                    }
+                    const std::size_t index = row * Columns + column;
+                    auto &result = results[index];
+                    result.resize(result_sizes[index]);
+                    reconstructor_.reconstruct(std::span<value_type>(result.data(), result.size()), left_spectrum_,
+                                               size);
+                    math::condense(result);
+                }
+            }
+            // All inputs have been consumed and all allocations/reconstruction have succeeded.
+            for (std::size_t i = 0; i < output.size(); ++i) {
+                output[i]->get_storage().swap(results[i].get_storage());
+            }
+            return true;
         }
 
         /**
@@ -323,15 +458,20 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         std::vector<double> prepare_spectrum(std::span<const value_type> coefficients, std::size_t size) const {
             // Allocate just this spectrum, so a small preparation never retains larger scratch capacity.
             std::vector<double> spectrum(field_type::arity * prime_count() * size);
+            prepare_spectrum(spectrum, coefficients, size);
+            return spectrum;
+        }
+
+        void prepare_spectrum(std::span<double> spectrum, std::span<const value_type> coefficients,
+                              std::size_t size) const {
             converter_.convert(spectrum, coefficients, size);
             const std::size_t plan_offset = std::countr_zero(size) * prime_count();
             for (std::size_t prime = 0; prime < prime_count(); ++prime) {
                 for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
                     plans_[plan_offset + prime].fft(
-                        std::span<double>(spectrum).subspan((prime * field_type::arity + coordinate) * size, size));
+                        spectrum.subspan((prime * field_type::arity + coordinate) * size, size));
                 }
             }
-            return spectrum;
         }
 
         static params_type checked_params(std::size_t max_size, std::size_t max_spectrum_bytes) {
@@ -349,9 +489,9 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             return std::move(*params);
         }
 
-        explicit bn254_small_prime_fft_backend(const params_type &params) :
-            max_transform_size_(params.transform_size), converter_(params.crt.prime_count),
-            reconstructor_(params.crt, params.coefficient_bound) {
+        explicit bn254_small_prime_fft_backend(const params_type &params, std::size_t max_matrix_spectrum_bytes) :
+            max_transform_size_(params.transform_size), max_matrix_spectrum_bytes_(max_matrix_spectrum_bytes),
+            converter_(params.crt.prime_count), reconstructor_(params.crt, params.coefficient_bound) {
             const unsigned depth = std::countr_zero(max_transform_size_);
             plans_.reserve((depth + 1) * prime_count());
             pointwise_.reserve(prime_count());
@@ -383,8 +523,17 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 throw std::invalid_argument("bn254_small_prime_fft_backend: product exceeds configured transform size");
             }
             const std::size_t product_size = left_size + right_size - 1;
-            const std::size_t size = std::bit_ceil(product_size);
             const std::size_t result_size = std::min(product_size, coefficient_count);
+            // Euclidean quotients are commonly linear. Their matrix updates need only one or two
+            // coefficient products per output, without conversion, transforms or reconstruction.
+            // Keep the capacity check above: direct arithmetic has the same supported shapes.
+            if (std::min(left_size, right_size) <= 2) {
+                const bool left_is_shorter = left_size <= right_size;
+                schoolbook_backend<value_type> {}.multiply_low(output, left_is_shorter ? left : right,
+                                                               left_is_shorter ? right : left, result_size);
+                return;
+            }
+            const std::size_t size = std::bit_ceil(product_size);
             const std::size_t channels = field_type::arity * prime_count();
             // Constructor checks guarantee that even the largest spectrum's byte count fits size_t.
             left_spectrum_.resize(channels * size);
@@ -448,12 +597,14 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         }
 
         std::size_t max_transform_size_;
+        std::size_t max_matrix_spectrum_bytes_;
         math::detail::bn254_small_prime_fft_converter converter_;
         math::detail::bn254_small_prime_fft_reconstructor reconstructor_;
         std::vector<math::detail::small_prime_fft_plan> plans_;
         std::vector<math::detail::bn254_small_prime_fft_pointwise> pointwise_;
         std::vector<double> left_spectrum_;
         std::vector<double> right_spectrum_;
+        std::vector<double> matrix_spectra_;
         polynomial_type result_;
     };
 

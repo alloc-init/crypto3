@@ -25,6 +25,7 @@
 #ifndef CRYPTO3_MATH_POLYNOMIAL_BACKEND_HPP
 #define CRYPTO3_MATH_POLYNOMIAL_BACKEND_HPP
 
+#include <array>
 #include <concepts>
 #include <cstddef>
 #include <limits>
@@ -131,6 +132,19 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         void multiply_low(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
                           std::size_t coefficient_count) {
             backend_.multiply_low(output, left, right, coefficient_count);
+        }
+
+        // Optional row-major 2-by-2 times 2-by-Columns product. A declined operation leaves every
+        // output unchanged, so algorithms can use their ordinary multiplication/addition fallback.
+        template<std::size_t Columns>
+        bool try_multiply_matrix(const std::array<polynomial_type *, 2 * Columns> &output,
+                                 const std::array<const polynomial_type *, 4> &left,
+                                 const std::array<const polynomial_type *, 2 * Columns> &right)
+            requires requires(backend_type &backend) {
+                { backend.template try_multiply_matrix<Columns>(output, left, right) } -> std::same_as<bool>;
+            }
+        {
+            return backend_.template try_multiply_matrix<Columns>(output, left, right);
         }
 
         // Optional capabilities: backends without prepared low products still satisfy PolynomialBackend.

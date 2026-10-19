@@ -24,8 +24,10 @@
 
 #define BOOST_TEST_MODULE polynomial_gcd_test
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 #include <tuple>
 
@@ -36,6 +38,7 @@
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 
 #include <nil/crypto3/math/polynomial/arithmetic/gcd.hpp>
+#include <nil/crypto3/math/polynomial/backends/bn254_small_prime_fft_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 
@@ -48,6 +51,35 @@ namespace {
     using fq_value_type = fq_field_type::value_type;
     using fq12_field_type = fields::fp12_2over3over2<fields::alt_bn128<254>>;
     using fq12_value_type = fq12_field_type::value_type;
+
+    struct matrix_product_counts {
+        std::array<std::size_t, 2> accepted {};
+        std::size_t declined = 0;
+    };
+
+    struct counting_matrix_backend : polynomial_arithmetic::bn254_small_prime_fft_backend {
+        using base_type = polynomial_arithmetic::bn254_small_prime_fft_backend;
+
+        counting_matrix_backend(std::size_t max_size, matrix_product_counts &counts, std::size_t byte_limit) :
+            base_type(max_size, std::numeric_limits<std::size_t>::max(), byte_limit), counts(counts) {
+        }
+
+        template<std::size_t Columns>
+            requires(Columns == 1 || Columns == 2)
+        bool try_multiply_matrix(const std::array<polynomial_type *, 2 * Columns> &output,
+                                 const std::array<const polynomial_type *, 4> &left,
+                                 const std::array<const polynomial_type *, 2 * Columns> &right) {
+            const bool accepted = base_type::try_multiply_matrix<Columns>(output, left, right);
+            if (accepted) {
+                ++counts.accepted[Columns - 1];
+            } else {
+                ++counts.declined;
+            }
+            return accepted;
+        }
+
+        matrix_product_counts &counts;
+    };
 
     fq12_value_type fq12_value(std::size_t first_coordinate) {
         fq12_value_type value = fq12_value_type::zero();
@@ -328,6 +360,58 @@ BOOST_AUTO_TEST_CASE(gcd_is_alias_safe_when_half_gcd_is_forced) {
     polynomial_type right_alias = right;
     math::gcd(right_alias, left, right_alias, half_gcd_context);
     BOOST_CHECK(right_alias == expected);
+}
+
+BOOST_AUTO_TEST_CASE(small_prime_half_gcd_uses_fused_matrices_and_preserves_the_fallback) {
+    using reference_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using polynomial_type = reference_backend::polynomial_type;
+    polynomial_arithmetic::polynomial_context<reference_backend> euclidean_context;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.gcd_half_gcd_cutoff = 1;
+    options.half_gcd_basecase_cutoff = 8;
+    matrix_product_counts fused_counts, fallback_counts;
+    polynomial_arithmetic::polynomial_context<counting_matrix_backend> fused_context(
+        counting_matrix_backend(1024, fused_counts, 32 * 1024 * 1024), options);
+    polynomial_arithmetic::polynomial_context<counting_matrix_backend> fallback_context(
+        counting_matrix_backend(1024, fallback_counts, 0), options);
+
+    for (const std::size_t common_size : {1, 5}) {
+        const polynomial_type common = fq12_polynomial(common_size, 0x123456789abcdefULL);
+        const polynomial_type left = product(reference_backend {}, common, fq12_polynomial(129, 0x31415926));
+        const polynomial_type right = product(reference_backend {}, common, fq12_polynomial(128, 0xfedcba98));
+        polynomial_type expected, actual;
+        math::gcd(expected, left, right, euclidean_context);
+        math::gcd(actual, left, right, fused_context);
+        BOOST_CHECK(actual == expected);
+        math::gcd(actual, left, right, fallback_context);
+        BOOST_CHECK(actual == expected);
+
+        auto left_alias = left;
+        auto right_alias = right;
+        math::gcd(left_alias, left_alias, right, fused_context);
+        math::gcd(right_alias, left, right_alias, fused_context);
+        BOOST_CHECK(left_alias == expected);
+        BOOST_CHECK(right_alias == expected);
+
+        math::detail::half_gcd_matrix<counting_matrix_backend> matrix;
+        polynomial_type reduced_first, reduced_second;
+        math::detail::half_gcd_reduce(matrix, reduced_first, reduced_second, left, right,
+                                      options.half_gcd_basecase_cutoff, fused_context);
+        BOOST_CHECK(math::is_zero(reduced_second) || reduced_second.size() <= left.size() / 2);
+        polynomial_type expected_first, expected_second;
+        math::addition(expected_first, product(reference_backend {}, matrix.entry_00, left),
+                       product(reference_backend {}, matrix.entry_01, right));
+        math::addition(expected_second, product(reference_backend {}, matrix.entry_10, left),
+                       product(reference_backend {}, matrix.entry_11, right));
+        BOOST_CHECK(reduced_first == expected_first);
+        BOOST_CHECK(reduced_second == expected_second);
+    }
+    BOOST_CHECK_GT(fused_counts.accepted[0], 0);
+    BOOST_CHECK_GT(fused_counts.accepted[1], 0);
+    BOOST_CHECK_GT(fused_counts.declined, 0);
+    BOOST_CHECK_EQUAL(fallback_counts.accepted[0], 0);
+    BOOST_CHECK_EQUAL(fallback_counts.accepted[1], 0);
+    BOOST_CHECK_GT(fallback_counts.declined, 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
