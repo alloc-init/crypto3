@@ -63,6 +63,16 @@ namespace {
     static_assert(math::detail::SupportsPreparedLowProduct<backend_type>);
     static_assert(math::detail::SupportsPreparedCyclicRemainder<backend_type>);
 
+    template<typename Context, std::size_t Columns>
+    concept SupportsMatrixProduct =
+        requires(Context &context, std::array<polynomial_type *, 2 * Columns> output,
+                 std::array<const polynomial_type *, 4> left, std::array<const polynomial_type *, 2 * Columns> right) {
+            { context.template try_multiply_matrix<Columns>(output, left, right) } -> std::same_as<bool>;
+        };
+    static_assert(SupportsMatrixProduct<context_type, 1> && SupportsMatrixProduct<context_type, 2>);
+    static_assert(!SupportsMatrixProduct<context_type, 3>);
+    static_assert(!SupportsMatrixProduct<arithmetic::polynomial_context<reference_backend>, 2>);
+
     struct prepared_product_counts {
         std::size_t preparations = 0;
         std::size_t prepared_products = 0;
@@ -198,6 +208,37 @@ namespace {
         return result;
     }
 
+    template<std::size_t Columns>
+    std::array<polynomial_type, 2 * Columns>
+        expected_matrix_product(const std::array<polynomial_type, 4> &left,
+                                const std::array<polynomial_type, 2 * Columns> &right) {
+        std::array<polynomial_type, 2 * Columns> result;
+        for (std::size_t row = 0; row < 2; ++row) {
+            for (std::size_t column = 0; column < Columns; ++column) {
+                math::addition(result[row * Columns + column], expected_product(left[2 * row], right[column]),
+                               expected_product(left[2 * row + 1], right[Columns + column]));
+            }
+        }
+        return result;
+    }
+
+    template<std::size_t Columns>
+    bool try_matrix_product(backend_type &backend, std::array<polynomial_type, 2 * Columns> &output,
+                            const std::array<polynomial_type, 4> &left,
+                            const std::array<polynomial_type, 2 * Columns> &right) {
+        std::array<polynomial_type *, 2 * Columns> outputs;
+        std::array<const polynomial_type *, 4> left_entries;
+        std::array<const polynomial_type *, 2 * Columns> right_entries;
+        for (std::size_t i = 0; i < left.size(); ++i) {
+            left_entries[i] = &left[i];
+        }
+        for (std::size_t i = 0; i < output.size(); ++i) {
+            outputs[i] = &output[i];
+            right_entries[i] = &right[i];
+        }
+        return backend.try_multiply_matrix<Columns>(outputs, left_entries, right_entries);
+    }
+
     polynomial_type expected_low(polynomial_type product, std::size_t count) {
         if (count == 0) {
             return {value_type::zero()};
@@ -296,28 +337,290 @@ BOOST_AUTO_TEST_CASE(pointwise_invalid_dimensions_throw_before_writes) {
     BOOST_CHECK_THROW(pointwise.multiply(left, right, std::numeric_limits<std::size_t>::max(), 1.0),
                       std::invalid_argument);
     BOOST_CHECK_THROW(pointwise.square(left, std::numeric_limits<std::size_t>::max(), 1.0), std::invalid_argument);
+    BOOST_CHECK_THROW(pointwise.multiply_sum(left, right, right, right, right, 1, 1.0), std::invalid_argument);
+    BOOST_CHECK_THROW(
+        pointwise.multiply_sum(left, right, right, right, std::span<const double>(right).first(23), 2, 1.0),
+        std::invalid_argument);
     BOOST_CHECK_EQUAL_COLLECTIONS(left.begin(), left.end(), before.begin(), before.end());
     BOOST_CHECK_NO_THROW(pointwise.multiply({}, {}, 0, 1.0));
     BOOST_CHECK_NO_THROW(pointwise.square({}, 0, 1.0));
+    BOOST_CHECK_NO_THROW(pointwise.multiply_sum({}, {}, {}, {}, {}, 0, 1.0));
+}
+
+BOOST_AUTO_TEST_CASE(pointwise_sums_match_expanded_integer_tower_and_preserve_aliases) {
+    restore_rounding restore;
+    BOOST_REQUIRE_EQUAL(std::fesetround(FE_TONEAREST), 0);
+    std::mt19937_64 random(0x46465421);
+    for (const auto &prime : detail::small_prime_fft_primes) {
+        const auto q = static_cast<std::int64_t>(prime.modulus);
+        const detail::bn254_small_prime_fft_pointwise pointwise(prime.modulus);
+        for (const std::size_t stride : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
+            std::array<std::vector<double>, 4> inputs;
+            for (auto &input : inputs) {
+                input.resize(12 * stride);
+            }
+            std::vector<coordinates_type> expected(stride);
+            for (std::size_t i = 0; i < stride; ++i) {
+                std::array<coordinates_type, 4> values;
+                for (std::size_t operand = 0; operand < inputs.size(); ++operand) {
+                    for (std::size_t c = 0; c < 12; ++c) {
+                        std::int64_t value = static_cast<std::int64_t>(random() % (6 * q - 1)) - (3 * q - 1);
+                        if ((c + i + operand) % 7 == 0) {
+                            value = (std::int64_t(1) << 53) - 1;
+                            if (operand % 2) {
+                                value = -value;
+                            }
+                        }
+                        values[operand][c] = value;
+                        inputs[operand][c * stride + i] = static_cast<double>(value);
+                    }
+                }
+                expected[i] = tower_product(values[0], values[1]);
+                const auto second = tower_product(values[2], values[3]);
+                for (std::size_t c = 0; c < 12; ++c) {
+                    expected[i][c] += second[c];
+                }
+            }
+            for (const double scale :
+                 {0.0, 1.0, -1.0, static_cast<double>((q - 1) / 2), -static_cast<double>((q - 1) / 2)}) {
+                std::vector<double> storage(12 * stride + 2, -19.0);
+                auto output = std::span<double>(storage).subspan(1, 12 * stride);
+                pointwise.multiply_sum(output, inputs[0], inputs[1], inputs[2], inputs[3], stride, scale);
+                check_pointwise(output, expected, prime.modulus, scale);
+                BOOST_CHECK_EQUAL(storage.front(), -19.0);
+                BOOST_CHECK_EQUAL(storage.back(), -19.0);
+                for (std::size_t alias = 0; alias < inputs.size(); ++alias) {
+                    auto aliased = inputs;
+                    pointwise.multiply_sum(aliased[alias], aliased[0], aliased[1], aliased[2], aliased[3], stride,
+                                           scale);
+                    check_pointwise(aliased[alias], expected, prime.modulus, scale);
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(fused_matrix_products_match_schoolbook_and_preserve_aliases) {
+    backend_type backend(256);
+    std::mt19937_64 random(0x46465422);
+    for (const std::size_t size : {3, 17, 64, 8}) {
+        std::array<polynomial_type, 4> left, right, actual;
+        for (std::size_t i = 0; i < left.size(); ++i) {
+            left[i] = random_polynomial(size, random);
+            right[i] = random_polynomial(size, random);
+        }
+        const auto expected = expected_matrix_product<2>(left, right);
+        BOOST_REQUIRE(try_matrix_product<2>(backend, actual, left, right));
+        for (std::size_t i = 0; i < actual.size(); ++i) {
+            check_polynomial(actual[i], expected[i]);
+        }
+        auto left_alias = left;
+        BOOST_REQUIRE(try_matrix_product<2>(backend, left_alias, left_alias, right));
+        auto right_alias = right;
+        BOOST_REQUIRE(try_matrix_product<2>(backend, right_alias, left, right_alias));
+        for (std::size_t i = 0; i < actual.size(); ++i) {
+            check_polynomial(left_alias[i], expected[i]);
+            check_polynomial(right_alias[i], expected[i]);
+        }
+        std::array<polynomial_type, 2> pair {right[0], right[1]};
+        const auto pair_expected = expected_matrix_product<1>(left, pair);
+        BOOST_REQUIRE(try_matrix_product<1>(backend, pair, left, pair));
+        check_polynomial(pair[0], pair_expected[0]);
+        check_polynomial(pair[1], pair_expected[1]);
+    }
+    // Entries differing by one coefficient can straddle a power-of-two transform boundary.
+    std::array<polynomial_type, 4> left, right, actual;
+    for (std::size_t i = 0; i < left.size(); ++i) {
+        left[i] = random_polynomial(16 + i % 2, random);
+        right[i] = random_polynomial(16 + (i / 2), random);
+    }
+    const auto expected = expected_matrix_product<2>(left, right);
+    BOOST_REQUIRE(try_matrix_product<2>(backend, actual, left, right));
+    for (std::size_t i = 0; i < actual.size(); ++i) {
+        check_polynomial(actual[i], expected[i]);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(fused_matrix_products_check_the_sum_bound_and_workspace_before_writes) {
+    std::mt19937_64 random(0x46465423);
+    backend_type backend(64);
+    std::array<polynomial_type, 4> left, right, output;
+    for (std::size_t i = 0; i < left.size(); ++i) {
+        left[i] = random_polynomial(16, random);
+        right[i] = random_polynomial(16, random);
+    }
+    const auto expected = expected_matrix_product<2>(left, right);
+    BOOST_REQUIRE(try_matrix_product<2>(backend, output, left, right));
+    for (std::size_t i = 0; i < output.size(); ++i) {
+        check_polynomial(output[i], expected[i]);
+    }
+    const auto before = output;
+    const auto check_unchanged = [&]() {
+        for (std::size_t i = 0; i < output.size(); ++i) {
+            check_polynomial(output[i], before[i]);
+        }
+    };
+    const std::size_t bytes = 8 * 12 * backend.prime_count() * 32 * sizeof(double);
+    backend_type exact_budget(64, std::numeric_limits<std::size_t>::max(), bytes);
+    BOOST_REQUIRE(try_matrix_product<2>(exact_budget, output, left, right));
+    check_unchanged();
+    for (const std::size_t budget : {std::size_t(0), bytes - 1}) {
+        backend_type limited(64, std::numeric_limits<std::size_t>::max(), budget);
+        BOOST_CHECK(!try_matrix_product<2>(limited, output, left, right));
+        check_unchanged();
+    }
+    // Both individual products fit, but 17+17 terms exceed the plan's 32-term CRT bound.
+    for (std::size_t i = 0; i < left.size(); ++i) {
+        left[i] = random_polynomial(17, random);
+        right[i] = random_polynomial(17, random);
+    }
+    BOOST_CHECK(!try_matrix_product<2>(backend, output, left, right));
+    check_unchanged();
+    for (const std::size_t size : {1, 2, 65}) {
+        left[0] = random_polynomial(size, random);
+        BOOST_CHECK(!try_matrix_product<2>(backend, output, left, right));
+        check_unchanged();
+    }
+    left[0] = polynomial_type(3, value_type::zero());
+    BOOST_CHECK(!try_matrix_product<2>(backend, output, left, right));
+    check_unchanged();
+
+    std::array<polynomial_type *, 4> outputs {&output[0], &output[1], &output[2], &output[3]};
+    std::array<const polynomial_type *, 4> inputs {&right[0], &right[1], &right[2], &right[3]};
+    outputs[3] = outputs[0];
+    BOOST_CHECK(!backend.try_multiply_matrix<2>(outputs, inputs, inputs));
+    check_unchanged();
+    outputs[3] = nullptr;
+    BOOST_CHECK(!backend.try_multiply_matrix<2>(outputs, inputs, inputs));
+    check_unchanged();
+    outputs[3] = &output[3];
+    inputs[3] = nullptr;
+    BOOST_CHECK(!backend.try_multiply_matrix<2>(outputs, inputs, inputs));
+    check_unchanged();
+
+    backend_type large_backend(512);
+    for (std::size_t i = 0; i < left.size(); ++i) {
+        left[i] = random_polynomial(i == 0 ? 3 : 40, random);
+        right[i] = random_polynomial(i == 0 ? 3 : 40, random);
+    }
+    BOOST_CHECK(!try_matrix_product<2>(large_backend, output, left, right));
+    check_unchanged();
+}
+
+BOOST_AUTO_TEST_CASE(fused_matrix_products_share_identical_inputs_and_survive_backend_moves) {
+    std::mt19937_64 random(0x46465424);
+    polynomial_type input = random_polynomial(16, random);
+    const auto product = expected_product(input, input);
+    polynomial_type expected;
+    math::addition(expected, product, product);
+    backend_type ordinary(64);
+    const std::size_t one_spectrum_bytes = 12 * ordinary.prime_count() * 32 * sizeof(double);
+    backend_type backend(64, std::numeric_limits<std::size_t>::max(), one_spectrum_bytes);
+    std::array<polynomial_type, 4> output;
+    const std::array<polynomial_type *, 4> outputs {&input, &output[1], &output[2], &output[3]};
+    const std::array<const polynomial_type *, 4> inputs {&input, &input, &input, &input};
+    BOOST_REQUIRE(backend.try_multiply_matrix<2>(outputs, inputs, inputs));
+    check_polynomial(input, expected);
+    for (std::size_t i = 1; i < output.size(); ++i) {
+        check_polynomial(output[i], expected);
+    }
+    input = random_polynomial(16, random);
+    auto moved = std::move(backend);
+    BOOST_CHECK(!backend.try_multiply_matrix<2>(outputs, inputs, inputs));
+    const auto square = expected_product(input, input);
+    math::addition(expected, square, square);
+    BOOST_REQUIRE(moved.try_multiply_matrix<2>(outputs, inputs, inputs));
+    check_polynomial(input, expected);
+    for (std::size_t i = 1; i < output.size(); ++i) {
+        check_polynomial(output[i], expected);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(fused_matrix_products_preserve_cancellation_and_rounding_modes) {
+    restore_rounding restore;
+    std::mt19937_64 random(0x46465425);
+    backend_type backend(64);
+    std::array<polynomial_type, 4> left, right, output;
+    left[0] = left[1] = random_polynomial(15, random);
+    left[2] = left[3] = random_polynomial(16, random);
+    right[0] = random_polynomial(17, random);
+    right[1] = random_polynomial(16, random);
+    const polynomial_type zero {value_type::zero()};
+    math::subtraction(right[2], zero, right[0]);
+    math::subtraction(right[3], zero, right[1]);
+    for (const int mode : {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
+        BOOST_REQUIRE_EQUAL(std::fesetround(mode), 0);
+        BOOST_REQUIRE(try_matrix_product<2>(backend, output, left, right));
+        BOOST_CHECK_EQUAL(std::fegetround(), mode);
+        for (const auto &result : output) {
+            check_polynomial(result, zero);
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(all_tower_basis_products_cross_the_conversion_and_crt_pipeline) {
-    backend_type backend(1);
+    backend_type backend(8);
     polynomial_type actual;
+    // Degree-two monomials keep these checks on the transform path when scalar and linear
+    // operands use direct arithmetic. Their product has its only nonzero coefficient at X^4.
     for (std::size_t i = 0; i < 12; ++i) {
         coordinates_type a {};
         a[i] = 1;
-        const polynomial_type left {field_value(a)};
+        const polynomial_type left {value_type::zero(), value_type::zero(), field_value(a)};
         for (std::size_t j = 0; j < 12; ++j) {
             coordinates_type b {};
             b[j] = 1;
-            const polynomial_type right {field_value(b)};
+            const polynomial_type right {value_type::zero(), value_type::zero(), field_value(b)};
             backend.multiply(actual, left, right);
-            check_polynomial(actual, polynomial_type {field_value(tower_product(a, b))});
+            polynomial_type expected(5, value_type::zero());
+            expected[4] = field_value(tower_product(a, b));
+            check_polynomial(actual, expected);
         }
         backend.square(actual, left);
-        check_polynomial(actual, polynomial_type {field_value(tower_product(a, a))});
+        polynomial_type expected(5, value_type::zero());
+        expected[4] = field_value(tower_product(a, a));
+        check_polynomial(actual, expected);
     }
+}
+
+BOOST_AUTO_TEST_CASE(short_operands_preserve_low_products_aliases_and_capacity) {
+    backend_type backend(512);
+    std::mt19937_64 random(0x46465440);
+    for (const std::size_t short_size : {1, 2, 3}) {
+        const auto short_operand = random_polynomial(short_size, random);
+        for (const std::size_t long_size : {17, 64, 255}) {
+            const auto long_operand = random_polynomial(long_size, random);
+            const auto full = expected_product(short_operand, long_operand);
+            for (const std::size_t count :
+                 {std::size_t(0), std::size_t(1), std::size_t(2), std::size_t(3), std::size_t(17), full.size()}) {
+                const auto expected = expected_low(full, count);
+                auto left_alias = short_operand;
+                auto right_alias = long_operand;
+                backend.multiply_low(left_alias, left_alias, long_operand, count);
+                backend.multiply_low(right_alias, short_operand, right_alias, count);
+                check_polynomial(left_alias, expected);
+                check_polynomial(right_alias, expected);
+                backend.multiply_low(right_alias, long_operand, short_operand, count);
+                check_polynomial(right_alias, expected);
+            }
+        }
+    }
+
+    backend_type limited(32);
+    const auto linear = random_polynomial(2, random);
+    const auto at_limit = random_polynomial(31, random);
+    polynomial_type result;
+    limited.multiply(result, linear, at_limit);
+    check_polynomial(result, expected_product(linear, at_limit));
+    const auto before = result;
+    BOOST_CHECK_THROW(limited.multiply(result, linear, random_polynomial(32, random)), std::invalid_argument);
+    BOOST_CHECK_THROW(
+        limited.multiply_low(result, random_polynomial(33, random), polynomial_type {value_type::one()}, 33),
+        std::invalid_argument);
+    check_polynomial(result, before);
+    backend_type moved(std::move(limited));
+    BOOST_CHECK_THROW(limited.multiply(result, linear, at_limit), std::invalid_argument);
+    check_polynomial(result, before);
 }
 
 BOOST_AUTO_TEST_CASE(full_width_products_match_native_fp12_schoolbook) {

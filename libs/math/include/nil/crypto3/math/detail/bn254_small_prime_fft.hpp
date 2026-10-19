@@ -783,7 +783,7 @@ namespace nil::crypto3::math::detail {
      * arithmetic to the target modulus and cannot represent these small-prime intermediates.
      *
      * @pre Input cells are integer-valued doubles of magnitude < 2^53. scale is an integer with
-     * |scale| < q/2, normally the FFT plan's centered 1/N. The two buffers are disjoint or identical.
+     * |scale| < q/2, normally the FFT plan's centered 1/N. Buffers are disjoint or identical.
      * The thread's rounding mode stays unchanged during the call. Output cells are in (-q,q).
      * No buffers are allocated and no constant-time guarantee is provided.
      */
@@ -910,9 +910,9 @@ namespace nil::crypto3::math::detail {
         void multiply(std::span<double> left, std::span<const double> right, std::size_t stride, double scale) const {
             check_buffers(left, right, stride, scale);
             if (arithmetic_.fma_supported()) {
-                apply<true, false>(left, right, scale);
+                apply<true, false>(left, left, right, scale);
             } else {
-                apply<false, false>(left, right, scale);
+                apply<false, false>(left, left, right, scale);
             }
         }
 
@@ -920,9 +920,24 @@ namespace nil::crypto3::math::detail {
         void square(std::span<double> values, std::size_t stride, double scale) const {
             check_buffers(values, values, stride, scale);
             if (arithmetic_.fma_supported()) {
-                apply<true, true>(values, values, scale);
+                apply<true, true>(values, values, values, scale);
             } else {
-                apply<false, true>(values, values, scale);
+                apply<false, true>(values, values, values, scale);
+            }
+        }
+
+        /** Compute scale*(a*b+c*d). Every buffer has 12*stride cells; output may equal any input. */
+        void multiply_sum(std::span<double> output, std::span<const double> a, std::span<const double> b,
+                          std::span<const double> c, std::span<const double> d, std::size_t stride,
+                          double scale) const {
+            check_buffers(output, a, stride, scale);
+            check_buffers(output, b, stride, scale);
+            check_buffers(output, c, stride, scale);
+            check_buffers(output, d, stride, scale);
+            if (arithmetic_.fma_supported()) {
+                apply<true, false, true>(output, a, b, scale, c, d);
+            } else {
+                apply<false, false, true>(output, a, b, scale, c, d);
             }
         }
 
@@ -936,32 +951,36 @@ namespace nil::crypto3::math::detail {
                    std::abs(scale) < static_cast<double>(arithmetic_.modulus()) / 2);
         }
 
-        template<bool UseFma, bool Square>
-        void apply(std::span<double> left, std::span<const double> right, double scale) const {
-            // Derive the indexing bound from the buffer extent checked by both public entry points.
-            const std::size_t stride = left.size() / 12;
+        template<bool UseFma, bool Square, bool Sum = false>
+        void apply(std::span<double> output, std::span<const double> left, std::span<const double> right, double scale,
+                   std::span<const double> extra_left = {}, std::span<const double> extra_right = {}) const {
+            // Derive the indexing bound from the buffer extent checked by the public entry points.
+            const std::size_t stride = output.size() / 12;
             std::size_t offset = 0;
 #if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
             if constexpr (UseFma) {
                 offset = stride - stride % 4;
                 if (offset != 0) {
                     const small_prime_fft_arithmetic::packed_fma_kernel packed(arithmetic_);
-                    apply_range<true, Square>(packed, left, right, 0, offset, _mm256_set1_pd(scale));
+                    apply_range<true, Square, Sum>(packed, output, left, right, extra_left, extra_right, 0, offset,
+                                                   _mm256_set1_pd(scale));
                 }
             }
 #endif
-            apply_range<UseFma, Square>(arithmetic_, left, right, offset, stride, scale);
+            apply_range<UseFma, Square, Sum>(arithmetic_, output, left, right, extra_left, extra_right, offset, stride,
+                                             scale);
         }
 
-        template<bool UseFma, bool Square, typename Arithmetic, typename Value>
-        static void apply_range(const Arithmetic &arithmetic, std::span<double> left, std::span<const double> right,
-                                std::size_t begin, std::size_t end, Value scale) {
+        template<bool UseFma, bool Square, bool Sum, typename Arithmetic, typename Value>
+        static void apply_range(const Arithmetic &arithmetic, std::span<double> output, std::span<const double> left,
+                                std::span<const double> right, std::span<const double> extra_left,
+                                std::span<const double> extra_right, std::size_t begin, std::size_t end, Value scale) {
             constexpr std::size_t width = sizeof(Value) / sizeof(double);
-            const std::size_t stride = left.size() / 12;
+            const std::size_t stride = output.size() / 12;
             const kernel<UseFma, Value, Arithmetic> operations {arithmetic};
             using tower_type = typename kernel<UseFma, Value, Arithmetic>::tower_type;
             for (std::size_t i = begin; i < end; i += width) {
-                tower_type a, b;
+                tower_type a, b, c, d;
                 for (std::size_t w = 0; w < 2; ++w) {
                     for (std::size_t v = 0; v < 3; ++v) {
                         for (std::size_t u = 0; u < 2; ++u) {
@@ -971,11 +990,19 @@ namespace nil::crypto3::math::detail {
                                 if constexpr (!Square) {
                                     b[w][v][u] = operations.reduce(right[offset]);
                                 }
+                                if constexpr (Sum) {
+                                    c[w][v][u] = operations.reduce(extra_left[offset]);
+                                    d[w][v][u] = operations.reduce(extra_right[offset]);
+                                }
 #if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
                             } else {
                                 a[w][v][u] = operations.reduce(_mm256_loadu_pd(left.data() + offset));
                                 if constexpr (!Square) {
                                     b[w][v][u] = operations.reduce(_mm256_loadu_pd(right.data() + offset));
+                                }
+                                if constexpr (Sum) {
+                                    c[w][v][u] = operations.reduce(_mm256_loadu_pd(extra_left.data() + offset));
+                                    d[w][v][u] = operations.reduce(_mm256_loadu_pd(extra_right.data() + offset));
                                 }
 #endif
                             }
@@ -983,7 +1010,11 @@ namespace nil::crypto3::math::detail {
                     }
                 }
                 const tower_type result = [&]() {
-                    if constexpr (Square) {
+                    if constexpr (Sum) {
+                        // Each product coordinate is in (-q,q); adding two is exact below 2*q.
+                        // Reduce that sum before the usual inverse-transform normalization.
+                        return operations.add(operations.multiply(a, b), operations.multiply(c, d));
+                    } else if constexpr (Square) {
                         return operations.square(a);
                     } else {
                         return operations.multiply(a, b);
@@ -996,10 +1027,10 @@ namespace nil::crypto3::math::detail {
                             const std::size_t offset = (6 * w + 2 * v + u) * stride + i;
                             const Value value = operations.multiply(result[w][v][u], scale);
                             if constexpr (width == 1) {
-                                left[offset] = value;
+                                output[offset] = value;
 #if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
                             } else {
-                                _mm256_storeu_pd(left.data() + offset, value);
+                                _mm256_storeu_pd(output.data() + offset, value);
 #endif
                             }
                         }
