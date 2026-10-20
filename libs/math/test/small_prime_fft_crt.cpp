@@ -73,14 +73,20 @@ namespace {
     }
 
     std::vector<double> make_residues(std::span<const coordinates_type> coordinates, std::size_t prime_count,
-                                      std::size_t stride, bool lazy = false) {
+                                      std::size_t stride, bool lazy = false, bool weighted = false) {
         // Padding is intentionally not a valid residue: reconstruction must read only the requested prefix.
         std::vector<double> result(prime_count * 12 * stride, std::numeric_limits<double>::quiet_NaN());
         for (std::size_t prime = 0; prime < prime_count; ++prime) {
             const cpp_int modulus = detail::small_prime_fft_primes[prime].modulus;
+            cpp_int inverse = 1;
+            if (weighted) {
+                // Compute the weight independently of the reconstructor's cached inverses.
+                const cpp_int cofactor = make_params(prime_count).modulus / modulus;
+                inverse = boost::multiprecision::powm(cpp_int(cofactor % modulus), cpp_int(modulus - 2), modulus);
+            }
             for (std::size_t coordinate = 0; coordinate < 12; ++coordinate) {
                 for (std::size_t i = 0; i < coordinates.size(); ++i) {
-                    cpp_int residue = canonical(coordinates[i][coordinate], modulus);
+                    cpp_int residue = canonical(coordinates[i][coordinate] * inverse, modulus);
                     if (lazy) {
                         // Reach large positive and negative representatives while staying below 2^53.
                         residue += ((prime + coordinate + i) % 2 == 0 ? 7 : -8) * modulus;
@@ -106,6 +112,9 @@ namespace {
                             const cpp_int actual(
                                 output[i].data[w].data[v].data[u].to_integral().backend().to_cpp_int());
                             BOOST_CHECK_EQUAL(actual, canonical(coordinates[i][coordinate], characteristic));
+                            const cpp_int stored(
+                                output[i].data[w].data[v].data[u].data.backend().base_data().to_cpp_int());
+                            BOOST_CHECK_LT(stored, characteristic);
                         }
                     }
                 }
@@ -120,6 +129,13 @@ namespace {
         std::vector<value_type> storage(coordinates.size() + 2, sentinel);
         auto output = std::span<value_type>(storage).subspan(1, coordinates.size());
         reconstructor.reconstruct(output, residues, stride);
+        BOOST_CHECK(storage.front() == sentinel);
+        BOOST_CHECK(storage.back() == sentinel);
+        check_output(output, coordinates);
+
+        const auto weighted = make_residues(coordinates, reconstructor.prime_count(), stride, lazy, true);
+        std::fill(output.begin(), output.end(), sentinel);
+        reconstructor.reconstruct_weighted(output, weighted, stride);
         BOOST_CHECK(storage.front() == sentinel);
         BOOST_CHECK(storage.back() == sentinel);
         check_output(output, coordinates);
@@ -142,6 +158,29 @@ namespace {
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(small_prime_fft_crt_test_suite)
+
+BOOST_AUTO_TEST_CASE(combined_normalization_is_centered_and_exact_in_every_rounding_mode) {
+    restore_rounding restore;
+    for (int mode : {FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO, FE_TONEAREST}) {
+        BOOST_REQUIRE_EQUAL(std::fesetround(mode), 0);
+        for (std::size_t count = 1; count <= detail::small_prime_fft_primes.size(); ++count) {
+            const auto params = make_params(count);
+            const reconstructor_type reconstructor(params, params.modulus / 2);
+            for (std::size_t prime = 0; prime < count; ++prime) {
+                const cpp_int q = detail::small_prime_fft_primes[prime].modulus;
+                for (std::size_t size : {1, 2, 4, 8, 32, 256}) {
+                    const detail::small_prime_fft_plan plan(prime, size);
+                    const double weight = reconstructor.weighted_normalization(prime, plan.size_inverse());
+                    BOOST_CHECK_LT(std::abs(weight), q.convert_to<double>() / 2);
+                    const cpp_int exact_weight = static_cast<std::int64_t>(weight);
+                    BOOST_CHECK_EQUAL(canonical(exact_weight * size * (params.modulus / q), q), 1);
+                }
+            }
+            BOOST_CHECK_THROW(reconstructor.weighted_normalization(count, 1), std::out_of_range);
+        }
+        BOOST_CHECK_EQUAL(std::fegetround(), mode);
+    }
+}
 
 BOOST_AUTO_TEST_CASE(every_catalogue_prefix_recovers_signed_boundaries_and_carries) {
     const cpp_int characteristic(fq::modulus.backend().to_cpp_int());
@@ -197,6 +236,91 @@ BOOST_AUTO_TEST_CASE(random_signed_integers_cover_all_prime_counts_and_partial_b
         const auto coordinates = random_coordinates(65, bound);
         check_reconstruction(reconstructor, coordinates, 65);
         check_reconstruction(reconstructor, coordinates, 96, true);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(direct_export_covers_every_centering_correction_and_maximum_digits) {
+    for (std::size_t count = 1; count <= detail::small_prime_fft_primes.size(); ++count) {
+        const auto params = make_params(count);
+        const cpp_int bound = params.modulus / 2;
+        const reconstructor_type reconstructor(params, bound);
+        for (std::size_t quotient = 0; quotient <= count; ++quotient) {
+            cpp_int sum = 0;
+            for (std::size_t prime = 0; prime < count; ++prime) {
+                const cpp_int q = detail::small_prime_fft_primes[prime].modulus;
+                const cpp_int digit = (q - 1) * quotient / count;
+                sum += digit * (params.modulus / q);
+            }
+            BOOST_REQUIRE_EQUAL((sum + bound) / params.modulus, quotient);
+            std::array<coordinates_type, 1> coordinates;
+            coordinates[0].fill(sum - quotient * params.modulus);
+            check_reconstruction(reconstructor, coordinates, 3, true);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(exact_fallback_preserves_tiny_bounds_and_values_adjacent_to_bounds) {
+    for (std::size_t count = 1; count <= detail::small_prime_fft_primes.size(); ++count) {
+        const auto params = make_params(count);
+        // Include bounds smaller than the certificate's resolution and bounds near M/2.
+        const std::vector<cpp_int> bounds {
+            0, 1, params.modulus >> 60, (params.modulus >> 60) * 32 + 7, params.modulus / 4, params.modulus / 2};
+        for (const auto &bound : bounds) {
+            const reconstructor_type reconstructor(params, bound);
+            auto coordinates = random_coordinates(33, bound);
+            coordinates[0][0] = bound;
+            coordinates[0][1] = -bound;
+            check_reconstruction(reconstructor, coordinates, 35, true);
+            if (bound == params.modulus / 2) {
+                continue;
+            }
+            for (int sign : {-1, 1}) {
+                coordinates[0][0] = sign * (bound + 1);
+                for (bool weighted : {false, true}) {
+                    const auto residues = make_residues(coordinates, count, 35, true, weighted);
+                    std::vector<value_type> output(coordinates.size(), value_type::one());
+                    if (weighted) {
+                        BOOST_CHECK_THROW(reconstructor.reconstruct_weighted(output, residues, 35),
+                                          std::overflow_error);
+                    } else {
+                        BOOST_CHECK_THROW(reconstructor.reconstruct(output, residues, 35), std::overflow_error);
+                    }
+                    BOOST_CHECK(std::all_of(output.begin(), output.end(),
+                                            [](const auto &value) { return value == value_type::one(); }));
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(bound_failure_preserves_completed_prefixes_across_block_boundaries) {
+    restore_rounding restore;
+    const auto plan = detail::make_bn254_small_prime_fft_params(14939, 14939);
+    BOOST_REQUIRE(plan);
+    for (const cpp_int &bound : {cpp_int(0), plan->coefficient_bound}) {
+        const reconstructor_type reconstructor(plan->crt, bound);
+        for (int mode : {FE_TONEAREST, FE_UPWARD}) {
+            BOOST_REQUIRE_EQUAL(std::fesetround(mode), 0);
+            for (std::size_t bad : {0, 1, 31, 32, 33}) {
+                for (int sign : {-1, 1}) {
+                    std::vector<coordinates_type> coordinates(35);
+                    coordinates[bad][0] = sign * (bound + 1);
+                    for (bool weighted : {false, true}) {
+                        const auto residues = make_residues(coordinates, plan->crt.prime_count, 37, true, weighted);
+                        std::vector<value_type> output(coordinates.size(), value_type::one());
+                        if (weighted) {
+                            BOOST_CHECK_THROW(reconstructor.reconstruct_weighted(output, residues, 37),
+                                              std::overflow_error);
+                        } else {
+                            BOOST_CHECK_THROW(reconstructor.reconstruct(output, residues, 37), std::overflow_error);
+                        }
+                        for (std::size_t i = 0; i < output.size(); ++i) {
+                            BOOST_CHECK(output[i] == (i < bad ? value_type::zero() : value_type::one()));
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -408,18 +532,21 @@ BOOST_AUTO_TEST_CASE(invalid_dimensions_are_rejected_before_output_writes) {
     const reconstructor_type reconstructor(make_params(1), 10);
     std::vector<double> residues(24, 0);
     std::vector<value_type> output(2, value_type::one());
-    BOOST_CHECK_THROW(reconstructor.reconstruct(output, std::span<const double>(residues).first(23), 2),
-                      std::invalid_argument);
-    BOOST_CHECK_THROW(reconstructor.reconstruct(output, residues, 1), std::invalid_argument);
-    BOOST_CHECK_THROW(reconstructor.reconstruct({}, residues, 1), std::invalid_argument);
-    BOOST_CHECK_THROW(reconstructor.reconstruct(output, std::span<const double>(residues).first(12), 1),
-                      std::invalid_argument);
-    BOOST_CHECK_THROW(reconstructor.reconstruct({}, residues, std::numeric_limits<std::size_t>::max()),
-                      std::invalid_argument);
-    BOOST_CHECK_THROW(reconstructor.reconstruct({}, residues, 0), std::invalid_argument);
-    BOOST_CHECK_THROW(reconstructor.reconstruct(output, {}, 2), std::invalid_argument);
-    BOOST_CHECK(
-        std::all_of(output.begin(), output.end(), [](const auto &value) { return value == value_type::one(); }));
+    for (auto reconstruct : {&reconstructor_type::reconstruct, &reconstructor_type::reconstruct_weighted}) {
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)(output, std::span<const double>(residues).first(23), 2),
+                          std::invalid_argument);
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)(output, residues, 1), std::invalid_argument);
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)({}, residues, 1), std::invalid_argument);
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)(output, std::span<const double>(residues).first(12), 1),
+                          std::invalid_argument);
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)({}, residues, std::numeric_limits<std::size_t>::max()),
+                          std::invalid_argument);
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)({}, residues, 0), std::invalid_argument);
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)(output, {}, 2), std::invalid_argument);
+        BOOST_CHECK(
+            std::all_of(output.begin(), output.end(), [](const auto &value) { return value == value_type::one(); }));
+        BOOST_CHECK_NO_THROW((reconstructor.*reconstruct)({}, {}, 0));
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

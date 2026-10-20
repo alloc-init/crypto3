@@ -34,9 +34,11 @@
 #include <cstdint>
 #include <span>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
+#include <nil/crypto3/algebra/fields/detail/element/fp12_fast/limb_ops.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 #include <nil/crypto3/math/detail/small_prime_fft_arithmetic.hpp>
 #include <nil/crypto3/math/detail/small_prime_fft_params.hpp>
@@ -193,8 +195,10 @@ namespace nil::crypto3::math::detail {
      * with M > 2*C for the prime product M. Centering must precede reduction into the target field:
      * the CRT representative M-1 denotes -1, not the field element (M-1) mod p.
      *
-     * Cofactors and their inverses are prepared once. Reconstruction uses fixed-size integer scratch
-     * and caller-owned output, with no arbitrary-precision setup work in the coefficient loop.
+     * Cofactors, inverses and Montgomery export weights are prepared once. An integer interval
+     * certificate permits direct export when it proves both centering and the coefficient bound;
+     * uncertain cases use exact wide reconstruction. Both paths use fixed-size scratch and
+     * caller-owned output, with no arbitrary-precision setup work in the coefficient loop.
      * This operation has no constant-time guarantee.
      */
     class bn254_small_prime_fft_reconstructor {
@@ -209,18 +213,30 @@ namespace nil::crypto3::math::detail {
             boost::multiprecision::number<boost::multiprecision::cpp_int_modular_backend<export_split>>;
         using export_type = boost::multiprecision::uint512_modular_t;
         static_assert(50 * small_prime_fft_primes.size() <= 600, "CRT export folding requires M < 2^600");
+        using fast_params = bn254_small_prime_fft_converter::field_type::extension_policy::fast_params;
+        using direct_weight_type = std::array<std::uint64_t, fast_params::base_value_limb_count>;
+        static constexpr bool direct_export_supported = base_field_type::integral_type::backend_type::limb_bits == 64;
+        static constexpr unsigned certificate_bits = 60;
+        static constexpr std::uint64_t certificate_scale = std::uint64_t(1) << certificate_bits;
+        static_assert(std::all_of(small_prime_fft_primes.begin(), small_prime_fft_primes.end(), [](const auto &prime) {
+            return prime.modulus > (std::uint64_t(1) << 49) && prime.modulus < (std::uint64_t(1) << 50);
+        }));
 
         struct prime_context {
             small_prime_fft_arithmetic arithmetic;
             integer_type cofactor;
             double inverse;
+            std::uint64_t certificate_reciprocal;
+            direct_weight_type export_weight;
 
-            prime_context(std::uint64_t modulus, const integer_type &cofactor) :
-                arithmetic(modulus), cofactor(cofactor) {
+            prime_context(std::uint64_t modulus, const integer_type &cofactor, const direct_weight_type &weight) :
+                arithmetic(modulus), cofactor(cofactor), export_weight(weight) {
                 using wide_type = boost::multiprecision::uint128_modular_t;
                 const auto residue = (cofactor % modulus).convert_to<std::uint64_t>();
                 inverse = static_cast<double>(boost::multiprecision::inverse_mod(wide_type(residue), wide_type(modulus))
                                                   .convert_to<std::uint64_t>());
+                certificate_reciprocal =
+                    ((wide_type(1) << (certificate_bits + 50)) / modulus).convert_to<std::uint64_t>();
             }
         };
 
@@ -256,14 +272,46 @@ namespace nil::crypto3::math::detail {
                 multiples_[bit] = multiples_[bit - 1] << 1;
             }
             primes_.reserve(params.prime_count);
+            const boost::multiprecision::cpp_int characteristic(base_field_type::modulus.backend().to_cpp_int());
+            const boost::multiprecision::cpp_int r_squared =
+                (boost::multiprecision::cpp_int(1) << 512) % characteristic;
+            scaled_bound_ = ((coefficient_bound << certificate_bits) / product).convert_to<std::uint64_t>();
             for (std::size_t i = 0; i < params.prime_count; ++i) {
                 const auto modulus = small_prime_fft_primes[i].modulus;
-                primes_.emplace_back(modulus, multiples_[0] / modulus);
+                const boost::multiprecision::cpp_int weight = (product / modulus) * r_squared % characteristic;
+                direct_weight_type limbs {};
+                boost::multiprecision::export_bits(weight, limbs.begin(), 64, false);
+                primes_.emplace_back(modulus, multiples_[0] / modulus, limbs);
+            }
+            // The centering quotient is in [0,prime_count]. Store canonical -k*M*R^2 mod p.
+            for (std::size_t k = 0; k <= params.prime_count; ++k) {
+                boost::multiprecision::cpp_int correction = (k * product * r_squared) % characteristic;
+                if (correction != 0) {
+                    correction = characteristic - correction;
+                }
+                boost::multiprecision::export_bits(correction, export_corrections_[k].begin(), 64, false);
             }
         }
 
         std::size_t prime_count() const {
             return primes_.size();
+        }
+
+        /**
+         * Combine an inverse-transform scale with (M/q)^-1, returning a centered residue.
+         * Require an integer-valued scale of magnitude < 2^53; invalid prime indices throw.
+         */
+        double weighted_normalization(std::size_t prime, double scale) const {
+            const auto &context = primes_.at(prime);
+            const double q = static_cast<double>(context.arithmetic.modulus());
+            double result =
+                context.arithmetic.multiply_integer(context.arithmetic.reduce_integer(scale), context.inverse);
+            if (result > q / 2) {
+                result -= q;
+            } else if (result < -q / 2) {
+                result += q;
+            }
+            return result;
         }
 
         /**
@@ -281,6 +329,23 @@ namespace nil::crypto3::math::detail {
          * bound when the integer expression has wrapped by M, so the caller must justify that bound.
          */
         void reconstruct(std::span<value_type> output, std::span<const double> residues, std::size_t stride) const {
+            reconstruct_dispatch<false>(output, residues, stride);
+        }
+
+        /**
+         * Reconstruct residues already multiplied by (M/q)^-1 modulo each q. All dimensions,
+         * residue bounds and failure semantics are those of reconstruct(). The backend can fuse
+         * this weight with 1/N in the pointwise pass because the inverse transform is linear.
+         */
+        void reconstruct_weighted(std::span<value_type> output, std::span<const double> residues,
+                                  std::size_t stride) const {
+            reconstruct_dispatch<true>(output, residues, stride);
+        }
+
+    private:
+        template<bool Weighted>
+        void reconstruct_dispatch(std::span<value_type> output, std::span<const double> residues,
+                                  std::size_t stride) const {
             const std::size_t channels = field_type::arity * primes_.size();
             if (channels == 0 || output.size() > stride || stride > residues.size() / channels ||
                 residues.size() != channels * stride) {
@@ -293,13 +358,12 @@ namespace nil::crypto3::math::detail {
                 return prime.arithmetic.fma_supported();
             });
             if (use_fma) {
-                reconstruct_impl<true>(output, residues, stride);
+                reconstruct_impl<true, Weighted>(output, residues, stride);
             } else {
-                reconstruct_impl<false>(output, residues, stride);
+                reconstruct_impl<false, Weighted>(output, residues, stride);
             }
         }
 
-    private:
         void add_cofactor_product(integer_type &sum, const integer_type &cofactor, std::uint64_t digit) const {
             using limb_type = boost::multiprecision::limb_type;
             using wide_type = boost::multiprecision::double_limb_type;
@@ -338,19 +402,90 @@ namespace nil::crypto3::math::detail {
             return base_field_type::value_type(folded);
         }
 
-        template<bool UseFma>
+        base_field_type::value_type export_exact(integer_type magnitude) const {
+            // Each canonical CRT term is < M. Reduce their sum to [0,M) without division.
+            for (std::size_t bit = std::bit_width(primes_.size() - 1); bit-- > 0;) {
+                if (magnitude >= multiples_[bit]) {
+                    magnitude -= multiples_[bit];
+                }
+            }
+            const bool negative = magnitude > half_modulus_;
+            if (negative) {
+                magnitude = multiples_[0] - magnitude;
+            }
+            if (magnitude > bound_) {
+                throw std::overflow_error("bn254_small_prime_fft_reconstructor: coefficient exceeds CRT bound");
+            }
+            const auto value = export_magnitude(magnitude);
+            return negative ? -value : value;
+        }
+
+        static void add_export_product(fast_params::limb_array &sum, const direct_weight_type &weight,
+                                       std::uint64_t digit) {
+            using wide_type = algebra::fields::detail::fp12_fast::wide_limb;
+            wide_type carry = 0;
+            for (std::size_t limb = 0; limb < weight.size(); ++limb) {
+                const wide_type value = wide_type(weight[limb]) * digit + sum[limb] + carry;
+                sum[limb] = static_cast<std::uint64_t>(value);
+                carry = value >> 64;
+            }
+            // At most twelve digits < 2^50 times weights < p, plus one correction < p.
+            // The total is < 2^54*p < 2^308, so the fifth limb cannot overflow.
+            sum[weight.size()] += static_cast<std::uint64_t>(carry);
+        }
+
+        bool certify_export(std::uint64_t lower, std::size_t &quotient) const {
+            // For d < q < 2^50 and a=floor(2^110/q), floor(d*a/2^50) <= 2^60*d/q
+            // < floor(d*a/2^50)+2. Summing encloses 2^60*sum(d/q) in [lower,upper].
+            // With at most twelve primes, all quantities below fit in uint64_t.
+            const std::uint64_t upper = lower + 2 * primes_.size();
+            quotient = (lower + certificate_scale / 2) >> certificate_bits;
+            const std::uint64_t center = std::uint64_t(quotient) << certificate_bits;
+            // Containment in k +/- C/M proves the bound AND the unique centering quotient,
+            // since C/M < 1/2. Using floor(2^60*C/M) makes this test conservative.
+            return lower + scaled_bound_ >= center && upper <= center + scaled_bound_;
+        }
+
+        template<typename Params = fast_params>
+        base_field_type::value_type export_direct(typename Params::limb_array &sum, std::size_t quotient) const {
+            add_export_product(sum, export_corrections_[quotient], 1);
+            // sum = (sum(d_i*M_i)-k*M)*R^2 mod p, and sum < 2^54*p < R*p for R=2^256.
+            // One existing REDC therefore yields a canonical Montgomery coordinate directly,
+            // without materializing the wide CRT integer, folding, or a second field conversion.
+            direct_weight_type reduced;
+            algebra::fields::detail::fp12_fast::montgomery_reduce<Params>(reduced.data(), sum);
+            base_field_type::value_type result;
+            std::copy(reduced.begin(), reduced.end(), result.data.backend().base_data().limbs());
+            return result;
+        }
+
+        template<bool UseFma, bool Weighted, bool Direct = direct_export_supported>
         void reconstruct_impl(std::span<value_type> output, std::span<const double> residues,
                               std::size_t stride) const {
             for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
                 for (std::size_t offset = 0; offset < output.size();) {
                     const std::size_t count = std::min(block_size, output.size() - offset);
-                    std::array<integer_type, block_size> sums {};
+                    using accumulator_type = std::conditional_t<Direct, fast_params::limb_array, integer_type>;
+                    std::array<accumulator_type, block_size> sums {};
+                    std::array<std::uint64_t, block_size> lower {};
+                    std::array<std::array<std::uint64_t, block_size>, small_prime_fft_primes.size()> saved_digits;
                     for (std::size_t prime = 0; prime < primes_.size(); ++prime) {
                         const auto &context = primes_[prime];
                         const auto &arithmetic = context.arithmetic;
                         const double modulus = static_cast<double>(arithmetic.modulus());
                         const double *source =
                             residues.data() + (prime * field_type::arity + coordinate) * stride + offset;
+                        const auto accumulate = [&](std::size_t i, std::uint64_t digit) {
+                            if constexpr (Direct) {
+                                using wide_type = algebra::fields::detail::fp12_fast::wide_limb;
+                                saved_digits[prime][i] = digit;
+                                lower[i] += static_cast<std::uint64_t>(
+                                    (wide_type(digit) * context.certificate_reciprocal) >> 50);
+                                add_export_product(sums[i], context.export_weight, digit);
+                            } else {
+                                add_cofactor_product(sums[i], context.cofactor, digit);
+                            }
+                        };
                         std::size_t i = 0;
 #if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
                         if constexpr (UseFma) {
@@ -359,15 +494,16 @@ namespace nil::crypto3::math::detail {
                                 const __m256d inverse = _mm256_set1_pd(context.inverse);
                                 const __m256d q = _mm256_set1_pd(modulus);
                                 for (; count - i >= 4; i += 4) {
-                                    __m256d digits =
-                                        packed.multiply_fma(packed.reduce_fma(_mm256_loadu_pd(source + i)), inverse);
+                                    __m256d digits = packed.reduce_fma(_mm256_loadu_pd(source + i));
+                                    if constexpr (!Weighted) {
+                                        digits = packed.multiply_fma(digits, inverse);
+                                    }
                                     const __m256d negative = _mm256_cmp_pd(digits, _mm256_setzero_pd(), _CMP_LT_OQ);
                                     digits = _mm256_add_pd(digits, _mm256_and_pd(negative, q));
                                     std::array<double, 4> canonical;
                                     _mm256_storeu_pd(canonical.data(), digits);
                                     for (std::size_t lane = 0; lane < canonical.size(); ++lane) {
-                                        add_cofactor_product(sums[i + lane], context.cofactor,
-                                                             static_cast<std::uint64_t>(canonical[lane]));
+                                        accumulate(i + lane, static_cast<std::uint64_t>(canonical[lane]));
                                     }
                                 }
                             }
@@ -376,36 +512,38 @@ namespace nil::crypto3::math::detail {
                         for (; i < count; ++i) {
                             double digit;
                             if constexpr (UseFma) {
-                                digit = arithmetic.multiply_fma(arithmetic.reduce_fma(source[i]), context.inverse);
+                                digit = arithmetic.reduce_fma(source[i]);
+                                if constexpr (!Weighted) {
+                                    digit = arithmetic.multiply_fma(digit, context.inverse);
+                                }
                             } else {
-                                digit =
-                                    arithmetic.multiply_integer(arithmetic.reduce_integer(source[i]), context.inverse);
+                                digit = arithmetic.reduce_integer(source[i]);
+                                if constexpr (!Weighted) {
+                                    digit = arithmetic.multiply_integer(digit, context.inverse);
+                                }
                             }
                             // Both operands have magnitude < q, so the product remainder is in (-q,q).
                             // Canonical digits give 0 <= digit*(M/q) < M and bound the complete sum.
                             const auto canonical = static_cast<std::uint64_t>(digit < 0 ? digit + modulus : digit);
-                            add_cofactor_product(sums[i], context.cofactor, canonical);
+                            accumulate(i, canonical);
                         }
                     }
                     for (std::size_t i = 0; i < count; ++i) {
-                        auto &magnitude = sums[i];
-                        // The sum is < prime_count*M. Subtract binary multiples of M from high to low
-                        // to obtain [0,M), using at most four comparisons/subtractions and no division.
-                        for (std::size_t bit = std::bit_width(primes_.size() - 1); bit-- > 0;) {
-                            if (magnitude >= multiples_[bit]) {
-                                magnitude -= multiples_[bit];
+                        auto &destination = output[offset + i].coordinate(coordinate);
+                        if constexpr (Direct) {
+                            std::size_t quotient;
+                            if (certify_export(lower[i], quotient)) {
+                                destination = export_direct(sums[i], quotient);
+                            } else {
+                                integer_type exact_sum = 0;
+                                for (std::size_t prime = 0; prime < primes_.size(); ++prime) {
+                                    add_cofactor_product(exact_sum, primes_[prime].cofactor, saved_digits[prime][i]);
+                                }
+                                destination = export_exact(exact_sum);
                             }
+                        } else {
+                            destination = export_exact(sums[i]);
                         }
-                        const bool negative = magnitude > half_modulus_;
-                        if (negative) {
-                            magnitude = multiples_[0] - magnitude;
-                        }
-                        if (magnitude > bound_) {
-                            throw std::overflow_error(
-                                "bn254_small_prime_fft_reconstructor: coefficient exceeds CRT bound");
-                        }
-                        const auto value = export_magnitude(magnitude);
-                        output[offset + i].coordinate(coordinate) = negative ? -value : value;
                     }
                     offset += count;
                 }
@@ -418,6 +556,8 @@ namespace nil::crypto3::math::detail {
         integer_type bound_;
         std::size_t accumulator_limbs_;
         export_type export_radix_;
+        std::uint64_t scaled_bound_;
+        std::array<direct_weight_type, small_prime_fft_primes.size() + 1> export_corrections_ {};
     };
 
     /**
