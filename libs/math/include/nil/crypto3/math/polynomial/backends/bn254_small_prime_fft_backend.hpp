@@ -288,7 +288,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                         auto destination = std::span<double>(left_spectrum_).subspan(offset, count);
                         pointwise_[prime].multiply_sum(destination, spectrum(2 * row), spectrum(4 + column),
                                                        spectrum(2 * row + 1), spectrum(4 + Columns + column), size,
-                                                       plan.size_inverse());
+                                                       normalizations_[plan_offset + prime]);
                         for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
                             plan.inverse_fft(destination.subspan(coordinate * size, size), false);
                         }
@@ -296,8 +296,8 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                     const std::size_t index = row * Columns + column;
                     auto &result = results[index];
                     result.resize(result_sizes[index]);
-                    reconstructor_.reconstruct(std::span<value_type>(result.data(), result.size()), left_spectrum_,
-                                               size);
+                    reconstructor_.reconstruct_weighted(std::span<value_type>(result.data(), result.size()),
+                                                        left_spectrum_, size);
                     math::condense(result);
                 }
             }
@@ -494,6 +494,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             converter_(params.crt.prime_count), reconstructor_(params.crt, params.coefficient_bound) {
             const unsigned depth = std::countr_zero(max_transform_size_);
             plans_.reserve((depth + 1) * prime_count());
+            normalizations_.reserve((depth + 1) * prime_count());
             pointwise_.reserve(prime_count());
             for (std::size_t prime = 0; prime < prime_count(); ++prime) {
                 pointwise_.emplace_back(math::detail::small_prime_fft_primes[prime].modulus);
@@ -501,6 +502,9 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             for (unsigned level = 0; level <= depth; ++level) {
                 for (std::size_t prime = 0; prime < prime_count(); ++prime) {
                     plans_.emplace_back(prime, std::size_t(1) << level);
+                    // Prepared forward spectra stay unweighted; apply this once to the product.
+                    normalizations_.push_back(
+                        reconstructor_.weighted_normalization(prime, plans_.back().size_inverse()));
                 }
             }
         }
@@ -571,16 +575,17 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                     }
                 }
                 if constexpr (Square) {
-                    pointwise_[prime].square(a, size, plan.size_inverse());
+                    pointwise_[prime].square(a, size, normalizations_[plan_offset + prime]);
                 } else {
-                    pointwise_[prime].multiply(a, b, size, plan.size_inverse());
+                    pointwise_[prime].multiply(a, b, size, normalizations_[plan_offset + prime]);
                 }
                 for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
                     plan.inverse_fft(a.subspan(coordinate * size, size), false);
                 }
             }
             result_.resize(result_size);
-            reconstructor_.reconstruct(std::span<value_type>(result_.data(), result_size), left_spectrum_, size);
+            reconstructor_.reconstruct_weighted(std::span<value_type>(result_.data(), result_size), left_spectrum_,
+                                                size);
             if (!cyclic_dividend.empty()) {
                 // Here result_size==size and degree(V)<=2*n-2<2*size, so at most one high coefficient
                 // folds into each cell. Keep the complete difference: any uncancelled tail stays visible.
@@ -601,6 +606,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         math::detail::bn254_small_prime_fft_converter converter_;
         math::detail::bn254_small_prime_fft_reconstructor reconstructor_;
         std::vector<math::detail::small_prime_fft_plan> plans_;
+        std::vector<double> normalizations_;
         std::vector<math::detail::bn254_small_prime_fft_pointwise> pointwise_;
         std::vector<double> left_spectrum_;
         std::vector<double> right_spectrum_;

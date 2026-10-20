@@ -254,20 +254,20 @@
 #define REDC_8_LIMBS_CANCEL_LOW(I)                                         \
     /* m = data[i] * p_dash */                                             \
     "movq " T8(I, 0) ", %%rdx\n"                                           \
-    "imulq %[p_dash], %%rdx\n"                                             \
+    "imulq " PTR(constants, 4) ", %%rdx\n"                                  \
     "xor %[zero], %[zero]\n"                                               \
     /* multiply m by each modulus limb and add into the rotating window */ \
-    "mulxq %[p0], %[low], %[high]\n"                                       \
+    "mulxq " PTR(constants, 0) ", %[low], %[high]\n"                        \
     /* use dual carry chains */                                            \
     "adcx %[low], " T8(I, 0) "\n"                                          \
     "adox %[high], " T8(I, 1) "\n"                                         \
-    "mulxq %[p1], %[low], %[high]\n"                                       \
+    "mulxq " PTR(constants, 1) ", %[low], %[high]\n"                        \
     "adcx %[low], " T8(I, 1) "\n"                                          \
     "adox %[high], " T8(I, 2) "\n"                                         \
-    "mulxq %[p2], %[low], %[high]\n"                                       \
+    "mulxq " PTR(constants, 2) ", %[low], %[high]\n"                        \
     "adcx %[low], " T8(I, 2) "\n"                                          \
     "adox %[high], " T8(I, 3) "\n"                                         \
-    "mulxq %[p3], %[low], %[high]\n"                                       \
+    "mulxq " PTR(constants, 3) ", %[low], %[high]\n"                        \
     "adcx %[low], " T8(I, 3) "\n"                                          \
     /* merge OF, prior pending carry, and CF into the next live limb */    \
     "adox %[zero], %[high]\n"                                              \
@@ -697,7 +697,13 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
     template<Fp12FastParams Params>
         requires(Params::storage_limb_count == 8)
     inline void montgomery_reduce_x86(limb *result, const limb *data) {
-        GET_MODULUS_4_LIMBS(Params::base_field_type);
+        constexpr auto mod_obj = Params::base_field_type::modulus_params.get_mod_obj();
+        // One explicit address operand keeps these constants from competing with scratch
+        // registers, including default-visibility Mach-O and unoptimized builds.
+        static constexpr std::array<limb, 5> constants = {
+            limb(mod_obj.get_mod().limbs()[0]), limb(mod_obj.get_mod().limbs()[1]),
+            limb(mod_obj.get_mod().limbs()[2]), limb(mod_obj.get_mod().limbs()[3]),
+            limb(mod_obj.get_p_dash())};
         limb t0, t1, t2, t3, t4;
         limb low, high, pending, zero;
         asm volatile(
@@ -723,10 +729,10 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             "movq " T8(3, 4) ", %%rdx\n"
 
             // Try q = t - p.
-            "subq %[p0], %[low]\n"
-            "sbbq %[p1], %[high]\n"
-            "sbbq %[p2], %[zero]\n"
-            "sbbq %[p3], %%rdx\n"
+            "subq " PTR(constants, 0) ", %[low]\n"
+            "sbbq " PTR(constants, 1) ", %[high]\n"
+            "sbbq " PTR(constants, 2) ", %[zero]\n"
+            "sbbq " PTR(constants, 3) ", %%rdx\n"
 
             // If t - p did not borrow, keep q as the canonical result.
             "cmovnc %[low], " T8(0, 4) "\n"
@@ -750,11 +756,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
               [zero]"=&r"(zero)
             : [data]"r"(data),
               [result]"r"(result),
-              [p0]"m"(p0),
-              [p1]"m"(p1),
-              [p2]"m"(p2),
-              [p3]"m"(p3),
-              [p_dash]"m"(p_dash)
+              [constants]"r"(constants.data())
             : "rdx", "cc", "memory"
         );
     }
