@@ -83,6 +83,7 @@ endforeach()
 set(COMPILE_TIME_TESTS_NAMES
         "polynomial_algorithm_constraints"
         "polynomial_concepts"
+        "small_prime_fft_conversion_32bit"
         "static_matrix")
 
 foreach(TEST_NAME ${COMPILE_TIME_TESTS_NAMES})

@@ -154,6 +154,18 @@ BOOST_AUTO_TEST_CASE(canonical_values_and_chunk_boundaries_match_integer_oracle)
         values.push_back(power);
         values.push_back(power + 1);
     }
+    // Also cross limb boundaries in the stored Montgomery value a*R mod p.
+    // Multiplying by R^-1 constructs canonical inputs independently of the decoder.
+    using base_backend_type = fq::integral_type::backend_type;
+    const cpp_int radix = cpp_int(1) << (base_backend_type::limb_bits * base_backend_type::internal_limb_count);
+    const cpp_int inverse_radix = boost::multiprecision::powm(radix, cpp_int(characteristic - 2), characteristic);
+    values.push_back(inverse_radix);
+    values.push_back(((characteristic - 1) * inverse_radix) % characteristic);
+    for (unsigned bit = base_backend_type::limb_bits; bit < 254; bit += base_backend_type::limb_bits) {
+        for (int delta : {-1, 0, 1}) {
+            values.push_back((((cpp_int(1) << bit) + delta) * inverse_radix) % characteristic);
+        }
+    }
     for (const auto &prime : detail::small_prime_fft_primes) {
         for (int delta : {-1, 0, 1}) {
             values.push_back(cpp_int(prime.modulus) + delta);
