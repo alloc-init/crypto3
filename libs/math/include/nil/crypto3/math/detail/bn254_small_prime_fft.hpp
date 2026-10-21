@@ -148,7 +148,7 @@ namespace nil::crypto3::math::detail {
                             // The stored value is a*R mod p, with R = 2^256. Zero-extend it
                             // into the low half of montgomery; one reduction recovers a in [0,p).
                             typename Params::limb_array montgomery {};
-                            const auto stored = fp12_fast::load_limbs(
+                            const auto stored = fp12_fast::load_limbs<base_backend_type>(
                                 coefficients[offset + i].coordinate(coordinate).data.backend().base_data());
                             std::copy(stored.begin(), stored.end(), montgomery.begin());
                             std::array<std::uint64_t, Params::base_value_limb_count> canonical;
