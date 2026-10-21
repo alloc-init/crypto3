@@ -567,28 +567,13 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         }
     };
 
-    // Lane-wise field arithmetic on normalized radix-2^52 digits. add/subtract take canonical
-    // S-Montgomery residues and return canonical residues with the same scaling; no REDC is needed.
+    // Lane-wise conditional modulus subtraction for the radix-2^52 dot-product reduction.
     template<Fp12FastParams Params, typename Operations>
     struct montgomery_radix52_simd {
         using radix = montgomery_radix52<Params>;
         using value_type = std::array<typename Operations::value_type, radix::digits>;
 
-        static value_type load(const limb *x) {
-            value_type result;
-            for (std::size_t i = 0; i < radix::digits; ++i) {
-                result[i] = Operations::load(x + i * Operations::lanes);
-            }
-            return result;
-        }
-
-        static void store(limb *result, const value_type &x) {
-            for (std::size_t i = 0; i < radix::digits; ++i) {
-                Operations::store(result + i * Operations::lanes, x[i]);
-            }
-        }
-
-        // Also used by dot-product REDC: x may be noncanonical, but must have normalized digits and x<S.
+        // x may be noncanonical, but must have normalized digits and x<S.
         static void subtract_modulus(value_type &x) {
             const auto zero = Operations::broadcast(0);
             const auto one = Operations::broadcast(1);
@@ -604,43 +589,6 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             for (std::size_t i = 0; i < radix::digits; ++i) {
                 x[i] = Operations::select(keep, x[i], difference[i]);
             }
-        }
-
-        static value_type add(const value_type &a, const value_type &b) {
-            value_type result;
-            const auto mask = Operations::broadcast(radix::mask);
-            auto carry = Operations::broadcast(0);
-            for (std::size_t i = 0; i < radix::digits; ++i) {
-                const auto sum = Operations::add(Operations::add(a[i], b[i]), carry);
-                result[i] = Operations::bit_and(sum, mask);
-                carry = Operations::shift52(sum);
-            }
-            // a+b<2*p<2^255<S, so there is no carry beyond the fifth digit; one subtraction suffices.
-            subtract_modulus(result);
-            return result;
-        }
-
-        static value_type subtract(const value_type &a, const value_type &b) {
-            value_type result;
-            const auto zero = Operations::broadcast(0);
-            const auto one = Operations::broadcast(1);
-            const auto mask = Operations::broadcast(radix::mask);
-            auto borrow = zero;
-            for (std::size_t i = 0; i < radix::digits; ++i) {
-                const auto subtrahend = Operations::add(b[i], borrow);
-                result[i] = Operations::bit_and(Operations::subtract(a[i], subtrahend), mask);
-                borrow = Operations::select(Operations::less(a[i], subtrahend), one, zero);
-            }
-            const auto negative = Operations::less(zero, borrow);
-            auto carry = zero;
-            for (std::size_t i = 0; i < radix::digits; ++i) {
-                const auto correction = Operations::select(negative, Operations::broadcast(radix::modulus()[i]), zero);
-                const auto sum = Operations::add(Operations::add(result[i], correction), carry);
-                result[i] = Operations::bit_and(sum, mask);
-                carry = Operations::shift52(sum);
-            }
-            // A borrowed difference is S+a-b. Discarding its carry after adding p gives a-b+p in [0,p).
-            return result;
         }
     };
 

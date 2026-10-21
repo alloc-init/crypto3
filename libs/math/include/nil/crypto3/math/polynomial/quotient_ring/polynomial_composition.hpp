@@ -54,7 +54,7 @@ namespace nil::crypto3::math {
             using params = typename Value::field_type::extension_policy::fast_params;
             using kernel = algebra::fields::detail::fp12_fast::fp12_fast<params>;
             using prepared_type = typename kernel::prepared_product_operand;
-            using simd_kernel = std::conditional_t<kernel::rank23::supported, typename kernel::rank23, kernel>;
+            using simd_kernel = typename kernel::rank23;
             using limb = algebra::fields::detail::fp12_fast::limb;
 
         public:
@@ -86,7 +86,7 @@ namespace nil::crypto3::math {
                     width = std::max(width, powers[exponent].size());
                 }
 #if defined(CRYPTO3_HAS_AVX512IFMA)
-                if constexpr (params::base_value_limb_count == 4 && params::base_field_type::modulus_bits <= 254) {
+                if constexpr (simd_kernel::supported) {
                     // Cache dimensions rule out short dots and narrow polynomials. use_for_block also checks
                     // the actual nonzero outer terms before selecting either prepared kernel.
                     if (simd_lanes != 0 && width >= 4 && terms >= minimum_prepared_terms &&
@@ -157,7 +157,7 @@ namespace nil::crypto3::math {
                                  std::size_t first_block, std::size_t block_count, workspace &scratch) const {
                 assert(available() && block_count > 0 && block_count <= block_tile_size);
 #if defined(CRYPTO3_HAS_AVX512IFMA)
-                if constexpr (params::base_value_limb_count == 4 && params::base_field_type::modulus_bits <= 254) {
+                if constexpr (simd_kernel::supported) {
                     if (simd_lanes_ == 4) {
                         evaluate_simd_blocks<4>(output, outer, first_block, block_count, scratch);
                         return;

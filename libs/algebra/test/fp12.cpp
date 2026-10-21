@@ -293,116 +293,6 @@ namespace {
     }
 
     template<typename Operations>
-    void check_radix52_add_subtract() {
-        namespace fast = fields::detail::fp12_fast;
-        using params = alt_bn128_254_fp12::extension_policy::fast_params;
-        using radix = fast::montgomery_radix52<params>;
-        using arithmetic = fast::montgomery_radix52_simd<params, Operations>;
-        using boost::multiprecision::cpp_int;
-        constexpr std::size_t lanes = Operations::lanes;
-        cpp_int modulus = 0;
-        for (auto digit = radix::modulus().rbegin(); digit != radix::modulus().rend(); ++digit) {
-            modulus = (modulus << 52) + *digit;
-        }
-        std::vector<cpp_int> values {0, 1, 2, modulus - 1, modulus - 2};
-        for (unsigned digit = 1; digit < 5; ++digit) {
-            const cpp_int boundary = cpp_int(1) << (52 * digit);
-            values.push_back(boundary - 1);
-            values.push_back(boundary);
-            values.push_back(boundary + 1);
-        }
-        // Cross every radix carry/borrow boundary and modulus correction in distinct lanes.
-        for (std::size_t a = 0; a < values.size(); ++a) {
-            for (std::size_t b = 0; b < values.size(); ++b) {
-                std::array<fast::limb, 5 * lanes> left, right, sum, difference;
-                for (std::size_t lane = 0; lane < lanes; ++lane) {
-                    for (std::size_t digit = 0; digit < 5; ++digit) {
-                        left[digit * lanes + lane] =
-                            ((values[(a + lane) % values.size()] >> (52 * digit)) & radix::mask)
-                                .template convert_to<fast::limb>();
-                        right[digit * lanes + lane] =
-                            ((values[(b + 3 * lane) % values.size()] >> (52 * digit)) & radix::mask)
-                                .template convert_to<fast::limb>();
-                    }
-                }
-                arithmetic::store(sum.data(),
-                                  arithmetic::add(arithmetic::load(left.data()), arithmetic::load(right.data())));
-                arithmetic::store(difference.data(),
-                                  arithmetic::subtract(arithmetic::load(left.data()), arithmetic::load(right.data())));
-                for (std::size_t lane = 0; lane < lanes; ++lane) {
-                    cpp_int actual_sum = 0, actual_difference = 0;
-                    for (std::size_t digit = 5; digit-- > 0;) {
-                        BOOST_CHECK_LE(sum[digit * lanes + lane], radix::mask);
-                        BOOST_CHECK_LE(difference[digit * lanes + lane], radix::mask);
-                        actual_sum = (actual_sum << 52) + sum[digit * lanes + lane];
-                        actual_difference = (actual_difference << 52) + difference[digit * lanes + lane];
-                    }
-                    const auto &x = values[(a + lane) % values.size()];
-                    const auto &y = values[(b + 3 * lane) % values.size()];
-                    BOOST_CHECK(actual_sum == (x + y) % modulus);
-                    BOOST_CHECK(actual_difference == (x - y + modulus) % modulus);
-                }
-            }
-        }
-    }
-
-    template<typename Operations>
-    void check_radix52_recombination() {
-        namespace fast = fields::detail::fp12_fast;
-        using value = alt_bn128_254_fp12::value_type;
-        using params = alt_bn128_254_fp12::extension_policy::fast_params;
-        using kernel = fast::fp12_fast<params>;
-        using radix = fast::montgomery_radix52<params>;
-        constexpr std::size_t lanes = Operations::lanes, coordinates = kernel::product_coordinate_count;
-        auto maximum = radix::modulus();
-        --maximum[0];
-        boost::random::mt19937 rng(0x521254);
-        for (std::size_t pattern = 0; pattern < 58 + random_samples; ++pattern) {
-            std::array<fast::limb, coordinates * 5 * lanes> products;
-            std::array<std::array<typename kernel::base_value_type, coordinates>, lanes> scalar;
-            for (std::size_t lane = 0; lane < lanes; ++lane) {
-                for (std::size_t c = 0; c < coordinates; ++c) {
-                    typename radix::value_type packed {};
-                    if (pattern == 1 || (pattern == 2 && (c + lane) % 2)) {
-                        packed = maximum;
-                    } else if (pattern == 3 || pattern >= 58) {
-                        packed = radix::from_montgomery64(random_fp12<alt_bn128_254_fp12>(rng)
-                                                              .coordinate((c + lane) % 12)
-                                                              .data.backend()
-                                                              .base_data());
-                    } else if (pattern >= 4 && c == pattern - 4) {
-                        packed = radix::from_montgomery64(
-                            typename kernel::base_value_type(lane + 1).data.backend().base_data());
-                    }
-                    radix::to_montgomery64(scalar[lane][c].data.backend().base_data(), packed);
-                    for (std::size_t digit = 0; digit < 5; ++digit) {
-                        products[(c * 5 + digit) * lanes + lane] = packed[digit];
-                    }
-                }
-            }
-            std::array<fast::limb, 12 * 5 * lanes + 2> combined;
-            combined.fill(0xAABBCCDDEEFF0011);
-            kernel::template recombine_products52<Operations>(combined.data() + 1, products.data());
-            BOOST_CHECK_EQUAL(combined.front(), 0xAABBCCDDEEFF0011);
-            BOOST_CHECK_EQUAL(combined.back(), 0xAABBCCDDEEFF0011);
-            for (std::size_t lane = 0; lane < lanes; ++lane) {
-                value actual;
-                for (std::size_t c = 0; c < 12; ++c) {
-                    typename radix::value_type packed;
-                    for (std::size_t digit = 0; digit < 5; ++digit) {
-                        packed[digit] = combined[1 + (c * 5 + digit) * lanes + lane];
-                        BOOST_CHECK_LE(packed[digit], radix::mask);
-                    }
-                    BOOST_CHECK(std::lexicographical_compare(packed.rbegin(), packed.rend(), radix::modulus().rbegin(),
-                                                             radix::modulus().rend()));
-                    radix::to_montgomery64(actual.coordinate(c).data.backend().base_data(), packed);
-                }
-                BOOST_CHECK_EQUAL(actual, kernel::template recombine_products<value>(scalar[lane]));
-            }
-        }
-    }
-
-    template<typename Operations>
     void check_rank23_recombination() {
         namespace fast = fields::detail::fp12_fast;
         using field = alt_bn128_254_fp12;
@@ -519,13 +409,12 @@ namespace {
         }
     }
 
-    template<typename Operations, bool Rank23 = false>
-    void check_radix52_fp12_dots() {
+    template<typename Operations>
+    void check_rank23_fp12_dots() {
         namespace fast = fields::detail::fp12_fast;
         using value = alt_bn128_254_fp12::value_type;
         using params = alt_bn128_254_fp12::extension_policy::fast_params;
-        using tower_kernel = fast::fp12_fast<params>;
-        using kernel = std::conditional_t<Rank23, typename tower_kernel::rank23, tower_kernel>;
+        using kernel = typename fast::fp12_fast<params>::rank23;
         using radix = fast::montgomery_radix52<params>;
         constexpr std::size_t lanes = Operations::lanes, terms = 514, coordinates = kernel::product_coordinate_count;
         constexpr std::size_t panel_stride = 2 * terms * 5 * lanes;
@@ -927,34 +816,16 @@ BOOST_AUTO_TEST_CASE(radix52_four_and_eight_lane_arithmetic_matches_reference) {
 BOOST_AUTO_TEST_CASE(radix52_rank23_matches_generic_fp12_in_four_and_eight_lanes) {
     check_rank23_recombination<scalar_ifma52_operations<4>>();
     check_rank23_recombination<scalar_ifma52_operations<8>>();
-    check_radix52_fp12_dots<scalar_ifma52_operations<4>, true>();
-    check_radix52_fp12_dots<scalar_ifma52_operations<8>, true>();
-}
-
-BOOST_AUTO_TEST_CASE(radix52_recombination_matches_scalar_tower_in_four_and_eight_lanes) {
-    check_radix52_add_subtract<scalar_ifma52_operations<4>>();
-    check_radix52_add_subtract<scalar_ifma52_operations<8>>();
-    check_radix52_recombination<scalar_ifma52_operations<4>>();
-    check_radix52_recombination<scalar_ifma52_operations<8>>();
-    check_radix52_fp12_dots<scalar_ifma52_operations<4>>();
-    check_radix52_fp12_dots<scalar_ifma52_operations<8>>();
+    check_rank23_fp12_dots<scalar_ifma52_operations<4>>();
+    check_rank23_fp12_dots<scalar_ifma52_operations<8>>();
 }
 
 #if defined(CRYPTO3_HAS_AVX512IFMA)
 BOOST_AUTO_TEST_CASE(radix52_ifma_rank23_matches_generic_fp12) {
     check_rank23_recombination<fields::detail::fp12_fast::ifma52_operations<4>>();
     check_rank23_recombination<fields::detail::fp12_fast::ifma52_operations<8>>();
-    check_radix52_fp12_dots<fields::detail::fp12_fast::ifma52_operations<4>, true>();
-    check_radix52_fp12_dots<fields::detail::fp12_fast::ifma52_operations<8>, true>();
-}
-
-BOOST_AUTO_TEST_CASE(radix52_ifma_recombination_matches_generic_fp12) {
-    check_radix52_add_subtract<fields::detail::fp12_fast::ifma52_operations<4>>();
-    check_radix52_add_subtract<fields::detail::fp12_fast::ifma52_operations<8>>();
-    check_radix52_recombination<fields::detail::fp12_fast::ifma52_operations<4>>();
-    check_radix52_recombination<fields::detail::fp12_fast::ifma52_operations<8>>();
-    check_radix52_fp12_dots<fields::detail::fp12_fast::ifma52_operations<4>>();
-    check_radix52_fp12_dots<fields::detail::fp12_fast::ifma52_operations<8>>();
+    check_rank23_fp12_dots<fields::detail::fp12_fast::ifma52_operations<4>>();
+    check_rank23_fp12_dots<fields::detail::fp12_fast::ifma52_operations<8>>();
 }
 
 BOOST_AUTO_TEST_CASE(radix52_ifma_matches_reference_in_every_lane) {
