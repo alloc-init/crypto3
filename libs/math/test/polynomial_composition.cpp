@@ -664,7 +664,7 @@ BOOST_AUTO_TEST_CASE(prepared_simd_panels_match_scalar_at_lane_and_term_boundari
             BOOST_CHECK_EQUAL(candidate.simd_lanes(), width >= 4 ? lanes : 0);
             if (width >= 4) {
                 const std::size_t expected =
-                    ((width + lanes - 1) / lanes) * lanes * 54 * 17 * 5 * sizeof(std::uint64_t);
+                    ((width + lanes - 1) / lanes) * lanes * 23 * 17 * 5 * sizeof(std::uint64_t);
                 BOOST_CHECK_EQUAL(candidate.bytes(), expected);
             }
 #else

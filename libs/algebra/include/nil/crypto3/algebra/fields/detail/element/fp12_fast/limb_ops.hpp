@@ -567,6 +567,83 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         }
     };
 
+    // Lane-wise field arithmetic on normalized radix-2^52 digits. add/subtract take canonical
+    // S-Montgomery residues and return canonical residues with the same scaling; no REDC is needed.
+    template<Fp12FastParams Params, typename Operations>
+    struct montgomery_radix52_simd {
+        using radix = montgomery_radix52<Params>;
+        using value_type = std::array<typename Operations::value_type, radix::digits>;
+
+        static value_type load(const limb *x) {
+            value_type result;
+            for (std::size_t i = 0; i < radix::digits; ++i) {
+                result[i] = Operations::load(x + i * Operations::lanes);
+            }
+            return result;
+        }
+
+        static void store(limb *result, const value_type &x) {
+            for (std::size_t i = 0; i < radix::digits; ++i) {
+                Operations::store(result + i * Operations::lanes, x[i]);
+            }
+        }
+
+        // Also used by dot-product REDC: x may be noncanonical, but must have normalized digits and x<S.
+        static void subtract_modulus(value_type &x) {
+            const auto zero = Operations::broadcast(0);
+            const auto one = Operations::broadcast(1);
+            const auto mask = Operations::broadcast(radix::mask);
+            value_type difference;
+            auto borrow = zero;
+            for (std::size_t i = 0; i < radix::digits; ++i) {
+                const auto subtrahend = Operations::add(Operations::broadcast(radix::modulus()[i]), borrow);
+                difference[i] = Operations::bit_and(Operations::subtract(x[i], subtrahend), mask);
+                borrow = Operations::select(Operations::less(x[i], subtrahend), one, zero);
+            }
+            const auto keep = Operations::less(zero, borrow);
+            for (std::size_t i = 0; i < radix::digits; ++i) {
+                x[i] = Operations::select(keep, x[i], difference[i]);
+            }
+        }
+
+        static value_type add(const value_type &a, const value_type &b) {
+            value_type result;
+            const auto mask = Operations::broadcast(radix::mask);
+            auto carry = Operations::broadcast(0);
+            for (std::size_t i = 0; i < radix::digits; ++i) {
+                const auto sum = Operations::add(Operations::add(a[i], b[i]), carry);
+                result[i] = Operations::bit_and(sum, mask);
+                carry = Operations::shift52(sum);
+            }
+            // a+b<2*p<2^255<S, so there is no carry beyond the fifth digit; one subtraction suffices.
+            subtract_modulus(result);
+            return result;
+        }
+
+        static value_type subtract(const value_type &a, const value_type &b) {
+            value_type result;
+            const auto zero = Operations::broadcast(0);
+            const auto one = Operations::broadcast(1);
+            const auto mask = Operations::broadcast(radix::mask);
+            auto borrow = zero;
+            for (std::size_t i = 0; i < radix::digits; ++i) {
+                const auto subtrahend = Operations::add(b[i], borrow);
+                result[i] = Operations::bit_and(Operations::subtract(a[i], subtrahend), mask);
+                borrow = Operations::select(Operations::less(a[i], subtrahend), one, zero);
+            }
+            const auto negative = Operations::less(zero, borrow);
+            auto carry = zero;
+            for (std::size_t i = 0; i < radix::digits; ++i) {
+                const auto correction = Operations::select(negative, Operations::broadcast(radix::modulus()[i]), zero);
+                const auto sum = Operations::add(Operations::add(result[i], correction), carry);
+                result[i] = Operations::bit_and(sum, mask);
+                carry = Operations::shift52(sum);
+            }
+            // A borrowed difference is S+a-b. Discarding its carry after adding p gives a-b+p in [0,p).
+            return result;
+        }
+    };
+
     // Left is count consecutive five-digit scalars. Right is [term][digit][lane]; indices selects
     // nonzero outer terms without repacking the cached panels. All digits are canonical S-Montgomery inputs.
     // Result has [digit][lane] layout. Padded coefficient lanes are zero and never read past a panel.
@@ -578,26 +655,12 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         constexpr std::size_t lanes = Operations::lanes;
         const auto zero = Operations::broadcast(0);
         const auto mask = Operations::broadcast(radix::mask);
-        const auto one = Operations::broadcast(1);
         const auto inverse = Operations::broadcast(radix::p_dash());
         std::array<vector, 5> modulus, total;
         for (std::size_t i = 0; i < 5; ++i) {
             modulus[i] = Operations::broadcast(radix::modulus()[i]);
             total[i] = zero;
         }
-        const auto subtract = [&](std::array<vector, 5> &x) {
-            std::array<vector, 5> difference;
-            auto borrow = zero;
-            for (std::size_t i = 0; i < 5; ++i) {
-                const auto subtrahend = Operations::add(modulus[i], borrow);
-                difference[i] = Operations::bit_and(Operations::subtract(x[i], subtrahend), mask);
-                borrow = Operations::select(Operations::less(x[i], subtrahend), one, zero);
-            }
-            const auto keep = Operations::less(zero, borrow);
-            for (std::size_t i = 0; i < 5; ++i) {
-                x[i] = Operations::select(keep, x[i], difference[i]);
-            }
-        };
         for (std::size_t first = 0; first < count;) {
             const std::size_t terms = std::min(radix::max_terms, count - first);
             std::array<vector, 10> t;
@@ -639,7 +702,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             }
             reduced[4] = t[9];
             for (unsigned i = 0; i < 4; ++i) {
-                subtract(reduced);
+                montgomery_radix52_simd<Params, Operations>::subtract_modulus(reduced);
             }
             auto carry = zero;
             for (std::size_t i = 0; i < 5; ++i) {
@@ -647,7 +710,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                 total[i] = Operations::bit_and(sum, mask);
                 carry = Operations::shift52(sum);
             }
-            subtract(total);
+            montgomery_radix52_simd<Params, Operations>::subtract_modulus(total);
             first += terms;
         }
         for (std::size_t i = 0; i < 5; ++i) {

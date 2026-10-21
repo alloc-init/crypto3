@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <iterator>
@@ -26,6 +27,131 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         // multiplying corresponding entries and applying recombine_products gives the Fp12 product.
         static constexpr std::size_t product_coordinate_count = 54;
         using prepared_product_operand = std::array<base_backend_type, product_coordinate_count>;
+
+        // BN254 has v=w^2 and u=w^6-9, hence w^12-18*w^6+82=0. Evaluate
+        // degree-11 operands at 0,+1,-1,...,+11,-11: their degree-22 product is
+        // determined by 23 pointwise products, also after summing any number of operands.
+        struct rank23 {
+            static constexpr bool supported = Params::xi == std::array {9, 1} && Params::u_squared == -1 &&
+                                              Params::base_value_limb_count == 4 &&
+                                              Params::base_field_type::modulus_bits <= 254;
+            static constexpr std::size_t product_coordinate_count = 23;
+            using prepared_product_operand = std::array<base_backend_type, product_coordinate_count>;
+
+            template<typename Fp12Value>
+            static prepared_product_operand prepare_product_operand(const Fp12Value &x) {
+                static_assert(supported);
+                std::array<base_value_type, 12> flat;
+                for (std::size_t w = 0; w < 2; ++w) {
+                    for (std::size_t v = 0; v < 3; ++v) {
+                        const auto &a = x.data[w].data[v].data;
+                        flat[2 * v + w] = a[0] - (a[1].doubled().doubled().doubled() + a[1]);
+                        flat[6 + 2 * v + w] = a[1];
+                    }
+                }
+                prepared_product_operand result;
+                result[0] = flat[0].data.backend().base_data();
+                // Reuse even/odd evaluations for each +/- pair. All arithmetic is canonical
+                // Montgomery arithmetic; no integer coefficient growth enters the dot kernel.
+                for (std::size_t point = 1; point <= 11; ++point) {
+                    const base_value_type t(point), t_squared(point * point);
+                    auto even = flat[10], odd = flat[11];
+                    for (std::size_t j = 5; j > 0; --j) {
+                        if (point != 1) {
+                            even *= t_squared;
+                            odd *= t_squared;
+                        }
+                        even += flat[2 * (j - 1)];
+                        odd += flat[2 * (j - 1) + 1];
+                    }
+                    if (point != 1) {
+                        odd *= t;
+                    }
+                    result[2 * point - 1] = (even + odd).data.backend().base_data();
+                    result[2 * point] = (even - odd).data.backend().base_data();
+                }
+                return result;
+            }
+
+            // Input/output: [coordinate][digit][lane], canonical residues scaled by S=2^260.
+            // Fold interpolation, reduction modulo w^12-18*w^6+82, and the tower conversion
+            // into a fixed 12-by-23 map. The existing bounded dot kernel applies each row;
+            // only the caller's twelve final coordinates need conversion back to R=2^256.
+            template<typename Operations>
+            static void recombine_products52(limb *result, const limb *products) {
+                static_assert(supported);
+                using radix = montgomery_radix52<Params>;
+                constexpr std::size_t count = product_coordinate_count;
+                static const auto weights = [] {
+                    std::array<limb, 12 * count * radix::digits> packed;
+                    std::array<base_value_type, count> points;
+                    points[0] = base_value_type::zero();
+                    for (std::size_t i = 1; i < count; ++i) {
+                        points[i] = base_value_type((i + 1) / 2);
+                        if (i % 2 == 0) {
+                            points[i] = -points[i];
+                        }
+                    }
+                    // Fixed-size Lagrange basis construction keeps algebra independent of the
+                    // higher-level math polynomial module. Initialization happens once per kernel.
+                    for (std::size_t i = 0; i < count; ++i) {
+                        std::array<base_value_type, count> basis {};
+                        basis[0] = base_value_type::one();
+                        auto denominator = base_value_type::one();
+                        std::size_t degree = 0;
+                        for (std::size_t j = 0; j < count; ++j) {
+                            if (i == j) {
+                                continue;
+                            }
+                            basis[degree + 1] = basis[degree];
+                            for (std::size_t k = degree; k > 0; --k) {
+                                basis[k] = basis[k - 1] - points[j] * basis[k];
+                            }
+                            basis[0] *= -points[j];
+                            denominator *= points[i] - points[j];
+                            ++degree;
+                        }
+                        const auto inverse = denominator.inversed();
+                        for (auto &coefficient : basis) {
+                            coefficient *= inverse;
+                        }
+                        // Descending reduction also handles degrees 18..22, whose first
+                        // reduction still contributes to degrees at least twelve.
+                        for (std::size_t k = count - 1; k >= 12; --k) {
+                            basis[k - 6] += base_value_type(18) * basis[k];
+                            basis[k - 12] -= base_value_type(82) * basis[k];
+                        }
+                        for (std::size_t w = 0; w < 2; ++w) {
+                            for (std::size_t v = 0; v < 3; ++v) {
+                                const auto &imag = basis[6 + 2 * v + w];
+                                const std::array<base_value_type, 2> tower = {
+                                    basis[2 * v + w] + base_value_type(9) * imag, imag};
+                                for (std::size_t u = 0; u < 2; ++u) {
+                                    const auto digits = radix::from_montgomery64(tower[u].data.backend().base_data());
+                                    const std::size_t offset = ((6 * w + 2 * v + u) * count + i) * radix::digits;
+                                    std::copy(digits.begin(), digits.end(), packed.begin() + offset);
+                                }
+                            }
+                        }
+                    }
+                    return packed;
+                }();
+                static constexpr auto indices = [] {
+                    std::array<std::size_t, count> result {};
+                    for (std::size_t i = 0; i < count; ++i) {
+                        result[i] = i;
+                    }
+                    return result;
+                }();
+                // Each interpolation dot has only 23 canonical terms, within the existing
+                // 256-term IFMA bound. Its Montgomery reduction preserves the S scaling.
+                for (std::size_t c = 0; c < 12; ++c) {
+                    montgomery_inner_product52<Params, Operations>(result + c * radix::digits * Operations::lanes,
+                                                                   weights.data() + c * count * radix::digits, products,
+                                                                   indices.data(), count);
+                }
+            }
+        };
 
         // Packed input-side Fp2 value: two canonical Fp coefficients.
         struct fp2_base {
@@ -351,6 +477,72 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             const auto &bd = outer[1];
             const fp6_value_type v_bd(mul_xi(bd.data[2]), bd.data[0], bd.data[1]);
             return Fp12Value(ac + v_bd, outer[2] - ac - bd);
+        }
+
+        // The same 54-to-12 tower map as recombine_products, applied lane-wise before radix conversion.
+        // Input and output use [coordinate][digit][lane] layout. Every intermediate remains canonical
+        // with Montgomery factor S; only the caller's twelve final coordinates need conversion to R.
+        template<typename Operations>
+        static void recombine_products52(limb *result, const limb *products) {
+            using arithmetic = montgomery_radix52_simd<Params, Operations>;
+            using base = typename arithmetic::value_type;
+            using fp2 = std::array<base, 2>;
+            using fp6 = std::array<fp2, 3>;
+            constexpr std::size_t stride = montgomery_radix52<Params>::digits * Operations::lanes;
+            const auto add = [](const fp2 &a, const fp2 &b) -> fp2 {
+                return {arithmetic::add(a[0], b[0]), arithmetic::add(a[1], b[1])};
+            };
+            const auto subtract = [](const fp2 &a, const fp2 &b) -> fp2 {
+                return {arithmetic::subtract(a[0], b[0]), arithmetic::subtract(a[1], b[1])};
+            };
+            const auto mul_xi = [&](const fp2 &x) -> fp2 {
+                if constexpr (Params::xi == std::array {9, 1} && Params::u_squared == -1) {
+                    auto times_8 = add(x, x);
+                    times_8 = add(times_8, times_8);
+                    times_8 = add(times_8, times_8);
+                    const auto times_9 = add(times_8, x);
+                    return {arithmetic::subtract(times_9[0], x[1]), arithmetic::add(x[0], times_9[1])};
+                } else if constexpr (Params::xi == std::array {1, 1} && Params::u_squared == -1) {
+                    return {arithmetic::subtract(x[0], x[1]), arithmetic::add(x[0], x[1])};
+                } else if constexpr (Params::xi == std::array {0, 1} && Params::u_squared == -5) {
+                    auto times_4 = arithmetic::add(x[1], x[1]);
+                    times_4 = arithmetic::add(times_4, times_4);
+                    const auto zero = arithmetic::subtract(x[0], x[0]);
+                    return {arithmetic::subtract(zero, arithmetic::add(times_4, x[1])), x[0]};
+                } else {
+                    static_assert(Params::xi != Params::xi, "unsupported Fp2 non-residue");
+                }
+            };
+            std::array<fp6, 3> outer;
+            for (std::size_t w = 0; w < outer.size(); ++w) {
+                std::array<fp2, 6> p;
+                for (std::size_t v = 0; v < p.size(); ++v) {
+                    const std::size_t offset = (18 * w + 3 * v) * stride;
+                    const auto ac = arithmetic::load(products + offset);
+                    const auto bd = arithmetic::load(products + offset + stride);
+                    auto real = arithmetic::subtract(ac, bd);
+                    if constexpr (Params::u_squared == -5) {
+                        auto times_4 = arithmetic::add(bd, bd);
+                        times_4 = arithmetic::add(times_4, times_4);
+                        real = arithmetic::subtract(real, times_4);
+                    } else {
+                        static_assert(Params::u_squared == -1, "unsupported quadratic non-residue");
+                    }
+                    p[v] = {real, arithmetic::subtract(
+                                      arithmetic::subtract(arithmetic::load(products + offset + 2 * stride), ac), bd)};
+                }
+                outer[w] = {add(p[0], mul_xi(subtract(subtract(p[5], p[1]), p[2]))),
+                            add(subtract(subtract(p[3], p[0]), p[1]), mul_xi(p[2])),
+                            add(subtract(subtract(p[4], p[0]), p[2]), p[1])};
+            }
+            for (std::size_t v = 0; v < 3; ++v) {
+                const auto low = add(outer[0][v], v == 0 ? mul_xi(outer[1][2]) : outer[1][v - 1]);
+                const auto high = subtract(subtract(outer[2][v], outer[0][v]), outer[1][v]);
+                for (std::size_t u = 0; u < 2; ++u) {
+                    arithmetic::store(result + (2 * v + u) * stride, low[u]);
+                    arithmetic::store(result + (6 + 2 * v + u) * stride, high[u]);
+                }
+            }
         }
 
         // Preconditions: both ranges contain prepared canonical operands; the right range is at least as long
