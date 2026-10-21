@@ -567,6 +567,31 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         }
     };
 
+    // Lane-wise conditional modulus subtraction for the radix-2^52 dot-product reduction.
+    template<Fp12FastParams Params, typename Operations>
+    struct montgomery_radix52_simd {
+        using radix = montgomery_radix52<Params>;
+        using value_type = std::array<typename Operations::value_type, radix::digits>;
+
+        // x may be noncanonical, but must have normalized digits and x<S.
+        static void subtract_modulus(value_type &x) {
+            const auto zero = Operations::broadcast(0);
+            const auto one = Operations::broadcast(1);
+            const auto mask = Operations::broadcast(radix::mask);
+            value_type difference;
+            auto borrow = zero;
+            for (std::size_t i = 0; i < radix::digits; ++i) {
+                const auto subtrahend = Operations::add(Operations::broadcast(radix::modulus()[i]), borrow);
+                difference[i] = Operations::bit_and(Operations::subtract(x[i], subtrahend), mask);
+                borrow = Operations::select(Operations::less(x[i], subtrahend), one, zero);
+            }
+            const auto keep = Operations::less(zero, borrow);
+            for (std::size_t i = 0; i < radix::digits; ++i) {
+                x[i] = Operations::select(keep, x[i], difference[i]);
+            }
+        }
+    };
+
     // Left is count consecutive five-digit scalars. Right is [term][digit][lane]; indices selects
     // nonzero outer terms without repacking the cached panels. All digits are canonical S-Montgomery inputs.
     // Result has [digit][lane] layout. Padded coefficient lanes are zero and never read past a panel.
@@ -578,26 +603,12 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         constexpr std::size_t lanes = Operations::lanes;
         const auto zero = Operations::broadcast(0);
         const auto mask = Operations::broadcast(radix::mask);
-        const auto one = Operations::broadcast(1);
         const auto inverse = Operations::broadcast(radix::p_dash());
         std::array<vector, 5> modulus, total;
         for (std::size_t i = 0; i < 5; ++i) {
             modulus[i] = Operations::broadcast(radix::modulus()[i]);
             total[i] = zero;
         }
-        const auto subtract = [&](std::array<vector, 5> &x) {
-            std::array<vector, 5> difference;
-            auto borrow = zero;
-            for (std::size_t i = 0; i < 5; ++i) {
-                const auto subtrahend = Operations::add(modulus[i], borrow);
-                difference[i] = Operations::bit_and(Operations::subtract(x[i], subtrahend), mask);
-                borrow = Operations::select(Operations::less(x[i], subtrahend), one, zero);
-            }
-            const auto keep = Operations::less(zero, borrow);
-            for (std::size_t i = 0; i < 5; ++i) {
-                x[i] = Operations::select(keep, x[i], difference[i]);
-            }
-        };
         for (std::size_t first = 0; first < count;) {
             const std::size_t terms = std::min(radix::max_terms, count - first);
             std::array<vector, 10> t;
@@ -639,7 +650,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             }
             reduced[4] = t[9];
             for (unsigned i = 0; i < 4; ++i) {
-                subtract(reduced);
+                montgomery_radix52_simd<Params, Operations>::subtract_modulus(reduced);
             }
             auto carry = zero;
             for (std::size_t i = 0; i < 5; ++i) {
@@ -647,7 +658,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                 total[i] = Operations::bit_and(sum, mask);
                 carry = Operations::shift52(sum);
             }
-            subtract(total);
+            montgomery_radix52_simd<Params, Operations>::subtract_modulus(total);
             first += terms;
         }
         for (std::size_t i = 0; i < 5; ++i) {

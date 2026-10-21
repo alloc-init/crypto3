@@ -54,6 +54,7 @@ namespace nil::crypto3::math {
             using params = typename Value::field_type::extension_policy::fast_params;
             using kernel = algebra::fields::detail::fp12_fast::fp12_fast<params>;
             using prepared_type = typename kernel::prepared_product_operand;
+            using simd_kernel = typename kernel::rank23;
             using limb = algebra::fields::detail::fp12_fast::limb;
 
         public:
@@ -85,7 +86,7 @@ namespace nil::crypto3::math {
                     width = std::max(width, powers[exponent].size());
                 }
 #if defined(CRYPTO3_HAS_AVX512IFMA)
-                if constexpr (params::base_value_limb_count == 4 && params::base_field_type::modulus_bits <= 254) {
+                if constexpr (simd_kernel::supported) {
                     // Cache dimensions rule out short dots and narrow polynomials. use_for_block also checks
                     // the actual nonzero outer terms before selecting either prepared kernel.
                     if (simd_lanes != 0 && width >= 4 && terms >= minimum_prepared_terms &&
@@ -156,7 +157,7 @@ namespace nil::crypto3::math {
                                  std::size_t first_block, std::size_t block_count, workspace &scratch) const {
                 assert(available() && block_count > 0 && block_count <= block_tile_size);
 #if defined(CRYPTO3_HAS_AVX512IFMA)
-                if constexpr (params::base_value_limb_count == 4 && params::base_field_type::modulus_bits <= 254) {
+                if constexpr (simd_kernel::supported) {
                     if (simd_lanes_ == 4) {
                         evaluate_simd_blocks<4>(output, outer, first_block, block_count, scratch);
                         return;
@@ -218,7 +219,7 @@ namespace nil::crypto3::math {
             bool prepare_simd(const std::vector<Polynomial> &powers, std::size_t width, std::size_t terms,
                               std::size_t byte_limit, std::size_t lanes) {
                 using radix = algebra::fields::detail::fp12_fast::montgomery_radix52<params>;
-                constexpr std::size_t coordinates = kernel::product_coordinate_count;
+                constexpr std::size_t coordinates = simd_kernel::product_coordinate_count;
                 const std::size_t panel_count = 1 + (width - 1) / lanes;
                 const std::size_t stride = coordinates * 5 * lanes;
                 const std::size_t capacity = std::min(byte_limit / sizeof(limb), simd_coefficients_.max_size());
@@ -234,7 +235,7 @@ namespace nil::crypto3::math {
                         if (coefficient >= powers[exponent].size()) {
                             continue;
                         }
-                        const auto prepared = kernel::prepare_product_operand(powers[exponent][coefficient]);
+                        const auto prepared = simd_kernel::prepare_product_operand(powers[exponent][coefficient]);
                         for (std::size_t coordinate = 0; coordinate < coordinates; ++coordinate) {
                             const auto packed = radix::from_montgomery64(prepared[coordinate]);
                             const std::size_t offset = ((panel * coordinates + coordinate) * terms + exponent - 1) * 5;
@@ -255,7 +256,7 @@ namespace nil::crypto3::math {
                                       std::size_t first_block, std::size_t block_count, workspace &scratch) const {
                 namespace fast = algebra::fields::detail::fp12_fast;
                 using radix = fast::montgomery_radix52<params>;
-                constexpr std::size_t coordinates = kernel::product_coordinate_count;
+                constexpr std::size_t coordinates = simd_kernel::product_coordinate_count;
                 bool any_active = false;
                 for (std::size_t block = 0; block < block_count; ++block) {
                     const std::size_t first = (first_block + block) * (terms_ + 1);
@@ -274,7 +275,7 @@ namespace nil::crypto3::math {
                     }
                     scalars.resize(indices.size() * coordinates * 5);
                     for (std::size_t term = 0; term < indices.size(); ++term) {
-                        const auto prepared = kernel::prepare_product_operand(outer[first + indices[term] + 1]);
+                        const auto prepared = simd_kernel::prepare_product_operand(outer[first + indices[term] + 1]);
                         for (std::size_t coordinate = 0; coordinate < coordinates; ++coordinate) {
                             const auto packed = radix::from_montgomery64(prepared[coordinate]);
                             std::copy(packed.begin(), packed.end(),
@@ -287,9 +288,8 @@ namespace nil::crypto3::math {
                 }
                 for (std::size_t first = 0; any_active && first < width_;) {
                     const std::size_t active_lanes = std::min(Lanes, width_ - first);
-                    std::array<std::array<std::array<typename kernel::base_value_type, coordinates>, Lanes>,
-                               block_tile_size>
-                        products;
+                    // Keep the dot products in canonical radix-52 form until tower recombination.
+                    std::array<std::array<limb, coordinates * 5 * Lanes>, block_tile_size> products;
                     for (std::size_t coordinate = 0; coordinate < coordinates; ++coordinate) {
                         const limb *right = simd_coefficients_.data() +
                                             ((first / Lanes * coordinates + coordinate) * terms_) * 5 * Lanes;
@@ -299,25 +299,28 @@ namespace nil::crypto3::math {
                             if (indices.empty()) {
                                 continue;
                             }
-                            std::array<limb, 5 * Lanes> reduced;
                             fast::montgomery_inner_product52<params, fast::ifma52_operations<Lanes>>(
-                                reduced.data(), scratch.simd_scalars[block].data() + coordinate * indices.size() * 5,
-                                right, indices.data(), indices.size());
-                            for (std::size_t lane = 0; lane < active_lanes; ++lane) {
-                                typename radix::value_type packed;
-                                for (std::size_t digit = 0; digit < 5; ++digit) {
-                                    packed[digit] = reduced[digit * Lanes + lane];
-                                }
-                                radix::to_montgomery64(products[block][lane][coordinate].data.backend().base_data(),
-                                                       packed);
-                            }
+                                products[block].data() + coordinate * 5 * Lanes,
+                                scratch.simd_scalars[block].data() + coordinate * indices.size() * 5, right,
+                                indices.data(), indices.size());
                         }
                     }
                     for (std::size_t block = 0; block < block_count; ++block) {
                         if (!scratch.exponents[block].empty()) {
+                            std::array<limb, 12 * 5 * Lanes> combined;
+                            simd_kernel::template recombine_products52<fast::ifma52_operations<Lanes>>(
+                                combined.data(), products[block].data());
                             for (std::size_t lane = 0; lane < active_lanes; ++lane) {
-                                output[block][first + lane] +=
-                                    kernel::template recombine_products<Value>(products[block][lane]);
+                                Value value;
+                                for (std::size_t coordinate = 0; coordinate < 12; ++coordinate) {
+                                    typename radix::value_type packed;
+                                    for (std::size_t digit = 0; digit < 5; ++digit) {
+                                        packed[digit] = combined[(coordinate * 5 + digit) * Lanes + lane];
+                                    }
+                                    radix::to_montgomery64(value.coordinate(coordinate).data.backend().base_data(),
+                                                           packed);
+                                }
+                                output[block][first + lane] += value;
                             }
                         }
                     }
@@ -344,7 +347,8 @@ namespace nil::crypto3::math {
      * maximum_outer_coefficient_count coefficients. A divisor context used for later compositions must represent the
      * same polynomial B and contain sufficient inverse precision.
      *
-     * Supported Fp12 coefficients may additionally cache their 54 prepared base-field forms. The context's
+     * Supported Fp12 coefficients may additionally cache prepared base-field forms (23 for BN254 SIMD,
+     * 54 for the scalar tower kernel). The context's
      * modular_composition_prepared_byte_limit bounds this optional payload; zero, insufficient space, or an
      * unsupported coefficient type keeps the scalar path. Prepared data is owned by this object and read-only
      * during composition. Copies own independent data; scratch belongs to each composition call.

@@ -292,6 +292,200 @@ namespace {
         }
     }
 
+    template<typename Operations>
+    void check_rank23_recombination() {
+        namespace fast = fields::detail::fp12_fast;
+        using field = alt_bn128_254_fp12;
+        using value = field::value_type;
+        using params = field::extension_policy::fast_params;
+        using kernel = typename fast::fp12_fast<params>::rank23;
+        using base = typename fast::fp12_fast<params>::base_value_type;
+        using radix = fast::montgomery_radix52<params>;
+        constexpr std::size_t lanes = Operations::lanes, count = kernel::product_coordinate_count;
+        static_assert(count == 23);
+        // Independent interpolation oracle: evaluate each Lagrange polynomial directly at
+        // the tower element w using generic Fp12 multiplication. No flat-basis reduction or
+        // production interpolation weights are used to construct the expected result.
+        std::array<base, count> points;
+        points[0] = base::zero();
+        for (std::size_t i = 1; i < count; ++i) {
+            points[i] = base((i + 1) / 2);
+            if (i % 2 == 0) {
+                points[i] = -points[i];
+            }
+        }
+        std::array<value, count> weights;
+        for (std::size_t i = 0; i < count; ++i) {
+            weights[i] = value::one();
+            auto denominator = base::one();
+            for (std::size_t j = 0; j < count; ++j) {
+                if (i != j) {
+                    auto factor = value::zero();
+                    factor.coordinate(6) = base::one();    // w
+                    factor.coordinate(0) = -points[j];
+                    weights[i] = generic_fp12_mul<field>(weights[i], factor);
+                    denominator *= points[i] - points[j];
+                }
+            }
+            auto inverse = value::zero();
+            inverse.coordinate(0) = denominator.inversed();
+            weights[i] = generic_fp12_mul<field>(weights[i], inverse);
+        }
+        auto maximum = radix::modulus();
+        --maximum[0];
+        boost::random::mt19937 rng(0x2312);
+        // Every interpolation basis vector, maximum raw residues, all 144 tower basis
+        // products, boundary pairs, and random products; each lane carries independent data.
+        for (std::size_t pattern = 0; pattern < 26 + 144 + 36 + random_samples; ++pattern) {
+            std::array<fast::limb, count * 5 * lanes> products {};
+            std::array<value, lanes> expected;
+            expected.fill(value::zero());
+            for (std::size_t lane = 0; lane < lanes; ++lane) {
+                std::array<base, count> scalar;
+                if (pattern < 26) {
+                    for (std::size_t i = 0; i < count; ++i) {
+                        if (pattern == 24 || (pattern == 25 && (i + lane) % 2)) {
+                            radix::to_montgomery64(scalar[i].data.backend().base_data(), maximum);
+                        } else {
+                            scalar[i] = i == pattern ? base(lane + 1) : base::zero();
+                        }
+                        auto factor = value::zero();
+                        factor.coordinate(0) = scalar[i];
+                        expected[lane] += generic_fp12_mul<field>(weights[i], factor);
+                    }
+                } else {
+                    value left, right;
+                    if (pattern < 26 + 144) {
+                        left = value::zero();
+                        right = value::zero();
+                        left.coordinate((pattern - 26) / 12) = base(lane + 1);
+                        right.coordinate((pattern - 26) % 12) = base(lane + 2);
+                    } else if (pattern < 26 + 144 + 36) {
+                        left = boundary_fp12<field>((pattern - 26 - 144) / 6);
+                        right = boundary_fp12<field>((pattern - 26 - 144) % 6);
+                    } else {
+                        left = random_fp12<field>(rng);
+                        right = random_fp12<field>(rng);
+                    }
+                    const auto a = kernel::prepare_product_operand(left);
+                    const auto b = kernel::prepare_product_operand(right);
+                    for (std::size_t i = 0; i < count; ++i) {
+                        const auto &modulus = base::modulus_params.get_mod_obj().get_mod();
+                        BOOST_CHECK(eval_lt(a[i], modulus));
+                        BOOST_CHECK(eval_lt(b[i], modulus));
+                        base x, y;
+                        x.data.backend().base_data() = a[i];
+                        y.data.backend().base_data() = b[i];
+                        scalar[i] = x * y;
+                    }
+                    expected[lane] = generic_fp12_mul<field>(left, right);
+                }
+                for (std::size_t i = 0; i < count; ++i) {
+                    const auto digits = radix::from_montgomery64(scalar[i].data.backend().base_data());
+                    for (std::size_t digit = 0; digit < 5; ++digit) {
+                        products[(i * 5 + digit) * lanes + lane] = digits[digit];
+                    }
+                }
+            }
+            std::array<fast::limb, 12 * 5 * lanes + 2> combined;
+            combined.fill(0xAABBCCDDEEFF0011);
+            kernel::template recombine_products52<Operations>(combined.data() + 1, products.data());
+            BOOST_CHECK_EQUAL(combined.front(), 0xAABBCCDDEEFF0011);
+            BOOST_CHECK_EQUAL(combined.back(), 0xAABBCCDDEEFF0011);
+            for (std::size_t lane = 0; lane < lanes; ++lane) {
+                value actual;
+                for (std::size_t c = 0; c < 12; ++c) {
+                    typename radix::value_type packed;
+                    for (std::size_t digit = 0; digit < 5; ++digit) {
+                        packed[digit] = combined[1 + (c * 5 + digit) * lanes + lane];
+                        BOOST_CHECK_LE(packed[digit], radix::mask);
+                    }
+                    BOOST_CHECK(std::lexicographical_compare(packed.rbegin(), packed.rend(), radix::modulus().rbegin(),
+                                                             radix::modulus().rend()));
+                    radix::to_montgomery64(actual.coordinate(c).data.backend().base_data(), packed);
+                }
+                BOOST_CHECK_EQUAL(actual, expected[lane]);
+            }
+        }
+    }
+
+    template<typename Operations>
+    void check_rank23_fp12_dots() {
+        namespace fast = fields::detail::fp12_fast;
+        using value = alt_bn128_254_fp12::value_type;
+        using params = alt_bn128_254_fp12::extension_policy::fast_params;
+        using kernel = typename fast::fp12_fast<params>::rank23;
+        using radix = fast::montgomery_radix52<params>;
+        constexpr std::size_t lanes = Operations::lanes, terms = 514, coordinates = kernel::product_coordinate_count;
+        constexpr std::size_t panel_stride = 2 * terms * 5 * lanes;
+        boost::random::mt19937 rng(0x5212D07);
+        std::vector<value> left(terms);
+        std::vector<std::array<value, lanes>> right(terms);
+        std::vector<fast::limb> packed_left(coordinates * terms * 5), packed_right(coordinates * panel_stride, 0);
+        std::array<std::size_t, terms> indices;
+        for (std::size_t term = 0; term < terms; ++term) {
+            // The second half cancels the first across the 256-term reduction boundaries.
+            left[term] = term >= 257   ? -left[term - 257] :
+                         term % 3 == 0 ? boundary_fp12<alt_bn128_254_fp12>(term % 6) :
+                                         random_fp12<alt_bn128_254_fp12>(rng);
+            indices[term] = 2 * (terms - 1 - term);
+            const auto prepared_left = kernel::prepare_product_operand(left[term]);
+            for (std::size_t c = 0; c < coordinates; ++c) {
+                const auto digits = radix::from_montgomery64(prepared_left[c]);
+                std::copy(digits.begin(), digits.end(), packed_left.begin() + (c * terms + term) * 5);
+            }
+            for (std::size_t lane = 0; lane < lanes; ++lane) {
+                // Zero first/last lanes also model empty coefficients and a padded panel tail.
+                right[term][lane] = lane == 0 || lane + 1 == lanes ? value::zero() :
+                                    term >= 257                    ? right[term - 257][lane] :
+                                                                     random_fp12<alt_bn128_254_fp12>(rng);
+                const auto prepared_right = kernel::prepare_product_operand(right[term][lane]);
+                for (std::size_t c = 0; c < coordinates; ++c) {
+                    const auto digits = radix::from_montgomery64(prepared_right[c]);
+                    for (std::size_t digit = 0; digit < 5; ++digit) {
+                        packed_right[c * panel_stride + (indices[term] * 5 + digit) * lanes + lane] = digits[digit];
+                    }
+                }
+            }
+        }
+        std::array<value, lanes> expected;
+        expected.fill(value::zero());
+        std::size_t verified_terms = 0;
+        for (std::size_t count : {0, 1, 123, 255, 256, 257, 513, 514}) {
+            for (; verified_terms < count; ++verified_terms) {
+                for (std::size_t lane = 0; lane < lanes; ++lane) {
+                    expected[lane] +=
+                        generic_fp12_mul<alt_bn128_254_fp12>(left[verified_terms], right[verified_terms][lane]);
+                }
+            }
+            std::array<fast::limb, coordinates * 5 * lanes> products;
+            std::array<fast::limb, 12 * 5 * lanes> combined;
+            for (std::size_t c = 0; c < coordinates; ++c) {
+                fast::montgomery_inner_product52<params, Operations>(
+                    products.data() + c * 5 * lanes, packed_left.data() + c * terms * 5,
+                    packed_right.data() + c * panel_stride, indices.data(), count);
+            }
+            kernel::template recombine_products52<Operations>(combined.data(), products.data());
+            for (std::size_t lane = 0; lane < lanes; ++lane) {
+                value actual;
+                for (std::size_t c = 0; c < 12; ++c) {
+                    typename radix::value_type packed;
+                    for (std::size_t digit = 0; digit < 5; ++digit) {
+                        packed[digit] = combined[(c * 5 + digit) * lanes + lane];
+                        BOOST_CHECK_LE(packed[digit], radix::mask);
+                    }
+                    BOOST_CHECK(std::lexicographical_compare(packed.rbegin(), packed.rend(), radix::modulus().rbegin(),
+                                                             radix::modulus().rend()));
+                    radix::to_montgomery64(actual.coordinate(c).data.backend().base_data(), packed);
+                }
+                BOOST_CHECK_EQUAL(actual, expected[lane]);
+                if (count == terms) {
+                    BOOST_CHECK_EQUAL(actual, value::zero());
+                }
+            }
+        }
+    }
+
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(fp12_tests)
@@ -619,7 +813,21 @@ BOOST_AUTO_TEST_CASE(radix52_four_and_eight_lane_arithmetic_matches_reference) {
     check_radix52_dots<scalar_ifma52_operations<8>>();
 }
 
+BOOST_AUTO_TEST_CASE(radix52_rank23_matches_generic_fp12_in_four_and_eight_lanes) {
+    check_rank23_recombination<scalar_ifma52_operations<4>>();
+    check_rank23_recombination<scalar_ifma52_operations<8>>();
+    check_rank23_fp12_dots<scalar_ifma52_operations<4>>();
+    check_rank23_fp12_dots<scalar_ifma52_operations<8>>();
+}
+
 #if defined(CRYPTO3_HAS_AVX512IFMA)
+BOOST_AUTO_TEST_CASE(radix52_ifma_rank23_matches_generic_fp12) {
+    check_rank23_recombination<fields::detail::fp12_fast::ifma52_operations<4>>();
+    check_rank23_recombination<fields::detail::fp12_fast::ifma52_operations<8>>();
+    check_rank23_fp12_dots<fields::detail::fp12_fast::ifma52_operations<4>>();
+    check_rank23_fp12_dots<fields::detail::fp12_fast::ifma52_operations<8>>();
+}
+
 BOOST_AUTO_TEST_CASE(radix52_ifma_matches_reference_in_every_lane) {
     check_radix52_dots<fields::detail::fp12_fast::ifma52_operations<4>>();
     check_radix52_dots<fields::detail::fp12_fast::ifma52_operations<8>>();
