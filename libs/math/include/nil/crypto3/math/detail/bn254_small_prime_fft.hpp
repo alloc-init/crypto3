@@ -128,7 +128,7 @@ namespace nil::crypto3::math::detail {
         }
 
     private:
-        template<bool UseFma>
+        template<bool UseFma, typename Params = field_type::extension_policy::fast_params>
         void convert_impl(std::span<double> output, std::span<const value_type> coefficients,
                           std::size_t stride) const {
             for (std::size_t channel = 0; channel < field_type::arity * primes_.size(); ++channel) {
@@ -142,9 +142,24 @@ namespace nil::crypto3::math::detail {
                     const std::size_t count = std::min(block_size, coefficients.size() - offset);
                     for (std::size_t i = 0; i < count; ++i) {
                         std::array<std::uint64_t, chunk_count> words {};
-                        // Use the canonical value, not the field's internal Montgomery representation.
-                        const auto canonical = coefficients[offset + i].coordinate(coordinate).to_integral();
-                        boost::multiprecision::export_bits(canonical, words.begin(), chunk_bits, false);
+                        using base_backend_type = typename Params::base_field_type::integral_type::backend_type;
+                        if constexpr (base_backend_type::limb_bits == 64) {
+                            namespace fp12_fast = algebra::fields::detail::fp12_fast;
+                            // The stored value is a*R mod p, with R = 2^256. Zero-extend it
+                            // into the low half of montgomery; one reduction recovers a in [0,p).
+                            typename Params::limb_array montgomery {};
+                            const auto stored = fp12_fast::load_limbs(
+                                coefficients[offset + i].coordinate(coordinate).data.backend().base_data());
+                            std::copy(stored.begin(), stored.end(), montgomery.begin());
+                            std::array<std::uint64_t, Params::base_value_limb_count> canonical;
+                            fp12_fast::montgomery_reduce<Params>(canonical.data(), montgomery);
+                            // pack only extracts five 52-bit chunks; it does not rescale them.
+                            // Packing the canonical value preserves the lift of field -1 to p-1.
+                            words = fp12_fast::montgomery_radix52<Params>::pack(canonical.data());
+                        } else {
+                            const auto canonical = coefficients[offset + i].coordinate(coordinate).to_integral();
+                            boost::multiprecision::export_bits(canonical, words.begin(), chunk_bits, false);
+                        }
                         for (std::size_t j = 0; j < chunk_count; ++j) {
                             chunks[i][j] = static_cast<double>(words[j]);
                         }
