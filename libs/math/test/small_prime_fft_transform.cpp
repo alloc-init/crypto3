@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_SUITE(small_prime_fft_transform_tests)
 BOOST_AUTO_TEST_CASE(forward_matches_integer_dft_for_every_prime) {
     std::mt19937_64 random(0x46465401);
     for (std::size_t prime = 0; prime < detail::small_prime_fft_primes.size(); ++prime) {
-        for (std::size_t size = 1; size <= 64; size *= 2) {
+        for (std::size_t size = 1; size <= 256; size *= 2) {
             BOOST_TEST_CONTEXT("prime=" << prime << " N=" << size) {
                 const plan_type plan(prime, size);
                 const auto q = detail::small_prime_fft_primes[prime].modulus;
@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE(forward_matches_integer_dft_for_every_prime) {
 BOOST_AUTO_TEST_CASE(inverse_matches_independent_spectra) {
     std::mt19937_64 random(0x46465402);
     for (std::size_t prime = 0; prime < detail::small_prime_fft_primes.size(); ++prime) {
-        for (std::size_t size = 1; size <= 64; size *= 2) {
+        for (std::size_t size = 1; size <= 256; size *= 2) {
             BOOST_TEST_CONTEXT("prime=" << prime << " N=" << size) {
                 const plan_type plan(prime, size);
                 const auto q = plan.modulus();
@@ -334,7 +334,7 @@ BOOST_AUTO_TEST_CASE(rounding_modes_preserve_exactness_and_environment) {
 
 BOOST_AUTO_TEST_CASE(plan_reuse_and_in_place_buffer_boundaries) {
     std::mt19937_64 random(0x46465406);
-    for (const std::size_t size : {1, 2, 4, 8, 16, 32, 64}) {
+    for (const std::size_t size : {1, 2, 4, 8, 16, 32, 64, 128, 256, 512}) {
         const plan_type original(0, size);
         auto copy = original;
         const plan_type moved = std::move(copy);
@@ -365,6 +365,86 @@ BOOST_AUTO_TEST_CASE(plan_reuse_and_in_place_buffer_boundaries) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(pointwise_inverse_preserves_bounds_and_matches_general_inverse) {
+    restore_rounding restore;
+    std::mt19937_64 random(0x46465407);
+    for (std::size_t prime = 0; prime < detail::small_prime_fft_primes.size(); ++prime) {
+        for (const std::size_t size : {1, 2, 4, 8, 16, 32, 64, 128, 512, 4096, 32768}) {
+            const plan_type plan(prime, size);
+            const auto q = static_cast<std::int64_t>(plan.modulus());
+            std::vector<double> input(size);
+            for (std::size_t i = 0; i < size; ++i) {
+                input[i] = i % 3 == 0 ? double(q - 1) :
+                           i % 3 == 1 ? double(1 - q) :
+                                        double(static_cast<std::int64_t>(random() % (2 * q - 1)) - (q - 1));
+            }
+            for (int mode : {FE_TONEAREST, FE_DOWNWARD}) {
+                BOOST_REQUIRE_EQUAL(std::fesetround(mode), 0);
+                auto general = input;
+                auto bounded = input;
+                plan.inverse_fft(general, false);
+                plan.inverse_fft_pointwise(bounded);
+                for (std::size_t i = 0; i < size; ++i) {
+                    BOOST_CHECK_EQUAL(std::trunc(bounded[i]), bounded[i]);
+                    BOOST_CHECK(std::abs(bounded[i]) < 2 * double(q));
+                    BOOST_CHECK_EQUAL(canonical(as_integer(bounded[i]), cpp_int(q)),
+                                      canonical(as_integer(general[i]), cpp_int(q)));
+                }
+                BOOST_CHECK_EQUAL(std::fegetround(), mode);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(bit_reversed_order_is_exact_across_rounding_mode_changes_and_unaligned_buffers) {
+    restore_rounding restore;
+    std::mt19937_64 random(0x46465408);
+    for (std::size_t prime = 0; prime < detail::small_prime_fft_primes.size(); ++prime) {
+        for (const std::size_t size : {1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 4096}) {
+            BOOST_REQUIRE_EQUAL(std::fesetround(FE_TONEAREST), 0);
+            const plan_type plan(prime, size);
+            const plan_type ordinary(prime, size);
+            const detail::small_prime_fft_arithmetic arithmetic(plan.modulus());
+            const auto input = lazy_input(size, plan.modulus(), random);
+            auto reference = input;
+            ordinary.fft(reference);
+            const auto direct = size <= 64 ? dft(input, prime) : std::vector<cpp_int>();
+            // Switching modes between calls preserves ordering across FMA and integer arithmetic.
+            for (int forward_mode : {FE_TONEAREST, FE_DOWNWARD}) {
+                const int inverse_mode = forward_mode == FE_TONEAREST ? FE_DOWNWARD : FE_TONEAREST;
+                std::vector<double> storage(size + 5, -29.0);
+                auto values = std::span<double>(storage).subspan(1, size);
+                std::copy(input.begin(), input.end(), values.begin());
+                BOOST_REQUIRE_EQUAL(std::fesetround(forward_mode), 0);
+                plan.fft(values);
+                for (std::size_t i = 0; i < size; ++i) {
+                    const cpp_int expected = direct.empty() ?
+                                                 canonical(as_integer(reference[i]), cpp_int(plan.modulus())) :
+                                                 direct[detail::bitreverse(i, std::countr_zero(size))];
+                    check_residue(values[i], expected, plan.modulus(), 3);
+                }
+                auto pointwise = std::vector<double>(values.begin(), values.end());
+                for (double &value : pointwise) {
+                    value = arithmetic.multiply_integer(value, plan.size_inverse());
+                }
+                BOOST_REQUIRE_EQUAL(std::fesetround(inverse_mode), 0);
+                plan.inverse_fft(values);
+                plan.inverse_fft_pointwise(pointwise);
+                for (std::size_t i = 0; i < size; ++i) {
+                    const auto expected = canonical(as_integer(input[i]), cpp_int(plan.modulus()));
+                    check_residue(values[i], expected, plan.modulus(), 1, true);
+                    check_residue(pointwise[i], expected, plan.modulus(), 2);
+                }
+                BOOST_CHECK_EQUAL(storage.front(), -29.0);
+                for (std::size_t i = size + 1; i < storage.size(); ++i) {
+                    BOOST_CHECK_EQUAL(storage[i], -29.0);
+                }
+                BOOST_CHECK_EQUAL(std::fegetround(), inverse_mode);
+            }
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(invalid_parameters_and_dimensions_throw_before_writes) {
     BOOST_CHECK_THROW(plan_type(detail::small_prime_fft_primes.size(), 1), std::invalid_argument);
     BOOST_CHECK_THROW(plan_type(std::numeric_limits<std::size_t>::max(), 1), std::invalid_argument);
@@ -385,7 +465,39 @@ BOOST_AUTO_TEST_CASE(invalid_parameters_and_dimensions_throw_before_writes) {
         BOOST_CHECK_THROW(plan.fft(values), std::invalid_argument);
         BOOST_CHECK_THROW(plan.inverse_fft(values), std::invalid_argument);
         BOOST_CHECK_THROW(plan.inverse_fft(values, false), std::invalid_argument);
+        BOOST_CHECK_THROW(plan.inverse_fft_pointwise(values), std::invalid_argument);
         BOOST_CHECK_EQUAL_COLLECTIONS(values.begin(), values.end(), before.begin(), before.end());
+    }
+}
+
+BOOST_AUTO_TEST_CASE(blocked_transforms_match_direct_evaluations_at_large_even_and_odd_depths) {
+    std::mt19937_64 random(0x46465409);
+    for (const std::size_t prime : {0, 10}) {
+        for (const std::size_t size : {2048, 4096, 8192, 16384, 32768, 65536}) {
+            {
+                const plan_type plan(prime, size);
+                const auto input = lazy_input(size, plan.modulus(), random);
+                std::vector<double> storage(size + 2, -31.0);
+                auto values = std::span<double>(storage).subspan(1, size);
+                std::copy(input.begin(), input.end(), values.begin());
+                plan.fft(values);
+                const cpp_int q = plan.modulus();
+                for (const std::size_t k : {std::size_t(0), size / 7, size / 3, size / 2, size - 1}) {
+                    const cpp_int step = boost::multiprecision::powm(cpp_int(plan.omega()), cpp_int(k), q);
+                    cpp_int expected = 0;
+                    for (std::size_t i = size; i-- > 0;) {
+                        expected = canonical(expected * step + as_integer(input[i]), q);
+                    }
+                    check_residue(values[detail::bitreverse(k, std::countr_zero(size))], expected, plan.modulus(), 3);
+                }
+                plan.inverse_fft(values);
+                for (std::size_t i = 0; i < size; ++i) {
+                    check_residue(values[i], canonical(as_integer(input[i]), q), plan.modulus(), 1, true);
+                }
+                BOOST_CHECK_EQUAL(storage.front(), -31.0);
+                BOOST_CHECK_EQUAL(storage.back(), -31.0);
+            }
+        }
     }
 }
 
