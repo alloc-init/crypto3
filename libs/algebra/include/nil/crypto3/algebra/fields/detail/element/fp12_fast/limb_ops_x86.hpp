@@ -1427,6 +1427,16 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         static value_type shift52(value_type a) {
             return {_mm256_srli_epi64(a.data, 52)};
         }
+        template<unsigned Bits>
+        static value_type shift_right(value_type a) {
+            static_assert(Bits < 64);
+            return {_mm256_srli_epi64(a.data, Bits)};
+        }
+        template<unsigned Bits>
+        static value_type shift_left(value_type a) {
+            static_assert(Bits < 64);
+            return {_mm256_slli_epi64(a.data, Bits)};
+        }
         static __mmask8 less(value_type a, value_type b) {
             return _mm256_cmp_epu64_mask(a.data, b.data, _MM_CMPINT_LT);
         }
@@ -1467,6 +1477,16 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
         }
         static value_type shift52(value_type a) {
             return {_mm512_srli_epi64(a.data, 52)};
+        }
+        template<unsigned Bits>
+        static value_type shift_right(value_type a) {
+            static_assert(Bits < 64);
+            return {_mm512_srli_epi64(a.data, Bits)};
+        }
+        template<unsigned Bits>
+        static value_type shift_left(value_type a) {
+            static_assert(Bits < 64);
+            return {_mm512_slli_epi64(a.data, Bits)};
         }
         static __mmask8 less(value_type a, value_type b) {
             return _mm512_cmp_epu64_mask(a.data, b.data, _MM_CMPINT_LT);

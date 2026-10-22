@@ -49,6 +49,92 @@ namespace {
     using value_type = reconstructor_type::value_type;
     using coordinates_type = std::array<cpp_int, 12>;
 
+    template<std::size_t Lanes>
+    struct scalar_ifma52_operations {
+        using limb = nil::crypto3::algebra::fields::detail::fp12_fast::limb;
+        using wide = nil::crypto3::algebra::fields::detail::fp12_fast::wide_limb;
+        static constexpr std::size_t lanes = Lanes;
+        static constexpr limb mask = (limb(1) << 52) - 1;
+        using value_type = std::array<limb, lanes>;
+        using mask_type = std::array<bool, lanes>;
+        static value_type broadcast(limb x) {
+            value_type r;
+            r.fill(x);
+            return r;
+        }
+        static value_type load(const limb *x) {
+            value_type r;
+            std::copy_n(x, lanes, r.begin());
+            return r;
+        }
+        static void store(limb *x, const value_type &a) {
+            std::copy(a.begin(), a.end(), x);
+        }
+        static value_type add(value_type a, const value_type &b) {
+            for (std::size_t i = 0; i < lanes; ++i) {
+                if (a[i] > std::numeric_limits<limb>::max() - b[i]) {
+                    throw std::overflow_error("IFMA lane overflow");
+                }
+                a[i] += b[i];
+            }
+            return a;
+        }
+        static value_type subtract(value_type a, const value_type &b) {
+            for (std::size_t i = 0; i < lanes; ++i)
+                a[i] -= b[i];
+            return a;
+        }
+        static value_type bit_and(value_type a, const value_type &b) {
+            for (std::size_t i = 0; i < lanes; ++i)
+                a[i] &= b[i];
+            return a;
+        }
+        static value_type shift52(value_type a) {
+            for (auto &x : a)
+                x >>= 52;
+            return a;
+        }
+        template<unsigned Bits>
+        static value_type shift_right(value_type a) {
+            for (auto &x : a)
+                x >>= Bits;
+            return a;
+        }
+        template<unsigned Bits>
+        static value_type shift_left(value_type a) {
+            for (auto &x : a) {
+                if (x > (std::numeric_limits<limb>::max() >> Bits))
+                    throw std::overflow_error("IFMA shift overflow");
+                x <<= Bits;
+            }
+            return a;
+        }
+        static mask_type less(const value_type &a, const value_type &b) {
+            mask_type r;
+            for (std::size_t i = 0; i < lanes; ++i)
+                r[i] = a[i] < b[i];
+            return r;
+        }
+        static value_type select(const mask_type &mask, value_type yes, const value_type &no) {
+            for (std::size_t i = 0; i < lanes; ++i)
+                if (!mask[i])
+                    yes[i] = no[i];
+            return yes;
+        }
+        static value_type multiply_add_low(value_type sum, const value_type &a, const value_type &b) {
+            value_type product;
+            for (std::size_t i = 0; i < lanes; ++i)
+                product[i] = limb(wide(a[i] & mask) * (b[i] & mask)) & mask;
+            return add(sum, product);
+        }
+        static value_type multiply_add_high(value_type sum, const value_type &a, const value_type &b) {
+            value_type product;
+            for (std::size_t i = 0; i < lanes; ++i)
+                product[i] = limb((wide(a[i] & mask) * (b[i] & mask)) >> 52);
+            return add(sum, product);
+        }
+    };
+
     struct restore_rounding {
         int saved = std::fegetround();
         ~restore_rounding() {
@@ -155,9 +241,132 @@ namespace {
         }
         return result;
     }
+    template<typename Operations>
+    void check_crt_accumulation() {
+        using params = reconstructor_type::field_type::extension_policy::fast_params;
+        using accumulator_type = detail::small_prime_fft_crt_accumulator<params, Operations>;
+        using radix = typename accumulator_type::radix;
+        const cpp_int p(fq::modulus.backend().to_cpp_int());
+        std::mt19937_64 random(0x52c47);
+        for (std::size_t count = 1; count <= detail::small_prime_fft_primes.size(); ++count) {
+            accumulator_type accumulator;
+            std::array<cpp_int, Operations::lanes> expected {};
+            for (std::size_t prime = 0; prime < count; ++prime) {
+                const auto q = detail::small_prime_fft_primes[prime].modulus;
+                cpp_int weight = p - 1;
+                if (prime % 3 != 0) {
+                    weight = 0;
+                    for (unsigned i = 0; i < 4; ++i)
+                        weight = (weight << 64) + random();
+                    weight %= p;
+                }
+                std::array<std::uint64_t, 4> words {};
+                boost::multiprecision::export_bits(weight, words.begin(), 64, false);
+                const auto packed = radix::pack(words.data());
+                std::array<std::uint64_t, Operations::lanes> digits;
+                for (std::size_t lane = 0; lane < Operations::lanes; ++lane) {
+                    digits[lane] = lane == 0 ? 0 : lane == 1 ? q - 1 : random() % q;
+                    expected[lane] += weight * digits[lane];
+                }
+                accumulator.add(packed, Operations::load(digits.data()));
+            }
+            std::array<std::array<std::uint64_t, Operations::lanes>, 6> columns;
+            for (std::size_t digit = 0; digit < columns.size(); ++digit)
+                Operations::store(columns[digit].data(), accumulator.columns[digit]);
+            std::array<cpp_int, Operations::lanes> correction;
+            std::array<std::array<std::uint64_t, Operations::lanes>, 5> correction_digits;
+            for (std::size_t lane = 0; lane < Operations::lanes; ++lane) {
+                cpp_int actual = 0;
+                for (std::size_t i = columns.size(); i-- > 0;)
+                    actual = (actual << 52) + columns[i][lane];
+                BOOST_CHECK_EQUAL(actual, expected[lane]);
+                correction[lane] = lane % 2 ? p - 1 : cpp_int(lane);
+                cpp_int c = correction[lane];
+                for (std::size_t i = 0; i < 5; ++i) {
+                    correction_digits[i][lane] = (c & radix::mask).template convert_to<std::uint64_t>();
+                    c >>= 52;
+                }
+            }
+            std::array<typename Operations::value_type, 5> vector_correction;
+            for (std::size_t i = 0; i < 5; ++i)
+                vector_correction[i] = Operations::load(correction_digits[i].data());
+            const auto reduced = accumulator.reduce(vector_correction);
+            std::array<std::array<std::uint64_t, Operations::lanes>, 5> digits;
+            for (std::size_t i = 0; i < 5; ++i)
+                Operations::store(digits[i].data(), reduced[i]);
+            const cpp_int s_inverse = boost::multiprecision::powm(cpp_int((cpp_int(1) << 260) % p), cpp_int(p - 2), p);
+            for (std::size_t lane = 0; lane < Operations::lanes; ++lane) {
+                cpp_int actual = 0;
+                for (std::size_t i = 5; i-- > 0;) {
+                    BOOST_CHECK_LE(digits[i][lane], radix::mask);
+                    actual = (actual << 52) + digits[i][lane];
+                }
+                BOOST_CHECK_LT(actual, p);
+                BOOST_CHECK_EQUAL(actual, ((expected[lane] + correction[lane]) * s_inverse) % p);
+            }
+        }
+    }
+    template<typename Operations>
+    void check_crt_certificates() {
+        using params = reconstructor_type::field_type::extension_policy::fast_params;
+        using accumulator_type = detail::small_prime_fft_crt_accumulator<params, Operations>;
+        constexpr std::uint64_t scale = std::uint64_t(1) << 60;
+        std::mt19937_64 random(0xc471f1);
+        for (std::size_t count = 1; count <= detail::small_prime_fft_primes.size(); ++count) {
+            const auto plan = make_params(count);
+            for (unsigned trial = 0; trial < 32; ++trial) {
+                auto lower = Operations::broadcast(0);
+                std::array<cpp_int, Operations::lanes> sums {}, expected_lower {};
+                for (std::size_t prime = 0; prime < count; ++prime) {
+                    const auto q = detail::small_prime_fft_primes[prime].modulus;
+                    const auto reciprocal = ((cpp_int(1) << 110) / q).convert_to<std::uint64_t>();
+                    std::array<std::uint64_t, Operations::lanes> input;
+                    for (std::size_t lane = 0; lane < Operations::lanes; ++lane) {
+                        input[lane] = trial == 0 ? 0 : trial == 1 ? q - 1 : random() % q;
+                        sums[lane] += cpp_int(input[lane]) * (plan.modulus / q);
+                        expected_lower[lane] += (cpp_int(input[lane]) * reciprocal) >> 50;
+                    }
+                    lower = Operations::add(
+                        lower, accumulator_type::certificate_term(Operations::load(input.data()), reciprocal));
+                }
+                std::array<std::uint64_t, Operations::lanes> actual_lower;
+                Operations::store(actual_lower.data(), lower);
+                for (std::size_t lane = 0; lane < Operations::lanes; ++lane)
+                    BOOST_CHECK_EQUAL(actual_lower[lane], expected_lower[lane]);
+                for (std::uint64_t bound : {std::uint64_t(0), std::uint64_t(1), scale / 8, scale / 2 - 1}) {
+                    const auto certificate = accumulator_type::certify(lower, bound, count);
+                    std::array<std::uint64_t, Operations::lanes> quotients, accepted;
+                    Operations::store(quotients.data(), certificate.quotients);
+                    Operations::store(accepted.data(), certificate.accepted);
+                    for (std::size_t lane = 0; lane < Operations::lanes; ++lane) {
+                        const cpp_int quotient = (expected_lower[lane] + scale / 2) / scale;
+                        const cpp_int center = quotient * scale;
+                        const bool expected = expected_lower[lane] + bound >= center &&
+                                              expected_lower[lane] + 2 * count <= center + bound;
+                        BOOST_CHECK_EQUAL(quotients[lane], quotient);
+                        BOOST_CHECK_EQUAL(bool(accepted[lane]), expected);
+                        if (accepted[lane]) {
+                            const cpp_int difference = sums[lane] - quotient * plan.modulus;
+                            BOOST_CHECK_LE(boost::multiprecision::abs(difference) * scale,
+                                           cpp_int(bound) * plan.modulus);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(small_prime_fft_crt_test_suite)
+
+BOOST_AUTO_TEST_CASE(radix52_accumulation_matches_full_integer_sums) {
+    check_crt_accumulation<scalar_ifma52_operations<8>>();
+    check_crt_certificates<scalar_ifma52_operations<8>>();
+#if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
+    check_crt_accumulation<nil::crypto3::algebra::fields::detail::fp12_fast::ifma52_operations<8>>();
+    check_crt_certificates<nil::crypto3::algebra::fields::detail::fp12_fast::ifma52_operations<8>>();
+#endif
+}
 
 BOOST_AUTO_TEST_CASE(combined_normalization_is_centered_and_exact_in_every_rounding_mode) {
     restore_rounding restore;
@@ -301,7 +510,7 @@ BOOST_AUTO_TEST_CASE(bound_failure_preserves_completed_prefixes_across_block_bou
         const reconstructor_type reconstructor(plan->crt, bound);
         for (int mode : {FE_TONEAREST, FE_UPWARD}) {
             BOOST_REQUIRE_EQUAL(std::fesetround(mode), 0);
-            for (std::size_t bad : {0, 1, 31, 32, 33}) {
+            for (std::size_t bad : {0, 1, 7, 8, 9, 15, 16, 17, 31, 32, 33}) {
                 for (int sign : {-1, 1}) {
                     std::vector<coordinates_type> coordinates(35);
                     coordinates[bad][0] = sign * (bound + 1);
