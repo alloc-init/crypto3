@@ -280,8 +280,8 @@ BOOST_AUTO_TEST_CASE(pointwise_products_and_squares_match_expanded_integer_tower
     for (const auto &prime : detail::small_prime_fft_primes) {
         const auto q = static_cast<std::int64_t>(prime.modulus);
         const detail::bn254_small_prime_fft_pointwise pointwise(prime.modulus);
-        // Cover empty/scalar buffers, complete four-lane blocks, and every possible scalar tail.
-        for (const std::size_t stride : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 16, 17}) {
+        // Cover both vector widths, every eight-lane remainder, and multiple wide blocks.
+        for (const std::size_t stride : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 31, 32, 33}) {
             std::vector<double> left(12 * stride), right(12 * stride);
             std::vector<coordinates_type> products(stride), squares(stride);
             for (std::size_t i = 0; i < stride; ++i) {
@@ -354,7 +354,7 @@ BOOST_AUTO_TEST_CASE(pointwise_sums_match_expanded_integer_tower_and_preserve_al
     for (const auto &prime : detail::small_prime_fft_primes) {
         const auto q = static_cast<std::int64_t>(prime.modulus);
         const detail::bn254_small_prime_fft_pointwise pointwise(prime.modulus);
-        for (const std::size_t stride : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
+        for (const std::size_t stride : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 31, 32, 33}) {
             std::array<std::vector<double>, 4> inputs;
             for (auto &input : inputs) {
                 input.resize(12 * stride);
@@ -395,6 +395,59 @@ BOOST_AUTO_TEST_CASE(pointwise_sums_match_expanded_integer_tower_and_preserve_al
                                            scale);
                     check_pointwise(aliased[alias], expected, prime.modulus, scale);
                 }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(pointwise_boundary_products_and_cancellation_preserve_rounding_modes) {
+    restore_rounding restore;
+    BOOST_REQUIRE_EQUAL(std::fesetround(FE_TONEAREST), 0);
+    // Multiple wide blocks and a scalar tail, with all tower coordinates active.
+    constexpr std::size_t stride = 65;
+    for (const auto &prime : detail::small_prime_fft_primes) {
+        const auto q = static_cast<std::int64_t>(prime.modulus);
+        const detail::bn254_small_prime_fft_pointwise pointwise(prime.modulus);
+        const std::array<std::int64_t, 11> edges {0,
+                                                  1,
+                                                  -1,
+                                                  q - 1,
+                                                  1 - q,
+                                                  (q - 1) / 2,
+                                                  -(q - 1) / 2,
+                                                  3 * q - 1,
+                                                  1 - 3 * q,
+                                                  (std::int64_t(1) << 53) - 1,
+                                                  1 - (std::int64_t(1) << 53)};
+        std::vector<double> left(12 * stride), right(12 * stride), negative_left(12 * stride);
+        std::vector<coordinates_type> products(stride), squares(stride), zero(stride);
+        for (std::size_t i = 0; i < stride; ++i) {
+            coordinates_type a {}, b {};
+            for (std::size_t c = 0; c < 12; ++c) {
+                const auto x = edges[(i + 3 * c) % edges.size()];
+                const auto y = edges[(i / edges.size() + 7 * c) % edges.size()];
+                a[c] = x;
+                b[c] = y;
+                left[c * stride + i] = static_cast<double>(x);
+                right[c * stride + i] = static_cast<double>(y);
+                negative_left[c * stride + i] = static_cast<double>(-x);
+            }
+            products[i] = tower_product(a, b);
+            squares[i] = tower_product(a, a);
+        }
+        for (const int mode : {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
+            BOOST_REQUIRE_EQUAL(std::fesetround(mode), 0);
+            // The largest allowed scales exercise the bound on unreduced tower outputs.
+            for (const double scale : {static_cast<double>((q - 1) / 2), -static_cast<double>((q - 1) / 2)}) {
+                auto actual = left;
+                pointwise.multiply(actual, right, stride, scale);
+                check_pointwise(actual, products, prime.modulus, scale);
+                actual = left;
+                pointwise.square(actual, stride, scale);
+                check_pointwise(actual, squares, prime.modulus, scale);
+                pointwise.multiply_sum(actual, left, right, negative_left, right, stride, scale);
+                check_pointwise(actual, zero, prime.modulus, scale);
+                BOOST_CHECK_EQUAL(std::fegetround(), mode);
             }
         }
     }
