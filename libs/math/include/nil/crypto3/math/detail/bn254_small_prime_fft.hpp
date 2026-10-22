@@ -54,7 +54,107 @@ static_assert(CRYPTO3_SMALL_PRIME_FFT_RADIX == 4 || CRYPTO3_SMALL_PRIME_FFT_RADI
                   CRYPTO3_SMALL_PRIME_FFT_RADIX == 16,
               "small-prime FFT stage radix must be 4, 8 or 16");
 
+#if defined(CRYPTO3_HAS_AVX512IFMA) && defined(CRYPTO3_SMALL_PRIME_FFT_AVX512_AVAILABLE) && \
+    !defined(CRYPTO3_SMALL_PRIME_CRT_DISABLE_IFMA)
+#define CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED
+#endif
+
 namespace nil::crypto3::math::detail {
+
+    // Independent coefficient lanes, using the existing IFMA operation policy. A CRT digit is
+    // below 2^50 and each five-digit export weight is below p. With at most twelve primes,
+    // every unnormalized column is below 24*2^52 and the complete sum is below 2^54*p.
+    template<typename Params, typename Operations>
+    struct small_prime_fft_crt_accumulator {
+        using radix = algebra::fields::detail::fp12_fast::montgomery_radix52<Params>;
+        using vector = typename Operations::value_type;
+        std::array<vector, 6> columns;
+
+        small_prime_fft_crt_accumulator() {
+            columns.fill(Operations::broadcast(0));
+        }
+
+        void add(const typename radix::value_type &weight, vector digits) {
+            for (std::size_t limb = 0; limb < weight.size(); ++limb) {
+                const auto w = Operations::broadcast(weight[limb]);
+                columns[limb] = Operations::multiply_add_low(columns[limb], digits, w);
+                columns[limb + 1] = Operations::multiply_add_high(columns[limb + 1], digits, w);
+            }
+        }
+
+        // The certificate reciprocal has up to 61 bits, so it cannot be an IFMA operand
+        // without splitting. Compute floor(d*r/2^50) exactly from four 52-bit split products.
+        static vector certificate_term(vector digits, std::uint64_t reciprocal) {
+            const auto zero = Operations::broadcast(0);
+            const auto low = Operations::broadcast(reciprocal & radix::mask);
+            const auto high = Operations::broadcast(reciprocal >> 52);
+            const auto a = Operations::multiply_add_low(zero, digits, low);
+            const auto b = Operations::multiply_add_high(zero, digits, low);
+            const auto c = Operations::multiply_add_low(zero, digits, high);
+            const auto d = Operations::multiply_add_high(zero, digits, high);
+            return Operations::add(
+                Operations::add(Operations::template shift_right<50>(a), Operations::template shift_left<2>(b)),
+                Operations::add(Operations::template shift_left<2>(c), Operations::template shift_left<54>(d)));
+        }
+
+        struct certificate {
+            vector quotients;
+            vector accepted;
+        };
+
+        static certificate certify(vector lower, std::uint64_t scaled_bound, std::size_t prime_count) {
+            constexpr std::uint64_t scale = std::uint64_t(1) << 60;
+            const auto zero = Operations::broadcast(0);
+            const auto one = Operations::broadcast(1);
+            const auto quotient =
+                Operations::template shift_right<60>(Operations::add(lower, Operations::broadcast(scale / 2)));
+            const auto center = Operations::template shift_left<60>(quotient);
+            const auto bound = Operations::broadcast(scaled_bound);
+            const auto upper = Operations::add(lower, Operations::broadcast(2 * prime_count));
+            const auto lower_ok =
+                Operations::select(Operations::less(Operations::add(lower, bound), center), zero, one);
+            const auto upper_ok =
+                Operations::select(Operations::less(Operations::add(center, bound), upper), zero, one);
+            return {quotient, Operations::bit_and(lower_ok, upper_ok)};
+        }
+
+        // Add the selected centering correction and divide by S=2^260. The caller prepares
+        // weights and corrections with R*S (R=2^256), so the result is already R-Montgomery.
+        std::array<vector, 5> reduce(const std::array<vector, 5> &correction) const {
+            const auto zero = Operations::broadcast(0);
+            const auto mask = Operations::broadcast(radix::mask);
+            const auto inverse = Operations::broadcast(radix::p_dash());
+            std::array<vector, 10> t;
+            t.fill(zero);
+            std::copy(columns.begin(), columns.end(), t.begin());
+            for (std::size_t i = 0; i < correction.size(); ++i)
+                t[i] = Operations::add(t[i], correction[i]);
+            for (std::size_t i = 0; i < 9; ++i) {
+                t[i + 1] = Operations::add(t[i + 1], Operations::shift52(t[i]));
+                t[i] = Operations::bit_and(t[i], mask);
+            }
+            // Each cancellation adds at most five split products to a column. All columns
+            // stay below 2^57; the initial sum plus correction is < 2^54*p < S*p.
+            for (std::size_t i = 0; i < 5; ++i) {
+                const auto m = Operations::multiply_add_low(zero, t[i], inverse);
+                for (std::size_t j = 0; j < 5; ++j) {
+                    const auto p = Operations::broadcast(radix::modulus()[j]);
+                    t[i + j] = Operations::multiply_add_low(t[i + j], m, p);
+                    t[i + j + 1] = Operations::multiply_add_high(t[i + j + 1], m, p);
+                }
+                t[i + 1] = Operations::add(t[i + 1], Operations::shift52(t[i]));
+            }
+            std::array<vector, 5> reduced;
+            for (std::size_t i = 5; i < 9; ++i) {
+                reduced[i - 5] = Operations::bit_and(t[i], mask);
+                t[i + 1] = Operations::add(t[i + 1], Operations::shift52(t[i]));
+            }
+            reduced[4] = t[9];
+            // REDC(T)<2*p<S; a single existing vector subtraction makes every lane canonical.
+            algebra::fields::detail::fp12_fast::montgomery_radix52_simd<Params, Operations>::subtract_modulus(reduced);
+            return reduced;
+        }
+    };
 
     /**
      * Convert canonical BN254 Fp12 coordinates to a prefix of the small-prime catalogue.
@@ -239,6 +339,9 @@ namespace nil::crypto3::math::detail {
         static_assert(50 * small_prime_fft_primes.size() <= 600, "CRT export folding requires M < 2^600");
         using fast_params = bn254_small_prime_fft_converter::field_type::extension_policy::fast_params;
         using direct_weight_type = std::array<std::uint64_t, fast_params::base_value_limb_count>;
+#if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
+        using radix52 = algebra::fields::detail::fp12_fast::montgomery_radix52<fast_params>;
+#endif
         static constexpr bool direct_export_supported = base_field_type::integral_type::backend_type::limb_bits == 64;
         static constexpr unsigned certificate_bits = 60;
         static constexpr std::uint64_t certificate_scale = std::uint64_t(1) << certificate_bits;
@@ -252,6 +355,9 @@ namespace nil::crypto3::math::detail {
             double inverse;
             std::uint64_t certificate_reciprocal;
             direct_weight_type export_weight;
+#if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
+            radix52::value_type export_weight52;
+#endif
 
             prime_context(std::uint64_t modulus, const integer_type &cofactor, const direct_weight_type &weight) :
                 arithmetic(modulus), cofactor(cofactor), export_weight(weight) {
@@ -306,6 +412,13 @@ namespace nil::crypto3::math::detail {
                 direct_weight_type limbs {};
                 boost::multiprecision::export_bits(weight, limbs.begin(), 64, false);
                 primes_.emplace_back(modulus, multiples_[0] / modulus, limbs);
+#if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
+                // S/R=16. Export after radix-52 REDC must retain the field's R=2^256 scaling.
+                const boost::multiprecision::cpp_int vector_weight = (weight * 16) % characteristic;
+                limbs.fill(0);
+                boost::multiprecision::export_bits(vector_weight, limbs.begin(), 64, false);
+                primes_.back().export_weight52 = radix52::pack(limbs.data());
+#endif
             }
             // The centering quotient is in [0,prime_count]. Store canonical -k*M*R^2 mod p.
             for (std::size_t k = 0; k <= params.prime_count; ++k) {
@@ -314,6 +427,14 @@ namespace nil::crypto3::math::detail {
                     correction = characteristic - correction;
                 }
                 boost::multiprecision::export_bits(correction, export_corrections_[k].begin(), 64, false);
+#if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
+                const boost::multiprecision::cpp_int vector_correction = (correction * 16) % characteristic;
+                direct_weight_type limbs {};
+                boost::multiprecision::export_bits(vector_correction, limbs.begin(), 64, false);
+                const auto packed = radix52::pack(limbs.data());
+                for (std::size_t digit = 0; digit < packed.size(); ++digit)
+                    export_corrections52_[digit][k] = packed[digit];
+#endif
             }
         }
 
@@ -382,6 +503,10 @@ namespace nil::crypto3::math::detail {
                 return prime.arithmetic.fma_supported();
             });
             if (use_fma) {
+#if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
+                reconstruct_ifma<Weighted>(output, residues, stride);
+                return;
+#endif
                 reconstruct_impl<true, Weighted>(output, residues, stride);
             } else {
                 reconstruct_impl<false, Weighted>(output, residues, stride);
@@ -574,6 +699,77 @@ namespace nil::crypto3::math::detail {
             }
         }
 
+#if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
+        template<bool Weighted>
+        void reconstruct_ifma(std::span<value_type> output, std::span<const double> residues,
+                              std::size_t stride) const {
+            using operations = algebra::fields::detail::fp12_fast::ifma52_operations<8>;
+            for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
+                for (std::size_t offset = 0; offset < output.size();) {
+                    const std::size_t count = std::min(operations::lanes, output.size() - offset);
+                    const auto active = static_cast<__mmask8>((1u << count) - 1);
+                    using accumulator_type = small_prime_fft_crt_accumulator<fast_params, operations>;
+                    accumulator_type accumulator;
+                    auto lower = operations::broadcast(0);
+                    std::array<std::array<std::uint64_t, operations::lanes>, small_prime_fft_primes.size()>
+                        saved_digits;
+                    for (std::size_t prime = 0; prime < primes_.size(); ++prime) {
+                        const auto &context = primes_[prime];
+                        const small_prime_fft_arithmetic::wide_fma_kernel packed(context.arithmetic);
+                        const double *source =
+                            residues.data() + (prime * field_type::arity + coordinate) * stride + offset;
+                        auto digits = packed.reduce_fma(_mm512_maskz_loadu_pd(active, source));
+                        if constexpr (!Weighted) {
+                            digits = packed.multiply_fma(digits, _mm512_set1_pd(context.inverse));
+                        }
+                        const auto negative = _mm512_cmp_pd_mask(digits, _mm512_setzero_pd(), _CMP_LT_OQ);
+                        digits = _mm512_mask_add_pd(digits, negative, digits,
+                                                    _mm512_set1_pd(static_cast<double>(context.arithmetic.modulus())));
+                        const operations::value_type canonical {_mm512_cvttpd_epu64(digits)};
+                        operations::store(saved_digits[prime].data(), canonical);
+                        accumulator.add(context.export_weight52, canonical);
+                        lower = operations::add(
+                            lower, accumulator_type::certificate_term(canonical, context.certificate_reciprocal));
+                    }
+                    const auto certificate = accumulator_type::certify(lower, scaled_bound_, primes_.size());
+                    const auto accepted = operations::less(operations::broadcast(0), certificate.accepted) & active;
+                    std::array<std::array<std::uint64_t, operations::lanes>, 5> reduced;
+                    if (accepted != 0) {
+                        std::array<operations::value_type, 5> corrections;
+                        for (std::size_t digit = 0; digit < corrections.size(); ++digit) {
+                            // Every quotient is in [0,prime_count], including uncertified lanes.
+                            corrections[digit] = {_mm512_i64gather_epi64(certificate.quotients.data,
+                                                                         export_corrections52_[digit].data(), 8)};
+                        }
+                        const auto values = accumulator.reduce(corrections);
+                        for (std::size_t digit = 0; digit < values.size(); ++digit)
+                            operations::store(reduced[digit].data(), values[digit]);
+                    }
+                    for (std::size_t lane = 0; lane < count; ++lane) {
+                        auto &destination = output[offset + lane].coordinate(coordinate);
+                        if ((accepted & (1u << lane)) != 0) {
+                            // Numeric repacking only: the R*S weights already account for S/R.
+                            base_field_type::value_type value;
+                            auto *words = value.data.backend().base_data().limbs();
+                            words[0] = reduced[0][lane] | (reduced[1][lane] << 52);
+                            words[1] = (reduced[1][lane] >> 12) | (reduced[2][lane] << 40);
+                            words[2] = (reduced[2][lane] >> 24) | (reduced[3][lane] << 28);
+                            words[3] = (reduced[3][lane] >> 36) | (reduced[4][lane] << 16);
+                            destination = value;
+                        } else {
+                            integer_type exact_sum = 0;
+                            for (std::size_t prime = 0; prime < primes_.size(); ++prime) {
+                                add_cofactor_product(exact_sum, primes_[prime].cofactor, saved_digits[prime][lane]);
+                            }
+                            destination = export_exact(exact_sum);
+                        }
+                    }
+                    offset += count;
+                }
+            }
+        }
+#endif
+
         std::vector<prime_context> primes_;
         std::array<integer_type, correction_count> multiples_;
         integer_type half_modulus_;
@@ -582,6 +778,9 @@ namespace nil::crypto3::math::detail {
         export_type export_radix_;
         std::uint64_t scaled_bound_;
         std::array<direct_weight_type, small_prime_fft_primes.size() + 1> export_corrections_ {};
+#if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
+        std::array<std::array<std::uint64_t, small_prime_fft_primes.size() + 1>, 5> export_corrections52_ {};
+#endif
     };
 
     /**
