@@ -39,6 +39,12 @@
 #if defined(__x86_64__) && defined(__AVX2__) && defined(__FMA__) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
 #define CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED
+#if defined(__AVX512F__) && defined(__AVX512DQ__)
+#define CRYPTO3_SMALL_PRIME_FFT_AVX512_AVAILABLE
+#if !defined(CRYPTO3_SMALL_PRIME_FFT_DISABLE_AVX512)
+#define CRYPTO3_SMALL_PRIME_FFT_AVX512_SELECTED
+#endif
+#endif
 #endif
 
 namespace nil::crypto3::math::detail {
@@ -164,6 +170,21 @@ namespace nil::crypto3::math::detail {
          */
         class packed_fma_kernel {
         public:
+            using value_type = __m256d;
+            static constexpr std::size_t lanes = 4;
+
+            static value_type broadcast(double value) {
+                return _mm256_set1_pd(value);
+            }
+
+            static value_type load(const double *values) {
+                return _mm256_loadu_pd(values);
+            }
+
+            static void store(double *values, value_type value) {
+                _mm256_storeu_pd(values, value);
+            }
+
             explicit packed_fma_kernel(const small_prime_fft_arithmetic &arithmetic) :
                 arithmetic_(arithmetic), modulus_(_mm256_set1_pd(static_cast<double>(arithmetic.modulus_))),
                 reciprocal_(_mm256_set1_pd(arithmetic.reciprocal_)) {
@@ -227,11 +248,191 @@ namespace nil::crypto3::math::detail {
                 return high;
             }
 
+            /**
+             * Two independent compensated products. The distinct left vectors are overwritten;
+             * right operands are copied before either write. Interleave the independent product
+             * and quotient work while sharing one quotient scratch register. Bounds match multiply_fma.
+             */
+            void multiply_fma_pair(__m256d &left0, __m256d &left1, __m256d right0, __m256d right1) const {
+                assert(&left0 != &left1);
+                assert(arithmetic_.fma_supported());
+#ifndef NDEBUG
+                double a[8], b[8];
+                _mm256_storeu_pd(a, left0);
+                _mm256_storeu_pd(a + 4, left1);
+                _mm256_storeu_pd(b, right0);
+                _mm256_storeu_pd(b + 4, right1);
+                for (std::size_t i = 0; i < 8; ++i) {
+                    assert(valid_integer(a[i]) && valid_integer(b[i]));
+                    assert(product_magnitude(a[i], b[i]) < 4 * wide_type(arithmetic_.modulus_) * arithmetic_.modulus_);
+                }
+#endif
+                __m256d high0, high1, quotient;
+                // The early-clobber left operands hold their exact low products after vfmsub213pd.
+                // Keep right operands distinct from both outputs until both residuals are computed.
+                // clang-format off
+                asm(
+                    "vmulpd %[right0], %[left0], %[high0]\n"
+                    "vmulpd %[right1], %[left1], %[high1]\n"
+                    "vmulpd %[reciprocal], %[high0], %[quotient]\n"
+                    "vfmsub213pd %[high0], %[right0], %[left0]\n"
+                    "vfmsub213pd %[high1], %[right1], %[left1]\n"
+                    "vroundpd $8, %[quotient], %[quotient]\n"
+                    "vfnmadd231pd %[modulus], %[quotient], %[high0]\n"
+                    "vmulpd %[reciprocal], %[high1], %[quotient]\n"
+                    "vroundpd $8, %[quotient], %[quotient]\n"
+                    "vfnmadd231pd %[modulus], %[quotient], %[high1]\n"
+                    "vaddpd %[high0], %[left0], %[left0]\n"
+                    "vaddpd %[high1], %[left1], %[left1]\n"
+                    : [left0] "+&x"(left0), [left1] "+&x"(left1),
+                      [high0] "=&x"(high0), [high1] "=&x"(high1), [quotient] "=&x"(quotient)
+                    : [right0] "x"(right0), [right1] "x"(right1),
+                      [modulus] "x"(modulus_), [reciprocal] "x"(reciprocal_)
+                );
+                // clang-format on
+            }
+
         private:
             const small_prime_fft_arithmetic &arithmetic_;
             const __m256d modulus_;
             const __m256d reciprocal_;
         };
+
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX512_AVAILABLE)
+        // Eight independent lanes use the same reciprocal certificate and exact product bounds.
+        // AVX-512 register constraints permit all 32 ZMM registers; no runtime CPU dispatch is
+        // needed because the compiler target already requires AVX-512F/DQ.
+        class wide_fma_kernel {
+        public:
+            using value_type = __m512d;
+            static constexpr std::size_t lanes = 8;
+
+            static value_type broadcast(double value) {
+                return _mm512_set1_pd(value);
+            }
+
+            static value_type load(const double *values) {
+                return _mm512_loadu_pd(values);
+            }
+
+            static void store(double *values, value_type value) {
+                _mm512_storeu_pd(values, value);
+            }
+
+            explicit wide_fma_kernel(const small_prime_fft_arithmetic &arithmetic) :
+                arithmetic_(arithmetic), modulus_(_mm512_set1_pd(static_cast<double>(arithmetic.modulus_))),
+                reciprocal_(_mm512_set1_pd(arithmetic.reciprocal_)) {
+                assert(arithmetic.fma_supported());
+            }
+
+            /** Eight independent reductions with the same preconditions and bounds as the scalar overload. */
+            __m512d reduce_fma(__m512d value) const {
+                assert(arithmetic_.fma_supported());
+#ifndef NDEBUG
+                double lanes[8];
+                _mm512_storeu_pd(lanes, value);
+                for (double lane : lanes) {
+                    assert(valid_integer(lane));
+                }
+#endif
+                __m512d quotient;
+                // Round to nearest, ties to even, suppressing the inexact exception just like nearbyint.
+                // All operands are registers; the early-clobber scratch cannot overlap a live input.
+                // clang-format off
+                asm(
+                    "vmulpd %[reciprocal], %[value], %[quotient]\n"
+                    "vrndscalepd $8, %[quotient], %[quotient]\n"
+                    "vfnmadd231pd %[modulus], %[quotient], %[value]\n"
+                    : [value] "+v"(value), [quotient] "=&v"(quotient)
+                    : [modulus] "v"(modulus_), [reciprocal] "v"(reciprocal_)
+                );
+                // clang-format on
+                return value;
+            }
+
+            /** Eight independent compensated products; the scalar product bounds apply to every lane. */
+            __m512d multiply_fma(__m512d left, __m512d right) const {
+                assert(arithmetic_.fma_supported());
+#ifndef NDEBUG
+                double a[8], b[8];
+                _mm512_storeu_pd(a, left);
+                _mm512_storeu_pd(b, right);
+                for (std::size_t i = 0; i < 8; ++i) {
+                    assert(valid_integer(a[i]) && valid_integer(b[i]));
+                    assert(product_magnitude(a[i], b[i]) < 4 * wide_type(arithmetic_.modulus_) * arithmetic_.modulus_);
+                }
+#endif
+                __m512d high, low, quotient;
+                // Keep the rounded high product and its exact FMA residual separate. The quotient
+                // estimate and low product are independent once high is available.
+                // clang-format off
+                asm(
+                    "vmulpd %[right], %[left], %[high]\n"
+                    "vmulpd %[reciprocal], %[high], %[quotient]\n"
+                    "vmovapd %[high], %[low]\n"
+                    "vfmsub231pd %[right], %[left], %[low]\n"
+                    "vrndscalepd $8, %[quotient], %[quotient]\n"
+                    "vfnmadd231pd %[modulus], %[quotient], %[high]\n"
+                    "vaddpd %[low], %[high], %[high]\n"
+                    : [high] "=&v"(high), [low] "=&v"(low), [quotient] "=&v"(quotient)
+                    : [left] "v"(left), [right] "v"(right),
+                      [modulus] "v"(modulus_), [reciprocal] "v"(reciprocal_)
+                );
+                // clang-format on
+                return high;
+            }
+
+            /**
+             * Two independent compensated products. The distinct left vectors are overwritten;
+             * right operands are copied before either write. Interleave the independent product
+             * and quotient work with separate scratch registers. Bounds match multiply_fma.
+             */
+            void multiply_fma_pair(__m512d &left0, __m512d &left1, __m512d right0, __m512d right1) const {
+                assert(&left0 != &left1);
+                assert(arithmetic_.fma_supported());
+#ifndef NDEBUG
+                double a[16], b[16];
+                _mm512_storeu_pd(a, left0);
+                _mm512_storeu_pd(a + 8, left1);
+                _mm512_storeu_pd(b, right0);
+                _mm512_storeu_pd(b + 8, right1);
+                for (std::size_t i = 0; i < 16; ++i) {
+                    assert(valid_integer(a[i]) && valid_integer(b[i]));
+                    assert(product_magnitude(a[i], b[i]) < 4 * wide_type(arithmetic_.modulus_) * arithmetic_.modulus_);
+                }
+#endif
+                __m512d high0, high1, quotient0, quotient1;
+                // The early-clobber left operands hold their exact low products after vfmsub213pd.
+                // Keep right operands distinct from both outputs until both residuals are computed.
+                // clang-format off
+                asm(
+                    "vmulpd %[right0], %[left0], %[high0]\n"
+                    "vmulpd %[right1], %[left1], %[high1]\n"
+                    "vmulpd %[reciprocal], %[high0], %[quotient0]\n"
+                    "vmulpd %[reciprocal], %[high1], %[quotient1]\n"
+                    "vfmsub213pd %[high0], %[right0], %[left0]\n"
+                    "vfmsub213pd %[high1], %[right1], %[left1]\n"
+                    "vrndscalepd $8, %[quotient0], %[quotient0]\n"
+                    "vrndscalepd $8, %[quotient1], %[quotient1]\n"
+                    "vfnmadd231pd %[modulus], %[quotient0], %[high0]\n"
+                    "vfnmadd231pd %[modulus], %[quotient1], %[high1]\n"
+                    "vaddpd %[high0], %[left0], %[left0]\n"
+                    "vaddpd %[high1], %[left1], %[left1]\n"
+                    : [left0] "+&v"(left0), [left1] "+&v"(left1),
+                      [high0] "=&v"(high0), [high1] "=&v"(high1),
+                      [quotient0] "=&v"(quotient0), [quotient1] "=&v"(quotient1)
+                    : [right0] "v"(right0), [right1] "v"(right1),
+                      [modulus] "v"(modulus_), [reciprocal] "v"(reciprocal_)
+                );
+                // clang-format on
+            }
+
+        private:
+            const small_prime_fft_arithmetic &arithmetic_;
+            const __m512d modulus_;
+            const __m512d reciprocal_;
+        };
+#endif
 #endif
 
         /** Exact fallback for reduce_fma, with the same input/output bounds and any rounding mode. */

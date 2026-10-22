@@ -290,7 +290,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                                                        spectrum(2 * row + 1), spectrum(4 + Columns + column), size,
                                                        normalizations_[plan_offset + prime]);
                         for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                            plan.inverse_fft(destination.subspan(coordinate * size, size), false);
+                            plan.inverse_fft_pointwise(destination.subspan(coordinate * size, size));
                         }
                     }
                     const std::size_t index = row * Columns + column;
@@ -580,7 +580,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                     pointwise_[prime].multiply(a, b, size, normalizations_[plan_offset + prime]);
                 }
                 for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                    plan.inverse_fft(a.subspan(coordinate * size, size), false);
+                    plan.inverse_fft_pointwise(a.subspan(coordinate * size, size));
                 }
             }
             result_.resize(result_size);

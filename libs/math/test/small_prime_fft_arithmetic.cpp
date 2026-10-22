@@ -247,7 +247,9 @@ BOOST_AUTO_TEST_CASE(invalid_moduli_are_rejected_and_valid_endpoints_work) {
 }
 
 #if defined(CRYPTO3_SMALL_PRIME_FFT_AVX2_SELECTED)
-BOOST_AUTO_TEST_CASE(packed_products_match_scalar_and_exact_integer_oracles) {
+template<typename Packed>
+void check_packed_products() {
+    constexpr auto lanes = Packed::lanes;
     restore_rounding restore;
     BOOST_REQUIRE_EQUAL(std::fesetround(FE_TONEAREST), 0);
     std::mt19937_64 random(0x41565832);
@@ -256,7 +258,7 @@ BOOST_AUTO_TEST_CASE(packed_products_match_scalar_and_exact_integer_oracles) {
         if (!arithmetic.fma_supported()) {
             continue;
         }
-        const arithmetic_type::packed_fma_kernel packed(arithmetic);
+        const Packed packed(arithmetic);
         const auto q = static_cast<std::int64_t>(prime.modulus);
         const std::array<std::array<std::int64_t, 2>, 12> boundaries {{{0, 4 * q - 1},
                                                                        {q - 1, 1 - q},
@@ -271,25 +273,37 @@ BOOST_AUTO_TEST_CASE(packed_products_match_scalar_and_exact_integer_oracles) {
                                                                        {1, -1},
                                                                        {-q, q}}};
         for (std::size_t batch = 0; batch < 1003; ++batch) {
-            alignas(32) std::array<double, 6> left {}, right {}, output;
+            alignas(64) std::array<double, lanes + 2> left {}, right {}, output;
             output.fill(-19.0);
-            for (std::size_t lane = 0; lane < 4; ++lane) {
-                const auto a = batch < 3 ? boundaries[4 * batch + lane][0] :
+            for (std::size_t lane = 0; lane < lanes; ++lane) {
+                const auto a = batch < 3 ? boundaries[(lanes * batch + lane) % boundaries.size()][0] :
                                            static_cast<std::int64_t>(random() % (8 * q - 1)) - (4 * q - 1);
-                const auto b = batch < 3 ? boundaries[4 * batch + lane][1] :
+                const auto b = batch < 3 ? boundaries[(lanes * batch + lane) % boundaries.size()][1] :
                                            static_cast<std::int64_t>(random() % (2 * q - 1)) - (q - 1);
                 left[lane + 1] = static_cast<double>(a);
                 right[lane + 1] = static_cast<double>(b);
             }
-            _mm256_storeu_pd(output.data() + 1,
-                             packed.multiply_fma(_mm256_loadu_pd(left.data() + 1), _mm256_loadu_pd(right.data() + 1)));
-            for (std::size_t lane = 1; lane <= 4; ++lane) {
+            Packed::store(output.data() + 1,
+                          packed.multiply_fma(Packed::load(left.data() + 1), Packed::load(right.data() + 1)));
+            std::array<double, lanes> paired, reversed, reversed_left, reversed_right;
+            for (std::size_t lane = 0; lane < lanes; ++lane) {
+                reversed_left[lane] = left[lanes - lane];
+                reversed_right[lane] = right[lanes - lane];
+            }
+            auto a = Packed::load(left.data() + 1);
+            auto b = Packed::load(reversed_left.data());
+            packed.multiply_fma_pair(a, b, Packed::load(right.data() + 1), Packed::load(reversed_right.data()));
+            Packed::store(paired.data(), a);
+            Packed::store(reversed.data(), b);
+            for (std::size_t lane = 1; lane <= lanes; ++lane) {
                 const cpp_int product =
                     cpp_int(static_cast<std::int64_t>(left[lane])) * static_cast<std::int64_t>(right[lane]);
                 const double bound = boost::multiprecision::abs(product) < 2 * cpp_int(q) * q ? double(q) : 1.5 * q;
                 BOOST_TEST_CONTEXT("q=" << q << " batch=" << batch << " lane=" << lane) {
                     check_residue(output[lane], positive_residue(product, prime.modulus), prime.modulus, bound);
                     BOOST_CHECK_EQUAL(output[lane], arithmetic.multiply_fma(left[lane], right[lane]));
+                    BOOST_CHECK_EQUAL(paired[lane - 1], output[lane]);
+                    BOOST_CHECK_EQUAL(reversed[lanes - lane], output[lane]);
                 }
             }
             BOOST_CHECK_EQUAL(output.front(), -19.0);
@@ -299,7 +313,9 @@ BOOST_AUTO_TEST_CASE(packed_products_match_scalar_and_exact_integer_oracles) {
     BOOST_CHECK_EQUAL(std::fegetround(), FE_TONEAREST);
 }
 
-BOOST_AUTO_TEST_CASE(packed_reductions_preserve_lane_order_and_large_integer_bounds) {
+template<typename Packed>
+void check_packed_reductions() {
+    constexpr auto lanes = Packed::lanes;
     restore_rounding restore;
     BOOST_REQUIRE_EQUAL(std::fesetround(FE_TONEAREST), 0);
     std::mt19937_64 random(0x41565833);
@@ -309,19 +325,22 @@ BOOST_AUTO_TEST_CASE(packed_reductions_preserve_lane_order_and_large_integer_bou
         if (!arithmetic.fma_supported()) {
             continue;
         }
-        const arithmetic_type::packed_fma_kernel packed(arithmetic);
+        const Packed packed(arithmetic);
         const auto q = static_cast<std::int64_t>(prime.modulus);
         for (std::size_t batch = 0; batch < 1001; ++batch) {
-            alignas(32) std::array<double, 6> input {}, output;
+            alignas(64) std::array<double, lanes + 2> input {}, output;
             output.fill(-23.0);
-            for (std::size_t lane = 1; lane <= 4; ++lane) {
+            for (std::size_t lane = 1; lane <= lanes; ++lane) {
                 input[lane] = static_cast<double>(static_cast<std::int64_t>(random() % (2 * limit - 1)) - (limit - 1));
             }
             if (batch == 0) {
-                input = {0.0, double(limit - 1), double(1 - limit), double(q / 2), double(-q / 2 - 1), 0.0};
+                input[1] = double(limit - 1);
+                input[2] = double(1 - limit);
+                input[3] = double(q / 2);
+                input[4] = double(-q / 2 - 1);
             }
-            _mm256_storeu_pd(output.data() + 1, packed.reduce_fma(_mm256_loadu_pd(input.data() + 1)));
-            for (std::size_t lane = 1; lane <= 4; ++lane) {
+            Packed::store(output.data() + 1, packed.reduce_fma(Packed::load(input.data() + 1)));
+            for (std::size_t lane = 1; lane <= lanes; ++lane) {
                 BOOST_TEST_CONTEXT("q=" << q << " batch=" << batch << " lane=" << lane) {
                     check_residue(output[lane], positive_residue(static_cast<std::int64_t>(input[lane]), prime.modulus),
                                   prime.modulus, double(q));
@@ -334,6 +353,25 @@ BOOST_AUTO_TEST_CASE(packed_reductions_preserve_lane_order_and_large_integer_bou
     }
     BOOST_CHECK_EQUAL(std::fegetround(), FE_TONEAREST);
 }
+
+BOOST_AUTO_TEST_CASE(packed_products_match_scalar_and_exact_integer_oracles) {
+    check_packed_products<arithmetic_type::packed_fma_kernel>();
+}
+
+BOOST_AUTO_TEST_CASE(packed_reductions_preserve_lane_order_and_large_integer_bounds) {
+    check_packed_reductions<arithmetic_type::packed_fma_kernel>();
+}
+
+#if defined(CRYPTO3_SMALL_PRIME_FFT_AVX512_AVAILABLE)
+BOOST_AUTO_TEST_CASE(wide_products_match_scalar_and_exact_integer_oracles) {
+    check_packed_products<arithmetic_type::wide_fma_kernel>();
+}
+
+BOOST_AUTO_TEST_CASE(wide_reductions_preserve_lane_order_and_large_integer_bounds) {
+    check_packed_reductions<arithmetic_type::wide_fma_kernel>();
+}
+#endif
+
 #endif
 
 BOOST_AUTO_TEST_SUITE_END()
