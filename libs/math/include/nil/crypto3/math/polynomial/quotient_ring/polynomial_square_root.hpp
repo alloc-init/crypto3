@@ -251,6 +251,67 @@ namespace nil::crypto3::math {
         return detail::is_square_mod_impl(input, divisor_context, arithmetic_context, nullptr);
     }
 
+    namespace detail {
+
+        // Return {X^((Q+1)/2), X^Q} modulo B. Called after the odd-degree root checks, with d > 1 and B(0) != 0.
+        template<SupportsDivrem Backend>
+        std::pair<typename Backend::polynomial_type, typename Backend::polynomial_type>
+            square_root_x_seed(const polynomial_divisor_context<Backend> &divisor_context,
+                               polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+            using polynomial_type = typename Backend::polynomial_type;
+            using value_type = typename polynomial_type::value_type;
+            using field_type = typename value_type::field_type;
+            const auto &modulus = divisor_context.divisor();
+            const std::size_t degree = divisor_context.degree();
+            polynomial_type seed, x_to_q;
+            if constexpr (field_type::arity > 1 && requires(const value_type &value, std::size_t power) {
+                              { value.Frobenius_map(power) } -> std::convertible_to<value_type>;
+                          }) {
+                const auto multiply_by_x = [&](polynomial_type &value) {
+                    shift_left(value, value, 1);
+                    if (value.size() > degree) {
+                        const value_type leading = value[degree] * divisor_context.reversed_divisor_inverse()[0];
+                        value.resize(degree);
+                        for (std::size_t i = 0; i < degree; ++i) {
+                            value[i] -= leading * modulus[i];
+                        }
+                        condense(value);
+                    }
+                };
+                // For Q = p^e, a = x^((p-1)/2) gives x^p = x*a^2. Accumulate the e conjugates of a:
+                // T = a * a^p * ... * a^(p^(e-1)) = x^((Q-1)/2). Then b = x*T and x^Q = x*T^2.
+                // The chain shares its composition caches between products and images, avoiding a Q-sized power.
+                const boost::multiprecision::cpp_int exponent =
+                    (algebra::fields::field_characteristic<field_type>() - 1) >> 1;
+                polynomial_type characteristic_seed, x_to_p;
+                powmod_x(characteristic_seed, exponent, divisor_context, arithmetic_context);
+                squaremod(x_to_p, characteristic_seed, divisor_context, arithmetic_context);
+                multiply_by_x(x_to_p);
+                frobenius_product_impl<true>(seed, characteristic_seed, field_type::arity, x_to_p, divisor_context,
+                                             arithmetic_context);
+                squaremod(x_to_q, seed, divisor_context, arithmetic_context);
+                multiply_by_x(x_to_q);
+                multiply_by_x(seed);
+            } else {
+                // Prime fields and coefficient types without a Frobenius map retain the direct seed.
+                const boost::multiprecision::cpp_int exponent = (algebra::fields::field_order<field_type>() + 1) >> 1;
+                polynomial_type seed_squared;
+                powmod_x(seed, exponent, divisor_context, arithmetic_context);
+                squaremod(seed_squared, seed, divisor_context, arithmetic_context);
+                // For a reduced y, y / X = (y - c * B) / X with c = y[0] / B[0], also for nonmonic B.
+                const value_type c = seed_squared[0] * modulus[0].inversed();
+                x_to_q.assign(degree, value_type::zero());
+                for (std::size_t i = 0; i < degree; ++i) {
+                    x_to_q[i] =
+                        (i + 1 < seed_squared.size() ? seed_squared[i + 1] : value_type::zero()) - c * modulus[i + 1];
+                }
+                condense(x_to_q);
+            }
+            return {std::move(seed), std::move(x_to_q)};
+        }
+
+    }    // namespace detail
+
     /**
      * Compute a square root of X modulo an irreducible polynomial B of odd degree d over an odd-order field K.
      * Write Q = |K|, x = X mod B, and N = Norm(x) = -B(0) / leading_coefficient(B). The element x is square exactly
@@ -261,9 +322,10 @@ namespace nil::crypto3::math {
      *     D = b^Q * b^(Q^3) * ... * b^(Q^(2m - 1))
      *
      * satisfies D^2 = x^(Q + Q^2 + ... + Q^(d - 1)) = N / x. Therefore R = x * D / sqrt(N) satisfies R^2 = x.
-     * Only the seed exponentiation depends on the bit length of Q. Frobenius products use logarithmically many
-     * compositions and modular products in d, without constructing a quadratic nonresidue in K[X]/(B).
-     * The Q-power image of X is recovered as b^2 / x; division by x and final multiplication by x are linear passes.
+     * For K = F_(p^e) with coefficient Frobenius support, the seed uses one characteristic-sized exponentiation
+     * and O(log(e)) semilinear compositions, producing X^Q at the same time. Other coefficient types retain the
+     * direct Q-sized seed. The remaining Frobenius product uses O(log(d)) compositions and modular products,
+     * without constructing a quadratic nonresidue in K[X]/(B). Final multiplication by x is a linear pass.
      *
      * Return false and set output to zero if x is nonsquare. Otherwise output is a canonical reduced root.
      * @throws std::invalid_argument if d is zero or even, K has characteristic two, B(0) is zero with d > 1,
@@ -306,18 +368,7 @@ namespace nil::crypto3::math {
             throw std::invalid_argument("direct square roots of X require a positive composition cached-power limit");
         }
 
-        const boost::multiprecision::cpp_int exponent = (algebra::fields::field_order<field_type>() + 1) >> 1;
-        polynomial_type seed, seed_squared;
-        powmod_x(seed, exponent, divisor_context, arithmetic_context);
-        squaremod(seed_squared, seed, divisor_context, arithmetic_context);
-
-        // For a reduced y, y / X = (y - c * B) / X with c = y[0] / B[0]. This also handles nonmonic B.
-        const value_type c = seed_squared[0] * modulus[0].inversed();
-        polynomial_type x_to_q(degree, value_type::zero());
-        for (std::size_t i = 0; i < degree; ++i) {
-            x_to_q[i] = (i + 1 < seed_squared.size() ? seed_squared[i + 1] : value_type::zero()) - c * modulus[i + 1];
-        }
-        condense(x_to_q);
+        auto [seed, x_to_q] = detail::square_root_x_seed(divisor_context, arithmetic_context);
 
         const std::size_t term_count = (degree - 1) / 2;
         polynomial_type product, x_to_q_squared;

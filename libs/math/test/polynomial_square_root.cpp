@@ -480,4 +480,46 @@ BOOST_AUTO_TEST_CASE(direct_odd_degree_roots_reject_unsupported_contexts) {
     BOOST_CHECK(output == polynomial_type({value_type(19)}));
 }
 
+BOOST_AUTO_TEST_CASE(characteristic_seed_and_image_match_independent_full_powers) {
+    using extension_field = fields::fp12_2over3over2<fields::alt_bn128<254>>;
+    using extension_value = extension_field::value_type;
+    using backend = polynomial_arithmetic::schoolbook_backend<extension_value>;
+    using polynomial = backend::polynomial_type;
+    boost::random::mt19937 rng(0x5EED012);
+    const boost::multiprecision::cpp_int q = fields::field_order<extension_field>();
+    const boost::multiprecision::cpp_int exponent = (q + 1) >> 1;
+    polynomial_arithmetic::polynomial_context<backend> context;
+    for (const std::size_t degree : {3, 5, 9}) {
+        polynomial modulus(degree + 1, extension_value::zero());
+        for (auto &coefficient : modulus) {
+            coefficient = nil::crypto3::algebra::random_element<extension_field>(rng);
+        }
+        BOOST_REQUIRE(!modulus[0].is_zero());
+        BOOST_REQUIRE(!modulus.back().is_zero());
+        // This identity holds even in reducible quotient rings; full coordinates also exercise semilinearity.
+        BOOST_REQUIRE(modulus[1].Frobenius_map(1) != modulus[1]);
+        const math::polynomial_divisor_context<backend> divisor(modulus, degree - 1, context);
+        const auto [seed, image] = math::detail::square_root_x_seed(divisor, context);
+        polynomial expected_seed, expected_image;
+        math::powmod_x(expected_seed, exponent, divisor, context);
+        math::powmod_x(expected_image, q, divisor, context);
+        BOOST_CHECK(seed == expected_seed);
+        BOOST_CHECK(image == expected_image);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(prime_field_seed_retains_direct_exponentiation) {
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    const polynomial_type modulus {value_type(5), value_type(7), value_type(11), value_type(13)};
+    const math::polynomial_divisor_context<backend_type> divisor(modulus, 2, context);
+    const auto [seed, image] = math::detail::square_root_x_seed(divisor, context);
+    const boost::multiprecision::cpp_int q = fields::field_order<field_type>();
+    const boost::multiprecision::cpp_int exponent = (q + 1) >> 1;
+    polynomial_type expected_seed, expected_image;
+    math::powmod_x(expected_seed, exponent, divisor, context);
+    math::powmod_x(expected_image, q, divisor, context);
+    BOOST_CHECK(seed == expected_seed);
+    BOOST_CHECK(image == expected_image);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

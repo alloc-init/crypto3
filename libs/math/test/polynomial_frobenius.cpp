@@ -368,4 +368,42 @@ BOOST_AUTO_TEST_CASE(frobenius_products_handle_constants_zero_rings_and_invalid_
     }
 }
 
+BOOST_AUTO_TEST_CASE(characteristic_product_twists_coefficients_and_matches_direct_powers) {
+    using backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using polynomial = backend::polynomial_type;
+    const polynomial modulus {fq12_value(3), fq12_value(19), fq12_value(37), fq12_value(53)};
+    const polynomial input {fq12_value(71), fq12_value(89), fq12_value(107)};
+    BOOST_REQUIRE(input[0].Frobenius_map(1) != input[0]);
+    const boost::multiprecision::cpp_int p = fields::field_characteristic<fq12_field_type>();
+    for (const std::size_t cache_limit : {1, 3}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.modular_composition_cached_power_limit = cache_limit;
+        polynomial_arithmetic::polynomial_context<backend> context(backend {}, options);
+        const math::polynomial_divisor_context<backend> divisor(modulus, 2, context);
+        polynomial image;
+        math::powmod_x(image, p, divisor, context);
+        for (const std::size_t count : {0, 1, 2, 3, 6, 12, 13}) {
+            boost::multiprecision::cpp_int exponent = 0;
+            for (std::size_t i = 0; i < count; ++i) {
+                exponent = exponent * p + 1;
+            }
+            // Constants also need the coefficient twist: they are not fixed by absolute Frobenius.
+            for (const auto &base : {input, polynomial {input[0]}, polynomial {fq12_value_type::zero()}}) {
+                polynomial expected, result;
+                math::powmod(expected, base, exponent, divisor, context);
+                math::detail::frobenius_product_impl<true>(result, base, count, image, divisor, context);
+                BOOST_CHECK(result == expected);
+                if (count == 12) {
+                    result = base;
+                    math::detail::frobenius_product_impl<true>(result, result, count, image, divisor, context);
+                    BOOST_CHECK(result == expected);
+                    result = image;
+                    math::detail::frobenius_product_impl<true>(result, base, count, result, divisor, context);
+                    BOOST_CHECK(result == expected);
+                }
+            }
+        }
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
