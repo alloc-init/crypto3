@@ -36,6 +36,7 @@
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 #include <nil/crypto3/algebra/random_element.hpp>
 
+#include <nil/crypto3/math/polynomial/backends/bn254_small_prime_fft_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/math/polynomial/reconstruction/polynomial_x_norm_reconstruction.hpp>
@@ -183,11 +184,16 @@ BOOST_AUTO_TEST_CASE(recovers_and_normalizes_an_irreducible_quadratic_with_the_s
     BOOST_REQUIRE(g == polynomial_type({value_type::one(), value_type::zero() - value_type(79), value_type::one()}));
 
     boost::random::mt19937 rng(0x584E4F52);
-    auto coefficient_generator = [&] { return nil::crypto3::algebra::random_element<field_type>(rng); };
+    std::size_t generator_calls = 0;
+    auto coefficient_generator = [&] {
+        ++generator_calls;
+        return nil::crypto3::algebra::random_element<field_type>(rng);
+    };
     const auto result = math::recover_irreducible_polynomial_x_norm_representation<backend_type>(g, arithmetic_context,
                                                                                                  coefficient_generator);
 
     BOOST_REQUIRE(result.has_value());
+    BOOST_CHECK_GT(generator_calls, 0);
     BOOST_CHECK_LE(result->p.size() - 1, 1);
     BOOST_CHECK_LE(result->q.size() - 1, 0);
     // Rational reconstruction makes Q monic, initially producing lambda = 1/81. Exact normalization restores Q^2 = 81.
@@ -227,6 +233,116 @@ BOOST_AUTO_TEST_CASE(returns_no_value_when_the_scalar_multiple_cannot_be_normali
     const auto result = math::recover_irreducible_polynomial_x_norm_representation<backend_type>(g, arithmetic_context,
                                                                                                  coefficient_generator);
     BOOST_CHECK(!result.has_value());
+}
+
+BOOST_AUTO_TEST_CASE(odd_degree_norm_recovery_verifies_exact_identities_without_sampling) {
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    value_type c(2);
+    const auto noncube_exponent = (field_type::modulus - 1u) / 3u;
+    while (c.pow(noncube_exponent) == value_type::one()) {
+        c += value_type::one();
+    }
+    c = c.squared();
+    std::size_t generator_calls = 0;
+    auto generator = [&]() -> value_type {
+        ++generator_calls;
+        throw std::logic_error("odd-degree recovery must not sample a polynomial nonresidue");
+    };
+    for (const std::size_t degree : {3, 9, 27}) {
+        // X^degree - c is irreducible by the binomial criterion; translation preserves irreducibility.
+        value_type shift = value_type::one();
+        while (!(c - shift.pow(degree)).is_square()) {
+            shift += value_type::one();
+        }
+        polynomial_type monic {value_type::one()};
+        const polynomial_type linear {shift, value_type::one()};
+        for (std::size_t i = 0; i < degree; ++i) {
+            context.multiply(monic, monic, linear);
+        }
+        monic[0] -= c;
+        for (const auto &scale : {value_type::one(), value_type(49), first_quadratic_non_residue()}) {
+            polynomial_type g;
+            math::scalar_multiplication(g, monic, scale);
+            const auto result = math::recover_irreducible_polynomial_x_norm_representation(g, context, generator);
+            // -1 is square in BabyBear. The leading coefficient of an odd-degree norm is minus a square.
+            BOOST_REQUIRE_EQUAL(result.has_value(), scale.is_square());
+            if (result) {
+                BOOST_CHECK(math::evaluate_polynomial_x_norm(*result, context) == g);
+                BOOST_CHECK_LE(result->p.size() - 1, degree / 2);
+                BOOST_CHECK_LE(result->q.size() - 1, (degree - 1) / 2);
+            }
+        }
+    }
+    const polynomial_type x {value_type::zero(), value_type::one()};
+    const auto zero_root = math::recover_irreducible_polynomial_x_norm_representation(x, context, generator);
+    BOOST_REQUIRE(zero_root.has_value());
+    BOOST_CHECK(math::evaluate_polynomial_x_norm(*zero_root, context) == x);
+    const polynomial_type nonsquare_linear {-first_quadratic_non_residue(), value_type::one()};
+    BOOST_CHECK(!math::recover_irreducible_polynomial_x_norm_representation(nonsquare_linear, context, generator));
+    BOOST_CHECK_EQUAL(generator_calls, 0);
+}
+
+BOOST_AUTO_TEST_CASE(odd_degree_recovery_preserves_tonelli_shanks_when_composition_is_disabled) {
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_cached_power_limit = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+    value_type c(2);
+    const auto noncube_exponent = (field_type::modulus - 1u) / 3u;
+    while (c.pow(noncube_exponent) == value_type::one()) {
+        c += value_type::one();
+    }
+    const polynomial_type g {-c.squared(), value_type::zero(), value_type::zero(), value_type::one()};
+    const auto nonresidue = first_quadratic_non_residue();
+    std::size_t generator_calls = 0;
+    auto generator = [&] {
+        // A coefficient-field nonsquare remains nonsquare in an odd-degree extension.
+        return generator_calls++ % 3 == 0 ? nonresidue : value_type::zero();
+    };
+    const auto result = math::recover_irreducible_polynomial_x_norm_representation(g, context, generator);
+    BOOST_REQUIRE(result.has_value());
+    BOOST_CHECK(math::evaluate_polynomial_x_norm(*result, context) == g);
+    BOOST_CHECK_EQUAL(generator_calls, 3);
+
+    const polynomial_type linear {value_type(9), -value_type(4)};
+    const auto linear_result = math::recover_irreducible_polynomial_x_norm_representation(linear, context, generator);
+    BOOST_REQUIRE(linear_result.has_value());
+    BOOST_CHECK(math::evaluate_polynomial_x_norm(*linear_result, context) == linear);
+    BOOST_CHECK_EQUAL(generator_calls, 3);
+}
+
+BOOST_AUTO_TEST_CASE(odd_degree_bn254_fp12_norm_recovery_agrees_across_backends_without_sampling) {
+    using backend = polynomial_arithmetic::bn254_small_prime_fft_backend;
+    using polynomial = backend::polynomial_type;
+    boost::random::mt19937 rng(0xF0120DD);
+    const boost::multiprecision::cpp_int noncube_exponent = (fields::field_order<fq12_field_type>() - 1) / 3;
+    fq12_value_type c = fq12_value_type::one();
+    for (std::size_t i = 0; i < 64 && c.pow(noncube_exponent) == fq12_value_type::one(); ++i) {
+        c = nil::crypto3::algebra::random_element<fq12_field_type>(rng);
+    }
+    BOOST_REQUIRE(!c.is_zero());
+    BOOST_REQUIRE(c.pow(noncube_exponent) != fq12_value_type::one());
+    c = c.squared();
+    fq12_value_type shift = fq12_value_type::one();
+    for (std::size_t i = 0; i < 64 && !(c - shift.pow(3)).is_square(); ++i) {
+        shift = nil::crypto3::algebra::random_element<fq12_field_type>(rng);
+    }
+    BOOST_REQUIRE((c - shift.pow(3)).is_square());
+    polynomial g {shift.pow(3) - c, fq12_scalar(3) * shift.squared(), fq12_scalar(3) * shift, fq12_value_type::one()};
+    const auto scale = nil::crypto3::algebra::random_element<fq12_field_type>(rng).squared();
+    BOOST_REQUIRE(!scale.is_zero());
+    math::scalar_multiplication(g, g, scale);
+    auto generator = []() -> fq12_value_type {
+        throw std::logic_error("odd-degree recovery must not sample a polynomial nonresidue");
+    };
+    polynomial_arithmetic::polynomial_context<backend> context {backend(16)};
+    polynomial_arithmetic::polynomial_context<fq12_schoolbook_backend> reference;
+    const auto result = math::recover_irreducible_polynomial_x_norm_representation(g, context, generator);
+    const auto expected = math::recover_irreducible_polynomial_x_norm_representation(g, reference, generator);
+    BOOST_REQUIRE(result.has_value());
+    BOOST_REQUIRE(expected.has_value());
+    BOOST_CHECK(math::evaluate_polynomial_x_norm(*result, reference) == g);
+    BOOST_CHECK(result->p == expected->p);
+    BOOST_CHECK(result->q == expected->q);
 }
 
 BOOST_AUTO_TEST_CASE(recovers_a_linear_bn254_fq12_norm_with_the_schoolbook_backend) {

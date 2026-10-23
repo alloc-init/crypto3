@@ -27,6 +27,8 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <optional>
+#include <stdexcept>
 #include <utility>
 
 #include <nil/crypto3/algebra/fields/field_order.hpp>
@@ -145,6 +147,89 @@ namespace nil::crypto3::math {
             frobenius_map(result, result, frobenius_context, arithmetic_context);
         }
         output = std::move(result);
+    }
+
+    /**
+     * Compute input * F(input) * ... * F^(term_count - 1)(input) modulo B, where F is a power of the coefficient
+     * field's Frobenius map. The supplied x_to_frobenius_power is the canonical reduced image F(X); it can represent
+     * X^(Q^s) for any s >= 0, with Q the coefficient-field order. Its algebraic identity is a caller precondition,
+     * not checked by repeating the exponentiation. B need not be irreducible.
+     *
+     * Binary doubling uses O(log(term_count)) compositions and products. Each doubling shares one composition
+     * precomputation between the partial product and the next Frobenius image. Odd steps reuse the initial image's
+     * precomputation. Only the initial cache and one doubling cache are live at once.
+     *
+     * An empty product is the quotient-ring identity, and a singleton is the reduced input. The result is canonical
+     * and may alias either input polynomial. Reducing an unreduced input may require more inverse coefficients than
+     * products of reduced operands; otherwise degree(B) - 1 inverse coefficients suffice.
+     *
+     * @throws std::invalid_argument if an input is empty or noncanonical, the supplied image is not reduced, a
+     *         needed composition has a zero cached-power limit, or the divisor inverse has insufficient precision.
+     */
+    template<detail::SupportsDivrem Backend>
+    void frobenius_product(typename Backend::polynomial_type &output, const typename Backend::polynomial_type &input,
+                           std::size_t term_count, const typename Backend::polynomial_type &x_to_frobenius_power,
+                           const polynomial_divisor_context<Backend> &divisor_context,
+                           polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using value_type = typename polynomial_type::value_type;
+        using cache_type = polynomial_composition_precomputation<Backend>;
+        const std::size_t degree = divisor_context.degree();
+        const auto canonical = [](const polynomial_type &value) {
+            return !value.empty() && (value.size() == 1 || value.back() != value_type::zero());
+        };
+        if (!canonical(input) || !canonical(x_to_frobenius_power) ||
+            x_to_frobenius_power.size() > std::max<std::size_t>(1, degree)) {
+            throw std::invalid_argument("Frobenius products require canonical inputs and a reduced Frobenius image");
+        }
+        if (degree == 0 || term_count == 0) {
+            output.assign(1, degree == 0 ? value_type::zero() : value_type::one());
+            return;
+        }
+        polynomial_type base;
+        remainder(base, input, divisor_context, arithmetic_context);
+        if (term_count == 1) {
+            output = std::move(base);
+            return;
+        }
+        // Every coefficient-field constant is fixed by F, including zero.
+        if (base.size() == 1) {
+            powmod(output, base, term_count, divisor_context, arithmetic_context);
+            return;
+        }
+
+        const cache_type first_cache(x_to_frobenius_power, degree, divisor_context, arithmetic_context);
+        const auto chain = [&](auto &&self, std::size_t count,
+                               bool need_image) -> std::pair<polynomial_type, polynomial_type> {
+            if (count == 1) {
+                return {base, x_to_frobenius_power};
+            }
+            auto [product, image] = self(self, count / 2, true);
+            std::optional<cache_type> doubling_cache;
+            if (count / 2 > 1) {
+                doubling_cache.emplace(image, degree, divisor_context, arithmetic_context);
+            }
+            const auto &cache = doubling_cache ? *doubling_cache : first_cache;
+            // With P_k = product and H_k = image, P_2k = P_k * P_k(H_k) and H_2k = H_k(H_k).
+            polynomial_type shifted;
+            compose_mod(shifted, product, cache, divisor_context, arithmetic_context);
+            mulmod(product, product, shifted, divisor_context, arithmetic_context);
+            if (need_image) {
+                compose_mod(image, image, cache, divisor_context, arithmetic_context);
+            }
+            if (count % 2 != 0) {
+                // P_(2k+1) = base * F(P_2k); use the same initial cache at every odd step.
+                compose_mod(shifted, product, first_cache, divisor_context, arithmetic_context);
+                mulmod(product, base, shifted, divisor_context, arithmetic_context);
+                if (need_image) {
+                    compose_mod(image, image, first_cache, divisor_context, arithmetic_context);
+                }
+            }
+            return {std::move(product), std::move(image)};
+        };
+        // The final image is not used by the caller, so avoid its compositions.
+        auto result = chain(chain, term_count, false);
+        output = std::move(result.first);
     }
 
 }    // namespace nil::crypto3::math

@@ -37,6 +37,7 @@
 #include <nil/crypto3/algebra/random_element.hpp>
 
 #include <nil/crypto3/math/polynomial/quotient_ring/polynomial_square_root.hpp>
+#include <nil/crypto3/math/polynomial/backends/bn254_small_prime_fft_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 
 namespace {
@@ -342,6 +343,141 @@ BOOST_AUTO_TEST_CASE(tonelli_shanks_recovers_a_square_in_a_quadratic_extension_o
     fq12_polynomial_type recovered_square;
     math::squaremod(recovered_square, root, divisor_context, arithmetic_context);
     BOOST_CHECK(recovered_square == square);
+}
+
+BOOST_AUTO_TEST_CASE(direct_odd_degree_roots_match_tonelli_shanks_for_sparse_and_dense_divisors) {
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    const polynomial_type x {value_type::zero(), value_type::one()};
+    const polynomial_type nonresidue {first_quadratic_non_residue()};
+    std::size_t squares = 0, nonsquares = 0;
+    for (const std::size_t degree : {3, 5, 9, 27}) {
+        const std::size_t prime_factor = degree == 5 ? 5 : 3;
+        const auto character_exponent = (field_type::modulus - 1u) / prime_factor;
+        value_type c(2);
+        while (c.pow(character_exponent) == value_type::one()) {
+            c += value_type::one();
+        }
+        c = c.squared();
+        // The binomial irreducibility criterion applies: all prime factors of degree divide ord(c), and none
+        // divide (|K| - 1) / ord(c). Translation and nonzero scaling preserve irreducibility.
+        for (const std::size_t shift : {0, 1, 2, 3}) {
+            polynomial_type monic {value_type::one()};
+            const polynomial_type linear {value_type(shift), value_type::one()};
+            for (std::size_t i = 0; i < degree; ++i) {
+                context.multiply(monic, monic, linear);
+            }
+            monic[0] -= c;
+            const bool expected_square = (-monic[0]).is_square();
+            expected_square ? ++squares : ++nonsquares;
+            for (const auto &scale : {value_type::one(), value_type(7)}) {
+                polynomial_type modulus;
+                math::scalar_multiplication(modulus, monic, scale);
+                const math::polynomial_divisor_context<backend_type> divisor(modulus, degree - 1, context);
+                const math::polynomial_square_root_context<backend_type> tonelli(nonresidue, divisor, context);
+                polynomial_type root, reference;
+                BOOST_REQUIRE_EQUAL(math::square_root_mod_x_odd_degree(root, divisor, context), expected_square);
+                BOOST_REQUIRE_EQUAL(math::square_root_mod(reference, x, tonelli, context), expected_square);
+                if (expected_square) {
+                    polynomial_type squared, negative_reference;
+                    math::squaremod(squared, root, divisor, context);
+                    math::scalar_multiplication(negative_reference, reference, -value_type::one());
+                    BOOST_CHECK(squared == x);
+                    BOOST_CHECK(root == reference || root == negative_reference);
+                    BOOST_CHECK_LE(root.size(), degree);
+                    BOOST_CHECK(root.size() == 1 || root.back() != value_type::zero());
+                } else {
+                    BOOST_CHECK(root == polynomial_type({value_type::zero()}));
+                }
+            }
+        }
+    }
+    BOOST_CHECK_GT(squares, 0);
+    BOOST_CHECK_GT(nonsquares, 0);
+}
+
+BOOST_AUTO_TEST_CASE(direct_linear_roots_handle_zero_nonmonic_divisors_and_disabled_composition) {
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_cached_power_limit = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+    for (const auto &x : {value_type::zero(), value_type::one(), value_type(49), first_quadratic_non_residue()}) {
+        for (const auto &scale : {value_type::one(), value_type(11)}) {
+            const polynomial_type modulus {-scale * x, scale};
+            const math::polynomial_divisor_context<backend_type> divisor(modulus, 1, context);
+            polynomial_type root {value_type(19)};
+            BOOST_REQUIRE_EQUAL(math::square_root_mod_x_odd_degree(root, divisor, context), x.is_square());
+            BOOST_REQUIRE_EQUAL(root.size(), 1);
+            BOOST_CHECK(root[0].squared() == (x.is_square() ? x : value_type::zero()));
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(direct_odd_degree_roots_support_dense_bn254_fp12_coefficients_and_small_prime_products) {
+    using extension_field = fields::fp12_2over3over2<fields::alt_bn128<254>>;
+    using extension_value = extension_field::value_type;
+    using backend = polynomial_arithmetic::bn254_small_prime_fft_backend;
+    using reference_backend = polynomial_arithmetic::schoolbook_backend<extension_value>;
+    using polynomial = backend::polynomial_type;
+    boost::random::mt19937 rng(0x0DD012);
+    const boost::multiprecision::cpp_int noncube_exponent = (fields::field_order<extension_field>() - 1) / 3;
+    extension_value c = extension_value::one();
+    for (std::size_t i = 0; i < 64 && c.pow(noncube_exponent) == extension_value::one(); ++i) {
+        c = nil::crypto3::algebra::random_element<extension_field>(rng);
+    }
+    BOOST_REQUIRE(!c.is_zero());
+    BOOST_REQUIRE(c.pow(noncube_exponent) != extension_value::one());
+    c = c.squared();
+    polynomial_arithmetic::polynomial_context<reference_backend> reference;
+    const polynomial x {extension_value::zero(), extension_value::one()};
+    for (const std::size_t degree : {3, 9}) {
+        extension_value shift = extension_value::one();
+        for (std::size_t i = 0; i < 64 && !(c - shift.pow(degree)).is_square(); ++i) {
+            shift = nil::crypto3::algebra::random_element<extension_field>(rng);
+        }
+        BOOST_REQUIRE((c - shift.pow(degree)).is_square());
+        polynomial modulus {extension_value::one()};
+        const polynomial linear {shift, extension_value::one()};
+        for (std::size_t i = 0; i < degree; ++i) {
+            reference.multiply(modulus, modulus, linear);
+        }
+        modulus[0] -= c;
+        const extension_value scale = nil::crypto3::algebra::random_element<extension_field>(rng);
+        BOOST_REQUIRE(!scale.is_zero());
+        math::scalar_multiplication(modulus, modulus, scale);
+        polynomial_arithmetic::polynomial_context_options options;
+        // Also exercise the smallest valid composition cache and inverse-based polynomial reduction.
+        options.modular_composition_cached_power_limit = degree == 3 ? 1 : 3;
+        options.basecase_divisor_coefficient_cutoff = 0;
+        options.basecase_quotient_coefficient_cutoff = 0;
+        polynomial_arithmetic::polynomial_context<backend> context(backend(32), options);
+        const math::polynomial_divisor_context<backend> divisor(modulus, degree - 1, context);
+        const math::polynomial_divisor_context<reference_backend> reference_divisor(modulus, degree - 1, reference);
+        polynomial root, squared;
+        BOOST_REQUIRE(math::square_root_mod_x_odd_degree(root, divisor, context));
+        math::squaremod(squared, root, reference_divisor, reference);
+        BOOST_CHECK(squared == x);
+        BOOST_CHECK_LE(root.size(), degree);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(direct_odd_degree_roots_reject_unsupported_contexts) {
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    polynomial_type output {value_type(19)};
+    for (const auto &modulus :
+         {polynomial_type {value_type::one()},
+          polynomial_type {-first_quadratic_non_residue(), value_type::zero(), value_type::one()},
+          polynomial_type {value_type::zero(), value_type::one(), value_type::zero(), value_type::one()}}) {
+        const math::polynomial_divisor_context<backend_type> divisor(modulus, 2, context);
+        BOOST_CHECK_THROW(math::square_root_mod_x_odd_degree(output, divisor, context), std::invalid_argument);
+        BOOST_CHECK(output == polynomial_type({value_type(19)}));
+    }
+    const value_type c = first_cubic_non_residue().squared();
+    const polynomial_type cubic {-c, value_type::zero(), value_type::zero(), value_type::one()};
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_cached_power_limit = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> disabled(backend_type {}, options);
+    const math::polynomial_divisor_context<backend_type> divisor(cubic, 2, disabled);
+    BOOST_CHECK_THROW(math::square_root_mod_x_odd_degree(output, divisor, disabled), std::invalid_argument);
+    BOOST_CHECK(output == polynomial_type({value_type(19)}));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
