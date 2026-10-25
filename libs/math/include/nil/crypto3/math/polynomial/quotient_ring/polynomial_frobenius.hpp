@@ -266,6 +266,108 @@ namespace nil::crypto3::math {
                                               arithmetic_context);
     }
 
+    /**
+     * Compute sum_{i=0}^{term_count-1} P_i * F^i(input) modulo B, where P_0 = 1 and
+     * P_i = weight * F(weight) * ... * F^(i-1)(weight). F fixes the coefficient field and the supplied canonical,
+     * reduced image is F(X). As with frobenius_product, its algebraic identity is a caller precondition and B need
+     * not be irreducible. An empty sum is zero; a singleton is the reduced input.
+     *
+     * Binary doubling uses O(log(term_count)) compositions and products. The sum, weight product and Frobenius
+     * image share each doubling cache; only the initial cache and one doubling cache are live at once. The last
+     * level computes only the sum. The canonical result may alias input, weight or the supplied image.
+     *
+     * @throws std::invalid_argument if an input is empty or noncanonical, the image is not reduced, a needed
+     *         composition has a zero cached-power limit, or the divisor inverse has insufficient precision.
+     */
+    template<detail::SupportsDivrem Backend>
+    void frobenius_weighted_sum(typename Backend::polynomial_type &output,
+                                const typename Backend::polynomial_type &input,
+                                const typename Backend::polynomial_type &weight, std::size_t term_count,
+                                const typename Backend::polynomial_type &x_to_frobenius_power,
+                                const polynomial_divisor_context<Backend> &divisor_context,
+                                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using value_type = typename polynomial_type::value_type;
+        using cache_type = polynomial_composition_precomputation<Backend>;
+        const std::size_t degree = divisor_context.degree();
+        const auto canonical = [](const polynomial_type &value) {
+            return !value.empty() && (value.size() == 1 || value.back() != value_type::zero());
+        };
+        if (!canonical(input) || !canonical(weight) || !canonical(x_to_frobenius_power) ||
+            x_to_frobenius_power.size() > std::max<std::size_t>(1, degree)) {
+            throw std::invalid_argument("Frobenius sums require canonical inputs and a reduced Frobenius image");
+        }
+        if (degree == 0 || term_count == 0) {
+            output.assign(1, value_type::zero());
+            return;
+        }
+        polynomial_type base, multiplier;
+        remainder(base, input, divisor_context, arithmetic_context);
+        if (term_count == 1 || is_zero(base)) {
+            output = std::move(base);
+            return;
+        }
+        remainder(multiplier, weight, divisor_context, arithmetic_context);
+        if (is_zero(multiplier)) {
+            output = std::move(base);
+            return;
+        }
+        if (base.size() == 1 && multiplier.size() == 1) {
+            // Coefficient-fixed Frobenius reduces this to a geometric sum, including weight = 1.
+            value_type sum = value_type::zero(), product = value_type::one();
+            value_type block_sum = value_type::one(), factor = multiplier[0];
+            for (std::size_t count = term_count; count != 0; count >>= 1) {
+                if (count % 2 != 0) {
+                    sum += product * block_sum;
+                    product *= factor;
+                }
+                block_sum += factor * block_sum;
+                factor = factor.squared();
+            }
+            output.assign(1, base[0] * sum);
+            return;
+        }
+
+        struct partial_sum {
+            polynomial_type sum, product, image;
+        };
+        const cache_type first_cache(x_to_frobenius_power, degree, divisor_context, arithmetic_context);
+        const auto chain = [&](auto &&self, std::size_t count, bool need_product_and_image) -> partial_sum {
+            if (count == 1) {
+                return {base, multiplier, x_to_frobenius_power};
+            }
+            auto result = self(self, count / 2, true);
+            std::optional<cache_type> doubling_cache;
+            if (count / 2 > 1) {
+                doubling_cache.emplace(result.image, degree, divisor_context, arithmetic_context);
+            }
+            const auto &cache = doubling_cache ? *doubling_cache : first_cache;
+            // W_2k = W_k + P_k * F^k(W_k). Form this before replacing P_k by P_2k.
+            polynomial_type shifted;
+            compose_mod(shifted, result.sum, cache, divisor_context, arithmetic_context);
+            mulmod(shifted, result.product, shifted, divisor_context, arithmetic_context);
+            addition(result.sum, result.sum, shifted);
+            if (need_product_and_image) {
+                compose_mod(shifted, result.product, cache, divisor_context, arithmetic_context);
+                mulmod(result.product, result.product, shifted, divisor_context, arithmetic_context);
+                compose_mod(result.image, result.image, cache, divisor_context, arithmetic_context);
+            }
+            if (count % 2 != 0) {
+                // Prepend a term: W_(2k+1) = input + weight * F(W_2k), reusing the initial cache.
+                compose_mod(shifted, result.sum, first_cache, divisor_context, arithmetic_context);
+                mulmod(shifted, multiplier, shifted, divisor_context, arithmetic_context);
+                addition(result.sum, base, shifted);
+                if (need_product_and_image) {
+                    compose_mod(shifted, result.product, first_cache, divisor_context, arithmetic_context);
+                    mulmod(result.product, multiplier, shifted, divisor_context, arithmetic_context);
+                    compose_mod(result.image, result.image, first_cache, divisor_context, arithmetic_context);
+                }
+            }
+            return result;
+        };
+        output = std::move(chain(chain, term_count, false).sum);
+    }
+
 }    // namespace nil::crypto3::math
 
 #endif    // CRYPTO3_MATH_POLYNOMIAL_FROBENIUS_HPP

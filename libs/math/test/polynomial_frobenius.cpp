@@ -406,4 +406,161 @@ BOOST_AUTO_TEST_CASE(characteristic_product_twists_coefficients_and_matches_dire
     }
 }
 
+BOOST_AUTO_TEST_CASE(weighted_sums_match_direct_powers_and_support_all_aliases) {
+    using value = fields::babybear::value_type;
+    using backend = polynomial_arithmetic::schoolbook_backend<value>;
+    using polynomial = backend::polynomial_type;
+    const polynomial modulus {value(5), value(7), value(3), value(2)};
+    const polynomial input {value(2), value(5), value(7), value(11), value(13), value(17)};
+    const polynomial weight {value(19), value(23), value(29), value(31)};
+    const boost::multiprecision::cpp_int q = fields::field_order<fields::babybear>();
+    for (const std::size_t cache_limit : {1, 3}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.modular_composition_cached_power_limit = cache_limit;
+        polynomial_arithmetic::polynomial_context<backend> context(backend {}, options);
+        const math::polynomial_divisor_context<backend> divisor(modulus, 4, context);
+        for (const boost::multiprecision::cpp_int &step :
+             {boost::multiprecision::cpp_int(q), boost::multiprecision::cpp_int(q * q)}) {
+            polynomial image;
+            math::powmod_x(image, step, divisor, context);
+            for (const std::size_t count : {0, 1, 2, 3, 4, 7, 8, 9, 15, 16, 17, 31, 32, 33}) {
+                polynomial expected {value::zero()}, actual;
+                boost::multiprecision::cpp_int exponent = 0, power = 1;
+                for (std::size_t i = 0; i < count; ++i) {
+                    polynomial factor, term;
+                    math::powmod(factor, weight, exponent, divisor, context);
+                    math::powmod(term, input, power, divisor, context);
+                    math::mulmod(term, factor, term, divisor, context);
+                    math::addition(expected, expected, term);
+                    exponent += power;
+                    power *= step;
+                }
+                math::frobenius_weighted_sum(actual, input, weight, count, image, divisor, context);
+                BOOST_CHECK(actual == expected);
+                actual = input;
+                math::frobenius_weighted_sum(actual, actual, weight, count, image, divisor, context);
+                BOOST_CHECK(actual == expected);
+                actual = weight;
+                math::frobenius_weighted_sum(actual, input, actual, count, image, divisor, context);
+                BOOST_CHECK(actual == expected);
+                actual = image;
+                math::frobenius_weighted_sum(actual, input, weight, count, actual, divisor, context);
+                BOOST_CHECK(actual == expected);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(weighted_sums_use_logarithmic_work_for_maximum_term_count) {
+    using backend = counting_product_backend;
+    using polynomial = backend::polynomial_type;
+    using value = polynomial::value_type;
+    std::size_t operations = 0;
+    polynomial_arithmetic::polynomial_context<backend> context {backend(operations)};
+    const polynomial modulus {-value::one(), value::zero(), value::one()};
+    const math::polynomial_divisor_context<backend> divisor(modulus, 1, context);
+    const polynomial x {value::zero(), value::one()};
+    const std::size_t count = std::numeric_limits<std::size_t>::max();
+    polynomial result;
+    operations = 0;
+    // F fixes X and X^2 = 1: the summands alternate X, 1, X, 1, ... .
+    math::frobenius_weighted_sum(result, x, x, count, x, divisor, context);
+    // Reduce before constructing this 31-bit field value from a full-width size_t.
+    const auto characteristic = static_cast<std::size_t>(fields::babybear::modulus);
+    BOOST_CHECK(result == polynomial({value((count / 2) % characteristic), value((count / 2 + 1) % characteristic)}));
+    BOOST_CHECK_LT(operations, 16 * std::numeric_limits<std::size_t>::digits);
+}
+
+BOOST_AUTO_TEST_CASE(weighted_sums_fix_fp12_coefficients_and_match_conjugate_sums) {
+    using value = fq12_value_type;
+    using backend = polynomial_arithmetic::bn254_small_prime_fft_backend;
+    using reference_backend = polynomial_arithmetic::schoolbook_backend<value>;
+    using polynomial = backend::polynomial_type;
+    value nonsquare = fq12_value(1);
+    while (nonsquare.is_square()) {
+        nonsquare += value::one();
+    }
+    const value scale = fq12_value(31);
+    const polynomial modulus {-scale * nonsquare, value::zero(), scale};
+    const polynomial input {fq12_value(5), fq12_value(17)}, weight {fq12_value(41), fq12_value(53)};
+    polynomial_arithmetic::polynomial_context<backend> context {backend(8)};
+    polynomial_arithmetic::polynomial_context<reference_backend> reference;
+    const math::polynomial_divisor_context<backend> divisor(modulus, 1, context);
+    const math::polynomial_divisor_context<reference_backend> reference_divisor(modulus, 1, reference);
+    for (const bool conjugate : {false, true}) {
+        const polynomial image {value::zero(), conjugate ? -value::one() : value::one()};
+        for (const std::size_t count : {0, 1, 2, 3, 7, 8, 9}) {
+            polynomial expected {value::zero()}, product {value::one()}, result;
+            for (std::size_t i = 0; i < count; ++i) {
+                auto c = input, w = weight;
+                if (conjugate && i % 2 != 0) {
+                    c[1] = -c[1];
+                    w[1] = -w[1];
+                }
+                polynomial term;
+                math::mulmod(term, product, c, reference_divisor, reference);
+                math::addition(expected, expected, term);
+                math::mulmod(product, product, w, reference_divisor, reference);
+            }
+            math::frobenius_weighted_sum(result, input, weight, count, image, divisor, context);
+            BOOST_CHECK(result == expected);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(weighted_sums_handle_degenerate_cases_and_preserve_output_on_errors) {
+    using value = fields::babybear::value_type;
+    using backend = polynomial_arithmetic::schoolbook_backend<value>;
+    using polynomial = backend::polynomial_type;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_cached_power_limit = 0;
+    polynomial_arithmetic::polynomial_context<backend> context(backend {}, options);
+    const polynomial modulus {value(5), value(7), value(3), value(2)};
+    const math::polynomial_divisor_context<backend> divisor(modulus, 4, context);
+    const polynomial zero {value::zero()}, x {value::zero(), value::one()};
+    polynomial image, output;
+    math::powmod_x(image, fields::field_order<fields::babybear>(), divisor, context);
+    for (const auto &weight : {value::zero(), value::one(), value(7)}) {
+        for (const std::size_t count : {0, 1, 2, 17}) {
+            value sum = value::zero(), factor = value::one();
+            for (std::size_t i = 0; i < count; ++i) {
+                sum += factor;
+                factor *= weight;
+            }
+            math::frobenius_weighted_sum(output, polynomial {value(11)}, polynomial {weight}, count, image, divisor,
+                                         context);
+            BOOST_CHECK(output == polynomial({value(11) * sum}));
+        }
+    }
+    math::frobenius_weighted_sum(output, zero, x, 17, image, divisor, context);
+    BOOST_CHECK(output == zero);
+    math::frobenius_weighted_sum(output, x, modulus, 17, image, divisor, context);
+    BOOST_CHECK(output == x);
+    math::frobenius_weighted_sum(output, x, x, 1, image, divisor, context);
+    BOOST_CHECK(output == x);
+    BOOST_CHECK_THROW(math::frobenius_weighted_sum(output, x, x, 2, image, divisor, context), std::invalid_argument);
+    BOOST_CHECK(output == x);
+    polynomial empty;
+    empty.get_storage().clear();
+    polynomial padded(2);
+    padded[0] = value::one();
+    padded[1] = value::zero();
+    for (const auto &invalid : {empty, padded}) {
+        BOOST_CHECK_THROW(math::frobenius_weighted_sum(output, invalid, x, 1, image, divisor, context),
+                          std::invalid_argument);
+        BOOST_CHECK_THROW(math::frobenius_weighted_sum(output, x, invalid, 1, image, divisor, context),
+                          std::invalid_argument);
+        BOOST_CHECK_THROW(math::frobenius_weighted_sum(output, x, x, 1, invalid, divisor, context),
+                          std::invalid_argument);
+        BOOST_CHECK(output == x);
+    }
+    BOOST_CHECK_THROW(math::frobenius_weighted_sum(output, x, x, 1, modulus, divisor, context), std::invalid_argument);
+    BOOST_CHECK(output == x);
+    const math::polynomial_divisor_context<backend> constant_divisor(polynomial {value(7)}, 1, context);
+    for (const std::size_t count : {0, 1, 9}) {
+        math::frobenius_weighted_sum(output, x, x, count, zero, constant_divisor, context);
+        BOOST_CHECK(output == zero);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
