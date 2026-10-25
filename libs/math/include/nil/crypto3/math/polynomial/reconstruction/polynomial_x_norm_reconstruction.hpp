@@ -144,11 +144,15 @@ namespace nil::crypto3::math {
      *     P^2 - X * Q^2 = g,
      *
      * with degree(P) at most floor(degree(g) / 2) and degree(Q) at most
-     * floor((degree(g) - 1) / 2). The coefficient generator supplies field elements used to find a quadratic
-     * nonresidue in K[X]/(g); it remains owned by the caller.
+     * floor((degree(g) - 1) / 2). Odd degrees use direct Frobenius root recovery when modular composition is enabled;
+     * linear inputs always use a coefficient-field root. These paths consume no samples from the coefficient generator.
+     * Even degrees, and higher odd degrees with modular composition disabled, use Tonelli-Shanks. The coefficient
+     * generator supplies field elements used to find its quadratic nonresidue in K[X]/(g); it remains owned by the
+     * caller.
      *
-     * Irreducibility of g is a caller precondition and is not tested. The coefficient generator must eventually produce
-     * coefficients forming a nonsquare canonical representative of degree below degree(g).
+     * Irreducibility of g is a caller precondition and is not tested. When Tonelli-Shanks is needed, the coefficient
+     * generator must eventually produce coefficients forming a nonsquare canonical representative of degree below
+     * degree(g). The selected root, and hence the returned representation, need not match the Tonelli-Shanks result.
      *
      * K must be a finite field of odd characteristic. Under these preconditions and the composed arithmetic contracts,
      * recovery is complete: no value means no exact representation exists. This irreducible-only operation does not
@@ -189,31 +193,37 @@ namespace nil::crypto3::math {
         const std::size_t inverse_precision = std::max<std::size_t>(1, degree - 1);
         polynomial_divisor_context<Backend> divisor_context(g, inverse_precision, arithmetic_context);
 
-        // Work with the canonical representative of X in K[X]/(g). Reduction is necessary when g is linear.
-        const polynomial_type x = {value_type::zero(), value_type::one()};
-        polynomial_type x_mod_g;
-        remainder(x_mod_g, x, divisor_context, arithmetic_context);
-        if (!is_square_mod(x_mod_g, divisor_context, arithmetic_context)) {
-            return std::nullopt;
-        }
-
-        // Adapt caller-generated field coefficients into canonical representatives of K[X]/(g). No random source or
-        // polynomial backend is constructed here.
-        auto quotient_representative_generator = [&]() {
-            polynomial_type representative(degree);
-            for (std::size_t index = 0; index < degree; ++index) {
-                representative[index] = coefficient_generator();
-            }
-            condense(representative);
-            return representative;
-        };
-        polynomial_square_root_context<Backend> square_root_context(divisor_context, arithmetic_context,
-                                                                    quotient_representative_generator);
-
-        // Recover R with R^2 = X mod g. A failure here contradicts the successful square test above.
         polynomial_type root;
-        if (!square_root_mod(root, x_mod_g, square_root_context, arithmetic_context)) {
-            throw std::logic_error("polynomial X-norm recovery failed after X was reported square modulo g");
+        if (degree % 2 != 0 &&
+            (degree == 1 || arithmetic_context.options().modular_composition_cached_power_limit != 0)) {
+            // Select this path before constructing a Tonelli-Shanks context: it needs no quotient-field nonresidue.
+            if (!square_root_mod_x_odd_degree(root, divisor_context, arithmetic_context)) {
+                return std::nullopt;
+            }
+        } else {
+            const polynomial_type x = {value_type::zero(), value_type::one()};
+            polynomial_type x_mod_g;
+            remainder(x_mod_g, x, divisor_context, arithmetic_context);
+            if (!is_square_mod(x_mod_g, divisor_context, arithmetic_context)) {
+                return std::nullopt;
+            }
+
+            // Adapt caller-generated field coefficients into canonical representatives of K[X]/(g). No random
+            // source or polynomial backend is constructed here.
+            auto quotient_representative_generator = [&]() {
+                polynomial_type representative(degree);
+                for (std::size_t index = 0; index < degree; ++index) {
+                    representative[index] = coefficient_generator();
+                }
+                condense(representative);
+                return representative;
+            };
+            polynomial_square_root_context<Backend> square_root_context(divisor_context, arithmetic_context,
+                                                                        quotient_representative_generator);
+            // A failure here contradicts the successful square test above.
+            if (!square_root_mod(root, x_mod_g, square_root_context, arithmetic_context)) {
+                throw std::logic_error("polynomial X-norm recovery failed after X was reported square modulo g");
+            }
         }
 
         // Reconstruct P = R * Q mod g with the unique degree bounds required by the norm equation.
