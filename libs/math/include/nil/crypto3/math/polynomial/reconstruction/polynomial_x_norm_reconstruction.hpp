@@ -146,13 +146,14 @@ namespace nil::crypto3::math {
      * with degree(P) at most floor(degree(g) / 2) and degree(Q) at most
      * floor((degree(g) - 1) / 2). Odd degrees use direct Frobenius root recovery when modular composition is enabled;
      * linear inputs always use a coefficient-field root. These paths consume no samples from the coefficient generator.
-     * Even degrees, and higher odd degrees with modular composition disabled, use Tonelli-Shanks. The coefficient
-     * generator supplies field elements used to find its quadratic nonresidue in K[X]/(g); it remains owned by the
-     * caller.
+     * Even degrees use a weighted Frobenius trace when modular composition is enabled, sampling only if the initial
+     * trace is zero. With composition disabled, higher degrees use Tonelli-Shanks. The coefficient generator supplies
+     * field elements for trace retries or the Tonelli-Shanks nonresidue search and remains owned by the caller.
      *
-     * Irreducibility of g is a caller precondition and is not tested. When Tonelli-Shanks is needed, the coefficient
-     * generator must eventually produce coefficients forming a nonsquare canonical representative of degree below
-     * degree(g). The selected root, and hence the returned representation, need not match the Tonelli-Shanks result.
+     * Irreducibility of g is a caller precondition and is not tested. The coefficient generator must eventually
+     * produce a representative with nonzero weighted trace when a trace retry is needed, or a nonsquare when
+     * Tonelli-Shanks is needed. Each sample uses degree(g) coefficients. The selected root, and hence the returned
+     * representation, need not match the Tonelli-Shanks result.
      *
      * K must be a finite field of odd characteristic. Under these preconditions and the composed arithmetic contracts,
      * recovery is complete: no value means no exact representation exists. This irreducible-only operation does not
@@ -201,13 +202,6 @@ namespace nil::crypto3::math {
                 return std::nullopt;
             }
         } else {
-            const polynomial_type x = {value_type::zero(), value_type::one()};
-            polynomial_type x_mod_g;
-            remainder(x_mod_g, x, divisor_context, arithmetic_context);
-            if (!is_square_mod(x_mod_g, divisor_context, arithmetic_context)) {
-                return std::nullopt;
-            }
-
             // Adapt caller-generated field coefficients into canonical representatives of K[X]/(g). No random
             // source or polynomial backend is constructed here.
             auto quotient_representative_generator = [&]() {
@@ -218,11 +212,25 @@ namespace nil::crypto3::math {
                 condense(representative);
                 return representative;
             };
-            polynomial_square_root_context<Backend> square_root_context(divisor_context, arithmetic_context,
-                                                                        quotient_representative_generator);
-            // A failure here contradicts the successful square test above.
-            if (!square_root_mod(root, x_mod_g, square_root_context, arithmetic_context)) {
-                throw std::logic_error("polynomial X-norm recovery failed after X was reported square modulo g");
+            if (arithmetic_context.options().modular_composition_cached_power_limit != 0) {
+                // Even degrees use the trace method before any Tonelli-Shanks context is constructed.
+                if (!square_root_mod_x_even_degree(root, divisor_context, arithmetic_context,
+                                                   quotient_representative_generator)) {
+                    return std::nullopt;
+                }
+            } else {
+                const polynomial_type x = {value_type::zero(), value_type::one()};
+                polynomial_type x_mod_g;
+                remainder(x_mod_g, x, divisor_context, arithmetic_context);
+                if (!is_square_mod(x_mod_g, divisor_context, arithmetic_context)) {
+                    return std::nullopt;
+                }
+                polynomial_square_root_context<Backend> square_root_context(divisor_context, arithmetic_context,
+                                                                            quotient_representative_generator);
+                // A failure here contradicts the successful square test above.
+                if (!square_root_mod(root, x_mod_g, square_root_context, arithmetic_context)) {
+                    throw std::logic_error("polynomial X-norm recovery failed after X was reported square modulo g");
+                }
             }
         }
 

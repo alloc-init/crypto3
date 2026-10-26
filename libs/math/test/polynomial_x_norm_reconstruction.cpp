@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE(recovers_and_normalizes_an_irreducible_quadratic_with_the_s
                                                                                                  coefficient_generator);
 
     BOOST_REQUIRE(result.has_value());
-    BOOST_CHECK_GT(generator_calls, 0);
+    BOOST_CHECK_EQUAL(generator_calls, 0);
     BOOST_CHECK_LE(result->p.size() - 1, 1);
     BOOST_CHECK_LE(result->q.size() - 1, 0);
     // Rational reconstruction makes Q monic, initially producing lambda = 1/81. Exact normalization restores Q^2 = 81.
@@ -592,6 +592,123 @@ BOOST_AUTO_TEST_CASE(screening_preserves_even_multiplicities_and_rejects_odd_obs
             math::recover_polynomial_x_norm_representation<backend_type>(suitable_input, context, generator);
         BOOST_REQUIRE(recovered.has_value());
         BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*recovered, context) == suitable_input);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(even_degree_trace_recovery_normalizes_scalars_and_consumes_only_retry_samples) {
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    // This irreducible quartic's root has trace zero; multiplying it by X gives trace -3.
+    // The square-root tests independently check irreducibility and the forced retry.
+    const polynomial_type monic {value_type(4), -value_type::one(), value_type(4), value_type::zero(),
+                                 value_type::one()};
+    for (const auto &scale : {value_type::one(), value_type(49), first_quadratic_non_residue()}) {
+        polynomial_type g;
+        math::scalar_multiplication(g, monic, scale);
+        std::size_t calls = 0;
+        auto generator = [&] {
+            const std::size_t index = calls++;
+            BOOST_REQUIRE_LT(index, 12);
+            // Three representatives: zero, one (both have zero weighted trace), then X.
+            return index == 4 || index == 9 ? value_type::one() : value_type::zero();
+        };
+        const auto result = math::recover_irreducible_polynomial_x_norm_representation(g, context, generator);
+        BOOST_REQUIRE_EQUAL(result.has_value(), scale.is_square());
+        BOOST_CHECK_EQUAL(calls, 12);
+        if (result) {
+            BOOST_CHECK(math::evaluate_polynomial_x_norm(*result, context) == g);
+            BOOST_CHECK_LE(result->p.size() - 1, 2);
+            BOOST_CHECK_LE(result->q.size() - 1, 1);
+        }
+    }
+    std::size_t calls = 0;
+    auto failing_generator = [&]() -> value_type {
+        ++calls;
+        throw std::runtime_error("retry coefficient generation failed");
+    };
+    BOOST_CHECK_THROW(math::recover_irreducible_polynomial_x_norm_representation(monic, context, failing_generator),
+                      std::runtime_error);
+    BOOST_CHECK_EQUAL(calls, 1);
+}
+
+BOOST_AUTO_TEST_CASE(even_degree_recovery_preserves_tonelli_shanks_when_composition_is_disabled) {
+    const polynomial_type g = representable_irreducible_quadratic();
+    for (const std::size_t cache_limit : {0, 1, 16}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.modular_composition_cached_power_limit = cache_limit;
+        polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+        std::size_t calls = 0;
+        boost::random::mt19937 rng(0xE7E021);
+        auto generator = [&] {
+            BOOST_REQUIRE_LT(++calls, 128);
+            return nil::crypto3::algebra::random_element<field_type>(rng);
+        };
+        const auto result = math::recover_irreducible_polynomial_x_norm_representation(g, context, generator);
+        BOOST_REQUIRE(result.has_value());
+        BOOST_CHECK(math::evaluate_polynomial_x_norm(*result, context) == g);
+        if (cache_limit == 0) {
+            BOOST_CHECK_GT(calls, 0);
+            BOOST_CHECK_EQUAL(calls % 2, 0);
+        } else {
+            BOOST_CHECK_EQUAL(calls, 0);
+        }
+        const std::size_t calls_before_rejection = calls;
+        const polynomial_type nonsquare {-first_quadratic_non_residue(), value_type::zero(), value_type::one()};
+        BOOST_CHECK(!math::recover_irreducible_polynomial_x_norm_representation(nonsquare, context, generator));
+        BOOST_CHECK_EQUAL(calls, calls_before_rejection);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(even_degree_bn254_fp12_norm_recovery_agrees_across_backends) {
+    using value = fq12_value_type;
+    using polynomial = fq12_schoolbook_backend::polynomial_type;
+    using fft_backend = polynomial_arithmetic::bn254_small_prime_fft_backend;
+    boost::random::mt19937 rng(0xE7E022);
+    value c = value::one();
+    for (std::size_t i = 0; i < 64 && c.is_square(); ++i) {
+        c = nil::crypto3::algebra::random_element<fq12_field_type>(rng);
+    }
+    BOOST_REQUIRE(!c.is_zero());
+    BOOST_REQUIRE(!c.is_square());
+    polynomial_arithmetic::polynomial_context<fq12_schoolbook_backend> reference;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.basecase_divisor_coefficient_cutoff = 0;
+    options.basecase_quotient_coefficient_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<fft_backend> optimized(fft_backend(16), options);
+    for (const std::size_t degree : {2, 4}) {
+        value shift = value::one();
+        for (std::size_t i = 0; i < 64 && !(shift.pow(degree) - c).is_square(); ++i) {
+            shift = nil::crypto3::algebra::random_element<fq12_field_type>(rng);
+        }
+        BOOST_REQUIRE((shift.pow(degree) - c).is_square());
+        polynomial g {value::one()};
+        const polynomial linear {shift, value::one()};
+        for (std::size_t i = 0; i < degree; ++i) {
+            reference.multiply(g, g, linear);
+        }
+        g[0] -= c;
+        const value scale = nil::crypto3::algebra::random_element<fq12_field_type>(rng).squared();
+        BOOST_REQUIRE(!scale.is_zero());
+        math::scalar_multiplication(g, g, scale);
+        // Fix independent RNG states for equivalent fallback sampling, if a zero trace occurs.
+        boost::random::mt19937 rng_reference(0xE7E023), rng_optimized(0xE7E023);
+        auto reference_generator = [&] {
+            return nil::crypto3::algebra::random_element<fq12_field_type>(rng_reference);
+        };
+        auto optimized_generator = [&] {
+            return nil::crypto3::algebra::random_element<fq12_field_type>(rng_optimized);
+        };
+        const auto expected =
+            math::recover_irreducible_polynomial_x_norm_representation(g, reference, reference_generator);
+        const auto actual =
+            math::recover_irreducible_polynomial_x_norm_representation(g, optimized, optimized_generator);
+        BOOST_REQUIRE(expected.has_value());
+        BOOST_REQUIRE(actual.has_value());
+        BOOST_CHECK(math::evaluate_polynomial_x_norm(*actual, reference) == g);
+        BOOST_CHECK(actual->p == expected->p);
+        BOOST_CHECK(actual->q == expected->q);
+        BOOST_CHECK_LE(actual->p.size() - 1, degree / 2);
+        BOOST_CHECK_LE(actual->q.size() - 1, (degree - 1) / 2);
+        BOOST_CHECK(rng_reference == rng_optimized);
     }
 }
 
