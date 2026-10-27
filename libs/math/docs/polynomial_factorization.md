@@ -131,9 +131,10 @@ The factor that triggers the stop is included in `result.factors`, and `result.c
 `complete == true`. Square-free and distinct-degree factorization also expose staged callbacks, allowing a caller to
 stop at the earliest useful stage rather than computing a complete irreducible factorization.
 
-Complete factorization splits each distinct-degree group and invokes its irreducible-factor callbacks as soon as the
-group is discovered. A callback stop also stops distinct-degree discovery, so later groups and square-free parts are
-not processed. Factors retain their square-free multiplicities and group/splitting order. The caller-owned generator
+Complete factorization finishes square-free decomposition before invoking any irreducible-factor callback. It then
+splits each distinct-degree group and invokes those callbacks as soon as the group is discovered. A callback stop
+skips the remaining distinct-degree discovery and equal-degree splitting, including work on later square-free parts.
+Factors retain their square-free multiplicities and group/splitting order. The caller-owned generator
 is shared with callbacks, so their sampling affects its state for subsequent splitting. Callback and generator
 exceptions propagate to the caller. Reproducibility assumes the same implementation, configuration, and callback
 behavior; changing a recovery algorithm can change sampling even with the same initial seed.
