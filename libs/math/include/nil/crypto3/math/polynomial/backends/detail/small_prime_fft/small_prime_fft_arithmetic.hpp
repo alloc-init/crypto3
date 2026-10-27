@@ -195,7 +195,7 @@ namespace nil::crypto3::math::detail {
             __m256d reduce_fma(__m256d value) const {
                 assert(arithmetic_.fma_supported());
 #ifndef NDEBUG
-                double lanes[4];
+                alignas(32) double lanes[4];
                 _mm256_storeu_pd(lanes, value);
                 for (double lane : lanes) {
                     assert(valid_integer(lane));
@@ -220,7 +220,7 @@ namespace nil::crypto3::math::detail {
             __m256d multiply_fma(__m256d left, __m256d right) const {
                 assert(arithmetic_.fma_supported());
 #ifndef NDEBUG
-                double a[4], b[4];
+                alignas(32) double a[4], b[4];
                 _mm256_storeu_pd(a, left);
                 _mm256_storeu_pd(b, right);
                 for (std::size_t i = 0; i < 4; ++i) {
@@ -257,7 +257,7 @@ namespace nil::crypto3::math::detail {
                 assert(&left0 != &left1);
                 assert(arithmetic_.fma_supported());
 #ifndef NDEBUG
-                double a[8], b[8];
+                alignas(32) double a[8], b[8];
                 _mm256_storeu_pd(a, left0);
                 _mm256_storeu_pd(a + 4, left1);
                 _mm256_storeu_pd(b, right0);
@@ -329,7 +329,8 @@ namespace nil::crypto3::math::detail {
             __m512d reduce_fma(__m512d value) const {
                 assert(arithmetic_.fma_supported());
 #ifndef NDEBUG
-                double lanes[8];
+                // Keep debug scratch SIMD-aligned even when sanitizers change the stack layout.
+                alignas(64) double lanes[8];
                 _mm512_storeu_pd(lanes, value);
                 for (double lane : lanes) {
                     assert(valid_integer(lane));
@@ -354,7 +355,7 @@ namespace nil::crypto3::math::detail {
             __m512d multiply_fma(__m512d left, __m512d right) const {
                 assert(arithmetic_.fma_supported());
 #ifndef NDEBUG
-                double a[8], b[8];
+                alignas(64) double a[8], b[8];
                 _mm512_storeu_pd(a, left);
                 _mm512_storeu_pd(b, right);
                 for (std::size_t i = 0; i < 8; ++i) {
@@ -391,7 +392,7 @@ namespace nil::crypto3::math::detail {
                 assert(&left0 != &left1);
                 assert(arithmetic_.fma_supported());
 #ifndef NDEBUG
-                double a[16], b[16];
+                alignas(64) double a[16], b[16];
                 _mm512_storeu_pd(a, left0);
                 _mm512_storeu_pd(a + 8, left1);
                 _mm512_storeu_pd(b, right0);
