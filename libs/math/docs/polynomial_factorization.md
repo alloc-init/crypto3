@@ -91,9 +91,26 @@ Cantor-Zassenhaus repeats randomized split trials until a nontrivial factor is f
 an arbitrary retry limit. A generator that does not adequately explore the coefficient field can therefore prevent
 progress. Callers that require a time or work limit should enforce it through their generator or at a higher level.
 
-For large products, callers can instead construct a `mixed_radix_backend<RootField, ValueType>` with an adequate
-transform order and place it in the polynomial context. This permits base-field roots to transform extension-field
-coefficients. Backend choice changes the arithmetic implementation, not the factorization API or result.
+For large products, callers can construct a `mixed_radix_backend<RootField, ValueType>` with an adequate transform
+order, or a `bn254_small_prime_fft_backend` for BN254 Fp12 coefficients, and place it in the polynomial context.
+The latter uses auxiliary-prime transforms and exact CRT export, so its transform lengths do not depend on roots
+available in the coefficient field. Both backends reuse plans and can prepare fixed divisor operands. Backend choice
+changes the arithmetic implementation without changing the factorization API or its reconstruction contract. See
+the [backend and memory contracts](@ref math_polynomial_arithmetic) before selecting the maximum transform size.
+
+Several independent options affect the work in this pipeline:
+
+| Option | Affected work | Default |
+|---|---|---|
+| `gcd_half_gcd_cutoff` | Recursive half-GCD during square-free decomposition, screening, and splitting | 0: disabled |
+| `distinct_degree_screening_limit` | Early degree checks before the full baby table | 0: disabled |
+| `modular_composition_cached_power_limit` | Baby powers retained by each Brent-Kung composition cache | Maximum `size_t`: permits the usual square-root block size |
+| `modular_composition_prepared_byte_limit` | Additional prepared Fp12 coefficient combinations | 0: disabled |
+| `modular_composition_simd_lanes` | Four- or eight-lane IFMA for eligible prepared combinations | 8; still requires a positive byte budget and build support |
+
+Selecting the small-prime backend does not enable half-GCD or prepared coefficient combinations automatically.
+Choose their cutoffs and budgets from representative complete operations, including preparation and memory costs.
+Composition budgets apply to each cache, and simultaneous workers need separate arithmetic contexts and generators.
 
 ## Staged factorization
 
@@ -116,9 +133,10 @@ stop at the earliest useful stage rather than computing a complete irreducible f
 
 Complete factorization splits each distinct-degree group and invokes its irreducible-factor callbacks as soon as the
 group is discovered. A callback stop also stops distinct-degree discovery, so later groups and square-free parts are
-not processed. Factors retain their square-free multiplicities and the same group/splitting order. The shared
-generator is consumed in the same order, including when callbacks use it, and callback or generator exceptions
-propagate to the caller.
+not processed. Factors retain their square-free multiplicities and group/splitting order. The caller-owned generator
+is shared with callbacks, so their sampling affects its state for subsequent splitting. Callback and generator
+exceptions propagate to the caller. Reproducibility assumes the same implementation, configuration, and callback
+behavior; changing a recovery algorithm can change sampling even with the same initial seed.
 
 By default, each nonlinear square-free part prepares the initial Frobenius power and full baby-step table before
 discovering groups. To screen small degrees first, set a numeric limit on the existing arithmetic options:
@@ -189,5 +207,8 @@ backend.
 | Complete factorization | The sum of the square-free, Kaltofen-Shoup, and equal-degree stages |
 
 The Cantor-Zassenhaus bounds are expected bounds for uniform random samples; a caller-supplied generator has no fixed
-retry limit. Each Frobenius map uses the current Brent-Kung implementation and therefore includes its quadratic
-coefficient-combination phase. Staged callbacks stop paying these costs once the caller has obtained enough factors.
+retry limit. Initial `X^Q mod B` construction uses `powmod_x`; subsequent Frobenius maps use Brent-Kung composition.
+Its coefficient-combination phase remains quadratic even when prepared dots and SIMD reduce the constant cost.
+Staged callbacks stop paying these costs once the caller has obtained enough factors. If a callback performs norm
+recovery, that additional work is outside these factorization-only bounds; the
+[recovery guide](@ref math_polynomial_recovery) describes odd- and even-degree root paths and factor combination.

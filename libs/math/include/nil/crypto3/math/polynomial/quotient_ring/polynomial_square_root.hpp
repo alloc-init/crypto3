@@ -160,30 +160,6 @@ namespace nil::crypto3::math {
         polynomial_type non_residue_to_odd_order_;
     };
 
-    /**
-     * Return whether input is a square in K[X]/(B), where K is a finite field and B is the irreducible polynomial
-     * stored in divisor_context. If Q is the order of K and d = degree(B), the quotient is a field of order Q^d.
-     * For a nonzero residue a in odd characteristic, Euler's criterion gives
-     *
-     *     a^((Q^d - 1) / 2) = 1
-     *
-     * exactly when a is a square. Zero is a square. In characteristic two, squaring is an automorphism of every
-     * finite field, so every residue is a square.
-     *
-     * The canonical indeterminate X uses the closed-form field norm
-     *
-     *     Norm(X) = (-1)^d B(0) / leading_coefficient(B).
-     *
-     * An element of a finite extension of an odd-order field is a square exactly when its norm is a square in the
-     * coefficient field. When the coefficient value type provides is_square(), this avoids quotient-ring
-     * exponentiation for X. Other inputs use Euler's criterion as a reference implementation.
-     *
-     * The irreducibility precondition is essential: for a reducible B the quotient has zero divisors and Euler's
-     * criterion does not characterize its squares. The function does not repeat an irreducibility test.
-     *
-     * @throws std::invalid_argument if B is constant or input is not a reduced quotient-field representative.
-     * @pre B is irreducible and input is a nonempty canonical coefficient polynomial.
-     */
     namespace detail {
 
         template<SupportsDivrem Backend>
@@ -243,6 +219,30 @@ namespace nil::crypto3::math {
 
     }    // namespace detail
 
+    /**
+     * Return whether input is a square in K[X]/(B), where K is a finite field and B is the irreducible polynomial
+     * stored in divisor_context. If Q is the order of K and d = degree(B), the quotient is a field of order Q^d.
+     * For a nonzero residue a in odd characteristic, Euler's criterion gives
+     *
+     *     a^((Q^d - 1) / 2) = 1
+     *
+     * exactly when a is a square. Zero is a square. In characteristic two, squaring is an automorphism of every
+     * finite field, so every residue is a square.
+     *
+     * The canonical indeterminate X uses the closed-form field norm
+     *
+     *     Norm(X) = (-1)^d B(0) / leading_coefficient(B).
+     *
+     * An element of a finite extension of an odd-order field is a square exactly when its norm is a square in the
+     * coefficient field. When the coefficient value type provides is_square(), this avoids quotient-ring
+     * exponentiation for X. Other inputs use Euler's criterion as a reference implementation.
+     *
+     * The irreducibility precondition is essential: for a reducible B the quotient has zero divisors and Euler's
+     * criterion does not characterize its squares. The function does not repeat an irreducibility test.
+     *
+     * @throws std::invalid_argument if B is constant or input is not a reduced quotient-field representative.
+     * @pre B is irreducible and input is a nonempty canonical coefficient polynomial.
+     */
     template<detail::SupportsDivrem Backend>
         requires algebra::FieldValue<typename Backend::polynomial_type::value_type>
     bool is_square_mod(const typename Backend::polynomial_type &input,
