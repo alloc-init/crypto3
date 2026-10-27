@@ -35,7 +35,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
-#include <nil/crypto3/math/detail/small_prime_fft_params.hpp>
+#include <nil/crypto3/math/polynomial/backends/detail/small_prime_fft/small_prime_fft_params.hpp>
 
 namespace {
     namespace detail = nil::crypto3::math::detail;

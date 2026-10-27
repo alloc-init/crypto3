@@ -27,7 +27,7 @@
 // Boost first so subsequent includes cannot re-enable its 128-bit integer support.
 #undef BOOST_HAS_INT128
 
-#include <nil/crypto3/math/detail/bn254_small_prime_fft.hpp>
+#include <nil/crypto3/math/polynomial/backends/detail/small_prime_fft/bn254_small_prime_fft_conversion.hpp>
 
 #include <array>
 

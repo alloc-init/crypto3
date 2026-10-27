@@ -24,8 +24,8 @@
 
 #define BOOST_TEST_MODULE small_prime_fft_arithmetic_test
 
-#include <nil/crypto3/math/detail/small_prime_fft_arithmetic.hpp>
-#include <nil/crypto3/math/detail/small_prime_fft_params.hpp>
+#include <nil/crypto3/math/polynomial/backends/detail/small_prime_fft/small_prime_fft_arithmetic.hpp>
+#include <nil/crypto3/math/polynomial/backends/detail/small_prime_fft/small_prime_fft_params.hpp>
 
 #include <array>
 #include <bit>

@@ -36,7 +36,7 @@
 #include <utility>
 #include <vector>
 
-#include <nil/crypto3/math/detail/bn254_small_prime_fft.hpp>
+#include <nil/crypto3/math/polynomial/backends/detail/small_prime_fft/bn254_small_prime_fft.hpp>
 #include <nil/crypto3/math/polynomial/backends/polynomial_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 #include <nil/crypto3/math/polynomial/operations/basic_operations.hpp>

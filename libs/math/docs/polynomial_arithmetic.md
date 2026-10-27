@@ -34,6 +34,11 @@ The main dependency chain is:
 | Modular composition | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_composition.hpp>` |
 | Frobenius maps, products, and weighted sums | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_frobenius.hpp>` |
 
+Internal headers live beside their owning subsystem. Relative to `nil/crypto3/math/`, the small-prime backend's
+parameters, arithmetic, transforms, conversion, CRT export, and pointwise kernels are grouped under
+`polynomial/backends/detail/small_prime_fft/`. The prepared composition helper lives in
+`polynomial/quotient_ring/detail/`. General helpers shared across math components remain in `detail/`.
+
 ## Multiplication backends
 
 `PolynomialBackend` is the compile-time interface used by the arithmetic layer. A backend supplies an associated

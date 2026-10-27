@@ -33,7 +33,7 @@
 #include <vector>
 
 #include <nil/crypto3/math/detail/integer_sqrt.hpp>
-#include <nil/crypto3/math/detail/prepared_composition_coefficients.hpp>
+#include <nil/crypto3/math/polynomial/quotient_ring/detail/prepared_composition_coefficients.hpp>
 #include <nil/crypto3/math/polynomial/quotient_ring/polynomial_modular_arithmetic.hpp>
 
 namespace nil::crypto3::math {
