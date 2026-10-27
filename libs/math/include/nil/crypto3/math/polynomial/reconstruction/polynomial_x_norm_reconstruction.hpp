@@ -473,8 +473,10 @@ namespace nil::crypto3::math {
 
         std::vector<representation_type> factor_representations;
         bool factor_recovery_failed = false;
-        const auto factorization = complete_factorization<Backend>(
-            h, arithmetic_context, coefficient_generator, [&](const polynomial_factor<polynomial_type> &factor) {
+        value_type leading_coefficient;
+        const auto control = detail::complete_factorization_impl<Backend>(
+            leading_coefficient, h, arithmetic_context, coefficient_generator,
+            [&](const polynomial_factor<polynomial_type> &factor) {
                 auto representation = detail::recover_polynomial_x_norm_factor_power<Backend>(
                     factor, arithmetic_context, coefficient_generator);
                 if (!representation) {
@@ -488,13 +490,12 @@ namespace nil::crypto3::math {
         if (factor_recovery_failed) {
             return std::nullopt;
         }
-        if (!factorization.complete || factor_representations.empty()) {
+        if (control != factorization_control::continue_factorization || factor_representations.empty()) {
             throw std::logic_error("complete factorization did not produce all nonconstant factors");
         }
 
         representation_type result = detail::combine_polynomial_x_norm_representations_balanced<Backend>(
             std::move(factor_representations), arithmetic_context);
-        const value_type leading_coefficient = factorization.leading_coefficient;
         if (leading_coefficient.is_zero()) {
             throw std::logic_error("complete factorization produced a zero leading coefficient");
         }

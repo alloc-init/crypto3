@@ -336,7 +336,8 @@ Complete factorization writes the remaining input as
 where `c` is the leading coefficient and each `g` is monic and irreducible. An even factor power `g^(2r)` has the
 immediate representation `(g^r, 0)`. For an odd power `g^(2r+1)`, irreducible recovery first obtains `(P_g, Q_g)` for
 the unpaired copy of `g`; scaling both components by `g^r` then represents the complete factor power. Factor recovery
-stops as soon as an odd-multiplicity factor cannot be represented.
+stops as soon as an odd-multiplicity factor cannot be represented. It consumes each irreducible factor without
+retaining a collected factor list; only the resulting representations are saved for the balanced combination below.
 
 Multiplicity parity and irreducible-degree parity serve different purposes. Even **multiplicity** gives the direct
 square representation above, regardless of the factor's degree. For an unpaired copy, the factor's **degree** chooses

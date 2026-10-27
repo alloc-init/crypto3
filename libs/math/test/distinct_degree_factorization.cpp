@@ -413,13 +413,13 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_fine_splitting_separates_exact_degrees) {
     };
 
     polynomial_type giant_step = precomputation.baby_step(block_size);
-    BOOST_CHECK(math::detail::kaltofen_shoup_split_coarse_block(factors, first_block, giant_step, 1, block_size,
+    BOOST_CHECK(math::detail::kaltofen_shoup_split_coarse_block(&factors, first_block, giant_step, 1, block_size,
                                                                 precomputation, arithmetic_context, record_factor) ==
                 math::factorization_control::continue_factorization);
 
     precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context, arithmetic_context);
-    BOOST_CHECK(math::detail::kaltofen_shoup_split_coarse_block(factors, second_block, giant_step, 3, 1, precomputation,
-                                                                arithmetic_context, record_factor) ==
+    BOOST_CHECK(math::detail::kaltofen_shoup_split_coarse_block(&factors, second_block, giant_step, 3, 1,
+                                                                precomputation, arithmetic_context, record_factor) ==
                 math::factorization_control::continue_factorization);
 
     BOOST_CHECK_EQUAL(callback_count, 3);
@@ -448,7 +448,7 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_fine_splitting_honors_an_early_stop) {
     std::vector<factor_type> factors;
 
     const auto control = math::detail::kaltofen_shoup_split_coarse_block(
-        factors, input, giant_step, 1, block_size, precomputation, arithmetic_context,
+        &factors, input, giant_step, 1, block_size, precomputation, arithmetic_context,
         [](const factor_type &) { return math::factorization_control::stop_factorization; });
 
     BOOST_CHECK(control == math::factorization_control::stop_factorization);
@@ -477,18 +477,18 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_fine_splitting_rejects_invalid_degree_interv
         return math::factorization_control::continue_factorization;
     };
 
-    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(factors, input, giant_step, 0, 1, precomputation,
+    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(&factors, input, giant_step, 0, 1, precomputation,
                                                                       arithmetic_context, continue_factorization),
                       std::invalid_argument);
-    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(factors, input, giant_step, 1, 0, precomputation,
+    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(&factors, input, giant_step, 1, 0, precomputation,
                                                                       arithmetic_context, continue_factorization),
                       std::invalid_argument);
-    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(factors, input, giant_step, 1, 3, precomputation,
+    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(&factors, input, giant_step, 1, 3, precomputation,
                                                                       arithmetic_context, continue_factorization),
                       std::invalid_argument);
 
     // The stated interval contains only degree one, so the unclassified quadratic must be rejected.
-    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(factors, input, giant_step, 1, 1, precomputation,
+    BOOST_CHECK_THROW(math::detail::kaltofen_shoup_split_coarse_block(&factors, input, giant_step, 1, 1, precomputation,
                                                                       arithmetic_context, continue_factorization),
                       std::invalid_argument);
 }
@@ -514,7 +514,7 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_internal_driver_processes_multiple_blocks) {
     std::size_t callback_count = 0;
     // A block size of two forces a full degree-1-to-2 block followed by a partial block containing degree three.
     const auto control = math::detail::kaltofen_shoup_factor_monic_square_free(
-        factors, input, 2, arithmetic_context, [&](const factor_type &) {
+        &factors, input, 2, arithmetic_context, [&](const factor_type &) {
             ++callback_count;
             return math::factorization_control::continue_factorization;
         });
@@ -537,7 +537,7 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_internal_driver_emits_the_final_irreducible_
     polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
     std::vector<factor_type> factors;
     const auto control = math::detail::kaltofen_shoup_factor_monic_square_free(
-        factors, cubic_factor, 2, arithmetic_context,
+        &factors, cubic_factor, 2, arithmetic_context,
         [](const factor_type &) { return math::factorization_control::continue_factorization; });
 
     BOOST_CHECK(control == math::factorization_control::continue_factorization);
@@ -555,7 +555,7 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_internal_driver_rejects_a_zero_block_size) {
     std::vector<factor_type> factors;
 
     BOOST_CHECK_THROW(math::detail::kaltofen_shoup_factor_monic_square_free(
-                          factors, input, 0, arithmetic_context,
+                          &factors, input, 0, arithmetic_context,
                           [](const factor_type &) { return math::factorization_control::continue_factorization; }),
                       std::invalid_argument);
 }
@@ -576,7 +576,7 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_internal_driver_propagates_an_early_stop) {
     polynomial_arithmetic::polynomial_context<backend_type> arithmetic_context;
     std::vector<factor_type> factors;
     const auto control = math::detail::kaltofen_shoup_factor_monic_square_free(
-        factors, input, 2, arithmetic_context, [](const factor_type &factor) {
+        &factors, input, 2, arithmetic_context, [](const factor_type &factor) {
             return factor.irreducible_factor_degree == 2 ? math::factorization_control::stop_factorization :
                                                            math::factorization_control::continue_factorization;
         });
@@ -585,6 +585,53 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_internal_driver_propagates_an_early_stop) {
     BOOST_REQUIRE_EQUAL(factors.size(), 2);
     BOOST_CHECK(factors[0] == factor_type({linear_factor, 1}));
     BOOST_CHECK(factors[1] == factor_type({quadratic_factor, 2}));
+}
+
+BOOST_AUTO_TEST_CASE(kaltofen_shoup_streaming_matches_collected_groups_and_stop_prefixes) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+    using factor_type = math::distinct_degree_factor<polynomial_type>;
+
+    backend_type backend;
+    const polynomial_type linear = {fq_value_type::one(), fq_value_type::one()};
+    const polynomial_type quadratic = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::one()};
+    const polynomial_type cubic = {-fq_value_type(3), fq_value_type::zero(), fq_value_type::zero(),
+                                   fq_value_type::one()};
+    const polynomial_type second_cubic = {-fq_value_type(9), fq_value_type::zero(), fq_value_type::zero(),
+                                          fq_value_type::one()};
+    const auto mixed = multiply(backend, multiply(backend, linear, quadratic), multiply(backend, cubic, second_cubic));
+    for (const auto &input : {linear, cubic, mixed}) {
+        for (std::size_t screening_limit : {0, 1, 100}) {
+            for (std::size_t block_size : {1, 2}) {
+                polynomial_arithmetic::polynomial_context_options options;
+                options.distinct_degree_screening_limit = screening_limit;
+                polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+                std::vector<factor_type> expected;
+                BOOST_REQUIRE(math::detail::kaltofen_shoup_factor_monic_square_free(
+                                  &expected, input, block_size, context, [&](const factor_type &factor) {
+                                      // The public collecting path must append before reporting the group.
+                                      BOOST_REQUIRE(!expected.empty());
+                                      BOOST_CHECK(&factor == &expected.back());
+                                      return math::factorization_control::continue_factorization;
+                                  }) == math::factorization_control::continue_factorization);
+
+                for (std::size_t stop_after = 0; stop_after <= expected.size(); ++stop_after) {
+                    polynomial_arithmetic::polynomial_context<backend_type> streaming_context(backend_type {}, options);
+                    std::size_t reported = 0;
+                    const auto control = math::detail::kaltofen_shoup_factor_monic_square_free(
+                        nullptr, input, block_size, streaming_context, [&](const factor_type &factor) {
+                            BOOST_REQUIRE_LT(reported, expected.size());
+                            BOOST_CHECK(factor == expected[reported++]);
+                            return reported == stop_after ? math::factorization_control::stop_factorization :
+                                                            math::factorization_control::continue_factorization;
+                        });
+                    BOOST_CHECK_EQUAL(reported, stop_after ? stop_after : expected.size());
+                    BOOST_CHECK(control == (stop_after ? math::factorization_control::stop_factorization :
+                                                         math::factorization_control::continue_factorization));
+                }
+            }
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(screening_continuation_matches_reference_and_unscreened_blocks) {
@@ -634,7 +681,7 @@ BOOST_AUTO_TEST_CASE(screening_continuation_matches_reference_and_unscreened_blo
         const auto reference = math::distinct_degree_factorization_reference<backend_type>(mixed_degrees, context);
         std::vector<math::distinct_degree_factor<polynomial_type>> groups;
         const auto control = math::detail::kaltofen_shoup_factor_monic_square_free(
-            groups, mixed_degrees, block_size, context,
+            &groups, mixed_degrees, block_size, context,
             [](const auto &) { return math::factorization_control::continue_factorization; });
         BOOST_CHECK(control == math::factorization_control::continue_factorization);
         BOOST_CHECK(groups == reference.factors);

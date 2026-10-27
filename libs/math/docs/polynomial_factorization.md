@@ -138,6 +138,12 @@ is shared with callbacks, so their sampling affects its state for subsequent spl
 exceptions propagate to the caller. Reproducibility assumes the same implementation, configuration, and callback
 behavior; changing a recovery algorithm can change sampling even with the same initial seed.
 
+The public factorization APIs collect the factors they report. Internally, complete factorization releases each
+distinct-degree group after splitting and any required exact division instead of retaining all processed groups.
+Its internal callback path also allows norm recovery to consume irreducible factors without collecting a second
+history. Square-free parts, active Frobenius precomputation, and pending equal-degree work remain available for the
+algorithm; this does not make its total memory use constant.
+
 By default, each nonlinear square-free part prepares the initial Frobenius power and full baby-step table before
 discovering groups. To screen small degrees first, set a numeric limit on the existing arithmetic options:
 
@@ -163,7 +169,7 @@ both rejected and suitable inputs before choosing a limit. Passing a bounded scr
 recovery will succeed.
 
 Splitting and callback work run while the active Frobenius precomputation remains alive, which can increase peak
-memory. Splitting copies the emitted group because distinct-degree refinement or screening still needs its stored
+memory. Splitting copies the emitted group because distinct-degree refinement or screening still needs its original
 polynomial after the callback returns. No default screening bound is selected from the behavior of one candidate.
 
 ## Preconditions and current restrictions

@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE(irreducible_callback_runs_before_later_degree_group_work) {
     BOOST_REQUIRE_EQUAL(square_free.factors.size(), 1);
     std::vector<math::distinct_degree_factor<polynomial_type>> groups;
     const auto control = math::detail::kaltofen_shoup_factor_monic_square_free(
-        groups, std::move(square_free.factors.front().polynomial),
+        &groups, std::move(square_free.factors.front().polynomial),
         math::detail::kaltofen_shoup_block_size(input.degree()), prefix_context, [&](const auto &group) {
             BOOST_CHECK(group.polynomial == linear);
             return math::factorization_control::stop_factorization;
@@ -202,34 +202,46 @@ BOOST_AUTO_TEST_CASE(irreducible_callback_runs_before_later_degree_group_work) {
 
     // This first degree group is already irreducible: delivering its factor requires no further backend calls
     // or random coefficients. Returning or throwing from the callback must both avoid all later degree-group work.
-    for (bool throw_from_callback : {false, true}) {
-        std::size_t calls = 0, callback_count = 0;
-        polynomial_arithmetic::polynomial_context<counting_schoolbook_backend> context(
-            counting_schoolbook_backend(calls), options);
-        auto generator = []() -> value_type { throw std::logic_error("unexpected random coefficient request"); };
-        auto callback = [&](const math::polynomial_factor<polynomial_type> &factor) {
-            ++callback_count;
-            BOOST_CHECK(factor.polynomial == linear);
-            BOOST_CHECK_EQUAL(factor.multiplicity, 1);
+    for (bool collect : {false, true}) {
+        for (bool throw_from_callback : {false, true}) {
+            std::size_t calls = 0, callback_count = 0;
+            polynomial_arithmetic::polynomial_context<counting_schoolbook_backend> context(
+                counting_schoolbook_backend(calls), options);
+            auto generator = []() -> value_type { throw std::logic_error("unexpected random coefficient request"); };
+            auto callback = [&](const math::polynomial_factor<polynomial_type> &factor) {
+                ++callback_count;
+                BOOST_CHECK(factor.polynomial == linear);
+                BOOST_CHECK_EQUAL(factor.multiplicity, 1);
+                BOOST_CHECK_EQUAL(calls, prefix_calls);
+                if (throw_from_callback)
+                    throw std::runtime_error("factor callback failure");
+                return math::factorization_control::stop_factorization;
+            };
+            auto run = [&] {
+                if (collect) {
+                    const auto result =
+                        math::complete_factorization<counting_schoolbook_backend>(input, context, generator, callback);
+                    BOOST_CHECK(!result.complete);
+                    BOOST_REQUIRE_EQUAL(result.factors.size(), 1);
+                    BOOST_CHECK(result.factors.front().polynomial == linear);
+                } else {
+                    value_type leading_coefficient;
+                    BOOST_CHECK(math::detail::complete_factorization_impl<counting_schoolbook_backend>(
+                                    leading_coefficient, input, context, generator, callback) ==
+                                math::factorization_control::stop_factorization);
+                    BOOST_CHECK(leading_coefficient == value_type::one());
+                }
+            };
+            if (throw_from_callback) {
+                BOOST_CHECK_EXCEPTION(run(), std::runtime_error, [](const auto &error) {
+                    return std::string(error.what()) == "factor callback failure";
+                });
+            } else {
+                run();
+            }
+            BOOST_CHECK_EQUAL(callback_count, 1);
             BOOST_CHECK_EQUAL(calls, prefix_calls);
-            if (throw_from_callback)
-                throw std::runtime_error("factor callback failure");
-            return math::factorization_control::stop_factorization;
-        };
-        if (throw_from_callback) {
-            BOOST_CHECK_EXCEPTION(
-                math::complete_factorization<counting_schoolbook_backend>(input, context, generator, callback),
-                std::runtime_error,
-                [](const auto &error) { return std::string(error.what()) == "factor callback failure"; });
-        } else {
-            const auto result =
-                math::complete_factorization<counting_schoolbook_backend>(input, context, generator, callback);
-            BOOST_CHECK(!result.complete);
-            BOOST_REQUIRE_EQUAL(result.factors.size(), 1);
-            BOOST_CHECK(result.factors.front().polynomial == linear);
         }
-        BOOST_CHECK_EQUAL(callback_count, 1);
-        BOOST_CHECK_EQUAL(calls, prefix_calls);
     }
 }
 
@@ -261,42 +273,64 @@ BOOST_AUTO_TEST_CASE(incremental_groups_preserve_factor_order_multiplicities_and
         polynomial_arithmetic::polynomial_context_options options;
         options.distinct_degree_screening_limit = screening_limit;
         for (std::size_t stop_after = 0; stop_after <= expected.size(); ++stop_after) {
-            polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
-            std::size_t next_coefficient = 0;
-            auto generator = [&] { return coefficients.at(next_coefficient++); };
-            std::vector<math::polynomial_factor<polynomial_type>> reported;
-            const auto result =
-                math::complete_factorization<backend_type>(input, context, generator, [&](const auto &factor) {
+            for (bool collect : {false, true}) {
+                polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+                std::size_t next_coefficient = 0;
+                auto generator = [&] { return coefficients.at(next_coefficient++); };
+                std::vector<math::polynomial_factor<polynomial_type>> reported;
+                auto callback = [&](const auto &factor) {
                     reported.push_back(factor);
                     BOOST_CHECK(generator() == value_type(100 + reported.size()));
                     return reported.size() == stop_after ? math::factorization_control::stop_factorization :
                                                            math::factorization_control::continue_factorization;
-                });
-            const auto count = stop_after ? stop_after : expected.size();
-            BOOST_REQUIRE_EQUAL(result.factors.size(), count);
-            BOOST_CHECK(result.factors == reported);
-            for (std::size_t i = 0; i < count; ++i)
-                BOOST_CHECK(result.factors[i] == expected[i]);
-            BOOST_CHECK(result.leading_coefficient == expected_result.leading_coefficient);
-            BOOST_CHECK_EQUAL(result.complete, stop_after == 0);
-            BOOST_CHECK_EQUAL(next_coefficient, consumed_at_factor[count - 1]);
-            if (result.complete)
-                BOOST_CHECK(reconstruct(backend, result) == input);
+                };
+                value_type leading_coefficient;
+                bool complete;
+                if (collect) {
+                    const auto result = math::complete_factorization<backend_type>(input, context, generator, callback);
+                    BOOST_CHECK(result.factors == reported);
+                    leading_coefficient = result.leading_coefficient;
+                    complete = result.complete;
+                    if (complete)
+                        BOOST_CHECK(reconstruct(backend, result) == input);
+                } else {
+                    complete = math::detail::complete_factorization_impl<backend_type>(leading_coefficient, input,
+                                                                                       context, generator, callback) ==
+                               math::factorization_control::continue_factorization;
+                }
+                const auto count = stop_after ? stop_after : expected.size();
+                BOOST_REQUIRE_EQUAL(reported.size(), count);
+                for (std::size_t i = 0; i < count; ++i)
+                    BOOST_CHECK(reported[i] == expected[i]);
+                BOOST_CHECK(leading_coefficient == expected_result.leading_coefficient);
+                BOOST_CHECK_EQUAL(complete, stop_after == 0);
+                BOOST_CHECK_EQUAL(next_coefficient, consumed_at_factor[count - 1]);
+            }
         }
     }
 
-    polynomial_arithmetic::polynomial_context<backend_type> context;
-    auto throwing_generator = []() -> value_type { throw std::runtime_error("coefficient generator failure"); };
-    std::size_t callback_count = 0;
-    BOOST_CHECK_EXCEPTION(
-        math::complete_factorization<backend_type>(input, context, throwing_generator,
-                                                   [&](const auto &) {
-                                                       ++callback_count;
-                                                       return math::factorization_control::continue_factorization;
-                                                   }),
-        std::runtime_error,
-        [](const auto &error) { return std::string(error.what()) == "coefficient generator failure"; });
-    BOOST_CHECK_EQUAL(callback_count, 0);
+    for (bool collect : {false, true}) {
+        polynomial_arithmetic::polynomial_context<backend_type> context;
+        auto throwing_generator = []() -> value_type { throw std::runtime_error("coefficient generator failure"); };
+        std::size_t callback_count = 0;
+        auto callback = [&](const auto &) {
+            ++callback_count;
+            return math::factorization_control::continue_factorization;
+        };
+        auto run = [&] {
+            if (collect) {
+                math::complete_factorization<backend_type>(input, context, throwing_generator, callback);
+            } else {
+                value_type leading_coefficient;
+                math::detail::complete_factorization_impl<backend_type>(leading_coefficient, input, context,
+                                                                        throwing_generator, callback);
+            }
+        };
+        BOOST_CHECK_EXCEPTION(run(), std::runtime_error, [](const auto &error) {
+            return std::string(error.what()) == "coefficient generator failure";
+        });
+        BOOST_CHECK_EQUAL(callback_count, 0);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(screening_delivers_a_linear_factor_before_building_the_baby_table) {
