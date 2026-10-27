@@ -85,11 +85,7 @@ namespace nil::crypto3::math {
         if (std::addressof(numerator) == std::addressof(denominator)) {
             throw std::invalid_argument("rational-reconstruction outputs must be distinct objects");
         }
-        const auto is_canonical = [](const polynomial_type &polynomial) {
-            return !polynomial.empty() &&
-                   (polynomial.size() == 1 || polynomial[polynomial.size() - 1] != value_type {});
-        };
-        if (!is_canonical(residue) || !is_canonical(modulus)) {
+        if (!detail::is_canonical_polynomial(residue) || !detail::is_canonical_polynomial(modulus)) {
             throw std::invalid_argument("rational reconstruction requires canonical nonempty inputs");
         }
         if (modulus.size() == 1) {

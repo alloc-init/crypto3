@@ -44,6 +44,10 @@ using coefficient_polynomial = math::polynomial<value_type>;
 using evaluation_polynomial = math::polynomial_dfs<value_type>;
 using interpolation_points = std::vector<std::pair<value_type, value_type>>;
 
+template<typename Polynomial>
+concept SupportsCanonicalPolynomialCheck =
+    requires(const Polynomial &input) { math::detail::is_canonical_polynomial(input); };
+
 template<typename Range>
 concept SupportsPolynomialMultiplication =
     requires(Range &output, const Range &input) { math::multiplication(output, input, input); };
@@ -102,6 +106,10 @@ static_assert(!math::detail::MutableNormalizableCoefficientPolynomial<coefficien
 static_assert(math::detail::PolynomialCoefficientRange<std::array<value_type, 2>>);
 static_assert(!math::detail::MutablePolynomialCoefficientRange<std::array<value_type, 2>>);
 static_assert(!math::detail::PolynomialCoefficientRange<std::list<value_type>>);
+
+static_assert(SupportsCanonicalPolynomialCheck<coefficient_polynomial>);
+static_assert(!SupportsCanonicalPolynomialCheck<evaluation_polynomial>);
+static_assert(!SupportsCanonicalPolynomialCheck<coefficients>);
 
 static_assert(SupportsPolynomialMultiplication<coefficients>);
 static_assert(!SupportsPolynomialMultiplication<std::vector<int>>);

@@ -55,12 +55,7 @@ namespace nil::crypto3::math {
         template<CoefficientPolynomial Polynomial>
         bool is_canonical_polynomial_x_norm_representation(
             const polynomial_x_norm_representation<Polynomial> &representation) {
-            using value_type = typename Polynomial::value_type;
-            const auto is_canonical = [](const Polynomial &polynomial) {
-                return !polynomial.empty() &&
-                       (polynomial.size() == 1 || polynomial[polynomial.size() - 1] != value_type {});
-            };
-            return is_canonical(representation.p) && is_canonical(representation.q);
+            return is_canonical_polynomial(representation.p) && is_canonical_polynomial(representation.q);
         }
 
     }    // namespace detail
@@ -183,7 +178,7 @@ namespace nil::crypto3::math {
         using value_type = typename polynomial_type::value_type;
         using representation_type = polynomial_x_norm_representation<polynomial_type>;
 
-        if (g.empty() || (g.size() > 1 && g[g.size() - 1] == value_type {})) {
+        if (!detail::is_canonical_polynomial(g)) {
             throw std::invalid_argument("polynomial X-norm recovery requires a canonical nonempty polynomial");
         }
         if (g.size() == 1) {
@@ -440,7 +435,7 @@ namespace nil::crypto3::math {
         using value_type = typename polynomial_type::value_type;
         using representation_type = polynomial_x_norm_representation<polynomial_type>;
 
-        if (h.empty() || (h.size() > 1 && h[h.size() - 1] == value_type::zero())) {
+        if (!detail::is_canonical_polynomial(h)) {
             throw std::invalid_argument("polynomial X-norm recovery requires a canonical nonempty polynomial");
         }
 

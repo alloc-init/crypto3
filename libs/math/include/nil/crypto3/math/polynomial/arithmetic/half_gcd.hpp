@@ -364,13 +364,7 @@ namespace nil::crypto3::math::detail {
     template<SupportsDivrem Backend>
     void validate_half_gcd_inputs(const typename Backend::polynomial_type &first,
                                   const typename Backend::polynomial_type &second) {
-        using value_type = typename Backend::polynomial_type::value_type;
-
-        const auto is_canonical = [](const typename Backend::polynomial_type &polynomial) {
-            return polynomial.size() != 0 &&
-                   (polynomial.size() == 1 || polynomial[polynomial.size() - 1] != value_type {});
-        };
-        if (!is_canonical(first) || !is_canonical(second)) {
+        if (!is_canonical_polynomial(first) || !is_canonical_polynomial(second)) {
             throw std::invalid_argument("half_gcd_reduce: inputs must be canonical polynomials");
         }
         if (is_zero(first)) {

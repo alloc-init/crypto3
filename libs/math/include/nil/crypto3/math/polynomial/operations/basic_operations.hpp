@@ -64,6 +64,16 @@ namespace nil {
                     std::default_initializable<typename Polynomial::value_type> &&
                     std::equality_comparable<typename Polynomial::value_type>;
 
+                // Canonical coefficient storage is nonempty, with no trailing zero except for the zero polynomial [0].
+                template<CoefficientPolynomial Polynomial>
+                    requires std::default_initializable<typename Polynomial::value_type> &&
+                             std::equality_comparable<typename Polynomial::value_type>
+                bool is_canonical_polynomial(const Polynomial &polynomial) {
+                    using value_type = typename Polynomial::value_type;
+                    return polynomial.size() != 0 &&
+                           (polynomial.size() == 1 || polynomial[polynomial.size() - 1] != value_type {});
+                }
+
             }    // namespace detail
 
             /**
