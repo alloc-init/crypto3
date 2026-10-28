@@ -29,6 +29,7 @@
 #include <cstdint>
 #include <limits>
 #include <utility>
+#include <vector>
 
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/test/unit_test.hpp>
@@ -243,6 +244,51 @@ BOOST_AUTO_TEST_CASE(powmod_supports_extension_coefficients_and_base_field_roots
     polynomial_type result;
     math::powmod(result, base, std::size_t(11), mixed_radix_divisor, mixed_radix_context);
     BOOST_CHECK(result == expected);
+}
+
+BOOST_AUTO_TEST_CASE(multiply_by_x_mod_matches_general_products_for_reduced_inputs) {
+    using backend_type = counting_schoolbook_backend;
+    using polynomial_type = typename backend_type::polynomial_type;
+    const auto zero = fq_value_type::zero();
+    const auto one = fq_value_type::one();
+    const polynomial_type x = {zero, one};
+    const polynomial_type divisors[] = {{zero, one},
+                                        {fq_value_type(3), fq_value_type(2)},
+                                        {one, zero, one},
+                                        {fq_value_type(3), fq_value_type(2), fq_value_type(4)},
+                                        {fq_value_type(3), fq_value_type(2), zero, fq_value_type(4)},
+                                        {zero, zero, zero, one}};
+    std::size_t squares = 0, products = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {squares, products});
+    for (const auto &modulus : divisors) {
+        const std::size_t degree = modulus.size() - 1;
+        const math::polynomial_divisor_context<backend_type> divisor(modulus, degree, context);
+        std::vector<polynomial_type> inputs = {{zero}};
+        for (std::size_t width = 1; width <= degree; ++width) {
+            polynomial_type input(width);
+            for (std::size_t i = 0; i < width; ++i) {
+                input[i] = fq_value_type(3 * i + 2);
+            }
+            inputs.push_back(std::move(input));
+        }
+        // X * ((B-B(0))/X) reduces to a constant, or zero when B(0)=0.
+        polynomial_type collapsing(degree);
+        for (std::size_t i = 0; i < degree; ++i) {
+            collapsing[i] = modulus[i + 1];
+        }
+        inputs.push_back(std::move(collapsing));
+        for (const auto &input : inputs) {
+            polynomial_type expected;
+            math::mulmod(expected, input, x, divisor, context);
+            const auto saved_squares = squares, saved_products = products;
+            auto actual = input;
+            math::detail::multiply_by_x_mod(actual, divisor);
+            BOOST_CHECK(actual == expected);
+            BOOST_CHECK_LE(actual.size(), degree);
+            BOOST_CHECK_EQUAL(squares, saved_squares);
+            BOOST_CHECK_EQUAL(products, saved_products);
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(powmod_x_matches_generic_exponentiation_across_moduli_and_reduction_paths) {

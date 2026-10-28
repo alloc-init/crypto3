@@ -27,13 +27,54 @@
 
 #include <cstddef>
 #include <utility>
-#include <vector>
 
 #include <nil/crypto3/math/polynomial/factorization/equal_degree_factorization.hpp>
 #include <nil/crypto3/math/polynomial/factorization/kaltofen_shoup_distinct_degree_factorization.hpp>
 #include <nil/crypto3/math/polynomial/factorization/square_free_factorization.hpp>
 
 namespace nil::crypto3::math {
+
+    namespace detail {
+
+        /**
+         * Consume irreducible factors without retaining a result history. The callback receives each factor as an
+         * rvalue and may move it into owned storage; otherwise it is released when the callback returns. Its return
+         * value controls both equal-degree splitting and distinct-degree discovery. Square-free decomposition still
+         * finishes before any irreducible-factor callback, preserving arithmetic and shared-generator ordering.
+         */
+        template<SupportsDivrem Backend, typename Generator, typename FactorCallback>
+        factorization_control
+            complete_factorization_impl(typename Backend::polynomial_type::value_type &leading_coefficient,
+                                        const typename Backend::polynomial_type &input,
+                                        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                        Generator &generator, FactorCallback &&factor_callback) {
+            using polynomial_type = typename Backend::polynomial_type;
+
+            auto square_free_result = square_free_factorization<Backend>(input, arithmetic_context);
+            leading_coefficient = square_free_result.leading_coefficient;
+            for (auto &square_free_factor : square_free_result.factors) {
+                const std::size_t multiplicity = square_free_factor.multiplicity;
+                const std::size_t block_size = kaltofen_shoup_block_size(square_free_factor.polynomial.size() - 1);
+
+                const auto control = kaltofen_shoup_factor_monic_square_free(
+                    nullptr, std::move(square_free_factor.polynomial), block_size, arithmetic_context,
+                    [&](const distinct_degree_factor<polynomial_type> &degree_group) {
+                        // Splitting consumes a copy; Kaltofen-Shoup still needs the original group for exact division
+                        // if this callback continues. No previously processed groups are retained.
+                        return factor_distinct_degree_group<Backend>(
+                            degree_group, arithmetic_context, generator, [&](polynomial_type &&factor) {
+                                return factor_callback(
+                                    polynomial_factor<polynomial_type> {std::move(factor), multiplicity});
+                            });
+                    });
+                if (control == factorization_control::stop_factorization) {
+                    return control;
+                }
+            }
+            return factorization_control::continue_factorization;
+        }
+
+    }    // namespace detail
 
     /**
      * Factor a polynomial into monic irreducible factors by composing the three finite-field factorization stages:
@@ -71,34 +112,14 @@ namespace nil::crypto3::math {
         using polynomial_type = typename Backend::polynomial_type;
         using result_type = polynomial_factorization_result<polynomial_type>;
 
-        auto square_free_result = square_free_factorization<Backend>(input, arithmetic_context);
-
         result_type result;
-        result.leading_coefficient = square_free_result.leading_coefficient;
-        for (auto &square_free_factor : square_free_result.factors) {
-            const std::size_t multiplicity = square_free_factor.multiplicity;
-            const std::size_t block_size = detail::kaltofen_shoup_block_size(square_free_factor.polynomial.size() - 1);
-
-            std::vector<distinct_degree_factor<polynomial_type>> degree_groups;
-            const auto control = detail::kaltofen_shoup_factor_monic_square_free(
-                degree_groups, std::move(square_free_factor.polynomial), block_size, arithmetic_context,
-                [&](const distinct_degree_factor<polynomial_type> &degree_group) {
-                    // Split each newly discovered degree group now and report its irreducible factors immediately.
-                    // This lets the caller stop before Kaltofen-Shoup searches for later degree groups.
-                    // The splitter takes its group by value, so passing degree_group intentionally copies it.
-                    // Splitting consumes that copy; Kaltofen-Shoup still needs the original polynomial for exact
-                    // division if this callback continues.
-                    return detail::factor_distinct_degree_group<Backend>(
-                        degree_group, arithmetic_context, generator, [&](polynomial_type &&factor) {
-                            result.factors.push_back({std::move(factor), multiplicity});
-                            return factor_callback(result.factors.back());
-                        });
-                });
-            if (control == factorization_control::stop_factorization) {
-                result.complete = false;
-                return result;
-            }
-        }
+        const auto control =
+            detail::complete_factorization_impl<Backend>(result.leading_coefficient, input, arithmetic_context,
+                                                         generator, [&](polynomial_factor<polynomial_type> &&factor) {
+                                                             result.factors.push_back(std::move(factor));
+                                                             return factor_callback(result.factors.back());
+                                                         });
+        result.complete = control == factorization_control::continue_factorization;
         return result;
     }
 

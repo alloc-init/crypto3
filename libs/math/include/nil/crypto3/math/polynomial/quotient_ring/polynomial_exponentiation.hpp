@@ -32,7 +32,6 @@
 #include <utility>
 #include <vector>
 
-#include <nil/crypto3/math/polynomial/operations/shift.hpp>
 #include <nil/crypto3/math/polynomial/quotient_ring/polynomial_modular_arithmetic.hpp>
 
 namespace nil::crypto3::math {
@@ -167,20 +166,7 @@ namespace nil::crypto3::math {
             // X^(2*k+b): square result, then multiply by X only when b is one.
             squaremod(result, result, divisor_context, arithmetic_context);
             if (bits.back()) {
-                if (result.size() == divisor_degree) {
-                    // With d = divisor_degree, X*result has degree d and leading coefficient result[d-1].
-                    // Subtract c*H once, with c = result[d-1]/lead(H). Store its lower d coefficients directly,
-                    // descending to preserve the old result[i-1]; the canceled X^d coefficient needs no storage.
-                    const value_type c = result[divisor_degree - 1] * inverse_lead;
-                    for (std::size_t i = divisor_degree - 1; i > 0; --i) {
-                        result[i] = result[i - 1] - c * modulus[i];
-                    }
-                    result[0] = -c * modulus[0];
-                    condense(result);
-                } else {
-                    // The shift stays below degree(H); this helper also preserves canonical zero.
-                    shift_left(result, result, 1);
-                }
+                detail::multiply_by_x_mod(result, divisor_context);
             }
             bits.pop_back();
         }

@@ -163,10 +163,7 @@ namespace nil::crypto3::math {
             using value_type = typename polynomial_type::value_type;
             using cache_type = polynomial_composition_precomputation<Backend>;
             const std::size_t degree = divisor_context.degree();
-            const auto canonical = [](const polynomial_type &value) {
-                return !value.empty() && (value.size() == 1 || value.back() != value_type::zero());
-            };
-            if (!canonical(input) || !canonical(x_to_frobenius_power) ||
+            if (!is_canonical_polynomial(input) || !is_canonical_polynomial(x_to_frobenius_power) ||
                 x_to_frobenius_power.size() > std::max<std::size_t>(1, degree)) {
                 throw std::invalid_argument(
                     "Frobenius products require canonical inputs and a reduced Frobenius image");
@@ -290,10 +287,8 @@ namespace nil::crypto3::math {
         using value_type = typename polynomial_type::value_type;
         using cache_type = polynomial_composition_precomputation<Backend>;
         const std::size_t degree = divisor_context.degree();
-        const auto canonical = [](const polynomial_type &value) {
-            return !value.empty() && (value.size() == 1 || value.back() != value_type::zero());
-        };
-        if (!canonical(input) || !canonical(weight) || !canonical(x_to_frobenius_power) ||
+        if (!detail::is_canonical_polynomial(input) || !detail::is_canonical_polynomial(weight) ||
+            !detail::is_canonical_polynomial(x_to_frobenius_power) ||
             x_to_frobenius_power.size() > std::max<std::size_t>(1, degree)) {
             throw std::invalid_argument("Frobenius sums require canonical inputs and a reduced Frobenius image");
         }

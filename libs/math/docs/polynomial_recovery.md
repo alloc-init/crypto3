@@ -23,6 +23,7 @@ polynomial arithmetic context and the coefficient-field generator.
 | Field orders and multiplicative-group decomposition | `<nil/crypto3/algebra/fields/field_order.hpp>` |
 | Coefficient-field square-root helpers | `<nil/crypto3/algebra/fields/field_algorithms.hpp>` |
 | Quotient-field square testing and roots | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_square_root.hpp>` |
+| Frobenius products and weighted sums | `<nil/crypto3/math/polynomial/quotient_ring/polynomial_frobenius.hpp>` |
 | Bounded rational reconstruction | `<nil/crypto3/math/polynomial/reconstruction/polynomial_rational_reconstruction.hpp>` |
 | `X`-norm reconstruction | `<nil/crypto3/math/polynomial/reconstruction/polynomial_x_norm_reconstruction.hpp>` |
 
@@ -45,6 +46,9 @@ criterion. `sqrt()` requires a square input and asserts that precondition; calle
 test first. The implementation uses the field's multiplicative-group decomposition and Tonelli-Shanks rather than
 converting the value to a generic integer representation.
 
+`algebra::fields::sqrt_known_square(value)` is the helper used after a square test or a mathematical invariant has
+established that the input is square. Its precondition is the same; it is not a square-classification API.
+
 ## Quotient-field square testing
 
 Let `K` be a finite field and let `B` be irreducible of degree `d`. The quotient `K[X]/(B)` is a field with
@@ -64,6 +68,8 @@ Irreducibility of `B` is a caller precondition. The function does not factor `B`
 characterize squares if the quotient has zero divisors.
 
 ## Quotient-field square roots
+
+### General residues: Tonelli-Shanks
 
 `square_root_mod` uses Tonelli-Shanks in `K[X]/(B)`. Repeated calls should share two immutable precomputations:
 
@@ -105,6 +111,68 @@ enforce one in the supplied generator.
 The square-root operation supports odd characteristic. It returns `false` and stores zero when the input is not a
 square; zero is returned as its own root. Output may alias input. The coefficient field may itself be an extension
 field, including BN254 Fq12.
+
+### Specialized roots of X
+
+Norm recovery needs a square root of `x = X mod B`. Write `d = degree(B)` and `Q = order(K)`. Two specialized APIs
+avoid constructing a quotient-field nonresidue and avoid exponentiations whose bit length grows with `d`:
+
+| API | Divisor degree | Root construction |
+|---|---|---|
+| `square_root_mod_x_odd_degree(output, divisor_context, arithmetic_context)` | Positive odd degree | A coefficient-field norm root and a product of Frobenius conjugates; no generator. |
+| `square_root_mod_x_even_degree(output, divisor_context, arithmetic_context, generator)` | Positive even degree | A weighted Frobenius trace, followed by a coefficient-field root; samples only after a zero trace. |
+
+Both require an irreducible divisor over an odd-characteristic field with coefficient square testing and
+`sqrt_known_square` support. They support nonmonic divisors. The norm
+
+    N = (-1)^d * B(0) / leading_coefficient(B)
+
+decides whether `x` is square. A nonsquare returns `false` and sets output to zero; success returns a canonical
+reduced root. Irreducibility is a caller precondition and is not rechecked. Degree `d - 1` divisor-inverse coefficients
+suffice for `d > 1`. Compositions require a positive `modular_composition_cached_power_limit`. Invalid degree parity,
+characteristic two, an invalid generated representative, or insufficient arithmetic capacity is rejected.
+
+For odd `d = 1`, `x` is already a coefficient-field element, so the answer is its scalar root, including zero when
+`B` is a multiple of `X`. This case needs neither composition nor sampling. For larger odd degrees, let
+
+    b = x^((Q + 1) / 2),
+    D = b^Q * b^(Q^3) * ... * b^(Q^(d - 2)).
+
+Then `D^2 = N/x`, so `x * D / sqrt(N)` is a root. The product is evaluated by binary doubling using
+`O(log d)` compositions and modular products after seed construction. No random coefficients are consumed.
+
+For even degrees, let `F(u) = u^Q`, `lambda = x^((Q - 1) / 2)`, and
+
+    P_0 = 1,
+    P_i = lambda * F(lambda) * ... * F^(i - 1)(lambda),
+    W(c) = sum(P_i * F^i(c), i = 0 .. d - 1).
+
+For a root `r` of `x`, `r * W(c) = Trace(r*c)` belongs to the coefficient field. When `W(c)` is nonzero,
+`C = x * W(c)^2` is a nonzero coefficient-field square, and `x * W(c) / sqrt(C)` is a root of `x`.
+Each weighted sum uses `O(log d)` compositions and modular products.
+
+The even-degree API tries `c = 1` first without calling the generator. If the weighted trace is zero, it asks the
+generator for another canonical polynomial of degree below `d`. It retains `lambda` and `X^Q` across retries;
+each weighted-sum call constructs its own composition caches. Uniform quotient-field sampling gives zero trace with
+probability `1/Q`. There is no fixed retry limit: the generator must eventually supply a nonzero weighted trace, and
+generator exceptions propagate. This low-level generator returns whole polynomial representatives; the norm-recovery
+APIs below instead accept a coefficient generator and adapt it internally.
+
+### Shared seed for extension coefficients
+
+Both specialized methods need `lambda = x^((Q - 1) / 2)` and `X^Q mod B`. When the coefficient field has order
+`Q = p^e`, `e > 1`, and its value type supplies `Frobenius_map`, the seed starts with
+
+    a = x^((p - 1) / 2),
+    x^p = x * a^2,
+    lambda = a * a^p * ... * a^(p^(e - 1)),
+    x^Q = x * lambda^2.
+
+The quotient-ring binary exponentiation therefore uses the characteristic-sized exponent `(p - 1)/2`. The conjugate
+product uses `O(log e)` compositions and products, with the required coefficient Frobenius twists. Prime fields and
+coefficient types without that map use `powmod_x` with `(Q - 1)/2` directly. Multiplication by `x` uses a linear shift/reduction.
+The two methods share this seed implementation; ordinary `polynomial_frobenius_context` construction still computes
+its initial `X^Q` using `powmod_x` with exponent `Q`.
 
 ## Bounded rational reconstruction
 
@@ -178,14 +246,27 @@ if (representation) {
 }
 ```
 
-The coefficient generator returns coefficient-field values. The recovery operation adapts those values into canonical
-degree-below-`degree(g)` representatives of `K[X]/(g)`. The generator remains caller-owned and must eventually supply
-coefficients forming a quotient-field nonsquare.
+The root path is selected before constructing any Tonelli-Shanks context:
+
+| Input and configuration | Selected root path | Coefficient-generator use for this root |
+|---|---|---|
+| Linear `g` | Scalar root through `square_root_mod_x_odd_degree` | None |
+| Odd degree greater than one, positive composition cache limit | Frobenius product | None |
+| Even degree, positive composition cache limit | Weighted Frobenius trace | Only after the initial `c = 1` trace is zero |
+| Degree greater than one, zero composition cache limit | Tonelli-Shanks fallback | Quotient-field nonresidue search |
+
+The coefficient generator remains caller-owned. When sampling is needed, recovery draws `degree(g)` field values
+per representative and removes trailing zero coefficients. Trace retries must eventually yield a nonzero weighted
+trace; the Tonelli-Shanks fallback must eventually find a nonsquare. The selected root and normalized `(P, Q)` need
+not match those produced by another root algorithm. All successful paths satisfy the same exact norm identity.
+
+The zero-cache fallback is available in irreducible recovery, where the factor is already supplied. When general
+recovery needs complete factorization, its Frobenius compositions still require a positive cache limit.
 
 On success, the optional contains `polynomial_x_norm_representation<polynomial_type>`. Its `p` and `q` members hold the
 two recovered coefficient polynomials.
 
-The function reduces `{0, 1}` modulo `g`, including when `g` is linear, and recovers `R` with `R^2 = X mod g`. It then
+The selected path recovers `R` with `R^2 = X mod g`, interpreting `X` as its residue also for linear `g`. It then
 reconstructs `P = R * Q mod g` with
 
     degree(P) <= floor(degree(g) / 2),
@@ -255,7 +336,14 @@ Complete factorization writes the remaining input as
 where `c` is the leading coefficient and each `g` is monic and irreducible. An even factor power `g^(2r)` has the
 immediate representation `(g^r, 0)`. For an odd power `g^(2r+1)`, irreducible recovery first obtains `(P_g, Q_g)` for
 the unpaired copy of `g`; scaling both components by `g^r` then represents the complete factor power. Factor recovery
-stops as soon as an odd-multiplicity factor cannot be represented.
+stops as soon as an odd-multiplicity factor cannot be represented. It consumes each irreducible factor without
+retaining a collected factor list; only the resulting representations are saved for the balanced combination below.
+
+Multiplicity parity and irreducible-degree parity serve different purposes. Even **multiplicity** gives the direct
+square representation above, regardless of the factor's degree. For an unpaired copy, the factor's **degree** chooses
+the odd-degree product or even-degree trace root algorithm. Recovery runs inside the irreducible-factor callback;
+it is not deferred until every factor has passed its eligibility checks. See
+[staged factorization](@ref math_polynomial_factorization) for screening and callback ordering.
 
 The factor-power representations are combined with `multiply_polynomial_x_norm_representations` in a balanced product
 tree. Finally, both components are scaled by `sqrt(c)` to incorporate the factorization's leading coefficient. A
@@ -267,15 +355,18 @@ When `-1` is square, separate normalization loses no representations: every moni
 scalar obstructions in individual factors and the leading scalar can cancel in `H`; the algorithm does not exploit
 such cancellation.
 
-The coefficient generator is shared by complete factorization and odd-factor recovery. It must meet the factorization
-generator contract and must allow each square-root context to find a quotient-field nonsquare. All polynomial products
-and squares use the caller's compile-time-selected arithmetic context; no polynomial backend or random engine is
-constructed internally.
+The coefficient generator is shared by complete factorization and recovery of odd-multiplicity factors. It must meet
+the factorization generator contract and support any trace retries or fallback nonresidue searches described above.
+Odd-degree root recovery consumes no samples, but equal-degree factorization can still do so. Changing the root path
+can therefore change the generator state seen by later factorization work and the resulting factor order. A seeded
+run is reproducible with the same implementation and configuration; identical sampling across different algorithms
+is not part of the contract. All polynomial products and squares use the caller's compile-time-selected arithmetic
+context; no polynomial backend or random engine is constructed internally.
 
 | Outcome | Contract |
 |---|---|
 | Representation returned | `evaluate_polynomial_x_norm(result, context) == H` exactly. |
-| No value returned | A special-case or necessary square test fails, an odd factor is unrepresentable, bounded recovery fails, or scalar normalization is impossible. |
+| No value returned | A special-case or necessary square test fails, an odd-multiplicity factor is unrepresentable, bounded recovery fails, or scalar normalization is impossible. |
 | `std::invalid_argument` | `H` is empty or noncanonical, or a composed API contract is violated. |
 | `std::logic_error` | Completed factorization, recovery, combination, normalization, or final verification is internally inconsistent. |
 
@@ -330,24 +421,36 @@ eligible factors then uses the multiplicative identity above.
 ## Reuse and performance
 
 The [polynomial arithmetic infrastructure](@ref math_polynomial_arithmetic) describes these contexts in detail. The
-recovery API reuses the caller's polynomial arithmetic context throughout recovery. It constructs one divisor context
-and one square-root context and reuses them for all operations within that call. Direct users of the lower-level APIs
-can retain those contexts across repeated operations modulo the same divisor.
+recovery API reuses the caller's polynomial arithmetic context throughout recovery and constructs one divisor context
+per irreducible recovery. Only the Tonelli-Shanks fallback constructs a `polynomial_square_root_context`. Direct users
+of that lower-level API can retain both contexts across repeated roots modulo the same divisor.
 
-Let `Q` be the coefficient-field order, `d` the irreducible divisor degree, and `s` the two-adicity of `Q^d - 1`.
+The specialized paths construct composition caches for the shared seed and the degree-dependent product or trace.
+Each binary chain retains only its initial cache and one doubling cache at a time, and caches are released between
+phases. Optional prepared coefficient payloads obey `modular_composition_prepared_byte_limit` **per cache**. Ordinary
+cached powers, backend scratch, and concurrent operations require additional memory; this option is not a total
+memory limit. Measure seed construction, degree-dependent work, and complete recovery together when assessing speed.
+
+Let `Q = p^e` be the coefficient-field order, `d` the irreducible divisor degree, and `s` the two-adicity of `Q^d - 1`.
 The current implementations have the rough bounds shown below.
 
-The table counts quotient-ring multiplications and Euclidean steps. The cost of each underlying polynomial
-multiplication, reduction, and division is given in the
+The table counts quotient-ring multiplications, compositions, and Euclidean steps. Composition includes preparing
+caches where needed; it is not a constant-time field operation. The cost of the underlying arithmetic is given in the
 [polynomial arithmetic cost overview](@ref math_polynomial_arithmetic) and depends on the selected backend.
 
 | Operation | Rough current bound |
 |---|---|
 | General `is_square_mod` | `O(d * log Q)` quotient-ring multiplications |
 | `is_square_mod(X)` norm shortcut | One coefficient-field square test |
-| Square-root context construction | Expected `O(d * log Q)` quotient-ring multiplications |
-| `square_root_mod` | `O(d * log Q + s^2)` quotient-ring multiplications |
+| Tonelli-Shanks context construction | Expected `O(d * log Q)` quotient-ring multiplications with uniform sampling |
+| General `square_root_mod` | `O(d * log Q + s^2)` quotient-ring multiplications |
+| Shared seed with coefficient Frobenius support | `O(log p)` quotient-ring products plus `O(log e)` compositions/products and coefficient twists |
+| Shared seed without coefficient Frobenius support | `O(log Q)` quotient-ring products |
+| Specialized odd-degree root, after its seed | `O(log d)` compositions/products, coefficient-field root/normalization, and linear finalization; linear divisors need only the scalar root |
+| Specialized even-degree root, after its seed | `O(log d)` compositions/products per trace attempt, coefficient-field root/normalization, and linear finalization |
 | Rational reconstruction | Up to `O(d)` sequential Euclidean steps; `O(d^2)` with schoolbook short-by-long products |
 
-The square-root context has no deterministic bound with a caller-supplied generator because it searches until it
-finds a nonresidue. Rational reconstruction does not currently use half-GCD acceleration.
+Tonelli-Shanks nonresidue search and even-degree trace retries have no deterministic attempt bound for an arbitrary
+caller-supplied generator. Odd-degree specialized roots are deterministic and require no quotient-field sampling.
+Rational reconstruction does not currently use half-GCD acceleration. These operation bounds describe the algorithms;
+they do not imply a fixed speedup independent of degree, backend, cache configuration, or CPU.

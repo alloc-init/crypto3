@@ -24,7 +24,8 @@
 
 #define BOOST_TEST_MODULE small_prime_fft_crt_test
 
-#include <nil/crypto3/math/detail/bn254_small_prime_fft.hpp>
+#include <nil/crypto3/math/polynomial/backends/detail/small_prime_fft/bn254_small_prime_fft_crt.hpp>
+#include <nil/crypto3/math/polynomial/backends/detail/small_prime_fft/small_prime_fft_plan.hpp>
 
 #include <algorithm>
 #include <array>

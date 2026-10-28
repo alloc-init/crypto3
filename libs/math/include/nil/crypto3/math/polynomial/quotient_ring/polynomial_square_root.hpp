@@ -36,7 +36,6 @@
 #include <nil/crypto3/algebra/fields/field_order.hpp>
 #include <nil/crypto3/algebra/type_traits.hpp>
 
-#include <nil/crypto3/math/polynomial/operations/shift.hpp>
 #include <nil/crypto3/math/polynomial/quotient_ring/polynomial_exponentiation.hpp>
 #include <nil/crypto3/math/polynomial/quotient_ring/polynomial_frobenius.hpp>
 
@@ -141,8 +140,7 @@ namespace nil::crypto3::math {
         }
 
         void require_canonical_reduced(const polynomial_type &candidate) const {
-            if (candidate.empty() || candidate.size() > divisor_context().degree() ||
-                (candidate.size() > 1 && candidate.back() == value_type::zero())) {
+            if (candidate.size() > divisor_context().degree() || !detail::is_canonical_polynomial(candidate)) {
                 throw std::invalid_argument(
                     "a polynomial square-root nonresidue candidate must be a nonempty canonical reduced "
                     "representative");
@@ -160,30 +158,6 @@ namespace nil::crypto3::math {
         polynomial_type non_residue_to_odd_order_;
     };
 
-    /**
-     * Return whether input is a square in K[X]/(B), where K is a finite field and B is the irreducible polynomial
-     * stored in divisor_context. If Q is the order of K and d = degree(B), the quotient is a field of order Q^d.
-     * For a nonzero residue a in odd characteristic, Euler's criterion gives
-     *
-     *     a^((Q^d - 1) / 2) = 1
-     *
-     * exactly when a is a square. Zero is a square. In characteristic two, squaring is an automorphism of every
-     * finite field, so every residue is a square.
-     *
-     * The canonical indeterminate X uses the closed-form field norm
-     *
-     *     Norm(X) = (-1)^d B(0) / leading_coefficient(B).
-     *
-     * An element of a finite extension of an odd-order field is a square exactly when its norm is a square in the
-     * coefficient field. When the coefficient value type provides is_square(), this avoids quotient-ring
-     * exponentiation for X. Other inputs use Euler's criterion as a reference implementation.
-     *
-     * The irreducibility precondition is essential: for a reducible B the quotient has zero divisors and Euler's
-     * criterion does not characterize its squares. The function does not repeat an irreducibility test.
-     *
-     * @throws std::invalid_argument if B is constant or input is not a reduced quotient-field representative.
-     * @pre B is irreducible and input is a nonempty canonical coefficient polynomial.
-     */
     namespace detail {
 
         template<SupportsDivrem Backend>
@@ -243,6 +217,30 @@ namespace nil::crypto3::math {
 
     }    // namespace detail
 
+    /**
+     * Return whether input is a square in K[X]/(B), where K is a finite field and B is the irreducible polynomial
+     * stored in divisor_context. If Q is the order of K and d = degree(B), the quotient is a field of order Q^d.
+     * For a nonzero residue a in odd characteristic, Euler's criterion gives
+     *
+     *     a^((Q^d - 1) / 2) = 1
+     *
+     * exactly when a is a square. Zero is a square. In characteristic two, squaring is an automorphism of every
+     * finite field, so every residue is a square.
+     *
+     * The canonical indeterminate X uses the closed-form field norm
+     *
+     *     Norm(X) = (-1)^d B(0) / leading_coefficient(B).
+     *
+     * An element of a finite extension of an odd-order field is a square exactly when its norm is a square in the
+     * coefficient field. When the coefficient value type provides is_square(), this avoids quotient-ring
+     * exponentiation for X. Other inputs use Euler's criterion as a reference implementation.
+     *
+     * The irreducibility precondition is essential: for a reducible B the quotient has zero divisors and Euler's
+     * criterion does not characterize its squares. The function does not repeat an irreducibility test.
+     *
+     * @throws std::invalid_argument if B is constant or input is not a reduced quotient-field representative.
+     * @pre B is irreducible and input is a nonempty canonical coefficient polynomial.
+     */
     template<detail::SupportsDivrem Backend>
         requires algebra::FieldValue<typename Backend::polynomial_type::value_type>
     bool is_square_mod(const typename Backend::polynomial_type &input,
@@ -252,23 +250,6 @@ namespace nil::crypto3::math {
     }
 
     namespace detail {
-
-        // Multiply a canonical reduced representative by X, reducing the single possible leading term.
-        template<SupportsDivrem Backend>
-        void square_root_multiply_by_x(typename Backend::polynomial_type &value,
-                                       const polynomial_divisor_context<Backend> &divisor_context) {
-            using value_type = typename Backend::polynomial_type::value_type;
-            const std::size_t degree = divisor_context.degree();
-            shift_left(value, value, 1);
-            if (value.size() > degree) {
-                const value_type leading = value[degree] * divisor_context.reversed_divisor_inverse()[0];
-                value.resize(degree);
-                for (std::size_t i = 0; i < degree; ++i) {
-                    value[i] -= leading * divisor_context.divisor()[i];
-                }
-                condense(value);
-            }
-        }
 
         // Return {X^((Q-1)/2), X^Q} modulo B. Called after the root checks, with d > 1 and B(0) != 0.
         template<SupportsDivrem Backend>
@@ -290,7 +271,7 @@ namespace nil::crypto3::math {
                 polynomial_type characteristic_seed, x_to_p;
                 powmod_x(characteristic_seed, exponent, divisor_context, arithmetic_context);
                 squaremod(x_to_p, characteristic_seed, divisor_context, arithmetic_context);
-                square_root_multiply_by_x(x_to_p, divisor_context);
+                multiply_by_x_mod(x_to_p, divisor_context);
                 frobenius_product_impl<true>(seed, characteristic_seed, field_type::arity, x_to_p, divisor_context,
                                              arithmetic_context);
             } else {
@@ -299,7 +280,7 @@ namespace nil::crypto3::math {
                 powmod_x(seed, exponent, divisor_context, arithmetic_context);
             }
             squaremod(x_to_q, seed, divisor_context, arithmetic_context);
-            square_root_multiply_by_x(x_to_q, divisor_context);
+            multiply_by_x_mod(x_to_q, divisor_context);
             return {std::move(seed), std::move(x_to_q)};
         }
 
@@ -362,7 +343,7 @@ namespace nil::crypto3::math {
         }
 
         auto [seed, x_to_q] = detail::square_root_x_seed(divisor_context, arithmetic_context);
-        detail::square_root_multiply_by_x(seed, divisor_context);
+        detail::multiply_by_x_mod(seed, divisor_context);
 
         const std::size_t term_count = (degree - 1) / 2;
         polynomial_type product, x_to_q_squared;
@@ -379,7 +360,7 @@ namespace nil::crypto3::math {
             frobenius_product(product, product, term_count, x_to_q_squared, divisor_context, arithmetic_context);
         }
 
-        detail::square_root_multiply_by_x(product, divisor_context);
+        detail::multiply_by_x_mod(product, divisor_context);
         scalar_multiplication(output, product, norm_root.inversed());
         return true;
     }
@@ -447,20 +428,19 @@ namespace nil::crypto3::math {
                 break;
             }
             candidate = generator();
-            if (candidate.empty() || candidate.size() > degree ||
-                (candidate.size() > 1 && candidate.back() == value_type::zero())) {
+            if (candidate.size() > degree || !detail::is_canonical_polynomial(candidate)) {
                 throw std::invalid_argument("a trace square-root candidate must be a canonical reduced representative");
             }
         }
 
         polynomial_type constant;
         squaremod(constant, sum, divisor_context, arithmetic_context);
-        detail::square_root_multiply_by_x(constant, divisor_context);
+        detail::multiply_by_x_mod(constant, divisor_context);
         if (constant.size() != 1 || constant[0] == value_type::zero() || !constant[0].is_square()) {
             throw std::logic_error("a nonzero weighted trace must yield a nonzero coefficient-field square");
         }
         const value_type scalar = algebra::fields::sqrt_known_square(constant[0]).inversed();
-        detail::square_root_multiply_by_x(sum, divisor_context);
+        detail::multiply_by_x_mod(sum, divisor_context);
         scalar_multiplication(output, sum, scalar);
         return true;
     }

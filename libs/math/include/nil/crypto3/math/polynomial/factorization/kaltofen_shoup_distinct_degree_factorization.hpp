@@ -222,8 +222,9 @@ namespace nil::crypto3::math::detail {
      * After the lower degrees in this block have been removed, taking the GCD with coarse_block therefore extracts
      * exactly the factors of that degree.
      *
-     * The extracted groups are appended in increasing degree order. The callback is invoked immediately after each
-     * group is appended and may stop the split early.
+     * The extracted groups are reported in increasing degree order. If output is nonnull, each group is appended
+     * before invoking the callback. Otherwise the group is kept only until its callback and exact division finish.
+     * The callback borrows the group and may stop the split before that division.
      *
      * @return stop_factorization if the callback requests an early stop; continue_factorization otherwise.
      * @throws std::invalid_argument if first_factor_degree is zero, or if degree_count is zero or greater than the
@@ -235,7 +236,7 @@ namespace nil::crypto3::math::detail {
     template<SupportsDivrem Backend, typename FactorCallback>
         requires DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
     factorization_control kaltofen_shoup_split_coarse_block(
-        std::vector<distinct_degree_factor<typename Backend::polynomial_type>> &output,
+        std::vector<distinct_degree_factor<typename Backend::polynomial_type>> *output,
         typename Backend::polynomial_type coarse_block, const typename Backend::polynomial_type &giant_step,
         std::size_t first_factor_degree, std::size_t degree_count,
         const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
@@ -259,12 +260,13 @@ namespace nil::crypto3::math::detail {
                 continue;
             }
 
-            output.push_back({std::move(factor), first_factor_degree + offset});
-            if (factor_callback(output.back()) == factorization_control::stop_factorization) {
+            distinct_degree_factor<polynomial_type> group {std::move(factor), first_factor_degree + offset};
+            const auto &reported = output ? output->emplace_back(std::move(group)) : group;
+            if (factor_callback(reported) == factorization_control::stop_factorization) {
                 return factorization_control::stop_factorization;
             }
 
-            factorization_exact_quotient(quotient, coarse_block, output.back().polynomial, arithmetic_context);
+            factorization_exact_quotient(quotient, coarse_block, reported.polynomial, arithmetic_context);
             coarse_block = std::move(quotient);
         }
 
@@ -281,6 +283,9 @@ namespace nil::crypto3::math::detail {
      * a giant-step polynomial for every block while preserving increasing degree order and immediate callback stops.
      * Optional small-degree screening uses successive Frobenius differences before building the full baby table.
      * The powers and divisor context remain relative to the original input even after screened factors are removed.
+     * A nonnull output collects each group before invoking the callback. With a null output, processed groups are
+     * released after their callback and any remaining exact division. The callback borrows its group only for the
+     * duration of the call.
      *
      * Once the smallest unprocessed factor degree is greater than half the degree of the unclassified polynomial,
      * that polynomial is either constant or irreducible. Otherwise it would contain at least two factors of at least
@@ -294,7 +299,7 @@ namespace nil::crypto3::math::detail {
     template<SupportsDivrem Backend, typename FactorCallback>
         requires DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
     factorization_control kaltofen_shoup_factor_monic_square_free(
-        std::vector<distinct_degree_factor<typename Backend::polynomial_type>> &output,
+        std::vector<distinct_degree_factor<typename Backend::polynomial_type>> *output,
         typename Backend::polynomial_type input, std::size_t block_size,
         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, FactorCallback &&factor_callback) {
         using polynomial_type = typename Backend::polynomial_type;
@@ -305,8 +310,9 @@ namespace nil::crypto3::math::detail {
         }
         // A linear polynomial is already one degree-one factor, so no Frobenius precomputation is needed.
         if (input.size() == 2) {
-            output.push_back({std::move(input), 1});
-            return factor_callback(output.back());
+            distinct_degree_factor<polynomial_type> group {std::move(input), 1};
+            const auto &reported = output ? output->emplace_back(std::move(group)) : group;
+            return factor_callback(reported);
         }
 
         polynomial_frobenius_context<Backend> frobenius_context(input, arithmetic_context);
@@ -332,11 +338,12 @@ namespace nil::crypto3::math::detail {
                 if (factor.size() > 1) {
                     // All lower degrees have been removed, so this is an exact-degree group, not necessarily one
                     // irreducible factor. Let the existing callback split it and apply multiplicity-aware recovery.
-                    output.push_back({std::move(factor), degree});
-                    if (factor_callback(output.back()) == factorization_control::stop_factorization)
+                    distinct_degree_factor<polynomial_type> group {std::move(factor), degree};
+                    const auto &reported = output ? output->emplace_back(std::move(group)) : group;
+                    if (factor_callback(reported) == factorization_control::stop_factorization)
                         return factorization_control::stop_factorization;
                     polynomial_type quotient;
-                    factorization_exact_quotient(quotient, unclassified, output.back().polynomial, arithmetic_context);
+                    factorization_exact_quotient(quotient, unclassified, reported.polynomial, arithmetic_context);
                     unclassified = std::move(quotient);
                 }
             }
@@ -344,8 +351,9 @@ namespace nil::crypto3::math::detail {
             if (degree > (unclassified.size() - 1) / 2) {
                 if (unclassified.size() > 1) {
                     const auto remaining_degree = unclassified.size() - 1;
-                    output.push_back({std::move(unclassified), remaining_degree});
-                    return factor_callback(output.back());
+                    distinct_degree_factor<polynomial_type> group {std::move(unclassified), remaining_degree};
+                    const auto &reported = output ? output->emplace_back(std::move(group)) : group;
+                    return factor_callback(reported);
                 }
                 return factorization_control::continue_factorization;
             }
@@ -374,8 +382,9 @@ namespace nil::crypto3::math::detail {
                 // Every irreducible factor in this block has degree at least first_factor_degree. If the block's total
                 // degree is less than twice that bound, it cannot contain two factors and is itself irreducible.
                 if (coarse_block_degree / 2 < first_factor_degree) {
-                    output.push_back({std::move(coarse_block), coarse_block_degree});
-                    if (factor_callback(output.back()) == factorization_control::stop_factorization) {
+                    distinct_degree_factor<polynomial_type> group {std::move(coarse_block), coarse_block_degree};
+                    const auto &reported = output ? output->emplace_back(std::move(group)) : group;
+                    if (factor_callback(reported) == factorization_control::stop_factorization) {
                         return factorization_control::stop_factorization;
                     }
                 } else if (kaltofen_shoup_split_coarse_block(output, std::move(coarse_block), giant_step,
@@ -396,8 +405,9 @@ namespace nil::crypto3::math::detail {
 
         if (unclassified.size() > 1) {
             const std::size_t irreducible_factor_degree = unclassified.size() - 1;
-            output.push_back({std::move(unclassified), irreducible_factor_degree});
-            if (factor_callback(output.back()) == factorization_control::stop_factorization) {
+            distinct_degree_factor<polynomial_type> group {std::move(unclassified), irreducible_factor_degree};
+            const auto &reported = output ? output->emplace_back(std::move(group)) : group;
+            if (factor_callback(reported) == factorization_control::stop_factorization) {
                 return factorization_control::stop_factorization;
             }
         }
@@ -438,7 +448,7 @@ namespace nil::crypto3::math {
         }
 
         const std::size_t block_size = detail::kaltofen_shoup_block_size(monic_input.size() - 1);
-        if (detail::kaltofen_shoup_factor_monic_square_free(result.factors, std::move(monic_input), block_size,
+        if (detail::kaltofen_shoup_factor_monic_square_free(&result.factors, std::move(monic_input), block_size,
                                                             arithmetic_context, factor_callback) ==
             factorization_control::stop_factorization) {
             result.complete = false;

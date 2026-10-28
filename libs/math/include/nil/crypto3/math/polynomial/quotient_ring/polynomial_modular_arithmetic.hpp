@@ -25,9 +25,41 @@
 #ifndef CRYPTO3_MATH_POLYNOMIAL_MODULAR_ARITHMETIC_HPP
 #define CRYPTO3_MATH_POLYNOMIAL_MODULAR_ARITHMETIC_HPP
 
+#include <cassert>
+#include <cstddef>
+
 #include <nil/crypto3/math/polynomial/arithmetic/polynomial_division.hpp>
+#include <nil/crypto3/math/polynomial/operations/shift.hpp>
 
 namespace nil::crypto3::math {
+
+    namespace detail {
+
+        // Multiply a canonical reduced representative by X modulo a nonconstant divisor B, in place.
+        // Reuse 1/lead(B) from the divisor context; no polynomial product or division is needed.
+        template<SupportsDivrem Backend>
+        void multiply_by_x_mod(typename Backend::polynomial_type &value,
+                               const polynomial_divisor_context<Backend> &divisor_context) {
+            using value_type = typename Backend::polynomial_type::value_type;
+            const std::size_t degree = divisor_context.degree();
+            assert(degree > 0 && value.size() <= degree && is_canonical_polynomial(value));
+            if (value.size() == degree) {
+                const auto &modulus = divisor_context.divisor();
+                const value_type c = value[degree - 1] * divisor_context.reversed_divisor_inverse()[0];
+                // Subtract c*B from X*value. Descending writes preserve the old value[i-1], and the
+                // canceled X^degree coefficient needs no storage.
+                for (std::size_t i = degree - 1; i > 0; --i) {
+                    value[i] = value[i - 1] - c * modulus[i];
+                }
+                value[0] = -c * modulus[0];
+                condense(value);
+            } else {
+                // The shift stays below degree(B), including canonical zero.
+                shift_left(value, value, 1);
+            }
+        }
+
+    }    // namespace detail
 
     /**
      * Compute output = (left * right) mod B, where B is the nonzero polynomial stored in divisor_context. B need not
