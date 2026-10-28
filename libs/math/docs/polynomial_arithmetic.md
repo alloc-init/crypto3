@@ -91,6 +91,44 @@ transform kernels depend on the compiler target, and IFMA acceleration also depe
 configuration. A binary must run on a CPU supporting its compiled instruction set. This backend executes serially
 and provides no constant-time guarantee.
 
+For ordinary native CMake builds, `crypto3::math` exports the supported FFT instruction options through its
+interface. Detection requires both CPU/OS support and a successful compiler probe matching the kernel guards:
+
+* AVX2 kernels require an x86-64 GCC-compatible compiler with AVX2 and FMA enabled.
+* Eight-lane kernels additionally require AVX512F and AVX512DQ.
+* IFMA CRT export additionally requires `CRYPTO3_HAS_AVX512IFMA`, supplied independently through `crypto3::algebra`
+  after checking AVX512F, AVX512VL, and AVX512IFMA, plus the AVX2/FMA baseline that compiler AVX-512 options can
+  implicitly enable. This check does not require DQ; the eight-lane FFT and CRT paths check DQ separately.
+
+A downstream target linking `crypto3::math` inherits these options and the algebra feature definition; it need not
+add instruction flags itself. The probes use explicit instruction options, without enabling `-march=native` or
+unsafe floating-point transformations. Unsupported configurations retain the existing scalar/exact fallbacks.
+The SIMD FFT implementations currently use GCC-compatible x86-64 assembly; compiler acceptance of unrelated
+intrinsics alone does not enable them.
+
+When `CMAKE_CROSSCOMPILING` is true, host probes do not run and host results cannot enable target instructions.
+An explicitly configured cross toolchain may still supply target instruction options and feature definitions;
+their suitability is the toolchain owner's responsibility. Set up cross-compilation through a CMake toolchain
+file rather than using the build machine as evidence of target capabilities.
+
+The options also travel with installed interface targets. This is build-time selection, with no runtime CPU
+dispatch: binaries require the enabled instruction sets on every machine where they run. An installed native
+build does not redetect the downstream machine's CPU. Configure a separate build/toolchain for a different
+deployment baseline, and use a fresh build directory when moving configuration to another host.
+
+The focused CMake consumer checks are available without running a profiling workload:
+
+```sh
+python3 cmake/tests/small_prime_features/run_checks.py --run-small-prime-tests
+```
+
+On x86-64 this checks native propagation, actual FFT/CRT selection macros, missing-feature and compiler-rejection
+cases, cross-compilation, and fresh/reused build directories. Simulated hosts and cross targets are compile-only;
+only the native configuration runs the arithmetic, CRT, transform, and backend tests. Logs are retained under
+`.test-logs/small-prime-cmake/`. On an ARM Mac, `--x86-compile-only` additionally checks the x86 configurations using
+Apple Clang; this supplies no x86 runtime coverage. The repository's CMake modules submodule and Boost development
+packages must be available, as for an ordinary build.
+
 The constructor is
 
 ```cpp

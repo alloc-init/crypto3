@@ -39,6 +39,19 @@ target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE
         Boost::headers
         Boost::random)
 
+include(CheckAVX)
+check_small_prime_fft()
+if(CXX_SMALL_PRIME_FFT_AVX512_FOUND)
+        separate_arguments(SMALL_PRIME_FFT_OPTIONS NATIVE_COMMAND "${CXX_SMALL_PRIME_FFT_AVX512_FLAGS}")
+elseif(CXX_SMALL_PRIME_FFT_AVX2_FOUND)
+        separate_arguments(SMALL_PRIME_FFT_OPTIONS NATIVE_COMMAND "${CXX_SMALL_PRIME_FFT_AVX2_FLAGS}")
+else()
+        set(SMALL_PRIME_FFT_OPTIONS "")
+endif()
+# Header-only users need these options too. Algebra independently supplies IFMA
+# options and its definition through the public dependency above.
+target_compile_options(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME} INTERFACE ${SMALL_PRIME_FFT_OPTIONS})
+
 cm_deploy(TARGETS ${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}
         INCLUDE include
         NAMESPACE ${CMAKE_WORKSPACE_NAME}::)
