@@ -25,6 +25,7 @@
 #define BOOST_TEST_MODULE distinct_degree_factorization_test
 
 #include <cstddef>
+#include <optional>
 #include <vector>
 
 #include <boost/test/unit_test.hpp>
@@ -290,9 +291,38 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_precomputation_builds_baby_and_giant_frobeni
                             arithmetic_context);
         BOOST_CHECK(giant_step == expected_giant_step);
         if (block != 3) {
-            precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context, arithmetic_context);
+            precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context.divisor_context(),
+                                                 arithmetic_context);
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(kaltofen_shoup_giant_steps_outlive_the_initial_prepared_cache) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using polynomial_type = typename backend_type::polynomial_type;
+    using precomputation_type = math::detail::kaltofen_shoup_frobenius_precomputation<backend_type>;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_prepared_byte_limit = 1024 * 1024;
+    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+    const polynomial_type modulus = {fq12_value(2), fq12_value(3), fq12_value(4), fq12_value_type::zero(),
+                                     fq12_value_type::one()};
+    std::optional<math::polynomial_divisor_context<backend_type>> divisor;
+    std::vector<polynomial_type> babies;
+    polynomial_type expected;
+    {
+        math::polynomial_frobenius_context<backend_type> initial(modulus, context);
+        BOOST_REQUIRE_GT(initial.composition_precomputation().prepared_coefficient_bytes(), 0);
+        babies = precomputation_type::make_baby_steps(3, initial, context, {});
+        math::frobenius_map(expected, babies.back(), 3, initial, context);
+        divisor.emplace(initial.divisor_context());
+    }
+    const precomputation_type precomputation(std::move(babies), *divisor, context);
+    polynomial_type giant = precomputation.baby_step(3);
+    precomputation.apply_block_frobenius(giant, giant, *divisor, context);
+    BOOST_CHECK(giant == expected);
+    BOOST_CHECK_THROW(precomputation_type(std::vector<polynomial_type> {}, *divisor, context), std::invalid_argument);
+    BOOST_CHECK_THROW(precomputation_type(std::vector<polynomial_type> {{fq12_value_type::one()}}, *divisor, context),
+                      std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(kaltofen_shoup_precomputation_rejects_a_zero_block_size) {
@@ -352,12 +382,13 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_coarse_blocks_extract_degree_intervals) {
     polynomial_type giant_step = precomputation.baby_step(block_size);
     polynomial_type factor;
     math::detail::kaltofen_shoup_coarse_block_factor(factor, input, giant_step, block_size, precomputation,
-                                                     frobenius_context, arithmetic_context);
+                                                     frobenius_context.divisor_context(), arithmetic_context);
     BOOST_CHECK(factor == first_block);
 
-    precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context, arithmetic_context);
+    precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context.divisor_context(),
+                                         arithmetic_context);
     math::detail::kaltofen_shoup_coarse_block_factor(factor, second_block, giant_step, 1, precomputation,
-                                                     frobenius_context, arithmetic_context);
+                                                     frobenius_context.divisor_context(), arithmetic_context);
     BOOST_CHECK(factor == second_block);
 }
 
@@ -374,10 +405,12 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_coarse_block_rejects_an_invalid_degree_count
     polynomial_type output;
 
     BOOST_CHECK_THROW(math::detail::kaltofen_shoup_coarse_block_factor(output, divisor, giant_step, 0, precomputation,
-                                                                       frobenius_context, arithmetic_context),
+                                                                       frobenius_context.divisor_context(),
+                                                                       arithmetic_context),
                       std::invalid_argument);
     BOOST_CHECK_THROW(math::detail::kaltofen_shoup_coarse_block_factor(output, divisor, giant_step, 3, precomputation,
-                                                                       frobenius_context, arithmetic_context),
+                                                                       frobenius_context.divisor_context(),
+                                                                       arithmetic_context),
                       std::invalid_argument);
 }
 
@@ -417,7 +450,8 @@ BOOST_AUTO_TEST_CASE(kaltofen_shoup_fine_splitting_separates_exact_degrees) {
                                                                 precomputation, arithmetic_context, record_factor) ==
                 math::factorization_control::continue_factorization);
 
-    precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context, arithmetic_context);
+    precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context.divisor_context(),
+                                         arithmetic_context);
     BOOST_CHECK(math::detail::kaltofen_shoup_split_coarse_block(&factors, second_block, giant_step, 3, 1,
                                                                 precomputation, arithmetic_context, record_factor) ==
                 math::factorization_control::continue_factorization);
