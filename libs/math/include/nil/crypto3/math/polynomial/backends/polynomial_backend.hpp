@@ -67,6 +67,11 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // Prepared BN254 combinations may use four or eight IFMA lanes when the build supports them.
         // Zero retains the scalar prepared kernel. The byte budget above remains the opt-in switch.
         std::size_t modular_composition_simd_lanes = 8;
+
+        // Explicit Brent-Kung block size for reusable composition caches. Zero selects the square-root heuristic.
+        // A positive request is capped by the cached-power limit and maximum outer coefficient count. Larger blocks
+        // trade more cache construction and storage for fewer giant-step products when the cache is reused.
+        std::size_t modular_composition_block_size = 0;
     };
 
     /**

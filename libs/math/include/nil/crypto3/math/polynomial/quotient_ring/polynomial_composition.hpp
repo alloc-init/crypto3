@@ -47,6 +47,8 @@ namespace nil::crypto3::math {
      * and the giant step inner^k mod B. It can be reused to compose multiple outer polynomials containing at most
      * maximum_outer_coefficient_count coefficients. A divisor context used for later compositions must represent the
      * same polynomial B and contain sufficient inverse precision.
+     * The default block size is ceil(sqrt(maximum_outer_coefficient_count)). An explicit context option may select
+     * a larger block for repeated compositions, subject to the cached-power limit and maximum outer size.
      *
      * Supported Fp12 coefficients may additionally cache prepared base-field forms (23 for BN254 SIMD,
      * 54 for the scalar tower kernel). The context's
@@ -79,7 +81,11 @@ namespace nil::crypto3::math {
             if (cached_power_limit == 0) {
                 throw std::invalid_argument("the modular-composition cached-power limit must be positive");
             }
-            block_size_ = std::min(detail::ceil_sqrt(maximum_outer_coefficient_count_), cached_power_limit);
+            const std::size_t requested_block_size = arithmetic_context.options().modular_composition_block_size;
+            const std::size_t selected_block_size =
+                requested_block_size == 0 ? detail::ceil_sqrt(maximum_outer_coefficient_count_) :
+                                            std::min(requested_block_size, maximum_outer_coefficient_count_);
+            block_size_ = std::min(selected_block_size, cached_power_limit);
 
             if (divisor_context.degree() == 0) {
                 return;
