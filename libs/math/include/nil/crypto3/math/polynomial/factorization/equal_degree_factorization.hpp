@@ -286,6 +286,16 @@ namespace nil::crypto3::math {
                     "equal-degree factorization requires the factor degree to divide the polynomial degree");
             }
 
+            // A group of exactly one irreducible factor needs no splitting exponent or random trials.
+            // Preserve the characteristic restriction of the splitting context before emitting it.
+            if (group.polynomial.size() - 1 == group.irreducible_factor_degree) {
+                if (algebra::fields::field_characteristic<typename value_type::field_type>() == 2) {
+                    throw std::invalid_argument(
+                        "Cantor-Zassenhaus splitting for characteristic two is not implemented");
+                }
+                return factor_callback(std::move(group.polynomial));
+            }
+
             cantor_zassenhaus_context<Backend> split_context(group.irreducible_factor_degree);
             return cantor_zassenhaus_split_all<Backend>(std::move(group.polynomial), split_context, arithmetic_context,
                                                         generator, std::forward<FactorCallback>(factor_callback));
