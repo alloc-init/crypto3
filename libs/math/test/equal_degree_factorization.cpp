@@ -248,6 +248,63 @@ BOOST_AUTO_TEST_CASE(cantor_zassenhaus_does_not_sample_an_already_irreducible_gr
     BOOST_CHECK_EQUAL(generated_coefficient_count, 0);
 }
 
+BOOST_AUTO_TEST_CASE(single_irreducible_degree_group_preserves_callback_control_without_sampling) {
+    const polynomial_type group = {-value_type(3), value_type::zero(), value_type::one()};
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    std::size_t draws = 0;
+    auto generator = [&] {
+        ++draws;
+        return value_type::one();
+    };
+    for (auto requested :
+         {math::factorization_control::continue_factorization, math::factorization_control::stop_factorization}) {
+        std::size_t callbacks = 0;
+        polynomial_type emitted;
+        const auto control = math::detail::factor_distinct_degree_group<backend_type>({group, 2}, context, generator,
+                                                                                      [&](polynomial_type &&factor) {
+                                                                                          emitted = std::move(factor);
+                                                                                          ++callbacks;
+                                                                                          return requested;
+                                                                                      });
+        BOOST_CHECK(control == requested);
+        BOOST_CHECK(emitted == group);
+        BOOST_CHECK_EQUAL(callbacks, 1);
+        BOOST_CHECK_EQUAL(draws, 0);
+    }
+    BOOST_CHECK_THROW(
+        math::detail::factor_distinct_degree_group<backend_type>(
+            {group, 2}, context, generator,
+            [](polynomial_type &&) -> math::factorization_control { throw std::runtime_error("consumer failed"); }),
+        std::runtime_error);
+    BOOST_CHECK_EQUAL(draws, 0);
+}
+
+BOOST_AUTO_TEST_CASE(degree_group_checks_structure_before_emitting_a_single_factor) {
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    std::size_t draws = 0, callbacks = 0;
+    auto generator = [&] {
+        ++draws;
+        return value_type::one();
+    };
+    auto callback = [&](polynomial_type &&) {
+        ++callbacks;
+        return math::factorization_control::continue_factorization;
+    };
+    const polynomial_type quadratic = {-value_type(3), value_type::zero(), value_type::one()};
+    const std::array<math::distinct_degree_factor<polynomial_type>, 4> invalid = {
+        math::distinct_degree_factor<polynomial_type> {quadratic, 0},
+        {{value_type::one()}, 1},
+        {{value_type::one(), value_type(2)}, 1},
+        {quadratic, 3},
+    };
+    for (const auto &group : invalid) {
+        BOOST_CHECK_THROW(math::detail::factor_distinct_degree_group<backend_type>(group, context, generator, callback),
+                          std::invalid_argument);
+    }
+    BOOST_CHECK_EQUAL(draws, 0);
+    BOOST_CHECK_EQUAL(callbacks, 0);
+}
+
 BOOST_AUTO_TEST_CASE(cantor_zassenhaus_is_deterministic_for_a_seeded_fq_generator) {
     backend_type backend;
     const polynomial_type first_factor = {-value_type(1), value_type::one()};

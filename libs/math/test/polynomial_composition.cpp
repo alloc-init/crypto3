@@ -321,6 +321,59 @@ BOOST_AUTO_TEST_CASE(composition_matches_between_schoolbook_and_mixed_radix_back
     BOOST_CHECK(result == expected);
 }
 
+BOOST_AUTO_TEST_CASE(explicit_composition_blocks_preserve_the_outer_contract_and_match_horner) {
+    using backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using polynomial = backend::polynomial_type;
+    polynomial modulus(12), inner(11), outer(17);
+    for (std::size_t i = 0; i < modulus.size(); ++i)
+        modulus[i] = fq12_value(13 * i + 2);
+    modulus.back() = fq12_value_type::one();
+    for (std::size_t i = 0; i < inner.size(); ++i)
+        inner[i] = fq12_value(17 * i + 3);
+    for (std::size_t i = 0; i < outer.size(); ++i)
+        outer[i] = fq12_value(19 * i + 5);
+
+    for (const std::size_t prepared_bytes : {0U, 1024U * 1024U}) {
+        for (const std::size_t power_limit : {1U, 7U, 20U}) {
+            polynomial_arithmetic::polynomial_context_options options;
+            options.modular_composition_cached_power_limit = power_limit;
+            options.modular_composition_prepared_byte_limit = prepared_bytes;
+            options.modular_composition_block_size = 9;    // Larger than ceil(sqrt(17)) = 5.
+            polynomial_arithmetic::polynomial_context<backend> context(backend {}, options);
+            const math::polynomial_divisor_context<backend> divisor(modulus, 10, context);
+            const math::polynomial_composition_precomputation<backend> cache(inner, outer.size(), divisor, context);
+            BOOST_CHECK_EQUAL(cache.block_size(), std::min<std::size_t>(9, power_limit));
+            BOOST_CHECK_EQUAL(cache.maximum_outer_coefficient_count(), outer.size());
+            if (power_limit > 1 && prepared_bytes != 0)
+                BOOST_CHECK_GT(cache.prepared_coefficient_bytes(), 0);
+            else
+                BOOST_CHECK_EQUAL(cache.prepared_coefficient_bytes(), 0);
+            polynomial expected, result = outer;
+            math::compose_mod_reference(expected, outer, inner, divisor, context);
+            math::compose_mod(result, result, cache, divisor, context);
+            BOOST_CHECK(result == expected);
+            math::compose_mod_reference(expected, expected, inner, divisor, context);
+            math::compose_mod(result, result, cache, divisor, context);
+            BOOST_CHECK(result == expected);
+
+            const math::polynomial_composition_precomputation<backend> short_cache(inner, 3, divisor, context);
+            BOOST_CHECK_EQUAL(short_cache.block_size(), std::min<std::size_t>(3, power_limit));
+            BOOST_CHECK_THROW(math::compose_mod(result, outer, short_cache, divisor, context), std::invalid_argument);
+        }
+    }
+    polynomial_arithmetic::polynomial_context<backend> automatic;
+    const math::polynomial_divisor_context<backend> divisor(modulus, 10, automatic);
+    const math::polynomial_composition_precomputation<backend> automatic_cache(inner, outer.size(), divisor, automatic);
+    BOOST_CHECK_EQUAL(automatic_cache.block_size(), 5);
+    polynomial_arithmetic::polynomial_context_options invalid_options;
+    invalid_options.modular_composition_cached_power_limit = 0;
+    invalid_options.modular_composition_block_size = 9;
+    polynomial_arithmetic::polynomial_context<backend> invalid(backend {}, invalid_options);
+    polynomial result = outer;
+    BOOST_CHECK_THROW(math::compose_mod(result, outer, inner, divisor, invalid), std::invalid_argument);
+    BOOST_CHECK(result == outer);
+}
+
 BOOST_AUTO_TEST_CASE(prepared_composition_cache_obeys_its_budget_and_pads_short_powers) {
     using backend_type = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
     using polynomial_type = typename backend_type::polynomial_type;

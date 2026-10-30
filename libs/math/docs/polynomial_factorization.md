@@ -105,12 +105,17 @@ Several independent options affect the work in this pipeline:
 | `gcd_half_gcd_cutoff` | Recursive half-GCD during square-free decomposition, screening, and splitting | 0: disabled |
 | `distinct_degree_screening_limit` | Early degree checks before the full baby table | 0: disabled |
 | `modular_composition_cached_power_limit` | Baby powers retained by each Brent-Kung composition cache | Maximum `size_t`: permits the usual square-root block size |
+| `modular_composition_block_size` | Explicit Brent-Kung block size, capped by the cached-power limit and maximum outer coefficient count | 0: automatic square-root heuristic |
 | `modular_composition_prepared_byte_limit` | Additional prepared Fp12 coefficient combinations | 0: disabled |
 | `modular_composition_simd_lanes` | Four- or eight-lane IFMA for eligible prepared combinations | 8; still requires a positive byte budget and build support |
 
 Selecting the small-prime backend does not enable half-GCD or prepared coefficient combinations automatically.
 Choose their cutoffs and budgets from representative complete operations, including preparation and memory costs.
 Composition budgets apply to each cache, and simultaneous workers need separate arithmetic contexts and generators.
+The explicit composition block size controls each Brent-Kung cache, independently of the Kaltofen-Shoup degree-block
+size. Larger composition blocks exchange additional preparation and storage for fewer modular products per reuse;
+they can make short-lived caches slower. See [composition block selection](@ref math_polynomial_arithmetic) for the
+selection rules and outer-size contract.
 
 ## Staged factorization
 
@@ -139,6 +144,13 @@ is shared with callbacks, so their sampling affects its state for subsequent spl
 exceptions propagate to the caller. Reproducibility assumes the same implementation, configuration, and callback
 behavior; changing a recovery algorithm can change sampling even with the same initial seed.
 
+At the internal boundary from distinct-degree discovery to complete factorization, a group whose polynomial degree
+equals its reported irreducible-factor degree already contains exactly one factor under the distinct-degree
+precondition. After the structural and characteristic checks, it is emitted directly without constructing the
+Cantor-Zassenhaus splitting exponent or consuming random elements in the dispatch itself. Its callback is invoked
+once, its stop/continue result is honored, and exceptions propagate. This shortcut relies on the preceding discovery
+stage; it does not establish irreducibility for an arbitrary polynomial supplied as a degree group.
+
 The public factorization APIs collect the factors they report. Internally, complete factorization releases each
 distinct-degree group after splitting and any required exact division instead of retaining all processed groups.
 Its internal callback path also allows norm recovery to consume irreducible factors without collecting a second
@@ -164,14 +176,21 @@ Screening reuses the initial `X^Q mod B` and subsequent Frobenius powers, all co
 square-free part B. A callback stop avoids constructing the remaining baby table and its block-composition cache.
 It still pays for square-free decomposition, the initial power, and the initial Frobenius composition cache. If
 screening continues, its powers become the prefix of the full baby table and only missing steps are computed.
+Once the table is complete, the blocked search retains the original divisor context and releases the initial
+Frobenius context, including its composition cache, before constructing the giant-step composition cache. The baby
+table owns its residues, so later steps do not depend on the released cache. The divisor and all powers still refer
+to the original square-free part B; this lifetime change does not shrink the modulus or rebuild the baby table.
 The blocked search retains its original alignment; its first block may revisit screened degrees, whose factors
 have already been removed. This adds GCD/exact-division work relative to the baseline and should be measured on
 both rejected and suitable inputs before choosing a limit. Passing a bounded screen does not establish that norm
 recovery will succeed.
 
-Splitting and callback work run while the active Frobenius precomputation remains alive, which can increase peak
-memory. Splitting copies the emitted group because distinct-degree refinement or screening still needs its original
-polynomial after the callback returns. No default screening bound is selected from the behavior of one candidate.
+Splitting and callback work run while the current discovery phase's precomputation remains alive: the initial
+Frobenius cache during screening, or the completed baby table and giant-step cache during the blocked search. Their
+storage can therefore overlap a callback's own recovery caches even though the two discovery composition caches no
+longer overlap each other during the transition. Splitting copies the emitted group because distinct-degree
+refinement or screening still needs its original polynomial after the callback returns. No default screening bound
+is selected from the behavior of one candidate.
 
 ## Preconditions and current restrictions
 

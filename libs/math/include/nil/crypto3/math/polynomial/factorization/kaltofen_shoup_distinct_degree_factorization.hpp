@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <concepts>
 #include <cstddef>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -92,13 +93,22 @@ namespace nil::crypto3::math::detail {
             std::size_t block_size, const polynomial_frobenius_context<backend_type> &frobenius_context,
             polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context,
             std::vector<polynomial_type> initial_baby_steps = {}) :
-            block_size_(block_size), baby_steps_(make_baby_steps(block_size_, frobenius_context, arithmetic_context,
-                                                                 std::move(initial_baby_steps))),
+            kaltofen_shoup_frobenius_precomputation(
+                make_baby_steps(block_size, frobenius_context, arithmetic_context, std::move(initial_baby_steps)),
+                frobenius_context.divisor_context(), arithmetic_context) {
+        }
+
+        // A completed table permits destroying the initial Frobenius cache before allocating the giant-step cache.
+        // The table must contain h[0], ..., h[b], b >= 1, for the supplied divisor.
+        kaltofen_shoup_frobenius_precomputation(
+            std::vector<polynomial_type> baby_steps, const polynomial_divisor_context<backend_type> &divisor_context,
+            polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) :
+            block_size_(completed_block_size(baby_steps)), baby_steps_(std::move(baby_steps)),
             block_frobenius_precomputation_(baby_steps_.back(),
                                             // A residue modulo degree-d polynomial B has at most d coefficients. The
                                             // composition precomputation requires a positive limit for constant B.
-                                            std::max<std::size_t>(1, frobenius_context.divisor_context().degree()),
-                                            frobenius_context.divisor_context(), arithmetic_context) {
+                                            std::max<std::size_t>(1, divisor_context.degree()), divisor_context,
+                                            arithmetic_context) {
         }
 
         std::size_t block_size() const {
@@ -114,16 +124,15 @@ namespace nil::crypto3::math::detail {
          * Apply b Frobenius iterations with one modular composition. Output may alias input.
          *
          * @pre input is reduced modulo B.
-         * @pre frobenius_context represents the same B used to construct this precomputation.
+         * @pre divisor_context represents the same B used to construct this precomputation.
          */
         void apply_block_frobenius(polynomial_type &output, const polynomial_type &input,
-                                   const polynomial_frobenius_context<backend_type> &frobenius_context,
+                                   const polynomial_divisor_context<backend_type> &divisor_context,
                                    polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) const {
-            compose_mod(output, input, block_frobenius_precomputation_, frobenius_context.divisor_context(),
-                        arithmetic_context);
+            compose_mod(output, input, block_frobenius_precomputation_, divisor_context, arithmetic_context);
         }
 
-    private:
+        // Complete the table while the initial Frobenius cache is alive; the returned residues own their data.
         static std::vector<polynomial_type>
             make_baby_steps(std::size_t block_size, const polynomial_frobenius_context<backend_type> &frobenius_context,
                             polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context,
@@ -154,6 +163,14 @@ namespace nil::crypto3::math::detail {
             return baby_steps;
         }
 
+    private:
+        static std::size_t completed_block_size(const std::vector<polynomial_type> &baby_steps) {
+            if (baby_steps.size() < 2) {
+                throw std::invalid_argument("a completed Frobenius table must contain at least h[0] and h[1]");
+            }
+            return baby_steps.size() - 1;
+        }
+
         std::size_t block_size_;
         std::vector<polynomial_type> baby_steps_;
         polynomial_composition_precomputation<backend_type> block_frobenius_precomputation_;
@@ -161,7 +178,7 @@ namespace nil::crypto3::math::detail {
 
     /**
      * Extract one coarse Kaltofen-Shoup degree block. Let the coefficient field contain Q elements, let B be the
-     * modulus in frobenius_context, and let precomputation store h[i] = X^(Q^i) mod B for a block of size b. For
+     * modulus in divisor_context, and let precomputation store h[i] = X^(Q^i) mod B for a block of size b. For
      * zero-based block j, the giant-step exponent is e = (j + 1) * b. The number c = degree_count satisfies
      * 1 <= c <= b and allows the final block to process fewer than b degrees. Let R denote the polynomial passed as
      * remaining. If giant_step = X^(Q^e) mod B, form
@@ -178,7 +195,7 @@ namespace nil::crypto3::math::detail {
      * @throws std::invalid_argument if degree_count is zero or greater than the block size.
      * @pre remaining is square-free, divides B, and has all earlier degree factors removed.
      * @pre giant_step is reduced modulo B.
-     * @pre frobenius_context represents the same B used to construct precomputation.
+     * @pre divisor_context represents the same B used to construct precomputation.
      */
     template<SupportsDivrem Backend>
     void kaltofen_shoup_coarse_block_factor(typename Backend::polynomial_type &output,
@@ -186,7 +203,7 @@ namespace nil::crypto3::math::detail {
                                             const typename Backend::polynomial_type &giant_step,
                                             std::size_t degree_count,
                                             const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
-                                            const polynomial_frobenius_context<Backend> &frobenius_context,
+                                            const polynomial_divisor_context<Backend> &divisor_context,
                                             polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
@@ -200,8 +217,7 @@ namespace nil::crypto3::math::detail {
         for (std::size_t offset = 0; offset < degree_count; ++offset) {
             const std::size_t baby_step_index = precomputation.block_size() - 1 - offset;
             subtraction(difference, giant_step, precomputation.baby_step(baby_step_index));
-            mulmod(interval_product, interval_product, difference, frobenius_context.divisor_context(),
-                   arithmetic_context);
+            mulmod(interval_product, interval_product, difference, divisor_context, arithmetic_context);
         }
         gcd(output, remaining, interval_product, arithmetic_context);
     }
@@ -315,7 +331,9 @@ namespace nil::crypto3::math::detail {
             return factor_callback(reported);
         }
 
-        polynomial_frobenius_context<Backend> frobenius_context(input, arithmetic_context);
+        std::optional<polynomial_frobenius_context<Backend>> initial_frobenius(std::in_place, input,
+                                                                               arithmetic_context);
+        const auto &frobenius_context = *initial_frobenius;
         polynomial_type unclassified(std::move(input));
         std::vector<polynomial_type> initial_baby_steps;
         const auto screening_limit = std::min(arithmetic_context.options().distinct_degree_screening_limit, block_size);
@@ -359,8 +377,14 @@ namespace nil::crypto3::math::detail {
             }
         }
 
-        kaltofen_shoup_frobenius_precomputation<Backend> precomputation(
-            block_size, frobenius_context, arithmetic_context, std::move(initial_baby_steps));
+        using precomputation_type = kaltofen_shoup_frobenius_precomputation<Backend>;
+        auto baby_steps = precomputation_type::make_baby_steps(block_size, frobenius_context, arithmetic_context,
+                                                               std::move(initial_baby_steps));
+        // Keep the original modulus and reciprocal, but release the much larger initial composition cache before
+        // constructing the giant-step cache. No single-step Frobenius maps are needed after the baby table.
+        auto divisor_context = frobenius_context.divisor_context();
+        initial_frobenius.reset();
+        precomputation_type precomputation(std::move(baby_steps), divisor_context, arithmetic_context);
         polynomial_type giant_step = precomputation.baby_step(block_size);
 
         // Keep the original degree-block alignment. The first block may revisit screened degrees, but their factors
@@ -372,7 +396,7 @@ namespace nil::crypto3::math::detail {
 
             polynomial_type coarse_block;
             kaltofen_shoup_coarse_block_factor(coarse_block, unclassified, giant_step, degree_count, precomputation,
-                                               frobenius_context, arithmetic_context);
+                                               divisor_context, arithmetic_context);
             if (coarse_block.size() > 1) {
                 polynomial_type quotient;
                 factorization_exact_quotient(quotient, unclassified, coarse_block, arithmetic_context);
@@ -399,7 +423,7 @@ namespace nil::crypto3::math::detail {
             // shorter than block_size.
             first_factor_degree += block_size;
             if (first_factor_degree <= (unclassified.size() - 1) / 2) {
-                precomputation.apply_block_frobenius(giant_step, giant_step, frobenius_context, arithmetic_context);
+                precomputation.apply_block_frobenius(giant_step, giant_step, divisor_context, arithmetic_context);
             }
         }
 

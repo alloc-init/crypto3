@@ -187,6 +187,7 @@ Separate contexts are required for concurrent calls when the backend owns mutabl
 | `half_gcd_basecase_cutoff` | 30 | At or below this coefficient count, recursive half-GCD constructs its transformation iteratively; zero disables this base case. |
 | `gcd_half_gcd_cutoff` | 0 | Use half-GCD when the smaller operand reaches this size; zero disables half-GCD. |
 | `modular_composition_cached_power_limit` | maximum `size_t` | Cap the number of Brent-Kung baby powers; constructing a composition cache requires a positive limit. |
+| `modular_composition_block_size` | 0 | Request a Brent-Kung block size for composition caches; zero selects the square-root heuristic. A positive request is capped by the cached-power limit and maximum outer coefficient count. |
 | `distinct_degree_screening_limit` | 0 | Screen initial irreducible-factor degrees before the full Kaltofen-Shoup baby table; zero disables screening. |
 | `modular_composition_prepared_byte_limit` | 0 | Bound the additional prepared Fp12 coefficient payload per composition cache; zero disables preparation. |
 | `modular_composition_simd_lanes` | 8 | Select four or eight IFMA lanes when supported; zero selects scalar prepared dots. The byte budget still controls whether preparation is enabled. |
@@ -374,13 +375,26 @@ The faster `compose_mod` overload uses blocked Brent-Kung composition. For block
     1, inner, ..., inner^(k - 1) mod B
 
 and the giant step `inner^k mod B`. Each `Fi(inner)` is a linear combination of the baby powers, and the block values
-are combined by Horner's rule in the giant step. The default `k = ceil(sqrt(L))`, where `L` is the maximum outer
-coefficient count, balances precomputation against giant-step multiplications.
+are combined by Horner's rule in the giant step. Let `L` be the positive maximum outer coefficient count and `C` the
+positive `modular_composition_cached_power_limit`. With the default `modular_composition_block_size == 0`, the cache
+selects `k = min(ceil(sqrt(L)), C)`. A positive request `r` instead selects `k = min(r, L, C)`.
 
 Construct and reuse the precomputation when composing several outer polynomials with the same inner polynomial and
 divisor. The one-off overload constructs it internally. `modular_composition_cached_power_limit` caps `k`, reducing
 memory from cached powers at the cost of more giant-step multiplications. Zero is rejected by the Brent-Kung APIs;
 it does not select Horner composition automatically. `compose_mod_reference` remains available explicitly.
+
+Set `modular_composition_block_size` on the arithmetic options before constructing the context and its caches.
+For example, requesting 246 requires both `L >= 246` and a cached-power limit of at least 246 to obtain that width.
+The request changes the cache layout while preserving the declared maximum outer coefficient count: an outer
+polynomial exceeding `L` is still rejected. The option applies to each newly constructed composition cache, including
+those created inside Frobenius and recovery operations; it does not detect how often a particular cache will be used.
+
+For a nonconstant modulus and an outer polynomial with `m` coefficients, blocked evaluation uses
+`ceil(m / k) - 1` giant-step modular multiplications. Increasing `k` reduces that count but builds and retains more
+baby powers and may require a larger prepared coefficient payload. Choose a block size using complete workloads
+that include cache construction, the intended number of reuses, and peak memory. A wider cache can cost more than it
+saves when reused only a few times. Its prepared payload remains subject to the separate per-cache byte budget below.
 
 ### Prepared coefficient combinations
 
@@ -494,7 +508,12 @@ coefficient-field order. These are rough bounds for the current implementation:
 | One cached Frobenius map | `O(sqrt(n) * M(n) + n^2)` |
 | Frobenius product or weighted sum of `t` terms | `O(log t)` compositions, composition-cache preparations, and modular products for `t > 1` |
 
-The `n^2` term in Brent-Kung and Frobenius maps is the block-formation phase, including when prepared dots are enabled.
+The composition and Frobenius bounds above assume automatic square-root blocking and a cached-power limit large
+enough to permit it.
+For comparable outer and modulus sizes, a chosen block size `k` instead requires `O(k * M(n))` to construct the
+cached powers and `O(ceil(n / k) * M(n) + n^2)` per cached composition, with `O(k * n)` coefficients in the baby powers.
+Prepared coefficient payloads and scratch require additional work and storage. The `n^2` term in Brent-Kung and
+Frobenius maps is the block-formation phase, including when prepared dots are enabled.
 Both FFT backends' `multiply_low` operations truncate their inputs but still transform their complete prefix product,
 so they have the same rough asymptotic cost as multiplying those prefixes in full. They do not currently use truncated
 transforms. The transform-only cost for the small-prime backend is not a complete product-cost estimate: conversion
