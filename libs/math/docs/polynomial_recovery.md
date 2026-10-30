@@ -431,6 +431,20 @@ phases. Optional prepared coefficient payloads obey `modular_composition_prepare
 cached powers, backend scratch, and concurrent operations require additional memory; this option is not a total
 memory limit. Measure seed construction, degree-dependent work, and complete recovery together when assessing speed.
 
+`modular_composition_block_size` applies to the composition caches constructed by these recovery paths as well as
+those used in factor discovery. Its default of zero keeps the automatic square-root heuristic. A positive value
+requests a width capped by the cached-power limit and each cache's maximum outer coefficient count, as described in
+the [composition guide](@ref math_polynomial_arithmetic). A larger width spends more time and memory on preparation
+to reduce giant-step products during composition. Recovery chains can have different degrees and reuse counts from
+discovery, so a width that helps a long discovery chain can slow a short recovery chain. Assess the complete recovery
+with its actual factor pattern, including preparation and peak memory, before selecting a width.
+
+During composite norm recovery, factor discovery releases its initial Frobenius cache after the baby table is
+complete and before allocating its giant-step cache. This reduces overlapping discovery storage, but the active
+discovery precomputation still remains alive while the factor callback performs norm recovery. Its storage must be
+counted alongside the recovery caches when estimating peak memory. See
+[staged factorization](@ref math_polynomial_factorization) for screening and callback lifetimes.
+
 Let `Q = p^e` be the coefficient-field order, `d` the irreducible divisor degree, and `s` the two-adicity of `Q^d - 1`.
 The current implementations have the rough bounds shown below.
 
