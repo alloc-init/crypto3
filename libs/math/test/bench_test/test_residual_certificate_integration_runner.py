@@ -60,13 +60,14 @@ class RunnerChecks(unittest.TestCase):
                         package / 'support/residual_support.py')
         common = reference / 'support' / support.COMMON if reference else HERE / 'support' / support.COMMON
         shutil.copyfile(common, package / 'support' / support.COMMON)
-        for name in (runner.SOURCE, 'README.md'):
+        for name in (runner.SOURCE, 'README.md', 'working-tree.patch'):
             (package / name).write_text('fixture\n')
         # A minimal preflight program avoids recursively launching this test suite in lifecycle checks.
         (package / runner.TEST).write_text('raise SystemExit(0)\n')
         support.save(package / 'source-provenance.json', {})
         support.save(package / 'panel.json', [])
-        for name in ('tests', 'states'):
+        support.save(package / 'small-panel.json', [])
+        for name in ('tests', 'states', 'provenance'):
             (package / name).mkdir()
         for name in runner.HEADERS:
             path = package / 'production' / runner.PREFIX / name
@@ -178,7 +179,8 @@ class RunnerChecks(unittest.TestCase):
                 (directory / 'group-0.bin').write_bytes(b'identical factor')
                 support.save(directory / 'measurement.json', {
                     'mode': 'all', 'seconds': seconds, 'rng_draws': 0, 'maximum_attempts': 1,
-                    'attempts': int(variant != 'disabled'), 'groups': [{'factor_degree': 3, 'group_degree': 3}]})
+                    'attempts': int(variant != 'disabled'), 'groups': [{'factor_degree': 3, 'group_degree': 3}],
+                    'input_odd': None, 'removed_factor_count': 1, 'residual_odd': None})
         comparison = runner.compare_case(self.root, ['disabled', 'prepared'], 2)
         self.assertEqual(comparison['median_seconds_saved']['prepared'], -2)
         self.assertEqual(len(comparison['pairs']), 2)
@@ -193,6 +195,66 @@ class RunnerChecks(unittest.TestCase):
         support.save(directory / 'measurement.json', {'rng_draws': 0, 'maximum_attempts': 1, 'attempts': 1})
         with self.assertRaisesRegex(ValueError, 'disabled certificate'):
             runner.compare_case(self.root, ['disabled'], 1)
+
+    def test_comparison_rejects_changed_parity_and_nonfinite_timing(self):
+        for variant in ('disabled', 'prepared'):
+            folder = self.root / ('trial-0-' + variant)
+            folder.mkdir()
+            (folder / 'group-0.bin').write_bytes(b'factor')
+            support.save(folder / 'measurement.json', {
+                'mode': 'all', 'seconds': 10, 'rng_draws': 0, 'maximum_attempts': 1, 'attempts': 0,
+                'groups': [{'factor_degree': 3, 'group_degree': 3}],
+                'input_odd': True, 'removed_factor_count': 1, 'residual_odd': variant != 'disabled'})
+        with self.assertRaisesRegex(ValueError, 'restored parity'):
+            runner.compare_case(self.root, ['disabled', 'prepared'], 1)
+        path = self.root / 'trial-0-prepared/measurement.json'
+        report = json.loads(path.read_text())
+        report.update(residual_odd=False, seconds=float('nan'))
+        support.save(path, report)
+        with self.assertRaisesRegex(ValueError, 'finite and positive'):
+            runner.compare_case(self.root, ['disabled', 'prepared'], 1)
+
+    def test_factor_prefix_uses_only_completed_excluded_factors(self):
+        case = {'counter': 7, 'excluded': 2, 'residual_degree': 5}
+        rows = [{'counter': '7', 'variant': 'broad', 'index': str(i), 'degree': str(degree),
+                 'multiplicity': '1', 'outcome': 'completed'} for i, degree in enumerate((1, 2, 5), 1)]
+        self.assertEqual(len(runner.factor_prefix(case, rows, 8)), 2)
+        rows[-1].update(degree='99', outcome='unknown')
+        self.assertEqual(len(runner.factor_prefix(case, rows, 8)), 2)
+        rows[1]['index'] = '3'
+        with self.assertRaisesRegex(ValueError, 'factor prefix'):
+            runner.factor_prefix(case, rows, 8)
+        rows[1]['index'] = '2'
+        with self.assertRaisesRegex(ValueError, 'factor prefix'):
+            runner.factor_prefix(case, rows, 9)
+
+    def test_snapshot_includes_changes_outside_the_old_three_header_overlay(self):
+        repo, target = self.root / 'repo', self.root / 'snapshot'
+        names = ('libs/math/include/arithmetic/gcd.hpp', 'libs/math/include/new_header.hpp')
+        for name in names:
+            path = repo / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('current ' + name)
+        def export(_repo, revision, destination):
+            path = destination / names[0]
+            path.parent.mkdir(parents=True)
+            path.write_text('old GCD')
+            support.save(destination / 'benchmark-snapshot.json', {
+                'revision': revision, 'files': {names[0]: support.digest(path)}})
+        def git_output(argv, **kwargs):
+            return '\0'.join(names).encode() + b'\0' if 'ls-files' in argv else 'recorded patch\n'
+        with mock.patch.object(support, 'export_sources', side_effect=export), \
+                mock.patch.object(runner.subprocess, 'check_output', side_effect=git_output):
+            self.assertEqual(runner.freeze_sources(repo, 'base', target, True), sorted(names))
+        snapshot = json.loads((target / 'benchmark-snapshot.json').read_text())
+        self.assertTrue(snapshot['working_tree_snapshot'])
+        for name in names:
+            self.assertEqual((target / name).read_bytes(), (repo / name).read_bytes())
+            self.assertEqual(snapshot['files'][name], support.digest(repo / name))
+        with mock.patch.object(support, 'export_sources', side_effect=export), \
+                mock.patch.object(runner.subprocess, 'check_output', side_effect=git_output):
+            with self.assertRaisesRegex(ValueError, 'snapshot-working-tree'):
+                runner.freeze_sources(repo, 'base', self.root / 'not-authorized', False)
 
 
 if __name__ == '__main__':

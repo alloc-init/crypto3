@@ -94,6 +94,8 @@ namespace {
         std::string mode = "next";
         std::size_t width = 246, prepared_bytes = std::size_t(8) << 30;
         std::size_t minimum_excluded = 0, maximum_attempts = 1, certificate_bytes = 0;
+        std::optional<std::size_t> removed_factor_count;
+        bool require_parity = false;
     };
 
     options parse(int argc, char **argv) {
@@ -118,10 +120,17 @@ namespace {
                 result.maximum_attempts = integer(argument);
             else if (key == "--certificate-prepared-bytes")
                 result.certificate_bytes = integer(argument);
-            else
+            else if (key == "--removed-factor-count")
+                result.removed_factor_count = integer(argument);
+            else if (key == "--require-parity") {
+                require(argument == "0" || argument == "1", "invalid parity requirement");
+                result.require_parity = argument == "1";
+            } else
                 throw std::invalid_argument("unknown option: " + key);
         }
         require(!result.state.empty() && !result.output.empty(), "--state and --output are required");
+        require(result.removed_factor_count && *result.removed_factor_count < maximum_coefficients,
+                "--removed-factor-count is required and must describe the completed discovery prefix");
         require(result.mode == "next" || result.mode == "all" || result.mode == "certificate", "invalid mode");
         require(result.width >= 1 && result.width <= 512 && result.prepared_bytes <= (std::size_t(16) << 30) &&
                     result.certificate_bytes <= (std::size_t(16) << 30),
@@ -230,11 +239,34 @@ int main(int argc, char **argv) {
         require(fs::create_directory(o.output), "output already exists or has no parent");
         const timer process;
         auto saved = load(o.state);
+        const auto load_seconds = process.seconds();
         const auto capacity = std::bit_ceil(2 * saved.modulus.degree());
         pa::polynomial_context<backend> context(backend(capacity), arithmetic_options(o));
+        const timer validation;
         verify_state_factors(saved, context);
+        require(*o.removed_factor_count <= saved.modulus.degree() - saved.residual.degree(),
+                "removed factor count exceeds the removed degree");
+        const auto validation_seconds = validation.seconds();
+        // Restore the same evidence used by production: the original square-free GCD and factors already
+        // emitted before this checkpoint. Captured residual factors never supply the parity decision.
+        const timer restore_parity;
+        std::optional<bool> input_parity;
+        {
+            polynomial derivative, common;
+            math::derivative(derivative, saved.modulus);
+            input_parity = math::detail::square_free_gcd_with_parity(common, saved.modulus, derivative, context);
+            require(common == polynomial {value::one()}, "saved input is not square-free");
+        }
+        auto residual_parity = input_parity;
+        if (residual_parity) {
+            *residual_parity = *residual_parity != (*o.removed_factor_count % 2 != 0);
+        }
+        require(!o.require_parity || residual_parity.has_value(), "required residual parity is unavailable");
+        const auto parity_seconds = restore_parity.seconds(), parity_cpu_seconds = restore_parity.cpu_seconds();
+        const timer rebuild_table;
         const math::polynomial_divisor_context<backend> divisor(saved.modulus, saved.modulus.degree() - 1, context);
         const discovery_table table(std::move(saved.babies), divisor, context);
+        const auto table_seconds = rebuild_table.seconds();
         const auto schedule = math::detail::kaltofen_shoup_plan_residual_certificate(saved.residual.degree(),
                                                                                      saved.block, saved.excluded);
         {
@@ -269,7 +301,7 @@ int main(int argc, char **argv) {
                     return o.mode == "next" ? math::factorization_control::stop_factorization :
                                               math::factorization_control::continue_factorization;
                 },
-                attempts);
+                attempts, residual_parity);
             require(status == (o.mode == "next" ? math::factorization_control::stop_factorization :
                                                   math::factorization_control::continue_factorization),
                     "unexpected continuation status");
@@ -278,6 +310,8 @@ int main(int argc, char **argv) {
         const auto rss = peak_rss();
         // The captured factors are a validation oracle only. No factor degree or outcome reaches the production
         // trigger.
+        require(!residual_parity || *residual_parity == (saved.factors.size() % 2 != 0),
+                "restored parity disagrees with captured factors");
         std::map<std::size_t, polynomial> expected;
         for (const auto &factor : saved.factors) {
             auto [entry, inserted] = expected.try_emplace(factor.degree(), polynomial {value::one()});
@@ -297,14 +331,20 @@ int main(int argc, char **argv) {
         std::ofstream report(o.output / "measurement.json");
         report << std::setprecision(17) << "{\"mode\":\"" << o.mode << "\",\"seconds\":" << seconds
                << ",\"cpu_seconds\":" << cpu_seconds << ",\"setup_seconds\":" << setup_seconds
-               << ",\"process_seconds\":" << process.seconds() << ",\"peak_rss_bytes\":" << rss
-               << ",\"modulus_degree\":" << saved.modulus.degree() << ",\"residual_degree\":" << saved.residual.degree()
-               << ",\"excluded_degree\":" << saved.excluded << ",\"width\":" << o.width
-               << ",\"prepared_byte_limit\":" << o.prepared_bytes
+               << ",\"load_seconds\":" << load_seconds << ",\"validation_seconds\":" << validation_seconds
+               << ",\"restore_parity_seconds\":" << parity_seconds
+               << ",\"restore_parity_cpu_seconds\":" << parity_cpu_seconds
+               << ",\"rebuild_table_seconds\":" << table_seconds << ",\"process_seconds\":" << process.seconds()
+               << ",\"peak_rss_bytes\":" << rss << ",\"modulus_degree\":" << saved.modulus.degree()
+               << ",\"residual_degree\":" << saved.residual.degree() << ",\"excluded_degree\":" << saved.excluded
+               << ",\"width\":" << o.width << ",\"prepared_byte_limit\":" << o.prepared_bytes
                << ",\"certificate_prepared_byte_limit\":" << o.certificate_bytes
                << ",\"minimum_excluded_degree\":" << o.minimum_excluded
                << ",\"maximum_attempts\":" << o.maximum_attempts << ",\"attempts\":" << attempts.attempts
                << ",\"last_attempted_degree\":" << attempts.last_attempted_degree
+               << ",\"removed_factor_count\":" << *o.removed_factor_count
+               << ",\"input_odd\":" << (input_parity ? (*input_parity ? "true" : "false") : "null")
+               << ",\"residual_odd\":" << (residual_parity ? (*residual_parity ? "true" : "false") : "null")
                << ",\"certificate_result\":" << (o.mode == "certificate" ? (certified ? "true" : "false") : "null")
                << ",\"rng_draws\":0,\"groups\":[";
         for (std::size_t i = 0; i < groups.size(); ++i)

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Compare the production residual-discovery continuation with bounded certificates enabled and disabled."""
+"""Compare parity-only discovery with parity plus bounded residual certificates."""
 
 import argparse
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -28,13 +29,22 @@ TEST = 'test_residual_certificate_integration_runner.py'
 GUIDE = 'residual_certificate_integration.md'
 SUPPORT_SHA256 = 'ffcbd34365170a1d58f8423de5bf4554007b5059fe7623077b795f9d64ef3a04'
 REFERENCE_MANIFEST_SHA256 = 'de0ae157b1b4ca4b7b774b38775b4ba45f0b3abe2711454b73a6b5aa50eb8181'
-BASE = '5f2f2316a19d2e76c7347f9569cf33ffd5d27b5a'
 PREFIX = Path('libs/math/include/nil/crypto3/math/polynomial')
 HEADERS = ('backends/polynomial_backend.hpp', 'quotient_ring/polynomial_composition.hpp',
            'factorization/kaltofen_shoup_distinct_degree_factorization.hpp')
 TESTS = ('distinct_degree_factorization', 'complete_factorization',
-         'polynomial_x_norm_reconstruction', 'polynomial_composition')
+         'polynomial_x_norm_reconstruction', 'polynomial_composition', 'polynomial_gcd', 'square_free_factorization')
 SMALL = ('prime5', 'prime7', 'prime_power9', 'degree15', 'mixed5', 'equal6')
+PARITY_SMALL = {
+    'prime5': '57814724a70ce58bac1046789abacbdd6407cd8294db6326b73930e46a8cad80',
+    'prime7': 'a60b4ffdb306fae629b14eb3469e9ddb3e1cac4a7e5839f70f8801f453556d12',
+    'prime_power9': '170ff1dc5864c8e6623fa2117b3c80605e4a75b8014925525dfd85ed9f83b05d',
+    'degree15': 'c1a2a0d2cb83289e4c339d8c937ec54cd2f0def6daf876fdf6d020c4da2e4fe3',
+    'mixed5': 'df039fad3b1eb7e72c9f301ff59e3c99b7b3c9974ac856e14a4f7c7a686ca808',
+    'equal6': '5ab27b97d1bfc123b5a3f332407a45febc2643d12a0d4ac3990cbcc8250f54d9',
+    'irregular7': '45a7d6269854e613d6884a8108a76f6a84f7dad6712e94f89e48115490e92ab1',
+}
+PARITY_FIELDS = ('input_odd', 'removed_factor_count', 'residual_odd')
 support = None
 
 
@@ -49,6 +59,51 @@ def load_support(reference=None):
     return module
 
 
+def freeze_sources(repo, revision, destination, working_tree):
+    """Freeze the complete production include/feature footprint, including a pending merge when requested."""
+    repo = repo.resolve()
+    support.export_sources(repo, revision, destination)
+    original = json.loads((destination / 'benchmark-snapshot.json').read_text())['files']
+    roots = [str(path.relative_to(repo)) for pattern in ('libs/*/include', 'libs/marshalling/*/include')
+             for path in sorted(repo.glob(pattern))]
+    roots += ['cmake/' + name for name in support.FEATURES] + ['LICENSE']
+    names = subprocess.check_output(['git', '-C', str(repo), 'ls-files', '-z', '--cached', '--others',
+                                    '--exclude-standard', '--', *roots]).decode().split('\0')
+    current = {}
+    for name in sorted(set(names) - {''}):
+        path = repo / name
+        if path.is_symlink() or not path.resolve().is_relative_to(repo):
+            raise ValueError('unsupported source path: ' + name)
+        if path.is_file():
+            current[name] = support.digest(path)
+    changed = sorted(name for name in original.keys() | current.keys() if original.get(name) != current.get(name))
+    if changed and not working_tree:
+        raise ValueError('production sources differ from the revision; use --snapshot-working-tree to freeze them')
+    for name in changed:
+        path = destination / name
+        if name not in current:
+            path.unlink()
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(repo / name, path)
+    support.verify_hashes(destination, current)
+    source_diff = subprocess.check_output(['git', '-C', str(repo), 'diff', '--binary', revision, '--', *roots], text=True)
+    support.save(destination / 'benchmark-snapshot.json', {
+        'revision': revision, 'files': current, 'working_tree_snapshot': working_tree,
+        'uncommitted_overlay': changed, 'git_diff': source_diff})
+    return changed
+
+
+def factor_prefix(case, factors, modulus_degree):
+    prefix = [row for row in factors if row['counter'] == str(case['counter']) and row['variant'] == 'broad'
+              and int(row['degree']) <= case['excluded']]
+    if (any(int(row['degree']) < 1 or row['multiplicity'] != '1' or row['outcome'] != 'completed' for row in prefix)
+            or [int(row['index']) for row in prefix] != list(range(1, len(prefix) + 1))
+            or sum(int(row['degree']) for row in prefix) != modulus_degree - case['residual_degree']):
+        raise ValueError('previously emitted factor prefix is inconsistent')
+    return prefix
+
+
 def package(args):
     repo, destination = args.repo.resolve(), args.output.resolve()
     reference, saved = args.reference_package.resolve(), args.saved_run.resolve()
@@ -59,22 +114,16 @@ def package(args):
     status = subprocess.check_output(['git', '-C', str(repo), 'status', '--short'], text=True)
     required = [str(BENCH / name) for name in (SOURCE, RUNNER, TEST, GUIDE)]
     required += [str(Path('libs/math/test') / (name + '.cpp')) for name in TESTS]
-    if not args.allow_dirty:
+    if not args.snapshot_working_tree:
         subprocess.run(['git', '-C', str(repo), 'ls-files', '--error-unmatch', *required],
                        stdout=subprocess.DEVNULL, check=True)
         if subprocess.check_output(['git', '-C', str(repo), 'diff', revision, '--',
                                     *required, 'libs/math/include'], text=True):
-            raise ValueError('final packages must use committed source; use --allow-dirty only for local development')
+            raise ValueError('sources differ from the revision; use --snapshot-working-tree to freeze them')
     destination.mkdir(parents=True, exist_ok=False)
-    support.export_sources(repo, revision, destination / 'production')
-    if args.allow_dirty:
-        for header in HEADERS:
-            shutil.copyfile(repo / PREFIX / header, destination / 'production' / PREFIX / header)
-        identity = support.hashes(destination / 'production')
-        identity.pop('benchmark-snapshot.json')
-        support.save(destination / 'production/benchmark-snapshot.json', {
-            'revision': revision, 'files': identity, 'uncommitted_overlay': list(HEADERS),
-            'git_diff': subprocess.check_output(['git', '-C', str(repo), 'diff', revision], text=True)})
+    overlay = freeze_sources(repo, revision, destination / 'production', args.snapshot_working_tree)
+    (destination / 'working-tree.patch').write_text(
+        subprocess.check_output(['git', '-C', str(repo), 'diff', '--binary', revision], text=True))
     for name, target in ((SOURCE, SOURCE), (RUNNER, 'run.py'), (TEST, TEST), (GUIDE, 'README.md')):
         shutil.copyfile(repo / BENCH / name, destination / target)
     (destination / 'support').mkdir()
@@ -90,10 +139,22 @@ def package(args):
     if panel != json.loads((reference / 'panel.json').read_text()):
         raise ValueError('source run and reference package panels differ')
     (destination / 'states').mkdir()
+    (destination / 'provenance').mkdir()
+    factor_file = reference / 'provenance/captured-factors.csv'
+    factors = support.read_csv(factor_file)
+    shutil.copyfile(factor_file, destination / 'provenance/captured-factors.csv')
+    prefixes = {}
     for case in panel:
         identity = json.loads((saved / 'cases' / case['name'] / 'state-sha256.json').read_text())
         support.verify_hashes(saved / 'cases' / case['name'] / 'state', identity)
         support.save(destination / 'states' / (case['name'] + '.json'), identity)
+        state_meta = dict(line.split() for line in (saved / 'cases' / case['name'] / 'state/state.txt').read_text().splitlines())
+        prefix = factor_prefix(case, factors, int(state_meta['modulus_degree']))
+        case.update(removed_factor_count=len(prefix), require_parity=True,
+                    prefix_factor_indices=[int(row['index']) for row in prefix])
+        prefixes[case['name']] = prefix
+    support.save(destination / 'provenance/completed-prefixes.json', prefixes)
+    small_panel = []
     for name in SMALL:
         source = saved / 'checks' / (name + '-prepared0')
         identity = json.loads((source / 'state-sha256.json').read_text())
@@ -101,13 +162,39 @@ def package(args):
         target = destination / 'smoke' / name
         shutil.copytree(source / 'state', target / 'state')
         support.save(target / 'state-sha256.json', identity)
+        small_panel.append({'name': name, 'removed_factor_count': 1, 'require_parity': False})
+    parity_run = args.parity_run.resolve()
+    if json.loads((parity_run / 'metadata.json').read_text()).get('outcome') != 'complete':
+        raise ValueError('parity fixtures must come from the completed reference run')
+    for name, checksum in PARITY_SMALL.items():
+        source = parity_run / 'checks' / (name + '-prepared0')
+        if support.digest(source / 'state-sha256.json') != checksum:
+            raise ValueError('parity fixture identity mismatch: ' + name)
+        identity = json.loads((source / 'state-sha256.json').read_text())
+        support.verify_hashes(source / 'state', identity)
+        target = destination / 'smoke' / ('parity-' + name)
+        shutil.copytree(source / 'state', target / 'state')
+        support.save(target / 'state-sha256.json', identity)
+        parity = json.loads((source / 'trial-0-candidate/parity.json').read_text())
+        small_panel.append({'name': 'parity-' + name, 'removed_factor_count': 1,
+                            'require_parity': parity['available'], 'expected_parity': parity['residual_odd']})
+    support.save(destination / 'small-panel.json', small_panel)
     support.save(destination / 'panel.json', panel)
+    merge = subprocess.run(['git', '-C', str(repo), 'rev-parse', '--verify', 'MERGE_HEAD'],
+                           text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     support.save(destination / 'source-provenance.json', {
-        'created_utc': support.timestamp(), 'production_revision': revision, 'base_revision': BASE,
-        'development_overlay': args.allow_dirty, 'git_status': status,
+        'created_utc': support.timestamp(), 'production_revision': revision,
+        'source_kind': 'working_tree_snapshot' if args.snapshot_working_tree else 'commit',
+        'working_tree_snapshot': args.snapshot_working_tree, 'source_overlay': overlay, 'git_status': status,
+        'head_revision': subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip(),
+        'merge_revision': merge.stdout.strip() if merge.returncode == 0 else None,
+        'production_snapshot_sha256': support.digest(destination / 'production/benchmark-snapshot.json'),
+        'working_tree_patch_sha256': support.digest(destination / 'working-tree.patch'),
         'source_run': str(saved), 'source_run_metadata': metadata,
         'reference_package_manifest_sha256': REFERENCE_MANIFEST_SHA256,
-        'scope': 'clean production continuation and optional isolated certificate; no observer build',
+        'factor_prefix_csv_sha256': support.digest(factor_file), 'parity_fixture_manifests': PARITY_SMALL,
+        'parity_fixture_run': str(parity_run),
+        'scope': 'parity-only versus parity plus certificates in the same production source snapshot; no observer build',
         'remote_execution': False})
     if args.checks:
         (destination / 'local-checks').mkdir()
@@ -161,7 +248,7 @@ def build(package, directory, budget, cxx, smoke):
 
 
 def compare_case(directory, variants, repetitions):
-    pairs, evidence = [], {}
+    pairs, evidence, parity_evidence = [], {}, None
     for trial in range(repetitions):
         reports = {}
         for variant in variants:
@@ -169,6 +256,14 @@ def compare_case(directory, variants, repetitions):
             report = json.loads((folder / 'measurement.json').read_text())
             if report['rng_draws'] != 0 or report['attempts'] > report['maximum_attempts']:
                 raise ValueError('RNG use or certificate attempt budget changed')
+            if variant == 'disabled' and report['attempts'] != 0:
+                raise ValueError('disabled certificate performed work')
+            if not math.isfinite(report['seconds']) or report['seconds'] <= 0:
+                raise ValueError('measurement time must be finite and positive')
+            parity = {key: report[key] for key in PARITY_FIELDS}
+            if parity_evidence is not None and parity != parity_evidence:
+                raise ValueError('restored parity or completed factor prefix changed between trials')
+            parity_evidence = parity
             reports[variant] = report
             if variant == 'certificate':
                 continue
@@ -176,8 +271,6 @@ def compare_case(directory, variants, repetitions):
             if not hashes or (evidence and hashes != evidence):
                 raise ValueError('continued discovery changed factor bytes')
             evidence = hashes
-            if variant == 'disabled' and report['attempts'] != 0:
-                raise ValueError('disabled certificate performed work')
         for variant in variants:
             if variant in ('disabled', 'certificate') or 'disabled' not in reports:
                 continue
@@ -186,12 +279,14 @@ def compare_case(directory, variants, repetitions):
                 raise ValueError('group order or continuation scope changed')
             pairs.append({'trial': trial, 'variant': variant, 'baseline': old, 'enabled': new,
                           'seconds_saved': old['seconds'] - new['seconds'],
-                          'speedup': old['seconds'] / new['seconds']})
+                          'speedup': old['seconds'] / new['seconds'],
+                          'time_reduction': 1 - new['seconds'] / old['seconds']})
     result = {'pairs': pairs, 'group_sha256': evidence, 'repetitions': repetitions,
+              'restored_parity': parity_evidence,
               'median_seconds_saved': {variant: statistics.median(p['seconds_saved'] for p in pairs
                                          if p['variant'] == variant)
                                       for variant in sorted({p['variant'] for p in pairs})},
-              'interpretation': 'Failures include the failed certificate plus resumed discovery. No norm-recovery or grinding timing.'}
+              'interpretation': 'Both continuations use parity. Failed attempts include resumed discovery; no full norm-recovery or grinding timing.'}
     support.save(directory / 'comparison.json', result)
     return result
 
@@ -220,7 +315,9 @@ def run_case(args):
                     '--mode', 'certificate' if variant == 'certificate' else case['scope'],
                     '--width', str(case['width']), '--prepared-bytes', str(case['prepared_bytes']),
                     '--minimum-excluded-degree', '0' if variant == 'disabled' else str(case['minimum_excluded']),
-                    '--maximum-attempts', str(case['maximum_attempts']), '--certificate-prepared-bytes', str(prepared)]
+                    '--maximum-attempts', str(case['maximum_attempts']), '--certificate-prepared-bytes', str(prepared),
+                    '--removed-factor-count', str(case['removed_factor_count']),
+                    '--require-parity', str(int(case.get('require_parity', False)))]
             record = {'phase': label, 'argv': argv, 'started_utc': support.timestamp()}
             commands.append(record)
             support.save(directory / 'commands.json', commands)
@@ -245,22 +342,40 @@ def run_case(args):
 
 
 def preflight(package, directory, budget, binary):
-    for index, name in enumerate(SMALL):
+    cases = json.loads((package / 'small-panel.json').read_text())
+    coverage = set()
+    for index, fixture in enumerate(cases):
+        name = fixture['name']
         case = {'name': name, 'directory': str(directory / 'checks' / name), 'cpu': None, 'binary': binary,
                 'state': str(package / 'smoke' / name / 'state'),
                 'state_manifest': str(package / 'smoke' / name / 'state-sha256.json'),
                 'variants': ['disabled', 'prepared', 'scalar', 'certificate'], 'scope': 'all',
                 'width': 4, 'prepared_bytes': 1024 * 1024, 'minimum_excluded': 1, 'maximum_attempts': 1,
-                'repetitions': 1, 'order_index': index}
+                'repetitions': 1, 'order_index': index, 'removed_factor_count': fixture['removed_factor_count'],
+                'require_parity': fixture['require_parity']}
         path = directory / (name + '-spec.json')
         support.save(path, case)
         budget.command('check-' + name, [sys.executable, str(package / 'run.py'), '_case', '--spec', str(path)])
         for variant in ('prepared', 'scalar'):
             report = json.loads((Path(case['directory']) / f'trial-0-{variant}/measurement.json').read_text())
-            if report['attempts'] != 1:
-                raise ValueError('small-fixture preflight did not execute the integrated certificate')
-    support.save(directory / 'preflight.json', {'status': 'passed', 'cases': len(SMALL), 'trials': 4 * len(SMALL),
-        'coverage': 'prime, prime-power, composite degree; failed full identity and proper-degree GCD; prepared and scalar; full continuation',
+            parity = report['residual_odd']
+            if 'expected_parity' in fixture and parity != fixture['expected_parity']:
+                raise ValueError('restored small-fixture parity differs from the validated reference')
+            if parity is False:
+                expected, category = 0, 'even_skip'
+            elif parity is True:
+                expected = int(report['excluded_degree'] + 1 <= report['residual_degree'] // 3)
+                category = 'odd_certificate' if expected else 'odd_bound'
+            else:
+                expected, category = 1, 'unknown_certificate'
+            if report['attempts'] != expected:
+                raise ValueError('small-fixture certificate policy mismatch: ' + name)
+            coverage.add(category)
+    if coverage != {'even_skip', 'odd_bound', 'odd_certificate', 'unknown_certificate'}:
+        raise ValueError('small fixtures did not cover all parity/certificate paths')
+    support.save(directory / 'preflight.json', {'status': 'passed', 'cases': len(cases), 'trials': 4 * len(cases),
+        'policy_coverage': sorted(coverage),
+        'coverage': 'certified odd/even and unknown parity; bounded attempts and skips; isolated failure checks; prepared and scalar; full continuation',
         'integrated_test_suites': TESTS})
 
 
@@ -289,15 +404,12 @@ def run(args):
     try:
         manifest = support.verify_package(package)
         support.save(directory / 'package.json', manifest)
-        for name in (SOURCE, 'run.py', TEST, 'README.md', 'source-provenance.json', 'panel.json'):
+        for name in (SOURCE, 'run.py', TEST, 'README.md', 'source-provenance.json', 'panel.json',
+                     'small-panel.json', 'working-tree.patch'):
             shutil.copyfile(package / name, directory / name)
-        for name in ('support', 'tests', 'states'):
+        for name in ('support', 'tests', 'states', 'provenance', 'production'):
             shutil.copytree(package / name, directory / name)
         shutil.copyfile(package / 'production/benchmark-snapshot.json', directory / 'production-sources.json')
-        for header in HEADERS:
-            target = directory / 'production-headers' / header
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(package / 'production' / PREFIX / header, target)
         choices = support.selection(args.workers, args.smoke)
         metadata['selection'] = choices
         host = {'uname': list(os.uname()), 'python': sys.version}
@@ -344,7 +456,7 @@ def run(args):
                 if path.exists():
                     comparisons[case['name']] = json.loads(path.read_text())
             support.save(directory / 'comparison.json', {'cases': comparisons, 'statuses': statuses,
-                'scope': 'clean saved-residual continuations with failed attempts retained; no full recovery or fresh search timing'})
+                'scope': 'parity-only versus parity plus certificates, same production snapshot; saved residuals, not full recovery or fresh search'})
             if any(statuses.values()):
                 raise RuntimeError('one or more cases failed; completed cases and partial evidence retained')
         support.verify_package(package)
@@ -375,7 +487,7 @@ def start(args):
     support.verify_package(package)
     root = args.results.resolve()
     root.mkdir(parents=True, exist_ok=True)
-    directory = Path(tempfile.mkdtemp(prefix='residual-integration-', dir=root))
+    directory = Path(tempfile.mkdtemp(prefix='residual-combined-', dir=root))
     argv = [sys.executable, str(package / 'run.py'), 'run', '--package', str(package), '--directory', str(directory),
             '--timeout', str(args.timeout), '--workers', str(args.workers), '--cxx', args.cxx,
             '--repetitions', str(args.repetitions), '--scope', args.scope,
@@ -408,15 +520,17 @@ def main(argv=None):
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--reference-package', type=Path, required=True)
     p.add_argument('--saved-run', type=Path, required=True)
+    p.add_argument('--parity-run', type=Path, required=True)
     p.add_argument('--revision', default='HEAD')
-    p.add_argument('--allow-dirty', action='store_true')
+    p.add_argument('--snapshot-working-tree', '--allow-dirty', dest='snapshot_working_tree', action='store_true',
+                   help='freeze all working production sources and retain hashes and the uncommitted patch')
     p.add_argument('--checks', type=Path)
     for name in ('start', 'run'):
         p = sub.add_parser(name)
         p.add_argument('--package', type=Path, default=HERE)
-        p.add_argument('--timeout', type=float, default=14400)
+        p.add_argument('--timeout', type=float, default=18000)
         p.add_argument('--workers', type=int, choices=range(1, 6), default=5)
-        p.add_argument('--repetitions', type=int, choices=range(1, 6), default=1)
+        p.add_argument('--repetitions', type=int, choices=range(1, 6), default=2)
         p.add_argument('--cxx', default=os.environ.get('CXX', 'c++'))
         p.add_argument('--smoke', action='store_true')
         p.add_argument('--saved-run', type=Path)
@@ -427,7 +541,7 @@ def main(argv=None):
         p.add_argument('--minimum-excluded-degree', type=int, default=1)
         p.add_argument('--maximum-attempts', type=int, default=1)
         if name == 'start':
-            p.add_argument('--results', type=Path, default=Path.cwd() / 'residual-integration-results')
+            p.add_argument('--results', type=Path, default=Path.cwd() / 'residual-combined-results')
         else:
             p.add_argument('--directory', type=Path, required=True)
     p = sub.add_parser('_case', help=argparse.SUPPRESS)
