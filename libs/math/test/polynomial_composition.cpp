@@ -404,6 +404,18 @@ BOOST_AUTO_TEST_CASE(prepared_composition_cache_obeys_its_budget_and_pads_short_
         math::compose_mod(actual, outer, cache, division, context);
         BOOST_CHECK(actual == expected);
 
+        // A temporary cache may use less prepared storage without changing this context or any existing cache.
+        // Its explicit cap cannot override the context's own limit.
+        for (std::size_t local_limit : {std::size_t(0), required - 1, required, required + 1}) {
+            const precomputation_type temporary(inner, outer.size(), division, context, local_limit);
+            BOOST_CHECK_EQUAL(temporary.prepared_coefficient_bytes(),
+                              std::min(limit, local_limit) >= required ? required : 0);
+            math::compose_mod(actual, outer, temporary, division, context);
+            BOOST_CHECK(actual == expected);
+            BOOST_CHECK_EQUAL(context.options().modular_composition_prepared_byte_limit, limit);
+            BOOST_CHECK_EQUAL(cache.prepared_coefficient_bytes(), limit >= required ? required : 0);
+        }
+
         // Check the shared single-block entry point too, including an existing accumulator and cancellation.
         for (std::size_t block = 0; block < 5; ++block) {
             const std::size_t first = block * 5;

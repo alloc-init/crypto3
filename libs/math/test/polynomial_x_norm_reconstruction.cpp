@@ -595,6 +595,50 @@ BOOST_AUTO_TEST_CASE(screening_preserves_even_multiplicities_and_rejects_odd_obs
     }
 }
 
+BOOST_AUTO_TEST_CASE(residual_certificate_preserves_norm_recovery_and_algebraic_rejection) {
+    polynomial_arithmetic::polynomial_context<backend_type> preparation;
+    auto nonic = [](std::size_t exponent) {
+        polynomial_type result(10, value_type::zero());
+        result.front() = -value_type(31).pow(exponent);
+        result.back() = value_type::one();
+        return result;
+    };
+    // 31 is a primitive generator. The nonics are irreducible; even powers have square roots of X in their
+    // quotient fields. Two unsuitable factors pass the scalar filters but still fail individual norm recovery.
+    const auto suitable = nonic(2);
+    const auto suitable_pair = context_multiply<backend_type>(suitable, nonic(4), preparation);
+    const auto unsuitable_pair = context_multiply<backend_type>(nonic(1), nonic(7), preparation);
+    for (const auto &input : {suitable, suitable_pair, unsuitable_pair}) {
+        BOOST_REQUIRE(input.front().is_square());
+        polynomial_arithmetic::polynomial_context_options options;
+        options.distinct_degree_certificate_minimum_excluded_degree = 1;
+        polynomial_arithmetic::polynomial_context<backend_type> enabled(backend_type {}, options), reference;
+        boost::random::mt19937 enabled_rng(0x52455349), reference_rng(0x52455349);
+        std::size_t enabled_calls = 0, reference_calls = 0;
+        auto enabled_generator = [&] {
+            ++enabled_calls;
+            return nil::crypto3::algebra::random_element<field_type>(enabled_rng);
+        };
+        auto reference_generator = [&] {
+            ++reference_calls;
+            return nil::crypto3::algebra::random_element<field_type>(reference_rng);
+        };
+        const auto actual =
+            math::recover_polynomial_x_norm_representation<backend_type>(input, enabled, enabled_generator);
+        const auto expected =
+            math::recover_polynomial_x_norm_representation<backend_type>(input, reference, reference_generator);
+        BOOST_REQUIRE_EQUAL(actual.has_value(), input != unsuitable_pair);
+        BOOST_REQUIRE_EQUAL(actual.has_value(), expected.has_value());
+        BOOST_CHECK_EQUAL(enabled_calls, reference_calls);
+        BOOST_CHECK(enabled_rng == reference_rng);
+        if (actual) {
+            BOOST_CHECK(actual->p == expected->p);
+            BOOST_CHECK(actual->q == expected->q);
+            BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*actual, enabled) == input);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(even_degree_trace_recovery_normalizes_scalars_and_consumes_only_retry_samples) {
     polynomial_arithmetic::polynomial_context<backend_type> context;
     // This irreducible quartic's root has trace zero; multiplying it by X gives trace -3.

@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -55,6 +56,8 @@ namespace nil::crypto3::math {
      * modular_composition_prepared_byte_limit bounds this optional payload; zero, insufficient space, or an
      * unsupported coefficient type keeps the scalar path. Prepared data is owned by this object and read-only
      * during composition. Copies own independent data; scratch belongs to each composition call.
+     * An optional constructor byte limit further caps the prepared payload of this cache without changing the
+     * arithmetic context or other caches. It does not bound ordinary cached powers or per-call scratch.
      *
      * @throws std::invalid_argument if maximum_outer_coefficient_count or the configured cached-power limit is zero,
      *         or if reducing inner requires more inverse coefficients than divisor_context stores.
@@ -71,7 +74,8 @@ namespace nil::crypto3::math {
         polynomial_composition_precomputation(
             const polynomial_type &inner, std::size_t maximum_outer_coefficient_count,
             const polynomial_divisor_context<backend_type> &divisor_context,
-            polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) :
+            polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context,
+            std::size_t prepared_byte_limit = std::numeric_limits<std::size_t>::max()) :
             maximum_outer_coefficient_count_(maximum_outer_coefficient_count) {
             if (maximum_outer_coefficient_count_ == 0) {
                 throw std::invalid_argument("the maximum outer coefficient count must be positive");
@@ -127,7 +131,8 @@ namespace nil::crypto3::math {
             }
             if constexpr (coefficient_cache_type::supported) {
                 prepared_coefficients_ = coefficient_cache_type(
-                    baby_steps_, arithmetic_context.options().modular_composition_prepared_byte_limit,
+                    baby_steps_,
+                    std::min(prepared_byte_limit, arithmetic_context.options().modular_composition_prepared_byte_limit),
                     arithmetic_context.options().modular_composition_simd_lanes);
             }
         }
