@@ -30,12 +30,14 @@
 #include <limits>
 #include <stdexcept>
 #include <tuple>
+#include <vector>
 
 #include <boost/test/unit_test.hpp>
 
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
+#include <nil/crypto3/algebra/fields/koalabear.hpp>
 
 #include <nil/crypto3/math/polynomial/arithmetic/gcd.hpp>
 #include <nil/crypto3/math/polynomial/backends/bn254_small_prime_fft_backend.hpp>
@@ -120,6 +122,110 @@ namespace {
         typename Backend::polynomial_type output;
         backend.multiply(output, left, right);
         return output;
+    }
+
+    // Independent of the accelerated division helper and its certificate: inspect the complete remainders.
+    template<typename Polynomial>
+    std::pair<Polynomial, bool> classical_chain(Polynomial first, Polynomial second) {
+        bool normal = first.size() > 1 && first.size() == second.size() + 1;
+        if (math::is_zero(first)) {
+            return {second, false};
+        }
+        if (first.size() < second.size()) {
+            std::swap(first, second);
+        }
+        while (!math::is_zero(second)) {
+            Polynomial quotient, remainder;
+            math::division(quotient, remainder, first, second);
+            normal = normal && first.size() == second.size() + 1 &&
+                     (math::is_zero(remainder) ? second.size() == 1 : second.size() == remainder.size() + 1);
+            first = std::move(second);
+            second = std::move(remainder);
+        }
+        return {first, normal && first.size() == 1 && !math::is_zero(first)};
+    }
+
+    // Test-only resultant oracle using a Sylvester determinant, not Euclidean recurrence. The existing static
+    // matrix elimination orders pivots by magnitude, which is not available for extension-field elements.
+    template<typename Polynomial>
+    typename Polynomial::value_type sylvester_resultant(const Polynomial &left, const Polynomial &right) {
+        using value_type = typename Polynomial::value_type;
+        const std::size_t m = left.size() - 1, n = right.size() - 1, size = m + n;
+        std::vector<std::vector<value_type>> matrix(size, std::vector<value_type>(size, value_type::zero()));
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t j = 0; j <= m; ++j) {
+                matrix[row][row + j] = left[m - j];
+            }
+        }
+        for (std::size_t row = 0; row < m; ++row) {
+            for (std::size_t j = 0; j <= n; ++j) {
+                matrix[n + row][row + j] = right[n - j];
+            }
+        }
+        value_type determinant = value_type::one();
+        for (std::size_t column = 0; column < size; ++column) {
+            std::size_t pivot = column;
+            while (pivot < size && matrix[pivot][column].is_zero()) {
+                ++pivot;
+            }
+            if (pivot == size) {
+                return value_type::zero();
+            }
+            if (pivot != column) {
+                std::swap(matrix[pivot], matrix[column]);
+                determinant = -determinant;
+            }
+            determinant *= matrix[column][column];
+            const value_type inverse = matrix[column][column].inversed();
+            for (std::size_t row = column + 1; row < size; ++row) {
+                const value_type scale = matrix[row][column] * inverse;
+                for (std::size_t j = column + 1; j < size; ++j) {
+                    matrix[row][j] -= scale * matrix[column][j];
+                }
+            }
+        }
+        return determinant;
+    }
+
+    template<typename Backend>
+    void check_chain(const typename Backend::polynomial_type &left, const typename Backend::polynomial_type &right,
+                     polynomial_arithmetic::polynomial_context<Backend> &context) {
+        using polynomial_type = typename Backend::polynomial_type;
+        const auto [last, normal] = classical_chain(left, right);
+        polynomial_type expected, actual;
+        if (math::is_zero(last)) {
+            expected = last;
+        } else {
+            math::make_monic(expected, last);
+        }
+        const auto certificate = math::gcd_with_normal_chain_certificate(actual, left, right, context);
+        BOOST_CHECK(actual == expected);
+        BOOST_REQUIRE_EQUAL(certificate.has_value(), normal);
+        if (certificate) {
+            BOOST_CHECK(*certificate == last[0]);
+        }
+        math::gcd(actual, left, right, context);
+        BOOST_CHECK(actual == expected);
+    }
+
+    // Build a known remainder sequence backwards. A chosen quadratic quotient creates a degree gap at an exact
+    // position, including positions that half-GCD visits only through truncated high parts.
+    std::pair<math::polynomial<fq_value_type>, math::polynomial<fq_value_type>> constructed_chain(std::size_t divisions,
+                                                                                                  std::size_t gap) {
+        using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+        using polynomial_type = backend_type::polynomial_type;
+        polynomial_type first {fq_value_type(7)}, second {fq_value_type::zero()};
+        for (std::size_t step = 1; step <= divisions; ++step) {
+            polynomial_type quotient {fq_value_type(step + 2), fq_value_type(step + 3)};
+            if (step == gap) {
+                quotient.push_back(fq_value_type(step + 4));
+            }
+            polynomial_type next;
+            math::addition(next, product(backend_type {}, quotient, first), second);
+            second = std::move(first);
+            first = std::move(next);
+        }
+        return {first, second};
     }
 
 }    // namespace
@@ -409,6 +515,195 @@ BOOST_AUTO_TEST_CASE(small_prime_half_gcd_uses_fused_matrices_and_preserves_the_
     BOOST_CHECK_GT(fused_counts.accepted[0], 0);
     BOOST_CHECK_GT(fused_counts.accepted[1], 0);
     BOOST_CHECK_GT(fused_counts.declined, 0);
+    BOOST_CHECK_EQUAL(fallback_counts.accepted[0], 0);
+    BOOST_CHECK_EQUAL(fallback_counts.accepted[1], 0);
+    BOOST_CHECK_GT(fallback_counts.declined, 0);
+}
+
+BOOST_AUTO_TEST_CASE(normal_chain_certificate_matches_classical_remainders_across_recursive_boundaries) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    for (const std::size_t divisions : {1, 2, 7, 8, 9, 31, 32, 33, 63, 64, 65, 127, 128, 129}) {
+        for (const std::size_t gap : {std::size_t(0), std::size_t(1), divisions / 2, divisions}) {
+            const auto [left, right] = constructed_chain(divisions, gap);
+            for (const std::size_t basecase : {0, 4, 8, 60}) {
+                polynomial_arithmetic::polynomial_context_options options;
+                options.gcd_half_gcd_cutoff = 1;
+                options.half_gcd_basecase_cutoff = basecase;
+                polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+                BOOST_TEST_CONTEXT("divisions=" << divisions << " gap=" << gap << " basecase=" << basecase) {
+                    check_chain(left, right, context);
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(normal_chain_certificate_agrees_with_independent_sylvester_resultants) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = backend_type::polynomial_type;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.gcd_half_gcd_cutoff = 1;
+    options.half_gcd_basecase_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+    for (std::size_t degree = 2; degree <= 9; ++degree) {
+        for (std::uint64_t seed = 1; seed <= 8; ++seed) {
+            const auto left = fq_polynomial(degree + 1, seed);
+            const auto right = fq_polynomial(degree, seed + 137);
+            const auto expected = sylvester_resultant(left, right);
+            polynomial_type common;
+            const auto certificate = math::gcd_with_normal_chain_certificate(common, left, right, context);
+            BOOST_REQUIRE(certificate.has_value());
+            BOOST_CHECK(!expected.is_zero());
+            BOOST_CHECK((expected * certificate->inversed()).is_square());
+            check_chain(left, right, context);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(normal_chain_certificate_preserves_the_raw_constant_and_is_alias_safe) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = backend_type::polynomial_type;
+    const auto [left, right] = constructed_chain(65, 0);
+    for (const std::size_t cutoff : {0, 1, 128}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.gcd_half_gcd_cutoff = cutoff;
+        options.half_gcd_basecase_cutoff = 4;
+        polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+        polynomial_type left_alias = left, right_alias = right;
+        const auto left_certificate = math::gcd_with_normal_chain_certificate(left_alias, left_alias, right, context);
+        const auto right_certificate = math::gcd_with_normal_chain_certificate(right_alias, left, right_alias, context);
+        BOOST_REQUIRE(left_certificate.has_value());
+        BOOST_REQUIRE(right_certificate.has_value());
+        BOOST_CHECK(*left_certificate == fq_value_type(7));
+        BOOST_CHECK(*right_certificate == fq_value_type(7));
+        BOOST_CHECK(left_alias == polynomial_type({fq_value_type::one()}));
+        BOOST_CHECK(right_alias == left_alias);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(normal_chain_certificate_declines_degenerate_and_repeated_factor_inputs) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = backend_type::polynomial_type;
+    const polynomial_type zero {fq_value_type::zero()}, constant {fq_value_type(3)};
+    const polynomial_type linear {fq_value_type(2), fq_value_type::one()};
+    const polynomial_type repeated = product(backend_type {}, linear, linear);
+    const polynomial_type cubic {fq_value_type::one(), fq_value_type::zero(), fq_value_type::zero(),
+                                 fq_value_type::one()};
+    polynomial_type repeated_derivative, cubic_derivative;
+    math::derivative(repeated_derivative, repeated);
+    math::derivative(cubic_derivative, cubic);
+    const std::array<std::pair<polynomial_type, polynomial_type>, 10> cases {std::pair {zero, zero},
+                                                                             std::pair {zero, linear},
+                                                                             std::pair {linear, zero},
+                                                                             std::pair {constant, constant},
+                                                                             std::pair {linear, linear},
+                                                                             std::pair {constant, linear},
+                                                                             std::pair {cubic, linear},
+                                                                             std::pair {repeated, repeated_derivative},
+                                                                             std::pair {cubic, cubic_derivative},
+                                                                             std::pair {linear, repeated}};
+    for (const std::size_t cutoff : {0, 1}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.gcd_half_gcd_cutoff = cutoff;
+        options.half_gcd_basecase_cutoff = 0;
+        polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+        for (const auto &[left, right] : cases) {
+            polynomial_type common;
+            BOOST_CHECK(!math::gcd_with_normal_chain_certificate(common, left, right, context).has_value());
+            check_chain(left, right, context);
+        }
+        check_chain(linear, constant, context);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(irregular_chain_constant_can_give_the_wrong_factor_parity) {
+    using value_type = fields::koalabear::value_type;
+    using backend_type = polynomial_arithmetic::schoolbook_backend<value_type>;
+    using polynomial_type = backend_type::polynomial_type;
+    // This field is 1 mod 4 and 2 mod 3. X^3+1 has two irreducible factors; its raw last constant is a square.
+    const polynomial_type input {value_type::one(), value_type::zero(), value_type::zero(), value_type::one()};
+    polynomial_type derivative, common;
+    math::derivative(derivative, input);
+    const auto [last, normal] = classical_chain(input, derivative);
+    BOOST_CHECK(!normal);
+    BOOST_CHECK(last == polynomial_type({value_type::one()}));
+    const auto discriminant = -sylvester_resultant(input, derivative);
+    BOOST_CHECK(discriminant == -value_type(27));
+    BOOST_CHECK(!discriminant.is_square());
+    polynomial_arithmetic::polynomial_context_options options;
+    options.gcd_half_gcd_cutoff = 1;
+    options.half_gcd_basecase_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+    BOOST_CHECK(!math::gcd_with_normal_chain_certificate(common, input, derivative, context).has_value());
+    BOOST_CHECK(common == polynomial_type({value_type::one()}));
+}
+
+BOOST_AUTO_TEST_CASE(prime_field_factor_parity_needs_the_discriminant_sign) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = backend_type::polynomial_type;
+    // (X-1)(X-2) has two factors and discriminant 1, but resultant(F,F') = -1 is not a square in BN254 Fp.
+    const polynomial_type input {fq_value_type(2), -fq_value_type(3), fq_value_type::one()};
+    polynomial_type derivative, common;
+    math::derivative(derivative, input);
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    const auto certificate = math::gcd_with_normal_chain_certificate(common, input, derivative, context);
+    BOOST_REQUIRE(certificate.has_value());
+    BOOST_CHECK(!certificate->is_square());
+    BOOST_CHECK((-*certificate).is_square());
+    BOOST_CHECK(sylvester_resultant(input, derivative) == -fq_value_type::one());
+}
+
+BOOST_AUTO_TEST_CASE(fp12_certificate_recovers_both_factor_count_parities) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using polynomial_type = backend_type::polynomial_type;
+    fq12_value_type nonsquare = fq12_value_type::zero();
+    for (std::size_t i = 1; i <= 32; ++i) {
+        const auto candidate = fq12_value(i);
+        if (!candidate.is_square()) {
+            nonsquare = candidate;
+            break;
+        }
+    }
+    BOOST_REQUIRE(!nonsquare.is_zero());
+    const polynomial_type irreducible_quadratic {(fq12_value_type::one() - nonsquare) * fq12_value_type(4).inversed(),
+                                                 fq12_value_type::one(), fq12_value_type::one()};
+    polynomial_arithmetic::polynomial_context_options options;
+    options.gcd_half_gcd_cutoff = 1;
+    options.half_gcd_basecase_cutoff = 0;
+    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+    for (const bool use_quadratic : {false, true}) {
+        polynomial_type input = use_quadratic ? irreducible_quadratic : polynomial_type {fq12_value_type::one()};
+        for (std::size_t linear_factors = 1; linear_factors <= 4; ++linear_factors) {
+            input = product(backend_type {}, input,
+                            polynomial_type {fq12_value_type(linear_factors + 5), fq12_value_type::one()});
+            polynomial_type derivative, common;
+            math::derivative(derivative, input);
+            const auto certificate = math::gcd_with_normal_chain_certificate(common, input, derivative, context);
+            BOOST_REQUIRE(certificate.has_value());
+            const auto resultant = sylvester_resultant(input, derivative);
+            BOOST_CHECK((resultant * certificate->inversed()).is_square());
+            const bool odd = ((input.size() - 1) % 2 != 0) != !certificate->is_square();
+            BOOST_CHECK_EQUAL(odd, (linear_factors + std::size_t(use_quadratic)) % 2 != 0);
+            check_chain(input, derivative, context);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(normal_chain_certificate_survives_fused_and_fallback_matrix_products) {
+    polynomial_arithmetic::polynomial_context_options options;
+    options.gcd_half_gcd_cutoff = 1;
+    options.half_gcd_basecase_cutoff = 8;
+    matrix_product_counts fused_counts, fallback_counts;
+    polynomial_arithmetic::polynomial_context<counting_matrix_backend> fused_context(
+        counting_matrix_backend(1024, fused_counts, 32 * 1024 * 1024), options);
+    polynomial_arithmetic::polynomial_context<counting_matrix_backend> fallback_context(
+        counting_matrix_backend(1024, fallback_counts, 0), options);
+    const auto left = fq12_polynomial(130, 0x123456789abcdefULL);
+    const auto right = fq12_polynomial(129, 0x31415926);
+    check_chain(left, right, fused_context);
+    check_chain(left, right, fallback_context);
+    BOOST_CHECK_GT(fused_counts.accepted[0], 0);
+    BOOST_CHECK_GT(fused_counts.accepted[1], 0);
     BOOST_CHECK_EQUAL(fallback_counts.accepted[0], 0);
     BOOST_CHECK_EQUAL(fallback_counts.accepted[1], 0);
     BOOST_CHECK_GT(fallback_counts.declined, 0);

@@ -25,6 +25,7 @@
 #define BOOST_TEST_MODULE distinct_degree_factorization_test
 
 #include <cstddef>
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -38,6 +39,7 @@
 #include <nil/crypto3/math/polynomial/factorization/kaltofen_shoup_distinct_degree_factorization.hpp>
 #include <nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
+#include <nil/crypto3/random/algebraic_engine.hpp>
 
 namespace {
     namespace math = nil::crypto3::math;
@@ -48,6 +50,45 @@ namespace {
     using fq_value_type = fq_field_type::value_type;
     using fq12_field_type = fields::fp12_2over3over2<fields::alt_bn128<254>>;
     using fq12_value_type = fq12_field_type::value_type;
+
+    struct counting_backend : polynomial_arithmetic::schoolbook_backend<fq_value_type> {
+        using base_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+        explicit counting_backend(std::size_t &calls) : calls(calls) {
+        }
+        void multiply(polynomial_type &out, const polynomial_type &a, const polynomial_type &b) const {
+            ++calls;
+            base_type::multiply(out, a, b);
+        }
+        void square(polynomial_type &out, const polynomial_type &a) const {
+            ++calls;
+            base_type::square(out, a);
+        }
+        void multiply_low(polynomial_type &out, const polynomial_type &a, const polynomial_type &b,
+                          std::size_t count) const {
+            ++calls;
+            base_type::multiply_low(out, a, b, count);
+        }
+        std::size_t &calls;
+    };
+
+    // Select a deterministic dense irreducible using the independent reference DDF. A binomial would always have
+    // a gapped derivative-GCD chain and would not exercise the public certificate-to-discovery handoff.
+    math::polynomial<fq_value_type> dense_irreducible() {
+        using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+        polynomial_arithmetic::polynomial_context<backend_type> context;
+        nil::crypto3::random::algebraic_engine<fq_field_type> generator(4819);
+        for (std::size_t attempt = 0; attempt < 64; ++attempt) {
+            backend_type::polynomial_type input(10, fq_value_type::one());
+            for (std::size_t i = 0; i < 9; ++i) {
+                input[i] = generator();
+            }
+            const auto factors = math::distinct_degree_factorization_reference<backend_type>(input, context);
+            if (factors.factors.size() == 1 && factors.factors.front().irreducible_factor_degree == 9) {
+                return input;
+            }
+        }
+        throw std::runtime_error("deterministic irreducible fixture search exhausted");
+    }
 
     fq12_value_type fq12_value(std::size_t first_coordinate) {
         fq12_value_type value = fq12_value_type::zero();
@@ -749,6 +790,118 @@ BOOST_AUTO_TEST_CASE(screening_preserves_full_fq12_groups_and_early_stops) {
     BOOST_CHECK(!result.complete);
     BOOST_CHECK(result == reference);
     BOOST_CHECK_EQUAL(callbacks, 2);
+}
+
+BOOST_AUTO_TEST_CASE(parity_bound_is_strict_and_does_not_overflow) {
+    for (std::size_t next : {1, 2, 87, 4873}) {
+        BOOST_CHECK(math::detail::kaltofen_shoup_requires_degree_test(3 * next, next, true));
+        BOOST_CHECK(!math::detail::kaltofen_shoup_requires_degree_test(3 * next - 1, next, true));
+        BOOST_CHECK(math::detail::kaltofen_shoup_requires_degree_test(3 * next - 1, next, false));
+        BOOST_CHECK(math::detail::kaltofen_shoup_requires_degree_test(3 * next - 1, next, std::nullopt));
+        BOOST_CHECK(!math::detail::kaltofen_shoup_requires_degree_test(2 * next - 1, next, false));
+    }
+    const auto maximum = std::numeric_limits<std::size_t>::max();
+    BOOST_CHECK(!math::detail::kaltofen_shoup_requires_degree_test(maximum, maximum / 3 + 1, true));
+    BOOST_CHECK(math::detail::kaltofen_shoup_requires_degree_test(maximum, maximum / 3, true));
+    BOOST_CHECK(!math::detail::kaltofen_shoup_requires_degree_test(0, 1, true));
+}
+
+BOOST_AUTO_TEST_CASE(parity_tracks_factor_counts_and_preserves_blocks_and_stop_prefixes) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = backend_type::polynomial_type;
+    using group_type = math::distinct_degree_factor<polynomial_type>;
+    backend_type backend;
+    const polynomial_type linear {fq_value_type(1), fq_value_type::one()};
+    const polynomial_type second_linear {fq_value_type(2), fq_value_type::one()};
+    const polynomial_type quadratic {-fq_value_type(3), fq_value_type::zero(), fq_value_type::one()};
+    const polynomial_type cubic {-fq_value_type(3), fq_value_type::zero(), fq_value_type::zero(), fq_value_type::one()};
+    const auto large = dense_irreducible();
+    const std::vector<polynomial_type> inputs {
+        large, multiply(backend, linear, large), multiply(backend, multiply(backend, linear, second_linear), large),
+        multiply(backend, quadratic, cubic), multiply(backend, multiply(backend, linear, quadratic), cubic)};
+    const std::vector<std::size_t> counts {1, 2, 3, 2, 3};
+    for (std::size_t index = 0; index < inputs.size(); ++index) {
+        polynomial_arithmetic::polynomial_context<backend_type> reference_context;
+        const auto expected =
+            math::distinct_degree_factorization_reference<backend_type>(inputs[index], reference_context);
+        for (std::size_t block : {1, 2, 3, 4}) {
+            for (std::size_t screening : {0, 1, 4}) {
+                polynomial_arithmetic::polynomial_context_options options;
+                options.distinct_degree_screening_limit = screening;
+                polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+                for (std::size_t stop = 0; stop <= expected.factors.size(); ++stop) {
+                    std::vector<group_type> collected;
+                    const auto result = math::detail::kaltofen_shoup_factor_monic_square_free(
+                        &collected, inputs[index], block, context,
+                        [&](const group_type &group) {
+                            BOOST_CHECK(&group == &collected.back());
+                            return collected.size() == stop ? math::factorization_control::stop_factorization :
+                                                              math::factorization_control::continue_factorization;
+                        },
+                        counts[index] % 2 != 0);
+                    const auto size = stop ? stop : expected.factors.size();
+                    BOOST_REQUIRE_EQUAL(collected.size(), size);
+                    BOOST_CHECK(std::equal(collected.begin(), collected.end(), expected.factors.begin()));
+                    BOOST_CHECK(result == (stop ? math::factorization_control::stop_factorization :
+                                                  math::factorization_control::continue_factorization));
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(parity_removes_polynomial_work_and_even_composites_keep_the_same_work) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = backend_type::polynomial_type;
+    backend_type backend;
+    const polynomial_type linear {fq_value_type(1), fq_value_type::one()};
+    const polynomial_type second_linear {fq_value_type(2), fq_value_type::one()};
+    const polynomial_type quadratic {-fq_value_type(3), fq_value_type::zero(), fq_value_type::one()};
+    const polynomial_type cubic {-fq_value_type(3), fq_value_type::zero(), fq_value_type::zero(), fq_value_type::one()};
+    const auto large = dense_irreducible();
+    const std::vector<polynomial_type> inputs {large, multiply(backend, linear, large),
+                                               multiply(backend, multiply(backend, linear, second_linear), large),
+                                               multiply(backend, quadratic, cubic)};
+    const std::vector<bool> parity {true, false, true, false};
+    for (std::size_t i = 0; i < inputs.size(); ++i) {
+        std::size_t baseline_calls = 0, candidate_calls = 0;
+        polynomial_arithmetic::polynomial_context_options options;
+        options.distinct_degree_screening_limit = 1;
+        polynomial_arithmetic::polynomial_context<counting_backend> baseline(counting_backend(baseline_calls), options);
+        polynomial_arithmetic::polynomial_context<counting_backend> candidate(counting_backend(candidate_calls),
+                                                                              options);
+        std::vector<math::distinct_degree_factor<polynomial_type>> before, after;
+        const auto proceed = [](const auto &) { return math::factorization_control::continue_factorization; };
+        math::detail::kaltofen_shoup_factor_monic_square_free(&before, inputs[i], 1, baseline, proceed);
+        math::detail::kaltofen_shoup_factor_monic_square_free(&after, inputs[i], 1, candidate, proceed, parity[i]);
+        BOOST_CHECK(before == after);
+        if (i < 3) {
+            BOOST_CHECK_LT(candidate_calls, baseline_calls);
+        } else {
+            BOOST_CHECK_EQUAL(candidate_calls, baseline_calls);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(public_discovery_uses_the_gcd_certificate_and_preserves_unknown_fallback) {
+    using backend_type = polynomial_arithmetic::schoolbook_backend<fq_value_type>;
+    using polynomial_type = backend_type::polynomial_type;
+    const auto input = dense_irreducible();
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    polynomial_type monic;
+    fq_value_type leading;
+    std::optional<bool> parity;
+    BOOST_REQUIRE(
+        math::detail::prepare_square_free_factorization_input<backend_type>(monic, leading, input, context, &parity));
+    BOOST_REQUIRE(parity.has_value());
+    BOOST_CHECK(*parity);
+    check_reference_and_kaltofen_shoup_agree(input, context, context);
+    const polynomial_type irregular {fq_value_type::one(), fq_value_type::zero(), fq_value_type::zero(),
+                                     fq_value_type::one()};
+    BOOST_REQUIRE(math::detail::prepare_square_free_factorization_input<backend_type>(monic, leading, irregular,
+                                                                                      context, &parity));
+    BOOST_CHECK(!parity.has_value());
+    check_reference_and_kaltofen_shoup_agree(irregular, context, context);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

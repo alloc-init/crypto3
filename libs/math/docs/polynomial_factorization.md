@@ -157,8 +157,9 @@ Its internal callback path also allows norm recovery to consume irreducible fact
 history. Square-free parts, active Frobenius precomputation, and pending equal-degree work remain available for the
 algorithm; this does not make its total memory use constant.
 
-By default, each nonlinear square-free part prepares the initial Frobenius power and full baby-step table before
-discovering groups. To screen small degrees first, set a numeric limit on the existing arithmetic options:
+Except for a quadratic already proved irreducible by factor-count parity, each nonlinear square-free part prepares
+the initial Frobenius power and full baby-step table before discovering groups by default. To screen small degrees
+first, set a numeric limit on the existing arithmetic options:
 
 ```cpp
 math::polynomial_arithmetic::polynomial_context_options options;
@@ -191,6 +192,37 @@ storage can therefore overlap a callback's own recovery caches even though the t
 longer overlap each other during the transition. Splitting copies the emitted group because distinct-degree
 refinement or screening still needs its original polynomial after the callback returns. No default screening bound
 is selected from the behavior of one candidate.
+
+## Factor-count parity and residual stopping
+
+Kaltofen-Shoup discovery and complete factorization reuse their initial square-free GCD to obtain an optional
+[normal-chain certificate](@ref math_polynomial_arithmetic). For a monic square-free input over an odd finite field
+whose values provide `is_square()`, one scalar square test, with the discriminant sign included, determines whether
+the number of irreducible factors is odd or even. This uses the existing GCD rather than computing a separate
+resultant. Linear inputs retain their square-free GCD but use their known odd factor count without a scalar square
+test. This adds no composition cache or random samples and needs no caller configuration.
+
+The parity belongs to the current square-free residual. Removing an exact-degree group of polynomial degree `m`,
+whose irreducible factors have degree `d`, removes `m / d` factors. Discovery flips the recorded parity exactly when
+that count is odd. It does not count an entire group as one factor or use the parity of its degree.
+
+Let `L` be the smallest untested factor degree and `R` the nonconstant residual. Once all smaller degrees are excluded:
+
+* Without certified odd parity, `degree(R) < 2 * L` proves that at most one irreducible factor remains.
+* With certified odd parity, a composite residual must contain at least three factors, so the stronger condition
+  `degree(R) < 3 * L` proves irreducibility.
+
+The inequalities are strict and implemented using division to avoid overflow. Screening and completed degree blocks
+can stop at the stronger bound, omitting later compositions, interval products, and GCDs. Existing block alignment
+and interval lengths are preserved: removing factors inside an interval can change odd parity to even, so shortening
+an interval and then skipping to the next full block would be unsound. The remaining irreducible factor is reported
+through the usual callback, preserving factor order, multiplicities, callback stops, and generator consumption.
+
+Unknown or even parity retains the ordinary two-factor bound. A gapped Euclidean chain leaves parity unknown;
+characteristic two and field values without a square test use the ordinary GCD path. For repeated inputs, complete
+factorization does not pass an input certificate to their square-free multiplicity components. The standalone
+square-free and reference distinct-degree APIs keep their ordinary GCD paths. Unknown parity never rejects an input,
+and factor-count parity alone does not establish norm recoverability.
 
 ## Preconditions and current restrictions
 

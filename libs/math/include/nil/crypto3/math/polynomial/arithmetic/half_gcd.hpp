@@ -35,6 +35,17 @@
 
 namespace nil::crypto3::math::detail {
 
+    // The ordinary arithmetic path instantiates an empty policy. A normal-chain certificate instead records every
+    // quotient, including those computed on truncated high parts during half-GCD recursion.
+    struct no_euclidean_chain_certificate {
+        void record_quotient(std::size_t) const noexcept {
+        }
+
+        template<typename Polynomial>
+        void finish(const Polynomial &) const noexcept {
+        }
+    };
+
     /*
      * Let A and B be the input polynomials, with A larger than B. One Euclidean division writes A = q * B + R,
      * where q is the quotient and R is the remainder, and replaces the pair (A, B) with (B, R). Acting on a column
@@ -83,12 +94,13 @@ namespace nil::crypto3::math::detail {
      *
      * @throws std::invalid_argument if the divisor is zero or has more coefficients than the dividend.
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, typename ChainCertificate>
     void gcd_divrem_step(typename Backend::polynomial_type &quotient,
                          typename Backend::polynomial_type &remainder_output,
                          const typename Backend::polynomial_type &dividend,
                          const typename Backend::polynomial_type &divisor,
-                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                         ChainCertificate &certificate) {
         if (is_zero(divisor)) {
             throw std::invalid_argument("gcd_divrem_step: divisor must be nonzero");
         }
@@ -103,6 +115,17 @@ namespace nil::crypto3::math::detail {
             polynomial_divisor_context<Backend> divisor_context(divisor, quotient_size, arithmetic_context);
             divrem(quotient, remainder_output, dividend, divisor_context, arithmetic_context);
         }
+        certificate.record_quotient(quotient.size());
+    }
+
+    template<SupportsDivrem Backend>
+    void gcd_divrem_step(typename Backend::polynomial_type &quotient,
+                         typename Backend::polynomial_type &remainder_output,
+                         const typename Backend::polynomial_type &dividend,
+                         const typename Backend::polynomial_type &divisor,
+                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        no_euclidean_chain_certificate certificate;
+        gcd_divrem_step(quotient, remainder_output, dividend, divisor, arithmetic_context, certificate);
     }
 
     /** Apply a 2-by-2 polynomial matrix to a polynomial pair. */
@@ -250,12 +273,13 @@ namespace nil::crypto3::math::detail {
      * transformation, apply Euclidean quotient steps until the second polynomial is zero or has at most half as many
      * coefficients as the original first polynomial. When requested, matrix accumulates the same quotient steps.
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, typename ChainCertificate>
     void half_gcd_basecase(half_gcd_matrix<Backend> *matrix, typename Backend::polynomial_type &first_output,
                            typename Backend::polynomial_type &second_output,
                            const typename Backend::polynomial_type &first,
                            const typename Backend::polynomial_type &second,
-                           polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                           polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                           ChainCertificate &certificate) {
         using polynomial_type = typename Backend::polynomial_type;
 
         const std::size_t target_second_size = first.size() / 2;
@@ -268,7 +292,7 @@ namespace nil::crypto3::math::detail {
         polynomial_type quotient;
         polynomial_type next_remainder;
         while (!is_zero(second_output) && second_output.size() > target_second_size) {
-            gcd_divrem_step(quotient, next_remainder, first_output, second_output, arithmetic_context);
+            gcd_divrem_step(quotient, next_remainder, first_output, second_output, arithmetic_context, certificate);
             first_output = std::move(second_output);
             second_output = std::move(next_remainder);
             if (matrix != nullptr) {
@@ -282,12 +306,13 @@ namespace nil::crypto3::math::detail {
      * input pair; recursive calls preserve those invariants. The transformation matrix is optional because plain GCD
      * needs only the reduced pair, while a future XGCD will also need the accumulated transformation.
      */
-    template<SupportsDivrem Backend>
+    template<SupportsDivrem Backend, typename ChainCertificate>
     void half_gcd_reduce_impl(half_gcd_matrix<Backend> *matrix, typename Backend::polynomial_type &first_output,
                               typename Backend::polynomial_type &second_output,
                               const typename Backend::polynomial_type &first,
                               const typename Backend::polynomial_type &second, std::size_t basecase_cutoff,
-                              polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+                              polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                              ChainCertificate &certificate) {
         using polynomial_type = typename Backend::polynomial_type;
 
         const std::size_t split = first.size() / 2;
@@ -300,7 +325,7 @@ namespace nil::crypto3::math::detail {
             return;
         }
         if (basecase_cutoff != 0 && first.size() <= basecase_cutoff) {
-            half_gcd_basecase(matrix, first_output, second_output, first, second, arithmetic_context);
+            half_gcd_basecase(matrix, first_output, second_output, first, second, arithmetic_context, certificate);
             return;
         }
 
@@ -313,7 +338,7 @@ namespace nil::crypto3::math::detail {
         polynomial_type transformed_high_first;
         polynomial_type transformed_high_second;
         half_gcd_reduce_impl(&first_matrix, transformed_high_first, transformed_high_second, high_first, high_second,
-                             basecase_cutoff, arithmetic_context);
+                             basecase_cutoff, arithmetic_context, certificate);
 
         polynomial_type reduced_first;
         polynomial_type reduced_second;
@@ -330,7 +355,7 @@ namespace nil::crypto3::math::detail {
 
         polynomial_type quotient;
         polynomial_type next_remainder;
-        gcd_divrem_step(quotient, next_remainder, reduced_first, reduced_second, arithmetic_context);
+        gcd_divrem_step(quotient, next_remainder, reduced_first, reduced_second, arithmetic_context, certificate);
         prepend_euclidean_step(first_matrix, quotient, arithmetic_context);
         if (is_zero(next_remainder)) {
             if (matrix != nullptr) {
@@ -352,7 +377,7 @@ namespace nil::crypto3::math::detail {
 
         half_gcd_matrix<Backend> second_matrix;
         half_gcd_reduce_impl(&second_matrix, transformed_high_first, transformed_high_second, high_reduced_second,
-                             high_next_remainder, basecase_cutoff, arithmetic_context);
+                             high_next_remainder, basecase_cutoff, arithmetic_context, certificate);
 
         reconstruct_half_gcd_pair(first_output, second_output, second_matrix, reduced_second, next_remainder,
                                   transformed_high_first, transformed_high_second, second_split, arithmetic_context);
@@ -390,7 +415,21 @@ namespace nil::crypto3::math::detail {
                          const typename Backend::polynomial_type &second, std::size_t basecase_cutoff,
                          polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
         validate_half_gcd_inputs<Backend>(first, second);
-        half_gcd_reduce_impl(&matrix, first_output, second_output, first, second, basecase_cutoff, arithmetic_context);
+        no_euclidean_chain_certificate certificate;
+        half_gcd_reduce_impl(&matrix, first_output, second_output, first, second, basecase_cutoff, arithmetic_context,
+                             certificate);
+    }
+
+    template<SupportsDivrem Backend, typename ChainCertificate>
+    void half_gcd_reduce(typename Backend::polynomial_type &first_output,
+                         typename Backend::polynomial_type &second_output,
+                         const typename Backend::polynomial_type &first,
+                         const typename Backend::polynomial_type &second, std::size_t basecase_cutoff,
+                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                         ChainCertificate &certificate) {
+        validate_half_gcd_inputs<Backend>(first, second);
+        half_gcd_reduce_impl<Backend>(nullptr, first_output, second_output, first, second, basecase_cutoff,
+                                      arithmetic_context, certificate);
     }
 
     /**
@@ -404,9 +443,8 @@ namespace nil::crypto3::math::detail {
                          const typename Backend::polynomial_type &first,
                          const typename Backend::polynomial_type &second, std::size_t basecase_cutoff,
                          polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
-        validate_half_gcd_inputs<Backend>(first, second);
-        half_gcd_reduce_impl<Backend>(nullptr, first_output, second_output, first, second, basecase_cutoff,
-                                      arithmetic_context);
+        no_euclidean_chain_certificate certificate;
+        half_gcd_reduce(first_output, second_output, first, second, basecase_cutoff, arithmetic_context, certificate);
     }
 
 }    // namespace nil::crypto3::math::detail

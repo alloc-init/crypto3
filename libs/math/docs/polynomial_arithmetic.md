@@ -13,7 +13,7 @@ The main dependency chain is:
 | Multiplication | `PolynomialBackend`, `schoolbook_backend`, `mixed_radix_backend`, `bn254_small_prime_fft_backend` |
 | Arithmetic lifetime | `polynomial_context` and `polynomial_context_options` |
 | Division | `inverse_series`, `polynomial_divisor_context`, `divrem`, `remainder`, `exact_division` |
-| GCD | `gcd`, with optional internal half-GCD reduction |
+| GCD | `gcd`, `gcd_with_normal_chain_certificate`, with optional internal half-GCD reduction |
 | Quotient ring | `mulmod`, `squaremod`, `powmod`, `powmod_x` |
 | Modular composition | `compose_mod_reference`, `polynomial_composition_precomputation`, `compose_mod` |
 | Frobenius | `polynomial_frobenius_context`, `frobenius_map`, `frobenius_product`, `frobenius_weighted_sum` |
@@ -337,6 +337,29 @@ inputs. A declined operation leaves all outputs unchanged, and half-GCD uses ord
 Half-GCD reduces the number of sequential Euclidean divisions but introduces polynomial-matrix products and temporary
 storage. It is therefore not unconditionally faster; its cutoff should be tuned for the active backend and coefficient
 field.
+
+### Optional normal-chain certificate
+
+`gcd_with_normal_chain_certificate(output, left, right, arithmetic_context)` computes the same canonical monic GCD,
+with the same input and aliasing requirements, and returns an optional coefficient-field value. A value is available
+only when the inputs have degrees `n` and `n - 1`, all `n` Euclidean quotients are linear, and the final nonzero
+remainder is a constant `c`. The returned value is `c` before monic normalization; it represents
+`resultant(left, right)` modulo nonzero squares.
+
+For consecutive remainder degrees `d`, `d - 1`, and `d - 2`, the resultant recurrence contributes a squared leading
+coefficient and sign `(-1)^(d*(d - 1)) = 1`. The final resultant of a linear polynomial and `c` is `c`, proving the
+square-class identity. The implementation records quotient sizes and the total division count, including recursive
+high-part steps. A truncated remainder's degree alone does not certify the complete chain.
+
+An irregular chain, a nonconstant GCD, or an unsuitable input-degree pair returns `std::nullopt` while still computing
+the GCD. Absence carries no information about irreducibility or square class. The ordinary `gcd` path uses an empty
+certificate policy. Neither path stores a remainder history or performs another polynomial GCD.
+
+The certificate itself performs no quadratic-character test. For monic square-free `F` of degree `n` over an odd
+finite field, use `left = F` and `right = F'`. If `r` is its irreducible-factor count and `chi` the quadratic character,
+then `(-1)^r = (-1)^n * chi((-1)^(n*(n - 1)/2) * c)`. The discriminant sign matters in general fields; it is a square
+in BN254 Fp12. [Factor discovery](@ref math_polynomial_factorization) uses this relation to strengthen its stopping
+bound when a certificate is available.
 
 ## Quotient-ring arithmetic
 
