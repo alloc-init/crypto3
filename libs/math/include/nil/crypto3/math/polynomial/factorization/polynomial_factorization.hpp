@@ -139,6 +139,11 @@ namespace nil::crypto3::math {
                         return std::nullopt;
                     }
                     const auto degree = monic_input.size() - 1;
+                    // A linear polynomial has exactly one irreducible factor. Its square-free GCD is still needed,
+                    // but testing the resulting constant one for squareness would only add a field exponentiation.
+                    if (degree == 1) {
+                        return true;
+                    }
                     if (degree % 4 >= 2) {
                         *certificate = -*certificate;
                     }

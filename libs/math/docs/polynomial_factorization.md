@@ -199,7 +199,8 @@ Kaltofen-Shoup discovery and complete factorization reuse their initial square-f
 [normal-chain certificate](@ref math_polynomial_arithmetic). For a monic square-free input over an odd finite field
 whose values provide `is_square()`, one scalar square test, with the discriminant sign included, determines whether
 the number of irreducible factors is odd or even. This uses the existing GCD rather than computing a separate
-resultant. It adds no composition cache or random samples and needs no caller configuration.
+resultant. Linear inputs retain their square-free GCD but use their known odd factor count without a scalar square
+test. This adds no composition cache or random samples and needs no caller configuration.
 
 The parity belongs to the current square-free residual. Removing an exact-degree group of polynomial degree `m`,
 whose irreducible factors have degree `d`, removes `m / d` factors. Discovery flips the recorded parity exactly when
