@@ -72,6 +72,21 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // A positive request is capped by the cached-power limit and maximum outer coefficient count. Larger blocks
         // trade more cache construction and storage for fewer giant-step products when the cache is reused.
         std::size_t modular_composition_block_size = 0;
+
+        // Try an exact residual irreducibility certificate after at least this factor degree has been excluded.
+        // Zero disables certificate attempts. The threshold is checked at completed Kaltofen-Shoup block boundaries;
+        // it is a caller-selected policy, not a prediction that the remaining polynomial is irreducible.
+        std::size_t distinct_degree_certificate_minimum_excluded_degree = 0;
+
+        // Bound attempts in one distinct-degree discovery invocation. A failed certificate is never retried on the
+        // same residual; further attempts require factor removal and remaining budget. Zero disables attempts.
+        std::size_t distinct_degree_certificate_maximum_attempts = 1;
+
+        // Additional prepared-coefficient payload allowed for the certificate's temporary composition cache, capped
+        // by modular_composition_prepared_byte_limit. Zero uses scalar coefficient combinations. Ordinary cached
+        // powers and arithmetic scratch are additional: this is not a process-RSS limit. The cache is destroyed
+        // before discovery resumes or a certified residual is passed to a factor callback.
+        std::size_t distinct_degree_certificate_prepared_byte_limit = 0;
     };
 
     /**

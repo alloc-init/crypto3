@@ -36,6 +36,7 @@
 
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
+#include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 
 #include <nil/crypto3/math/polynomial/factorization/complete_factorization.hpp>
@@ -350,6 +351,66 @@ BOOST_AUTO_TEST_CASE(incremental_groups_preserve_factor_order_multiplicities_and
             return std::string(error.what()) == "coefficient generator failure";
         });
         BOOST_CHECK_EQUAL(callback_count, 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(residual_certificate_preserves_shared_rng_multiplicities_and_callback_stops) {
+    using small_value = fields::babybear::value_type;
+    using small_backend = polynomial_arithmetic::schoolbook_backend<small_value>;
+    using small_polynomial = small_backend::polynomial_type;
+    using factor_type = math::polynomial_factor<small_polynomial>;
+    small_backend backend;
+    const small_polynomial cubic {-small_value(31), small_value::zero(), small_value::zero(), small_value::one()};
+    auto second_cubic = cubic;
+    second_cubic.front() = -small_value(31).pow(7);
+    small_polynomial nonic(10, small_value::zero());
+    nonic.front() = -small_value(31);
+    nonic.back() = small_value::one();
+    const small_polynomial linear {small_value::one(), small_value::one()};
+    const std::vector<factor_type> factors {{second_cubic, 1}, {cubic, 1}, {nonic, 1}, {linear, 2}};
+    small_polynomial input {small_value::one()};
+    for (const auto &factor : factors)
+        for (std::size_t i = 0; i < factor.multiplicity; ++i)
+            input = multiply(backend, input, factor.polynomial);
+    // The first six samples make the splitter select cubic. Callbacks consume the following four samples.
+    const std::vector<small_value> samples {
+        -small_value(31),    small_value::zero(), small_value::zero(), small_value::one(), small_value::zero(),
+        small_value::zero(), small_value(101),    small_value(102),    small_value(103),   small_value(104)};
+    for (bool enable : {false, true}) {
+        for (std::size_t stop_after = 0; stop_after <= factors.size(); ++stop_after) {
+            for (bool collect : {false, true}) {
+                polynomial_arithmetic::polynomial_context_options options;
+                options.distinct_degree_certificate_minimum_excluded_degree = enable ? 1 : 0;
+                polynomial_arithmetic::polynomial_context<small_backend> context(small_backend {}, options);
+                std::size_t consumed = 0;
+                auto generator = [&] { return samples.at(consumed++); };
+                std::vector<factor_type> reported;
+                auto callback = [&](const auto &factor) {
+                    reported.push_back(factor);
+                    BOOST_CHECK(generator() == small_value(100 + reported.size()));
+                    return reported.size() == stop_after ? math::factorization_control::stop_factorization :
+                                                           math::factorization_control::continue_factorization;
+                };
+                bool complete;
+                if (collect) {
+                    const auto result =
+                        math::complete_factorization<small_backend>(input, context, generator, callback);
+                    BOOST_CHECK(result.factors == reported);
+                    complete = result.complete;
+                } else {
+                    small_value leading;
+                    complete = math::detail::complete_factorization_impl<small_backend>(leading, input, context,
+                                                                                        generator, callback) ==
+                               math::factorization_control::continue_factorization;
+                    BOOST_CHECK(leading == small_value::one());
+                }
+                BOOST_REQUIRE_EQUAL(reported.size(), stop_after == 0 ? factors.size() : stop_after);
+                for (std::size_t i = 0; i < reported.size(); ++i)
+                    BOOST_CHECK(reported[i] == factors[i]);
+                BOOST_CHECK_EQUAL(complete, stop_after == 0);
+                BOOST_CHECK_EQUAL(consumed, 6 + reported.size());
+            }
+        }
     }
 }
 

@@ -104,6 +104,9 @@ Several independent options affect the work in this pipeline:
 |---|---|---|
 | `gcd_half_gcd_cutoff` | Recursive half-GCD during square-free decomposition, screening, and splitting | 0: disabled |
 | `distinct_degree_screening_limit` | Early degree checks before the full baby table | 0: disabled |
+| `distinct_degree_certificate_minimum_excluded_degree` | Minimum excluded factor degree before trying a residual irreducibility certificate at a completed block boundary | 0: disabled |
+| `distinct_degree_certificate_maximum_attempts` | Certificate attempts per square-free part; another attempt requires factor removal | 1; zero disables attempts |
+| `distinct_degree_certificate_prepared_byte_limit` | Prepared coefficient payload for the certificate's temporary cache, also capped by the general composition budget | 0: scalar combinations |
 | `modular_composition_cached_power_limit` | Baby powers retained by each Brent-Kung composition cache | Maximum `size_t`: permits the usual square-root block size |
 | `modular_composition_block_size` | Explicit Brent-Kung block size, capped by the cached-power limit and maximum outer coefficient count | 0: automatic square-root heuristic |
 | `modular_composition_prepared_byte_limit` | Additional prepared Fp12 coefficient combinations | 0: disabled |
@@ -223,6 +226,45 @@ characteristic two and field values without a square test use the ordinary GCD p
 factorization does not pass an input certificate to their square-free multiplicity components. The standalone
 square-free and reference distinct-degree APIs keep their ordinary GCD paths. Unknown parity never rejects an input,
 and factor-count parity alone does not establish norm recoverability.
+
+## Optional residual irreducibility certificate
+
+Long discovery scans can finish early when the remaining polynomial is irreducible. Set
+`distinct_degree_certificate_minimum_excluded_degree` to a positive, caller-selected threshold to permit an exact
+certificate at completed Kaltofen-Shoup block boundaries. Zero disables this feature. The threshold counts factor
+degrees already excluded, not elapsed time or the number of factors removed. It is not an automatic profitability
+prediction. The parity-aware stopping rule above takes precedence when it already proves irreducibility.
+Certified even factor count rules out irreducibility, so discovery skips the certificate without consuming an
+attempt. Removing factors updates parity before the next block boundary. Unknown parity retains the bounded
+certificate policy, and odd parity alone does not guarantee that an attempt will succeed.
+
+For a monic square-free residual R of degree n over a field with Q elements, the certificate checks
+`X^(Q^n) = X mod R` and `gcd(R, X^(Q^(n/p)) - X) = 1` for every distinct prime divisor p of n. A proper-degree check
+whose target `n/p` is already excluded is unnecessary. The remaining checks are necessary and sufficient, including
+for prime-power and composite n and for residuals with an odd number of factors.
+
+The implementation reuses the original discovery modulus B, baby powers `h[0..b]`, and current giant power `h[D]`,
+where `h[k] = X^(Q^k) mod B`. One temporary composition cache for a larger jump `h[b*s]` completes the required powers.
+Its schedule minimizes the number of compositions within this one-cache strategy, sharing equal remainder images.
+That operation-count objective does not model cache construction, GCD costs, or a smaller-modulus alternative.
+Because R divides B, reducing these powers modulo R preserves the certificate identities.
+
+A successful certificate emits R through the existing factor callback. A failed certificate means only that R is
+composite: discovery resumes at the next untested degree block. It never rejects a norm-recovery input. The attempt
+budget defaults to one per square-free part. Even with a larger budget, a failed attempt is not repeated on the same
+residual; a factor must first be removed. The certificate uses no RNG and preserves factor order, multiplicities,
+callback stops and the caller's shared generator state.
+
+`distinct_degree_certificate_prepared_byte_limit` further caps the prepared coefficient payload of the extra cache,
+without changing the existing discovery cache. Zero selects scalar combinations. Ordinary cached powers and scratch
+remain additional memory. The temporary cache is destroyed before a factor callback or a resumed scan, although an
+allocator can retain released memory in process RSS. The original discovery table and its giant-step cache remain
+alive during callbacks as described above.
+
+Failed attempts add work, including on inputs whose norm recovery eventually succeeds. The feature therefore remains
+opt-in until a caller has measured its trigger policy across representative successes and rejections. Comparisons
+must include the failed attempt plus fallback scan. Saved-checkpoint comparisons do not establish the latency or
+profitability of a fresh grinding run.
 
 ## Preconditions and current restrictions
 

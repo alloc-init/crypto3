@@ -28,12 +28,16 @@
 #include <algorithm>
 #include <concepts>
 #include <cstddef>
+#include <limits>
+#include <map>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <utility>
 #include <vector>
 
 #include <nil/crypto3/math/detail/integer_sqrt.hpp>
+#include <nil/crypto3/math/algorithms/unity_root.hpp>
 #include <nil/crypto3/math/polynomial/factorization/distinct_degree_factorization.hpp>
 #include <nil/crypto3/math/polynomial/arithmetic/gcd.hpp>
 #include <nil/crypto3/math/polynomial/factorization/polynomial_factorization.hpp>
@@ -189,6 +193,153 @@ namespace nil::crypto3::math::detail {
         polynomial_composition_precomputation<backend_type> block_frobenius_precomputation_;
     };
 
+    struct kaltofen_shoup_residual_certificate_plan {
+        std::vector<std::size_t> targets;
+        std::size_t jump_blocks = 0;
+        std::size_t construction_compositions = 0;
+        std::size_t remainder_compositions = 0;
+        std::size_t jump_compositions = 0;
+    };
+
+    /**
+     * Schedule Rabin's irreducibility criterion using h[0..b], h[excluded_degree], and one additional composition
+     * cache for h[b*s]. Here h[k] = X^(Q^k) modulo the original discovery modulus. Each target k is decomposed as
+     * k = q*b*s + a*b + t, with a < s and t < b. Identical (a,t) remainder images are shared across checks.
+     * Minimize composition count within this one-cache schedule; cache construction and GCD costs are not modeled.
+     * Checks at n/p <= excluded_degree are already implied by completed degree discovery and can be omitted.
+     */
+    inline kaltofen_shoup_residual_certificate_plan
+        kaltofen_shoup_plan_residual_certificate(std::size_t degree, std::size_t block_size,
+                                                 std::size_t excluded_degree) {
+        if (degree == 0 || block_size == 0 || excluded_degree < block_size || excluded_degree % block_size != 0) {
+            throw std::invalid_argument(
+                "a residual certificate requires a positive degree and a completed degree block");
+        }
+        kaltofen_shoup_residual_certificate_plan best;
+        if (excluded_degree >= degree / 2) {
+            return best;
+        }
+        best.targets.push_back(degree);
+        for (const auto prime : distinct_prime_factors(degree)) {
+            if (degree / prime > excluded_degree) {
+                best.targets.push_back(degree / prime);
+            }
+        }
+        const auto current_blocks = excluded_degree / block_size;
+        auto best_cost = std::numeric_limits<std::size_t>::max();
+        // Jumps beyond the largest target cannot be used and are dominated by a jump at degree/block_size.
+        // The product jump_blocks * block_size is consequently bounded by degree.
+        for (std::size_t jump_blocks = 2; jump_blocks <= degree / block_size; ++jump_blocks) {
+            const auto construction = jump_blocks >= current_blocks ? jump_blocks - current_blocks : jump_blocks - 1;
+            std::set<std::pair<std::size_t, std::size_t>> remainders;
+            std::size_t large = 0;
+            for (const auto target : best.targets) {
+                remainders.emplace((target / block_size) % jump_blocks, target % block_size);
+                large += target / (block_size * jump_blocks);
+            }
+            std::size_t small = 0;
+            for (const auto &[steps, remainder] : remainders) {
+                small += steps;
+            }
+            const auto cost = construction + small + large;
+            if (cost < best_cost) {
+                best_cost = cost;
+                best.jump_blocks = jump_blocks;
+                best.construction_compositions = construction;
+                best.remainder_compositions = small;
+                best.jump_compositions = large;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Test a remaining square-free polynomial R for irreducibility using the existing discovery state for B.
+     * Check h[n] = X modulo R, then gcd(R, h[n/p] - X) = 1 for each distinct prime divisor p of n = degree(R)
+     * whose target is not already excluded. These conditions are necessary and sufficient. Coefficients are fixed
+     * by the Q-power Frobenius, so h[a+b] = h[a](h[b]) modulo B; reduction to its factor R preserves the identity.
+     * False means R is composite, not that factorization or norm recovery has failed. Caller-owned state and RNG
+     * are unchanged. The temporary cache is released on either return before discovery or callbacks continue.
+     *
+     * @pre R is monic, square-free, nonconstant, divides B, and has no factor of degree <= excluded_degree.
+     * @pre precomputation and divisor_context represent the same B; giant_step is h[excluded_degree] modulo B.
+     * @pre excluded_degree is a positive multiple of precomputation.block_size().
+     */
+    template<SupportsDivrem Backend>
+    bool kaltofen_shoup_certify_residual(const typename Backend::polynomial_type &remaining,
+                                         const typename Backend::polynomial_type &giant_step,
+                                         std::size_t excluded_degree,
+                                         const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
+                                         const polynomial_divisor_context<Backend> &divisor_context,
+                                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using value_type = typename polynomial_type::value_type;
+        const auto block_size = precomputation.block_size();
+        const auto plan = kaltofen_shoup_plan_residual_certificate(remaining.size() - 1, block_size, excluded_degree);
+        if (plan.targets.empty()) {
+            return true;
+        }
+        const polynomial_divisor_context<Backend> residual_divisor(
+            remaining, std::max<std::size_t>(1, divisor_context.divisor().size() - remaining.size()),
+            arithmetic_context);
+        const auto jump_exponent = block_size * plan.jump_blocks;
+        auto exponent = plan.jump_blocks >= excluded_degree / block_size ? excluded_degree : block_size;
+        polynomial_type jump =
+            plan.jump_blocks >= excluded_degree / block_size ? giant_step : precomputation.baby_step(block_size);
+        for (; exponent < jump_exponent; exponent += block_size) {
+            precomputation.apply_block_frobenius(jump, jump, divisor_context, arithmetic_context);
+        }
+        const polynomial_composition_precomputation<Backend> extra_cache(
+            jump, divisor_context.degree(), divisor_context, arithmetic_context,
+            arithmetic_context.options().distinct_degree_certificate_prepared_byte_limit);
+        std::map<std::pair<std::size_t, std::size_t>, polynomial_type> remainders;
+        const polynomial_type x {value_type {}, value_type::one()};
+        for (std::size_t index = 0; index < plan.targets.size(); ++index) {
+            const auto target = plan.targets[index];
+            const auto key = std::make_pair((target / block_size) % plan.jump_blocks, target % block_size);
+            auto [entry, inserted] = remainders.try_emplace(key);
+            if (inserted) {
+                entry->second = precomputation.baby_step(key.second);
+                for (std::size_t step = 0; step < key.first; ++step) {
+                    precomputation.apply_block_frobenius(entry->second, entry->second, divisor_context,
+                                                         arithmetic_context);
+                }
+            }
+            polynomial_type image = entry->second;
+            for (std::size_t step = 0; step < target / jump_exponent; ++step) {
+                compose_mod(image, image, extra_cache, divisor_context, arithmetic_context);
+            }
+            polynomial_type difference;
+            subtraction(difference, image, x);
+            if (index == 0) {
+                polynomial_type residual_image;
+                remainder(residual_image, difference, residual_divisor, arithmetic_context);
+                if (!is_zero(residual_image)) {
+                    return false;
+                }
+            } else {
+                polynomial_type common;
+                gcd(common, remaining, difference, arithmetic_context);
+                if (common != polynomial_type {value_type::one()}) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    struct kaltofen_shoup_residual_certificate_state {
+        std::size_t attempts = 0;
+        std::size_t last_attempted_degree = 0;
+
+        bool should_attempt(std::size_t degree, std::size_t excluded_degree,
+                            const polynomial_arithmetic::polynomial_context_options &options) const {
+            return options.distinct_degree_certificate_minimum_excluded_degree != 0 &&
+                   excluded_degree >= options.distinct_degree_certificate_minimum_excluded_degree &&
+                   attempts < options.distinct_degree_certificate_maximum_attempts && degree != last_attempted_degree;
+        }
+    };
+
     /**
      * Extract one coarse Kaltofen-Shoup degree block. Let the coefficient field contain Q elements, let B be the
      * modulus in divisor_context, and let precomputation store h[i] = X^(Q^i) mod B for a block of size b. For
@@ -306,6 +457,103 @@ namespace nil::crypto3::math::detail {
     }
 
     /**
+     * Continue degree discovery at a completed block boundary, reusing the original modulus and Frobenius table.
+     * A successful certificate reaches the ordinary residual callback; a failed attempt leaves the scan state
+     * intact and resumes the next degree block. The attempt budget persists across residual changes in this call.
+     * The parity stopping bound takes precedence over a certificate. Certified even residuals skip the attempt
+     * without spending its budget; unknown parity retains the bounded certificate policy.
+     *
+     * @pre unclassified is monic, square-free, nonconstant, divides B, and excludes degrees <= excluded_degree.
+     * @pre excluded_degree is zero or a multiple of the table's block size; giant_step = h[excluded_degree] mod B.
+     * @pre divisor_context and precomputation represent the same B.
+     * @pre odd_factor_count, when present, is certified for unclassified.
+     */
+    template<SupportsDivrem Backend, typename FactorCallback>
+        requires DistinctDegreeFactorCallback<FactorCallback, typename Backend::polynomial_type>
+    factorization_control kaltofen_shoup_continue_discovery(
+        std::vector<distinct_degree_factor<typename Backend::polynomial_type>> *output,
+        typename Backend::polynomial_type unclassified, std::size_t excluded_degree,
+        typename Backend::polynomial_type giant_step,
+        const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
+        const polynomial_divisor_context<Backend> &divisor_context,
+        polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context, FactorCallback &&factor_callback,
+        kaltofen_shoup_residual_certificate_state &certificate_state,
+        std::optional<bool> odd_factor_count = std::nullopt) {
+        using polynomial_type = typename Backend::polynomial_type;
+        const auto block_size = precomputation.block_size();
+        if (excluded_degree % block_size != 0) {
+            throw std::invalid_argument("continued discovery requires a completed degree block");
+        }
+        const auto report_group = [&](const distinct_degree_factor<polynomial_type> &group) {
+            if (odd_factor_count) {
+                const auto removed_count = (group.polynomial.size() - 1) / group.irreducible_factor_degree;
+                *odd_factor_count = *odd_factor_count != (removed_count % 2 != 0);
+            }
+            return factor_callback(group);
+        };
+        while (excluded_degree < unclassified.size() - 1 &&
+               kaltofen_shoup_requires_degree_test(unclassified.size() - 1, excluded_degree + 1, odd_factor_count)) {
+            const auto remaining_degree = unclassified.size() - 1;
+            if (odd_factor_count.value_or(true) &&
+                certificate_state.should_attempt(remaining_degree, excluded_degree, arithmetic_context.options())) {
+                ++certificate_state.attempts;
+                certificate_state.last_attempted_degree = remaining_degree;
+                if (kaltofen_shoup_certify_residual(unclassified, giant_step, excluded_degree, precomputation,
+                                                    divisor_context, arithmetic_context)) {
+                    break;
+                }
+            }
+            // Keep the original fixed block alignment, including when screened degrees are revisited.
+            const auto first_factor_degree = excluded_degree + 1;
+            if (excluded_degree == 0) {
+                giant_step = precomputation.baby_step(block_size);
+            } else {
+                precomputation.apply_block_frobenius(giant_step, giant_step, divisor_context, arithmetic_context);
+            }
+            // A removal can switch odd parity to even, so preserve the original half-degree interval length.
+            const std::size_t maximum_degree_to_test = (unclassified.size() - 1) / 2;
+            const std::size_t degree_count = std::min(block_size, maximum_degree_to_test - first_factor_degree + 1);
+
+            polynomial_type coarse_block;
+            kaltofen_shoup_coarse_block_factor(coarse_block, unclassified, giant_step, degree_count, precomputation,
+                                               divisor_context, arithmetic_context);
+            if (coarse_block.size() > 1) {
+                polynomial_type quotient;
+                factorization_exact_quotient(quotient, unclassified, coarse_block, arithmetic_context);
+                unclassified = std::move(quotient);
+
+                const std::size_t coarse_block_degree = coarse_block.size() - 1;
+                // Every irreducible factor in this block has degree at least first_factor_degree. If the block's total
+                // degree is less than twice that bound, it cannot contain two factors and is itself irreducible.
+                if (coarse_block_degree / 2 < first_factor_degree) {
+                    distinct_degree_factor<polynomial_type> group {std::move(coarse_block), coarse_block_degree};
+                    const auto &reported = output ? output->emplace_back(std::move(group)) : group;
+                    if (report_group(reported) == factorization_control::stop_factorization) {
+                        return factorization_control::stop_factorization;
+                    }
+                } else if (kaltofen_shoup_split_coarse_block(output, std::move(coarse_block), giant_step,
+                                                             first_factor_degree, degree_count, precomputation,
+                                                             arithmetic_context, report_group) ==
+                           factorization_control::stop_factorization) {
+                    return factorization_control::stop_factorization;
+                }
+            }
+
+            excluded_degree += block_size;
+        }
+
+        if (unclassified.size() > 1) {
+            const std::size_t irreducible_factor_degree = unclassified.size() - 1;
+            distinct_degree_factor<polynomial_type> group {std::move(unclassified), irreducible_factor_degree};
+            const auto &reported = output ? output->emplace_back(std::move(group)) : group;
+            if (report_group(reported) == factorization_control::stop_factorization) {
+                return factorization_control::stop_factorization;
+            }
+        }
+        return factorization_control::continue_factorization;
+    }
+
+    /**
      * Factor a monic square-free polynomial into distinct-degree groups using an explicit Kaltofen-Shoup block size.
      * For each consecutive degree block, the algorithm computes one coarse GCD, removes that block from the
      * unclassified polynomial, and immediately fine-splits it. Interleaving the coarse and fine phases avoids storing
@@ -411,59 +659,11 @@ namespace nil::crypto3::math::detail {
         auto divisor_context = frobenius_context.divisor_context();
         initial_frobenius.reset();
         precomputation_type precomputation(std::move(baby_steps), divisor_context, arithmetic_context);
-        polynomial_type giant_step = precomputation.baby_step(block_size);
-
-        // Keep the original degree-block alignment. The first block may revisit screened degrees, but their factors
-        // have been removed from unclassified and therefore cannot be emitted twice.
-        std::size_t first_factor_degree = 1;
-        while (requires_degree_test(first_factor_degree)) {
-            // Keep the old interval length even with odd parity. A removal can switch back to the two-factor bound;
-            // shortening an interval to degree(R)/3 and then advancing by block_size would skip untested degrees.
-            const std::size_t maximum_degree_to_test = (unclassified.size() - 1) / 2;
-            const std::size_t degree_count = std::min(block_size, maximum_degree_to_test - first_factor_degree + 1);
-
-            polynomial_type coarse_block;
-            kaltofen_shoup_coarse_block_factor(coarse_block, unclassified, giant_step, degree_count, precomputation,
-                                               divisor_context, arithmetic_context);
-            if (coarse_block.size() > 1) {
-                polynomial_type quotient;
-                factorization_exact_quotient(quotient, unclassified, coarse_block, arithmetic_context);
-                unclassified = std::move(quotient);
-
-                const std::size_t coarse_block_degree = coarse_block.size() - 1;
-                // Every irreducible factor in this block has degree at least first_factor_degree. If the block's total
-                // degree is less than twice that bound, it cannot contain two factors and is itself irreducible.
-                if (coarse_block_degree / 2 < first_factor_degree) {
-                    distinct_degree_factor<polynomial_type> group {std::move(coarse_block), coarse_block_degree};
-                    const auto &reported = output ? output->emplace_back(std::move(group)) : group;
-                    if (report_group(reported) == factorization_control::stop_factorization) {
-                        return factorization_control::stop_factorization;
-                    }
-                } else if (kaltofen_shoup_split_coarse_block(output, std::move(coarse_block), giant_step,
-                                                             first_factor_degree, degree_count, precomputation,
-                                                             arithmetic_context, report_group) ==
-                           factorization_control::stop_factorization) {
-                    return factorization_control::stop_factorization;
-                }
-            }
-
-            // Giant-step exponents remain aligned to fixed-size blocks, including when the final tested interval is
-            // shorter than block_size.
-            first_factor_degree += block_size;
-            if (requires_degree_test(first_factor_degree)) {
-                precomputation.apply_block_frobenius(giant_step, giant_step, divisor_context, arithmetic_context);
-            }
-        }
-
-        if (unclassified.size() > 1) {
-            const std::size_t irreducible_factor_degree = unclassified.size() - 1;
-            distinct_degree_factor<polynomial_type> group {std::move(unclassified), irreducible_factor_degree};
-            const auto &reported = output ? output->emplace_back(std::move(group)) : group;
-            if (report_group(reported) == factorization_control::stop_factorization) {
-                return factorization_control::stop_factorization;
-            }
-        }
-        return factorization_control::continue_factorization;
+        kaltofen_shoup_residual_certificate_state certificate_state;
+        return kaltofen_shoup_continue_discovery(
+            output, std::move(unclassified), 0, polynomial_type {value_type {}, value_type::one()}, precomputation,
+            divisor_context, arithmetic_context, std::forward<FactorCallback>(factor_callback), certificate_state,
+            odd_factor_count);
     }
 
 }    // namespace nil::crypto3::math::detail

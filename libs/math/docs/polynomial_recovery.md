@@ -437,6 +437,12 @@ phases. Optional prepared coefficient payloads obey `modular_composition_prepare
 cached powers, backend scratch, and concurrent operations require additional memory; this option is not a total
 memory limit. Measure seed construction, degree-dependent work, and complete recovery together when assessing speed.
 
+Factor discovery can optionally certify that its remaining polynomial is irreducible before finishing a long degree
+scan. This is disabled by default; see the [factorization guide](@ref math_polynomial_factorization) for the threshold,
+attempt limit and separate prepared-cache budget. A failed certificate resumes factor discovery and does not reject
+the input. A successful certificate still requires the ordinary individual-factor norm recovery. Its temporary
+composition cache is released before that recovery callback, and it consumes no random samples.
+
 `modular_composition_block_size` applies to the composition caches constructed by these recovery paths as well as
 those used in factor discovery. Its default of zero keeps the automatic square-root heuristic. A positive value
 requests a width capped by the cached-power limit and each cache's maximum outer coefficient count, as described in

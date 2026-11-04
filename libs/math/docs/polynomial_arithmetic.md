@@ -189,6 +189,9 @@ Separate contexts are required for concurrent calls when the backend owns mutabl
 | `modular_composition_cached_power_limit` | maximum `size_t` | Cap the number of Brent-Kung baby powers; constructing a composition cache requires a positive limit. |
 | `modular_composition_block_size` | 0 | Request a Brent-Kung block size for composition caches; zero selects the square-root heuristic. A positive request is capped by the cached-power limit and maximum outer coefficient count. |
 | `distinct_degree_screening_limit` | 0 | Screen initial irreducible-factor degrees before the full Kaltofen-Shoup baby table; zero disables screening. |
+| `distinct_degree_certificate_minimum_excluded_degree` | 0 | Permit exact residual irreducibility certificates after this excluded factor degree, at completed blocks; zero disables attempts. |
+| `distinct_degree_certificate_maximum_attempts` | 1 | Cap attempts per square-free part; a failed attempt is never retried without factor removal. |
+| `distinct_degree_certificate_prepared_byte_limit` | 0 | Additional per-cache cap for the certificate's prepared coefficient payload; zero uses scalar combinations. |
 | `modular_composition_prepared_byte_limit` | 0 | Bound the additional prepared Fp12 coefficient payload per composition cache; zero disables preparation. |
 | `modular_composition_simd_lanes` | 8 | Select four or eight IFMA lanes when supported; zero selects scalar prepared dots. The byte budget still controls whether preparation is enabled. |
 
@@ -425,6 +428,12 @@ Supported Fp12 coefficient types can additionally prepare the linear forms used 
 `modular_composition_prepared_byte_limit` before constructing the composition cache to enable this preparation.
 Its default is zero. `prepared_coefficient_bytes()` reports the retained payload. The budget applies to each cache
 separately and excludes the ordinary baby powers, giant step, temporary block outputs, and per-call scratch.
+
+The `polynomial_composition_precomputation` constructor accepts an optional fifth argument that further caps the
+prepared payload of that cache. Its effective limit is the minimum of that argument and the context's
+`modular_composition_prepared_byte_limit`; omitting it preserves the context limit. This does not mutate the context
+or existing caches and does not cap ordinary powers or scratch. Residual certification uses this facility for its
+temporary larger-jump cache; its trigger and fallback are described in the [factorization guide](@ref math_polynomial_factorization).
 
 The scalar prepared kernel uses 54 base-field product coordinates from the Fp12 tower. BN254 builds with
 `CRYPTO3_HAS_AVX512IFMA` can use a 23-coordinate evaluation/interpolation representation with four or eight lanes.
