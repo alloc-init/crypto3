@@ -262,10 +262,9 @@ allocator can retain released memory in process RSS. The original discovery tabl
 alive during callbacks as described above.
 
 Failed attempts add work, including on inputs whose norm recovery eventually succeeds. The feature therefore remains
-opt-in until a caller has measured its trigger policy across representative successes and rejections. The
-[integration benchmark](../test/bench_test/residual_certificate_integration.md) compares enabled and disabled
-production continuations on pinned saved states and includes the failed attempt plus fallback scan. Those checkpoint
-comparisons do not establish the latency or profitability of a fresh grinding run.
+opt-in until a caller has measured its trigger policy across representative successes and rejections. Comparisons
+must include the failed attempt plus fallback scan. Saved-checkpoint comparisons do not establish the latency or
+profitability of a fresh grinding run.
 
 ## Preconditions and current restrictions
 
