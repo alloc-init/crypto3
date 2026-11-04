@@ -504,4 +504,31 @@ BOOST_AUTO_TEST_CASE(fq12_factorization_reconstructs_input_and_matches_the_mixed
     BOOST_CHECK_EQUAL(next_mixed_radix_coefficient, random_coefficients.size());
 }
 
+BOOST_AUTO_TEST_CASE(square_free_parity_is_not_inherited_by_repeated_components_or_constant_inputs) {
+    backend_type backend;
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    const polynomial_type irreducible {-value_type(3), value_type::zero(), value_type::one()};
+    const polynomial_type split {value_type(2), -value_type(3), value_type::one()};
+    const auto repeated = multiply(backend, irreducible, irreducible);
+    const auto proceed = [](const auto &) { return math::factorization_control::continue_factorization; };
+    std::optional<bool> parity;
+    const auto one = math::detail::square_free_factorization_impl<backend_type>(irreducible, context, proceed, &parity);
+    BOOST_REQUIRE(parity.has_value());
+    BOOST_CHECK(*parity);
+    BOOST_REQUIRE_EQUAL(one.factors.size(), 1);
+    BOOST_CHECK_EQUAL(one.factors.front().multiplicity, 1);
+    math::detail::square_free_factorization_impl<backend_type>(split, context, proceed, &parity);
+    BOOST_REQUIRE(parity.has_value());
+    BOOST_CHECK(!*parity);
+    const auto twice = math::detail::square_free_factorization_impl<backend_type>(repeated, context, proceed, &parity);
+    BOOST_CHECK(!parity.has_value());
+    BOOST_REQUIRE_EQUAL(twice.factors.size(), 1);
+    BOOST_CHECK_EQUAL(twice.factors.front().multiplicity, 2);
+    parity = true;
+    const auto constant = math::detail::square_free_factorization_impl<backend_type>(polynomial_type {value_type(7)},
+                                                                                     context, proceed, &parity);
+    BOOST_CHECK(!parity.has_value());
+    BOOST_CHECK(constant.factors.empty());
+}
+
 BOOST_AUTO_TEST_SUITE_END()

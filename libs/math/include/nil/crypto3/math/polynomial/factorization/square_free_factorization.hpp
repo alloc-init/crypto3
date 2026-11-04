@@ -27,6 +27,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -35,7 +36,7 @@
 #include <nil/crypto3/math/polynomial/arithmetic/gcd.hpp>
 #include <nil/crypto3/math/polynomial/factorization/polynomial_factorization.hpp>
 
-namespace nil::crypto3::math {
+namespace nil::crypto3::math::detail {
     /**
      * Separate a polynomial into monic square-free factors with distinct multiplicities using Yun's decomposition.
      * For a nonconstant input, the returned leading coefficient is the input's original leading coefficient. By
@@ -79,16 +80,19 @@ namespace nil::crypto3::math {
      * @throws std::invalid_argument if the coefficient-field characteristic is not greater than the input degree.
      */
     template<detail::SupportsDivrem Backend, typename FactorCallback>
-        requires detail::PolynomialFactorCallback<FactorCallback, typename Backend::polynomial_type>
+        requires PolynomialFactorCallback<FactorCallback, typename Backend::polynomial_type>
     polynomial_factorization_result<typename Backend::polynomial_type>
-        square_free_factorization(const typename Backend::polynomial_type &input,
-                                  polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
-                                  FactorCallback &&factor_callback) {
+        square_free_factorization_impl(const typename Backend::polynomial_type &input,
+                                       polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                       FactorCallback &&factor_callback, std::optional<bool> *odd_factor_count) {
         using polynomial_type = typename Backend::polynomial_type;
         using value_type = typename polynomial_type::value_type;
         using field_type = typename value_type::field_type;
         using result_type = polynomial_factorization_result<polynomial_type>;
 
+        if (odd_factor_count) {
+            odd_factor_count->reset();
+        }
         result_type result;
         polynomial_type monic_input(input);
         condense(monic_input);
@@ -109,7 +113,12 @@ namespace nil::crypto3::math {
         derivative(input_derivative, monic_input);
 
         polynomial_type repeated_part;
-        gcd(repeated_part, monic_input, input_derivative, arithmetic_context);
+        if (odd_factor_count) {
+            *odd_factor_count =
+                square_free_gcd_with_parity(repeated_part, monic_input, input_derivative, arithmetic_context);
+        } else {
+            gcd(repeated_part, monic_input, input_derivative, arithmetic_context);
+        }
 
         polynomial_type square_free_part;
         detail::factorization_exact_quotient(square_free_part, monic_input, repeated_part, arithmetic_context);
@@ -136,6 +145,26 @@ namespace nil::crypto3::math {
         }
 
         return result;
+    }
+
+}    // namespace nil::crypto3::math::detail
+
+namespace nil::crypto3::math {
+
+    /**
+     * Separate the input into monic square-free factors in increasing multiplicity using Yun's decomposition.
+     * The result preserves the original leading coefficient. A callback may stop after any reported factor; the
+     * stopped result includes that factor and has complete set to false. Zero and constant inputs have no factors.
+     * @throws std::invalid_argument if the coefficient-field characteristic is not greater than the input degree.
+     */
+    template<detail::SupportsDivrem Backend, typename FactorCallback>
+        requires detail::PolynomialFactorCallback<FactorCallback, typename Backend::polynomial_type>
+    polynomial_factorization_result<typename Backend::polynomial_type>
+        square_free_factorization(const typename Backend::polynomial_type &input,
+                                  polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                  FactorCallback &&factor_callback) {
+        return detail::square_free_factorization_impl<Backend>(input, arithmetic_context,
+                                                               std::forward<FactorCallback>(factor_callback), nullptr);
     }
 
     /** Compute the complete square-free factorization without a staged callback. */
