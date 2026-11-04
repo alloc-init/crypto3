@@ -29,6 +29,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <boost/test/unit_test.hpp>
@@ -55,6 +56,25 @@ namespace {
     using backend_type = polynomial_arithmetic::schoolbook_backend<value_type>;
     using polynomial_type = typename backend_type::polynomial_type;
 
+    // Reuse the prime-field implementation with a distinct policy so only this test's scalar square tests are counted.
+    struct square_test_counting_field : fq_field_type {
+        using value_type = fields::detail::element_fp<fields::params<square_test_counting_field>>;
+    };
+
+    std::size_t coefficient_square_tests = 0;
+}    // namespace
+
+namespace nil::crypto3::algebra::fields::detail {
+    template<>
+    constexpr bool element_fp<params<square_test_counting_field>>::is_square() const {
+        if (!std::is_constant_evaluated()) {
+            ++coefficient_square_tests;
+        }
+        return alt_bn128_base_field<254>::value_type(data).is_square();
+    }
+}    // namespace nil::crypto3::algebra::fields::detail
+
+namespace {
     // Count backend calls without replacing any arithmetic, as in the exponentiation tests.
     struct counting_schoolbook_backend : backend_type {
         explicit counting_schoolbook_backend(std::size_t &calls) : calls(calls) {
@@ -563,6 +583,89 @@ BOOST_AUTO_TEST_CASE(fq12_factorization_reconstructs_input_and_matches_the_mixed
 
     BOOST_CHECK(mixed_radix_result == result);
     BOOST_CHECK_EQUAL(next_mixed_radix_coefficient, random_coefficients.size());
+}
+
+BOOST_AUTO_TEST_CASE(square_free_parity_is_not_inherited_by_repeated_components_or_constant_inputs) {
+    backend_type backend;
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    const polynomial_type irreducible {-value_type(3), value_type::zero(), value_type::one()};
+    const polynomial_type split {value_type(2), -value_type(3), value_type::one()};
+    const auto repeated = multiply(backend, irreducible, irreducible);
+    const auto proceed = [](const auto &) { return math::factorization_control::continue_factorization; };
+    std::optional<bool> parity;
+    const auto one = math::detail::square_free_factorization_impl<backend_type>(irreducible, context, proceed, &parity);
+    BOOST_REQUIRE(parity.has_value());
+    BOOST_CHECK(*parity);
+    BOOST_REQUIRE_EQUAL(one.factors.size(), 1);
+    BOOST_CHECK_EQUAL(one.factors.front().multiplicity, 1);
+    math::detail::square_free_factorization_impl<backend_type>(split, context, proceed, &parity);
+    BOOST_REQUIRE(parity.has_value());
+    BOOST_CHECK(!*parity);
+    const auto twice = math::detail::square_free_factorization_impl<backend_type>(repeated, context, proceed, &parity);
+    BOOST_CHECK(!parity.has_value());
+    BOOST_REQUIRE_EQUAL(twice.factors.size(), 1);
+    BOOST_CHECK_EQUAL(twice.factors.front().multiplicity, 2);
+    parity = true;
+    const auto constant = math::detail::square_free_factorization_impl<backend_type>(polynomial_type {value_type(7)},
+                                                                                     context, proceed, &parity);
+    BOOST_CHECK(!parity.has_value());
+    BOOST_CHECK(constant.factors.empty());
+}
+
+BOOST_AUTO_TEST_CASE(linear_factorization_preserves_the_gcd_and_skips_scalar_square_tests) {
+    using counted_value = square_test_counting_field::value_type;
+    using counted_backend = polynomial_arithmetic::schoolbook_backend<counted_value>;
+    using counted_polynomial = counted_backend::polynomial_type;
+    polynomial_arithmetic::polynomial_context<counted_backend> context;
+    const counted_polynomial linear {counted_value(2), counted_value::one()};
+    counted_polynomial derivative, common;
+    math::derivative(derivative, linear);
+
+    coefficient_square_tests = 0;
+    const auto parity = math::detail::square_free_gcd_with_parity(common, linear, derivative, context);
+    BOOST_REQUIRE(parity.has_value());
+    BOOST_CHECK(*parity);
+    BOOST_CHECK(common == counted_polynomial({counted_value::one()}));
+    BOOST_CHECK_EQUAL(coefficient_square_tests, 0);
+
+    // Exercise normalization as well as both public paths. Stopping must include the sole factor without sampling.
+    counted_polynomial scaled;
+    const counted_value leading(7);
+    math::scalar_multiplication(scaled, linear, leading);
+    auto generator = []() -> counted_value { throw std::logic_error("linear input must not sample coefficients"); };
+    for (const bool stop : {false, true}) {
+        std::size_t callbacks = 0;
+        const auto callback = [&](const auto &factor) {
+            ++callbacks;
+            BOOST_CHECK(factor.polynomial == linear);
+            return stop ? math::factorization_control::stop_factorization :
+                          math::factorization_control::continue_factorization;
+        };
+        const auto ddf = math::distinct_degree_factorization_kaltofen_shoup<counted_backend>(scaled, context, callback);
+        BOOST_CHECK_EQUAL(callbacks, 1);
+        BOOST_CHECK_EQUAL(ddf.complete, !stop);
+        BOOST_CHECK(ddf.leading_coefficient == leading);
+        BOOST_REQUIRE_EQUAL(ddf.factors.size(), 1);
+        BOOST_CHECK_EQUAL(ddf.factors.front().irreducible_factor_degree, 1);
+        BOOST_CHECK_EQUAL(coefficient_square_tests, 0);
+
+        callbacks = 0;
+        const auto full = math::complete_factorization<counted_backend>(scaled, context, generator, callback);
+        BOOST_CHECK_EQUAL(callbacks, 1);
+        BOOST_CHECK_EQUAL(full.complete, !stop);
+        BOOST_CHECK(full.leading_coefficient == leading);
+        BOOST_REQUIRE_EQUAL(full.factors.size(), 1);
+        BOOST_CHECK_EQUAL(full.factors.front().multiplicity, 1);
+        BOOST_CHECK_EQUAL(coefficient_square_tests, 0);
+    }
+
+    // The counter must observe the usual character test for nonlinear inputs, ruling out a disconnected test guard.
+    const counted_polynomial quadratic {-counted_value(3), counted_value::zero(), counted_value::one()};
+    math::derivative(derivative, quadratic);
+    const auto quadratic_parity = math::detail::square_free_gcd_with_parity(common, quadratic, derivative, context);
+    BOOST_REQUIRE(quadratic_parity.has_value());
+    BOOST_CHECK(*quadratic_parity);
+    BOOST_CHECK_EQUAL(coefficient_square_tests, 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

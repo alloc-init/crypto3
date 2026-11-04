@@ -345,6 +345,12 @@ the odd-degree product or even-degree trace root algorithm. Recovery runs inside
 it is not deferred until every factor has passed its eligibility checks. See
 [staged factorization](@ref math_polynomial_factorization) for screening and callback ordering.
 
+Discovery also tracks an optional parity of the **number of irreducible factors**. This third kind of parity can
+prove a remaining residual irreducible earlier and avoid later discovery operations. It changes when the factor is
+available, while preserving the factor order and shared-generator consumption. It does not replace the per-factor
+norm checks, root recovery, reconstruction, or final exact identity check. Missing factor-count parity leaves the
+ordinary discovery bound in effect.
+
 The factor-power representations are combined with `multiply_polynomial_x_norm_representations` in a balanced product
 tree. Finally, both components are scaled by `sqrt(c)` to incorporate the factorization's leading coefficient. A
 nonsquare required scalar produces no result. Every successful path evaluates the completed norm and compares it

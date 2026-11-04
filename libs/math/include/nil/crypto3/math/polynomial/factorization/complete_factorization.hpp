@@ -26,6 +26,7 @@
 #define CRYPTO3_MATH_COMPLETE_FACTORIZATION_HPP
 
 #include <cstddef>
+#include <optional>
 #include <utility>
 
 #include <nil/crypto3/math/polynomial/factorization/equal_degree_factorization.hpp>
@@ -50,7 +51,13 @@ namespace nil::crypto3::math {
                                         Generator &generator, FactorCallback &&factor_callback) {
             using polynomial_type = typename Backend::polynomial_type;
 
-            auto square_free_result = square_free_factorization<Backend>(input, arithmetic_context);
+            std::optional<bool> odd_factor_count;
+            auto square_free_result = square_free_factorization_impl<Backend>(
+                input, arithmetic_context,
+                [](const polynomial_factor<polynomial_type> &) {
+                    return factorization_control::continue_factorization;
+                },
+                &odd_factor_count);
             leading_coefficient = square_free_result.leading_coefficient;
             for (auto &square_free_factor : square_free_result.factors) {
                 const std::size_t multiplicity = square_free_factor.multiplicity;
@@ -66,7 +73,10 @@ namespace nil::crypto3::math {
                                 return factor_callback(
                                     polynomial_factor<polynomial_type> {std::move(factor), multiplicity});
                             });
-                    });
+                    },
+                    // A certificate exists only when the whole input is square-free. Multiplicity components of a
+                    // repeated input have no inherited certificate and follow the ordinary discovery bound.
+                    odd_factor_count);
                 if (control == factorization_control::stop_factorization) {
                     return control;
                 }
