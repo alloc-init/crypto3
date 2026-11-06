@@ -382,6 +382,43 @@ This factorization and factor-combination behavior is a generic polynomial opera
 polynomial arithmetic and the fixed norm map `P^2 - X * Q^2`. The API returns the two coefficient polynomials and does
 not impose a representation or policy beyond that algebraic identity.
 
+### Reusing a known factor across inputs
+
+When several inputs share a factor product `C` with a known norm representation, prepare a
+`polynomial_x_norm_factor_context<backend_type>` once and pass it explicitly to recovery:
+
+```cpp
+// C is canonical and nonconstant. known_norm satisfies P_C^2 - X * Q_C^2 == C.
+// maximum_input_coefficients >= C.size().
+const std::size_t inverse_precision = maximum_input_coefficients - C.size() + 1;
+math::polynomial_x_norm_factor_context<backend_type> known_factor(
+    C, known_norm, inverse_precision, arithmetic_context);
+
+auto representation = math::recover_polynomial_x_norm_representation<backend_type>(
+    H, arithmetic_context, coefficient_generator, known_factor);
+```
+
+Construction verifies the supplied norm and owns copies of both the representation and the divisor preparation.
+It performs no factor discovery or random sampling. The preparation uses `polynomial_divisor_context`, including
+its reciprocal and any backend-supported fixed-operand spectra. Its inverse precision bounds the number of quotient
+coefficients that can use the cache.
+
+Recovery handles zero, constants, and the original scalar filters first. If `C` divides `H` exactly within the
+prepared precision, it recovers `H/C`, multiplies that representation by the cached one, and verifies the result
+against the original `H`. Removing a known norm preserves the norm obstructions. Only one copy of the complete
+cached product is removed; remaining multiplicities are handled by ordinary recovery. `C` may be nonmonic, have
+repeated factors or a zero root, and share factors with the quotient.
+
+A division remainder, an input smaller than `C`, or insufficient prepared precision continues through ordinary
+recovery. These cache misses preserve its random-generator consumption and chosen result. Reuse is also bypassed
+outside the ordinary algorithm's completeness domain of odd characteristic and square `-1`; this prevents cached
+division from exposing scalar-normalization failures that ordinary recovery of the full input avoids. The input
+degree restriction remains in force. An invalid cached norm is a construction error, not a candidate rejection.
+
+The existing three-argument call performs no cache lookup. A cache hit can change factorization order, random sampling,
+and the chosen representation. The saving depends on the factors removed and the resulting quotient; measure cache
+preparation, division, combination, and full recovery before claiming a performance improvement.
+
 ### Worked example over F7
 
 This is a successful case for both recovery APIs, not a completeness guarantee for general recovery over F7. Here
