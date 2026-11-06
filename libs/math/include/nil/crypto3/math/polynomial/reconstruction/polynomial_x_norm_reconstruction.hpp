@@ -91,6 +91,69 @@ namespace nil::crypto3::math {
     }
 
     /**
+     * Immutable reusable factor C, its exact X-norm representation, and preparation for division by C.
+     * Construction verifies P_C^2 - X * Q_C^2 = C once; C must be canonical and nonconstant. The inputs are copied,
+     * so later changes to the caller's polynomials cannot invalidate the verified representation or divisor.
+     * No factorization or random sampling is performed here. Callers may assemble C and its representation with
+     * the existing polynomial and X-norm multiplication operations.
+     *
+     * inverse_precision bounds the number of quotient coefficients on a cache hit, as in polynomial_divisor_context.
+     * Recovery falls back to the ordinary algorithm when the input is outside this bound or is not divisible by C.
+     * Reuse also requires odd characteristic and square -1, the completeness domain of ordinary X-norm recovery.
+     * In other fields this context can still be constructed, but recovery does not use it to remove factors.
+     *
+     * @throws std::invalid_argument if C is constant or noncanonical, the representation is noncanonical or has a
+     * different norm, or inverse_precision is zero.
+     */
+    template<detail::SupportsDivrem Backend>
+        requires algebra::FieldValue<typename Backend::polynomial_type::value_type>
+    class polynomial_x_norm_factor_context {
+    public:
+        using polynomial_type = typename Backend::polynomial_type;
+        using value_type = typename polynomial_type::value_type;
+        using representation_type = polynomial_x_norm_representation<polynomial_type>;
+
+        polynomial_x_norm_factor_context(const polynomial_type &factor, const representation_type &representation,
+                                         std::size_t inverse_precision,
+                                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) :
+            representation_(representation),
+            divisor_context_(validated_factor(factor, representation_, arithmetic_context), inverse_precision,
+                             arithmetic_context),
+            supports_reuse_(algebra::fields::field_characteristic<typename value_type::field_type>() != 2 &&
+                            (-value_type::one()).is_square()) {
+        }
+
+        const polynomial_divisor_context<Backend> &divisor_context() const {
+            return divisor_context_;
+        }
+
+        const representation_type &representation() const {
+            return representation_;
+        }
+
+        bool supports_reuse() const {
+            return supports_reuse_;
+        }
+
+    private:
+        static const polynomial_type &
+            validated_factor(const polynomial_type &factor, const representation_type &representation,
+                             polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+            if (!detail::is_canonical_polynomial(factor) || factor.size() == 1) {
+                throw std::invalid_argument("cached X-norm factor must be canonical and nonconstant");
+            }
+            if (evaluate_polynomial_x_norm<Backend>(representation, arithmetic_context) != factor) {
+                throw std::invalid_argument("cached X-norm representation does not match its factor");
+            }
+            return factor;
+        }
+
+        representation_type representation_;
+        polynomial_divisor_context<Backend> divisor_context_;
+        bool supports_reuse_;
+    };
+
+    /**
      * Multiply two polynomial X-norm representations using
      *
      *     P = P1 * P2 + X * Q1 * Q2,
@@ -392,6 +455,119 @@ namespace nil::crypto3::math {
             return std::move(representations.front());
         }
 
+        template<bool ReuseKnownFactor, SupportsDivrem Backend, typename Generator>
+            requires algebra::FieldValue<typename Backend::polynomial_type::value_type> &&
+                     std::constructible_from<typename Backend::polynomial_type, std::size_t> &&
+                     requires(typename Backend::polynomial_type &polynomial, Generator &generator,
+                              const typename Backend::polynomial_type::value_type &value) {
+                         polynomial[0] = generator();
+                         { value.is_square() } -> std::convertible_to<bool>;
+                     }
+        std::optional<polynomial_x_norm_representation<typename Backend::polynomial_type>>
+            recover_polynomial_x_norm_representation_impl(
+                const typename Backend::polynomial_type &h,
+                polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                Generator &coefficient_generator, const polynomial_x_norm_factor_context<Backend> *known_factor) {
+            using polynomial_type = typename Backend::polynomial_type;
+            using value_type = typename polynomial_type::value_type;
+            using representation_type = polynomial_x_norm_representation<polynomial_type>;
+
+            if (!detail::is_canonical_polynomial(h)) {
+                throw std::invalid_argument("polynomial X-norm recovery requires a canonical nonempty polynomial");
+            }
+
+            const auto verify_exact = [&](representation_type representation) -> std::optional<representation_type> {
+                if (evaluate_polynomial_x_norm<Backend>(representation, arithmetic_context) != h) {
+                    throw std::logic_error("polynomial X-norm recovery failed exact verification");
+                }
+                return std::move(representation);
+            };
+
+            if (is_zero(h)) {
+                return verify_exact(
+                    representation_type {polynomial_type {value_type::zero()}, polynomial_type {value_type::zero()}});
+            }
+            if (h.size() == 1) {
+                if (!h[0].is_square()) {
+                    return std::nullopt;
+                }
+                return verify_exact(representation_type {polynomial_type {algebra::fields::sqrt_known_square(h[0])},
+                                                         polynomial_type {value_type::zero()}});
+            }
+
+            // square filters
+            const std::size_t degree = h.size() - 1;
+            if (!h[0].is_square()) {
+                return std::nullopt;
+            }
+            value_type signed_leading_coefficient = h[h.size() - 1];
+            if ((degree & 1) != 0) {
+                signed_leading_coefficient = value_type::zero() - signed_leading_coefficient;
+            }
+            if (!signed_leading_coefficient.is_square()) {
+                return std::nullopt;
+            }
+
+            if constexpr (ReuseKnownFactor) {
+                const auto &divisor = known_factor->divisor_context();
+                if (known_factor->supports_reuse() && h.size() >= divisor.divisor().size() &&
+                    h.size() - divisor.divisor().size() + 1 <= divisor.inverse_precision() &&
+                    degree < algebra::fields::field_characteristic<typename value_type::field_type>()) {
+                    polynomial_type quotient;
+                    polynomial_type remainder_result;
+                    divrem(quotient, remainder_result, h, divisor, arithmetic_context);
+                    if (is_zero(remainder_result)) {
+                        // Remove exactly one copy of C. Ordinary recovery handles every remaining multiplicity.
+                        // Since C is a verified norm, H and H/C have the same norm obstructions in this field.
+                        auto residual = recover_polynomial_x_norm_representation_impl<false>(
+                            quotient, arithmetic_context, coefficient_generator, known_factor);
+                        if (!residual) {
+                            return std::nullopt;
+                        }
+                        return verify_exact(multiply_polynomial_x_norm_representations<Backend>(
+                            known_factor->representation(), *residual, arithmetic_context));
+                    }
+                }
+                // A cache miss consumes no randomness and continues through the unchanged recovery path below.
+            }
+
+            std::vector<representation_type> factor_representations;
+            bool factor_recovery_failed = false;
+            value_type leading_coefficient;
+            const auto control = detail::complete_factorization_impl<Backend>(
+                leading_coefficient, h, arithmetic_context, coefficient_generator,
+                [&](const polynomial_factor<polynomial_type> &factor) {
+                    auto representation = detail::recover_polynomial_x_norm_factor_power<Backend>(
+                        factor, arithmetic_context, coefficient_generator);
+                    if (!representation) {
+                        factor_recovery_failed = true;
+                        return factorization_control::stop_factorization;
+                    }
+                    factor_representations.push_back(std::move(*representation));
+                    return factorization_control::continue_factorization;
+                });
+
+            if (factor_recovery_failed) {
+                return std::nullopt;
+            }
+            if (control != factorization_control::continue_factorization || factor_representations.empty()) {
+                throw std::logic_error("complete factorization did not produce all nonconstant factors");
+            }
+
+            representation_type result = detail::combine_polynomial_x_norm_representations_balanced<Backend>(
+                std::move(factor_representations), arithmetic_context);
+            if (leading_coefficient.is_zero()) {
+                throw std::logic_error("complete factorization produced a zero leading coefficient");
+            }
+            if (!leading_coefficient.is_square()) {
+                return std::nullopt;
+            }
+            const value_type scalar = algebra::fields::sqrt_known_square(leading_coefficient);
+            scalar_multiplication(result.p, result.p, scalar);
+            scalar_multiplication(result.q, result.q, scalar);
+            return verify_exact(std::move(result));
+        }
+
     }    // namespace detail
 
     /**
@@ -431,81 +607,39 @@ namespace nil::crypto3::math {
         recover_polynomial_x_norm_representation(const typename Backend::polynomial_type &h,
                                                  polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
                                                  Generator &coefficient_generator) {
-        using polynomial_type = typename Backend::polynomial_type;
-        using value_type = typename polynomial_type::value_type;
-        using representation_type = polynomial_x_norm_representation<polynomial_type>;
+        return detail::recover_polynomial_x_norm_representation_impl<false>(
+            h, arithmetic_context, coefficient_generator,
+            static_cast<const polynomial_x_norm_factor_context<Backend> *>(nullptr));
+    }
 
-        if (!detail::is_canonical_polynomial(h)) {
-            throw std::invalid_argument("polynomial X-norm recovery requires a canonical nonempty polynomial");
-        }
-
-        const auto verify_exact = [&](representation_type representation) -> std::optional<representation_type> {
-            if (evaluate_polynomial_x_norm<Backend>(representation, arithmetic_context) != h) {
-                throw std::logic_error("polynomial X-norm recovery failed exact verification");
-            }
-            return std::move(representation);
-        };
-
-        if (is_zero(h)) {
-            return verify_exact(
-                representation_type {polynomial_type {value_type::zero()}, polynomial_type {value_type::zero()}});
-        }
-        if (h.size() == 1) {
-            if (!h[0].is_square()) {
-                return std::nullopt;
-            }
-            return verify_exact(representation_type {polynomial_type {algebra::fields::sqrt_known_square(h[0])},
-                                                     polynomial_type {value_type::zero()}});
-        }
-
-        // square filters
-        const std::size_t degree = h.size() - 1;
-        if (!h[0].is_square()) {
-            return std::nullopt;
-        }
-        value_type signed_leading_coefficient = h[h.size() - 1];
-        if ((degree & 1) != 0) {
-            signed_leading_coefficient = value_type::zero() - signed_leading_coefficient;
-        }
-        if (!signed_leading_coefficient.is_square()) {
-            return std::nullopt;
-        }
-
-        std::vector<representation_type> factor_representations;
-        bool factor_recovery_failed = false;
-        value_type leading_coefficient;
-        const auto control = detail::complete_factorization_impl<Backend>(
-            leading_coefficient, h, arithmetic_context, coefficient_generator,
-            [&](const polynomial_factor<polynomial_type> &factor) {
-                auto representation = detail::recover_polynomial_x_norm_factor_power<Backend>(
-                    factor, arithmetic_context, coefficient_generator);
-                if (!representation) {
-                    factor_recovery_failed = true;
-                    return factorization_control::stop_factorization;
-                }
-                factor_representations.push_back(std::move(*representation));
-                return factorization_control::continue_factorization;
-            });
-
-        if (factor_recovery_failed) {
-            return std::nullopt;
-        }
-        if (control != factorization_control::continue_factorization || factor_representations.empty()) {
-            throw std::logic_error("complete factorization did not produce all nonconstant factors");
-        }
-
-        representation_type result = detail::combine_polynomial_x_norm_representations_balanced<Backend>(
-            std::move(factor_representations), arithmetic_context);
-        if (leading_coefficient.is_zero()) {
-            throw std::logic_error("complete factorization produced a zero leading coefficient");
-        }
-        if (!leading_coefficient.is_square()) {
-            return std::nullopt;
-        }
-        const value_type scalar = algebra::fields::sqrt_known_square(leading_coefficient);
-        scalar_multiplication(result.p, result.p, scalar);
-        scalar_multiplication(result.q, result.q, scalar);
-        return verify_exact(std::move(result));
+    /**
+     * Recover an X-norm using an optional, explicitly supplied known factor. After the ordinary scalar filters,
+     * exact division by the cached C permits recovery of H/C followed by multiplication with the cached norm.
+     * The final representation is verified against the original H. A nonzero division remainder, insufficient
+     * prepared precision, or a field outside the ordinary recovery completeness domain uses ordinary recovery.
+     *
+     * Removing a verified norm preserves the odd-multiplicity obstructions to norm recovery; repeated factors,
+     * the zero root, and nonmonic scalars are retained in the quotient and final product. The cached factor is
+     * removed once, without assuming irreducibility, square-freeness, or coprimality with the quotient.
+     *
+     * Field, input, and generator contracts are those of the three-argument overload. A cache miss preserves its
+     * factorization and RNG order. A hit may change factorization order, RNG consumption, and the chosen P/Q pair.
+     */
+    template<detail::SupportsDivrem Backend, typename Generator>
+        requires algebra::FieldValue<typename Backend::polynomial_type::value_type> &&
+                 std::constructible_from<typename Backend::polynomial_type, std::size_t> &&
+                 requires(typename Backend::polynomial_type &polynomial, Generator &generator,
+                          const typename Backend::polynomial_type::value_type &value) {
+                     polynomial[0] = generator();
+                     { value.is_square() } -> std::convertible_to<bool>;
+                 }
+    std::optional<polynomial_x_norm_representation<typename Backend::polynomial_type>>
+        recover_polynomial_x_norm_representation(const typename Backend::polynomial_type &h,
+                                                 polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context,
+                                                 Generator &coefficient_generator,
+                                                 const polynomial_x_norm_factor_context<Backend> &known_factor) {
+        return detail::recover_polynomial_x_norm_representation_impl<true>(h, arithmetic_context, coefficient_generator,
+                                                                           &known_factor);
     }
 
 }    // namespace nil::crypto3::math
