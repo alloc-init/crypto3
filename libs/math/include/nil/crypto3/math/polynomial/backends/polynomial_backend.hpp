@@ -73,6 +73,16 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // trade more cache construction and storage for fewer giant-step products when the cache is reused.
         std::size_t modular_composition_block_size = 0;
 
+        // Optional grouping of giant steps into one transformed sum before modular reduction.
+        // Zero keeps Horner composition. One prepares only the fixed giant multiplier;
+        // larger values also prepare its reduced powers, capped by the maximum block count.
+        std::size_t modular_composition_giant_step_group_size = 0;
+
+        // Limit the additional owned giant-power spectra. Both a positive group size and a
+        // sufficient budget are required. This excludes ordinary powers, CRT metadata and
+        // per-call accumulation scratch; insufficient space retains the Horner path.
+        std::size_t modular_composition_giant_step_prepared_byte_limit = 0;
+
         // Try an exact residual irreducibility certificate after at least this factor degree has been excluded.
         // Zero disables certificate attempts. The threshold is checked at completed Kaltofen-Shoup block boundaries;
         // it is a caller-selected policy, not a prediction that the remaining polynomial is irreducible.
@@ -199,6 +209,35 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
         {
             return backend_.prepare_cyclic_remainder(divisor, quotient_coefficient_count);
+        }
+
+        // Optional bounded sums reuse prepared operands and keep backend workspace opaque.
+        auto make_product_accumulator(std::size_t operand_coefficient_count, std::size_t maximum_products,
+                                      std::size_t max_spectrum_bytes = std::numeric_limits<std::size_t>::max())
+            requires requires(backend_type &backend, std::size_t count) {
+                backend.make_product_accumulator(count, count, count);
+            }
+        {
+            return backend_.make_product_accumulator(operand_coefficient_count, maximum_products, max_spectrum_bytes);
+        }
+
+        template<typename Accumulator, typename PreparedOperand>
+        bool try_accumulate_prepared_product(Accumulator &accumulator, const polynomial_type &input,
+                                             const PreparedOperand &prepared)
+            requires requires(backend_type &backend) {
+                { backend.try_accumulate_prepared_product(accumulator, input, prepared) } -> std::same_as<bool>;
+            }
+        {
+            return backend_.try_accumulate_prepared_product(accumulator, input, prepared);
+        }
+
+        template<typename Accumulator>
+        bool try_finish_product_sum(polynomial_type &output, Accumulator &accumulator)
+            requires requires(backend_type &backend) {
+                { backend.try_finish_product_sum(output, accumulator) } -> std::same_as<bool>;
+            }
+        {
+            return backend_.try_finish_product_sum(output, accumulator);
         }
 
         template<typename PreparedRemainder>

@@ -56,6 +56,76 @@ namespace {
         }
         return value;
     }
+
+    using grouped_backend_type = polynomial_arithmetic::bn254_small_prime_fft_backend;
+    using grouped_polynomial_type = grouped_backend_type::polynomial_type;
+    static_assert(math::detail::SupportsPreparedProductSum<grouped_backend_type>);
+    static_assert(
+        !math::detail::SupportsPreparedProductSum<polynomial_arithmetic::schoolbook_backend<fq12_value_type>>);
+    static_assert(!math::detail::SupportsPreparedProductSum<
+                  polynomial_arithmetic::mixed_radix_backend<fq_field_type, fq12_value_type>>);
+
+    grouped_polynomial_type grouped_polynomial(std::size_t size, std::size_t seed) {
+        grouped_polynomial_type result(size, fq12_value_type::zero());
+        for (std::size_t i = 0; i < size; ++i) {
+            const auto value = fq12_value(seed + 13 * i);
+            result[i] = i % 3 == 1 ? -value : value;
+        }
+        return result;
+    }
+
+    struct grouped_operation_counts {
+        std::size_t append_attempts = 0;
+        std::size_t products = 0;
+        std::size_t finishes = 0;
+        std::size_t remainders = 0;
+        std::size_t decline_on_append = 0;
+        bool decline_finish = false;
+        bool decline_preparation = false;
+    };
+
+    struct grouped_counting_backend : grouped_backend_type {
+        grouped_counting_backend(std::size_t size, grouped_operation_counts &counts) :
+            grouped_backend_type(size), counts(counts) {
+        }
+
+        std::optional<product_accumulator_type>
+            make_product_accumulator(std::size_t count, std::size_t products,
+                                     std::size_t bytes = std::numeric_limits<std::size_t>::max()) const {
+            if (counts.decline_preparation) {
+                return std::nullopt;
+            }
+            return grouped_backend_type::make_product_accumulator(count, products, bytes);
+        }
+
+        bool try_accumulate_prepared_product(product_accumulator_type &accumulator, const polynomial_type &input,
+                                             const prepared_low_product_type &prepared) {
+            if (++counts.append_attempts == counts.decline_on_append) {
+                return false;
+            }
+            const bool used = grouped_backend_type::try_accumulate_prepared_product(accumulator, input, prepared);
+            counts.products += used;
+            return used;
+        }
+
+        bool try_finish_product_sum(polynomial_type &output, product_accumulator_type &accumulator) {
+            if (counts.decline_finish) {
+                return false;
+            }
+            const bool used = grouped_backend_type::try_finish_product_sum(output, accumulator);
+            counts.finishes += used;
+            return used;
+        }
+
+        bool try_cyclic_remainder(polynomial_type &output, const polynomial_type &dividend,
+                                  const polynomial_type &quotient, const prepared_cyclic_remainder_type &prepared) {
+            const bool used = grouped_backend_type::try_cyclic_remainder(output, dividend, quotient, prepared);
+            counts.remainders += used;
+            return used;
+        }
+
+        grouped_operation_counts &counts;
+    };
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(polynomial_composition_test_suite)
@@ -803,6 +873,251 @@ BOOST_AUTO_TEST_CASE(prepared_simd_configuration_keeps_six_limb_fields_on_scalar
     std::array<polynomial, 4> output;
     cache.evaluate_blocks(output, polynomial(9, value::one()), 0, 1, scratch);
     BOOST_CHECK(output[0] == polynomial({value(9), value(8), value(8), value(8)}));
+}
+
+BOOST_AUTO_TEST_CASE(grouped_composition_matches_reference_for_partial_groups_and_reducible_nonmonic_moduli) {
+    using backend_type = grouped_backend_type;
+    using polynomial_type = grouped_polynomial_type;
+    using reference_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    polynomial_arithmetic::polynomial_context<reference_backend> reference;
+    // X^2*D has a repeated zero root; D's extension-field leading coefficient is nonmonic.
+    auto divisor = grouped_polynomial(18, 31);
+    divisor.get_storage().insert(divisor.begin(), 2, fq12_value_type::zero());
+    const auto inner = grouped_polynomial(25, 7);
+    math::polynomial_divisor_context<reference_backend> reference_divisor(divisor, 18, reference);
+    std::vector<polynomial_type> outers, expected;
+    for (const std::size_t size : {1, 2, 9, 10, 35, 36, 37, 71, 72, 73, 89}) {
+        outers.push_back(grouped_polynomial(size, 43));
+        expected.emplace_back();
+        math::compose_mod_reference(expected.back(), outers.back(), inner, reference_divisor, reference);
+    }
+    for (const std::size_t group : {1, 4, 8}) {
+        for (const std::size_t coefficient_bytes : {0U, 4U * 1024U * 1024U}) {
+            BOOST_TEST_CONTEXT("group=" << group << ", coefficient_bytes=" << coefficient_bytes) {
+                polynomial_arithmetic::polynomial_context_options options;
+                options.basecase_divisor_coefficient_cutoff = 0;
+                options.basecase_quotient_coefficient_cutoff = 0;
+                options.modular_composition_block_size = 9;
+                options.modular_composition_prepared_byte_limit = coefficient_bytes;
+                options.modular_composition_giant_step_group_size = group;
+                options.modular_composition_giant_step_prepared_byte_limit = 4 * 1024 * 1024;
+                polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(64), options};
+                math::polynomial_divisor_context<backend_type> fixed(divisor, 18, context);
+                math::polynomial_composition_precomputation<backend_type> cache(inner, 89, fixed, context);
+                BOOST_REQUIRE_EQUAL(cache.giant_step_group_size(), group);
+                BOOST_CHECK_EQUAL(cache.prepared_coefficients().available(), coefficient_bytes != 0);
+                for (std::size_t i = 0; i < outers.size(); ++i) {
+                    polynomial_type actual;
+                    math::compose_mod(actual, outers[i], cache, fixed, context);
+                    BOOST_CHECK(actual == expected[i]);
+                    actual = outers[i];
+                    math::compose_mod(actual, actual, cache, fixed, context);
+                    BOOST_CHECK(actual == expected[i]);
+                    BOOST_CHECK_EQUAL(cache.prepared_giant_steps().accumulator->product_count(), 0);
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(grouped_composition_reduces_once_per_group_without_adding_products) {
+    using backend_type = grouped_counting_backend;
+    using polynomial_type = grouped_polynomial_type;
+    const auto outer = grouped_polynomial(540, 17);    // 60 blocks, hence 59 giant products.
+    const auto inner = grouped_polynomial(19, 3);
+    auto divisor = grouped_polynomial(20, 71);
+    divisor.back() = fq12_value_type::one();
+    polynomial_type expected;
+    for (const std::size_t group : {0, 1, 4, 8}) {
+        grouped_operation_counts counts;
+        polynomial_arithmetic::polynomial_context_options options;
+        options.basecase_divisor_coefficient_cutoff = 0;
+        options.basecase_quotient_coefficient_cutoff = 0;
+        options.modular_composition_block_size = 9;
+        options.modular_composition_prepared_byte_limit = 4 * 1024 * 1024;
+        options.modular_composition_giant_step_group_size = group;
+        options.modular_composition_giant_step_prepared_byte_limit = 4 * 1024 * 1024;
+        polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(64, counts), options};
+        math::polynomial_divisor_context<backend_type> fixed(divisor, 18, context);
+        math::polynomial_composition_precomputation<backend_type> cache(inner, outer.size(), fixed, context);
+        counts = {};
+        polynomial_type actual;
+        math::compose_mod(actual, outer, cache, fixed, context);
+        if (group == 0) {
+            expected = actual;
+            BOOST_CHECK_EQUAL(counts.products, 0);
+            BOOST_CHECK_EQUAL(counts.finishes, 0);
+            BOOST_CHECK_EQUAL(counts.remainders, 59);
+        } else {
+            BOOST_CHECK(actual == expected);
+            BOOST_CHECK_EQUAL(counts.products, 59);
+            BOOST_CHECK_EQUAL(counts.finishes, (59 + group - 1) / group);
+            BOOST_CHECK_EQUAL(counts.remainders, counts.finishes);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(grouped_composition_respects_cache_budgets_and_backend_capabilities) {
+    using backend_type = grouped_backend_type;
+    const auto outer = grouped_polynomial(89, 11);
+    const auto inner = grouped_polynomial(19, 3);
+    const auto divisor = grouped_polynomial(20, 7);
+    polynomial_arithmetic::polynomial_context<backend_type> ordinary {backend_type(64)};
+    math::polynomial_divisor_context<backend_type> ordinary_fixed(divisor, 18, ordinary);
+    grouped_polynomial_type expected;
+    math::compose_mod_reference(expected, outer, inner, ordinary_fixed, ordinary);
+    const auto shape = ordinary.make_product_accumulator(19, 4);
+    BOOST_REQUIRE(shape.has_value());
+    const std::size_t required = 4 * shape->required_spectrum_bytes();
+    for (const std::size_t limit : {std::size_t(0), required - 1, required}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.modular_composition_block_size = 9;
+        options.modular_composition_giant_step_group_size = 4;
+        options.modular_composition_giant_step_prepared_byte_limit = limit;
+        polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(64), options};
+        math::polynomial_divisor_context<backend_type> fixed(divisor, 18, context);
+        math::polynomial_composition_precomputation<backend_type> cache(inner, outer.size(), fixed, context);
+        BOOST_CHECK_EQUAL(cache.giant_step_group_size(), limit == required ? 4 : 0);
+        BOOST_CHECK_EQUAL(cache.prepared_giant_step_bytes(), limit == required ? required : 0);
+        grouped_polynomial_type actual;
+        math::compose_mod(actual, outer, cache, fixed, context);
+        BOOST_CHECK(actual == expected);
+    }
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_block_size = 9;
+    options.modular_composition_giant_step_group_size = 8;
+    options.modular_composition_giant_step_prepared_byte_limit = 4 * 1024 * 1024;
+    using reference_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    polynomial_arithmetic::polynomial_context<reference_backend> unsupported {reference_backend {}, options};
+    math::polynomial_divisor_context<reference_backend> unsupported_fixed(divisor, 18, unsupported);
+    math::polynomial_composition_precomputation<reference_backend> unsupported_cache(inner, outer.size(),
+                                                                                     unsupported_fixed, unsupported);
+    BOOST_CHECK_EQUAL(unsupported_cache.giant_step_group_size(), 0);
+    BOOST_CHECK_EQUAL(unsupported_cache.prepared_giant_step_bytes(), 0);
+    grouped_polynomial_type actual;
+    math::compose_mod(actual, outer, unsupported_cache, unsupported_fixed, unsupported);
+    BOOST_CHECK(actual == expected);
+
+    polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(64), options};
+    math::polynomial_divisor_context<backend_type> fixed(divisor, 18, context);
+    math::polynomial_composition_precomputation<backend_type> one_block(inner, 9, fixed, context);
+    BOOST_CHECK_EQUAL(one_block.giant_step_group_size(), 0);
+    math::polynomial_composition_precomputation<backend_type> two_blocks(inner, 18, fixed, context);
+    BOOST_CHECK_EQUAL(two_blocks.giant_step_group_size(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(grouped_composition_falls_back_after_partial_work_without_changing_aliased_input) {
+    using backend_type = grouped_counting_backend;
+    const auto outer = grouped_polynomial(89, 11);
+    const auto inner = grouped_polynomial(19, 3);
+    const auto divisor = grouped_polynomial(20, 7);
+    grouped_operation_counts counts;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_block_size = 9;
+    options.modular_composition_prepared_byte_limit = 4 * 1024 * 1024;
+    options.modular_composition_giant_step_group_size = 4;
+    options.modular_composition_giant_step_prepared_byte_limit = 4 * 1024 * 1024;
+    polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(64, counts), options};
+    math::polynomial_divisor_context<backend_type> fixed(divisor, 18, context);
+    math::polynomial_composition_precomputation<backend_type> cache(inner, outer.size(), fixed, context);
+    grouped_polynomial_type expected;
+    math::compose_mod_reference(expected, outer, inner, fixed, context);
+    for (const std::size_t failure : {1, 3, 5}) {
+        counts = {};
+        counts.decline_on_append = failure;
+        auto actual = outer;
+        math::compose_mod(actual, actual, cache, fixed, context);
+        BOOST_CHECK(actual == expected);
+        BOOST_CHECK_EQUAL(counts.append_attempts, failure);
+    }
+    counts = {};
+    counts.decline_finish = true;
+    auto actual = outer;
+    math::compose_mod(actual, actual, cache, fixed, context);
+    BOOST_CHECK(actual == expected);
+    BOOST_CHECK_GT(counts.products, 0);
+    BOOST_CHECK_EQUAL(counts.finishes, 0);
+    counts = {};
+    counts.decline_preparation = true;
+    math::polynomial_composition_precomputation<backend_type> declined(inner, outer.size(), fixed, context);
+    BOOST_CHECK_EQUAL(declined.giant_step_group_size(), 0);
+    math::compose_mod(actual, outer, declined, fixed, context);
+    BOOST_CHECK(actual == expected);
+}
+
+BOOST_AUTO_TEST_CASE(grouped_composition_mixes_sparse_blocks_and_owns_prepared_state) {
+    using backend_type = grouped_backend_type;
+    using cache_type = math::polynomial_composition_precomputation<backend_type>;
+    const auto inner = grouped_polynomial(19, 3);
+    const auto divisor = grouped_polynomial(20, 7);
+    auto outer = grouped_polynomial(89, 11);
+    // Mix dense tiles, scalar blocks and a partial tail across both grouping and tile boundaries.
+    for (std::size_t block : {1, 4, 6}) {
+        for (std::size_t i = 1; i < 9; ++i) {
+            outer[block * 9 + i] = fq12_value_type::zero();
+        }
+    }
+    auto cache = [&] {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.modular_composition_block_size = 9;
+        options.modular_composition_prepared_byte_limit = 4 * 1024 * 1024;
+        options.modular_composition_giant_step_group_size = 8;
+        options.modular_composition_giant_step_prepared_byte_limit = 4 * 1024 * 1024;
+        polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(128), options};
+        auto source_inner = inner;
+        math::polynomial_divisor_context<backend_type> fixed(divisor, 18, context);
+        cache_type snapshot(source_inner, outer.size(), fixed, context);
+        source_inner[0] += fq12_value_type::one();
+        return snapshot;
+    }();
+    auto copied = cache;
+    auto moved = std::move(copied);
+    polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(64)};
+    math::polynomial_divisor_context<backend_type> fixed(divisor, 18, context);
+    grouped_polynomial_type expected;
+    math::compose_mod_reference(expected, outer, inner, fixed, context);
+    for (const auto *snapshot : {&cache, &moved}) {
+        BOOST_REQUIRE_EQUAL(snapshot->giant_step_group_size(), 8);
+        for (unsigned repeat = 0; repeat < 2; ++repeat) {
+            auto actual = outer;
+            math::compose_mod(actual, actual, *snapshot, fixed, context);
+            BOOST_CHECK(actual == expected);
+            BOOST_CHECK_EQUAL(snapshot->prepared_giant_steps().accumulator->product_count(), 0);
+            BOOST_CHECK_EQUAL(snapshot->prepared_giant_steps().accumulator->storage_bytes(), 0);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(grouped_composition_handles_zero_constant_and_nilpotent_giants) {
+    using backend_type = grouped_backend_type;
+    using polynomial_type = grouped_polynomial_type;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_block_size = 3;
+    options.modular_composition_giant_step_group_size = 8;
+    options.modular_composition_giant_step_prepared_byte_limit = 4 * 1024 * 1024;
+    polynomial_arithmetic::polynomial_context<backend_type> context {backend_type(32), options};
+    polynomial_type divisor(8, fq12_value_type::zero());
+    divisor.back() = fq12_value_type(3);    // 3*X^7: powers of X eventually vanish.
+    math::polynomial_divisor_context<backend_type> fixed(divisor, 6, context);
+    const auto outer = grouped_polynomial(60, 11);
+    for (const polynomial_type inner :
+         {polynomial_type {fq12_value_type::zero()}, polynomial_type {fq12_value_type::one()},
+          polynomial_type {fq12_value(3)}, polynomial_type {fq12_value_type::zero(), fq12_value_type::one()}}) {
+        polynomial_type expected;
+        math::compose_mod_reference(expected, outer, inner, fixed, context);
+        auto actual = inner;
+        math::compose_mod(actual, outer, actual, fixed, context);
+        BOOST_CHECK(actual == expected);
+        actual = outer;
+        math::compose_mod(actual, actual, inner, fixed, context);
+        BOOST_CHECK(actual == expected);
+    }
+    math::polynomial_divisor_context<backend_type> constant(polynomial_type {fq12_value_type(3)}, 1, context);
+    math::polynomial_composition_precomputation<backend_type> cache(outer, outer.size(), constant, context);
+    BOOST_CHECK_EQUAL(cache.giant_step_group_size(), 0);
+    polynomial_type actual;
+    math::compose_mod(actual, outer, cache, constant, context);
+    BOOST_CHECK(actual == polynomial_type {fq12_value_type::zero()});
 }
 
 BOOST_AUTO_TEST_SUITE_END()

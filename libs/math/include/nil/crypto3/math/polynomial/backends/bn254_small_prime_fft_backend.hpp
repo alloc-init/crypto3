@@ -109,6 +109,48 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             std::vector<double> spectrum_;
         };
 
+        /**
+         * Owned workspace for a bounded sum of full products. Fixed operands reuse
+         * prepared_low_product_type; the accumulator owns the larger signed-CRT bound and
+         * retains its spectrum allocation between groups. No backend or input is borrowed.
+         */
+        class product_accumulator_type {
+        public:
+            std::size_t transform_size() const noexcept {
+                return transform_size_;
+            }
+
+            std::size_t required_spectrum_bytes() const noexcept {
+                return field_type::arity * reconstructor_.prime_count() * transform_size_ * sizeof(double);
+            }
+
+            std::size_t product_count() const noexcept {
+                return products_;
+            }
+
+            std::size_t storage_bytes() const noexcept {
+                return spectrum_.capacity() * sizeof(double);
+            }
+
+        private:
+            friend class bn254_small_prime_fft_backend;
+
+            product_accumulator_type(std::size_t operand_coefficient_count, std::size_t maximum_products,
+                                     std::size_t transform_size, const math::detail::small_prime_fft_crt_params &crt,
+                                     const boost::multiprecision::cpp_int &bound) :
+                operand_coefficient_count_(operand_coefficient_count), maximum_products_(maximum_products),
+                transform_size_(transform_size), reconstructor_(crt, bound) {
+            }
+
+            std::size_t operand_coefficient_count_;
+            std::size_t maximum_products_;
+            std::size_t transform_size_;
+            math::detail::bn254_small_prime_fft_reconstructor reconstructor_;
+            std::vector<double> spectrum_;
+            std::size_t products_ = 0;
+            std::size_t result_size_ = 0;
+        };
+
         // Owns the transformed complete divisor modulo X^N - 1, including its leading coefficient.
         // Its distinct type keeps cyclic reconstruction separate from multiplication modulo X^k.
         class prepared_cyclic_remainder_type {
@@ -379,6 +421,136 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             left_spectrum_.resize(field_type::arity * prime_count() * size);
             converter_.convert(left_spectrum_, std::span<const value_type>(left.data(), left_size), size);
             finish_product<false, true>(output, size, std::min(product_size, coefficient_count), prepared.spectrum_);
+            return true;
+        }
+
+        /**
+         * Certify a sum of at most maximum_products full products, with at most
+         * operand_coefficient_count coefficients in either operand. The transform contains
+         * the complete linear product, while the CRT bound is multiplied by maximum_products.
+         * Reuse this backend's catalogue prefix; insufficient capacity declines without
+         * changing ordinary multiplication's bound or selecting additional FFT primes.
+         * max_spectrum_bytes limits the accumulator's one additional spectrum; backend scratch,
+         * coefficient output and prepared fixed operands are separate allocations.
+         */
+        std::optional<product_accumulator_type>
+            make_product_accumulator(std::size_t operand_coefficient_count, std::size_t maximum_products,
+                                     std::size_t max_spectrum_bytes = std::numeric_limits<std::size_t>::max()) const {
+            if (plans_.empty() || operand_coefficient_count == 0 || maximum_products == 0 ||
+                operand_coefficient_count > max_transform_size_ ||
+                operand_coefficient_count > max_transform_size_ - (operand_coefficient_count - 1)) {
+                return std::nullopt;
+            }
+            const std::size_t size = std::bit_ceil(2 * operand_coefficient_count - 1);
+            const std::size_t cells = field_type::arity * prime_count() * size;
+            if (cells > max_spectrum_bytes / sizeof(double)) {
+                return std::nullopt;
+            }
+            math::detail::small_prime_fft_crt_params crt {prime_count(), 1};
+            for (std::size_t prime = 0; prime < prime_count(); ++prime) {
+                crt.modulus *= math::detail::small_prime_fft_primes[prime].modulus;
+            }
+            const boost::multiprecision::cpp_int bound =
+                math::detail::bn254_fp12_convolution_bound(operand_coefficient_count) * maximum_products;
+            if (2 * bound >= crt.modulus) {
+                return std::nullopt;
+            }
+            return product_accumulator_type(operand_coefficient_count, maximum_products, size, crt, bound);
+        }
+
+        /**
+         * Append input*fixed in transform space. Prepare fixed with precision 2*n-1 and
+         * transform bit_ceil(2*n-1), where n is the accumulator's operand limit. Padding a
+         * shorter fixed polynomial to n coefficients before preparation selects that shape.
+         * Shorter variable operands are zero-padded to the shared transform. Zero products
+         * consume one product slot but require no spectrum. A declined append leaves the
+         * accumulator unchanged; all input coefficients are consumed before returning.
+         */
+        bool try_accumulate_prepared_product(product_accumulator_type &accumulator, const polynomial_type &input,
+                                             const prepared_low_product_type &prepared) {
+            const std::size_t n = accumulator.operand_coefficient_count_;
+            const std::size_t size = accumulator.transform_size_;
+            if (plans_.empty() || size > max_transform_size_ ||
+                accumulator.reconstructor_.prime_count() != prime_count() ||
+                accumulator.products_ == accumulator.maximum_products_ || input.size() > n ||
+                prepared.prefix_size_ > n || prepared.coefficient_count_ != 2 * n - 1 ||
+                (prepared.transform_size_ != 0 &&
+                 (prepared.transform_size_ != size || prepared.prime_count_ != prime_count() ||
+                  prepared.spectrum_.empty()))) {
+                return false;
+            }
+            if (prepared.transform_size_ == 0 || math::is_zero(input)) {
+                ++accumulator.products_;
+                return true;
+            }
+            const std::size_t cells = field_type::arity * prime_count() * size;
+            if (accumulator.spectrum_.empty()) {
+                std::vector<double>(cells).swap(accumulator.spectrum_);
+            }
+            left_spectrum_.resize(cells);
+            prepare_spectrum(left_spectrum_, std::span<const value_type>(input.data(), input.size()), size);
+            const std::size_t plan_offset = std::countr_zero(size) * prime_count();
+            for (std::size_t prime = 0; prime < prime_count(); ++prime) {
+                const std::size_t count = field_type::arity * size;
+                const std::size_t offset = prime * count;
+                auto product = std::span<double>(left_spectrum_).subspan(offset, count);
+                pointwise_[prime].multiply(product, std::span<const double>(prepared.spectrum_).subspan(offset, count),
+                                           size, normalizations_[plan_offset + prime]);
+                auto sum = std::span<double>(accumulator.spectrum_).subspan(offset, count);
+                if (accumulator.result_size_ == 0) {
+                    std::copy(product.begin(), product.end(), sum.begin());
+                } else {
+                    const double modulus = static_cast<double>(math::detail::small_prime_fft_primes[prime].modulus);
+                    // Both operands lie in (-q,q). Their integer sum is exact in binary64
+                    // under every rounding mode; one correction returns it to (-q,q).
+                    for (std::size_t i = 0; i < count; ++i) {
+                        double value = sum[i] + product[i];
+                        if (value >= modulus) {
+                            value -= modulus;
+                        } else if (value <= -modulus) {
+                            value += modulus;
+                        }
+                        sum[i] = value;
+                    }
+                }
+            }
+            accumulator.result_size_ = std::max(accumulator.result_size_, input.size() + prepared.prefix_size_ - 1);
+            ++accumulator.products_;
+            return true;
+        }
+
+        /**
+         * Reconstruct the accumulated full sum with one inverse transform per channel and one
+         * CRT export, then reset the group while retaining its workspace and certified bound.
+         * An empty group produces zero. Output may alias any previously consumed input.
+         * Incompatible or moved-from state returns false without changing output or the group.
+         */
+        bool try_finish_product_sum(polynomial_type &output, product_accumulator_type &accumulator) {
+            const std::size_t size = accumulator.transform_size_;
+            if (plans_.empty() || size > max_transform_size_ ||
+                accumulator.reconstructor_.prime_count() != prime_count() ||
+                (accumulator.result_size_ != 0 && accumulator.spectrum_.empty())) {
+                return false;
+            }
+            if (accumulator.result_size_ == 0) {
+                output.assign(1, value_type::zero());
+            } else {
+                result_.resize(accumulator.result_size_);
+                const std::size_t plan_offset = std::countr_zero(size) * prime_count();
+                for (std::size_t prime = 0; prime < prime_count(); ++prime) {
+                    for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
+                        plans_[plan_offset + prime].inverse_fft_pointwise(
+                            std::span<double>(accumulator.spectrum_)
+                                .subspan((prime * field_type::arity + coordinate) * size, size));
+                    }
+                }
+                accumulator.reconstructor_.reconstruct_weighted(std::span<value_type>(result_.data(), result_.size()),
+                                                                accumulator.spectrum_, size);
+                math::condense(result_);
+                output.get_storage().swap(result_.get_storage());
+            }
+            accumulator.products_ = 0;
+            accumulator.result_size_ = 0;
             return true;
         }
 
