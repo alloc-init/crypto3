@@ -73,6 +73,11 @@ namespace {
     static_assert(!SupportsMatrixProduct<context_type, 3>);
     static_assert(!SupportsMatrixProduct<arithmetic::polynomial_context<reference_backend>, 2>);
 
+    template<typename Context>
+    concept SupportsProductAccumulator = requires(Context &context) { context.make_product_accumulator(1, 1); };
+    static_assert(SupportsProductAccumulator<context_type>);
+    static_assert(!SupportsProductAccumulator<arithmetic::polynomial_context<reference_backend>>);
+
     struct prepared_product_counts {
         std::size_t preparations = 0;
         std::size_t prepared_products = 0;
@@ -939,6 +944,223 @@ BOOST_AUTO_TEST_CASE(prepared_products_match_native_and_ordinary_low_products) {
     polynomial_type actual;
     BOOST_REQUIRE(context.try_multiply_low_prepared(actual, dense, *prepared, dense.size()));
     check_polynomial(actual, expected_low(expected_product(dense, dense), dense.size()));
+}
+
+BOOST_AUTO_TEST_CASE(prepared_product_sums_match_schoolbook_and_reset_between_groups) {
+    context_type context {backend_type(128)};
+    std::mt19937_64 random(0x46465430);
+    for (const std::size_t n : {1, 3, 9, 17, 33}) {
+        for (const std::size_t products : {1, 4, 8}) {
+            BOOST_TEST_CONTEXT("operand_limit=" << n << ", products=" << products) {
+                auto sum = context.make_product_accumulator(n, products);
+                BOOST_REQUIRE(sum.has_value());
+                BOOST_CHECK_EQUAL(sum->transform_size(), std::bit_ceil(2 * n - 1));
+                std::vector<polynomial_type> fixed;
+                std::vector<backend_type::prepared_low_product_type> prepared;
+                for (std::size_t i = 0; i < products; ++i) {
+                    fixed.push_back(random_polynomial(i % 2 ? n : std::max(std::size_t(1), n / 2), random));
+                    auto padded = fixed.back();
+                    padded.resize(n, value_type::zero());
+                    auto operand = context.prepare_low_product(padded, n, 2 * n - 1);
+                    BOOST_REQUIRE(operand.has_value());
+                    prepared.push_back(std::move(*operand));
+                }
+                for (unsigned repeat = 0; repeat < 2; ++repeat) {
+                    polynomial_type expected {value_type::zero()}, input;
+                    for (std::size_t i = 0; i < products; ++i) {
+                        input = random_polynomial(i % 3 ? n : 1, random);
+                        math::addition(expected, expected, expected_product(input, fixed[i]));
+                        BOOST_REQUIRE(context.try_accumulate_prepared_product(*sum, input, prepared[i]));
+                        BOOST_CHECK_EQUAL(sum->product_count(), i + 1);
+                    }
+                    // The output can replace an input that has already been consumed.
+                    BOOST_REQUIRE(context.try_finish_product_sum(input, *sum));
+                    check_polynomial(input, expected);
+                    BOOST_CHECK_EQUAL(sum->product_count(), 0);
+                }
+                polynomial_type empty {value_type::one()};
+                BOOST_REQUIRE(context.try_finish_product_sum(empty, *sum));
+                check_polynomial(empty, polynomial_type {value_type::zero()});
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(prepared_product_sums_handle_zero_cancellation_and_product_limits) {
+    context_type context {backend_type(32)};
+    std::mt19937_64 random(0x46465431);
+    const auto fixed = random_polynomial(9, random);
+    const auto operand = context.prepare_low_product(fixed, 9, 17);
+    const auto zero = context.prepare_low_product(polynomial_type(9, value_type::zero()), 9, 17);
+    BOOST_REQUIRE(operand && zero);
+    auto sum = context.make_product_accumulator(9, 4);
+    BOOST_REQUIRE(sum.has_value());
+    auto input = random_polynomial(9, random);
+    auto negative = input;
+    for (auto &coefficient : negative) {
+        coefficient = -coefficient;
+    }
+    BOOST_REQUIRE(context.try_accumulate_prepared_product(*sum, input, *operand));
+    BOOST_REQUIRE(context.try_accumulate_prepared_product(*sum, negative, *operand));
+    BOOST_REQUIRE(context.try_accumulate_prepared_product(*sum, polynomial_type {value_type::zero()}, *operand));
+    BOOST_REQUIRE(context.try_accumulate_prepared_product(*sum, input, *zero));
+    BOOST_CHECK(!context.try_accumulate_prepared_product(*sum, input, *operand));
+    BOOST_CHECK_EQUAL(sum->product_count(), 4);
+    polynomial_type result;
+    BOOST_REQUIRE(context.try_finish_product_sum(result, *sum));
+    check_polynomial(result, polynomial_type {value_type::zero()});
+    // Zero appends after a reset must not revive the previous group's transformed data.
+    BOOST_REQUIRE(context.try_accumulate_prepared_product(*sum, input, *zero));
+    BOOST_REQUIRE(context.try_accumulate_prepared_product(*sum, input, *operand));
+    BOOST_REQUIRE(context.try_finish_product_sum(result, *sum));
+    check_polynomial(result, expected_product(input, fixed));
+}
+
+BOOST_AUTO_TEST_CASE(prepared_product_sums_certify_the_combined_integer_bound) {
+    context_type context {backend_type(64)};
+    coordinates_type coordinates;
+    coordinates.fill(cpp_int(fq::modulus.backend().to_cpp_int()) - 1);
+    const polynomial_type dense(17, field_value(coordinates));
+    const auto fixed = context.prepare_low_product(dense, 17, 33);
+    auto sum = context.make_product_accumulator(17, 8);
+    BOOST_REQUIRE(fixed && sum);
+    const auto product = expected_product(dense, dense);
+    polynomial_type expected {value_type::zero()}, result;
+    for (unsigned i = 0; i < 8; ++i) {
+        math::addition(expected, expected, product);
+        BOOST_REQUIRE(context.try_accumulate_prepared_product(*sum, dense, *fixed));
+    }
+    BOOST_REQUIRE(context.try_finish_product_sum(result, *sum));
+    check_polynomial(result, expected);
+
+    const std::size_t bytes = 64 * 12 * backend_type(64).prime_count() * sizeof(double);
+    BOOST_CHECK(context.make_product_accumulator(17, 8, bytes).has_value());
+    BOOST_CHECK(!context.make_product_accumulator(17, 8, bytes - 1).has_value());
+    BOOST_CHECK(!context.make_product_accumulator(17, 8, 0).has_value());
+    BOOST_CHECK(!context.make_product_accumulator(0, 8).has_value());
+    BOOST_CHECK(!context.make_product_accumulator(17, 0).has_value());
+    BOOST_CHECK(!context.make_product_accumulator(33, 8).has_value());
+    BOOST_CHECK(!context.make_product_accumulator(std::numeric_limits<std::size_t>::max(), 8).has_value());
+    BOOST_CHECK(!context.make_product_accumulator(17, std::numeric_limits<std::size_t>::max()).has_value());
+}
+
+BOOST_AUTO_TEST_CASE(prepared_product_sums_decline_incompatible_operands_without_losing_work) {
+    context_type context {backend_type(32)}, smaller {backend_type(16)};
+    std::mt19937_64 random(0x46465432);
+    const auto fixed = random_polynomial(9, random);
+    const auto input = random_polynomial(9, random);
+    const auto prepared = context.prepare_low_product(fixed, 9, 17);
+    const auto wrong_precision = context.prepare_low_product(fixed, 9, 16);
+    const auto wrong_shape = context.prepare_low_product(polynomial_type {value_type::one()}, 9, 17);
+    const auto too_long = context.prepare_low_product(random_polynomial(10, random), 9, 17);
+    BOOST_REQUIRE(prepared && wrong_precision && wrong_shape && too_long);
+    auto moved_from = *prepared;
+    const auto moved = std::move(moved_from);
+    auto sum = context.make_product_accumulator(9, 4);
+    BOOST_REQUIRE(sum.has_value());
+    BOOST_REQUIRE(context.try_accumulate_prepared_product(*sum, input, *prepared));
+    const std::array<const backend_type::prepared_low_product_type *, 4> incompatible {&*wrong_precision, &*wrong_shape,
+                                                                                       &*too_long, &moved_from};
+    for (const auto *bad : incompatible) {
+        BOOST_CHECK(!context.try_accumulate_prepared_product(*sum, input, *bad));
+        BOOST_CHECK_EQUAL(sum->product_count(), 1);
+    }
+    BOOST_CHECK(!context.try_accumulate_prepared_product(*sum, random_polynomial(10, random), *prepared));
+    BOOST_CHECK(!smaller.try_accumulate_prepared_product(*sum, input, *prepared));
+    polynomial_type result {value_type::one()};
+    BOOST_CHECK(!smaller.try_finish_product_sum(result, *sum));
+    check_polynomial(result, polynomial_type {value_type::one()});
+    BOOST_CHECK_EQUAL(sum->product_count(), 1);
+    BOOST_REQUIRE(context.try_finish_product_sum(result, *sum));
+    check_polynomial(result, expected_product(input, fixed));
+}
+
+BOOST_AUTO_TEST_CASE(prepared_product_sums_own_state_across_contexts_and_moves) {
+    std::mt19937_64 random(0x46465433);
+    const auto input = random_polynomial(9, random);
+    const auto fixed = random_polynomial(9, random);
+    auto [prepared, accumulated] = [&] {
+        context_type temporary {backend_type(128)};
+        auto source = fixed;
+        auto operand = temporary.prepare_low_product(source, 9, 17);
+        auto sum = temporary.make_product_accumulator(9, 4);
+        BOOST_REQUIRE(operand && sum);
+        BOOST_REQUIRE(temporary.try_accumulate_prepared_product(*sum, input, *operand));
+        source[0] += value_type::one();
+        return std::pair {std::move(*operand), std::move(*sum)};
+    }();
+    context_type context {backend_type(32)};
+    auto copied = accumulated;
+    auto moved = std::move(accumulated);
+    polynomial_type result {value_type::one()};
+    BOOST_CHECK(!context.try_accumulate_prepared_product(accumulated, input, prepared));
+    BOOST_CHECK(!context.try_finish_product_sum(result, accumulated));
+    check_polynomial(result, polynomial_type {value_type::one()});
+    BOOST_REQUIRE(context.try_accumulate_prepared_product(moved, input, prepared));
+    BOOST_REQUIRE(context.try_finish_product_sum(result, moved));
+    const auto product = expected_product(input, fixed);
+    polynomial_type twice;
+    math::addition(twice, product, product);
+    check_polynomial(result, twice);
+    BOOST_REQUIRE(context.try_finish_product_sum(result, copied));
+    check_polynomial(result, product);
+
+    backend_type source(32);
+    auto sum = source.make_product_accumulator(9, 4);
+    BOOST_REQUIRE(sum.has_value());
+    backend_type destination = std::move(source);
+    BOOST_CHECK(!source.make_product_accumulator(9, 4).has_value());
+    BOOST_CHECK(!source.try_accumulate_prepared_product(*sum, input, prepared));
+    BOOST_CHECK(!source.try_finish_product_sum(result, *sum));
+    BOOST_REQUIRE(destination.try_accumulate_prepared_product(*sum, input, prepared));
+    BOOST_REQUIRE(destination.try_finish_product_sum(result, *sum));
+    check_polynomial(result, product);
+}
+
+BOOST_AUTO_TEST_CASE(prepared_product_sums_keep_workspace_within_its_own_budget) {
+    backend_type backend(256);
+    polynomial_type result, large(65, value_type::one());
+    backend.multiply(result, large, large);
+    const polynomial_type small(3, value_type::one());
+    const auto fixed = backend.prepare_low_product(small, 3, 5);
+    const std::size_t bytes = 8 * 12 * backend.prime_count() * sizeof(double);
+    auto sum = backend.make_product_accumulator(3, 4, bytes);
+    BOOST_REQUIRE(fixed && sum);
+    BOOST_CHECK_EQUAL(sum->required_spectrum_bytes(), bytes);
+    BOOST_CHECK_EQUAL(sum->storage_bytes(), 0);
+    for (unsigned i = 0; i < 2; ++i) {
+        BOOST_REQUIRE(backend.try_accumulate_prepared_product(*sum, small, *fixed));
+        BOOST_CHECK_EQUAL(sum->storage_bytes(), bytes);
+        BOOST_REQUIRE(backend.try_finish_product_sum(result, *sum));
+        check_polynomial(result, expected_product(small, small));
+        BOOST_CHECK_EQUAL(sum->storage_bytes(), bytes);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(prepared_product_sums_preserve_correctness_across_rounding_modes) {
+    restore_rounding restore;
+    std::mt19937_64 random(0x46465434);
+    const auto input = random_polynomial(5, random);
+    const auto fixed = random_polynomial(5, random);
+    const auto product = expected_product(input, fixed);
+    polynomial_type expected {value_type::zero()};
+    for (unsigned i = 0; i < 8; ++i) {
+        math::addition(expected, expected, product);
+    }
+    context_type context {backend_type(16)};
+    const auto prepared = context.prepare_low_product(fixed, 5, 9);
+    BOOST_REQUIRE(prepared.has_value());
+    for (const int mode : {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
+        BOOST_REQUIRE_EQUAL(std::fesetround(mode), 0);
+        auto sum = context.make_product_accumulator(5, 8);
+        BOOST_REQUIRE(sum.has_value());
+        for (unsigned i = 0; i < 8; ++i) {
+            BOOST_REQUIRE(context.try_accumulate_prepared_product(*sum, input, *prepared));
+        }
+        polynomial_type result;
+        BOOST_REQUIRE(context.try_finish_product_sum(result, *sum));
+        check_polynomial(result, expected);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(prepared_products_handle_zero_and_truncated_prefixes) {
