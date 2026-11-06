@@ -171,8 +171,10 @@ Both specialized methods need `lambda = x^((Q - 1) / 2)` and `X^Q mod B`. When t
 The quotient-ring binary exponentiation therefore uses the characteristic-sized exponent `(p - 1)/2`. The conjugate
 product uses `O(log e)` compositions and products, with the required coefficient Frobenius twists. Prime fields and
 coefficient types without that map use `powmod_x` with `(Q - 1)/2` directly. Multiplication by `x` uses a linear shift/reduction.
-The two methods share this seed implementation; ordinary `polynomial_frobenius_context` construction still computes
-its initial `X^Q` using `powmod_x` with exponent `Q`.
+The two methods share this seed implementation. Ordinary `polynomial_frobenius_context` construction defaults to
+`powmod_x` with exponent `Q`; degree-12 coefficient fields with `Frobenius_map` can instead select the
+`initial_frobenius_composition_cutoff` chain described in the [arithmetic guide](@ref math_polynomial_arithmetic).
+That option does not change the shared square-root seed above.
 
 ## Bounded rational reconstruction
 

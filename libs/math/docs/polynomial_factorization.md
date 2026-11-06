@@ -104,6 +104,7 @@ Several independent options affect the work in this pipeline:
 |---|---|---|
 | `gcd_half_gcd_cutoff` | Recursive half-GCD during square-free decomposition, screening, and splitting | 0: disabled |
 | `distinct_degree_screening_limit` | Early degree checks before the full baby table | 0: disabled |
+| `initial_frobenius_composition_cutoff` | Initial `X^Q` for degree-12 coefficient fields with `Frobenius_map`: a characteristic-sized power followed by five compositions at or above the divisor-degree cutoff | 0: direct exponentiation |
 | `distinct_degree_certificate_minimum_excluded_degree` | Minimum excluded factor degree before trying a residual irreducibility certificate at a completed block boundary | 0: disabled |
 | `distinct_degree_certificate_maximum_attempts` | Certificate attempts per square-free part; another attempt requires factor removal | 1; zero disables attempts |
 | `distinct_degree_certificate_prepared_byte_limit` | Prepared coefficient payload for the certificate's temporary cache, also capped by the general composition budget | 0: scalar combinations |
@@ -115,6 +116,9 @@ Several independent options affect the work in this pipeline:
 Selecting the small-prime backend does not enable half-GCD or prepared coefficient combinations automatically.
 Choose their cutoffs and budgets from representative complete operations, including preparation and memory costs.
 Composition budgets apply to each cache, and simultaneous workers need separate arithmetic contexts and generators.
+The opt-in initial-power chain releases its two intermediate caches sequentially before constructing the final
+Frobenius-map cache. Its caches honor the same explicit block size and per-cache prepared-byte budget. Measure the
+complete context and memory occupancy under the intended concurrency before enabling it for grinding.
 The explicit composition block size controls each Brent-Kung cache, independently of the Kaltofen-Shoup degree-block
 size. Larger composition blocks exchange additional preparation and storage for fewer modular products per reuse;
 they can make short-lived caches slower. See [composition block selection](@ref math_polynomial_arithmetic) for the
@@ -307,7 +311,8 @@ backend.
 | Complete factorization | The sum of the square-free, Kaltofen-Shoup, and equal-degree stages |
 
 The Cantor-Zassenhaus bounds are expected bounds for uniform random samples; a caller-supplied generator has no fixed
-retry limit. Initial `X^Q mod B` construction uses `powmod_x`; subsequent Frobenius maps use Brent-Kung composition.
+retry limit. Initial `X^Q mod B` construction uses `powmod_x` by default; the opt-in degree-12 initial-power chain
+uses a characteristic-sized power and five compositions. Subsequent Frobenius maps use Brent-Kung composition.
 Its coefficient-combination phase remains quadratic even when prepared dots and SIMD reduce the constant cost.
 Staged callbacks stop paying these costs once the caller has obtained enough factors. If a callback performs norm
 recovery, that additional work is outside these factorization-only bounds; the

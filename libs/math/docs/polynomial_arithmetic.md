@@ -188,6 +188,7 @@ Separate contexts are required for concurrent calls when the backend owns mutabl
 | `gcd_half_gcd_cutoff` | 0 | Use half-GCD when the smaller operand reaches this size; zero disables half-GCD. |
 | `modular_composition_cached_power_limit` | maximum `size_t` | Cap the number of Brent-Kung baby powers; constructing a composition cache requires a positive limit. |
 | `modular_composition_block_size` | 0 | Request a Brent-Kung block size for composition caches; zero selects the square-root heuristic. A positive request is capped by the cached-power limit and maximum outer coefficient count. |
+| `initial_frobenius_composition_cutoff` | 0 | At this divisor degree or above, initialize Frobenius over degree-12 coefficient fields with a characteristic-sized power and five compositions; requires coefficient `Frobenius_map` support. Zero keeps direct exponentiation. |
 | `distinct_degree_screening_limit` | 0 | Screen initial irreducible-factor degrees before the full Kaltofen-Shoup baby table; zero disables screening. |
 | `distinct_degree_certificate_minimum_excluded_degree` | 0 | Permit exact residual irreducibility certificates after this excluded factor degree, at completed blocks; zero disables attempts. |
 | `distinct_degree_certificate_maximum_attempts` | 1 | Cap attempts per square-free part; a failed attempt is never retried without factor removal. |
@@ -459,9 +460,26 @@ Let the finite coefficient field `K` contain `Q` elements. Every coefficient sat
 
     A(X)^Q mod B = A(X^Q mod B) mod B.
 
-`polynomial_frobenius_context<Backend>` computes `X^Q mod B` using `powmod_x`, owns the required divisor context, and
-builds a Brent-Kung precomputation for composition with that value. The context can then apply many Frobenius maps
-without repeating the field-order exponentiation or rebuilding baby powers.
+`polynomial_frobenius_context<Backend>` computes `X^Q mod B` using `powmod_x` by default, owns the required divisor
+context, and builds a Brent-Kung precomputation for composition with that value. The context can then apply many
+Frobenius maps without repeating the field-order exponentiation or rebuilding baby powers.
+
+For degree-12 coefficient fields whose values support `Frobenius_map`, a positive
+`initial_frobenius_composition_cutoff` selects a composition chain when `degree(B)` reaches the cutoff. With
+characteristic `p` and `Q = p^12`, it first computes `h[1] = X^p mod B`, then constructs `h[2]`, `h[3]`, `h[6]`,
+`h[9]` and `h[12]` using five compositions. Each step uses
+
+    h[a+b] = sigma^a(h[b])(h[a]) mod B,
+
+where `sigma^a` raises every coefficient to `p^a`. These coefficient twists are required even when `B` is reducible
+or nonmonic. The resulting `h[12]` is exactly the same field-order image as direct exponentiation. Other coefficient
+fields, degrees below the cutoff, and the default zero cutoff retain the direct path.
+
+The chain constructs caches for `h[1]` and `h[3]` sequentially, releasing each before constructing the next; both are
+released before the final `h[12]` cache is built. All three caches honor the composition block size, cached-power
+limit and per-cache prepared-byte budget. This moves cache allocation into the initial power calculation and can
+increase the time spent at high memory use even when the complete context has a similar peak. Choose the cutoff
+and cache settings from complete-context measurements under the intended worker load.
 
 ```cpp
 math::polynomial_frobenius_context<backend_type> frobenius_context(
@@ -536,7 +554,8 @@ coefficient-field order. These are rough bounds for the current implementation:
 | `powmod_x` | `O(M(n) * log e)` with fast division, with linear shifts/reductions for set bits |
 | Reference modular composition | `O(n * M(n))` |
 | Current Brent-Kung composition | `O(sqrt(n) * M(n) + n^2)` |
-| Frobenius-context construction | `O(M(n) * log Q + sqrt(n) * M(n))` |
+| Default Frobenius-context construction | `O(M(n) * log Q + sqrt(n) * M(n))` |
+| Degree-12 Frobenius composition chain | `O(M(n) * log p)` for the initial power, five cached compositions and three composition-cache constructions |
 | One cached Frobenius map | `O(sqrt(n) * M(n) + n^2)` |
 | Frobenius product or weighted sum of `t` terms | `O(log t)` compositions, composition-cache preparations, and modular products for `t > 1` |
 
