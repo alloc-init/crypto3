@@ -24,8 +24,10 @@
 
 #define BOOST_TEST_MODULE polynomial_frobenius_test
 
+#include <algorithm>
 #include <cstddef>
 #include <limits>
+#include <vector>
 
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/test/unit_test.hpp>
@@ -34,6 +36,7 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/algebra/fields/field_order.hpp>
+#include <nil/crypto3/algebra/fields/fp2.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 
 #include <nil/crypto3/math/polynomial/quotient_ring/polynomial_frobenius.hpp>
@@ -59,8 +62,10 @@ namespace {
         return value;
     }
 
-    struct counting_product_backend : polynomial_arithmetic::schoolbook_backend<fields::babybear::value_type> {
-        using base_type = polynomial_arithmetic::schoolbook_backend<fields::babybear::value_type>;
+    template<typename Value>
+    struct counting_product_backend : polynomial_arithmetic::schoolbook_backend<Value> {
+        using base_type = polynomial_arithmetic::schoolbook_backend<Value>;
+        using polynomial_type = typename base_type::polynomial_type;
         explicit counting_product_backend(std::size_t &operations) : operations(operations) {
         }
         void square(polynomial_type &output, const polynomial_type &input) const {
@@ -190,6 +195,146 @@ BOOST_AUTO_TEST_CASE(frobenius_modulo_a_nonzero_constant_is_zero) {
     BOOST_CHECK(result == polynomial_type({fq_value_type::zero()}));
 }
 
+BOOST_AUTO_TEST_CASE(initial_composition_chain_matches_direct_powers_over_quotient_rings) {
+    using backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using polynomial = backend::polynomial_type;
+    using value = fq12_value_type;
+    polynomial_arithmetic::polynomial_context<backend> reference;
+    const auto u = fq12_value(3);
+    BOOST_REQUIRE(u.Frobenius_map(1) != u);
+    BOOST_REQUIRE(u.Frobenius_map(3) != u);
+    const polynomial linear {-u, value::one()};
+    polynomial repeated, reducible;
+    math::multiplication(repeated, linear, linear, reference);
+    math::multiplication(reducible, repeated, polynomial {u + value::one(), value::one()}, reference);
+    for (auto &coefficient : reducible) {
+        coefficient *= fq12_value(17);
+    }
+    const std::vector<polynomial> moduli {{value(7)},
+                                          linear,
+                                          repeated,
+                                          reducible,
+                                          {fq12_value(2), fq12_value(19), fq12_value(37), fq12_value(53)},
+                                          {value::zero(), value::one()},
+                                          {value::zero(), value::zero(), value::zero(), value::zero(), value::one()}};
+    const polynomial x {value::zero(), value::one()}, input {fq12_value(71), fq12_value(89)};
+    const auto order = fields::field_order<fq12_field_type>();
+    for (const auto &modulus : moduli) {
+        const std::size_t degree = modulus.size() - 1;
+        const math::polynomial_divisor_context<backend> divisor(modulus, std::max<std::size_t>(1, degree), reference);
+        polynomial expected_image, expected_map;
+        math::powmod(expected_image, x, order, divisor, reference);
+        math::powmod(expected_map, input, order, divisor, reference);
+        for (const std::size_t cache_limit : {1, 3}) {
+            polynomial_arithmetic::polynomial_context_options options;
+            options.initial_frobenius_composition_cutoff = 1;
+            options.modular_composition_cached_power_limit = cache_limit;
+            polynomial_arithmetic::polynomial_context<backend> context(backend {}, options);
+            const math::polynomial_frobenius_context<backend> frobenius(modulus, context);
+            BOOST_CHECK(frobenius.x_to_field_order() == expected_image);
+            auto result = input;
+            math::frobenius_map(result, result, frobenius, context);
+            BOOST_CHECK(result == expected_map);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(initial_composition_chain_is_opt_in_at_the_divisor_degree_cutoff) {
+    using backend = counting_product_backend<fq12_value_type>;
+    using polynomial = backend::polynomial_type;
+    const polynomial modulus {fq12_value(3), fq12_value(19), fq12_value(37), fq12_value(53)};
+    const std::size_t degree = modulus.size() - 1;
+    std::size_t direct_operations = 0;
+    polynomial_arithmetic::polynomial_context<backend> direct(backend {direct_operations});
+    BOOST_CHECK_EQUAL(direct.options().initial_frobenius_composition_cutoff, 0);
+    const math::polynomial_frobenius_context<backend> baseline(modulus, direct);
+    for (const std::size_t cutoff : {degree + 1, degree, std::size_t(1), std::numeric_limits<std::size_t>::max()}) {
+        std::size_t operations = 0;
+        polynomial_arithmetic::polynomial_context_options options;
+        options.initial_frobenius_composition_cutoff = cutoff;
+        polynomial_arithmetic::polynomial_context<backend> context(backend {operations}, options);
+        const math::polynomial_frobenius_context<backend> frobenius(modulus, context);
+        BOOST_CHECK(frobenius.x_to_field_order() == baseline.x_to_field_order());
+        // Equality alone would also pass if the option were ignored. Count arithmetic, not elapsed time.
+        if (cutoff <= degree) {
+            BOOST_CHECK_LT(operations, direct_operations);
+        } else {
+            BOOST_CHECK_EQUAL(operations, direct_operations);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(initial_composition_chain_retains_direct_powers_for_other_fields) {
+    const auto check = []<typename Field>() {
+        using value = typename Field::value_type;
+        using backend = counting_product_backend<value>;
+        using polynomial = typename backend::polynomial_type;
+        const polynomial modulus {value(2), value(3), value::zero(), value::one()};
+        std::size_t direct_operations = 0, selected_operations = 0;
+        polynomial_arithmetic::polynomial_context<backend> direct(backend {direct_operations});
+        polynomial_arithmetic::polynomial_context_options options;
+        options.initial_frobenius_composition_cutoff = 1;
+        polynomial_arithmetic::polynomial_context<backend> selected(backend {selected_operations}, options);
+        const math::polynomial_frobenius_context<backend> baseline(modulus, direct), frobenius(modulus, selected);
+        BOOST_CHECK(frobenius.x_to_field_order() == baseline.x_to_field_order());
+        BOOST_CHECK_EQUAL(selected_operations, direct_operations);
+    };
+    check.template operator()<fq_field_type>();
+    check.template operator()<fields::fp2<fields::alt_bn128<254>>>();
+}
+
+BOOST_AUTO_TEST_CASE(initial_composition_chain_supports_prepared_caches_and_budget_fallbacks) {
+    using backend = polynomial_arithmetic::bn254_small_prime_fft_backend;
+    using reference_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using polynomial = backend::polynomial_type;
+    const std::size_t degree = 10;
+    polynomial modulus(degree + 1), input(degree);
+    for (std::size_t i = 0; i < modulus.size(); ++i) {
+        modulus[i] = fq12_value(12 * i + 1);
+    }
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        input[i] = fq12_value(12 * i + 137);
+    }
+    polynomial_arithmetic::polynomial_context<reference_backend> reference;
+    const math::polynomial_divisor_context<reference_backend> divisor(modulus, degree - 1, reference);
+    const auto order = fields::field_order<fq12_field_type>();
+    const polynomial x {fq12_value_type::zero(), fq12_value_type::one()};
+    polynomial expected_image, expected_map;
+    math::powmod(expected_image, x, order, divisor, reference);
+    math::powmod(expected_map, input, order, divisor, reference);
+    for (const std::size_t budget : {std::size_t(0), std::size_t(1), std::size_t(1) << 20}) {
+        polynomial_arithmetic::polynomial_context_options options;
+        options.initial_frobenius_composition_cutoff = 1;
+        options.modular_composition_block_size = degree;
+        options.modular_composition_prepared_byte_limit = budget;
+        options.basecase_divisor_coefficient_cutoff = 0;
+        options.basecase_quotient_coefficient_cutoff = 0;
+        polynomial_arithmetic::polynomial_context<backend> context(backend(32), options);
+        const math::polynomial_frobenius_context<backend> frobenius(modulus, context);
+        BOOST_CHECK(frobenius.x_to_field_order() == expected_image);
+        const auto &cache = frobenius.composition_precomputation();
+        BOOST_CHECK_LE(cache.prepared_coefficient_bytes(), budget);
+        BOOST_CHECK_EQUAL(cache.prepared_coefficients().use_for_block(input, 0), budget > 1);
+        auto result = input;
+        math::frobenius_map(result, result, frobenius, context);
+        BOOST_CHECK(result == expected_map);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(initial_composition_chain_preserves_invalid_precomputation_errors) {
+    using backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    using polynomial = backend::polynomial_type;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.initial_frobenius_composition_cutoff = 1;
+    polynomial_arithmetic::polynomial_context<backend> context(backend {}, options);
+    BOOST_CHECK_THROW(math::polynomial_frobenius_context<backend>(polynomial {fq12_value_type::zero()}, context),
+                      std::invalid_argument);
+    options.modular_composition_cached_power_limit = 0;
+    polynomial_arithmetic::polynomial_context<backend> invalid_context(backend {}, options);
+    const polynomial modulus {fq12_value(3), fq12_value(19), fq12_value(37)};
+    BOOST_CHECK_THROW(math::polynomial_frobenius_context<backend>(modulus, invalid_context), std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_CASE(mixed_radix_frobenius_reuses_cyclic_reduction_and_cached_composition) {
     using mixed_backend = polynomial_arithmetic::mixed_radix_backend<fq_field_type, fq12_value_type>;
     using reference_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
@@ -206,26 +351,32 @@ BOOST_AUTO_TEST_CASE(mixed_radix_frobenius_reuses_cyclic_reduction_and_cached_co
     polynomial_arithmetic::polynomial_context_options options;
     options.basecase_divisor_coefficient_cutoff = 0;
     options.basecase_quotient_coefficient_cutoff = 0;
-    polynomial_arithmetic::polynomial_context<mixed_backend> mixed(mixed_backend(18), options);
     polynomial_arithmetic::polynomial_context<reference_backend> reference;
     const math::polynomial_divisor_context<reference_backend> reference_divisor(divisor, 5, reference);
-    const math::polynomial_frobenius_context<mixed_backend> frobenius(divisor, mixed);
     const auto order = fields::field_order<fq12_field_type>();
     const polynomial_type x {fq12_value_type::zero(), fq12_value_type::one()};
-    polynomial_type expected, result;
-    math::powmod(expected, x, order, reference_divisor, reference);
-    BOOST_CHECK(frobenius.x_to_field_order() == expected);
-    math::powmod(expected, input, order, reference_divisor, reference);
-    math::frobenius_map(result, input, frobenius, mixed);
-    BOOST_CHECK(result == expected);
-    auto alias = input;
-    math::frobenius_map(alias, alias, frobenius, mixed);
-    BOOST_CHECK(alias == expected);
-    // Reuse the same composition cache with another input. Frobenius fixes the added constant one.
-    input[0] += fq12_value_type::one();
-    expected[0] += fq12_value_type::one();
-    math::frobenius_map(result, input, frobenius, mixed);
-    BOOST_CHECK(result == expected);
+    polynomial_type expected_image, expected_map;
+    math::powmod(expected_image, x, order, reference_divisor, reference);
+    math::powmod(expected_map, input, order, reference_divisor, reference);
+    for (const std::size_t cutoff : {0, 1}) {
+        options.initial_frobenius_composition_cutoff = cutoff;
+        polynomial_arithmetic::polynomial_context<mixed_backend> mixed(mixed_backend(18), options);
+        const math::polynomial_frobenius_context<mixed_backend> frobenius(divisor, mixed);
+        BOOST_CHECK(frobenius.x_to_field_order() == expected_image);
+        polynomial_type result;
+        math::frobenius_map(result, input, frobenius, mixed);
+        BOOST_CHECK(result == expected_map);
+        auto alias = input;
+        math::frobenius_map(alias, alias, frobenius, mixed);
+        BOOST_CHECK(alias == expected_map);
+        // Reuse the same composition cache with another input. Frobenius fixes the added constant one.
+        auto next_input = input;
+        auto next_expected = expected_map;
+        next_input[0] += fq12_value_type::one();
+        next_expected[0] += fq12_value_type::one();
+        math::frobenius_map(result, next_input, frobenius, mixed);
+        BOOST_CHECK(result == next_expected);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(frobenius_context_rejects_invalid_precomputation_inputs) {
@@ -280,7 +431,7 @@ BOOST_AUTO_TEST_CASE(frobenius_products_match_geometric_exponents_and_support_al
 }
 
 BOOST_AUTO_TEST_CASE(frobenius_products_use_bounded_work_for_maximum_term_count) {
-    using backend = counting_product_backend;
+    using backend = counting_product_backend<fields::babybear::value_type>;
     using polynomial = backend::polynomial_type;
     using value = polynomial::value_type;
     std::size_t operations = 0;
@@ -452,7 +603,7 @@ BOOST_AUTO_TEST_CASE(weighted_sums_match_direct_powers_and_support_all_aliases) 
 }
 
 BOOST_AUTO_TEST_CASE(weighted_sums_use_logarithmic_work_for_maximum_term_count) {
-    using backend = counting_product_backend;
+    using backend = counting_product_backend<fields::babybear::value_type>;
     using polynomial = backend::polynomial_type;
     using value = polynomial::value_type;
     std::size_t operations = 0;

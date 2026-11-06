@@ -87,6 +87,10 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // powers and arithmetic scratch are additional: this is not a process-RSS limit. The cache is destroyed
         // before discovery resumes or a certified residual is passed to a factor callback.
         std::size_t distinct_degree_certificate_prepared_byte_limit = 0;
+
+        // Initialize Frobenius with a characteristic-sized power and five compositions for degree-12 coefficient
+        // fields with Frobenius_map when the divisor degree reaches this cutoff. Zero keeps direct exponentiation.
+        std::size_t initial_frobenius_composition_cutoff = 0;
     };
 
     /**

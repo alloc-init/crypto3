@@ -26,6 +26,7 @@
 #define CRYPTO3_MATH_POLYNOMIAL_FROBENIUS_HPP
 
 #include <algorithm>
+#include <concepts>
 #include <cstddef>
 #include <optional>
 #include <stdexcept>
@@ -48,9 +49,10 @@ namespace nil::crypto3::math {
      *
      *     A(X)^Q mod B = A(X^Q mod B) mod B.
      *
-     * Consequently, constructing the context performs one modular exponentiation and precomputes the Brent-Kung
-     * powers of X^Q mod B. Each later Frobenius map reuses those powers for modular composition. B need not be
-     * irreducible.
+     * Construction uses direct exponentiation by default. For degree-12 coefficient fields with Frobenius_map,
+     * initial_frobenius_composition_cutoff can select a characteristic-sized exponentiation and five semilinear
+     * compositions. Its two intermediate caches are constructed sequentially and released before precomputing the
+     * final Brent-Kung powers of X^Q mod B. Each later Frobenius map reuses those powers. B need not be irreducible.
      *
      * @throws std::invalid_argument if B is the zero polynomial or the configured modular-composition cached-power
      *         limit is zero.
@@ -88,6 +90,37 @@ namespace nil::crypto3::math {
             compute_x_to_field_order(const polynomial_divisor_context<backend_type> &divisor_context,
                                      polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context) {
             polynomial_type result;
+            if constexpr (field_type::arity == 12 && requires(const value_type &value, std::size_t power) {
+                              { value.Frobenius_map(power) } -> std::convertible_to<value_type>;
+                          }) {
+                const auto cutoff = arithmetic_context.options().initial_frobenius_composition_cutoff;
+                if (cutoff != 0 && divisor_context.degree() >= cutoff) {
+                    powmod_x(result, algebra::fields::field_characteristic<field_type>(), divisor_context,
+                             arithmetic_context);
+                    using cache_type = polynomial_composition_precomputation<backend_type>;
+                    const auto advance = [&](const cache_type &cache, std::size_t power) {
+                        // h[a+b] = sigma^a(h[b])(h[a]) mod B, where h[k] = X^(p^k) mod B.
+                        // The coefficient twist is necessary even when B is reducible or nonmonic.
+                        polynomial_type twisted = result;
+                        for (auto &coefficient : twisted) {
+                            coefficient = coefficient.Frobenius_map(power);
+                        }
+                        compose_mod(result, twisted, cache, divisor_context, arithmetic_context);
+                    };
+                    {
+                        const cache_type cache(result, divisor_context.degree(), divisor_context, arithmetic_context);
+                        advance(cache, 1);    // h[2]
+                        advance(cache, 1);    // h[3]
+                    }
+                    {
+                        const cache_type cache(result, divisor_context.degree(), divisor_context, arithmetic_context);
+                        advance(cache, 3);    // h[6]
+                        advance(cache, 3);    // h[9]
+                        advance(cache, 3);    // h[12]
+                    }
+                    return result;
+                }
+            }
             powmod_x(result, algebra::fields::field_order<field_type>(), divisor_context, arithmetic_context);
             return result;
         }
