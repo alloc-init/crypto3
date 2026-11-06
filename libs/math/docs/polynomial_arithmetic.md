@@ -188,6 +188,8 @@ Separate contexts are required for concurrent calls when the backend owns mutabl
 | `gcd_half_gcd_cutoff` | 0 | Use half-GCD when the smaller operand reaches this size; zero disables half-GCD. |
 | `modular_composition_cached_power_limit` | maximum `size_t` | Cap the number of Brent-Kung baby powers; constructing a composition cache requires a positive limit. |
 | `modular_composition_block_size` | 0 | Request a Brent-Kung block size for composition caches; zero selects the square-root heuristic. A positive request is capped by the cached-power limit and maximum outer coefficient count. |
+| `modular_composition_giant_step_group_size` | 0 | Group giant-step products before reconstruction and reduction; zero keeps ordinary Horner evaluation, and one prepares only the fixed multiplier. Requires a supporting backend and a positive spectrum budget. |
+| `modular_composition_giant_step_prepared_byte_limit` | 0 | Bound additional owned giant-power spectra per cache; excludes the coefficient cache, ordinary powers, CRT metadata and per-call scratch. |
 | `initial_frobenius_composition_cutoff` | 0 | At this divisor degree or above, initialize Frobenius over degree-12 coefficient fields with a characteristic-sized power and five compositions; requires coefficient `Frobenius_map` support. Zero keeps direct exponentiation. |
 | `distinct_degree_screening_limit` | 0 | Screen initial irreducible-factor degrees before the full Kaltofen-Shoup baby table; zero disables screening. |
 | `distinct_degree_certificate_minimum_excluded_degree` | 0 | Permit exact residual irreducibility certificates after this excluded factor degree, at completed blocks; zero disables attempts. |
@@ -417,7 +419,7 @@ The request changes the cache layout while preserving the declared maximum outer
 polynomial exceeding `L` is still rejected. The option applies to each newly constructed composition cache, including
 those created inside Frobenius and recovery operations; it does not detect how often a particular cache will be used.
 
-For a nonconstant modulus and an outer polynomial with `m` coefficients, blocked evaluation uses
+For a nonconstant modulus and an outer polynomial with `m` coefficients, ordinary blocked Horner evaluation uses
 `ceil(m / k) - 1` giant-step modular multiplications. Increasing `k` reduces that count but builds and retains more
 baby powers and may require a larger prepared coefficient payload. Choose a block size using complete workloads
 that include cache construction, the intended number of reuses, and peak memory. A wider cache can cost more than it
@@ -445,13 +447,64 @@ any preparation retain the ordinary coefficient loop.
 Prepared evaluation batches up to four adjacent blocks, prepares each selected outer coefficient once per block,
 and accumulates base-field dot products before recombination. Blocks with fewer than eight nonzero nonconstant
 terms use the ordinary loop. SIMD preparation additionally requires a cached coefficient width of at least four.
-All paths retain descending Horner order and exact field results. Prepared data is owned by the precomputation and
-read-only during composition; copies own independent data, and scratch belongs to the call. This optimization is
+All paths visit blocks in descending order and retain exact field results. Prepared data is owned by the
+precomputation and read-only during composition; copies own independent data, and scratch belongs to the call. This optimization is
 independent of the polynomial multiplication backend and can be used with schoolbook, mixed-radix, or small-prime products.
 
 The formation of block values still costs `O(L * degree(B))` field operations and can dominate at large comparable
 degrees. Brent-Kung reduces modular multiplications; it does not remove the quadratic work needed to form these linear
 combinations. Prepared dots and SIMD improve its constants without changing that asymptotic bound.
+
+### Grouped giant-step accumulation
+
+The BN254 small-prime FFT backend can retain prepared transforms of `G, G^2, ..., G^g mod B`, where
+`G = inner^k mod B`. Enable this independently of coefficient preparation, before constructing the arithmetic
+context and composition caches:
+
+```cpp
+options.modular_composition_giant_step_group_size = 8;
+options.modular_composition_giant_step_prepared_byte_limit = std::size_t{512} << 20;
+```
+
+Both options default to zero. The effective group size is capped by the maximum number of giant-step products
+allowed by the cache's outer-size limit. `giant_step_group_size()` reports the retained group size, or zero when
+preparation was disabled or declined. `prepared_giant_step_bytes()` reports the additional owned spectra. The
+constructor's optional coefficient-byte limit does not limit these separately budgeted spectra.
+
+For a group of `g` steps, evaluate the equivalent expression
+
+    A * G^g + C_(g-1) * G^(g-1) + ... + C_1 * G + C_0 mod B.
+
+Every cached power and block value has degree below `degree(B)`. Each product therefore has degree at most
+`2*degree(B)-2`, regardless of the group size. Accumulating the products in transform space allows one inverse
+transform per channel and one CRT reconstruction of their sum, followed by one modular reduction before adding
+`C_0`. With `b` outer blocks,
+the number of giant products remains `b-1`, while reductions become `ceil((b-1)/g)`. For example, 60 blocks
+require 59 products and 59, 15 or 8 reductions with groups 1, 4 or 8. Group 1 still saves preparation of the
+fixed multiplier on each application.
+
+The backend exposes the optional `make_product_accumulator`, `try_accumulate_prepared_product` and
+`try_finish_product_sum` operations through the arithmetic context. The accumulator certifies a signed-CRT
+bound for the complete sum, using the backend's existing prime catalogue prefix. It declines when that prefix
+cannot represent the requested bound or the required spectrum exceeds its supplied budget. This does not
+change ordinary multiplication's reconstruction bound. Finishing resets the group while retaining workspace;
+zero products, partial groups and canceling terms are exact.
+
+Grouping needs no irreducibility or monicity assumption beyond the ordinary composition API. Unsupported
+backends, insufficient preparation budgets and declined grouped operations retain ordinary Horner evaluation.
+A partial grouped attempt publishes no output before falling back, preserving input/output aliasing. Allocation
+and arithmetic exceptions propagate normally. Prepared spectra are immutable and owned by the cache; each call
+copies the empty accumulator's CRT configuration into private scratch. Concurrent calls still require separate
+arithmetic contexts because the backend owns mutable workspace.
+
+Budget for each live cache and for the per-call accumulator separately. In a width-246, degree-14,714 x86
+component comparison, groups 4 and 8 retained 132 MiB and 264 MiB of extra spectra, respectively. Group 8 changed
+median clean application time from 19.56 s to 13.02 s, with approximately 1.4 s of additional cache preparation
+and 305 MiB higher process peak memory. Three clean trials at degrees 8,415 and 5,410 showed application times
+of 7.89 s to 4.88 s and 2.88 s to 1.90 s. These saved-modulus component measurements used reproducible dense
+arguments, GCC 15.2, BMI2/ADX and AVX512IFMA; they are not integrated factor-discovery or recovery timings.
+Choose a group using total setup plus reuse cost and memory, including the short-lived caches inside Frobenius
+and recovery. The option does not select a group automatically from the expected reuse count.
 
 ## Iterated Frobenius maps
 
