@@ -150,6 +150,62 @@ namespace {
         return value;
     }
 
+    void check_rank23_operand52(const alt_bn128_254_fp12::value_type &value) {
+        namespace fast = fields::detail::fp12_fast;
+        using params = alt_bn128_254_fp12::extension_policy::fast_params;
+        using kernel = fast::fp12_fast<params>::rank23;
+        using radix = fast::montgomery_radix52<params>;
+        using boost::multiprecision::cpp_int;
+        const auto integer = [](const auto &digits, unsigned bits) {
+            cpp_int result = 0;
+            for (auto i = digits.rbegin(); i != digits.rend(); ++i) {
+                result <<= bits;
+                result += *i;
+            }
+            return result;
+        };
+        const cpp_int p = integer(fast::modulus_limbs<params>(), 64);
+        const auto ordinary = kernel::prepare_product_operand(value);
+        const auto actual = kernel::prepare_product_operand52(value);
+        for (std::size_t coordinate = 0; coordinate < actual.size(); ++coordinate) {
+            BOOST_TEST_CONTEXT("coordinate=" << coordinate) {
+                const auto expected = radix::from_montgomery64(ordinary[coordinate]);
+                BOOST_CHECK_EQUAL_COLLECTIONS(actual[coordinate].begin(), actual[coordinate].end(), expected.begin(),
+                                              expected.end());
+                for (const auto digit : actual[coordinate]) {
+                    BOOST_CHECK_LE(digit, radix::mask);
+                }
+                const cpp_int packed = integer(actual[coordinate], 52);
+                BOOST_CHECK(packed >= 0 && packed < p);
+
+                // Independent integer evaluation in the original tower: v=t^2 and u=t^6-9.
+                // Use signed, unbounded integers here, without the paired Horner decomposition.
+                cpp_int t = (coordinate + 1) / 2;
+                if (coordinate != 0 && coordinate % 2 == 0) {
+                    t = -t;
+                }
+                const cpp_int t_squared = t * t, u = t_squared * t_squared * t_squared - 9;
+                cpp_int evaluated = 0, w_power = 1;
+                for (std::size_t w = 0; w < 2; ++w) {
+                    cpp_int power = w_power;
+                    for (std::size_t v = 0; v < 3; ++v) {
+                        const auto &coefficient = value.data[w].data[v].data;
+                        const cpp_int real = integer(fast::load_limbs(coefficient[0].data.backend().base_data()), 64);
+                        const cpp_int imag = integer(fast::load_limbs(coefficient[1].data.backend().base_data()), 64);
+                        evaluated += power * (real + u * imag);
+                        power *= t_squared;
+                    }
+                    w_power *= t;
+                }
+                evaluated = (16 * evaluated) % p;
+                if (evaluated < 0) {
+                    evaluated += p;
+                }
+                BOOST_CHECK(packed == evaluated);
+            }
+        }
+    }
+
     // Execute the vector algorithm on scalar lanes as well, independently of the 128-bit-column reference.
     // These operations model IFMA's ignored upper operand bits and reject any accumulator overflow.
     template<std::size_t Lanes>
@@ -805,6 +861,65 @@ BOOST_AUTO_TEST_CASE(radix52_conversion_preserves_canonical_montgomery_values) {
         backend restored;
         radix::to_montgomery64(restored, packed);
         BOOST_CHECK(eval_eq(restored, original));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(radix52_rank23_bounded_preparation_matches_reference) {
+    using value_type = alt_bn128_254_fp12::value_type;
+    using params = alt_bn128_254_fp12::extension_policy::fast_params;
+    using kernel = fields::detail::fp12_fast::fp12_fast<params>;
+    auto maximum = params::base_field_type::modulus_params.get_mod_obj().get_mod();
+    eval_subtract(maximum, boost::multiprecision::limb_type(1));
+    check_rank23_operand52(value_type::zero());
+    check_rank23_operand52(value_type::one());
+    for (std::size_t pattern = 0; pattern < 6; ++pattern) {
+        check_rank23_operand52(boundary_fp12<alt_bn128_254_fp12>(pattern));
+    }
+    value_type maximum_residues = value_type::zero();
+    for (std::size_t i = 0; i < alt_bn128_254_fp12::arity; ++i) {
+        auto basis = value_type::zero();
+        basis.coordinate(i) = kernel::base_value_type::one();
+        check_rank23_operand52(basis);
+        basis.coordinate(i).data.backend().base_data() = maximum;
+        check_rank23_operand52(basis);
+        maximum_residues.coordinate(i).data.backend().base_data() = maximum;
+    }
+    check_rank23_operand52(maximum_residues);
+    boost::random::mt19937 rng(0x235264);
+    for (std::size_t i = 0; i < 4 * random_samples; ++i) {
+        check_rank23_operand52(random_fp12<alt_bn128_254_fp12>(rng));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(radix52_rank23_bounded_preparation_handles_maximal_integer_evaluations) {
+    using value_type = alt_bn128_254_fp12::value_type;
+    using params = alt_bn128_254_fp12::extension_policy::fast_params;
+    const auto &modulus = params::base_field_type::modulus_params.get_mod_obj().get_mod();
+    auto real = modulus, imag = modulus;
+    eval_subtract(real, boost::multiprecision::limb_type(10));
+    eval_subtract(imag, boost::multiprecision::limb_type(1));
+    // Raw tower residues (p-10,p-1) flatten to (p-1,p-1). This attains the
+    // maximum integer Horner inputs, unlike setting every tower residue to p-1.
+    // Also isolate the even and odd halves to exercise each sign of the paired subtraction.
+    for (std::size_t pattern = 0; pattern < 3; ++pattern) {
+        auto value = value_type::zero();
+        for (std::size_t w = 0; w < 2; ++w) {
+            if (pattern != 0 && w != pattern - 1) {
+                continue;
+            }
+            for (std::size_t v = 0; v < 3; ++v) {
+                value.data[w].data[v].data[0].data.backend().base_data() = real;
+                value.data[w].data[v].data[1].data.backend().base_data() = imag;
+            }
+        }
+        check_rank23_operand52(value);
+    }
+    // These cancel exactly at -1 or +1, respectively.
+    for (bool negate : {false, true}) {
+        auto value = value_type::one();
+        value.data[1].data[0].data[0] =
+            negate ? -params::base_field_type::value_type::one() : params::base_field_type::value_type::one();
+        check_rank23_operand52(value);
     }
 }
 
