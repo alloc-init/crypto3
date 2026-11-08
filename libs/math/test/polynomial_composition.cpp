@@ -860,6 +860,77 @@ BOOST_AUTO_TEST_CASE(prepared_simd_complete_composition_matches_horner_and_alias
     }
 }
 
+BOOST_AUTO_TEST_CASE(prepared_simd_cache_handles_maximal_residues_in_246_coefficient_blocks) {
+    using polynomial_type = math::polynomial<fq12_value_type>;
+    using cache_type = math::detail::prepared_composition_coefficients<fq12_value_type>;
+    constexpr std::size_t block_size = 246, budget = 16 * 1024 * 1024;
+    auto maximum = fq_value_type::modulus_params.get_mod_obj().get_mod();
+    eval_subtract(maximum, boost::multiprecision::limb_type(1));
+    auto maximal_flat_real = maximum;
+    eval_subtract(maximal_flat_real, boost::multiprecision::limb_type(9));
+    fq12_value_type maximal_tower, maximal_flat;
+    for (std::size_t w = 0; w < 2; ++w) {
+        for (std::size_t v = 0; v < 3; ++v) {
+            maximal_flat.data[w].data[v].data[0].data.backend().base_data() = maximal_flat_real;
+            maximal_flat.data[w].data[v].data[1].data.backend().base_data() = maximum;
+            for (std::size_t u = 0; u < 2; ++u) {
+                maximal_tower.data[w].data[v].data[u].data.backend().base_data() = maximum;
+            }
+        }
+    }
+    for (const std::size_t width : {5, 9}) {
+        std::vector<polynomial_type> powers(block_size);
+        powers[0] = {fq12_value_type::one()};
+        for (std::size_t exponent = 1; exponent < block_size; ++exponent) {
+            // Short powers and explicit zero coefficients both require zero padding in the cache.
+            powers[exponent].resize(exponent % 11 == 0 ? 1 : width);
+            for (std::size_t coefficient = 0; coefficient < powers[exponent].size(); ++coefficient) {
+                const std::array<fq12_value_type, 4> values = {maximal_tower, maximal_flat, fq12_value_type::zero(),
+                                                               fq12_value(12 * exponent + coefficient)};
+                powers[exponent][coefficient] = values[(exponent + coefficient) % values.size()];
+            }
+        }
+        polynomial_type outer(3 * block_size + 17);
+        for (std::size_t i = 0; i < outer.size(); ++i) {
+            outer[i] = i % 13 == 0 ? fq12_value_type::zero() : (i % 2 == 0 ? maximal_tower : maximal_flat);
+        }
+        // Reuse scratch across dense blocks, a constant block, and a partial final block.
+        for (std::size_t i = block_size + 1; i < 2 * block_size; ++i) {
+            outer[i] = fq12_value_type::zero();
+        }
+        std::array<polynomial_type, 4> expected;
+        for (std::size_t block = 0; block < expected.size(); ++block) {
+            const std::size_t first = block * block_size, count = std::min(block_size, outer.size() - first);
+            expected[block].assign(width, fq12_value_type::zero());
+            expected[block][0] = outer[first];
+            // Direct coefficient sums avoid both prepared product decompositions.
+            for (std::size_t exponent = 1; exponent < count; ++exponent) {
+                for (std::size_t coefficient = 0; coefficient < powers[exponent].size(); ++coefficient) {
+                    expected[block][coefficient] += outer[first + exponent] * powers[exponent][coefficient];
+                }
+            }
+            math::condense(expected[block]);
+        }
+        for (const std::size_t lanes : {0, 4, 8}) {
+            const cache_type cache(powers, budget, lanes);
+            BOOST_REQUIRE(cache.available());
+#if defined(CRYPTO3_HAS_AVX512IFMA)
+            BOOST_CHECK_EQUAL(cache.simd_lanes(), lanes);
+#else
+            BOOST_CHECK_EQUAL(cache.simd_lanes(), 0);
+#endif
+            typename cache_type::workspace scratch;
+            std::array<polynomial_type, 4> actual;
+            cache.evaluate_blocks(actual, outer, 0, 4, scratch);
+            BOOST_CHECK(actual == expected);
+            cache.evaluate_blocks(actual, outer, 1, 3, scratch);
+            for (std::size_t i = 0; i < 3; ++i) {
+                BOOST_CHECK(actual[i] == expected[i + 1]);
+            }
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(prepared_simd_configuration_keeps_six_limb_fields_on_scalar_kernel) {
     using value = fields::fp12_2over3over2<fields::bls12<381>>::value_type;
     using polynomial = math::polynomial<value>;

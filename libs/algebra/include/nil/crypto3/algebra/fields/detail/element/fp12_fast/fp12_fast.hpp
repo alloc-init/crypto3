@@ -41,14 +41,7 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
             template<typename Fp12Value>
             static prepared_product_operand prepare_product_operand(const Fp12Value &x) {
                 static_assert(supported);
-                std::array<base_value_type, 12> flat;
-                for (std::size_t w = 0; w < 2; ++w) {
-                    for (std::size_t v = 0; v < 3; ++v) {
-                        const auto &a = x.data[w].data[v].data;
-                        flat[2 * v + w] = a[0] - (a[1].doubled().doubled().doubled() + a[1]);
-                        flat[6 + 2 * v + w] = a[1];
-                    }
-                }
+                const auto flat = flatten_operand(x);
                 prepared_product_operand result;
                 result[0] = flat[0].data.backend().base_data();
                 // Reuse even/odd evaluations for each +/- pair. All arithmetic is canonical
@@ -69,6 +62,53 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                     }
                     result[2 * point - 1] = (even + odd).data.backend().base_data();
                     result[2 * point] = (even - odd).data.backend().base_data();
+                }
+                return result;
+            }
+
+            // The same 23 forms, directly in canonical radix-52 Montgomery representation.
+            // Delay reductions through each nonnegative even/odd Horner evaluation, then include
+            // S/R=16 in its final reduction. The paired subtraction happens only after reduction.
+            template<typename Fp12Value>
+            static auto prepare_product_operand52(const Fp12Value &x) {
+                static_assert(supported);
+                using radix = montgomery_radix52<Params>;
+                const auto &modulus = Params::base_field_type::modulus_params.get_mod_obj();
+                using policy = typename std::remove_cvref_t<decltype(modulus)>::policy_type;
+                using accumulator_type = typename policy::Backend_padded_limbs;
+                static_assert(accumulator_type::internal_limb_count == 5 && accumulator_type::limb_bits == 64);
+                // For p<2^254 and 1<=t<=11, every intermediate is at most
+                // 16*11*(p-1)*(1+121+...+121^5) < 2^297, within the 320-bit accumulator.
+                const auto flat = flatten_operand(x);
+                std::array<accumulator_type, 12> coefficients;
+                for (std::size_t i = 0; i < coefficients.size(); ++i) {
+                    coefficients[i] = flat[i].data.backend().base_data();
+                }
+                std::array<typename radix::value_type, product_coordinate_count> result;
+                result[0] = radix::from_montgomery64(flat[0].data.backend().base_data());
+                for (std::size_t point = 1; point <= 11; ++point) {
+                    auto even = coefficients[10], odd = coefficients[11];
+                    const boost::multiprecision::limb_type squared = point * point;
+                    for (std::size_t j = 5; j > 0; --j) {
+                        if (point != 1) {
+                            eval_multiply(even, squared);
+                            eval_multiply(odd, squared);
+                        }
+                        eval_add(even, coefficients[2 * (j - 1)]);
+                        eval_add(odd, coefficients[2 * (j - 1) + 1]);
+                    }
+                    eval_left_shift(even, 4);
+                    eval_multiply(odd, boost::multiprecision::limb_type(16 * point));
+                    base_backend_type even_reduced, odd_reduced;
+                    // Ordinary reduction preserves the S scaling; Montgomery REDC would remove R.
+                    modulus.barrett_reduce(even_reduced, even);
+                    modulus.barrett_reduce(odd_reduced, odd);
+                    const auto even_words = load_limbs(even_reduced), odd_words = load_limbs(odd_reduced);
+                    std::array<limb, Params::base_value_limb_count> combined;
+                    add_low_limbs_mod_portable<Params>(combined.data(), even_words.data(), odd_words.data());
+                    result[2 * point - 1] = radix::pack(combined.data());
+                    subtract_low_limbs_mod_portable<Params>(combined.data(), even_words.data(), odd_words.data());
+                    result[2 * point] = radix::pack(combined.data());
                 }
                 return result;
             }
@@ -150,6 +190,20 @@ namespace nil::crypto3::algebra::fields::detail::fp12_fast {
                                                                    weights.data() + c * count * radix::digits, products,
                                                                    indices.data(), count);
                 }
+            }
+
+        private:
+            template<typename Fp12Value>
+            static std::array<base_value_type, 12> flatten_operand(const Fp12Value &x) {
+                std::array<base_value_type, 12> flat;
+                for (std::size_t w = 0; w < 2; ++w) {
+                    for (std::size_t v = 0; v < 3; ++v) {
+                        const auto &a = x.data[w].data[v].data;
+                        flat[2 * v + w] = a[0] - (a[1].doubled().doubled().doubled() + a[1]);
+                        flat[6 + 2 * v + w] = a[1];
+                    }
+                }
+                return flat;
             }
         };
 

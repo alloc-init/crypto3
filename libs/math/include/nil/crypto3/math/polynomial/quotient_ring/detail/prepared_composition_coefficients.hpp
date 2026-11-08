@@ -214,7 +214,6 @@ namespace nil::crypto3::math::detail {
         template<typename Polynomial>
         bool prepare_simd(const std::vector<Polynomial> &powers, std::size_t width, std::size_t terms,
                           std::size_t byte_limit, std::size_t lanes) {
-            using radix = algebra::fields::detail::fp12_fast::montgomery_radix52<params>;
             constexpr std::size_t coordinates = simd_kernel::product_coordinate_count;
             const std::size_t panel_count = 1 + (width - 1) / lanes;
             const std::size_t stride = coordinates * 5 * lanes;
@@ -231,9 +230,9 @@ namespace nil::crypto3::math::detail {
                     if (coefficient >= powers[exponent].size()) {
                         continue;
                     }
-                    const auto prepared = simd_kernel::prepare_product_operand(powers[exponent][coefficient]);
+                    const auto prepared = simd_kernel::prepare_product_operand52(powers[exponent][coefficient]);
                     for (std::size_t coordinate = 0; coordinate < coordinates; ++coordinate) {
-                        const auto packed = radix::from_montgomery64(prepared[coordinate]);
+                        const auto &packed = prepared[coordinate];
                         const std::size_t offset = ((panel * coordinates + coordinate) * terms + exponent - 1) * 5;
                         for (std::size_t digit = 0; digit < 5; ++digit) {
                             simd_coefficients_[(offset + digit) * lanes + lane] = packed[digit];
