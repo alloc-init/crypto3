@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <concepts>
 #include <cstddef>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <utility>
@@ -108,12 +109,18 @@ namespace nil::crypto3::math {
                         compose_mod(result, twisted, cache, divisor_context, arithmetic_context);
                     };
                     {
-                        const cache_type cache(result, divisor_context.degree(), divisor_context, arithmetic_context);
+                        // Only two applications use this cache; cap its width independently of reusable discovery.
+                        const cache_type cache(result, divisor_context.degree(), divisor_context, arithmetic_context,
+                                               std::numeric_limits<std::size_t>::max(),
+                                               detail::ceil_sqrt(divisor_context.degree()));
                         advance(cache, 1);    // h[2]
                         advance(cache, 1);    // h[3]
                     }
                     {
-                        const cache_type cache(result, divisor_context.degree(), divisor_context, arithmetic_context);
+                        // This temporary cache is used three times; leave the final discovery width unchanged.
+                        const cache_type cache(result, divisor_context.degree(), divisor_context, arithmetic_context,
+                                               std::numeric_limits<std::size_t>::max(),
+                                               detail::ceil_sqrt(divisor_context.degree()));
                         advance(cache, 3);    // h[6]
                         advance(cache, 3);    // h[9]
                         advance(cache, 3);    // h[12]
@@ -243,7 +250,9 @@ namespace nil::crypto3::math {
                 auto [product, image] = self(self, count / 2, true);
                 std::optional<cache_type> doubling_cache;
                 if (count / 2 > 1) {
-                    doubling_cache.emplace(image, degree, divisor_context, arithmetic_context);
+                    // One product and at most one image use this cache. Odd steps keep reusing first_cache.
+                    doubling_cache.emplace(image, degree, divisor_context, arithmetic_context,
+                                           std::numeric_limits<std::size_t>::max(), detail::ceil_sqrt(degree));
                 }
                 const auto &cache = doubling_cache ? *doubling_cache : first_cache;
                 // With P_k = product and H_k = image, P_2k = P_k * F^k(P_k) and H_2k = F^k(H_k).
@@ -279,6 +288,7 @@ namespace nil::crypto3::math {
      * Binary doubling uses O(log(term_count)) compositions and products. Each doubling shares one composition
      * precomputation between the partial product and the next Frobenius image. Odd steps reuse the initial image's
      * precomputation. Only the initial cache and one doubling cache are live at once.
+     * Doubling caches cap their width at ceil(sqrt(degree(B))); the shared initial cache retains the configured width.
      *
      * An empty product is the quotient-ring identity, and a singleton is the reduced input. The result is canonical
      * and may alias either input polynomial. Reducing an unreduced input may require more inverse coefficients than
@@ -305,6 +315,8 @@ namespace nil::crypto3::math {
      * Binary doubling uses O(log(term_count)) compositions and products. The sum, weight product and Frobenius
      * image share each doubling cache; only the initial cache and one doubling cache are live at once. The last
      * level computes only the sum. The canonical result may alias input, weight or the supplied image.
+     * The doubling cache has at most three uses and caps its width at ceil(sqrt(degree(B))). The shared initial
+     * cache retains the configured width.
      *
      * @throws std::invalid_argument if an input is empty or noncanonical, the image is not reduced, a needed
      *         composition has a zero cached-power limit, or the divisor inverse has insufficient precision.
@@ -367,7 +379,8 @@ namespace nil::crypto3::math {
             auto result = self(self, count / 2, true);
             std::optional<cache_type> doubling_cache;
             if (count / 2 > 1) {
-                doubling_cache.emplace(result.image, degree, divisor_context, arithmetic_context);
+                doubling_cache.emplace(result.image, degree, divisor_context, arithmetic_context,
+                                       std::numeric_limits<std::size_t>::max(), detail::ceil_sqrt(degree));
             }
             const auto &cache = doubling_cache ? *doubling_cache : first_cache;
             // W_2k = W_k + P_k * F^k(W_k). Form this before replacing P_k by P_2k.

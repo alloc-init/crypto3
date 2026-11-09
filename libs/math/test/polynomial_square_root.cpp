@@ -348,7 +348,9 @@ BOOST_AUTO_TEST_CASE(tonelli_shanks_recovers_a_square_in_a_quadratic_extension_o
 }
 
 BOOST_AUTO_TEST_CASE(direct_odd_degree_roots_match_tonelli_shanks_for_sparse_and_dense_divisors) {
-    polynomial_arithmetic::polynomial_context<backend_type> context;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_block_size = 32;
+    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
     const polynomial_type x {value_type::zero(), value_type::one()};
     const polynomial_type nonresidue {first_quadratic_non_residue()};
     std::size_t squares = 0, nonsquares = 0;

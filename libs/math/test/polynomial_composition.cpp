@@ -444,6 +444,58 @@ BOOST_AUTO_TEST_CASE(explicit_composition_blocks_preserve_the_outer_contract_and
     BOOST_CHECK(result == outer);
 }
 
+BOOST_AUTO_TEST_CASE(per_cache_block_limits_preserve_outer_size_and_other_caches) {
+    using backend = grouped_backend_type;
+    using polynomial = backend::polynomial_type;
+    using reference_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    auto modulus = grouped_polynomial(13, 31);
+    modulus[0] = modulus[1] = fq12_value_type::zero();    // A repeated zero root and a nonmonic leading coefficient.
+    const auto inner = grouped_polynomial(12, 7), outer = grouped_polynomial(37, 43);
+    polynomial_arithmetic::polynomial_context<reference_backend> reference;
+    const math::polynomial_divisor_context<reference_backend> reference_divisor(modulus, 11, reference);
+    polynomial expected;
+    math::compose_mod_reference(expected, outer, inner, reference_divisor, reference);
+
+    for (const std::size_t requested : {0U, 3U, 9U}) {
+        for (const std::size_t power_limit : {2U, 64U}) {
+            for (const std::size_t prepared_bytes : {0U, 4U * 1024U * 1024U}) {
+                polynomial_arithmetic::polynomial_context_options options;
+                options.modular_composition_block_size = requested;
+                options.modular_composition_cached_power_limit = power_limit;
+                options.modular_composition_prepared_byte_limit = prepared_bytes;
+                options.modular_composition_giant_step_group_size = 8;
+                options.modular_composition_giant_step_prepared_byte_limit = 4 * 1024 * 1024;
+                polynomial_arithmetic::polynomial_context<backend> context {backend(32), options};
+                const math::polynomial_divisor_context<backend> divisor(modulus, 11, context);
+                const math::polynomial_composition_precomputation<backend> reusable(inner, outer.size(), divisor,
+                                                                                    context);
+                const auto reusable_width = reusable.block_size();
+                for (const std::size_t limit : {1U, 4U, 20U}) {
+                    BOOST_TEST_CONTEXT("requested=" << requested << ", power_limit=" << power_limit
+                                                    << ", prepared_bytes=" << prepared_bytes << ", limit=" << limit) {
+                        const math::polynomial_composition_precomputation<backend> temporary(
+                            inner, outer.size(), divisor, context, prepared_bytes, limit);
+                        BOOST_CHECK_EQUAL(temporary.block_size(), std::min(reusable_width, limit));
+                        BOOST_CHECK_EQUAL(temporary.maximum_outer_coefficient_count(), outer.size());
+                        BOOST_CHECK_LE(temporary.prepared_coefficient_bytes(), prepared_bytes);
+                        polynomial result = outer;
+                        math::compose_mod(result, result, temporary, divisor, context);
+                        BOOST_CHECK(result == expected);
+                        math::compose_mod(result, outer, reusable, divisor, context);
+                        BOOST_CHECK(result == expected);
+                        BOOST_CHECK_EQUAL(reusable.block_size(), reusable_width);
+                        BOOST_CHECK_EQUAL(context.options().modular_composition_block_size, requested);
+                        BOOST_CHECK_EQUAL(context.options().modular_composition_cached_power_limit, power_limit);
+                    }
+                }
+                BOOST_CHECK_THROW(math::polynomial_composition_precomputation<backend>(inner, outer.size(), divisor,
+                                                                                       context, prepared_bytes, 0),
+                                  std::invalid_argument);
+            }
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(prepared_composition_cache_obeys_its_budget_and_pads_short_powers) {
     using backend_type = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
     using polynomial_type = typename backend_type::polynomial_type;

@@ -101,14 +101,17 @@ namespace nil::crypto3::math {
      * during composition. Copies own independent data; scratch belongs to each composition call.
      * An optional constructor byte limit further caps the prepared coefficient payload without changing the
      * arithmetic context or other caches. It does not bound ordinary cached powers or per-call scratch.
+     * An optional constructor block-size limit caps the selected width independently of the outer size and the
+     * shared context. Short-lived caches can use this to avoid preparing a width chosen for frequent reuse.
      *
      * A separately enabled giant-step group cache prepares G, G^2, ..., G^g modulo B, where G=inner^k mod B.
      * modular_composition_giant_step_prepared_byte_limit bounds those spectra independently of the coefficient
      * cache. Group size zero, insufficient space/capacity, or an unsupported backend keeps Horner evaluation.
      * Group size one reuses G's transform without changing the number of modular reductions.
      *
-     * @throws std::invalid_argument if maximum_outer_coefficient_count or the configured cached-power limit is zero,
-     *         or if reducing inner requires more inverse coefficients than divisor_context stores.
+     * @throws std::invalid_argument if maximum_outer_coefficient_count, block_size_limit or the configured
+     *         cached-power limit is zero, or if reducing inner requires more inverse coefficients than
+     *         divisor_context stores.
      * @pre inner is a nonempty canonical coefficient polynomial.
      */
     template<detail::SupportsDivrem Backend>
@@ -124,7 +127,8 @@ namespace nil::crypto3::math {
             const polynomial_type &inner, std::size_t maximum_outer_coefficient_count,
             const polynomial_divisor_context<backend_type> &divisor_context,
             polynomial_arithmetic::polynomial_context<backend_type> &arithmetic_context,
-            std::size_t prepared_byte_limit = std::numeric_limits<std::size_t>::max()) :
+            std::size_t prepared_byte_limit = std::numeric_limits<std::size_t>::max(),
+            std::size_t block_size_limit = std::numeric_limits<std::size_t>::max()) :
             maximum_outer_coefficient_count_(maximum_outer_coefficient_count) {
             if (maximum_outer_coefficient_count_ == 0) {
                 throw std::invalid_argument("the maximum outer coefficient count must be positive");
@@ -134,11 +138,14 @@ namespace nil::crypto3::math {
             if (cached_power_limit == 0) {
                 throw std::invalid_argument("the modular-composition cached-power limit must be positive");
             }
+            if (block_size_limit == 0) {
+                throw std::invalid_argument("the per-cache modular-composition block-size limit must be positive");
+            }
             const std::size_t requested_block_size = arithmetic_context.options().modular_composition_block_size;
             const std::size_t selected_block_size =
                 requested_block_size == 0 ? detail::ceil_sqrt(maximum_outer_coefficient_count_) :
                                             std::min(requested_block_size, maximum_outer_coefficient_count_);
-            block_size_ = std::min(selected_block_size, cached_power_limit);
+            block_size_ = std::min({selected_block_size, cached_power_limit, block_size_limit});
 
             if (divisor_context.degree() == 0) {
                 return;
