@@ -27,6 +27,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -349,8 +350,9 @@ namespace nil::crypto3::math {
         polynomial_type product, x_to_q_squared;
         {
             // Reuse this cache for b^Q and X^(Q^2), then release it before allocating the product-chain caches.
-            const polynomial_composition_precomputation<Backend> cache(x_to_q, degree, divisor_context,
-                                                                       arithmetic_context);
+            const polynomial_composition_precomputation<Backend> cache(
+                x_to_q, degree, divisor_context, arithmetic_context, std::numeric_limits<std::size_t>::max(),
+                detail::ceil_sqrt(degree));
             compose_mod(product, seed, cache, divisor_context, arithmetic_context);
             if (term_count > 1) {
                 compose_mod(x_to_q_squared, x_to_q, cache, divisor_context, arithmetic_context);

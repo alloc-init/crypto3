@@ -71,6 +71,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // Explicit Brent-Kung block size for reusable composition caches. Zero selects the square-root heuristic.
         // A positive request is capped by the cached-power limit and maximum outer coefficient count. Larger blocks
         // trade more cache construction and storage for fewer giant-step products when the cache is reused.
+        // A per-cache limit may reduce this width, including for short-lived Frobenius and square-root caches.
         std::size_t modular_composition_block_size = 0;
 
         // Optional grouping of giant steps into one transformed sum before modular reduction.

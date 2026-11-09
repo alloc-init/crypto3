@@ -307,12 +307,16 @@ BOOST_AUTO_TEST_CASE(initial_composition_chain_supports_prepared_caches_and_budg
         options.initial_frobenius_composition_cutoff = 1;
         options.modular_composition_block_size = degree;
         options.modular_composition_prepared_byte_limit = budget;
+        options.modular_composition_giant_step_group_size = 8;
+        options.modular_composition_giant_step_prepared_byte_limit = 1 << 20;
         options.basecase_divisor_coefficient_cutoff = 0;
         options.basecase_quotient_coefficient_cutoff = 0;
         polynomial_arithmetic::polynomial_context<backend> context(backend(32), options);
         const math::polynomial_frobenius_context<backend> frobenius(modulus, context);
         BOOST_CHECK(frobenius.x_to_field_order() == expected_image);
         const auto &cache = frobenius.composition_precomputation();
+        BOOST_CHECK_EQUAL(cache.block_size(), degree);
+        BOOST_CHECK_EQUAL(context.options().modular_composition_block_size, degree);
         BOOST_CHECK_LE(cache.prepared_coefficient_bytes(), budget);
         BOOST_CHECK_EQUAL(cache.prepared_coefficients().use_for_block(input, 0), budget > 1);
         auto result = input;
@@ -401,7 +405,9 @@ BOOST_AUTO_TEST_CASE(frobenius_products_match_geometric_exponents_and_support_al
     using value = fields::babybear::value_type;
     using backend = polynomial_arithmetic::schoolbook_backend<value>;
     using polynomial = backend::polynomial_type;
-    polynomial_arithmetic::polynomial_context<backend> context;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_block_size = 3;    // Doubling caches reduce this to ceil(sqrt(3)) = 2.
+    polynomial_arithmetic::polynomial_context<backend> context(backend {}, options);
     const polynomial modulus {value(5), value(7), value(3), value(2)};
     const math::polynomial_divisor_context<backend> divisor(modulus, 4, context);
     const polynomial input {value(2), value(5), value(7), value(11), value(13), value(17)};
@@ -529,6 +535,7 @@ BOOST_AUTO_TEST_CASE(characteristic_product_twists_coefficients_and_matches_dire
     for (const std::size_t cache_limit : {1, 3}) {
         polynomial_arithmetic::polynomial_context_options options;
         options.modular_composition_cached_power_limit = cache_limit;
+        options.modular_composition_block_size = 3;
         polynomial_arithmetic::polynomial_context<backend> context(backend {}, options);
         const math::polynomial_divisor_context<backend> divisor(modulus, 2, context);
         polynomial image;
@@ -568,6 +575,7 @@ BOOST_AUTO_TEST_CASE(weighted_sums_match_direct_powers_and_support_all_aliases) 
     for (const std::size_t cache_limit : {1, 3}) {
         polynomial_arithmetic::polynomial_context_options options;
         options.modular_composition_cached_power_limit = cache_limit;
+        options.modular_composition_block_size = 3;
         polynomial_arithmetic::polynomial_context<backend> context(backend {}, options);
         const math::polynomial_divisor_context<backend> divisor(modulus, 4, context);
         for (const boost::multiprecision::cpp_int &step :
