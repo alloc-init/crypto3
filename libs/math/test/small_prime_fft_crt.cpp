@@ -189,6 +189,10 @@ namespace {
     void check_output(std::span<const value_type> output, std::span<const coordinates_type> coordinates) {
         BOOST_REQUIRE_EQUAL(output.size(), coordinates.size());
         const cpp_int characteristic(fq::modulus.backend().to_cpp_int());
+        // An independent integer oracle removes the product lift's R^2, including on
+        // exact fallback paths where the supplied integer is close to the signed bound.
+        static const cpp_int inverse_scale =
+            boost::multiprecision::powm(cpp_int(1) << 512, cpp_int(characteristic - 2), characteristic);
         for (std::size_t i = 0; i < output.size(); ++i) {
             for (std::size_t w = 0; w < 2; ++w) {
                 for (std::size_t v = 0; v < 3; ++v) {
@@ -198,7 +202,8 @@ namespace {
                             // Inspect the tower directly, independently of coordinate() in reconstruction.
                             const cpp_int actual(
                                 output[i].data[w].data[v].data[u].to_integral().backend().to_cpp_int());
-                            BOOST_CHECK_EQUAL(actual, canonical(coordinates[i][coordinate], characteristic));
+                            BOOST_CHECK_EQUAL(actual,
+                                              canonical(coordinates[i][coordinate] * inverse_scale, characteristic));
                             const cpp_int stored(
                                 output[i].data[w].data[v].data[u].data.backend().base_data().to_cpp_int());
                             BOOST_CHECK_LT(stored, characteristic);
@@ -361,12 +366,16 @@ namespace {
 BOOST_AUTO_TEST_SUITE(small_prime_fft_crt_test_suite)
 
 BOOST_AUTO_TEST_CASE(radix52_accumulation_matches_full_integer_sums) {
-    check_crt_accumulation<scalar_ifma52_operations<8>>();
-    check_crt_certificates<scalar_ifma52_operations<8>>();
+    if constexpr (fq::integral_type::backend_type::limb_bits == 64) {
+        check_crt_accumulation<scalar_ifma52_operations<8>>();
+        check_crt_certificates<scalar_ifma52_operations<8>>();
 #if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
-    check_crt_accumulation<nil::crypto3::algebra::fields::detail::fp12_fast::ifma52_operations<8>>();
-    check_crt_certificates<nil::crypto3::algebra::fields::detail::fp12_fast::ifma52_operations<8>>();
+        check_crt_accumulation<nil::crypto3::algebra::fields::detail::fp12_fast::ifma52_operations<8>>();
+        check_crt_certificates<nil::crypto3::algebra::fields::detail::fp12_fast::ifma52_operations<8>>();
 #endif
+    } else {
+        BOOST_TEST_MESSAGE("The portable CRT path does not use the 64-bit-limb radix52 accumulator.");
+    }
 }
 
 BOOST_AUTO_TEST_CASE(combined_normalization_is_centered_and_exact_in_every_rounding_mode) {
@@ -655,11 +664,13 @@ BOOST_AUTO_TEST_CASE(workload_plan_bound_is_recovered_with_both_signs) {
     check_reconstruction(reconstructor, coordinates, 64, true);
 }
 
-BOOST_AUTO_TEST_CASE(conversion_round_trip_preserves_fp12_coordinates_and_requested_prefixes) {
+BOOST_AUTO_TEST_CASE(conversion_product_scale_preserves_fp12_coordinates_and_requested_prefixes) {
     const auto plan = detail::make_bn254_small_prime_fft_params(65, 33);
     BOOST_REQUIRE(plan);
     const cpp_int characteristic(fq::modulus.backend().to_cpp_int());
+    const cpp_int radix = (cpp_int(1) << 256) % characteristic;
     auto coordinates = random_coordinates(65, characteristic - 1);
+    auto product_coordinates = coordinates;
     std::vector<value_type> input(coordinates.size(), value_type::zero());
     for (std::size_t i = 0; i < input.size(); ++i) {
         for (std::size_t w = 0; w < 2; ++w) {
@@ -668,6 +679,7 @@ BOOST_AUTO_TEST_CASE(conversion_round_trip_preserves_fp12_coordinates_and_reques
                     auto &coordinate = coordinates[i][6 * w + 2 * v + u];
                     coordinate = canonical(coordinate, characteristic);
                     input[i].data[w].data[v].data[u] = fq::value_type(fq::integral_type(coordinate.str()));
+                    product_coordinates[i][6 * w + 2 * v + u] = ((coordinate * radix) % characteristic) * radix;
                 }
             }
         }
@@ -676,11 +688,22 @@ BOOST_AUTO_TEST_CASE(conversion_round_trip_preserves_fp12_coordinates_and_reques
     const reconstructor_type reconstructor(plan->crt, plan->coefficient_bound);
     std::vector<double> residues(plan->spectrum_bytes / sizeof(double));
     converter.convert(residues, input, plan->transform_size);
+    // Multiply every converted coordinate by the integer lift of field one. This gives
+    // the R^2 product scale required by reconstruction while preserving the field value.
+    for (std::size_t prime = 0; prime < plan->crt.prime_count; ++prime) {
+        const cpp_int modulus = detail::small_prime_fft_primes[prime].modulus;
+        for (std::size_t cell = 0; cell < 12 * plan->transform_size; ++cell) {
+            auto &residue = residues[prime * 12 * plan->transform_size + cell];
+            const cpp_int product = (cpp_int(static_cast<std::uint64_t>(residue)) * radix) % modulus;
+            residue = static_cast<double>(product.convert_to<std::uint64_t>());
+        }
+    }
     std::vector<value_type> output(input.size(), value_type::one());
     for (std::size_t count : {std::size_t(65), std::size_t(33), std::size_t(1), std::size_t(0)}) {
         reconstructor.reconstruct(std::span<value_type>(output).first(count), residues, plan->transform_size);
         check_output(std::span<const value_type>(output).first(count),
-                     std::span<const coordinates_type>(coordinates).first(count));
+                     std::span<const coordinates_type>(product_coordinates).first(count));
+        BOOST_CHECK_EQUAL_COLLECTIONS(output.begin(), output.begin() + count, input.begin(), input.begin() + count);
     }
     converter.convert(residues, {}, plan->transform_size);
     reconstructor.reconstruct(output, residues, plan->transform_size);

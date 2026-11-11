@@ -111,7 +111,7 @@ namespace nil::crypto3::math::detail {
         }
 
         // Add the selected centering correction and divide by S=2^260. The caller prepares
-        // weights and corrections with R*S (R=2^256), so the result is already R-Montgomery.
+        // weights and corrections with S/R=16; the integer input already carries R^2 (R=2^256).
         std::array<vector, 5> reduce(const std::array<vector, 5> &correction) const {
             const auto zero = Operations::broadcast(0);
             const auto mask = Operations::broadcast(radix::mask);
@@ -150,9 +150,11 @@ namespace nil::crypto3::math::detail {
 
     /**
      * Reconstruct signed integer coordinates from a prefix of the small-prime catalogue, then
-     * reduce them into BN254 Fp12. The supplied bound C must cover the original integer expression,
+     * remove their R^2 scale and reduce them into BN254 Fp12, with R=2^256. Inputs represent
+     * products of the converter's stored Montgomery integers. The supplied bound C must cover
+     * the original signed integer expression before removing this scale,
      * with M > 2*C for the prime product M. Centering must precede reduction into the target field:
-     * the CRT representative M-1 denotes -1, not the field element (M-1) mod p.
+     * the CRT representative M-1 denotes the integer -1 before rescaling, not (M-1) mod p.
      *
      * Cofactors, inverses and Montgomery export weights are prepared once. An integer interval
      * certificate permits direct export when it proves both centering and the coefficient bound;
@@ -238,12 +240,11 @@ namespace nil::crypto3::math::detail {
             }
             primes_.reserve(params.prime_count);
             const boost::multiprecision::cpp_int characteristic(base_field_type::modulus.backend().to_cpp_int());
-            const boost::multiprecision::cpp_int r_squared =
-                (boost::multiprecision::cpp_int(1) << 512) % characteristic;
             scaled_bound_ = ((coefficient_bound << certificate_bits) / product).convert_to<std::uint64_t>();
             for (std::size_t i = 0; i < params.prime_count; ++i) {
                 const auto modulus = small_prime_fft_primes[i].modulus;
-                const boost::multiprecision::cpp_int weight = (product / modulus) * r_squared % characteristic;
+                // Products already carry R^2. Scalar REDC removes R; IFMA REDC removes S=16*R.
+                const boost::multiprecision::cpp_int weight = (product / modulus) % characteristic;
                 direct_weight_type limbs {};
                 boost::multiprecision::export_bits(weight, limbs.begin(), 64, false);
                 primes_.emplace_back(modulus, multiples_[0] / modulus, limbs);
@@ -255,9 +256,9 @@ namespace nil::crypto3::math::detail {
                 primes_.back().export_weight52 = radix52::pack(limbs.data());
 #endif
             }
-            // The centering quotient is in [0,prime_count]. Store canonical -k*M*R^2 mod p.
+            // The centering quotient is in [0,prime_count]. Store canonical -k*M mod p.
             for (std::size_t k = 0; k <= params.prime_count; ++k) {
-                boost::multiprecision::cpp_int correction = (k * product * r_squared) % characteristic;
+                boost::multiprecision::cpp_int correction = (k * product) % characteristic;
                 if (correction != 0) {
                     correction = characteristic - correction;
                 }
@@ -339,8 +340,10 @@ namespace nil::crypto3::math::detail {
             });
             if (use_fma) {
 #if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
-                reconstruct_ifma<Weighted>(output, residues, stride);
-                return;
+                if constexpr (direct_export_supported) {
+                    reconstruct_ifma<Weighted>(output, residues, stride);
+                    return;
+                }
 #endif
                 reconstruct_impl<true, Weighted>(output, residues, stride);
             } else {
@@ -383,7 +386,10 @@ namespace nil::crypto3::math::detail {
             if (high != 0) {
                 folded += high * export_radix_;
             }
-            return base_field_type::value_type(folded);
+            // The ordinary field constructor retains its normal Montgomery conversion.
+            // Remove the input product's R^2 scale for the exact reconstruction path.
+            static const auto inverse_scale = base_field_type::value_type(export_type(1) << 256).inversed().squared();
+            return base_field_type::value_type(folded) * inverse_scale;
         }
 
         base_field_type::value_type export_exact(integer_type magnitude) const {
@@ -433,7 +439,7 @@ namespace nil::crypto3::math::detail {
         template<typename Params = fast_params>
         base_field_type::value_type export_direct(typename Params::limb_array &sum, std::size_t quotient) const {
             add_export_product(sum, export_corrections_[quotient], 1);
-            // sum = (sum(d_i*M_i)-k*M)*R^2 mod p, and sum < 2^54*p < R*p for R=2^256.
+            // sum = sum(d_i*M_i)-k*M mod p retains the input R^2; sum < 2^54*p < R*p for R=2^256.
             // One existing REDC therefore yields a canonical Montgomery coordinate directly,
             // without materializing the wide CRT integer, folding, or a second field conversion.
             direct_weight_type reduced;
