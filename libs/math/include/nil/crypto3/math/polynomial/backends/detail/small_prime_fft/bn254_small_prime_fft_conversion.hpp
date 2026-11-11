@@ -43,10 +43,11 @@
 namespace nil::crypto3::math::detail {
 
     /**
-     * Convert canonical BN254 Fp12 coordinates to a prefix of the small-prime catalogue.
+     * Convert stored Montgomery BN254 Fp12 coordinates to a prefix of the small-prime catalogue.
      * Coordinate order is Crypto3's [1,u,v,uv,v^2,uv^2,w,uw,vw,uvw,v^2w,uv^2w].
-     * Each output cell is an exact integer in [0,q), congruent to the canonical base-field
-     * coordinate modulo q. In particular, a base-field -1 is lifted to p-1 before reduction.
+     * For a base-field coordinate a, lift the canonical stored integer a*R mod p, with R=2^256.
+     * Each output cell is that integer reduced into [0,q). Products retain R^2 modulo p;
+     * bn254_small_prime_fft_reconstructor removes this scale when exporting into the field.
      *
      * Precomputed powers are reusable across operands and sizes. Conversion extracts each
      * coordinate once for all primes, using fixed-size scratch and caller-owned output storage.
@@ -140,20 +141,15 @@ namespace nil::crypto3::math::detail {
                         using base_backend_type = typename Params::base_field_type::integral_type::backend_type;
                         if constexpr (base_backend_type::limb_bits == 64) {
                             namespace fp12_fast = algebra::fields::detail::fp12_fast;
-                            // The stored value is a*R mod p, with R = 2^256. Zero-extend it
-                            // into the low half of montgomery; one reduction recovers a in [0,p).
-                            typename Params::limb_array montgomery {};
+                            // Retain the stored integer in [0,p); packing only extracts chunks.
+                            // The paired CRT export accounts for the product's R^2 scale.
                             const auto stored = fp12_fast::load_limbs<base_backend_type>(
                                 coefficients[offset + i].coordinate(coordinate).data.backend().base_data());
-                            std::copy(stored.begin(), stored.end(), montgomery.begin());
-                            std::array<std::uint64_t, Params::base_value_limb_count> canonical;
-                            fp12_fast::montgomery_reduce<Params>(canonical.data(), montgomery);
-                            // pack only extracts five 52-bit chunks; it does not rescale them.
-                            // Packing the canonical value preserves the lift of field -1 to p-1.
-                            words = fp12_fast::montgomery_radix52<Params>::pack(canonical.data());
+                            words = fp12_fast::montgomery_radix52<Params>::pack(stored.data());
                         } else {
-                            const auto canonical = coefficients[offset + i].coordinate(coordinate).to_integral();
-                            boost::multiprecision::export_bits(canonical, words.begin(), chunk_bits, false);
+                            const typename Params::base_field_type::integral_type stored(
+                                coefficients[offset + i].coordinate(coordinate).data.backend().base_data());
+                            boost::multiprecision::export_bits(stored, words.begin(), chunk_bits, false);
                         }
                         for (std::size_t j = 0; j < chunk_count; ++j) {
                             chunks[i][j] = static_cast<double>(words[j]);

@@ -69,10 +69,12 @@ selection is explicit; higher-level algorithms do not silently replace the calle
 
 ### BN254 Fp12 small-prime products
 
-This backend has a fixed coefficient type, available as `bn254_small_prime_fft_backend::value_type`. It converts
-the twelve base-field coordinates of each coefficient into residues modulo auxiliary 50-bit primes. Each prime has
-twelve transform channels; pointwise operations apply the BN254 tower identities in that prime's quotient ring.
-Inverse transforms and signed CRT reconstruction return exact BN254 Fp12 coefficients.
+This backend has a fixed coefficient type, available as `bn254_small_prime_fft_backend::value_type`. It lifts the
+twelve stored Montgomery coordinates of each coefficient directly into residues modulo auxiliary 50-bit primes.
+For a base-field value `a`, the integer lift is `a*R mod p` in `[0,p)`, with `R = 2^256`; input conversion does not
+decode it to `a`. Each prime has twelve transform channels; pointwise operations apply the BN254 tower identities
+in that prime's quotient ring. Products and sums of products retain an `R^2` scale modulo `p`. Inverse transforms
+and signed CRT export remove this scale and return exact BN254 Fp12 coefficients in their normal representation.
 
 For base-field modulus `p` and at most `t` overlapping polynomial terms, the conservative coordinate bound is
 
@@ -82,7 +84,9 @@ The product of the selected primes must exceed `2*C`. Construction selects the s
 for the configured maximum length; all smaller plans share that prefix, coefficient converter, and CRT data. The
 prime count is therefore fixed for a backend instance rather than selected again for every call. The 32,768-point
 configuration uses eleven primes. CRT export uses a certified direct reduction into Montgomery representation when
-possible and an exact reconstruction fallback otherwise.
+possible and an exact reconstruction fallback otherwise. Both export paths account for the product's `R^2` scale;
+centering and bound checks apply to the signed integer expression before that scale is removed. The coordinate
+bound is unchanged because stored Montgomery coordinates are also canonical integers below `p`.
 
 The FMA kernels use integer-valued binary64 residues with proved bounds. They require the supported floating-point
 compiler settings and round-to-nearest mode; other supported settings or rounding modes select exact integer

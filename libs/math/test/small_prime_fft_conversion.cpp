@@ -77,6 +77,7 @@ namespace {
     void check_output(std::span<const double> output, std::size_t prime_count,
                       std::span<const coordinates_type> coordinates, std::size_t stride) {
         const cpp_int characteristic(fq::modulus.backend().to_cpp_int());
+        const cpp_int radix = cpp_int(1) << 256;
         BOOST_REQUIRE_EQUAL(output.size(), prime_count * 12 * stride);
         for (std::size_t prime = 0; prime < prime_count; ++prime) {
             const auto modulus = detail::small_prime_fft_primes[prime].modulus;
@@ -90,7 +91,7 @@ namespace {
                         BOOST_REQUIRE_LT(actual, static_cast<double>(modulus));
                         cpp_int expected = 0;
                         if (i < coordinates.size()) {
-                            expected = (coordinates[i][coordinate] % characteristic) % modulus;
+                            expected = ((coordinates[i][coordinate] * radix) % characteristic) % modulus;
                         }
                         BOOST_CHECK_EQUAL(static_cast<std::uint64_t>(actual), expected);
                     }
@@ -143,7 +144,7 @@ BOOST_AUTO_TEST_CASE(basis_and_coordinate_layout_are_preserved_for_every_catalog
     }
 }
 
-BOOST_AUTO_TEST_CASE(canonical_values_and_chunk_boundaries_match_integer_oracle) {
+BOOST_AUTO_TEST_CASE(montgomery_values_and_chunk_boundaries_match_integer_oracle) {
     const cpp_int characteristic(fq::modulus.backend().to_cpp_int());
     std::vector<cpp_int> values = {
         0, 1, characteristic - 1, characteristic, characteristic + 1, (cpp_int(1) << 254) - 1};
@@ -155,7 +156,7 @@ BOOST_AUTO_TEST_CASE(canonical_values_and_chunk_boundaries_match_integer_oracle)
         values.push_back(power + 1);
     }
     // Also cross limb boundaries in the stored Montgomery value a*R mod p.
-    // Multiplying by R^-1 constructs canonical inputs independently of the decoder.
+    // Multiplying by R^-1 constructs field inputs independently of the converter.
     using base_backend_type = fq::integral_type::backend_type;
     const cpp_int radix = cpp_int(1) << (base_backend_type::limb_bits * base_backend_type::internal_limb_count);
     const cpp_int inverse_radix = boost::multiprecision::powm(radix, cpp_int(characteristic - 2), characteristic);
