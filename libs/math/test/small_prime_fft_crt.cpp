@@ -782,4 +782,61 @@ BOOST_AUTO_TEST_CASE(invalid_dimensions_are_rejected_before_output_writes) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(disjoint_reconstruction_ranges_preserve_neighbors_and_rounding_modes) {
+    restore_rounding restore;
+    constexpr std::size_t count = 65, stride = 71;
+    const std::array<std::array<std::size_t, 2>, 4> ranges {{{33, 65}, {0, 1}, {7, 33}, {1, 7}}};
+    for (std::size_t primes : {std::size_t(1), detail::small_prime_fft_primes.size()}) {
+        const auto params = make_params(primes);
+        const cpp_int bound = params.modulus / 4;
+        const reconstructor_type reconstructor(params, bound);
+        const auto coordinates = random_coordinates(count, bound);
+        for (bool weighted : {false, true}) {
+            const auto residues = make_residues(coordinates, primes, stride, true, weighted);
+            const auto reconstruct =
+                weighted ? &reconstructor_type::reconstruct_weighted_range : &reconstructor_type::reconstruct_range;
+            for (int mode : {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
+                BOOST_REQUIRE_EQUAL(std::fesetround(mode), 0);
+                std::vector<value_type> complete(count), output(count, value_type::one()), expected = output;
+                (reconstructor.*reconstruct)(complete, residues, stride, 0, count);
+                for (const auto &[first, end] : ranges) {
+                    (reconstructor.*reconstruct)(output, residues, stride, first, end);
+                    std::copy(complete.begin() + first, complete.begin() + end, expected.begin() + first);
+                    BOOST_CHECK(output == expected);
+                }
+                (reconstructor.*reconstruct)(output, residues, stride, 7, 7);
+                BOOST_CHECK(output == expected);
+                check_output(output, coordinates);
+                BOOST_CHECK_EQUAL(std::fegetround(), mode);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(reconstruction_ranges_validate_bounds_and_only_read_selected_coefficients) {
+    const reconstructor_type reconstructor(make_params(1), 10);
+    std::array<coordinates_type, 3> coordinates {};
+    coordinates[0][0] = 11;
+    for (bool weighted : {false, true}) {
+        const auto residues = make_residues(coordinates, 1, 5, false, weighted);
+        const auto reconstruct =
+            weighted ? &reconstructor_type::reconstruct_weighted_range : &reconstructor_type::reconstruct_range;
+        std::vector<value_type> output(3, value_type::one());
+        const auto expected = output;
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)(output, residues, 5, 2, 1), std::out_of_range);
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)(output, residues, 5, 0, 4), std::out_of_range);
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)(output, residues, 5, 0, std::numeric_limits<std::size_t>::max()),
+                          std::out_of_range);
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)(output, std::span<const double>(residues).first(59), 5, 1, 3),
+                          std::invalid_argument);
+        BOOST_CHECK(output == expected);
+        BOOST_CHECK_NO_THROW((reconstructor.*reconstruct)(output, residues, 5, 1, 3));
+        BOOST_CHECK(output[0] == value_type::one());
+        BOOST_CHECK(output[1].is_zero() && output[2].is_zero());
+        BOOST_CHECK_THROW((reconstructor.*reconstruct)(output, residues, 5, 0, 1), std::overflow_error);
+        BOOST_CHECK(output[0] == value_type::one());
+        BOOST_CHECK_NO_THROW((reconstructor.*reconstruct)({}, {}, 0, 0, 0));
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
