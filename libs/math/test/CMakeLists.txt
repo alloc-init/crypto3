@@ -80,6 +80,13 @@ foreach(TEST_NAME ${TESTS_NAMES})
     define_math_test(${TEST_NAME})
 endforeach()
 
+# Application-controlled execution is covered by the regular composition tests.
+# Thread support belongs only to the test executable, not to the library.
+find_package(Threads REQUIRED)
+target_link_libraries(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_polynomial_composition_test Threads::Threads)
+set_tests_properties(${CMAKE_WORKSPACE_NAME}_${CURRENT_PROJECT_NAME}_polynomial_composition_test
+        PROPERTIES PROCESSORS 8 TIMEOUT 300)
+
 set(COMPILE_TIME_TESTS_NAMES
         "polynomial_algorithm_constraints"
         "polynomial_concepts"

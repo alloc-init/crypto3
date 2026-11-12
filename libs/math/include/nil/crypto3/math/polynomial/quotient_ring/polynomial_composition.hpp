@@ -293,13 +293,28 @@ namespace nil::crypto3::math {
     };
 
     namespace detail {
+        template<SupportsDivrem Backend>
+        void evaluate_composition_blocks(
+            std::array<typename Backend::polynomial_type,
+                       polynomial_composition_precomputation<Backend>::coefficient_cache_type::block_tile_size> &output,
+            const typename Backend::polynomial_type &outer,
+            const polynomial_composition_precomputation<Backend> &precomputation, std::size_t first, std::size_t count,
+            typename polynomial_composition_precomputation<Backend>::coefficient_cache_type::workspace &scratch,
+            polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+            const auto evaluation =
+                precomputation.prepared_coefficients().prepare_blocks(output, outer, first, count, scratch);
+            arithmetic_context.evaluate_composition_coefficients(evaluation);
+            evaluation.finish();
+        }
+
         // Add one evaluated outer block to an existing accumulator. The cache must have a nonconstant divisor;
         // outer must fit it, block_index must exist, and result must not alias outer or the cached powers.
         template<SupportsDivrem Backend>
         void add_composition_block(typename Backend::polynomial_type &result,
                                    const typename Backend::polynomial_type &outer,
                                    const polynomial_composition_precomputation<Backend> &precomputation,
-                                   std::size_t block_index) {
+                                   std::size_t block_index,
+                                   polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
             using polynomial_type = typename Backend::polynomial_type;
             using value_type = typename polynomial_type::value_type;
             using cache_type = typename polynomial_composition_precomputation<Backend>::coefficient_cache_type;
@@ -307,7 +322,8 @@ namespace nil::crypto3::math {
                 if (precomputation.prepared_coefficients().use_for_block(outer, block_index)) {
                     typename cache_type::workspace scratch;
                     std::array<polynomial_type, cache_type::block_tile_size> blocks;
-                    precomputation.prepared_coefficients().evaluate_blocks(blocks, outer, block_index, 1, scratch);
+                    evaluate_composition_blocks(blocks, outer, precomputation, block_index, 1, scratch,
+                                                arithmetic_context);
                     addition(result, result, blocks[0]);
                     return;
                 }
@@ -384,7 +400,7 @@ namespace nil::crypto3::math {
             };
             const auto consume_scalar = [&](std::size_t index) {
                 polynomial_type block;
-                add_composition_block(block, outer, precomputation, index);
+                add_composition_block(block, outer, precomputation, index, arithmetic_context);
                 return consume(block, index);
             };
             std::size_t end = 1 + (outer.size() - 1) / precomputation.block_size();
@@ -405,7 +421,8 @@ namespace nil::crypto3::math {
                             continue;
                         }
                         const std::size_t count = end - first;
-                        precomputation.prepared_coefficients().evaluate_blocks(blocks, outer, first, count, scratch);
+                        evaluate_composition_blocks(blocks, outer, precomputation, first, count, scratch,
+                                                    arithmetic_context);
                         for (std::size_t block = count; block-- > 0;) {
                             if (!consume(blocks[block], first + block)) {
                                 return false;
@@ -552,13 +569,14 @@ namespace nil::crypto3::math {
                         if (!leading) {
                             mulmod(result, result, precomputation.giant_step(), divisor_context, arithmetic_context);
                         }
-                        detail::add_composition_block(result, outer, precomputation, end - 1);
+                        detail::add_composition_block(result, outer, precomputation, end - 1, arithmetic_context);
                         leading = false;
                         --end;
                         continue;
                     }
                     const std::size_t count = end - first;
-                    precomputation.prepared_coefficients().evaluate_blocks(blocks, outer, first, count, scratch);
+                    detail::evaluate_composition_blocks(blocks, outer, precomputation, first, count, scratch,
+                                                        arithmetic_context);
                     // Evaluate blocks together, then consume them in the original descending Horner order.
                     for (std::size_t block = count; block-- > 0;) {
                         if (leading) {
@@ -576,10 +594,10 @@ namespace nil::crypto3::math {
             }
         }
         polynomial_type result;
-        detail::add_composition_block(result, outer, precomputation, block_count - 1);
+        detail::add_composition_block(result, outer, precomputation, block_count - 1, arithmetic_context);
         for (std::size_t block = block_count - 1; block-- > 0;) {
             mulmod(result, result, precomputation.giant_step(), divisor_context, arithmetic_context);
-            detail::add_composition_block(result, outer, precomputation, block);
+            detail::add_composition_block(result, outer, precomputation, block, arithmetic_context);
         }
 
         output = std::move(result);

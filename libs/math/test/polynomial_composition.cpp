@@ -25,8 +25,11 @@
 #define BOOST_TEST_MODULE polynomial_composition_test
 
 #include <cstddef>
+#include <exception>
+#include <future>
 #include <limits>
 #include <optional>
+#include <vector>
 
 #include <boost/test/unit_test.hpp>
 
@@ -125,6 +128,60 @@ namespace {
         }
 
         grouped_operation_counts &counts;
+    };
+
+    struct composition_execution_counts {
+        std::size_t batches = 0;
+        bool fail = false;
+    };
+
+    struct partitioned_composition_backend : grouped_backend_type {
+        partitioned_composition_backend(std::size_t size, composition_execution_counts &counts,
+                                        std::size_t threads = 1) :
+            grouped_backend_type(size), counts(counts), threads(threads) {
+        }
+
+        template<typename Evaluation>
+        void evaluate_composition_coefficients(const Evaluation &evaluation) {
+            ++counts.batches;
+            // Application scheduling stays in this test. Each worker visits a disjoint reverse stride;
+            // the calling thread participates, and every helper completes before return or rethrow.
+            const auto visit = [&](std::size_t rank) {
+                for (std::size_t offset = rank; offset < evaluation.panel_count(); offset += threads) {
+                    const auto panel = evaluation.panel_count() - 1 - offset;
+                    evaluation.evaluate_panels(panel, panel + 1);
+                    if (counts.fail) {
+                        throw std::runtime_error("application coefficient evaluation failed");
+                    }
+                }
+            };
+            std::vector<std::future<void>> helpers;
+            helpers.reserve(threads - 1);
+            for (std::size_t rank = 1; rank < threads; ++rank) {
+                helpers.push_back(std::async(std::launch::async, [&, rank] { visit(rank); }));
+            }
+            std::exception_ptr failure;
+            try {
+                visit(0);
+            } catch (...) {
+                failure = std::current_exception();
+            }
+            for (auto &helper : helpers) {
+                try {
+                    helper.get();
+                } catch (...) {
+                    if (!failure) {
+                        failure = std::current_exception();
+                    }
+                }
+            }
+            if (failure) {
+                std::rethrow_exception(failure);
+            }
+        }
+
+        composition_execution_counts &counts;
+        std::size_t threads;
     };
 }    // namespace
 
@@ -546,10 +603,10 @@ BOOST_AUTO_TEST_CASE(prepared_composition_cache_obeys_its_budget_and_pads_short_
             math::compose_mod_reference(evaluated, slice, inner, division, context);
             actual = {fq12_value(77), fq12_value(91)};
             math::addition(expected, actual, evaluated);
-            math::detail::add_composition_block(actual, outer, cache, block);
+            math::detail::add_composition_block(actual, outer, cache, block, context);
             BOOST_CHECK(actual == expected);
             math::subtraction(actual, polynomial_type {}, evaluated);
-            math::detail::add_composition_block(actual, outer, cache, block);
+            math::detail::add_composition_block(actual, outer, cache, block, context);
             BOOST_CHECK(actual == polynomial_type {fq12_value_type::zero()});
         }
     }
@@ -638,10 +695,10 @@ BOOST_AUTO_TEST_CASE(prepared_composition_dispatch_counts_nonzero_nonconstant_te
             math::compose_mod_reference(evaluated, slice, inner, division, context);
             polynomial_type actual(11, fq12_value(61)), expected;
             math::addition(expected, actual, evaluated);
-            math::detail::add_composition_block(actual, outer, cache, 0);
+            math::detail::add_composition_block(actual, outer, cache, 0, context);
             BOOST_CHECK(actual == expected);
             math::subtraction(actual, polynomial_type {}, evaluated);
-            math::detail::add_composition_block(actual, outer, cache, 0);
+            math::detail::add_composition_block(actual, outer, cache, 0, context);
             BOOST_CHECK(actual == polynomial_type {fq12_value_type::zero()});
         }
     }
@@ -884,6 +941,155 @@ BOOST_AUTO_TEST_CASE(prepared_simd_panels_match_scalar_at_lane_and_term_boundari
             }
         }
         BOOST_CHECK_THROW(cache_type(powers, budget, 3), std::invalid_argument);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(prepared_composition_panels_support_independent_ranges_and_workspace_reuse) {
+    using polynomial_type = grouped_polynomial_type;
+    using cache_type = math::detail::prepared_composition_coefficients<fq12_value_type>;
+    constexpr std::size_t block_size = 10, blocks = 3;
+    for (std::size_t width : {3, 9, 17}) {
+        std::vector<polynomial_type> powers(block_size);
+        powers[0] = {fq12_value_type::one()};
+        for (std::size_t exponent = 1; exponent < powers.size(); ++exponent) {
+            powers[exponent] = grouped_polynomial(exponent % 3 == 0 ? 1 : width, 13 * exponent);
+        }
+        for (std::size_t lanes : {0, 4, 8}) {
+            const cache_type cache(powers, 4 * 1024 * 1024, lanes);
+            BOOST_REQUIRE(cache.available());
+            typename cache_type::workspace scratch;
+            std::array<polynomial_type, cache_type::block_tile_size> output;
+            output.back() = {fq12_value(77)};
+            for (unsigned pattern = 0; pattern < 3; ++pattern) {
+                polynomial_type outer(block_size * blocks - 2, fq12_value_type::zero());
+                for (std::size_t i = 0; i < outer.size(); ++i) {
+                    if (pattern == 0 || (pattern == 1 && i % 3 == 0) || i % block_size == 0) {
+                        outer[i] = fq12_value(17 + 12 * i);
+                    }
+                }
+                const auto evaluation = cache.prepare_blocks(output, outer, 0, blocks, scratch);
+                const auto prepared_output = output;
+                BOOST_CHECK_THROW(evaluation.evaluate_panels(1, 0), std::out_of_range);
+                BOOST_CHECK_THROW(evaluation.evaluate_panels(0, evaluation.panel_count() + 1), std::out_of_range);
+                BOOST_CHECK(output == prepared_output);
+                evaluation.evaluate_panels(evaluation.panel_count(), evaluation.panel_count());
+                for (std::size_t panel = evaluation.panel_count(); panel-- > 0;) {
+                    evaluation.evaluate_panels(panel, panel + 1);
+                }
+                for (std::size_t block = 0; block < blocks; ++block) {
+                    BOOST_CHECK_EQUAL(output[block].size(), prepared_output[block].size());
+                }
+                evaluation.finish();
+                for (std::size_t block = 0; block < blocks; ++block) {
+                    polynomial_type expected(width, fq12_value_type::zero());
+                    for (std::size_t exponent = 0;
+                         exponent < block_size && block * block_size + exponent < outer.size();
+                         ++exponent) {
+                        for (std::size_t coefficient = 0; coefficient < powers[exponent].size(); ++coefficient) {
+                            expected[coefficient] +=
+                                powers[exponent][coefficient] * outer[block * block_size + exponent];
+                        }
+                    }
+                    math::condense(expected);
+                    BOOST_CHECK(output[block] == expected);
+                }
+                BOOST_CHECK(output.back() == polynomial_type {fq12_value(77)});
+                if (pattern == 2) {
+                    BOOST_CHECK_EQUAL(evaluation.panel_count(), 0);
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(application_composition_evaluation_partitions_panels_across_threads) {
+    using backend_type = partitioned_composition_backend;
+    using polynomial_type = backend_type::polynomial_type;
+    using cache_type = math::detail::prepared_composition_coefficients<fq12_value_type>;
+    constexpr std::size_t block_size = 10, blocks = 3;
+    std::vector<polynomial_type> powers(block_size);
+    powers[0] = {fq12_value_type::one()};
+    for (std::size_t exponent = 1; exponent < powers.size(); ++exponent) {
+        // Nine SIMD8 panels give every worker a nonempty range, including a partial final panel.
+        powers[exponent] = grouped_polynomial(exponent % 3 == 0 ? 64 : 65, 13 * exponent);
+    }
+    for (std::size_t lanes : {0, 4, 8}) {
+        const cache_type cache(powers, 4 * 1024 * 1024, lanes);
+        BOOST_REQUIRE(cache.available());
+        for (std::size_t threads : {1, 2, 4, 8}) {
+            composition_execution_counts counts;
+            polynomial_arithmetic::polynomial_context<backend_type> context(backend_type(64, counts, threads));
+            typename cache_type::workspace scratch, reference_scratch;
+            std::array<polynomial_type, cache_type::block_tile_size> output, expected;
+            for (unsigned pattern = 0; pattern < 3; ++pattern) {
+                polynomial_type outer(block_size * blocks - 2, fq12_value_type::zero());
+                for (std::size_t i = 0; i < outer.size(); ++i) {
+                    if (pattern == 0 || (pattern == 1 && i % 3 == 0) || i % block_size == 0) {
+                        outer[i] = fq12_value(17 + 12 * i);
+                    }
+                }
+                cache.evaluate_blocks(expected, outer, 0, blocks, reference_scratch);
+                const auto evaluation = cache.prepare_blocks(output, outer, 0, blocks, scratch);
+                context.evaluate_composition_coefficients(evaluation);
+                evaluation.finish();
+                BOOST_CHECK(output == expected);
+            }
+            BOOST_CHECK_EQUAL(counts.batches, 3);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(application_composition_evaluation_preserves_grouping_aliases_and_failure_reuse) {
+    using backend_type = partitioned_composition_backend;
+    using polynomial_type = backend_type::polynomial_type;
+    using reference_backend = polynomial_arithmetic::schoolbook_backend<fq12_value_type>;
+    constexpr std::size_t degree = 19;
+    const auto modulus = grouped_polynomial(degree + 1, 41);
+    const auto inner = grouped_polynomial(degree, 73);
+    const auto outer = grouped_polynomial(9 * 9 + 3, 101);
+    polynomial_arithmetic::polynomial_context<reference_backend> reference;
+    math::polynomial_divisor_context<reference_backend> reference_divisor(modulus, degree - 1, reference);
+    polynomial_type expected;
+    math::compose_mod_reference(expected, outer, inner, reference_divisor, reference);
+    for (std::size_t group : {0, 8}) {
+        for (std::size_t bytes : {0, 4 * 1024 * 1024}) {
+            for (std::size_t threads : {1, 2, 4, 8}) {
+                composition_execution_counts counts;
+                polynomial_arithmetic::polynomial_context_options options;
+                options.modular_composition_block_size = 9;
+                options.modular_composition_prepared_byte_limit = bytes;
+                options.modular_composition_giant_step_group_size = group;
+                options.modular_composition_giant_step_prepared_byte_limit = 16 * 1024 * 1024;
+                polynomial_arithmetic::polynomial_context<backend_type> context(backend_type(64, counts, threads),
+                                                                                options);
+                math::polynomial_divisor_context<backend_type> divisor(modulus, degree - 1, context);
+                const math::polynomial_composition_precomputation<backend_type> cache(inner, outer.size(), divisor,
+                                                                                      context);
+                polynomial_type output = outer;
+                math::compose_mod(output, output, cache, divisor, context);
+                BOOST_CHECK(output == expected);
+                BOOST_CHECK_EQUAL(counts.batches != 0, bytes != 0);
+                if (bytes != 0) {
+                    counts.fail = true;
+                    output = outer;
+                    BOOST_CHECK_THROW(math::compose_mod(output, output, cache, divisor, context), std::runtime_error);
+                    BOOST_CHECK(output == outer);
+                    counts.fail = false;
+                    math::compose_mod(output, output, cache, divisor, context);
+                    BOOST_CHECK(output == expected);
+
+                    // Exercise the single-block helper independently of the batched composition paths.
+                    const polynomial_type block(outer.begin(), outer.begin() + 9);
+                    polynomial_type expected_block;
+                    math::compose_mod_reference(expected_block, block, inner, reference_divisor, reference);
+                    const auto before = counts.batches;
+                    output = {fq12_value_type::zero()};
+                    math::detail::add_composition_block(output, outer, cache, 0, context);
+                    BOOST_CHECK_EQUAL(counts.batches, before + 1);
+                    BOOST_CHECK(output == expected_block);
+                }
+            }
+        }
     }
 }
 

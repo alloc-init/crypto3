@@ -66,6 +66,65 @@ namespace nil::crypto3::math::detail {
             std::array<std::vector<limb>, block_tile_size> simd_scalars;
         };
 
+        /**
+         * Borrowed, prepared evaluation of up to four outer blocks. Preparation allocates the outputs and
+         * prepares each scalar once. evaluate_panels visits a half-open range of coefficient panels using
+         * only immutable cache/workspace data and disjoint output coefficients; it never resizes storage.
+         *
+         * The cache, workspace and output array must outlive this evaluation and remain in place. Evaluate
+         * every panel exactly once, with nonoverlapping ranges if callers run them concurrently. Join every
+         * caller before finish(), reusing the workspace, or destroying any borrowed storage, including when
+         * a caller throws. finish() condenses outputs and must run serially after successful evaluation.
+         */
+        template<typename Polynomial>
+        class block_evaluation {
+        public:
+            std::size_t panel_count() const noexcept {
+                return panel_count_;
+            }
+
+            void evaluate_panels(std::size_t first, std::size_t end) const {
+                if (first > end || end > panel_count_) {
+                    throw std::out_of_range("composition coefficient panel range is out of bounds");
+                }
+#if defined(CRYPTO3_HAS_AVX512IFMA)
+                if constexpr (simd_kernel::supported) {
+                    if (cache_.simd_lanes_ == 4) {
+                        cache_.template evaluate_simd_panels<4>(output_, block_count_, scratch_, first, end);
+                        return;
+                    }
+                    if (cache_.simd_lanes_ == 8) {
+                        cache_.template evaluate_simd_panels<8>(output_, block_count_, scratch_, first, end);
+                        return;
+                    }
+                }
+#endif
+                cache_.evaluate_scalar_panels(output_, block_count_, scratch_, first, end);
+            }
+
+            void finish() const {
+                for (std::size_t block = 0; block < block_count_; ++block) {
+                    condense(output_[block]);
+                }
+            }
+
+        private:
+            friend class prepared_composition_coefficients;
+
+            block_evaluation(const prepared_composition_coefficients &cache,
+                             std::array<Polynomial, block_tile_size> &output, const workspace &scratch,
+                             std::size_t block_count, bool active) :
+                cache_(cache), output_(output), scratch_(scratch), block_count_(block_count) {
+                const std::size_t lanes = cache.simd_lanes_ ? cache.simd_lanes_ : coefficient_tile_size;
+                panel_count_ = active ? 1 + (cache.width_ - 1) / lanes : 0;
+            }
+
+            const prepared_composition_coefficients &cache_;
+            std::array<Polynomial, block_tile_size> &output_;
+            const workspace &scratch_;
+            std::size_t block_count_, panel_count_;
+        };
+
         prepared_composition_coefficients() = default;
 
         template<typename Polynomial>
@@ -146,26 +205,25 @@ namespace nil::crypto3::math::detail {
             return false;
         }
 
-        // Evaluate up to four adjacent outer blocks. Each scalar is prepared once and reused across all
+        // Prepare up to four adjacent outer blocks. Each scalar is prepared once and reused across all
         // output coefficients. The coefficient-major cache keeps each dot contiguous; tiles reuse the same
         // cached columns across adjacent blocks without storing a matrix of every block's output.
+        // The requested blocks must exist, the cache must be available, and outer must not alias output.
         template<typename Polynomial>
-        void evaluate_blocks(std::array<Polynomial, block_tile_size> &output, const Polynomial &outer,
-                             std::size_t first_block, std::size_t block_count, workspace &scratch) const {
+        block_evaluation<Polynomial> prepare_blocks(std::array<Polynomial, block_tile_size> &output,
+                                                    const Polynomial &outer, std::size_t first_block,
+                                                    std::size_t block_count, workspace &scratch) const {
             assert(available() && block_count > 0 && block_count <= block_tile_size);
 #if defined(CRYPTO3_HAS_AVX512IFMA)
             if constexpr (simd_kernel::supported) {
-                if (simd_lanes_ == 4) {
-                    evaluate_simd_blocks<4>(output, outer, first_block, block_count, scratch);
-                    return;
-                }
-                if (simd_lanes_ == 8) {
-                    evaluate_simd_blocks<8>(output, outer, first_block, block_count, scratch);
-                    return;
+                if (simd_lanes_ != 0) {
+                    const bool active = prepare_simd_blocks(output, outer, first_block, block_count, scratch);
+                    return {*this, output, scratch, block_count, active};
                 }
             }
 #endif
             const std::size_t block_size = terms_ + 1;
+            bool active = false;
             for (std::size_t block = 0; block < block_count; ++block) {
                 const std::size_t first = (first_block + block) * block_size;
                 assert(first < outer.size());
@@ -184,8 +242,25 @@ namespace nil::crypto3::math::detail {
                 }
                 output[block].assign(scalars.empty() ? 1 : width_, Value::zero());
                 output[block][0] = outer[first];
+                active = active || !scalars.empty();
             }
-            for (std::size_t first_coefficient = 0; first_coefficient < width_;) {
+            return {*this, output, scratch, block_count, active};
+        }
+
+        template<typename Polynomial>
+        void evaluate_blocks(std::array<Polynomial, block_tile_size> &output, const Polynomial &outer,
+                             std::size_t first_block, std::size_t block_count, workspace &scratch) const {
+            const auto evaluation = prepare_blocks(output, outer, first_block, block_count, scratch);
+            evaluation.evaluate_panels(0, evaluation.panel_count());
+            evaluation.finish();
+        }
+
+    private:
+        template<typename Polynomial>
+        void evaluate_scalar_panels(std::array<Polynomial, block_tile_size> &output, std::size_t block_count,
+                                    const workspace &scratch, std::size_t first_panel, std::size_t end_panel) const {
+            for (std::size_t panel = first_panel; panel < end_panel; ++panel) {
+                const std::size_t first_coefficient = panel * coefficient_tile_size;
                 const std::size_t end = first_coefficient + std::min(coefficient_tile_size, width_ - first_coefficient);
                 for (std::size_t coefficient = first_coefficient; coefficient < end; ++coefficient) {
                     const auto select_power = [this, coefficient](std::size_t exponent) -> const prepared_type & {
@@ -200,14 +275,9 @@ namespace nil::crypto3::math::detail {
                         }
                     }
                 }
-                first_coefficient = end;
-            }
-            for (std::size_t block = 0; block < block_count; ++block) {
-                condense(output[block]);
             }
         }
 
-    private:
         // Conservative dispatch heuristic shared with the SIMD cache cutoff, not an arithmetic bound.
         static constexpr std::size_t minimum_prepared_terms = 8;
 #if defined(CRYPTO3_HAS_AVX512IFMA)
@@ -246,9 +316,9 @@ namespace nil::crypto3::math::detail {
             return true;
         }
 
-        template<std::size_t Lanes, typename Polynomial>
-        void evaluate_simd_blocks(std::array<Polynomial, block_tile_size> &output, const Polynomial &outer,
-                                  std::size_t first_block, std::size_t block_count, workspace &scratch) const {
+        template<typename Polynomial>
+        bool prepare_simd_blocks(std::array<Polynomial, block_tile_size> &output, const Polynomial &outer,
+                                 std::size_t first_block, std::size_t block_count, workspace &scratch) const {
             namespace fast = algebra::fields::detail::fp12_fast;
             using radix = fast::montgomery_radix52<params>;
             constexpr std::size_t coordinates = simd_kernel::product_coordinate_count;
@@ -281,7 +351,17 @@ namespace nil::crypto3::math::detail {
                 output[block].assign(indices.empty() ? 1 : width_, Value::zero());
                 output[block][0] = outer[first];
             }
-            for (std::size_t first = 0; any_active && first < width_;) {
+            return any_active;
+        }
+
+        template<std::size_t Lanes, typename Polynomial>
+        void evaluate_simd_panels(std::array<Polynomial, block_tile_size> &output, std::size_t block_count,
+                                  const workspace &scratch, std::size_t first_panel, std::size_t end_panel) const {
+            namespace fast = algebra::fields::detail::fp12_fast;
+            using radix = fast::montgomery_radix52<params>;
+            constexpr std::size_t coordinates = simd_kernel::product_coordinate_count;
+            for (std::size_t panel = first_panel; panel < end_panel; ++panel) {
+                const std::size_t first = panel * Lanes;
                 const std::size_t active_lanes = std::min(Lanes, width_ - first);
                 // Keep the dot products in canonical radix-52 form until tower recombination.
                 std::array<std::array<limb, coordinates * 5 * Lanes>, block_tile_size> products;
@@ -318,10 +398,6 @@ namespace nil::crypto3::math::detail {
                         }
                     }
                 }
-                first += active_lanes;
-            }
-            for (std::size_t block = 0; block < block_count; ++block) {
-                condense(output[block]);
             }
         }
 #endif

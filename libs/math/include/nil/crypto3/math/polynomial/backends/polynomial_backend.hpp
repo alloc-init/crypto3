@@ -169,6 +169,28 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             backend_.multiply_low(output, left, right, coefficient_count);
         }
 
+        /**
+         * Evaluate the independent panels of an already prepared composition batch. An optional backend
+         * operation may choose how to execute the serial evaluate_panels(first, end) primitive; backends
+         * without this operation evaluate the entire range on the calling thread.
+         *
+         * The operation borrows its cache, prepared operands and output storage. A backend must evaluate
+         * every panel in [0, panel_count()) exactly once and complete all accesses before returning or
+         * throwing. Concurrent calls must use disjoint panel ranges. The backend must not retain the
+         * evaluation or call finish(): the composition caller finalizes only after successful completion.
+         * This capability does not change the context's sequential-use contract for other operations.
+         */
+        template<typename Evaluation>
+        void evaluate_composition_coefficients(const Evaluation &evaluation) {
+            if constexpr (requires(backend_type &backend) {
+                              { backend.evaluate_composition_coefficients(evaluation) } -> std::same_as<void>;
+                          }) {
+                backend_.evaluate_composition_coefficients(evaluation);
+            } else {
+                evaluation.evaluate_panels(0, evaluation.panel_count());
+            }
+        }
+
         // Optional row-major 2-by-2 times 2-by-Columns product. A declined operation leaves every
         // output unchanged, so algorithms can use their ordinary multiplication/addition fallback.
         template<std::size_t Columns>
