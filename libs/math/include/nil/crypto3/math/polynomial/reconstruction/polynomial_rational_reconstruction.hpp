@@ -104,21 +104,19 @@ namespace nil::crypto3::math {
             throw std::invalid_argument("rational-reconstruction degree bounds do not ensure uniqueness");
         }
 
-        if (residue.size() - 1 <= maximum_numerator_degree) {
-            numerator = residue;
-            denominator = {value_type::one()};
-            return true;
-        }
-
         polynomial_type current_remainder;
         polynomial_type current_denominator;
         // Small inputs avoid matrix setup. A plan sized for the classical denominator updates can also be
         // too short for the matrix products, whose lengths can approach the modulus coefficient count.
         constexpr std::size_t minimum_half_gcd_degree = 128;
         const auto basecase_cutoff = arithmetic_context.options().half_gcd_basecase_cutoff;
-        if (modulus_degree >= std::max(minimum_half_gcd_degree, basecase_cutoff) &&
-            maximum_numerator_degree == modulus_degree / 2 && maximum_denominator_degree == (modulus_degree - 1) / 2 &&
-            arithmetic_context.supports_product_size(modulus.size())) {
+        if (residue.size() - 1 <= maximum_numerator_degree) {
+            current_remainder = residue;
+            current_denominator = {value_type::one()};
+        } else if (modulus_degree >= std::max(minimum_half_gcd_degree, basecase_cutoff) &&
+                   maximum_numerator_degree == modulus_degree / 2 &&
+                   maximum_denominator_degree == (modulus_degree - 1) / 2 &&
+                   arithmetic_context.supports_product_size(modulus.size())) {
             detail::half_gcd_matrix<Backend> matrix;
             polynomial_type previous_remainder;
             detail::half_gcd_reduce(matrix, previous_remainder, current_remainder, modulus, residue, basecase_cutoff,

@@ -49,7 +49,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         using value_type = ValueType;
         using polynomial_type = math::polynomial<value_type>;
 
-        static constexpr bool supports_product_size(std::size_t) {
+        constexpr bool supports_product_size(std::size_t) const {
             return true;
         }
 

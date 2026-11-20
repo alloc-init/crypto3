@@ -337,9 +337,10 @@ applies it to the complete inputs. A reduction lowers the second polynomial to r
 The public `gcd` operation selects this internal path only when `gcd_half_gcd_cutoff` is nonzero and the smaller operand
 reaches the cutoff. At or below `half_gcd_basecase_cutoff`, it constructs the same transformation iteratively.
 Large [bounded rational reconstructions](@ref math_polynomial_recovery) also use the matrix for the degree bounds
-of X-norm recovery. A backend can expose `bool supports_product_size(std::size_t) const` to indicate which full linear
-product lengths its configuration supports. Reconstruction uses individual divisions when capacity is unknown or
-insufficient.
+of X-norm recovery. A concrete backend can declare the const member `bool supports_product_size(std::size_t) const`
+to report which full linear product lengths it supports. A derived adapter can declare the member and forward to its
+base if it preserves the same limits. Adapters that omit the declaration, and backends with insufficient capacity,
+use individual Euclidean steps.
 
 Short-quotient Euclidean steps use direct division without constructing a reciprocal context. Recursive half-GCD
 reuses the already transformed high halves when reconstructing the full pair. Backends may also expose

@@ -191,9 +191,9 @@ For the bounds used in X-norm recovery, `degree(P) <= d / 2` and `degree(Q) <= (
 one half-GCD reduction supplies two consecutive remainders and their denominators. Here `d = degree(B)`. At even
 degree, the preceding remainder can lie exactly on the numerator bound. Reconstruction takes that row when it does.
 The recursive path starts at degree 128 when the modulus has more coefficients than `half_gcd_basecase_cutoff` and
-the backend supports products of `d + 1` coefficients. Smaller plans, backends without a capacity query, and other
-degree bounds use individual Euclidean steps. A residue already within the numerator bound returns immediately
-with denominator one. The plain-GCD setting `gcd_half_gcd_cutoff` applies only to GCD.
+the concrete backend declares support for products of `d + 1` coefficients. Smaller plans, adapters with undeclared
+capacity, and other degree bounds use individual Euclidean steps. A residue already within the numerator bound
+needs no division and yields denominator one. The plain-GCD setting `gcd_half_gcd_cutoff` applies only to GCD.
 
 ```cpp
 #include <nil/crypto3/math/polynomial/reconstruction/polynomial_rational_reconstruction.hpp>
