@@ -189,7 +189,7 @@ Separate contexts are required for concurrent calls when the backend owns mutabl
 | `basecase_divisor_coefficient_cutoff` | 10 | Use quadratic long division when the divisor has at most this many coefficients. |
 | `basecase_quotient_coefficient_cutoff` | 2 | Use quadratic long division when the quotient has at most this many coefficients. |
 | `half_gcd_basecase_cutoff` | 30 | At or below this coefficient count, recursive half-GCD constructs its transformation iteratively; zero disables this base case. |
-| `gcd_half_gcd_cutoff` | 0 | Use half-GCD when the smaller operand reaches this size; zero disables half-GCD. |
+| `gcd_half_gcd_cutoff` | 0 | For GCD, use half-GCD when the smaller operand reaches this size. Zero selects Euclidean GCD. |
 | `modular_composition_cached_power_limit` | maximum `size_t` | Cap the number of Brent-Kung baby powers; constructing a composition cache requires a positive limit. |
 | `modular_composition_block_size` | 0 | Request a Brent-Kung block size for composition caches; zero selects the square-root heuristic. A positive request is capped by the cached-power limit and maximum outer coefficient count. |
 | `modular_composition_giant_step_group_size` | 0 | Group giant-step products before reconstruction and reduction; zero keeps ordinary Horner evaluation, and one prepares only the fixed multiplier. Requires a supporting backend and a positive spectrum budget. |
@@ -336,6 +336,11 @@ Half-GCD recursively derives a product of these two-by-two polynomial matrices f
 applies it to the complete inputs. A reduction lowers the second polynomial to roughly half the original first size.
 The public `gcd` operation selects this internal path only when `gcd_half_gcd_cutoff` is nonzero and the smaller operand
 reaches the cutoff. At or below `half_gcd_basecase_cutoff`, it constructs the same transformation iteratively.
+Large [bounded rational reconstructions](@ref math_polynomial_recovery) also use the matrix for the degree bounds
+of X-norm recovery. A concrete backend can declare the const member `bool supports_product_size(std::size_t) const`
+to report which full linear product lengths it supports. A derived adapter can declare the member and forward to its
+base if it preserves the same limits. Adapters that omit the declaration, and backends with insufficient capacity,
+use individual Euclidean steps.
 
 Short-quotient Euclidean steps use direct division without constructing a reciprocal context. Recursive half-GCD
 reuses the already transformed high halves when reconstructing the full pair. Backends may also expose
