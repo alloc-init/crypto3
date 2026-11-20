@@ -49,6 +49,10 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         using value_type = ValueType;
         using polynomial_type = math::polynomial<value_type>;
 
+        static constexpr bool supports_product_size(std::size_t) {
+            return true;
+        }
+
         void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) const {
             multiply_low(output, left, right, left.size() + right.size() - 1);
         }

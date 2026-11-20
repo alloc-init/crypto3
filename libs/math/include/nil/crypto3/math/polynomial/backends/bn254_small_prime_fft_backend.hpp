@@ -200,6 +200,10 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             return max_transform_size_;
         }
 
+        bool supports_product_size(std::size_t coefficient_count) const {
+            return !plans_.empty() && coefficient_count <= max_transform_size();
+        }
+
         std::size_t prime_count() const {
             return converter_.prime_count();
         }

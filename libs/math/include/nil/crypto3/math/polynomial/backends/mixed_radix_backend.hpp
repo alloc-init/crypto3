@@ -129,6 +129,10 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
         }
 
+        bool supports_product_size(std::size_t coefficient_count) const {
+            return find_plan(coefficient_count) != nullptr;
+        }
+
         void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) {
             if (math::is_zero(left) || math::is_zero(right)) {
                 set_zero(output);

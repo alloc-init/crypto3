@@ -169,6 +169,17 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             backend_.multiply_low(output, left, right, coefficient_count);
         }
 
+        // Optional capacity query for algorithms that trade short products for larger ones.
+        // Keep the short-product path when the backend does not advertise a capacity.
+        bool supports_product_size(std::size_t coefficient_count) const {
+            if constexpr (requires {
+                              { backend_.supports_product_size(coefficient_count) } -> std::same_as<bool>;
+                          }) {
+                return backend_.supports_product_size(coefficient_count);
+            }
+            return false;
+        }
+
         // Optional row-major 2-by-2 times 2-by-Columns product. A declined operation leaves every
         // output unchanged, so algorithms can use their ordinary multiplication/addition fallback.
         template<std::size_t Columns>

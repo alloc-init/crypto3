@@ -25,6 +25,7 @@
 #ifndef CRYPTO3_MATH_POLYNOMIAL_RATIONAL_RECONSTRUCTION_HPP
 #define CRYPTO3_MATH_POLYNOMIAL_RATIONAL_RECONSTRUCTION_HPP
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
@@ -49,16 +50,17 @@ namespace nil::crypto3::math {
      *     Ri = Ui * modulus + Qi * residue.
      *
      * Here Ui is the coefficient of modulus and Qi is the coefficient of residue. Initially U0 = 1, Q0 = 0 and
-     * U1 = 0, Q1 = 1. The Ui terms vanish modulo modulus, so the algorithm stores only Q0 and Q1.
+     * U1 = 0, Q1 = 1. The Ui terms vanish modulo modulus, so only Qi is needed as the denominator.
      *
      * A Euclidean quotient q replaces the pairs by
      *
      *     (R0, R1) <- (R1, R0 - q * R1),
      *     (Q0, Q1) <- (Q1, Q0 - q * Q1).
      *
-     * Repeat this step while R1 is nonzero and degree(R1) exceeds maximum_numerator_degree. The loop normally stops
-     * before the Euclidean sequence reaches zero. At that point R1 is the first remainder within the numerator bound,
-     * so R1 is a valid numerator and Q1 is its denominator. Reconstruction fails if Q1 exceeds the denominator bound.
+     * Select the first remainder within the numerator bound, or zero if the sequence terminates first. For large
+     * inputs with the half-degree bounds used in X-norm recovery, half-GCD batches these steps and supplies Qi in
+     * the second column of its transformation matrix. Other inputs use individual steps and track only Q0 and Q1.
+     * Reconstruction fails if the selected denominator exceeds its bound.
      *
      * The strict condition
      *
@@ -102,25 +104,54 @@ namespace nil::crypto3::math {
             throw std::invalid_argument("rational-reconstruction degree bounds do not ensure uniqueness");
         }
 
-        polynomial_type previous_remainder(modulus);
-        polynomial_type current_remainder(residue);
-        polynomial_type previous_denominator = {value_type {}};
-        polynomial_type current_denominator = {value_type::one()};
-        polynomial_type quotient;
-        polynomial_type next_remainder;
-        polynomial_type quotient_times_denominator;
-        polynomial_type next_denominator;
+        if (residue.size() - 1 <= maximum_numerator_degree) {
+            numerator = residue;
+            denominator = {value_type::one()};
+            return true;
+        }
 
-        while (!is_zero(current_remainder) && current_remainder.size() - 1 > maximum_numerator_degree) {
-            detail::gcd_divrem_step(quotient, next_remainder, previous_remainder, current_remainder,
+        polynomial_type current_remainder;
+        polynomial_type current_denominator;
+        // Small inputs avoid matrix setup. A plan sized for the classical denominator updates can also be
+        // too short for the matrix products, whose lengths can approach the modulus coefficient count.
+        constexpr std::size_t minimum_half_gcd_degree = 128;
+        const auto basecase_cutoff = arithmetic_context.options().half_gcd_basecase_cutoff;
+        if (modulus_degree >= std::max(minimum_half_gcd_degree, basecase_cutoff) &&
+            maximum_numerator_degree == modulus_degree / 2 && maximum_denominator_degree == (modulus_degree - 1) / 2 &&
+            arithmetic_context.supports_product_size(modulus.size())) {
+            detail::half_gcd_matrix<Backend> matrix;
+            polynomial_type previous_remainder;
+            detail::half_gcd_reduce(matrix, previous_remainder, current_remainder, modulus, residue, basecase_cutoff,
                                     arithmetic_context);
-            arithmetic_context.multiply(quotient_times_denominator, quotient, current_denominator);
-            subtraction(next_denominator, previous_denominator, quotient_times_denominator);
+            // At even degree 2k, half-GCD stops strictly below degree k. If its preceding remainder has degree k,
+            // that row is the first one within our inclusive bound. A degree drop can also skip k entirely.
+            if (previous_remainder.size() - 1 <= maximum_numerator_degree) {
+                current_remainder = std::move(previous_remainder);
+                current_denominator = std::move(matrix.entry_01);
+            } else {
+                current_denominator = std::move(matrix.entry_11);
+            }
+        } else {
+            polynomial_type previous_remainder(modulus);
+            polynomial_type previous_denominator = {value_type {}};
+            current_remainder = residue;
+            current_denominator = {value_type::one()};
+            polynomial_type quotient;
+            polynomial_type next_remainder;
+            polynomial_type quotient_times_denominator;
+            polynomial_type next_denominator;
 
-            previous_remainder = std::move(current_remainder);
-            current_remainder = std::move(next_remainder);
-            previous_denominator = std::move(current_denominator);
-            current_denominator = std::move(next_denominator);
+            do {
+                detail::gcd_divrem_step(quotient, next_remainder, previous_remainder, current_remainder,
+                                        arithmetic_context);
+                arithmetic_context.multiply(quotient_times_denominator, quotient, current_denominator);
+                subtraction(next_denominator, previous_denominator, quotient_times_denominator);
+
+                previous_remainder = std::move(current_remainder);
+                current_remainder = std::move(next_remainder);
+                previous_denominator = std::move(current_denominator);
+                current_denominator = std::move(next_denominator);
+            } while (current_remainder.size() - 1 > maximum_numerator_degree);
         }
 
         if (is_zero(current_denominator) || current_denominator.size() - 1 > maximum_denominator_degree) {
