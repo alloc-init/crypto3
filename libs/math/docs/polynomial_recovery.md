@@ -187,6 +187,14 @@ subject to caller-supplied degree bounds. It follows the Euclidean remainder seq
 numerator bound, while tracking the corresponding coefficient of `R`. The returned denominator is monic, and the
 numerator is scaled by the same field element.
 
+For the bounds used in X-norm recovery, `degree(P) <= d / 2` and `degree(Q) <= (d - 1) / 2` with integer division,
+one half-GCD reduction supplies two consecutive remainders and their denominators. Here `d = degree(B)`. At even
+degree, the preceding remainder can lie exactly on the numerator bound. Reconstruction takes that row when it does.
+The recursive path starts at degree 128 when the modulus has more coefficients than `half_gcd_basecase_cutoff` and
+the concrete backend declares support for products of `d + 1` coefficients. Smaller plans, adapters with undeclared
+capacity, and other degree bounds use individual Euclidean steps. A residue already within the numerator bound
+needs no division and yields denominator one. The plain-GCD setting `gcd_half_gcd_cutoff` applies only to GCD.
+
 ```cpp
 #include <nil/crypto3/math/polynomial/reconstruction/polynomial_rational_reconstruction.hpp>
 
@@ -513,9 +521,9 @@ caches where needed; it is not a constant-time field operation. The cost of the 
 | Shared seed without coefficient Frobenius support | `O(log Q)` quotient-ring products |
 | Specialized odd-degree root, after its seed | `O(log d)` compositions/products, coefficient-field root/normalization, and linear finalization; linear divisors need only the scalar root |
 | Specialized even-degree root, after its seed | `O(log d)` compositions/products per trace attempt, coefficient-field root/normalization, and linear finalization |
-| Rational reconstruction | Up to `O(d)` sequential Euclidean steps; `O(d^2)` with schoolbook short-by-long products |
+| Rational reconstruction with recursive half-GCD | `O(M(d) * log d)` with fast division, where `M(d)` is the cost of a degree-`d` polynomial product |
+| Rational reconstruction with individual Euclidean steps | Up to `O(d)` sequential divisions, `O(d^2)` with schoolbook arithmetic |
 
 Tonelli-Shanks nonresidue search and even-degree trace retries have no deterministic attempt bound for an arbitrary
 caller-supplied generator. Odd-degree specialized roots are deterministic and require no quotient-field sampling.
-Rational reconstruction does not currently use half-GCD acceleration. These operation bounds describe the algorithms;
-they do not imply a fixed speedup independent of degree, backend, cache configuration, or CPU.
+Observed runtimes depend on the degree, backend, cache configuration, and CPU.

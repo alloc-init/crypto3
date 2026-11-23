@@ -24,17 +24,25 @@
 
 #define BOOST_TEST_MODULE polynomial_rational_reconstruction_test
 
+#include <array>
 #include <limits>
+#include <memory>
+#include <new>
+#include <optional>
+#include <random>
 #include <stdexcept>
+#include <utility>
 
 #include <boost/test/unit_test.hpp>
 
 #include <nil/crypto3/algebra/fields/alt_bn128/base_field.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/alt_bn128.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/babybear.hpp>
 #include <nil/crypto3/algebra/fields/babybear/base_field.hpp>
 #include <nil/crypto3/algebra/fields/fp12_2over3over2.hpp>
 
 #include <nil/crypto3/math/polynomial/reconstruction/polynomial_rational_reconstruction.hpp>
+#include <nil/crypto3/math/polynomial/backends/mixed_radix_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
 
 namespace {
@@ -45,6 +53,82 @@ namespace {
     using value_type = fields::babybear::value_type;
     using backend_type = polynomial_arithmetic::schoolbook_backend<value_type>;
     using polynomial_type = typename backend_type::polynomial_type;
+
+    struct counting_backend : backend_type {
+        explicit counting_backend(std::size_t &matrix_products) : matrix_products(matrix_products) {
+        }
+
+        bool supports_product_size(std::size_t count) const {
+            return backend_type::supports_product_size(count);
+        }
+
+        template<std::size_t Columns>
+        bool try_multiply_matrix(const std::array<polynomial_type *, 2 * Columns> &,
+                                 const std::array<const polynomial_type *, 4> &,
+                                 const std::array<const polynomial_type *, 2 * Columns> &) {
+            ++matrix_products;
+            return false;
+        }
+
+        std::size_t &matrix_products;
+    };
+
+    // This adapter delegates full products to a bounded FFT and inherits the other schoolbook operations.
+    struct bounded_product_backend : backend_type {
+        polynomial_arithmetic::mixed_radix_backend<fields::babybear> plan {128};
+
+        void multiply(polynomial_type &output, const polynomial_type &left, const polynomial_type &right) {
+            plan.multiply(output, left, right);
+        }
+    };
+
+    template<typename T>
+    struct failing_allocator {
+        using value_type = T;
+        static inline thread_local std::optional<std::size_t> allocations_before_failure;
+
+        failing_allocator() = default;
+        template<typename U>
+        failing_allocator(const failing_allocator<U> &) noexcept {
+        }
+
+        T *allocate(std::size_t count) {
+            if (allocations_before_failure) {
+                if (*allocations_before_failure == 0) {
+                    allocations_before_failure.reset();
+                    throw std::bad_alloc();
+                }
+                --*allocations_before_failure;
+            }
+            return std::allocator<T> {}.allocate(count);
+        }
+
+        void deallocate(T *ptr, std::size_t count) noexcept {
+            std::allocator<T> {}.deallocate(ptr, count);
+        }
+
+        template<typename U>
+        bool operator==(const failing_allocator<U> &) const noexcept {
+            return true;
+        }
+    };
+
+    struct short_residue_backend {
+        using polynomial_type = math::polynomial<value_type, failing_allocator<value_type>>;
+
+        void multiply(polynomial_type &, const polynomial_type &, const polynomial_type &) const {
+            throw std::logic_error("a residue within the bound requires no multiplication");
+        }
+
+        void square(polynomial_type &output, const polynomial_type &input) const {
+            multiply(output, input, input);
+        }
+
+        void multiply_low(polynomial_type &output, const polynomial_type &left, const polynomial_type &right,
+                          std::size_t) const {
+            multiply(output, left, right);
+        }
+    };
 
     using fq_value_type = fields::alt_bn128_base_field<254>::value_type;
     using fq12_field_type = fields::fp12_2over3over2<fields::alt_bn128<254>>;
@@ -93,6 +177,38 @@ BOOST_AUTO_TEST_CASE(reconstruction_failure_preserves_the_outputs) {
     BOOST_CHECK(!math::rational_reconstruct(numerator, denominator, residue, modulus, 0, 1, arithmetic_context));
     BOOST_CHECK(numerator == polynomial_type({value_type(7)}));
     BOOST_CHECK(denominator == polynomial_type({value_type(11)}));
+}
+
+BOOST_AUTO_TEST_CASE(short_residue_preserves_both_outputs_on_allocation_failure) {
+    using polynomial = short_residue_backend::polynomial_type;
+    polynomial_arithmetic::polynomial_context<short_residue_backend> context;
+    const polynomial r = {value_type(7)};
+    const polynomial f = {value_type::one(), value_type::zero(), value_type::one()};
+    const polynomial sentinel = {value_type(99)};
+    // Fail each polynomial allocation in turn, including with a moved-from denominator that owns no storage.
+    auto &remaining = failing_allocator<value_type>::allocations_before_failure;
+    for (std::size_t fail_after = 0;; ++fail_after) {
+        polynomial denominator(sentinel);
+        polynomial numerator(std::move(denominator));
+        BOOST_REQUIRE_EQUAL(denominator.get_storage().capacity(), 0U);
+
+        remaining = fail_after;
+        bool recovered;
+        try {
+            recovered = math::rational_reconstruct(numerator, denominator, r, f, 0, 0, context);
+        } catch (const std::bad_alloc &) {
+            BOOST_REQUIRE(!remaining.has_value());
+            BOOST_CHECK(numerator == sentinel);
+            BOOST_CHECK_EQUAL(denominator.size(), 0U);
+            continue;
+        }
+        remaining.reset();
+        BOOST_REQUIRE_GT(fail_after, 0U);
+        BOOST_REQUIRE(recovered);
+        BOOST_CHECK(numerator == r);
+        BOOST_CHECK(denominator == polynomial({value_type::one()}));
+        break;
+    }
 }
 
 BOOST_AUTO_TEST_CASE(reconstruction_supports_bn254_fq12_coefficients) {
@@ -193,6 +309,82 @@ BOOST_AUTO_TEST_CASE(reconstruction_rejects_invalid_inputs_and_bounds) {
     BOOST_CHECK_THROW(
         math::rational_reconstruct(numerator, denominator, residue, modulus, 0, maximum_size, arithmetic_context),
         std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(balanced_reconstruction_matches_individual_steps_across_the_half_gcd_cutoff) {
+    std::size_t matrix_products = 0;
+    polynomial_arithmetic::polynomial_context<counting_backend> context {counting_backend(matrix_products)};
+    // A 128-coefficient FFT fits every classical denominator update on these inputs, including degree 255.
+    // The larger matrix products would exceed this plan.
+    using fft_backend = polynomial_arithmetic::mixed_radix_backend<fields::babybear>;
+    polynomial_arithmetic::polynomial_context<fft_backend> classical {fft_backend(128)};
+    polynomial_arithmetic::polynomial_context<bounded_product_backend> adapter;
+    BOOST_CHECK(!adapter.supports_product_size(256));
+    std::mt19937 random(1824);
+
+    for (const std::size_t degree : {127, 128, 129, 255}) {
+        BOOST_TEST_CONTEXT("modulus degree " << degree) {
+            polynomial_type f(degree + 1);
+            polynomial_type r(degree);
+            for (auto *input : {&f, &r}) {
+                for (auto &coefficient : *input) {
+                    coefficient = value_type(random());
+                }
+                input->back() = value_type::one();
+            }
+            polynomial_type p, q, expected_p, expected_q;
+            const auto numerator_bound = degree / 2;
+            const auto denominator_bound = (degree - 1) / 2;
+            BOOST_REQUIRE(math::rational_reconstruct(expected_p, expected_q, r, f, numerator_bound, denominator_bound,
+                                                     classical));
+            matrix_products = 0;
+            BOOST_REQUIRE(math::rational_reconstruct(p, q, r, f, numerator_bound, denominator_bound, context));
+            BOOST_CHECK(p == expected_p);
+            BOOST_CHECK(q == expected_q);
+            BOOST_CHECK_EQUAL(matrix_products != 0, degree >= 128);
+
+            BOOST_REQUIRE(math::rational_reconstruct(p, q, r, f, numerator_bound, denominator_bound, adapter));
+            BOOST_CHECK(p == expected_p);
+            BOOST_CHECK(q == expected_q);
+
+            matrix_products = 0;
+            BOOST_CHECK(!math::rational_reconstruct(p, q, r, f, numerator_bound, 0, context));
+            BOOST_CHECK(p == expected_p);
+            BOOST_CHECK(q == expected_q);
+            BOOST_CHECK_EQUAL(matrix_products, 0U);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(half_gcd_selects_the_first_remainder_within_the_inclusive_bound) {
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    const polynomial_type x(value_type::one(), 1);
+    for (const std::size_t degree : {128, 129}) {
+        const std::size_t bound = degree / 2;
+        const polynomial_type r(value_type::one(), degree - 1);
+        polynomial_type f(value_type(2), degree);
+        polynomial_type p, q;
+
+        // With f = 2 X^degree + 3 X^e, multiplying r by X gives -(3/2) X^e modulo f.
+        for (const auto exponent : {bound, bound - 1}) {
+            f[exponent] = value_type(3);
+            p = f;
+            q = r;
+            BOOST_REQUIRE(math::rational_reconstruct(p, q, q, p, bound, (degree - 1) / 2, context));
+            BOOST_CHECK(p == polynomial_type(-value_type(3) * value_type(2).inversed(), exponent));
+            BOOST_CHECK(q == x);
+            f[exponent] = value_type::zero();
+        }
+
+        BOOST_REQUIRE(math::rational_reconstruct(p, q, r, f, bound, (degree - 1) / 2, context));
+        BOOST_CHECK(p == polynomial_type({value_type::zero()}));
+        BOOST_CHECK(q == x);
+
+        q = polynomial_type(value_type(3), bound);
+        BOOST_REQUIRE(math::rational_reconstruct(p, q, q, f, bound, (degree - 1) / 2, context));
+        BOOST_CHECK(p == polynomial_type(value_type(3), bound));
+        BOOST_CHECK(q == polynomial_type({value_type::one()}));
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <concepts>
 #include <cstddef>
 #include <limits>
 #include <optional>
@@ -43,6 +44,25 @@
 #include <nil/crypto3/math/polynomial/polynomial.hpp>
 
 namespace nil::crypto3::math::polynomial_arithmetic {
+
+    // Stage tasks own no threads. Prime pipelines retain the existing transform/product order;
+    // standalone transforms expose independent prime/coordinate channels.
+    enum class small_prime_fft_execution_stage {
+        conversion,
+        forward_transform,
+        prime_product,
+        prime_sum,
+        pointwise_product,
+        inverse_transform,
+        reconstruction
+    };
+
+    struct serial_small_prime_fft_execution {
+        template<typename Task>
+        void execute(const Task &task) const {
+            task.execute_range(0, task.task_count());
+        }
+    };
 
     /**
      * Exact BN254 Fp12 polynomial products through small-prime transforms and signed CRT.
@@ -60,10 +80,13 @@ namespace nil::crypto3::math::polynomial_arithmetic {
      * Spectrum buffers retain capacity across operations. Squaring converts/transforms one operand
      * and uses the dedicated tower square. Results are assembled separately before swapping into
      * output, permitting output to alias either input and preserving it on failure.
-     * Reuse sequentially; concurrent operations require separate backend instances. No constant-time
-     * guarantee is provided, and the thread's rounding mode must stay unchanged during an operation.
+     * Reuse sequentially; concurrent operations require separate backend instances. An application
+     * policy can schedule disjoint ranges within an operation; the default executes them serially.
+     * Each executing thread must keep its rounding mode unchanged during a range call. No constant-time
+     * guarantee is provided.
      */
-    class bn254_small_prime_fft_backend {
+    template<typename ExecutionPolicy = serial_small_prime_fft_execution>
+    class basic_bn254_small_prime_fft_backend {
         using params_type = math::detail::small_prime_fft_params;
 
     public:
@@ -93,7 +116,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
 
         private:
-            friend class bn254_small_prime_fft_backend;
+            friend class basic_bn254_small_prime_fft_backend;
 
             prepared_low_product_type(std::size_t coefficient_count, std::size_t prefix_size,
                                       std::size_t transform_size = 0, std::size_t prime_count = 0,
@@ -133,7 +156,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
 
         private:
-            friend class bn254_small_prime_fft_backend;
+            friend class basic_bn254_small_prime_fft_backend;
 
             product_accumulator_type(std::size_t operand_coefficient_count, std::size_t maximum_products,
                                      std::size_t transform_size, const math::detail::small_prime_fft_crt_params &crt,
@@ -168,7 +191,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
 
         private:
-            friend class bn254_small_prime_fft_backend;
+            friend class basic_bn254_small_prime_fft_backend;
 
             prepared_cyclic_remainder_type(std::size_t divisor_degree, std::size_t transform_size,
                                            std::size_t prime_count, std::vector<double> spectrum) :
@@ -189,15 +212,38 @@ namespace nil::crypto3::math::polynomial_arithmetic {
          * max_matrix_spectrum_bytes limits the additional shared input spectra used by matrix
          * products. Zero disables that optional path; exceeding its budget declines the operation.
          */
-        explicit bn254_small_prime_fft_backend(std::size_t max_transform_size,
-                                               std::size_t max_spectrum_bytes = std::numeric_limits<std::size_t>::max(),
-                                               std::size_t max_matrix_spectrum_bytes = 256 * 1024 * 1024) :
-            bn254_small_prime_fft_backend(checked_params(max_transform_size, max_spectrum_bytes),
-                                          max_matrix_spectrum_bytes) {
+        explicit basic_bn254_small_prime_fft_backend(
+            std::size_t max_transform_size,
+            std::size_t max_spectrum_bytes = std::numeric_limits<std::size_t>::max(),
+            std::size_t max_matrix_spectrum_bytes = 256 * 1024 * 1024)
+            requires std::default_initializable<ExecutionPolicy>
+            :
+            basic_bn254_small_prime_fft_backend(checked_params(max_transform_size, max_spectrum_bytes),
+                                                max_matrix_spectrum_bytes, ExecutionPolicy {}) {
+        }
+
+        /**
+         * The application policy executes borrowed stage tasks. Each task exposes stage(),
+         * task_count(), transform_size() and a serial execute_range(first,end) operation.
+         * Visit every task index exactly once with disjoint concurrent ranges. Complete all work
+         * before returning or throwing; never retain a task. Shared-buffer allocation and result
+         * commit remain on the calling thread; kernels may allocate local scratch on workers.
+         * The policy owns scheduling, thread budgets and pool lifetime.
+         */
+        explicit basic_bn254_small_prime_fft_backend(
+            std::size_t max_transform_size, ExecutionPolicy execution,
+            std::size_t max_spectrum_bytes = std::numeric_limits<std::size_t>::max(),
+            std::size_t max_matrix_spectrum_bytes = 256 * 1024 * 1024) :
+            basic_bn254_small_prime_fft_backend(checked_params(max_transform_size, max_spectrum_bytes),
+                                                max_matrix_spectrum_bytes, std::move(execution)) {
         }
 
         std::size_t max_transform_size() const {
             return max_transform_size_;
+        }
+
+        bool supports_product_size(std::size_t coefficient_count) const {
+            return !plans_.empty() && coefficient_count <= max_transform_size();
         }
 
         std::size_t prime_count() const {
@@ -319,27 +365,31 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             const std::size_t plan_offset = std::countr_zero(size) * prime_count();
             for (std::size_t row = 0; row < 2; ++row) {
                 for (std::size_t column = 0; column < Columns; ++column) {
-                    for (std::size_t prime = 0; prime < prime_count(); ++prime) {
-                        const auto &plan = plans_[plan_offset + prime];
-                        const std::size_t count = field_type::arity * size;
-                        const std::size_t offset = prime * count;
-                        const auto spectrum = [&](std::size_t operand) {
-                            return std::span<const double>(matrix_spectra_)
-                                .subspan(spectrum_indices[operand] * cells + offset, count);
-                        };
-                        auto destination = std::span<double>(left_spectrum_).subspan(offset, count);
-                        pointwise_[prime].multiply_sum(destination, spectrum(2 * row), spectrum(4 + column),
-                                                       spectrum(2 * row + 1), spectrum(4 + Columns + column), size,
-                                                       normalizations_[plan_offset + prime]);
-                        for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                            plan.inverse_fft_pointwise(destination.subspan(coordinate * size, size));
-                        }
-                    }
+                    execute_stage(
+                        small_prime_fft_execution_stage::prime_sum, prime_count(), size,
+                        [&](std::size_t first, std::size_t end) {
+                            for (std::size_t prime = first; prime < end; ++prime) {
+                                const auto &plan = plans_[plan_offset + prime];
+                                const std::size_t count = field_type::arity * size;
+                                const std::size_t offset = prime * count;
+                                const auto spectrum = [&](std::size_t operand) {
+                                    return std::span<const double>(matrix_spectra_)
+                                        .subspan(spectrum_indices[operand] * cells + offset, count);
+                                };
+                                auto destination = std::span<double>(left_spectrum_).subspan(offset, count);
+                                pointwise_[prime].multiply_sum(destination, spectrum(2 * row), spectrum(4 + column),
+                                                               spectrum(2 * row + 1), spectrum(4 + Columns + column),
+                                                               size, normalizations_[plan_offset + prime]);
+                                for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
+                                    plan.inverse_fft_pointwise(destination.subspan(coordinate * size, size));
+                                }
+                            }
+                        });
                     const std::size_t index = row * Columns + column;
                     auto &result = results[index];
                     result.resize(result_sizes[index]);
-                    reconstructor_.reconstruct_weighted(std::span<value_type>(result.data(), result.size()),
-                                                        left_spectrum_, size);
+                    reconstruct_coefficients(reconstructor_, std::span<value_type>(result.data(), result.size()),
+                                             left_spectrum_, size);
                     math::condense(result);
                 }
             }
@@ -419,7 +469,7 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 return false;
             }
             left_spectrum_.resize(field_type::arity * prime_count() * size);
-            converter_.convert(left_spectrum_, std::span<const value_type>(left.data(), left_size), size);
+            convert_spectrum(left_spectrum_, std::span<const value_type>(left.data(), left_size), size);
             finish_product<false, true>(output, size, std::min(product_size, coefficient_count), prepared.spectrum_);
             return true;
         }
@@ -465,6 +515,8 @@ namespace nil::crypto3::math::polynomial_arithmetic {
          * Shorter variable operands are zero-padded to the shared transform. Zero products
          * consume one product slot but require no spectrum. A declined append leaves the
          * accumulator unchanged; all input coefficients are consumed before returning.
+         * With a custom execution policy, products finish in scratch before a serial no-throw
+         * commit, preserving the logical sum and count if application execution throws.
          */
         bool try_accumulate_prepared_product(product_accumulator_type &accumulator, const polynomial_type &input,
                                              const prepared_low_product_type &prepared) {
@@ -490,12 +542,10 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             left_spectrum_.resize(cells);
             prepare_spectrum(left_spectrum_, std::span<const value_type>(input.data(), input.size()), size);
             const std::size_t plan_offset = std::countr_zero(size) * prime_count();
-            for (std::size_t prime = 0; prime < prime_count(); ++prime) {
+            const auto commit_prime = [&](std::size_t prime) noexcept {
                 const std::size_t count = field_type::arity * size;
                 const std::size_t offset = prime * count;
-                auto product = std::span<double>(left_spectrum_).subspan(offset, count);
-                pointwise_[prime].multiply(product, std::span<const double>(prepared.spectrum_).subspan(offset, count),
-                                           size, normalizations_[plan_offset + prime]);
+                const auto product = std::span<const double>(left_spectrum_).subspan(offset, count);
                 auto sum = std::span<double>(accumulator.spectrum_).subspan(offset, count);
                 if (accumulator.result_size_ == 0) {
                     std::copy(product.begin(), product.end(), sum.begin());
@@ -513,6 +563,28 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                         sum[i] = value;
                     }
                 }
+            };
+            execute_stage(small_prime_fft_execution_stage::pointwise_product, prime_count(), size,
+                          [&](std::size_t first, std::size_t end) {
+                              for (std::size_t prime = first; prime < end; ++prime) {
+                                  const std::size_t count = field_type::arity * size;
+                                  const std::size_t offset = prime * count;
+                                  auto product = std::span<double>(left_spectrum_).subspan(offset, count);
+                                  pointwise_[prime].multiply(
+                                      product, std::span<const double>(prepared.spectrum_).subspan(offset, count), size,
+                                      normalizations_[plan_offset + prime]);
+                                  if constexpr (std::same_as<ExecutionPolicy, serial_small_prime_fft_execution>) {
+                                      // Preserve the default fused prime-by-prime path.
+                                      commit_prime(prime);
+                                  }
+                              }
+                          });
+            if constexpr (!std::same_as<ExecutionPolicy, serial_small_prime_fft_execution>) {
+                // A policy can throw after partial work. Commit only after all scheduled products
+                // finish, so failure leaves the existing logical sum and product count unchanged.
+                for (std::size_t prime = 0; prime < prime_count(); ++prime) {
+                    commit_prime(prime);
+                }
             }
             accumulator.result_size_ = std::max(accumulator.result_size_, input.size() + prepared.prefix_size_ - 1);
             ++accumulator.products_;
@@ -524,6 +596,8 @@ namespace nil::crypto3::math::polynomial_arithmetic {
          * CRT export, then reset the group while retaining its workspace and certified bound.
          * An empty group produces zero. Output may alias any previously consumed input.
          * Incompatible or moved-from state returns false without changing output or the group.
+         * A custom execution policy transforms a copy in backend scratch, so execution failure
+         * preserves the sum for retry. The default serial policy retains in-place finalization.
          */
         bool try_finish_product_sum(polynomial_type &output, product_accumulator_type &accumulator) {
             const std::size_t size = accumulator.transform_size_;
@@ -536,16 +610,16 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                 output.assign(1, value_type::zero());
             } else {
                 result_.resize(accumulator.result_size_);
-                const std::size_t plan_offset = std::countr_zero(size) * prime_count();
-                for (std::size_t prime = 0; prime < prime_count(); ++prime) {
-                    for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                        plans_[plan_offset + prime].inverse_fft_pointwise(
-                            std::span<double>(accumulator.spectrum_)
-                                .subspan((prime * field_type::arity + coordinate) * size, size));
-                    }
+                std::span<double> spectrum(accumulator.spectrum_);
+                if constexpr (!std::same_as<ExecutionPolicy, serial_small_prime_fft_execution>) {
+                    // Keep the sum reusable if application execution or reconstruction throws.
+                    // Reuse the ordinary product buffer; no per-worker spectrum is allocated.
+                    left_spectrum_.assign(accumulator.spectrum_.begin(), accumulator.spectrum_.end());
+                    spectrum = left_spectrum_;
                 }
-                accumulator.reconstructor_.reconstruct_weighted(std::span<value_type>(result_.data(), result_.size()),
-                                                                accumulator.spectrum_, size);
+                transform_spectrum<true>(spectrum, size);
+                reconstruct_coefficients(accumulator.reconstructor_,
+                                         std::span<value_type>(result_.data(), result_.size()), spectrum, size);
                 math::condense(result_);
                 output.get_storage().swap(result_.get_storage());
             }
@@ -607,13 +681,102 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
             // Q has fewer than n coefficients, so it needs only zero padding, never cyclic folding.
             left_spectrum_.resize(field_type::arity * prime_count() * size);
-            converter_.convert(left_spectrum_, std::span<const value_type>(quotient.data(), quotient.size()), size);
+            convert_spectrum(left_spectrum_, std::span<const value_type>(quotient.data(), quotient.size()), size);
             finish_product<false, true>(output, size, size, prepared.spectrum_,
                                         std::span<const value_type>(dividend.data(), dividend.size()));
             return true;
         }
 
     private:
+        template<typename Function>
+        class execution_task {
+        public:
+            execution_task(small_prime_fft_execution_stage stage, std::size_t count, std::size_t size,
+                           Function function) :
+                stage_(stage), count_(count), size_(size), function_(std::move(function)) {
+            }
+
+            small_prime_fft_execution_stage stage() const noexcept {
+                return stage_;
+            }
+
+            std::size_t task_count() const noexcept {
+                return count_;
+            }
+
+            std::size_t transform_size() const noexcept {
+                return size_;
+            }
+
+            void execute_range(std::size_t first, std::size_t end) const {
+                if (first > end || end > count_) {
+                    throw std::out_of_range("bn254_small_prime_fft_backend: invalid execution range");
+                }
+                if (first != end) {
+                    function_(first, end);
+                }
+            }
+
+        private:
+            small_prime_fft_execution_stage stage_;
+            std::size_t count_, size_;
+            Function function_;
+        };
+
+        template<typename Function>
+        void execute_stage(small_prime_fft_execution_stage stage, std::size_t count, std::size_t size,
+                           Function function) {
+            if (count != 0) {
+                const execution_task task(stage, count, size, std::move(function));
+                execution_.execute(task);
+            }
+        }
+
+        template<typename Function>
+        void execute_coefficients(small_prime_fft_execution_stage stage, std::size_t count, std::size_t size,
+                                  Function function) {
+            // Match the conversion/CRT tile and keep SIMD tails at the end of a range.
+            constexpr std::size_t tile = 32;
+            const auto tasks = count == 0 ? 0 : 1 + (count - 1) / tile;
+            execute_stage(stage, tasks, size, [&](std::size_t first, std::size_t end) {
+                function(first == tasks ? count : first * tile, end == tasks ? count : end * tile);
+            });
+        }
+
+        void convert_spectrum(std::span<double> spectrum, std::span<const value_type> coefficients, std::size_t size) {
+            execute_coefficients(small_prime_fft_execution_stage::conversion, size, size,
+                                 [&](std::size_t first, std::size_t end) {
+                                     converter_.convert_range(spectrum, coefficients, size, first, end);
+                                 });
+        }
+
+        void reconstruct_coefficients(const math::detail::bn254_small_prime_fft_reconstructor &reconstructor,
+                                      std::span<value_type> output, std::span<const double> spectrum,
+                                      std::size_t size) {
+            execute_coefficients(small_prime_fft_execution_stage::reconstruction, output.size(), size,
+                                 [&](std::size_t first, std::size_t end) {
+                                     reconstructor.reconstruct_weighted_range(output, spectrum, size, first, end);
+                                 });
+        }
+
+        template<bool Inverse>
+        void transform_spectrum(std::span<double> spectrum, std::size_t size) {
+            const auto stage = Inverse ? small_prime_fft_execution_stage::inverse_transform :
+                                         small_prime_fft_execution_stage::forward_transform;
+            const auto plan_offset = std::countr_zero(size) * prime_count();
+            execute_stage(stage, prime_count() * field_type::arity, size, [&](std::size_t first, std::size_t end) {
+                for (std::size_t channel = first; channel < end; ++channel) {
+                    const auto &plan = plans_[plan_offset + channel / field_type::arity];
+                    auto values = spectrum.subspan(channel * size, size);
+                    if constexpr (Inverse) {
+                        plan.inverse_fft_pointwise(values);
+                    } else {
+                        plan.fft(values);
+                    }
+                }
+            });
+        }
+
         std::size_t cyclic_remainder_size(std::size_t n, std::size_t quotient_size) const {
             if (plans_.empty() || n < 2 || quotient_size == 0 || quotient_size > n - 1 || n > max_transform_size_ ||
                 quotient_size > max_transform_size_ - (n - 1)) {
@@ -627,23 +790,16 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             return size < std::bit_ceil(quotient_size + n - 1) ? size : 0;
         }
 
-        std::vector<double> prepare_spectrum(std::span<const value_type> coefficients, std::size_t size) const {
+        std::vector<double> prepare_spectrum(std::span<const value_type> coefficients, std::size_t size) {
             // Allocate just this spectrum, so a small preparation never retains larger scratch capacity.
             std::vector<double> spectrum(field_type::arity * prime_count() * size);
             prepare_spectrum(spectrum, coefficients, size);
             return spectrum;
         }
 
-        void prepare_spectrum(std::span<double> spectrum, std::span<const value_type> coefficients,
-                              std::size_t size) const {
-            converter_.convert(spectrum, coefficients, size);
-            const std::size_t plan_offset = std::countr_zero(size) * prime_count();
-            for (std::size_t prime = 0; prime < prime_count(); ++prime) {
-                for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                    plans_[plan_offset + prime].fft(
-                        spectrum.subspan((prime * field_type::arity + coordinate) * size, size));
-                }
-            }
+        void prepare_spectrum(std::span<double> spectrum, std::span<const value_type> coefficients, std::size_t size) {
+            convert_spectrum(spectrum, coefficients, size);
+            transform_spectrum<false>(spectrum, size);
         }
 
         static params_type checked_params(std::size_t max_size, std::size_t max_spectrum_bytes) {
@@ -661,9 +817,11 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             return std::move(*params);
         }
 
-        explicit bn254_small_prime_fft_backend(const params_type &params, std::size_t max_matrix_spectrum_bytes) :
+        explicit basic_bn254_small_prime_fft_backend(const params_type &params, std::size_t max_matrix_spectrum_bytes,
+                                                     ExecutionPolicy execution) :
             max_transform_size_(params.transform_size), max_matrix_spectrum_bytes_(max_matrix_spectrum_bytes),
-            converter_(params.crt.prime_count), reconstructor_(params.crt, params.coefficient_bound) {
+            converter_(params.crt.prime_count), reconstructor_(params.crt, params.coefficient_bound),
+            execution_(std::move(execution)) {
             const unsigned depth = std::countr_zero(max_transform_size_);
             plans_.reserve((depth + 1) * prime_count());
             normalizations_.reserve((depth + 1) * prime_count());
@@ -713,10 +871,10 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             const std::size_t channels = field_type::arity * prime_count();
             // Constructor checks guarantee that even the largest spectrum's byte count fits size_t.
             left_spectrum_.resize(channels * size);
-            converter_.convert(left_spectrum_, std::span<const value_type>(left.data(), left_size), size);
+            convert_spectrum(left_spectrum_, std::span<const value_type>(left.data(), left_size), size);
             if constexpr (!Square) {
                 right_spectrum_.resize(channels * size);
-                converter_.convert(right_spectrum_, std::span<const value_type>(right.data(), right_size), size);
+                convert_spectrum(right_spectrum_, std::span<const value_type>(right.data(), right_size), size);
             }
             finish_product<Square>(output, size, result_size);
         }
@@ -728,36 +886,40 @@ namespace nil::crypto3::math::polynomial_arithmetic {
                             std::span<const double> prepared_spectrum = {},
                             std::span<const value_type> cyclic_dividend = {}) {
             const std::size_t plan_offset = std::countr_zero(size) * prime_count();
-            for (std::size_t prime = 0; prime < prime_count(); ++prime) {
-                const auto &plan = plans_[plan_offset + prime];
-                const std::size_t offset = prime * field_type::arity * size;
-                auto a = std::span<double>(left_spectrum_).subspan(offset, field_type::arity * size);
-                std::span<const double> b;
-                if constexpr (!Square) {
-                    if constexpr (Prepared) {
-                        b = prepared_spectrum.subspan(offset, field_type::arity * size);
-                    } else {
-                        b = std::span<const double>(right_spectrum_).subspan(offset, field_type::arity * size);
+            execute_stage(
+                small_prime_fft_execution_stage::prime_product, prime_count(), size,
+                [&](std::size_t first, std::size_t end) {
+                    for (std::size_t prime = first; prime < end; ++prime) {
+                        const auto &plan = plans_[plan_offset + prime];
+                        const std::size_t offset = prime * field_type::arity * size;
+                        auto a = std::span<double>(left_spectrum_).subspan(offset, field_type::arity * size);
+                        std::span<const double> b;
+                        if constexpr (!Square) {
+                            if constexpr (Prepared) {
+                                b = prepared_spectrum.subspan(offset, field_type::arity * size);
+                            } else {
+                                b = std::span<const double>(right_spectrum_).subspan(offset, field_type::arity * size);
+                            }
+                        }
+                        for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
+                            plan.fft(a.subspan(coordinate * size, size));
+                            if constexpr (!Square && !Prepared) {
+                                plan.fft(std::span<double>(right_spectrum_).subspan(offset + coordinate * size, size));
+                            }
+                        }
+                        if constexpr (Square) {
+                            pointwise_[prime].square(a, size, normalizations_[plan_offset + prime]);
+                        } else {
+                            pointwise_[prime].multiply(a, b, size, normalizations_[plan_offset + prime]);
+                        }
+                        for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
+                            plan.inverse_fft_pointwise(a.subspan(coordinate * size, size));
+                        }
                     }
-                }
-                for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                    plan.fft(a.subspan(coordinate * size, size));
-                    if constexpr (!Square && !Prepared) {
-                        plan.fft(std::span<double>(right_spectrum_).subspan(offset + coordinate * size, size));
-                    }
-                }
-                if constexpr (Square) {
-                    pointwise_[prime].square(a, size, normalizations_[plan_offset + prime]);
-                } else {
-                    pointwise_[prime].multiply(a, b, size, normalizations_[plan_offset + prime]);
-                }
-                for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                    plan.inverse_fft_pointwise(a.subspan(coordinate * size, size));
-                }
-            }
+                });
             result_.resize(result_size);
-            reconstructor_.reconstruct_weighted(std::span<value_type>(result_.data(), result_size), left_spectrum_,
-                                                size);
+            reconstruct_coefficients(reconstructor_, std::span<value_type>(result_.data(), result_size), left_spectrum_,
+                                     size);
             if (!cyclic_dividend.empty()) {
                 // Here result_size==size and degree(V)<=2*n-2<2*size, so at most one high coefficient
                 // folds into each cell. Keep the complete difference: any uncancelled tail stays visible.
@@ -784,7 +946,10 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         std::vector<double> right_spectrum_;
         std::vector<double> matrix_spectra_;
         polynomial_type result_;
+        [[no_unique_address]] ExecutionPolicy execution_;
     };
+
+    using bn254_small_prime_fft_backend = basic_bn254_small_prime_fft_backend<>;
 
 }    // namespace nil::crypto3::math::polynomial_arithmetic
 

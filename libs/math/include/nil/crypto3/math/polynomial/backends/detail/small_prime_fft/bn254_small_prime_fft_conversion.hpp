@@ -105,37 +105,56 @@ namespace nil::crypto3::math::detail {
          * on mismatch. Empty input writes zeros, including when reusing a previous output buffer.
          */
         void convert(std::span<double> output, std::span<const value_type> coefficients, std::size_t stride) const {
+            convert_range(output, coefficients, stride, 0, stride);
+        }
+
+        /**
+         * Convert coefficient positions [first,end) in every channel, including zero padding.
+         * Buffer dimensions are those of convert(); positions outside the range remain unchanged.
+         * Disjoint ranges may run concurrently with immutable input/context and stable output storage.
+         * Each call selects its arithmetic for the executing thread's rounding mode. Invalid ranges
+         * throw out_of_range before writes; callers must join all work before reusing any storage.
+         */
+        void convert_range(std::span<double> output, std::span<const value_type> coefficients, std::size_t stride,
+                           std::size_t first, std::size_t end) const {
             const std::size_t channels = field_type::arity * primes_.size();
             if (channels == 0 || coefficients.size() > stride || stride > output.size() / channels ||
                 output.size() != channels * stride) {
                 throw std::invalid_argument("bn254_small_prime_fft_converter: invalid buffer dimensions");
             }
-            if (output.empty()) {
+            if (first > end || end > stride) {
+                throw std::out_of_range("bn254_small_prime_fft_converter: invalid coefficient range");
+            }
+            if (first == end) {
                 return;
             }
             const bool use_fma = std::all_of(primes_.begin(), primes_.end(), [](const prime_context &prime) {
                 return prime.arithmetic.fma_supported();
             });
             if (use_fma) {
-                convert_impl<true>(output, coefficients, stride);
+                convert_impl<true>(output, coefficients, stride, first, end);
             } else {
-                convert_impl<false>(output, coefficients, stride);
+                convert_impl<false>(output, coefficients, stride, first, end);
             }
         }
 
     private:
         template<bool UseFma, typename Params = field_type::extension_policy::fast_params>
-        void convert_impl(std::span<double> output, std::span<const value_type> coefficients,
-                          std::size_t stride) const {
-            for (std::size_t channel = 0; channel < field_type::arity * primes_.size(); ++channel) {
-                auto padding = output.subspan(channel * stride + coefficients.size(), stride - coefficients.size());
-                std::fill(padding.begin(), padding.end(), 0.0);
+        void convert_impl(std::span<double> output, std::span<const value_type> coefficients, std::size_t stride,
+                          std::size_t first, std::size_t end) const {
+            const auto padding_first = std::max(first, coefficients.size());
+            if (padding_first < end) {
+                for (std::size_t channel = 0; channel < field_type::arity * primes_.size(); ++channel) {
+                    auto padding = output.subspan(channel * stride + padding_first, end - padding_first);
+                    std::fill(padding.begin(), padding.end(), 0.0);
+                }
             }
 
+            const auto coefficient_end = std::min(end, coefficients.size());
             std::array<std::array<double, chunk_count>, block_size> chunks;
             for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                for (std::size_t offset = 0; offset < coefficients.size();) {
-                    const std::size_t count = std::min(block_size, coefficients.size() - offset);
+                for (std::size_t offset = first; offset < coefficient_end;) {
+                    const std::size_t count = std::min(block_size, coefficient_end - offset);
                     for (std::size_t i = 0; i < count; ++i) {
                         std::array<std::uint64_t, chunk_count> words {};
                         using base_backend_type = typename Params::base_field_type::integral_type::backend_type;

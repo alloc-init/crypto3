@@ -169,6 +169,18 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             backend_.multiply_low(output, left, right, coefficient_count);
         }
 
+        // Optional capacity query for algorithms that trade short products for larger ones.
+        // An adapter must declare its own query since it may impose a tighter limit than its base.
+        bool supports_product_size(std::size_t coefficient_count) const {
+            if constexpr (requires {
+                              requires declares_product_size_query(&backend_type::supports_product_size);
+                              { backend_.supports_product_size(coefficient_count) } -> std::same_as<bool>;
+                          }) {
+                return backend_.supports_product_size(coefficient_count);
+            }
+            return false;
+        }
+
         /**
          * Evaluate the independent panels of an already prepared composition batch. An optional backend
          * operation may choose how to execute the serial evaluate_panels(first, end) primitive; backends
@@ -279,6 +291,12 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         }
 
     private:
+        // Deducing the member pointer's owner preserves the class that declared an inherited member.
+        template<typename Owner>
+        static constexpr bool declares_product_size_query(bool (Owner::*)(std::size_t) const) {
+            return std::same_as<Owner, backend_type>;
+        }
+
         backend_type backend_;
         options_type options_;
     };
