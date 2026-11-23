@@ -31,6 +31,7 @@
 #include <limits>
 #include <map>
 #include <optional>
+#include <span>
 #include <set>
 #include <stdexcept>
 #include <utility>
@@ -340,6 +341,200 @@ namespace nil::crypto3::math::detail {
         }
     };
 
+    /** Form the reduced product of the Frobenius differences in one degree block. */
+    template<SupportsDivrem Backend>
+    void kaltofen_shoup_interval_product(typename Backend::polynomial_type &output,
+                                         const typename Backend::polynomial_type &giant_step, std::size_t degree_count,
+                                         const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
+                                         const polynomial_divisor_context<Backend> &divisor_context,
+                                         polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using value_type = typename polynomial_type::value_type;
+        if (degree_count == 0 || degree_count > precomputation.block_size()) {
+            throw std::invalid_argument("the coarse Kaltofen-Shoup degree count must be within the block");
+        }
+        polynomial_type product = {value_type::one()};
+        polynomial_type difference;
+        for (std::size_t offset = 0; offset < degree_count; ++offset) {
+            const std::size_t baby_step_index = precomputation.block_size() - 1 - offset;
+            subtraction(difference, giant_step, precomputation.baby_step(baby_step_index));
+            mulmod(product, product, difference, divisor_context, arithmetic_context);
+        }
+        output = std::move(product);
+    }
+
+    /**
+     * Borrowed serial tasks for a bounded batch of consecutive degree intervals. Task 2*i computes giant image i;
+     * task 2*i+1 forms its interval product. Giant images form a chain; an interval product can run alongside later
+     * giant images once its own image is complete. Each task writes only its indexed output polynomial.
+     *
+     * The caller owns scheduling and must complete a task's dependency before starting it. Prepared divisor and
+     * Frobenius data are read-only and shared. Concurrent tasks require private compatible arithmetic contexts,
+     * including their mutable backend workspace. All tasks must be joined before outputs are read or destroyed,
+     * including on exception. This descriptor creates no threads and contains no executor.
+     *
+     * @pre seed is h[excluded_degree] and excluded_degree is a multiple of block_size().
+     * @pre input/prepared data and output spans outlive all calls; output polynomials are distinct and do not alias
+     * seed, baby steps, or prepared operands. Each task is executed exactly once in dependency order.
+     */
+    template<SupportsDivrem Backend>
+    class kaltofen_shoup_interval_tasks {
+    public:
+        using backend_type = Backend;
+        using polynomial_type = typename Backend::polynomial_type;
+
+        kaltofen_shoup_interval_tasks(const polynomial_type &seed, std::size_t excluded_degree,
+                                      std::span<const std::size_t> counts,
+                                      const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation,
+                                      const polynomial_divisor_context<Backend> &divisor,
+                                      std::span<polynomial_type> giant_steps,
+                                      std::span<polynomial_type> interval_products) :
+            seed_(seed), excluded_degree_(excluded_degree), counts_(counts), precomputation_(precomputation),
+            divisor_(divisor), giant_steps_(giant_steps), interval_products_(interval_products) {
+            if (counts.size() != giant_steps.size() || counts.size() != interval_products.size() ||
+                counts.size() > std::numeric_limits<std::size_t>::max() / 2 ||
+                excluded_degree % precomputation.block_size() != 0) {
+                throw std::invalid_argument("invalid continuation task spans or block alignment");
+            }
+            for (auto count : counts) {
+                if (count == 0 || count > precomputation.block_size()) {
+                    throw std::invalid_argument("invalid continuation interval length");
+                }
+            }
+        }
+
+        std::size_t task_count() const {
+            return 2 * counts_.size();
+        }
+
+        std::optional<std::size_t> dependency(std::size_t task) const {
+            if (task >= task_count()) {
+                throw std::out_of_range("continuation task index");
+            }
+            if (task == 0) {
+                return std::nullopt;
+            }
+            return task % 2 ? task - 1 : task - 2;
+        }
+
+        std::size_t input_coefficient_count() const {
+            return divisor_.divisor().size();
+        }
+
+        std::size_t block_index(std::size_t task) const {
+            return excluded_degree_ / precomputation_.block_size() + task / 2 + 1;
+        }
+
+        void execute_task(std::size_t task, polynomial_arithmetic::polynomial_context<Backend> &context) const {
+            (void)dependency(task);    // Validate the task index before accessing its output.
+            const auto index = task / 2;
+            if (task % 2 == 0) {
+                if (index == 0 && excluded_degree_ == 0) {
+                    giant_steps_[index] = precomputation_.baby_step(precomputation_.block_size());
+                } else {
+                    precomputation_.apply_block_frobenius(giant_steps_[index], index ? giant_steps_[index - 1] : seed_,
+                                                          divisor_, context);
+                }
+            } else {
+                kaltofen_shoup_interval_product(interval_products_[index], giant_steps_[index], counts_[index],
+                                                precomputation_, divisor_, context);
+            }
+        }
+
+        void execute_serial(polynomial_arithmetic::polynomial_context<Backend> &context) const {
+            for (std::size_t task = 0; task < task_count(); ++task) {
+                execute_task(task, context);
+            }
+        }
+
+    private:
+        const polynomial_type &seed_;
+        std::size_t excluded_degree_;
+        std::span<const std::size_t> counts_;
+        const kaltofen_shoup_frobenius_precomputation<Backend> &precomputation_;
+        const polynomial_divisor_context<Backend> &divisor_;
+        std::span<polynomial_type> giant_steps_, interval_products_;
+    };
+
+    /**
+     * Extract ordered coarse factors from a batch of reduced interval products with one large GCD.
+     * For square-free R dividing B, gcd(R, product(I[j]) mod B) contains exactly the union of the factors found by
+     * individual GCDs. Refine a nonconstant result down a product tree. At each split, assign gcd(D, left) to the
+     * left child and D/gcd(D, left) to the right child. Removing the left factors before visiting the right child
+     * assigns a factor appearing in several intervals to its first occurrence, as sequential GCD/removal would.
+     *
+     * An empty batch returns an empty vector. An entry equal to one denotes an empty interval. Tree products are
+     * reduced modulo the original B; R need not equal B. All operations are serial and reuse the caller's context.
+     *
+     * @pre remaining is monic, nonzero and square-free, and divides divisor_context.divisor().
+     * @pre interval_products contains canonical polynomials reduced modulo divisor_context.divisor().
+     */
+    template<SupportsDivrem Backend>
+    std::vector<typename Backend::polynomial_type>
+        kaltofen_shoup_batch_block_factors(const typename Backend::polynomial_type &remaining,
+                                           std::span<const typename Backend::polynomial_type>
+                                               interval_products,
+                                           const polynomial_divisor_context<Backend> &divisor_context,
+                                           polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
+        using polynomial_type = typename Backend::polynomial_type;
+        using value_type = typename polynomial_type::value_type;
+        const polynomial_type one = {value_type::one()};
+        std::vector<polynomial_type> result(interval_products.size(), one);
+        if (interval_products.empty()) {
+            return result;
+        }
+        if (interval_products.size() == 1) {
+            gcd(result.front(), remaining, interval_products.front(), arithmetic_context);
+            return result;
+        }
+        std::size_t leaves = 1;
+        const auto capacity = result.max_size();
+        while (leaves < interval_products.size()) {
+            if (leaves > capacity / 4) {
+                throw std::length_error("the coarse Kaltofen-Shoup product tree is too large");
+            }
+            leaves *= 2;
+        }
+        std::vector<polynomial_type> tree(2 * leaves, one);
+        for (std::size_t index = 0; index < interval_products.size(); ++index) {
+            tree[leaves + index] = interval_products[index];
+        }
+        for (std::size_t node = leaves - 1; node > 0; --node) {
+            if (tree[2 * node] == one) {
+                tree[node] = tree[2 * node + 1];
+            } else if (tree[2 * node + 1] == one) {
+                tree[node] = tree[2 * node];
+            } else {
+                mulmod(tree[node], tree[2 * node], tree[2 * node + 1], divisor_context, arithmetic_context);
+            }
+        }
+        polynomial_type common;
+        gcd(common, remaining, tree[1], arithmetic_context);
+        const auto refine = [&](auto &&self, std::size_t node, polynomial_type factor) -> void {
+            if (factor == one) {
+                return;
+            }
+            if (node >= leaves) {
+                result[node - leaves] = std::move(factor);
+                return;
+            }
+            polynomial_type left;
+            gcd(left, factor, tree[2 * node], arithmetic_context);
+            polynomial_type right;
+            if (left == one) {
+                right = std::move(factor);
+            } else if (left == factor) {
+                right = one;
+            } else {
+                factorization_exact_quotient(right, factor, left, arithmetic_context);
+            }
+            self(self, 2 * node, std::move(left));
+            self(self, 2 * node + 1, std::move(right));
+        };
+        refine(refine, 1, std::move(common));
+        return result;
+    }
+
     /**
      * Extract one coarse Kaltofen-Shoup degree block. Let the coefficient field contain Q elements, let B be the
      * modulus in divisor_context, and let precomputation store h[i] = X^(Q^i) mod B for a block of size b. For
@@ -370,19 +565,9 @@ namespace nil::crypto3::math::detail {
                                             const polynomial_divisor_context<Backend> &divisor_context,
                                             polynomial_arithmetic::polynomial_context<Backend> &arithmetic_context) {
         using polynomial_type = typename Backend::polynomial_type;
-        using value_type = typename polynomial_type::value_type;
-
-        if (degree_count == 0 || degree_count > precomputation.block_size()) {
-            throw std::invalid_argument("the coarse Kaltofen-Shoup degree count must be within the block");
-        }
-
-        polynomial_type interval_product = {value_type::one()};
-        polynomial_type difference;
-        for (std::size_t offset = 0; offset < degree_count; ++offset) {
-            const std::size_t baby_step_index = precomputation.block_size() - 1 - offset;
-            subtraction(difference, giant_step, precomputation.baby_step(baby_step_index));
-            mulmod(interval_product, interval_product, difference, divisor_context, arithmetic_context);
-        }
+        polynomial_type interval_product;
+        kaltofen_shoup_interval_product(interval_product, giant_step, degree_count, precomputation, divisor_context,
+                                        arithmetic_context);
         gcd(output, remaining, interval_product, arithmetic_context);
     }
 
@@ -484,6 +669,14 @@ namespace nil::crypto3::math::detail {
         if (excluded_degree % block_size != 0) {
             throw std::invalid_argument("continued discovery requires a completed degree block");
         }
+        struct pending_degree_block {
+            polynomial_type giant_step;
+            polynomial_type factor;
+            std::size_t degree_count;
+        };
+        const auto batch_size = arithmetic_context.options().distinct_degree_gcd_batch_size;
+        std::vector<pending_degree_block> pending;
+        std::size_t next_pending = 0;
         const auto report_group = [&](const distinct_degree_factor<polynomial_type> &group) {
             if (odd_factor_count) {
                 const auto removed_count = (group.polynomial.size() - 1) / group.irreducible_factor_degree;
@@ -505,18 +698,65 @@ namespace nil::crypto3::math::detail {
             }
             // Keep the original fixed block alignment, including when screened degrees are revisited.
             const auto first_factor_degree = excluded_degree + 1;
-            if (excluded_degree == 0) {
-                giant_step = precomputation.baby_step(block_size);
-            } else {
-                precomputation.apply_block_frobenius(giant_step, giant_step, divisor_context, arithmetic_context);
-            }
             // A removal can switch odd parity to even, so preserve the original half-degree interval length.
             const std::size_t maximum_degree_to_test = (unclassified.size() - 1) / 2;
             const std::size_t degree_count = std::min(block_size, maximum_degree_to_test - first_factor_degree + 1);
 
             polynomial_type coarse_block;
-            kaltofen_shoup_coarse_block_factor(coarse_block, unclassified, giant_step, degree_count, precomputation,
-                                               divisor_context, arithmetic_context);
+            if (batch_size <= 1 ||
+                excluded_degree / block_size < arithmetic_context.options().distinct_degree_gcd_batch_serial_prefix) {
+                if (excluded_degree == 0) {
+                    giant_step = precomputation.baby_step(block_size);
+                } else {
+                    precomputation.apply_block_frobenius(giant_step, giant_step, divisor_context, arithmetic_context);
+                }
+                kaltofen_shoup_coarse_block_factor(coarse_block, unclassified, giant_step, degree_count, precomputation,
+                                                   divisor_context, arithmetic_context);
+            } else {
+                if (next_pending == pending.size()) {
+                    pending.clear();
+                    next_pending = 0;
+                    std::vector<std::size_t> counts;
+                    auto lookahead_excluded = excluded_degree;
+                    // The current parity bound may shorten this batch. A later removal can relax that bound, in
+                    // which case the next batch continues normally. No callback or certificate is run speculatively.
+                    for (std::size_t index = 0;
+                         index < batch_size && kaltofen_shoup_requires_degree_test(
+                                                   remaining_degree, lookahead_excluded + 1, odd_factor_count);
+                         ++index, lookahead_excluded += block_size) {
+                        const auto count = std::min(block_size, maximum_degree_to_test - lookahead_excluded);
+                        counts.push_back(count);
+                    }
+                    std::vector<polynomial_type> giant_steps(counts.size()), interval_products(counts.size());
+                    const kaltofen_shoup_interval_tasks<Backend> tasks(giant_step, excluded_degree, counts,
+                                                                       precomputation, divisor_context, giant_steps,
+                                                                       interval_products);
+                    bool executed = false;
+                    if constexpr (requires { arithmetic_context.try_execute_distinct_degree_intervals(tasks); }) {
+                        executed = arithmetic_context.try_execute_distinct_degree_intervals(tasks);
+                    }
+                    if (!executed) {
+                        tasks.execute_serial(arithmetic_context);
+                    }
+                    auto factors = kaltofen_shoup_batch_block_factors<Backend>(unclassified, interval_products,
+                                                                               divisor_context, arithmetic_context);
+                    for (std::size_t index = 0; index < factors.size(); ++index) {
+                        pending.push_back({std::move(giant_steps[index]), std::move(factors[index]), counts[index]});
+                    }
+                }
+                auto &block = pending[next_pending++];
+                giant_step = std::move(block.giant_step);
+                if (block.degree_count == degree_count) {
+                    coarse_block = std::move(block.factor);
+                } else {
+                    // Factor removal can shorten the final interval. Do not report factors outside its new bound.
+                    // Recompute that interval against the current residual and discard the now-unused lookahead.
+                    kaltofen_shoup_coarse_block_factor(coarse_block, unclassified, giant_step, degree_count,
+                                                       precomputation, divisor_context, arithmetic_context);
+                    pending.clear();
+                    next_pending = 0;
+                }
+            }
             if (coarse_block.size() > 1) {
                 polynomial_type quotient;
                 factorization_exact_quotient(quotient, unclassified, coarse_block, arithmetic_context);
@@ -555,9 +795,11 @@ namespace nil::crypto3::math::detail {
 
     /**
      * Factor a monic square-free polynomial into distinct-degree groups using an explicit Kaltofen-Shoup block size.
-     * For each consecutive degree block, the algorithm computes one coarse GCD, removes that block from the
-     * unclassified polynomial, and immediately fine-splits it. Interleaving the coarse and fine phases avoids storing
-     * a giant-step polynomial for every block while preserving increasing degree order and immediate callback stops.
+     * By default, each consecutive degree block uses one coarse GCD, removes that block from the unclassified
+     * polynomial, and immediately fine-splits it. An optional bounded batch joins interval products before the GCD
+     * and refines its result in order. It retains at most the requested number of giant steps, rather than all
+     * blocks. Both paths preserve increasing degree order and immediate callback stops; batching may perform unused
+     * arithmetic ahead of a stop. Certificates and parity updates remain at the original completed-block boundaries.
      * Optional small-degree screening uses successive Frobenius differences before building the full baby table.
      * The powers and divisor context remain relative to the original input even after screened factors are removed.
      * A nonnull output collects each group before invoking the callback. With a null output, processed groups are

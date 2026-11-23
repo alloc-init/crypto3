@@ -134,6 +134,52 @@ namespace {
         BOOST_CHECK(math::evaluate_polynomial_x_norm<Backend>(*result, arithmetic_context) == h);
     }
 
+    struct norm_handoff_checks {
+        enum class mode { ordinary, omit_result, corrupt_result, repeat_discovery } action = mode::ordinary;
+        std::size_t calls = 0;
+        std::vector<std::size_t> multiplicities;
+    };
+
+    struct norm_handoff_backend : backend_type {
+        norm_handoff_checks *checks;
+
+        explicit norm_handoff_backend(norm_handoff_checks &checks) : checks(&checks) {
+        }
+
+        template<typename Recovery, typename Context>
+        typename Recovery::result_type recover_x_norm_factors(Recovery &recovery, Context &context) {
+            ++checks->calls;
+            std::vector<typename Recovery::representation_type> results;
+            bool failed = false;
+            auto callback = [&](typename Recovery::factor_type &&borrowed) {
+                // Own the factor independently of the discovery callback's original storage.
+                typename Recovery::factor_type owned(std::move(borrowed));
+                checks->multiplicities.push_back(owned.multiplicity);
+                auto result = recovery.recover_factor(owned, context, recovery.generator());
+                if (!result) {
+                    failed = true;
+                    return math::factorization_control::stop_factorization;
+                }
+                results.push_back(std::move(*result));
+                return math::factorization_control::continue_factorization;
+            };
+            recovery.discover(context, recovery.generator(), callback);
+            if (checks->action == norm_handoff_checks::mode::repeat_discovery) {
+                recovery.discover(context, recovery.generator(), callback);
+            }
+            if (failed) {
+                return std::nullopt;
+            }
+            if (checks->action == norm_handoff_checks::mode::omit_result) {
+                results.pop_back();
+            } else if (checks->action == norm_handoff_checks::mode::corrupt_result) {
+                results.front().p[0] += value_type::one();
+                math::condense(results.front().p);
+            }
+            return results;
+        }
+    };
+
     // Fail on arithmetic after preparation, so scalar-filter tests detect an accidental cache lookup.
     struct guarded_backend : backend_type {
         bool *forbid;
@@ -671,33 +717,39 @@ BOOST_AUTO_TEST_CASE(residual_certificate_preserves_norm_recovery_and_algebraic_
     const auto suitable = nonic(2);
     const auto suitable_pair = context_multiply<backend_type>(suitable, nonic(4), preparation);
     const auto unsuitable_pair = context_multiply<backend_type>(nonic(1), nonic(7), preparation);
-    for (const auto &input : {suitable, suitable_pair, unsuitable_pair}) {
-        BOOST_REQUIRE(input.front().is_square());
-        polynomial_arithmetic::polynomial_context_options options;
-        options.distinct_degree_certificate_minimum_excluded_degree = 1;
-        polynomial_arithmetic::polynomial_context<backend_type> enabled(backend_type {}, options), reference;
-        boost::random::mt19937 enabled_rng(0x52455349), reference_rng(0x52455349);
-        std::size_t enabled_calls = 0, reference_calls = 0;
-        auto enabled_generator = [&] {
-            ++enabled_calls;
-            return nil::crypto3::algebra::random_element<field_type>(enabled_rng);
-        };
-        auto reference_generator = [&] {
-            ++reference_calls;
-            return nil::crypto3::algebra::random_element<field_type>(reference_rng);
-        };
-        const auto actual =
-            math::recover_polynomial_x_norm_representation<backend_type>(input, enabled, enabled_generator);
-        const auto expected =
-            math::recover_polynomial_x_norm_representation<backend_type>(input, reference, reference_generator);
-        BOOST_REQUIRE_EQUAL(actual.has_value(), input != unsuitable_pair);
-        BOOST_REQUIRE_EQUAL(actual.has_value(), expected.has_value());
-        BOOST_CHECK_EQUAL(enabled_calls, reference_calls);
-        BOOST_CHECK(enabled_rng == reference_rng);
-        if (actual) {
-            BOOST_CHECK(actual->p == expected->p);
-            BOOST_CHECK(actual->q == expected->q);
-            BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*actual, enabled) == input);
+    for (std::size_t batch_size : {0, 1, 2, 4, 8}) {
+        for (std::size_t prefix : {0, 1, 100}) {
+            for (const auto &input : {suitable, suitable_pair, unsuitable_pair}) {
+                BOOST_REQUIRE(input.front().is_square());
+                polynomial_arithmetic::polynomial_context_options options;
+                options.distinct_degree_gcd_batch_size = batch_size;
+                options.distinct_degree_gcd_batch_serial_prefix = prefix;
+                options.distinct_degree_certificate_minimum_excluded_degree = 1;
+                polynomial_arithmetic::polynomial_context<backend_type> enabled(backend_type {}, options), reference;
+                boost::random::mt19937 enabled_rng(0x52455349), reference_rng(0x52455349);
+                std::size_t enabled_calls = 0, reference_calls = 0;
+                auto enabled_generator = [&] {
+                    ++enabled_calls;
+                    return nil::crypto3::algebra::random_element<field_type>(enabled_rng);
+                };
+                auto reference_generator = [&] {
+                    ++reference_calls;
+                    return nil::crypto3::algebra::random_element<field_type>(reference_rng);
+                };
+                const auto actual =
+                    math::recover_polynomial_x_norm_representation<backend_type>(input, enabled, enabled_generator);
+                const auto expected =
+                    math::recover_polynomial_x_norm_representation<backend_type>(input, reference, reference_generator);
+                BOOST_REQUIRE_EQUAL(actual.has_value(), input != unsuitable_pair);
+                BOOST_REQUIRE_EQUAL(actual.has_value(), expected.has_value());
+                BOOST_CHECK_EQUAL(enabled_calls, reference_calls);
+                BOOST_CHECK(enabled_rng == reference_rng);
+                if (actual) {
+                    BOOST_CHECK(actual->p == expected->p);
+                    BOOST_CHECK(actual->q == expected->q);
+                    BOOST_CHECK(math::evaluate_polynomial_x_norm<backend_type>(*actual, enabled) == input);
+                }
+            }
         }
     }
 }
@@ -1049,6 +1101,107 @@ BOOST_AUTO_TEST_CASE(cached_bn254_fq12_recovery_agrees_across_backends) {
     using fft_backend = polynomial_arithmetic::bn254_small_prime_fft_backend;
     polynomial_arithmetic::polynomial_context<fft_backend> fft(fft_backend(32), options);
     check_bn254_fq12_cached_recovery(fft);
+}
+
+BOOST_AUTO_TEST_CASE(factor_recovery_handoff_preserves_serial_results_multiplicities_and_rng) {
+    polynomial_arithmetic::polynomial_context<backend_type> reference;
+    const polynomial_type a {-value_type(4), value_type::one()};
+    const polynomial_type b {-value_type(9), value_type::one()};
+    const auto non_residue = first_quadratic_non_residue();
+    const polynomial_type bad_a {-non_residue, value_type::one()};
+    const polynomial_type bad_b {-next_quadratic_non_residue(non_residue), value_type::one()};
+    const auto repeated =
+        context_multiply<backend_type>(math::detail::polynomial_x_norm_power(a, 3, reference),
+                                       math::detail::polynomial_x_norm_power(b, 2, reference), reference);
+    const auto mixed = context_multiply<backend_type>(repeated, representable_irreducible_quadratic(), reference);
+    const auto rejected = context_multiply<backend_type>(bad_a, bad_b, reference);
+    for (const auto &h : {a, mixed, rejected}) {
+        norm_handoff_checks checks;
+        polynomial_arithmetic::polynomial_context<norm_handoff_backend> context {norm_handoff_backend(checks)};
+        boost::random::mt19937 actual_rng(0xFAC101), expected_rng(0xFAC101);
+        std::size_t actual_calls = 0, expected_calls = 0;
+        auto actual_generator = [&] {
+            ++actual_calls;
+            return nil::crypto3::algebra::random_element<field_type>(actual_rng);
+        };
+        auto expected_generator = [&] {
+            ++expected_calls;
+            return nil::crypto3::algebra::random_element<field_type>(expected_rng);
+        };
+        const auto actual = math::recover_polynomial_x_norm_representation(h, context, actual_generator);
+        const auto expected = math::recover_polynomial_x_norm_representation(h, reference, expected_generator);
+        BOOST_CHECK_EQUAL(checks.calls, 1);
+        BOOST_REQUIRE_EQUAL(actual.has_value(), expected.has_value());
+        if (actual) {
+            BOOST_CHECK(actual->p == expected->p);
+            BOOST_CHECK(actual->q == expected->q);
+            BOOST_CHECK(math::evaluate_polynomial_x_norm(*actual, reference) == h);
+        }
+        BOOST_CHECK_EQUAL(actual_calls, expected_calls);
+        BOOST_CHECK(actual_rng == expected_rng);
+        if (h == mixed) {
+            std::sort(checks.multiplicities.begin(), checks.multiplicities.end());
+            const std::vector<std::size_t> expected_multiplicities {1, 2, 3};
+            BOOST_CHECK(checks.multiplicities == expected_multiplicities);
+        } else if (h == rejected) {
+            BOOST_CHECK_EQUAL(checks.multiplicities.size(), 1);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(factor_recovery_handoff_retains_exact_verification_and_lifecycle_checks) {
+    const polynomial_type h {-value_type(4), value_type::one()};
+    auto generator = []() -> value_type { throw std::logic_error("linear recovery must not sample"); };
+    for (const auto action : {norm_handoff_checks::mode::omit_result, norm_handoff_checks::mode::corrupt_result,
+                              norm_handoff_checks::mode::repeat_discovery}) {
+        norm_handoff_checks checks;
+        checks.action = action;
+        polynomial_arithmetic::polynomial_context<norm_handoff_backend> context {norm_handoff_backend(checks)};
+        BOOST_CHECK_THROW(math::recover_polynomial_x_norm_representation(h, context, generator), std::logic_error);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(factor_recovery_handoff_preserves_known_factor_and_scalar_fast_paths) {
+    norm_handoff_checks checks;
+    polynomial_arithmetic::polynomial_context<norm_handoff_backend> context {norm_handoff_backend(checks)};
+    const representation_type norm {polynomial_type {value_type(2)},
+                                    polynomial_type {fields::sqrt_known_square(-value_type::one())}};
+    const polynomial_type factor {value_type(4), value_type::one()};
+    const math::polynomial_x_norm_factor_context<norm_handoff_backend> known(factor, norm, 6, context);
+    auto generator = []() -> value_type { throw std::logic_error("linear recovery must not sample"); };
+    const auto actual = math::recover_polynomial_x_norm_representation(factor, context, generator, known);
+    BOOST_REQUIRE(actual.has_value());
+    BOOST_CHECK_EQUAL(checks.calls, 0);
+    const auto non_residue = first_quadratic_non_residue();
+    BOOST_CHECK(!math::recover_polynomial_x_norm_representation(
+        polynomial_type {non_residue, value_type::zero(), value_type::one()}, context, generator));
+    BOOST_CHECK_EQUAL(checks.calls, 0);
+    const polynomial_type residual {-value_type(9), value_type::one()};
+    const auto product = context_multiply<norm_handoff_backend>(factor, residual, context);
+    const auto result = math::recover_polynomial_x_norm_representation(product, context, generator, known);
+    BOOST_REQUIRE(result.has_value());
+    BOOST_CHECK_EQUAL(checks.calls, 1);
+    BOOST_CHECK(math::evaluate_polynomial_x_norm(*result, context) == product);
+}
+
+BOOST_AUTO_TEST_CASE(factor_handoff_filters_preserve_even_multiplicities_and_sampling_errors) {
+    polynomial_arithmetic::polynomial_context<backend_type> context;
+    const polynomial_type h {-value_type(4), value_type::one()};
+    value_type leading = value_type::zero();
+    auto generator = []() -> value_type { throw std::runtime_error("expected generator failure"); };
+    math::detail::polynomial_x_norm_factor_recovery<backend_type, decltype(generator)> recovery(h, leading, generator);
+    const polynomial_type bad {-first_quadratic_non_residue(), value_type::one()};
+    BOOST_CHECK(!recovery.passes_scalar_filters({bad, 1}));
+    BOOST_CHECK(recovery.passes_scalar_filters({bad, 2}));
+    BOOST_CHECK_THROW(recovery.passes_scalar_filters({bad, 0}), std::invalid_argument);
+    BOOST_CHECK_THROW(recovery.passes_scalar_filters({polynomial_type {value_type::one()}, 1}), std::invalid_argument);
+    norm_handoff_checks checks;
+    polynomial_arithmetic::polynomial_context<norm_handoff_backend> dispatched {norm_handoff_backend(checks)};
+    const auto product =
+        context_multiply<backend_type>(h, polynomial_type {-value_type(9), value_type::one()}, context);
+    BOOST_CHECK_THROW(math::recover_polynomial_x_norm_representation(product, dispatched, generator),
+                      std::runtime_error);
+    BOOST_CHECK(checks.multiplicities.empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
