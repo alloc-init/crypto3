@@ -310,7 +310,7 @@ namespace nil::crypto3::math::detail {
          * bound when the integer expression has wrapped by M, so the caller must justify that bound.
          */
         void reconstruct(std::span<value_type> output, std::span<const double> residues, std::size_t stride) const {
-            reconstruct_dispatch<false>(output, residues, stride);
+            reconstruct_range(output, residues, stride, 0, output.size());
         }
 
         /**
@@ -320,19 +320,40 @@ namespace nil::crypto3::math::detail {
          */
         void reconstruct_weighted(std::span<value_type> output, std::span<const double> residues,
                                   std::size_t stride) const {
-            reconstruct_dispatch<true>(output, residues, stride);
+            reconstruct_weighted_range(output, residues, stride, 0, output.size());
+        }
+
+        /**
+         * Reconstruct output coefficients [first,end), preserving all other entries. Full buffer
+         * dimensions and residue bounds are those of reconstruct(). Disjoint ranges may execute
+         * concurrently with immutable input/context and stable output storage; callers must join
+         * all work before reusing it, including on failure. Invalid ranges throw out_of_range before
+         * writes. Each executing thread selects its own rounding-compatible arithmetic kernel.
+         */
+        void reconstruct_range(std::span<value_type> output, std::span<const double> residues, std::size_t stride,
+                               std::size_t first, std::size_t end) const {
+            reconstruct_dispatch<false>(output, residues, stride, first, end);
+        }
+
+        /** The same range contract for residues carrying the precombined CRT weight. */
+        void reconstruct_weighted_range(std::span<value_type> output, std::span<const double> residues,
+                                        std::size_t stride, std::size_t first, std::size_t end) const {
+            reconstruct_dispatch<true>(output, residues, stride, first, end);
         }
 
     private:
         template<bool Weighted>
-        void reconstruct_dispatch(std::span<value_type> output, std::span<const double> residues,
-                                  std::size_t stride) const {
+        void reconstruct_dispatch(std::span<value_type> output, std::span<const double> residues, std::size_t stride,
+                                  std::size_t first, std::size_t end) const {
             const std::size_t channels = field_type::arity * primes_.size();
             if (channels == 0 || output.size() > stride || stride > residues.size() / channels ||
                 residues.size() != channels * stride) {
                 throw std::invalid_argument("bn254_small_prime_fft_reconstructor: invalid buffer dimensions");
             }
-            if (output.empty()) {
+            if (first > end || end > output.size()) {
+                throw std::out_of_range("bn254_small_prime_fft_reconstructor: invalid coefficient range");
+            }
+            if (first == end) {
                 return;
             }
             const bool use_fma = std::all_of(primes_.begin(), primes_.end(), [](const prime_context &prime) {
@@ -341,13 +362,13 @@ namespace nil::crypto3::math::detail {
             if (use_fma) {
 #if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
                 if constexpr (direct_export_supported) {
-                    reconstruct_ifma<Weighted>(output, residues, stride);
+                    reconstruct_ifma<Weighted>(output, residues, stride, first, end);
                     return;
                 }
 #endif
-                reconstruct_impl<true, Weighted>(output, residues, stride);
+                reconstruct_impl<true, Weighted>(output, residues, stride, first, end);
             } else {
-                reconstruct_impl<false, Weighted>(output, residues, stride);
+                reconstruct_impl<false, Weighted>(output, residues, stride, first, end);
             }
         }
 
@@ -450,11 +471,11 @@ namespace nil::crypto3::math::detail {
         }
 
         template<bool UseFma, bool Weighted, bool Direct = direct_export_supported>
-        void reconstruct_impl(std::span<value_type> output, std::span<const double> residues,
-                              std::size_t stride) const {
+        void reconstruct_impl(std::span<value_type> output, std::span<const double> residues, std::size_t stride,
+                              std::size_t first, std::size_t end) const {
             for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                for (std::size_t offset = 0; offset < output.size();) {
-                    const std::size_t count = std::min(block_size, output.size() - offset);
+                for (std::size_t offset = first; offset < end;) {
+                    const std::size_t count = std::min(block_size, end - offset);
                     using accumulator_type = std::conditional_t<Direct, fast_params::limb_array, integer_type>;
                     std::array<accumulator_type, block_size> sums {};
                     std::array<std::uint64_t, block_size> lower {};
@@ -542,12 +563,12 @@ namespace nil::crypto3::math::detail {
 
 #if defined(CRYPTO3_SMALL_PRIME_CRT_IFMA_SELECTED)
         template<bool Weighted>
-        void reconstruct_ifma(std::span<value_type> output, std::span<const double> residues,
-                              std::size_t stride) const {
+        void reconstruct_ifma(std::span<value_type> output, std::span<const double> residues, std::size_t stride,
+                              std::size_t first, std::size_t end) const {
             using operations = algebra::fields::detail::fp12_fast::ifma52_operations<8>;
             for (std::size_t coordinate = 0; coordinate < field_type::arity; ++coordinate) {
-                for (std::size_t offset = 0; offset < output.size();) {
-                    const std::size_t count = std::min(operations::lanes, output.size() - offset);
+                for (std::size_t offset = first; offset < end;) {
+                    const std::size_t count = std::min(operations::lanes, end - offset);
                     const auto active = static_cast<__mmask8>((1u << count) - 1);
                     using accumulator_type = small_prime_fft_crt_accumulator<fast_params, operations>;
                     accumulator_type accumulator;

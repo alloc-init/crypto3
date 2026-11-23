@@ -64,6 +64,10 @@ Crypto3.Math currently provides three implementations:
   transforms and exact signed CRT reconstruction. It takes a power-of-two maximum transform length and caches all
   smaller power-of-two plans. Scalar and linear operands use direct coefficient arithmetic.
 
+The small-prime backend's serial default also has an optional
+[application execution policy](polynomial_execution.md) for scheduling disjoint conversion, transform/product and
+CRT ranges on an application-owned executor. Thread creation and resource limits remain in the application.
+
 This separation permits, for example, roots in a base field to transform values in an extension field. Backend
 selection is explicit; higher-level algorithms do not silently replace the caller's backend.
 

@@ -26,16 +26,22 @@
 
 #include <nil/crypto3/math/polynomial/backends/bn254_small_prime_fft_backend.hpp>
 #include <nil/crypto3/math/polynomial/backends/schoolbook_backend.hpp>
+#include <nil/crypto3/math/polynomial/arithmetic/gcd.hpp>
+#include <nil/crypto3/math/polynomial/quotient_ring/polynomial_composition.hpp>
 #include <nil/crypto3/math/polynomial/quotient_ring/polynomial_modular_arithmetic.hpp>
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <bit>
 #include <cfenv>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
+#include <future>
 #include <limits>
+#include <optional>
 #include <random>
 #include <span>
 #include <stdexcept>
@@ -77,6 +83,41 @@ namespace {
     concept SupportsProductAccumulator = requires(Context &context) { context.make_product_accumulator(1, 1); };
     static_assert(SupportsProductAccumulator<context_type>);
     static_assert(!SupportsProductAccumulator<arithmetic::polynomial_context<reference_backend>>);
+
+    using execution_stage = arithmetic::small_prime_fft_execution_stage;
+
+    struct execution_counts {
+        std::array<std::size_t, 7> stages {};
+        std::optional<execution_stage> fail;
+    };
+
+    struct reverse_execution {
+        execution_counts &counts;
+
+        template<typename Task>
+        void execute(const Task &task) {
+            ++counts.stages[static_cast<std::size_t>(task.stage())];
+            BOOST_CHECK(std::has_single_bit(task.transform_size()));
+            BOOST_CHECK_THROW(task.execute_range(1, 0), std::out_of_range);
+            BOOST_CHECK_THROW(task.execute_range(0, task.task_count() + 1), std::out_of_range);
+            task.execute_range(task.task_count(), task.task_count());
+            for (std::size_t i = task.task_count(); i != 0; --i) {
+                task.execute_range(i - 1, i);
+                if (counts.fail == task.stage()) {
+                    throw std::runtime_error("application execution failed after partial work");
+                }
+            }
+        }
+    };
+
+    using scheduled_backend = arithmetic::basic_bn254_small_prime_fft_backend<reverse_execution>;
+    using scheduled_context = arithmetic::polynomial_context<scheduled_backend>;
+    static_assert(arithmetic::PolynomialBackend<scheduled_backend>);
+    static_assert(math::detail::SupportsDivrem<scheduled_backend>);
+    static_assert(math::detail::SupportsPreparedLowProduct<scheduled_backend>);
+    static_assert(math::detail::SupportsPreparedCyclicRemainder<scheduled_backend>);
+    static_assert(SupportsMatrixProduct<scheduled_context, 1> && SupportsMatrixProduct<scheduled_context, 2>);
+    static_assert(SupportsProductAccumulator<scheduled_context>);
 
     struct prepared_product_counts {
         std::size_t preparations = 0;
@@ -132,6 +173,82 @@ namespace {
             std::fesetround(saved);
         }
     };
+
+    struct parallel_execution_state {
+        std::size_t threads = 1;
+        std::array<std::size_t, 7> stages {};
+        std::atomic<std::size_t> active {0}, helper_visits {0};
+        std::atomic<bool> rounding_changed {false};
+        bool mixed_rounding = false;
+        std::optional<execution_stage> fail;
+        std::size_t fail_rank = 1;
+    };
+
+    // Scheduling and threads belong to this application adapter, never the backend.
+    // Use joined async jobs for correctness tests; a production adapter can reuse a pool.
+    struct parallel_execution {
+        parallel_execution_state &state;
+
+        template<typename Task>
+        void execute(const Task &task) {
+            ++state.stages[static_cast<std::size_t>(task.stage())];
+            const auto workers = std::min(state.threads, task.task_count());
+            const auto visit = [&](std::size_t rank) {
+                ++state.active;
+                struct completion {
+                    std::atomic<std::size_t> &active;
+                    ~completion() {
+                        --active;
+                    }
+                } complete {state.active};
+                restore_rounding restore;
+                const std::array modes {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
+                const auto mode = state.mixed_rounding ? modes[rank % modes.size()] : std::fegetround();
+                if (std::fesetround(mode) != 0) {
+                    throw std::runtime_error("cannot set worker rounding mode");
+                }
+                if (rank != 0) {
+                    ++state.helper_visits;
+                }
+                const auto count = task.task_count() / workers;
+                const auto extra = task.task_count() % workers;
+                const auto first = rank * count + std::min(rank, extra);
+                task.execute_range(first, first + count + (rank < extra));
+                if (std::fegetround() != mode) {
+                    state.rounding_changed = true;
+                }
+                if (state.fail == task.stage() && rank == state.fail_rank) {
+                    throw std::runtime_error("application worker failed after partial work");
+                }
+            };
+            std::vector<std::future<void>> helpers;
+            helpers.reserve(workers - 1);
+            for (std::size_t rank = 1; rank < workers; ++rank) {
+                helpers.push_back(std::async(std::launch::async, [&, rank] { visit(rank); }));
+            }
+            std::exception_ptr failure;
+            try {
+                visit(0);
+            } catch (...) {
+                failure = std::current_exception();
+            }
+            for (auto &helper : helpers) {
+                try {
+                    helper.get();
+                } catch (...) {
+                    if (!failure) {
+                        failure = std::current_exception();
+                    }
+                }
+            }
+            if (failure) {
+                std::rethrow_exception(failure);
+            }
+        }
+    };
+
+    using parallel_backend = arithmetic::basic_bn254_small_prime_fft_backend<parallel_execution>;
+    using parallel_context = arithmetic::polynomial_context<parallel_backend>;
 
     cpp_int canonical(const cpp_int &value, const cpp_int &modulus) {
         cpp_int result = value % modulus;
@@ -227,8 +344,8 @@ namespace {
         return result;
     }
 
-    template<std::size_t Columns>
-    bool try_matrix_product(backend_type &backend, std::array<polynomial_type, 2 * Columns> &output,
+    template<std::size_t Columns, typename Backend>
+    bool try_matrix_product(Backend &backend, std::array<polynomial_type, 2 * Columns> &output,
                             const std::array<polynomial_type, 4> &left,
                             const std::array<polynomial_type, 2 * Columns> &right) {
         std::array<polynomial_type *, 2 * Columns> outputs;
@@ -241,7 +358,7 @@ namespace {
             outputs[i] = &output[i];
             right_entries[i] = &right[i];
         }
-        return backend.try_multiply_matrix<Columns>(outputs, left_entries, right_entries);
+        return backend.template try_multiply_matrix<Columns>(outputs, left_entries, right_entries);
     }
 
     polynomial_type expected_low(polynomial_type product, std::size_t count) {
@@ -1679,6 +1796,375 @@ BOOST_AUTO_TEST_CASE(divisor_context_keeps_prepared_low_products_when_cyclic_is_
         BOOST_CHECK_EQUAL(counts.prepared_products, 2);
         BOOST_CHECK_EQUAL(counts.cyclic_remainders + counts.ordinary_products, 0);
         BOOST_CHECK_EQUAL(counts.preparations + counts.cyclic_preparations, 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(application_execution_reorders_products_and_preserves_fallbacks) {
+    execution_counts counts;
+    scheduled_backend backend(256, reverse_execution {counts});
+    std::mt19937_64 random(0x45584501);
+    const auto left = random_polynomial(33, random);
+    const auto right = random_polynomial(35, random);
+    const auto expected = expected_product(left, right);
+    polynomial_type result;
+    backend.multiply(result, left, right);
+    check_polynomial(result, expected);
+    result = left;
+    backend.multiply(result, result, right);
+    check_polynomial(result, expected);
+    result = right;
+    backend.square(result, result);
+    check_polynomial(result, expected_product(right, right));
+    backend.multiply_low(result, left, right, 33);
+    check_polynomial(result, expected_low(expected, 33));
+    for (const auto stage :
+         {execution_stage::conversion, execution_stage::prime_product, execution_stage::reconstruction}) {
+        BOOST_CHECK_GT(counts.stages[static_cast<std::size_t>(stage)], 0);
+    }
+
+    counts = {};
+    backend.multiply(result, left, polynomial_type {value_type::one()});
+    check_polynomial(result, left);
+    backend.multiply(result, polynomial_type {value_type::zero()}, right);
+    check_polynomial(result, polynomial_type {value_type::zero()});
+    backend.multiply_low(result, left, right, 0);
+    check_polynomial(result, polynomial_type {value_type::zero()});
+    BOOST_CHECK(std::all_of(counts.stages.begin(), counts.stages.end(), [](auto n) { return n == 0; }));
+}
+
+BOOST_AUTO_TEST_CASE(application_execution_covers_prepared_grouped_cyclic_and_matrix_products) {
+    execution_counts counts;
+    scheduled_backend backend(128, reverse_execution {counts});
+    std::mt19937_64 random(0x45584502);
+    const auto fixed = random_polynomial(33, random);
+    const auto input = random_polynomial(33, random);
+    const auto expected = expected_product(input, fixed);
+    const auto prepared = backend.prepare_low_product(fixed, 33, 65);
+    auto sum = backend.make_product_accumulator(33, 4);
+    BOOST_REQUIRE(prepared && sum);
+    polynomial_type result = input;
+    BOOST_REQUIRE(backend.try_multiply_low_prepared(result, result, *prepared, 65));
+    check_polynomial(result, expected);
+    BOOST_REQUIRE(backend.try_accumulate_prepared_product(*sum, input, *prepared));
+    BOOST_REQUIRE(backend.try_accumulate_prepared_product(*sum, input, *prepared));
+    BOOST_REQUIRE(backend.try_finish_product_sum(result, *sum));
+    polynomial_type twice;
+    math::addition(twice, expected, expected);
+    check_polynomial(result, twice);
+    BOOST_CHECK_EQUAL(sum->product_count(), 0);
+
+    const auto divisor = random_polynomial(33, random);
+    const auto quotient = random_polynomial(31, random);
+    const auto remainder = random_polynomial(32, random);
+    auto dividend = expected_product(quotient, divisor);
+    math::addition(dividend, dividend, remainder);
+    const auto cyclic = backend.prepare_cyclic_remainder(divisor, quotient.size());
+    BOOST_REQUIRE(cyclic.has_value());
+    BOOST_REQUIRE(backend.try_cyclic_remainder(dividend, dividend, quotient, *cyclic));
+    check_polynomial(dividend, remainder);
+
+    std::array<polynomial_type, 4> matrix_left, matrix_right, matrix_result;
+    for (std::size_t i = 0; i < 4; ++i) {
+        matrix_left[i] = random_polynomial(17 + i % 2, random);
+        matrix_right[i] = random_polynomial(17 + i / 2, random);
+    }
+    const auto matrix_expected = expected_matrix_product<2>(matrix_left, matrix_right);
+    BOOST_REQUIRE(try_matrix_product<2>(backend, matrix_result, matrix_left, matrix_right));
+    for (std::size_t i = 0; i < 4; ++i) {
+        check_polynomial(matrix_result[i], matrix_expected[i]);
+    }
+    for (auto count : counts.stages) {
+        BOOST_CHECK_GT(count, 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(application_execution_failures_preserve_outputs_and_backend_reuse) {
+    execution_counts counts;
+    scheduled_backend backend(128, reverse_execution {counts});
+    std::mt19937_64 random(0x45584503);
+    const auto input = random_polynomial(33, random);
+    const auto fixed = random_polynomial(33, random);
+    const auto expected = expected_product(input, fixed);
+    for (const auto stage :
+         {execution_stage::conversion, execution_stage::prime_product, execution_stage::reconstruction}) {
+        auto result = input;
+        counts.fail = stage;
+        BOOST_CHECK_THROW(backend.multiply(result, result, fixed), std::runtime_error);
+        check_polynomial(result, input);
+        counts.fail.reset();
+        backend.multiply(result, result, fixed);
+        check_polynomial(result, expected);
+    }
+    counts.fail = execution_stage::forward_transform;
+    BOOST_CHECK_THROW(backend.prepare_low_product(fixed, 33, 65), std::runtime_error);
+    counts.fail.reset();
+    const auto prepared = backend.prepare_low_product(fixed, 33, 65);
+    BOOST_REQUIRE(prepared.has_value());
+    polynomial_type result;
+    BOOST_REQUIRE(backend.try_multiply_low_prepared(result, input, *prepared, 65));
+    check_polynomial(result, expected);
+
+    const auto matrix_input = random_polynomial(17, random);
+    const auto matrix_fixed = random_polynomial(17, random);
+    std::array<polynomial_type, 4> left {matrix_input, matrix_fixed, matrix_input, matrix_fixed};
+    auto output = left;
+    counts.fail = execution_stage::prime_sum;
+    BOOST_CHECK_THROW(try_matrix_product<2>(backend, output, output, left), std::runtime_error);
+    BOOST_CHECK(output == left);
+    counts.fail.reset();
+    const auto matrix_expected = expected_matrix_product<2>(left, left);
+    BOOST_REQUIRE(try_matrix_product<2>(backend, output, output, left));
+    BOOST_CHECK(output == matrix_expected);
+}
+
+BOOST_AUTO_TEST_CASE(application_execution_failures_preserve_accumulated_products) {
+    execution_counts counts;
+    scheduled_backend backend(128, reverse_execution {counts});
+    std::mt19937_64 random(0x45584504);
+    const auto fixed = random_polynomial(33, random);
+    const auto input = random_polynomial(33, random);
+    const auto prepared = backend.prepare_low_product(fixed, 33, 65);
+    auto sum = backend.make_product_accumulator(33, 4);
+    BOOST_REQUIRE(prepared && sum);
+    const auto expected = expected_product(input, fixed);
+    for (const auto stage :
+         {execution_stage::conversion, execution_stage::forward_transform, execution_stage::pointwise_product}) {
+        BOOST_REQUIRE(backend.try_accumulate_prepared_product(*sum, input, *prepared));
+        counts.fail = stage;
+        BOOST_CHECK_THROW(backend.try_accumulate_prepared_product(*sum, input, *prepared), std::runtime_error);
+        BOOST_CHECK_EQUAL(sum->product_count(), 1);
+        counts.fail.reset();
+        polynomial_type result;
+        BOOST_REQUIRE(backend.try_finish_product_sum(result, *sum));
+        check_polynomial(result, expected);
+    }
+    for (const auto stage : {execution_stage::inverse_transform, execution_stage::reconstruction}) {
+        BOOST_REQUIRE(backend.try_accumulate_prepared_product(*sum, input, *prepared));
+        auto result = input;
+        counts.fail = stage;
+        BOOST_CHECK_THROW(backend.try_finish_product_sum(result, *sum), std::runtime_error);
+        check_polynomial(result, input);
+        BOOST_CHECK_EQUAL(sum->product_count(), 1);
+        counts.fail.reset();
+        BOOST_REQUIRE(backend.try_finish_product_sum(result, *sum));
+        check_polynomial(result, expected);
+        BOOST_CHECK_EQUAL(sum->product_count(), 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(concurrent_products_preserve_exact_results_aliases_and_worker_rounding) {
+    restore_rounding restore;
+    BOOST_REQUIRE_EQUAL(std::fesetround(FE_TOWARDZERO), 0);
+    std::mt19937_64 random(0x45584511);
+    for (const std::size_t threads : {1, 2, 4, 8}) {
+        BOOST_TEST_CONTEXT("threads=" << threads) {
+            parallel_execution_state state;
+            state.threads = threads;
+            state.mixed_rounding = true;
+            parallel_backend backend(256, parallel_execution {state});
+            for (const std::size_t size : {3, 17, 33}) {
+                const auto left = random_polynomial(size, random);
+                const auto right = random_polynomial(size + 2, random);
+                const auto expected = expected_product(left, right);
+                auto result = left;
+                backend.multiply(result, result, right);
+                check_polynomial(result, expected);
+                result = right;
+                backend.multiply(result, left, result);
+                check_polynomial(result, expected);
+                result = right;
+                backend.square(result, result);
+                check_polynomial(result, expected_product(right, right));
+                backend.multiply_low(result, left, right, size);
+                check_polynomial(result, expected_low(expected, size));
+                const auto prepared = backend.prepare_low_product(right, size, 2 * size + 1);
+                BOOST_REQUIRE(prepared.has_value());
+                BOOST_REQUIRE(backend.try_multiply_low_prepared(result, left, *prepared, 2 * size + 1));
+                check_polynomial(result, expected);
+                BOOST_CHECK_EQUAL(std::fegetround(), FE_TOWARDZERO);
+            }
+            BOOST_CHECK_EQUAL(state.active.load(), 0);
+            BOOST_CHECK(!state.rounding_changed.load());
+            BOOST_CHECK_EQUAL(state.helper_visits.load() != 0, threads != 1);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(concurrent_preparations_support_groups_matrices_and_cyclic_remainders) {
+    std::mt19937_64 random(0x45584512);
+    for (const std::size_t threads : {1, 2, 4, 8}) {
+        BOOST_TEST_CONTEXT("threads=" << threads) {
+            parallel_execution_state state;
+            state.threads = threads;
+            state.mixed_rounding = true;
+            parallel_backend source(256, parallel_execution {state});
+            const auto fixed = random_polynomial(33, random);
+            const auto input = random_polynomial(33, random);
+            const auto expected = expected_product(input, fixed);
+            const auto prepared = source.prepare_low_product(fixed, 33, 65);
+            auto sum = source.make_product_accumulator(33, 4);
+            BOOST_REQUIRE(prepared && sum);
+            // Prepared state owns its data and can cross compatible backend instances and moves.
+            parallel_backend other(256, parallel_execution {state});
+            parallel_backend backend(std::move(other));
+            auto negative = input;
+            for (auto &coefficient : negative) {
+                coefficient = -coefficient;
+            }
+            polynomial_type result;
+            for (unsigned repeat = 0; repeat < 2; ++repeat) {
+                BOOST_REQUIRE(backend.try_accumulate_prepared_product(*sum, input, *prepared));
+                BOOST_REQUIRE(backend.try_accumulate_prepared_product(*sum, negative, *prepared));
+                BOOST_REQUIRE(
+                    backend.try_accumulate_prepared_product(*sum, polynomial_type {value_type::zero()}, *prepared));
+                BOOST_REQUIRE(backend.try_accumulate_prepared_product(*sum, input, *prepared));
+                BOOST_CHECK_EQUAL(sum->product_count(), 4);
+                BOOST_REQUIRE(backend.try_finish_product_sum(result, *sum));
+                check_polynomial(result, expected);
+                BOOST_CHECK_EQUAL(sum->product_count(), 0);
+            }
+            BOOST_REQUIRE(backend.try_finish_product_sum(result, *sum));
+            check_polynomial(result, polynomial_type {value_type::zero()});
+
+            const auto divisor = random_polynomial(33, random);
+            auto quotient = random_polynomial(31, random);
+            const auto remainder = random_polynomial(32, random);
+            auto dividend = expected_product(quotient, divisor);
+            math::addition(dividend, dividend, remainder);
+            const auto cyclic = source.prepare_cyclic_remainder(divisor, quotient.size());
+            BOOST_REQUIRE(cyclic.has_value());
+            BOOST_REQUIRE(backend.try_cyclic_remainder(quotient, dividend, quotient, *cyclic));
+            check_polynomial(quotient, remainder);
+
+            std::array<polynomial_type, 4> left, right;
+            for (std::size_t i = 0; i < 4; ++i) {
+                left[i] = random_polynomial(17 + i % 2, random);
+                right[i] = random_polynomial(17 + i / 2, random);
+            }
+            const auto matrix_expected = expected_matrix_product<2>(left, right);
+            BOOST_REQUIRE(try_matrix_product<2>(backend, left, left, right));
+            BOOST_CHECK(left == matrix_expected);
+            const std::array<polynomial_type, 2> column {right[0], right[1]};
+            const auto column_expected = expected_matrix_product<1>(right, column);
+            std::array<polynomial_type, 2> output;
+            BOOST_REQUIRE(try_matrix_product<1>(backend, output, right, column));
+            BOOST_CHECK(output == column_expected);
+            BOOST_CHECK_EQUAL(state.active.load(), 0);
+            BOOST_CHECK(!state.rounding_changed.load());
+            BOOST_CHECK_EQUAL(state.helper_visits.load() != 0, threads != 1);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(concurrent_failures_join_workers_and_preserve_outputs_and_groups) {
+    restore_rounding restore;
+    BOOST_REQUIRE_EQUAL(std::fesetround(FE_DOWNWARD), 0);
+    parallel_execution_state state;
+    state.threads = 4;
+    state.mixed_rounding = true;
+    parallel_backend backend(128, parallel_execution {state});
+    std::mt19937_64 random(0x45584513);
+    const auto input = random_polynomial(33, random);
+    const auto fixed = random_polynomial(33, random);
+    const auto expected = expected_product(input, fixed);
+    for (const std::size_t failing_rank : {0, 1}) {
+        state.fail_rank = failing_rank;
+        for (const auto stage :
+             {execution_stage::conversion, execution_stage::prime_product, execution_stage::reconstruction}) {
+            auto result = input;
+            state.fail = stage;
+            BOOST_CHECK_THROW(backend.multiply(result, result, fixed), std::runtime_error);
+            check_polynomial(result, input);
+            BOOST_CHECK_EQUAL(state.active.load(), 0);
+            BOOST_CHECK_EQUAL(std::fegetround(), FE_DOWNWARD);
+            state.fail.reset();
+            backend.multiply(result, result, fixed);
+            check_polynomial(result, expected);
+        }
+    }
+    state.fail_rank = 1;
+    const auto prepared = backend.prepare_low_product(fixed, 33, 65);
+    auto sum = backend.make_product_accumulator(33, 4);
+    BOOST_REQUIRE(prepared && sum);
+    for (const auto stage :
+         {execution_stage::conversion, execution_stage::forward_transform, execution_stage::pointwise_product}) {
+        BOOST_REQUIRE(backend.try_accumulate_prepared_product(*sum, input, *prepared));
+        state.fail = stage;
+        BOOST_CHECK_THROW(backend.try_accumulate_prepared_product(*sum, input, *prepared), std::runtime_error);
+        BOOST_CHECK_EQUAL(state.active.load(), 0);
+        BOOST_CHECK_EQUAL(sum->product_count(), 1);
+        state.fail.reset();
+        polynomial_type result;
+        BOOST_REQUIRE(backend.try_finish_product_sum(result, *sum));
+        check_polynomial(result, expected);
+    }
+    for (const auto stage : {execution_stage::inverse_transform, execution_stage::reconstruction}) {
+        BOOST_REQUIRE(backend.try_accumulate_prepared_product(*sum, input, *prepared));
+        auto result = input;
+        state.fail = stage;
+        BOOST_CHECK_THROW(backend.try_finish_product_sum(result, *sum), std::runtime_error);
+        check_polynomial(result, input);
+        BOOST_CHECK_EQUAL(state.active.load(), 0);
+        BOOST_CHECK_EQUAL(sum->product_count(), 1);
+        state.fail.reset();
+        BOOST_REQUIRE(backend.try_finish_product_sum(result, *sum));
+        check_polynomial(result, expected);
+    }
+    BOOST_CHECK_EQUAL(std::fegetround(), FE_DOWNWARD);
+    BOOST_CHECK(!state.rounding_changed.load());
+    BOOST_CHECK_GT(state.helper_visits.load(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(concurrent_backend_preserves_division_gcd_and_grouped_composition) {
+    std::mt19937_64 random(0x45584514);
+    const auto divisor = random_polynomial(20, random);
+    const auto inner = random_polynomial(21, random);
+    const auto outer = random_polynomial(90, random);
+    arithmetic::polynomial_context<reference_backend> reference;
+    math::polynomial_divisor_context<reference_backend> reference_divisor(divisor, 18, reference);
+    polynomial_type expected_composition;
+    math::compose_mod_reference(expected_composition, outer, inner, reference_divisor, reference);
+    const auto common = random_polynomial(5, random);
+    const auto left = expected_product(common, random_polynomial(65, random));
+    const auto right = expected_product(common, random_polynomial(64, random));
+    polynomial_type expected_gcd;
+    math::gcd(expected_gcd, left, right, reference);
+    for (const std::size_t threads : {1, 4}) {
+        parallel_execution_state state;
+        state.threads = threads;
+        arithmetic::polynomial_context_options options;
+        options.basecase_divisor_coefficient_cutoff = 0;
+        options.basecase_quotient_coefficient_cutoff = 0;
+        options.gcd_half_gcd_cutoff = 1;
+        options.half_gcd_basecase_cutoff = 8;
+        options.modular_composition_block_size = 9;
+        options.modular_composition_prepared_byte_limit = 1 << 20;
+        options.modular_composition_giant_step_group_size = 8;
+        options.modular_composition_giant_step_prepared_byte_limit = 1 << 20;
+        parallel_context context {parallel_backend(256, parallel_execution {state}), options};
+        math::polynomial_divisor_context<parallel_backend> fixed(divisor, 18, context);
+        math::polynomial_composition_precomputation<parallel_backend> cache(inner, outer.size(), fixed, context);
+        BOOST_REQUIRE_EQUAL(cache.giant_step_group_size(), 8);
+        auto result = outer;
+        math::compose_mod(result, result, cache, fixed, context);
+        check_polynomial(result, expected_composition);
+        math::compose_mod(result, outer, cache, fixed, context);
+        check_polynomial(result, expected_composition);
+
+        const auto quotient = random_polynomial(17, random);
+        const auto remainder = random_polynomial(19, random);
+        auto dividend = expected_product(quotient, divisor);
+        math::addition(dividend, dividend, remainder);
+        polynomial_type actual_quotient, actual_remainder;
+        math::divrem(actual_quotient, actual_remainder, dividend, fixed, context);
+        check_polynomial(actual_quotient, quotient);
+        check_polynomial(actual_remainder, remainder);
+        result = left;
+        math::gcd(result, result, right, context);
+        check_polynomial(result, expected_gcd);
+        BOOST_CHECK_GT(state.stages[static_cast<std::size_t>(execution_stage::prime_sum)], 0);
+        BOOST_CHECK_EQUAL(state.active.load(), 0);
+        BOOST_CHECK_EQUAL(state.helper_visits.load() != 0, threads != 1);
     }
 }
 

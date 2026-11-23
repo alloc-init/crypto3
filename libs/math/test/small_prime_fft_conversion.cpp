@@ -259,4 +259,52 @@ BOOST_AUTO_TEST_CASE(conversion_uses_existing_plan_sizes_and_input_prefixes) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(disjoint_conversion_ranges_preserve_neighbors_padding_and_rounding_modes) {
+    restore_rounding restore;
+    const auto coordinates = random_coordinates(65);
+    const auto coefficients = make_coefficients(coordinates);
+    constexpr std::size_t stride = 71;
+    const std::array<std::array<std::size_t, 2>, 5> ranges {{{33, 65}, {65, 71}, {0, 1}, {7, 33}, {1, 7}}};
+    for (std::size_t primes : {std::size_t(1), detail::small_prime_fft_primes.size()}) {
+        const converter_type converter(primes);
+        for (int mode : {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
+            BOOST_REQUIRE_EQUAL(std::fesetround(mode), 0);
+            std::vector<double> complete(primes * 12 * stride), output(complete.size(), sentinel), expected = output;
+            converter.convert(complete, coefficients, stride);
+            for (const auto &[first, end] : ranges) {
+                converter.convert_range(output, coefficients, stride, first, end);
+                for (std::size_t channel = 0; channel < primes * 12; ++channel) {
+                    std::copy(complete.begin() + channel * stride + first, complete.begin() + channel * stride + end,
+                              expected.begin() + channel * stride + first);
+                }
+                BOOST_CHECK(output == expected);
+            }
+            converter.convert_range(output, coefficients, stride, 7, 7);
+            BOOST_CHECK(output == expected);
+            check_output(output, primes, coordinates, stride);
+            converter.convert_range(output, {}, stride, 31, 34);
+            for (std::size_t channel = 0; channel < primes * 12; ++channel) {
+                std::fill(expected.begin() + channel * stride + 31, expected.begin() + channel * stride + 34, 0.0);
+            }
+            BOOST_CHECK(output == expected);
+            BOOST_CHECK_EQUAL(std::fegetround(), mode);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(invalid_conversion_ranges_are_rejected_before_writes) {
+    const converter_type converter(1);
+    const std::array<value_type, 2> coefficients {value_type::one(), value_type::one()};
+    std::vector<double> output(24, sentinel);
+    const auto expected = output;
+    BOOST_CHECK_THROW(converter.convert_range(output, coefficients, 2, 2, 1), std::out_of_range);
+    BOOST_CHECK_THROW(converter.convert_range(output, coefficients, 2, 0, 3), std::out_of_range);
+    BOOST_CHECK_THROW(converter.convert_range(output, coefficients, 2, 0, std::numeric_limits<std::size_t>::max()),
+                      std::out_of_range);
+    BOOST_CHECK_THROW(converter.convert_range(std::span<double>(output).first(23), coefficients, 2, 0, 1),
+                      std::invalid_argument);
+    BOOST_CHECK(output == expected);
+    BOOST_CHECK_NO_THROW(converter.convert_range({}, {}, 0, 0, 0));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
