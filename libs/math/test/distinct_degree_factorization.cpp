@@ -90,6 +90,36 @@ namespace {
     using counting_backend = counting_backend_impl<fq_value_type>;
     using small_counting_backend = counting_backend_impl<small_value>;
 
+    struct scheduled_small_backend : small_backend {
+        std::size_t *calls = nullptr;
+        bool decline = false;
+
+        template<typename Tasks, typename Context>
+        bool try_execute_distinct_degree_intervals(const Tasks &tasks, Context &context) {
+            ++*calls;
+            if (decline) {
+                return false;
+            }
+            // A deliberately different valid order exercises the dependency contract without library threads.
+            std::vector<bool> done(tasks.task_count());
+            Context private_context(*this, context.options());
+            for (std::size_t completed = 0; completed < tasks.task_count(); ++completed) {
+                bool advanced = false;
+                for (std::size_t i = tasks.task_count(); i-- > 0;) {
+                    const auto dependency = tasks.dependency(i);
+                    if (!done[i] && (!dependency || done[*dependency])) {
+                        tasks.execute_task(i, private_context);
+                        done[i] = true;
+                        advanced = true;
+                        break;
+                    }
+                }
+                BOOST_REQUIRE(advanced);
+            }
+            return true;
+        }
+    };
+
     // Select a deterministic dense irreducible using the independent reference DDF. A binomial would always have
     // a gapped derivative-GCD chain and would not exercise the public certificate-to-discovery handoff.
     math::polynomial<fq_value_type> dense_irreducible() {
@@ -149,6 +179,199 @@ namespace {
 }    // namespace
 
 BOOST_AUTO_TEST_SUITE(distinct_degree_factorization_test_suite)
+
+BOOST_AUTO_TEST_CASE(continuation_tasks_preserve_images_products_and_validate_spans) {
+    small_backend backend;
+    const auto input = multiply(backend, certificate_binomial(8), certificate_binomial(5));
+    polynomial_arithmetic::polynomial_context<small_backend> context;
+    const math::polynomial_frobenius_context<small_backend> frobenius(input, context);
+    const math::detail::kaltofen_shoup_frobenius_precomputation<small_backend> table(4, frobenius, context);
+    using tasks_type = math::detail::kaltofen_shoup_interval_tasks<small_backend>;
+    for (std::size_t excluded : {0, 4}) {
+        small_polynomial seed = excluded ? table.baby_step(4) : table.baby_step(0);
+        const std::vector<std::size_t> counts {4, 2};
+        std::vector<small_polynomial> serial_images(2), serial_products(2), images(2), products(2);
+        tasks_type serial(seed, excluded, counts, table, frobenius.divisor_context(), serial_images, serial_products);
+        tasks_type reordered(seed, excluded, counts, table, frobenius.divisor_context(), images, products);
+        serial.execute_serial(context);
+        for (auto index : {0, 2, 3, 1}) {
+            reordered.execute_task(index, context);
+        }
+        BOOST_CHECK(images == serial_images);
+        BOOST_CHECK(products == serial_products);
+        auto expected_image = seed;
+        for (std::size_t i = 0; i < 2; ++i) {
+            if (excluded == 0 && i == 0) {
+                expected_image = table.baby_step(4);
+            } else {
+                table.apply_block_frobenius(expected_image, expected_image, frobenius.divisor_context(), context);
+            }
+            small_polynomial expected_product;
+            math::detail::kaltofen_shoup_interval_product(expected_product, expected_image, counts[i], table,
+                                                          frobenius.divisor_context(), context);
+            BOOST_CHECK(images[i] == expected_image);
+            BOOST_CHECK(products[i] == expected_product);
+        }
+        BOOST_CHECK_THROW(reordered.execute_task(4, context), std::out_of_range);
+        BOOST_CHECK_THROW(tasks_type(seed, 1, counts, table, frobenius.divisor_context(), images, products),
+                          std::invalid_argument);
+        const std::vector<std::size_t> invalid {4, 0};
+        BOOST_CHECK_THROW(tasks_type(seed, excluded, invalid, table, frobenius.divisor_context(), images, products),
+                          std::invalid_argument);
+        images.resize(1);
+        BOOST_CHECK_THROW(tasks_type(seed, excluded, counts, table, frobenius.divisor_context(), images, products),
+                          std::invalid_argument);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(scheduled_continuation_preserves_guards_callbacks_and_fallback) {
+    small_backend backend;
+    const auto input =
+        multiply(backend, multiply(backend, certificate_binomial(3), certificate_binomial(5)), certificate_binomial(8));
+    polynomial_arithmetic::polynomial_context<small_backend> reference;
+    const auto expected = math::distinct_degree_factorization_reference<small_backend>(input, reference);
+    for (std::size_t prefix : {0, 1, 2, 100}) {
+        for (bool decline : {false, true}) {
+            for (std::size_t stop : {0, 1, 2, 3}) {
+                for (auto parity : {std::optional<bool> {}, std::optional<bool>(true)}) {
+                    std::size_t calls = 0;
+                    scheduled_small_backend scheduled;
+                    scheduled.calls = &calls;
+                    scheduled.decline = decline;
+                    polynomial_arithmetic::polynomial_context_options options;
+                    options.distinct_degree_gcd_batch_size = 4;
+                    options.distinct_degree_gcd_batch_serial_prefix = prefix;
+                    options.distinct_degree_certificate_minimum_excluded_degree = 1;
+                    polynomial_arithmetic::polynomial_context<scheduled_small_backend> context(scheduled, options);
+                    std::vector<math::distinct_degree_factor<small_polynomial>> groups;
+                    const auto outcome = math::detail::kaltofen_shoup_factor_monic_square_free(
+                        &groups, input, 1, context,
+                        [&](const auto &) {
+                            return groups.size() == stop ? math::factorization_control::stop_factorization :
+                                                           math::factorization_control::continue_factorization;
+                        },
+                        parity);
+                    BOOST_REQUIRE_EQUAL(groups.size(), stop ? stop : expected.factors.size());
+                    BOOST_CHECK(std::equal(groups.begin(), groups.end(), expected.factors.begin()));
+                    BOOST_CHECK_EQUAL(outcome == math::factorization_control::continue_factorization, stop == 0);
+                    if (prefix == 100) {
+                        BOOST_CHECK_EQUAL(calls, 0);
+                    }
+                }
+            }
+        }
+    }
+    // A first-block callback stop must not dispatch speculative tasks under the one-block guard.
+    const auto early =
+        multiply(backend, small_polynomial {small_value::one(), small_value::one()}, certificate_binomial(8));
+    for (std::size_t prefix : {0, 1}) {
+        std::size_t calls = 0;
+        scheduled_small_backend scheduled;
+        scheduled.calls = &calls;
+        polynomial_arithmetic::polynomial_context_options options;
+        options.distinct_degree_gcd_batch_size = 4;
+        options.distinct_degree_gcd_batch_serial_prefix = prefix;
+        polynomial_arithmetic::polynomial_context<scheduled_small_backend> context(scheduled, options);
+        const auto outcome = math::detail::kaltofen_shoup_factor_monic_square_free<scheduled_small_backend>(
+            nullptr, early, 1, context, [](const auto &) { return math::factorization_control::stop_factorization; });
+        BOOST_CHECK(outcome == math::factorization_control::stop_factorization);
+        BOOST_CHECK_EQUAL(calls, prefix ? 0 : 1);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(batched_coarse_factors_match_ordered_removal_with_overlapping_products) {
+    polynomial_arithmetic::polynomial_context<small_backend> context;
+    const small_polynomial one = {small_value::one()};
+    const auto a = certificate_binomial(1);
+    const auto b = certificate_binomial(2);
+    const auto c = certificate_binomial(4);
+    const auto d = certificate_binomial(8);
+    const auto extra = certificate_binomial(1, 3);
+    const auto product = [&](const small_polynomial &left, const small_polynomial &right) {
+        small_polynomial result;
+        context.multiply(result, left, right);
+        return result;
+    };
+    const auto remaining = product(product(a, b), product(c, d));
+    const auto modulus = product(remaining, extra);
+    math::polynomial_divisor_context<small_backend> divisor(modulus, modulus.size(), context);
+    const std::vector<small_polynomial> pattern = {
+        product(b, c), product(c, d), product(a, c), {small_value::zero()}, one, extra, b, d};
+    for (std::size_t count : {0, 1, 2, 3, 5, 8}) {
+        std::vector<small_polynomial> intervals(pattern.begin(), pattern.begin() + count);
+        const auto actual =
+            math::detail::kaltofen_shoup_batch_block_factors<small_backend>(remaining, intervals, divisor, context);
+        std::vector<small_polynomial> expected;
+        auto unclassified = remaining;
+        for (const auto &interval : intervals) {
+            small_polynomial factor;
+            math::gcd(factor, unclassified, interval, context);
+            small_polynomial quotient;
+            math::detail::factorization_exact_quotient(quotient, unclassified, factor, context);
+            unclassified = std::move(quotient);
+            expected.push_back(std::move(factor));
+        }
+        BOOST_CHECK(actual == expected);
+        if (count >= 3) {
+            BOOST_CHECK(actual[0] == product(b, c));
+            BOOST_CHECK(actual[1] == d);
+            BOOST_CHECK(actual[2] == a);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(batched_coarse_factors_handle_empty_batches_units_and_zero_products) {
+    polynomial_arithmetic::polynomial_context<small_backend> context;
+    const auto remaining = certificate_binomial(8);
+    const small_polynomial one = {small_value::one()};
+    math::polynomial_divisor_context<small_backend> divisor(remaining, remaining.size(), context);
+    for (std::size_t count : {1, 2, 3, 5, 8}) {
+        std::vector<small_polynomial> intervals(count, one);
+        BOOST_CHECK(math::detail::kaltofen_shoup_batch_block_factors<small_backend>(remaining, intervals, divisor,
+                                                                                    context) == intervals);
+        intervals.back() = {small_value::zero()};
+        auto expected = std::vector<small_polynomial>(count, one);
+        expected.back() = remaining;
+        BOOST_CHECK(math::detail::kaltofen_shoup_batch_block_factors<small_backend>(remaining, intervals, divisor,
+                                                                                    context) == expected);
+        intervals.front() = {small_value::zero()};
+        expected.assign(count, one);
+        expected.front() = remaining;
+        BOOST_CHECK(math::detail::kaltofen_shoup_batch_block_factors<small_backend>(remaining, intervals, divisor,
+                                                                                    context) == expected);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(batched_continuation_rechecks_a_final_interval_shortened_by_factor_removal) {
+    small_backend backend;
+    const auto input =
+        multiply(backend, multiply(backend, certificate_binomial(3), certificate_binomial(5)), certificate_binomial(8));
+    polynomial_arithmetic::polynomial_context<small_backend> reference;
+    const auto expected = math::distinct_degree_factorization_reference<small_backend>(input, reference);
+    BOOST_REQUIRE_EQUAL(expected.factors.size(), 3);
+    // The initial half-degree bound includes degree eight in block two. Removing the cubic reduces that bound to
+    // six. The prefetched block must be shortened before reporting the quintic; the octic is the final residual.
+    for (std::size_t batch_size : {0, 1, 2, 4, 8}) {
+        for (const auto parity : {std::optional<bool> {}, std::optional<bool>(true)}) {
+            for (std::size_t stop : {0, 1, 2, 3}) {
+                polynomial_arithmetic::polynomial_context_options options;
+                options.distinct_degree_gcd_batch_size = batch_size;
+                polynomial_arithmetic::polynomial_context<small_backend> context(small_backend {}, options);
+                std::vector<math::distinct_degree_factor<small_polynomial>> groups;
+                const auto control = math::detail::kaltofen_shoup_factor_monic_square_free(
+                    &groups, input, 4, context,
+                    [&](const auto &) {
+                        return groups.size() == stop ? math::factorization_control::stop_factorization :
+                                                       math::factorization_control::continue_factorization;
+                    },
+                    parity);
+                BOOST_REQUIRE_EQUAL(groups.size(), stop == 0 ? 3 : stop);
+                BOOST_CHECK(std::equal(groups.begin(), groups.end(), expected.factors.begin()));
+                BOOST_CHECK_EQUAL(control == math::factorization_control::continue_factorization, stop == 0);
+            }
+        }
+    }
+}
 
 BOOST_AUTO_TEST_CASE(residual_certificate_plans_reuse_completed_blocks_and_skip_excluded_targets) {
     struct example {
@@ -287,49 +510,52 @@ BOOST_AUTO_TEST_CASE(residual_certificate_budget_preserves_discovery_and_stop_pr
     BOOST_REQUIRE_EQUAL(expected.factors.size(), 3);
     const math::polynomial_frobenius_context<small_backend> frobenius(original, preparation);
     const math::detail::kaltofen_shoup_frobenius_precomputation<small_backend> table(1, frobenius, preparation);
-    for (const auto parity : {std::optional<bool> {}, std::optional<bool>(true)}) {
-        for (std::size_t threshold : {0, 1, 4, 100}) {
-            for (std::size_t budget : {0, 1, 2, 3, 100}) {
-                for (std::size_t stop_after = 0; stop_after <= 3; ++stop_after) {
-                    for (bool collect : {false, true}) {
-                        polynomial_arithmetic::polynomial_context_options options;
-                        options.distinct_degree_certificate_minimum_excluded_degree = threshold;
-                        options.distinct_degree_certificate_maximum_attempts = budget;
-                        polynomial_arithmetic::polynomial_context<small_backend> context(small_backend {}, options);
-                        math::detail::kaltofen_shoup_residual_certificate_state state;
-                        std::vector<math::distinct_degree_factor<small_polynomial>> reported, collected;
-                        const auto control = math::detail::kaltofen_shoup_continue_discovery<small_backend>(
-                            collect ? &collected : nullptr, remaining, 1, table.baby_step(1), table,
-                            frobenius.divisor_context(), context,
-                            [&](const auto &group) {
-                                reported.push_back(group);
-                                return reported.size() == stop_after ?
-                                           math::factorization_control::stop_factorization :
-                                           math::factorization_control::continue_factorization;
-                            },
-                            state, parity);
-                        BOOST_CHECK_EQUAL(control == math::factorization_control::continue_factorization,
-                                          stop_after == 0);
-                        BOOST_REQUIRE_EQUAL(reported.size(), stop_after == 0 ? 3 : stop_after);
-                        for (std::size_t i = 0; i < reported.size(); ++i)
-                            BOOST_CHECK(reported[i] == expected.factors[i]);
-                        if (collect)
-                            BOOST_CHECK(collected == reported);
-                        BOOST_CHECK_LE(state.attempts, budget);
-                        if (stop_after == 0) {
-                            const auto attempts =
-                                threshold == 1 ? std::min(budget, parity ? std::size_t(2) : std::size_t(3)) :
-                                threshold == 4 ? std::min(budget, parity ? std::size_t(1) : std::size_t(2)) :
-                                                 0;
-                            BOOST_CHECK_EQUAL(state.attempts, attempts);
-                            // Many empty blocks on each composite residual must not spend another attempt.
-                            const auto last_degree =
-                                attempts == 0                   ? 0 :
-                                threshold == 1 && attempts == 1 ? 32 :
-                                !parity && ((threshold == 1 && attempts == 2) || (threshold == 4 && attempts == 1)) ?
-                                                                  29 :
-                                                                  24;
-                            BOOST_CHECK_EQUAL(state.last_attempted_degree, last_degree);
+    for (std::size_t batch_size : {0, 1, 2, 4, 8}) {
+        for (const auto parity : {std::optional<bool> {}, std::optional<bool>(true)}) {
+            for (std::size_t threshold : {0, 1, 4, 100}) {
+                for (std::size_t budget : {0, 1, 2, 3, 100}) {
+                    for (std::size_t stop_after = 0; stop_after <= 3; ++stop_after) {
+                        for (bool collect : {false, true}) {
+                            polynomial_arithmetic::polynomial_context_options options;
+                            options.distinct_degree_gcd_batch_size = batch_size;
+                            options.distinct_degree_certificate_minimum_excluded_degree = threshold;
+                            options.distinct_degree_certificate_maximum_attempts = budget;
+                            polynomial_arithmetic::polynomial_context<small_backend> context(small_backend {}, options);
+                            math::detail::kaltofen_shoup_residual_certificate_state state;
+                            std::vector<math::distinct_degree_factor<small_polynomial>> reported, collected;
+                            const auto control = math::detail::kaltofen_shoup_continue_discovery<small_backend>(
+                                collect ? &collected : nullptr, remaining, 1, table.baby_step(1), table,
+                                frobenius.divisor_context(), context,
+                                [&](const auto &group) {
+                                    reported.push_back(group);
+                                    return reported.size() == stop_after ?
+                                               math::factorization_control::stop_factorization :
+                                               math::factorization_control::continue_factorization;
+                                },
+                                state, parity);
+                            BOOST_CHECK_EQUAL(control == math::factorization_control::continue_factorization,
+                                              stop_after == 0);
+                            BOOST_REQUIRE_EQUAL(reported.size(), stop_after == 0 ? 3 : stop_after);
+                            for (std::size_t i = 0; i < reported.size(); ++i)
+                                BOOST_CHECK(reported[i] == expected.factors[i]);
+                            if (collect)
+                                BOOST_CHECK(collected == reported);
+                            BOOST_CHECK_LE(state.attempts, budget);
+                            if (stop_after == 0) {
+                                const auto attempts =
+                                    threshold == 1 ? std::min(budget, parity ? std::size_t(2) : std::size_t(3)) :
+                                    threshold == 4 ? std::min(budget, parity ? std::size_t(1) : std::size_t(2)) :
+                                                     0;
+                                BOOST_CHECK_EQUAL(state.attempts, attempts);
+                                // Many empty blocks on each composite residual must not spend another attempt.
+                                const auto last_degree = attempts == 0                   ? 0 :
+                                                         threshold == 1 && attempts == 1 ? 32 :
+                                                         !parity && ((threshold == 1 && attempts == 2) ||
+                                                                     (threshold == 4 && attempts == 1)) ?
+                                                                                           29 :
+                                                                                           24;
+                                BOOST_CHECK_EQUAL(state.last_attempted_degree, last_degree);
+                            }
                         }
                     }
                 }
@@ -348,33 +574,37 @@ BOOST_AUTO_TEST_CASE(residual_certificate_preserves_its_budget_until_even_parity
     BOOST_REQUIRE_EQUAL(expected.factors.size(), 3);
     BOOST_REQUIRE_EQUAL(expected.factors.front().polynomial.degree(), 6);
     const math::polynomial_frobenius_context<small_backend> frobenius(remaining, preparation);
-    for (std::size_t block : {1, 2}) {
-        const math::detail::kaltofen_shoup_frobenius_precomputation<small_backend> table(block, frobenius, preparation);
-        for (const auto parity : {std::optional<bool> {}, std::optional<bool>(false)}) {
-            for (std::size_t stop_after = 0; stop_after <= 3; ++stop_after) {
-                polynomial_arithmetic::polynomial_context_options options;
-                options.distinct_degree_certificate_minimum_excluded_degree = 1;
-                polynomial_arithmetic::polynomial_context<small_backend> context(small_backend {}, options);
-                math::detail::kaltofen_shoup_residual_certificate_state state;
-                std::vector<math::distinct_degree_factor<small_polynomial>> reported;
-                const auto status = math::detail::kaltofen_shoup_continue_discovery<small_backend>(
-                    nullptr, remaining, block, table.baby_step(block), table, frobenius.divisor_context(), context,
-                    [&](const auto &group) {
-                        reported.push_back(group);
-                        // The first group removes two cubics, so parity stays even. Removing the quintic flips it
-                        // to odd, allowing the unused attempt to certify the final degree-24 factor.
-                        BOOST_CHECK_EQUAL(state.attempts, !parity || reported.size() == 3 ? 1 : 0);
-                        return reported.size() == stop_after ? math::factorization_control::stop_factorization :
-                                                               math::factorization_control::continue_factorization;
-                    },
-                    state, parity);
-                BOOST_CHECK_EQUAL(status == math::factorization_control::continue_factorization, stop_after == 0);
-                BOOST_REQUIRE_EQUAL(reported.size(), stop_after == 0 ? 3 : stop_after);
-                BOOST_CHECK(std::equal(reported.begin(), reported.end(), expected.factors.begin()));
-                BOOST_CHECK_EQUAL(state.last_attempted_degree,
-                                  !parity                            ? 35 :
-                                  stop_after == 0 || stop_after == 3 ? 24 :
-                                                                       0);
+    for (std::size_t batch_size : {0, 1, 2, 4, 8}) {
+        for (std::size_t block : {1, 2}) {
+            const math::detail::kaltofen_shoup_frobenius_precomputation<small_backend> table(block, frobenius,
+                                                                                             preparation);
+            for (const auto parity : {std::optional<bool> {}, std::optional<bool>(false)}) {
+                for (std::size_t stop_after = 0; stop_after <= 3; ++stop_after) {
+                    polynomial_arithmetic::polynomial_context_options options;
+                    options.distinct_degree_gcd_batch_size = batch_size;
+                    options.distinct_degree_certificate_minimum_excluded_degree = 1;
+                    polynomial_arithmetic::polynomial_context<small_backend> context(small_backend {}, options);
+                    math::detail::kaltofen_shoup_residual_certificate_state state;
+                    std::vector<math::distinct_degree_factor<small_polynomial>> reported;
+                    const auto status = math::detail::kaltofen_shoup_continue_discovery<small_backend>(
+                        nullptr, remaining, block, table.baby_step(block), table, frobenius.divisor_context(), context,
+                        [&](const auto &group) {
+                            reported.push_back(group);
+                            // The first group removes two cubics, so parity stays even. Removing the quintic flips it
+                            // to odd, allowing the unused attempt to certify the final degree-24 factor.
+                            BOOST_CHECK_EQUAL(state.attempts, !parity || reported.size() == 3 ? 1 : 0);
+                            return reported.size() == stop_after ? math::factorization_control::stop_factorization :
+                                                                   math::factorization_control::continue_factorization;
+                        },
+                        state, parity);
+                    BOOST_CHECK_EQUAL(status == math::factorization_control::continue_factorization, stop_after == 0);
+                    BOOST_REQUIRE_EQUAL(reported.size(), stop_after == 0 ? 3 : stop_after);
+                    BOOST_CHECK(std::equal(reported.begin(), reported.end(), expected.factors.begin()));
+                    BOOST_CHECK_EQUAL(state.last_attempted_degree,
+                                      !parity                            ? 35 :
+                                      stop_after == 0 || stop_after == 3 ? 24 :
+                                                                           0);
+                }
             }
         }
     }
@@ -1069,32 +1299,36 @@ BOOST_AUTO_TEST_CASE(parity_tracks_factor_counts_and_preserves_blocks_and_stop_p
         large, multiply(backend, linear, large), multiply(backend, multiply(backend, linear, second_linear), large),
         multiply(backend, quadratic, cubic), multiply(backend, multiply(backend, linear, quadratic), cubic)};
     const std::vector<std::size_t> counts {1, 2, 3, 2, 3};
-    for (std::size_t index = 0; index < inputs.size(); ++index) {
-        polynomial_arithmetic::polynomial_context<backend_type> reference_context;
-        const auto expected =
-            math::distinct_degree_factorization_reference<backend_type>(inputs[index], reference_context);
-        for (std::size_t block : {1, 2, 3, 4}) {
-            for (std::size_t screening : {0, 1, 4}) {
-                for (std::size_t certificate_threshold : {0, 1}) {
-                    polynomial_arithmetic::polynomial_context_options options;
-                    options.distinct_degree_screening_limit = screening;
-                    options.distinct_degree_certificate_minimum_excluded_degree = certificate_threshold;
-                    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
-                    for (std::size_t stop = 0; stop <= expected.factors.size(); ++stop) {
-                        std::vector<group_type> collected;
-                        const auto result = math::detail::kaltofen_shoup_factor_monic_square_free(
-                            &collected, inputs[index], block, context,
-                            [&](const group_type &group) {
-                                BOOST_CHECK(&group == &collected.back());
-                                return collected.size() == stop ? math::factorization_control::stop_factorization :
-                                                                  math::factorization_control::continue_factorization;
-                            },
-                            counts[index] % 2 != 0);
-                        const auto size = stop ? stop : expected.factors.size();
-                        BOOST_REQUIRE_EQUAL(collected.size(), size);
-                        BOOST_CHECK(std::equal(collected.begin(), collected.end(), expected.factors.begin()));
-                        BOOST_CHECK(result == (stop ? math::factorization_control::stop_factorization :
-                                                      math::factorization_control::continue_factorization));
+    for (std::size_t batch_size : {0, 1, 2, 4, 8}) {
+        for (std::size_t index = 0; index < inputs.size(); ++index) {
+            polynomial_arithmetic::polynomial_context<backend_type> reference_context;
+            const auto expected =
+                math::distinct_degree_factorization_reference<backend_type>(inputs[index], reference_context);
+            for (std::size_t block : {1, 2, 3, 4}) {
+                for (std::size_t screening : {0, 1, 4}) {
+                    for (std::size_t certificate_threshold : {0, 1}) {
+                        polynomial_arithmetic::polynomial_context_options options;
+                        options.distinct_degree_gcd_batch_size = batch_size;
+                        options.distinct_degree_screening_limit = screening;
+                        options.distinct_degree_certificate_minimum_excluded_degree = certificate_threshold;
+                        polynomial_arithmetic::polynomial_context<backend_type> context(backend_type {}, options);
+                        for (std::size_t stop = 0; stop <= expected.factors.size(); ++stop) {
+                            std::vector<group_type> collected;
+                            const auto result = math::detail::kaltofen_shoup_factor_monic_square_free(
+                                &collected, inputs[index], block, context,
+                                [&](const group_type &group) {
+                                    BOOST_CHECK(&group == &collected.back());
+                                    return collected.size() == stop ?
+                                               math::factorization_control::stop_factorization :
+                                               math::factorization_control::continue_factorization;
+                                },
+                                counts[index] % 2 != 0);
+                            const auto size = stop ? stop : expected.factors.size();
+                            BOOST_REQUIRE_EQUAL(collected.size(), size);
+                            BOOST_CHECK(std::equal(collected.begin(), collected.end(), expected.factors.begin()));
+                            BOOST_CHECK(result == (stop ? math::factorization_control::stop_factorization :
+                                                          math::factorization_control::continue_factorization));
+                        }
                     }
                 }
             }

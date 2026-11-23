@@ -104,6 +104,8 @@ Several independent options affect the work in this pipeline:
 |---|---|---|
 | `gcd_half_gcd_cutoff` | Recursive half-GCD during square-free decomposition, screening, and splitting | 0: disabled |
 | `distinct_degree_screening_limit` | Early degree checks before the full baby table | 0: disabled |
+| `distinct_degree_gcd_batch_size` | Consecutive degree intervals combined before a coarse GCD | 1: one interval; zero has the same behavior |
+| `distinct_degree_gcd_batch_serial_prefix` | Initial completed degree blocks kept on the single-interval path | 0: no serial prefix |
 | `initial_frobenius_composition_cutoff` | Initial `X^Q` for degree-12 coefficient fields with `Frobenius_map`: a characteristic-sized power followed by five compositions at or above the divisor-degree cutoff | 0: direct exponentiation |
 | `distinct_degree_certificate_minimum_excluded_degree` | Minimum excluded factor degree before trying a residual irreducibility certificate at a completed block boundary | 0: disabled |
 | `distinct_degree_certificate_maximum_attempts` | Certificate attempts per square-free part; another attempt requires factor removal | 1; zero disables attempts |
@@ -115,7 +117,7 @@ Several independent options affect the work in this pipeline:
 
 Selecting the small-prime backend does not enable half-GCD or prepared coefficient combinations automatically.
 Choose their cutoffs and budgets from representative complete operations, including preparation and memory costs.
-Composition budgets apply to each cache, and simultaneous workers need separate arithmetic contexts and generators.
+Composition budgets apply to each cache, and independent factorizations need separate arithmetic contexts and generators.
 The opt-in initial-power chain releases its two intermediate caches sequentially before constructing the final
 Frobenius-map cache. Its caches honor the same explicit block size and per-cache prepared-byte budget. Measure the
 complete context and memory occupancy under the intended concurrency before enabling it for grinding.
@@ -123,6 +125,35 @@ The explicit composition block size controls each Brent-Kung cache, independentl
 size. Larger composition blocks exchange additional preparation and storage for fewer modular products per reuse;
 they can make short-lived caches slower. See [composition block selection](@ref math_polynomial_arithmetic) for the
 selection rules and outer-size contract.
+
+## Bounded continuation batches
+
+With `distinct_degree_gcd_batch_size > 1`, Kaltofen-Shoup discovery forms a bounded batch of consecutive interval
+products and combines them before taking a coarse GCD with the remaining square-free polynomial. A product tree
+refines a nonconstant result back into the original interval order. A factor appearing in more than one interval
+belongs to its first occurrence, preserving sequential GCD/removal behavior. The default processes one interval.
+
+Batching retains additional giant images and interval products, and may compute arithmetic beyond an early stop.
+Factor callbacks, parity updates and certificate attempts still occur at their original completed-block boundaries;
+none run speculatively. If factor removal shortens the current interval, discovery recomputes that interval against
+the new residual and discards the unused batch. Choose the batch size using complete rejection and recovery costs,
+including retained memory and work discarded after early rejection.
+
+`distinct_degree_gcd_batch_serial_prefix` keeps an initial number of degree blocks on the original path. Its count
+is relative to the original discovery modulus, including resumed discovery; callbacks and continuation windows do
+not restart the prefix. For example, batch size four with prefix one processes the first block alone before batching.
+
+An application backend may supply `try_execute_distinct_degree_intervals(tasks, context)`. The borrowed descriptor
+exposes `task_count()`, `dependency(task)`, `input_coefficient_count()`, `block_index(task)` and
+`execute_task(task, private_context)`. Task `2*i` computes a giant image and task `2*i+1` its interval product.
+Giant images form a chain; each interval product depends on its own image and can overlap later giant images.
+An absent dependency means the task is ready initially. The descriptor also provides `execute_serial(context)`.
+
+Return `true` only after executing every task exactly once in dependency order and joining all work. Return `false`
+without changing outputs to select serial fallback. Concurrent tasks require private compatible arithmetic contexts;
+divisor and Frobenius preparation are shared read-only. Join every task before throwing and retain no borrowed
+descriptor or storage. Coarse GCD refinement and factor callbacks remain on the calling thread. Crypto3 creates no
+threads and supplies no scheduler; a backend without the hook executes each batch serially.
 
 ## Staged factorization
 

@@ -102,6 +102,17 @@ namespace nil::crypto3::math::polynomial_arithmetic {
         // Initialize Frobenius with a characteristic-sized power and five compositions for degree-12 coefficient
         // fields with Frobenius_map when the divisor degree reaches this cutoff. Zero keeps direct exponentiation.
         std::size_t initial_frobenius_composition_cutoff = 0;
+
+        // Combine at most this many consecutive Kaltofen-Shoup interval products before the coarse GCD.
+        // Zero and one keep the original single-block path. Larger batches trade extra retained giant steps and
+        // speculative interval work for fewer large GCDs. Factor callbacks, parity updates and certificate attempts
+        // still occur at their original block boundaries; an early stop discards unconsumed work in this batch.
+        std::size_t distinct_degree_gcd_batch_size = 1;
+
+        // Keep this many initial completed degree blocks on the single-block path before enabling batching.
+        // Zero preserves immediate batching. The count is relative to the discovery modulus, including resumed
+        // discovery; it is not reset at a callback or at the start of a saved continuation window.
+        std::size_t distinct_degree_gcd_batch_serial_prefix = 0;
     };
 
     /**
@@ -306,6 +317,18 @@ namespace nil::crypto3::math::polynomial_arithmetic {
 
         const options_type &options() const {
             return options_;
+        }
+
+        // Optional application scheduling of a bounded group of continuation tasks. A declining backend must
+        // leave the task outputs unchanged. A successful call joins all tasks before returning; an exceptional
+        // call must join before propagating the exception. The ordinary library path remains serial.
+        template<typename Tasks>
+        bool try_execute_distinct_degree_intervals(const Tasks &tasks)
+            requires requires(backend_type &backend, polynomial_context &context) {
+                { backend.try_execute_distinct_degree_intervals(tasks, context) } -> std::same_as<bool>;
+            }
+        {
+            return backend_.try_execute_distinct_degree_intervals(tasks, *this);
         }
 
     private:
