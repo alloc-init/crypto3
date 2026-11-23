@@ -603,6 +603,22 @@ fix the coefficient field; passing `X^p` to them in place of `X^Q` is generally 
 
 ## Context ownership and reuse
 
+X-norm recovery can delegate its factor phase through the optional backend hook
+`recover_x_norm_factors(recovery, context)`. The default executes the original synchronous discovery/recovery
+sequence. The borrowed `recovery` descriptor provides `discover(context, generator, callback)`,
+`recover_factor(factor, context, generator)` and access to the original caller-owned `generator()`.
+Discovery emits `polynomial_factor` objects as rvalues, including their multiplicity; an application must own
+any deferred factor. The hook returns an optional vector of norm representations in discovery order. Missing results
+mean recovery failed. Successful results must account for every discovered factor; ordinary balanced combination
+and exact verification against the original polynomial still run in the library.
+
+An application that defers recovery must complete pending recoveries before allowing discovery to consume its
+next random coefficient, and preserve factor order for any recovery sampling. Separate arithmetic contexts are
+required for concurrent operations. The hook must join all work before returning or throwing and may not retain
+the descriptor, callback or generator references. A lock around the shared generator alone does not preserve its
+consumption order. `passes_scalar_filters(factor)` supplies necessary conditions for queue admission; passing is
+not a proof of recoverability. None of these interfaces create threads in Crypto3.
+
 The arithmetic context normally has the longest lifetime. Divisor, composition, Frobenius, and square-root contexts
 are immutable precomputations tied to particular polynomials and may reference or logically depend on one another.
 Construct them once per fixed input and reuse them sequentially. Do not combine precomputations built for different

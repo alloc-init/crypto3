@@ -455,6 +455,115 @@ namespace nil::crypto3::math {
             return std::move(representations.front());
         }
 
+        /**
+         * Borrowed handoff for the factor phase of X-norm recovery. discover() emits owned factors as rvalues
+         * and may be called exactly once. Its generator parameter lets an application drain pending recoveries
+         * before discovery requests another sample from generator(). Recoveries must likewise consume samples
+         * in factor order. A mutex alone would prevent races but would not preserve this ordering.
+         *
+         * recover_factor() reuses the ordinary multiplicity-aware recovery operation. The arithmetic context
+         * and generator passed to it belong to the caller; concurrent jobs require separate contexts and an
+         * ordered generator adapter. Returned representations must be in discovery order. All queued work and
+         * borrowed references must be joined before the backend hook exits, including failures and exceptions.
+         * The enclosing operation combines the results and verifies their exact norm against the original H.
+         */
+        template<SupportsDivrem Backend, typename Generator>
+        class polynomial_x_norm_factor_recovery {
+        public:
+            using polynomial_type = typename Backend::polynomial_type;
+            using value_type = typename polynomial_type::value_type;
+            using factor_type = polynomial_factor<polynomial_type>;
+            using context_type = polynomial_arithmetic::polynomial_context<Backend>;
+            using representation_type = polynomial_x_norm_representation<polynomial_type>;
+            using result_type = std::optional<std::vector<representation_type>>;
+
+            polynomial_x_norm_factor_recovery(const polynomial_type &input, value_type &leading_coefficient,
+                                              Generator &generator) :
+                input_(input), leading_coefficient_(leading_coefficient), generator_(generator) {
+            }
+
+            polynomial_x_norm_factor_recovery(const polynomial_x_norm_factor_recovery &) = delete;
+            polynomial_x_norm_factor_recovery &operator=(const polynomial_x_norm_factor_recovery &) = delete;
+
+            Generator &generator() const {
+                return generator_;
+            }
+
+            std::size_t input_coefficient_count() const {
+                return input_.size();
+            }
+
+            std::size_t factor_count() const {
+                return factor_count_;
+            }
+
+            bool complete() const {
+                return complete_;
+            }
+
+            template<typename DiscoveryGenerator, typename FactorCallback>
+            factorization_control discover(context_type &context, DiscoveryGenerator &generator,
+                                           FactorCallback &&callback) {
+                if (started_) {
+                    throw std::logic_error("X-norm factor discovery may only be executed once");
+                }
+                started_ = true;
+                const auto control = complete_factorization_impl<Backend>(leading_coefficient_, input_, context,
+                                                                          generator, [&](factor_type &&factor) {
+                                                                              ++factor_count_;
+                                                                              return callback(std::move(factor));
+                                                                          });
+                complete_ = control == factorization_control::continue_factorization;
+                return control;
+            }
+
+            template<typename RecoveryGenerator>
+            std::optional<representation_type> recover_factor(const factor_type &factor, context_type &context,
+                                                              RecoveryGenerator &generator) const {
+                return recover_polynomial_x_norm_factor_power<Backend>(factor, context, generator);
+            }
+
+            // Necessary scalar conditions only; passing does not certify irreducibility or successful recovery.
+            // Applications may use this to keep obviously unsuitable factors out of a deferred work queue.
+            bool passes_scalar_filters(const factor_type &factor) const {
+                if (factor.multiplicity == 0 || !is_canonical_polynomial(factor.polynomial) ||
+                    factor.polynomial.size() < 2) {
+                    throw std::invalid_argument("X-norm factor handoff requires a nonconstant factor power");
+                }
+                if ((factor.multiplicity & 1) == 0) {
+                    return true;
+                }
+                const auto &g = factor.polynomial;
+                const auto signed_leading = (g.size() & 1) == 0 ? -g.back() : g.back();
+                return g[0].is_square() && signed_leading.is_square();
+            }
+
+            result_type execute_serial(context_type &context) {
+                std::vector<representation_type> results;
+                bool failed = false;
+                discover(context, generator_, [&](factor_type &&factor) {
+                    auto result = recover_factor(factor, context, generator_);
+                    if (!result) {
+                        failed = true;
+                        return factorization_control::stop_factorization;
+                    }
+                    results.push_back(std::move(*result));
+                    return factorization_control::continue_factorization;
+                });
+                if (failed) {
+                    return std::nullopt;
+                }
+                return results;
+            }
+
+        private:
+            const polynomial_type &input_;
+            value_type &leading_coefficient_;
+            Generator &generator_;
+            std::size_t factor_count_ = 0;
+            bool started_ = false, complete_ = false;
+        };
+
         template<bool ReuseKnownFactor, SupportsDivrem Backend, typename Generator>
             requires algebra::FieldValue<typename Backend::polynomial_type::value_type> &&
                      std::constructible_from<typename Backend::polynomial_type, std::size_t> &&
@@ -531,31 +640,20 @@ namespace nil::crypto3::math {
                 // A cache miss consumes no randomness and continues through the unchanged recovery path below.
             }
 
-            std::vector<representation_type> factor_representations;
-            bool factor_recovery_failed = false;
-            value_type leading_coefficient;
-            const auto control = detail::complete_factorization_impl<Backend>(
-                leading_coefficient, h, arithmetic_context, coefficient_generator,
-                [&](const polynomial_factor<polynomial_type> &factor) {
-                    auto representation = detail::recover_polynomial_x_norm_factor_power<Backend>(
-                        factor, arithmetic_context, coefficient_generator);
-                    if (!representation) {
-                        factor_recovery_failed = true;
-                        return factorization_control::stop_factorization;
-                    }
-                    factor_representations.push_back(std::move(*representation));
-                    return factorization_control::continue_factorization;
-                });
-
-            if (factor_recovery_failed) {
+            value_type leading_coefficient = value_type::zero();
+            polynomial_x_norm_factor_recovery<Backend, Generator> recovery(h, leading_coefficient,
+                                                                           coefficient_generator);
+            auto factor_representations = arithmetic_context.recover_x_norm_factors(recovery);
+            if (!factor_representations) {
                 return std::nullopt;
             }
-            if (control != factorization_control::continue_factorization || factor_representations.empty()) {
+            if (!recovery.complete() || factor_representations->empty() ||
+                factor_representations->size() != recovery.factor_count()) {
                 throw std::logic_error("complete factorization did not produce all nonconstant factors");
             }
 
             representation_type result = detail::combine_polynomial_x_norm_representations_balanced<Backend>(
-                std::move(factor_representations), arithmetic_context);
+                std::move(*factor_representations), arithmetic_context);
             if (leading_coefficient.is_zero()) {
                 throw std::logic_error("complete factorization produced a zero leading coefficient");
             }
@@ -582,6 +680,8 @@ namespace nil::crypto3::math {
      *
      * The coefficient generator remains caller-owned and is shared by complete factorization and irreducible-factor
      * recovery. It must satisfy the documented requirements of both operations.
+     * An optional backend recover_x_norm_factors hook controls factor handoff and execution; the default remains
+     * synchronous. Such a hook must preserve generator ordering and join all work before returning or throwing.
      *
      * K must be a finite field of odd characteristic. Nonconstant h must satisfy degree(h) < characteristic(K), as
      * required by complete factorization. Under the generator and arithmetic contracts, recovery is complete when -1

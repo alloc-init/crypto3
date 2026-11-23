@@ -351,8 +351,8 @@ retaining a collected factor list; only the resulting representations are saved 
 
 Multiplicity parity and irreducible-degree parity serve different purposes. Even **multiplicity** gives the direct
 square representation above, regardless of the factor's degree. For an unpaired copy, the factor's **degree** chooses
-the odd-degree product or even-degree trace root algorithm. Recovery runs inside the irreducible-factor callback;
-it is not deferred until every factor has passed its eligibility checks. See
+the odd-degree product or even-degree trace root algorithm. By default, recovery runs inside the irreducible-factor
+callback; it is not deferred until every factor has passed its eligibility checks. See
 [staged factorization](@ref math_polynomial_factorization) for screening and callback ordering.
 
 Discovery also tracks an optional parity of the **number of irreducible factors**. This third kind of parity can
@@ -389,6 +389,30 @@ context; no polynomial backend or random engine is constructed internally.
 This factorization and factor-combination behavior is a generic polynomial operation: it depends only on finite-field
 polynomial arithmetic and the fixed norm map `P^2 - X * Q^2`. The API returns the two coefficient polynomials and does
 not impose a representation or policy beyond that algebraic identity.
+
+### Application-controlled factor recovery
+
+An optional backend hook `recover_x_norm_factors(recovery, context)` can control discovery and factor recovery.
+Without this hook, the original synchronous callback sequence remains in use. The library creates no threads;
+an application owns any queue, executor, worker budget and additional factor storage.
+
+The borrowed operation offers `discover(context, generator, callback)`, `recover_factor(factor, context, generator)`,
+`generator()`, `passes_scalar_filters(factor)`, and `execute_serial(context)`. Discovery may run exactly once and
+emits owned factor powers as rvalues. Move a deferred factor into application storage rather than retaining a
+callback reference. The scalar filters are necessary conditions only, with even multiplicities handled separately.
+
+The hook returns an optional vector of norm representations in discovery order. A missing value means that recovery
+failed, not that execution was declined. On success, discovery must have completed and the vector must contain one
+representation per discovered factor power. The library then performs its ordinary balanced combination, scalar
+normalization and exact verification against the original input. Missing results and invalid final identities remain
+errors rather than successful recoveries.
+
+Concurrent operations require private arithmetic contexts. Preserve the original random stream: complete pending
+factor recoveries before discovery requests its next sample, and order recovery samples by factor discovery order.
+Mutex protection alone does not establish that order. A later factor must not consume samples after an earlier
+factor fails. Complete or cancel and join all work before returning or throwing; borrowed operations, callbacks and
+generator references may not escape the hook. Retained discovery caches and all pending recovery workspaces count
+towards the application's memory budget.
 
 ### Reusing a known factor across inputs
 

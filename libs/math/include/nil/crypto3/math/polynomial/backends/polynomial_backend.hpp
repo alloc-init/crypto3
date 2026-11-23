@@ -232,6 +232,28 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
         }
 
+        /**
+         * Optional application-controlled recovery of discovered irreducible factor powers. The borrowed
+         * operation supplies discovery, ordinary factor recovery and the caller-owned coefficient generator.
+         * Without a backend hook, discovery and recovery execute synchronously in their original order.
+         * A hook must preserve generator access order, own deferred factors, use private contexts concurrently,
+         * return representations in discovery order, and join all work before returning or throwing. No
+         * operation, factor callback or generator reference may escape this call. A missing result means
+         * a factor failed recovery, not that execution was declined. Exact final norm verification is retained.
+         */
+        template<typename Recovery>
+        typename Recovery::result_type recover_x_norm_factors(Recovery &recovery) {
+            if constexpr (requires(backend_type &backend) {
+                              {
+                                  backend.recover_x_norm_factors(recovery, *this)
+                              } -> std::same_as<typename Recovery::result_type>;
+                          }) {
+                return backend_.recover_x_norm_factors(recovery, *this);
+            } else {
+                return recovery.execute_serial(*this);
+            }
+        }
+
         // Optional row-major 2-by-2 times 2-by-Columns product. A declined operation leaves every
         // output unchanged, so algorithms can use their ordinary multiplication/addition fallback.
         template<std::size_t Columns>
