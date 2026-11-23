@@ -32,6 +32,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <nil/crypto3/algebra/fields/detail/element/fp12_fast/fp12_fast.hpp>
@@ -125,11 +126,71 @@ namespace nil::crypto3::math::detail {
             std::size_t block_count_, panel_count_;
         };
 
+        /**
+         * Borrowed preparation of an already allocated coefficient cache. Each panel owns complete scalar
+         * coefficient rows or one complete SIMD panel, including its padding. prepare_panels never resizes
+         * storage. The powers remain immutable until every caller has joined.
+         *
+         * Execute every panel exactly once, using disjoint ranges for concurrent calls. The dispatcher must
+         * join all callers before returning or propagating an exception and must not retain this descriptor.
+         * The cache is published only after its constructor and the dispatcher return successfully.
+         */
+        template<typename Polynomial>
+        class coefficient_preparation {
+        public:
+            std::size_t panel_count() const noexcept {
+                return panel_count_;
+            }
+
+            std::size_t coefficient_count() const noexcept {
+                return cache_.width_;
+            }
+
+            std::size_t term_count() const noexcept {
+                return cache_.terms_;
+            }
+
+            void prepare_panels(std::size_t first, std::size_t end) const {
+                if (first > end || end > panel_count_) {
+                    throw std::out_of_range("composition cache panel range is out of bounds");
+                }
+#if defined(CRYPTO3_HAS_AVX512IFMA)
+                if constexpr (simd_kernel::supported) {
+                    if (cache_.simd_lanes_ != 0) {
+                        cache_.prepare_simd_panels(powers_, first, end);
+                        return;
+                    }
+                }
+#endif
+                cache_.prepare_scalar_panels(powers_, first, end);
+            }
+
+        private:
+            friend class prepared_composition_coefficients;
+
+            coefficient_preparation(prepared_composition_coefficients &cache, const std::vector<Polynomial> &powers) :
+                cache_(cache), powers_(powers),
+                panel_count_(1 + (cache.width_ - 1) / (cache.simd_lanes_ ? cache.simd_lanes_ : coefficient_tile_size)) {
+            }
+
+            prepared_composition_coefficients &cache_;
+            const std::vector<Polynomial> &powers_;
+            std::size_t panel_count_;
+        };
+
         prepared_composition_coefficients() = default;
 
         template<typename Polynomial>
         prepared_composition_coefficients(const std::vector<Polynomial> &powers, std::size_t byte_limit,
-                                          std::size_t simd_lanes = 8) {
+                                          std::size_t simd_lanes = 8) :
+            prepared_composition_coefficients(powers, byte_limit, simd_lanes, [](const auto &preparation) {
+                preparation.prepare_panels(0, preparation.panel_count());
+            }) {
+        }
+
+        template<typename Polynomial, typename Execution>
+        prepared_composition_coefficients(const std::vector<Polynomial> &powers, std::size_t byte_limit,
+                                          std::size_t simd_lanes, Execution &&execute) {
             if (simd_lanes != 0 && simd_lanes != 4 && simd_lanes != 8) {
                 throw std::invalid_argument("composition SIMD lanes must be 0, 4 or 8");
             }
@@ -146,7 +207,8 @@ namespace nil::crypto3::math::detail {
                 // Cache dimensions rule out short dots and narrow polynomials. use_for_block also checks
                 // the actual nonzero outer terms before selecting either prepared kernel.
                 if (simd_lanes != 0 && width >= 4 && terms >= minimum_prepared_terms &&
-                    prepare_simd(powers, width, terms, byte_limit, simd_lanes)) {
+                    allocate_simd(width, terms, byte_limit, simd_lanes)) {
+                    std::forward<Execution>(execute)(coefficient_preparation<Polynomial>(*this, powers));
                     return;
                 }
             }
@@ -157,17 +219,9 @@ namespace nil::crypto3::math::detail {
                 return;
             }
             coefficients_.resize(width * terms);
-            for (std::size_t coefficient = 0; coefficient < width; ++coefficient) {
-                for (std::size_t exponent = 1; exponent < powers.size(); ++exponent) {
-                    if (coefficient < powers[exponent].size()) {
-                        coefficients_[coefficient * terms + exponent - 1] =
-                            kernel::prepare_product_operand(powers[exponent][coefficient]);
-                    }
-                    // Default-constructed backends are zero, padding shorter powers without borrowed views.
-                }
-            }
             terms_ = terms;
             width_ = width;
+            std::forward<Execution>(execute)(coefficient_preparation<Polynomial>(*this, powers));
         }
 
         bool available() const {
@@ -278,12 +332,29 @@ namespace nil::crypto3::math::detail {
             }
         }
 
+    private:
+        template<typename Polynomial>
+        void prepare_scalar_panels(const std::vector<Polynomial> &powers, std::size_t first_panel,
+                                   std::size_t end_panel) {
+            for (std::size_t panel = first_panel; panel < end_panel; ++panel) {
+                const std::size_t first = panel * coefficient_tile_size;
+                const std::size_t end = first + std::min(coefficient_tile_size, width_ - first);
+                for (std::size_t coefficient = first; coefficient < end; ++coefficient) {
+                    for (std::size_t exponent = 1; exponent < powers.size(); ++exponent) {
+                        if (coefficient < powers[exponent].size()) {
+                            coefficients_[coefficient * terms_ + exponent - 1] =
+                                kernel::prepare_product_operand(powers[exponent][coefficient]);
+                        }
+                        // Default-constructed backends are zero, including the tails of shorter powers.
+                    }
+                }
+            }
+        }
+
         // Conservative dispatch heuristic shared with the SIMD cache cutoff, not an arithmetic bound.
         static constexpr std::size_t minimum_prepared_terms = 8;
 #if defined(CRYPTO3_HAS_AVX512IFMA)
-        template<typename Polynomial>
-        bool prepare_simd(const std::vector<Polynomial> &powers, std::size_t width, std::size_t terms,
-                          std::size_t byte_limit, std::size_t lanes) {
+        bool allocate_simd(std::size_t width, std::size_t terms, std::size_t byte_limit, std::size_t lanes) {
             constexpr std::size_t coordinates = simd_kernel::product_coordinate_count;
             const std::size_t panel_count = 1 + (width - 1) / lanes;
             const std::size_t stride = coordinates * 5 * lanes;
@@ -292,28 +363,38 @@ namespace nil::crypto3::math::detail {
                 return false;
             }
             simd_coefficients_.resize(panel_count * stride * terms);
-            // Owned [panel][coordinate][term][digit][lane] storage. Only this representation is retained;
-            // 40 bytes per form replace the scalar backend object, and padding is included in the budget.
-            for (std::size_t coefficient = 0; coefficient < width; ++coefficient) {
-                const std::size_t panel = coefficient / lanes, lane = coefficient % lanes;
-                for (std::size_t exponent = 1; exponent < powers.size(); ++exponent) {
-                    if (coefficient >= powers[exponent].size()) {
-                        continue;
-                    }
-                    const auto prepared = simd_kernel::prepare_product_operand52(powers[exponent][coefficient]);
-                    for (std::size_t coordinate = 0; coordinate < coordinates; ++coordinate) {
-                        const auto &packed = prepared[coordinate];
-                        const std::size_t offset = ((panel * coordinates + coordinate) * terms + exponent - 1) * 5;
-                        for (std::size_t digit = 0; digit < 5; ++digit) {
-                            simd_coefficients_[(offset + digit) * lanes + lane] = packed[digit];
-                        }
-                    }
-                }
-            }
             terms_ = terms;
             width_ = width;
             simd_lanes_ = lanes;
             return true;
+        }
+
+        template<typename Polynomial>
+        void prepare_simd_panels(const std::vector<Polynomial> &powers, std::size_t first_panel,
+                                 std::size_t end_panel) {
+            constexpr std::size_t coordinates = simd_kernel::product_coordinate_count;
+            // Owned [panel][coordinate][term][digit][lane] storage. Only this representation is retained;
+            // 40 bytes per form replace the scalar backend object, and padding is included in the budget.
+            for (std::size_t panel = first_panel; panel < end_panel; ++panel) {
+                const std::size_t first = panel * simd_lanes_;
+                const std::size_t count = std::min(simd_lanes_, width_ - first);
+                for (std::size_t lane = 0; lane < count; ++lane) {
+                    const std::size_t coefficient = first + lane;
+                    for (std::size_t exponent = 1; exponent < powers.size(); ++exponent) {
+                        if (coefficient >= powers[exponent].size()) {
+                            continue;
+                        }
+                        const auto prepared = simd_kernel::prepare_product_operand52(powers[exponent][coefficient]);
+                        for (std::size_t coordinate = 0; coordinate < coordinates; ++coordinate) {
+                            const auto &packed = prepared[coordinate];
+                            const std::size_t offset = ((panel * coordinates + coordinate) * terms_ + exponent - 1) * 5;
+                            for (std::size_t digit = 0; digit < 5; ++digit) {
+                                simd_coefficients_[(offset + digit) * simd_lanes_ + lane] = packed[digit];
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         template<typename Polynomial>

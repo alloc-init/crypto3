@@ -189,7 +189,8 @@ namespace nil::crypto3::math {
                 prepared_coefficients_ = coefficient_cache_type(
                     baby_steps_,
                     std::min(prepared_byte_limit, arithmetic_context.options().modular_composition_prepared_byte_limit),
-                    arithmetic_context.options().modular_composition_simd_lanes);
+                    arithmetic_context.options().modular_composition_simd_lanes,
+                    [&](const auto &preparation) { arithmetic_context.prepare_composition_coefficients(preparation); });
             }
             prepare_giant_steps(divisor_context, arithmetic_context);
         }

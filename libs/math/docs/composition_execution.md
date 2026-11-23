@@ -1,10 +1,10 @@
-# Application-controlled composition evaluation
+# Application-controlled execution of prepared modular composition
 
-Prepared modular composition can delegate coefficient evaluation to an optional
-polynomial-backend operation. Crypto3 prepares operands, allocates outputs and
-finalizes the result on the calling thread. The default backend evaluates every
-coefficient panel serially. Thread ownership, scheduling and resource limits
-belong to an application that supplies this optional operation.
+An application can schedule two parts of prepared modular composition on its
+own executor: building the coefficient cache and evaluating outer polynomial
+blocks with that cache. Each hook is optional and defaults to serial execution
+on the calling thread. Crypto3 allocates shared storage before dispatch and
+finalizes the result after all panels complete.
 
 The extension applies to the existing prepared coefficient path, including
 grouped composition, batched Horner evaluation and single-block evaluation.
@@ -14,16 +14,22 @@ remain separate backend capabilities.
 
 ## Backend contract
 
-A backend may define:
+A backend can implement either or both of these operations.
 
 ```cpp
+template<typename Preparation>
+void prepare_composition_coefficients(const Preparation &preparation);
+
 template<typename Evaluation>
 void evaluate_composition_coefficients(const Evaluation &evaluation);
 ```
 
-`polynomial_context` detects this operation at compile time. A backend without
-it continues to satisfy `PolynomialBackend` and uses the serial evaluation.
-There is no runtime executor pointer, thread count or scheduler in the library.
+`polynomial_context` detects each operation at compile time. During cache
+construction, `prepare_panels(first, end)` writes complete coefficient rows or
+SIMD panels from immutable powers into preallocated storage. The descriptor
+reports `panel_count()`, `coefficient_count()` and `term_count()` so the
+application can choose a worker count. Crypto3 skips this hook when the cache
+is disabled, unsupported or exceeds its byte budget.
 
 The supplied evaluation has two operations needed by the backend:
 
@@ -31,8 +37,10 @@ The supplied evaluation has two operations needed by the backend:
 - `evaluate_panels(first, end)` evaluates a half-open range of panel indices.
   It executes serial arithmetic and does not resize the outputs or workspace.
 
-The backend must visit every panel exactly once, using disjoint ranges for
-concurrent calls. An empty range is valid. An invalid range throws
+For either hook, a successful dispatch must visit every panel exactly once.
+Concurrent workers must use disjoint ranges and finish before the hook returns
+or throws. Both descriptors borrow their storage for the duration of the hook.
+An empty range is valid. An invalid range throws
 `std::out_of_range` before writing any coefficients. Panel boundaries preserve
 the selected scalar, SIMD4 or SIMD8 kernel, including partial final panels.
 
@@ -69,16 +77,29 @@ destruction must wait for all range evaluations to complete. The original
 
 ## Application integration
 
-An application can extend its existing backend while inheriting its arithmetic
-and prepared-product capabilities. For example, with an application-owned pool
-whose `run` method joins every job before returning or rethrowing an exception:
+This example adds both hooks to the BN254 small-prime FFT backend. The
+application supplies a pool whose `run` method joins every job before
+returning or propagating an exception.
 
 ```cpp
-template<typename Backend, typename Pool>
-class application_backend : public Backend {
+using fft_backend = nil::crypto3::math::polynomial_arithmetic::bn254_small_prime_fft_backend;
+
+template<typename Pool>
+class application_backend : public fft_backend {
 public:
-    application_backend(Backend backend, Pool &pool) :
-        Backend(std::move(backend)), pool_(pool) {}
+    application_backend(std::size_t max_transform_size, Pool &pool) :
+        fft_backend(max_transform_size), pool_(pool) {}
+
+    bool supports_product_size(std::size_t count) const {
+        return fft_backend::supports_product_size(count);
+    }
+
+    template<typename Preparation>
+    void prepare_composition_coefficients(const Preparation &preparation) {
+        pool_.run(preparation.panel_count(), [&](std::size_t first, std::size_t end) {
+            preparation.prepare_panels(first, end);
+        });
+    }
 
     template<typename Evaluation>
     void evaluate_composition_coefficients(const Evaluation &evaluation) {
@@ -94,9 +115,13 @@ private:
 
 The pool must outlive every context that borrows it. Keep it alive across
 compositions and recoveries, and use one application worker budget across
-operations. A backend may choose serial execution for small batches without
-changing the mathematical result. Each panel retains the original arithmetic
-order; only independent output coefficients are scheduled differently.
+operations. A backend may choose serial execution for small batches. Each
+panel retains the original arithmetic order.
+
+The adapter forwards `supports_product_size()` because it uses the base
+backend's multiplication plan. Half-GCD rational reconstruction checks this
+query on the concrete backend. An adapter with tighter limits should report
+its own supported sizes or omit the query to use classical reconstruction.
 
 ## Correctness coverage
 
@@ -104,5 +129,6 @@ The regular `polynomial_composition` test uses a small application backend to
 exercise disjoint panel evaluation with 1/2/4/8 threads. It compares results
 with serial evaluation and reference arithmetic, including sparse and constant
 blocks, partial SIMD panels, grouped composition, aliasing, exceptions and
-workspace reuse. These checks run with benchmark tests disabled. Thread support
-is linked only to the test executable; applications provide their own executor.
+workspace reuse. Preparation tests cover padding, cache budgets, disjoint
+writes, and retry after a worker throws. These checks run with benchmark tests
+disabled. The test application supplies its own executor.

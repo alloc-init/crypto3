@@ -24,11 +24,13 @@
 
 #define BOOST_TEST_MODULE polynomial_composition_test
 
+#include <atomic>
 #include <cstddef>
 #include <exception>
 #include <future>
 #include <limits>
 #include <optional>
+#include <thread>
 #include <vector>
 
 #include <boost/test/unit_test.hpp>
@@ -59,6 +61,70 @@ namespace {
         }
         return value;
     }
+
+    struct preparation_execution_state {
+        std::size_t threads = 4;
+        std::size_t calls = 0;
+        bool fail = false;
+        std::atomic<std::size_t> active_workers = 0;
+    };
+
+    template<typename Preparation>
+    void run_preparation_panels(const Preparation &preparation, preparation_execution_state &state) {
+        ++state.calls;
+        const std::size_t count = preparation.panel_count();
+        BOOST_REQUIRE_GT(count, 0);
+        BOOST_CHECK_THROW(preparation.prepare_panels(1, 0), std::out_of_range);
+        BOOST_CHECK_THROW(preparation.prepare_panels(0, count + 1), std::out_of_range);
+        preparation.prepare_panels(count, count);
+        const std::size_t workers = std::min(state.threads, count);
+        std::vector<std::atomic<std::size_t>> visits(count);
+        std::vector<std::exception_ptr> errors(workers);
+        std::vector<std::jthread> threads;
+        for (std::size_t rank = 0; rank < workers; ++rank) {
+            threads.emplace_back([&, rank] {
+                ++state.active_workers;
+                try {
+                    // Interleave complete panels in reverse order; no two workers write the same panel.
+                    for (std::size_t offset = rank; offset < count; offset += workers) {
+                        const std::size_t panel = count - 1 - offset;
+                        preparation.prepare_panels(panel, panel + 1);
+                        ++visits[panel];
+                        if (state.fail && rank == 0) {
+                            throw std::runtime_error("application preparation failure");
+                        }
+                    }
+                } catch (...) {
+                    errors[rank] = std::current_exception();
+                }
+                --state.active_workers;
+            });
+        }
+        for (auto &thread : threads) {
+            thread.join();
+        }
+        for (const auto &error : errors) {
+            if (error) {
+                std::rethrow_exception(error);
+            }
+        }
+        for (const auto &visited : visits) {
+            BOOST_CHECK_EQUAL(visited.load(), 1);
+        }
+    }
+
+    template<typename Value>
+    struct preparation_backend : polynomial_arithmetic::schoolbook_backend<Value> {
+        explicit preparation_backend(preparation_execution_state &state) : state(state) {
+        }
+
+        template<typename Preparation>
+        void prepare_composition_coefficients(const Preparation &preparation) {
+            run_preparation_panels(preparation, state);
+        }
+
+        preparation_execution_state &state;
+    };
 
     using grouped_backend_type = polynomial_arithmetic::bn254_small_prime_fft_backend;
     using grouped_polynomial_type = grouped_backend_type::polynomial_type;
@@ -1447,6 +1513,126 @@ BOOST_AUTO_TEST_CASE(grouped_composition_handles_zero_constant_and_nilpotent_gia
     polynomial_type actual;
     math::compose_mod(actual, outer, cache, constant, context);
     BOOST_CHECK(actual == polynomial_type {fq12_value_type::zero()});
+}
+
+BOOST_AUTO_TEST_CASE(coefficient_preparation_panels_match_direct_sums_with_padding_and_tails) {
+    using polynomial_type = math::polynomial<fq12_value_type>;
+    using cache_type = math::detail::prepared_composition_coefficients<fq12_value_type>;
+    for (std::size_t width : {3u, 8u, 11u, 17u}) {
+        for (std::size_t terms : {1u, 8u, 12u}) {
+            std::vector<polynomial_type> powers {polynomial_type {fq12_value_type::one()}};
+            polynomial_type outer(terms + 1, fq12_value_type::zero());
+            outer[0] = fq12_value(19);
+            polynomial_type expected(width, fq12_value_type::zero());
+            expected[0] = outer[0];
+            for (std::size_t exponent = 1; exponent <= terms; ++exponent) {
+                const std::size_t length = exponent == 1 ? width : width - exponent % 3;
+                powers.emplace_back(length, fq12_value_type::zero());
+                outer[exponent] = fq12_value(3 * exponent + 1);
+                for (std::size_t coefficient = 0; coefficient < length; ++coefficient) {
+                    powers.back()[coefficient] = fq12_value(5 * coefficient + exponent);
+                    expected[coefficient] += powers.back()[coefficient] * outer[exponent];
+                }
+            }
+            math::condense(expected);
+            for (std::size_t lanes : {0u, 4u, 8u}) {
+                const cache_type serial(powers, 4 * 1024 * 1024, lanes);
+                for (std::size_t threads : {1u, 3u, 8u}) {
+                    preparation_execution_state state;
+                    state.threads = threads;
+                    const cache_type parallel(powers, 4 * 1024 * 1024, lanes, [&](const auto &preparation) {
+                        BOOST_CHECK_EQUAL(preparation.coefficient_count(), width);
+                        BOOST_CHECK_EQUAL(preparation.term_count(), terms);
+                        run_preparation_panels(preparation, state);
+                    });
+                    BOOST_CHECK_EQUAL(state.calls, 1);
+                    BOOST_CHECK_EQUAL(state.active_workers.load(), 0);
+                    BOOST_CHECK_EQUAL(parallel.bytes(), serial.bytes());
+                    BOOST_CHECK_EQUAL(parallel.simd_lanes(), serial.simd_lanes());
+                    std::array<polynomial_type, cache_type::block_tile_size> output;
+                    cache_type::workspace scratch;
+                    parallel.evaluate_blocks(output, outer, 0, 1, scratch);
+                    BOOST_CHECK(output[0] == expected);
+                }
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(coefficient_preparation_hook_preserves_fallback_and_joins_on_failure) {
+    using backend_type = preparation_backend<fq12_value_type>;
+    using polynomial_type = backend_type::polynomial_type;
+    using cache_type = math::polynomial_composition_precomputation<backend_type>;
+    const auto inner = grouped_polynomial(5, 7);
+    const auto modulus = grouped_polynomial(14, 3);
+    const auto outer = grouped_polynomial(37, 5);
+    const auto saved_inner = inner;
+    const auto saved_modulus = modulus;
+    for (std::size_t limit : {0u, 1u, 1024u * 1024u}) {
+        preparation_execution_state state;
+        polynomial_arithmetic::polynomial_context_options options;
+        options.modular_composition_block_size = 17;
+        options.modular_composition_prepared_byte_limit = limit;
+        polynomial_arithmetic::polynomial_context<backend_type> context(backend_type(state), options);
+        math::polynomial_divisor_context<backend_type> divisor(modulus, modulus.size(), context);
+        polynomial_type expected;
+        math::compose_mod_reference(expected, outer, inner, divisor, context);
+        const cache_type cache(inner, outer.size(), divisor, context);
+        BOOST_CHECK_EQUAL(state.calls, limit > 1 ? 1 : 0);
+        polynomial_type result;
+        math::compose_mod(result, outer, cache, divisor, context);
+        BOOST_CHECK(result == expected);
+
+        if (limit > 1) {
+            state.fail = true;
+            BOOST_CHECK_THROW(cache_type(inner, outer.size(), divisor, context), std::runtime_error);
+            BOOST_CHECK_EQUAL(state.active_workers.load(), 0);
+            state.fail = false;
+            const cache_type retry(inner, outer.size(), divisor, context);
+            math::compose_mod(result, outer, retry, divisor, context);
+            BOOST_CHECK(result == expected);
+            // A failed construction cannot invalidate an earlier immutable cache.
+            math::compose_mod(result, outer, cache, divisor, context);
+            BOOST_CHECK(result == expected);
+        }
+        BOOST_CHECK(inner == saved_inner);
+        BOOST_CHECK(modulus == saved_modulus);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(coefficient_preparation_skips_unavailable_and_unsupported_caches) {
+    using polynomial_type = math::polynomial<fq12_value_type>;
+    using cache_type = math::detail::prepared_composition_coefficients<fq12_value_type>;
+    std::size_t calls = 0;
+    const auto dispatch = [&](const auto &preparation) {
+        ++calls;
+        preparation.prepare_panels(0, preparation.panel_count());
+    };
+    const std::vector<polynomial_type> powers {polynomial_type {fq12_value_type::one()}, grouped_polynomial(11, 3),
+                                               grouped_polynomial(4, 7)};
+    for (std::size_t limit : {0u, 1u}) {
+        const cache_type cache(powers, limit, 8, dispatch);
+        BOOST_CHECK(!cache.available());
+    }
+    const cache_type empty(std::vector<polynomial_type> {}, 1024, 8, dispatch);
+    const cache_type constant(std::vector<polynomial_type> {powers[0]}, 1024, 8, dispatch);
+    BOOST_CHECK(!empty.available());
+    BOOST_CHECK(!constant.available());
+    BOOST_CHECK_EQUAL(calls, 0);
+    BOOST_CHECK_THROW(cache_type(powers, 0, 2, dispatch), std::invalid_argument);
+
+    using backend_type = preparation_backend<fq_value_type>;
+    preparation_execution_state state;
+    polynomial_arithmetic::polynomial_context_options options;
+    options.modular_composition_prepared_byte_limit = 1024 * 1024;
+    options.modular_composition_block_size = 9;
+    polynomial_arithmetic::polynomial_context<backend_type> context(backend_type(state), options);
+    const backend_type::polynomial_type modulus {fq_value_type(1), fq_value_type(2), fq_value_type(1)};
+    math::polynomial_divisor_context<backend_type> divisor(modulus, 3, context);
+    const math::polynomial_composition_precomputation<backend_type> cache({fq_value_type(3), fq_value_type(1)}, 17,
+                                                                          divisor, context);
+    BOOST_CHECK_EQUAL(cache.prepared_coefficient_bytes(), 0);
+    BOOST_CHECK_EQUAL(state.calls, 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

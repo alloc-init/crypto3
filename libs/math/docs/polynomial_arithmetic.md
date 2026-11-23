@@ -445,6 +445,15 @@ Supported Fp12 coefficient types can additionally prepare the linear forms used 
 Its default is zero. `prepared_coefficient_bytes()` reports the retained payload. The budget applies to each cache
 separately and excludes the ordinary baby powers, giant step, temporary block outputs, and per-call scratch.
 
+An application backend may provide `prepare_composition_coefficients(preparation)` to schedule cache construction.
+The descriptor exposes `panel_count()`, `coefficient_count()`, `term_count()` and the serial operation
+`prepare_panels(first, end)`. Storage is allocated and zero-initialized before dispatch; each panel owns complete
+scalar coefficient rows or a complete SIMD panel. Calls on disjoint ranges may run concurrently without resizing
+shared storage. Process every panel exactly once and join all callers before returning or propagating an exception.
+The descriptor borrows the immutable powers and the cache under construction and must not escape the hook.
+Backends without the hook prepare the complete range on the calling thread. For the evaluation hook and a
+complete backend example, see [Application-controlled execution of prepared modular composition](composition_execution.md).
+
 The `polynomial_composition_precomputation` constructor accepts an optional fifth argument that further caps the
 prepared payload of that cache. Its effective limit is the minimum of that argument and the context's
 `modular_composition_prepared_byte_limit`; omitting it preserves the context limit. This does not mutate the context

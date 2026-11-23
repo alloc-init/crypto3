@@ -203,6 +203,24 @@ namespace nil::crypto3::math::polynomial_arithmetic {
             }
         }
 
+        /**
+         * Prepare independent panels of an allocated composition coefficient cache. An optional backend
+         * hook chooses execution; otherwise every panel runs on the calling thread. The hook must process
+         * each panel exactly once, with disjoint ranges for concurrent prepare_panels(first, end) calls.
+         * It must join all accesses before returning or throwing and must not retain the borrowed task.
+         * This does not permit concurrent use of this context's ordinary arithmetic operations.
+         */
+        template<typename Preparation>
+        void prepare_composition_coefficients(const Preparation &preparation) {
+            if constexpr (requires(backend_type &backend) {
+                              { backend.prepare_composition_coefficients(preparation) } -> std::same_as<void>;
+                          }) {
+                backend_.prepare_composition_coefficients(preparation);
+            } else {
+                preparation.prepare_panels(0, preparation.panel_count());
+            }
+        }
+
         // Optional row-major 2-by-2 times 2-by-Columns product. A declined operation leaves every
         // output unchanged, so algorithms can use their ordinary multiplication/addition fallback.
         template<std::size_t Columns>
